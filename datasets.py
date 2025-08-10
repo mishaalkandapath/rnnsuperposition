@@ -1,5 +1,6 @@
 import torch
 from torch.utils.data import Dataset
+import math
 
 def generate_sparse_copyset(n_features, feature_prob, copy_length, batch_size):
     """Generate sparse copy dataset"""

@@ -10,7 +10,7 @@ import numpy as np
 from tqdm import tqdm 
 
 from rnn import RNN
-from data import generate_sparse_copyset    
+from datasets import generate_sparse_copyset    
 
 # Learning rate schedulers
 def linear_lr(step, steps):
