@@ -9,11 +9,12 @@ waitGPU.wait(memory_ratio=0.001,
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.utils.data import DataLoader
 import numpy as np
 from tqdm import tqdm 
 
 from rnn import RNN
-from datasets import generate_sparse_copyset, generate_token_copyset
+from datasets import generate_sparse_copyset, generate_token_copy_dataset
 
 # Learning rate schedulers
 def linear_lr(step, steps):
@@ -198,43 +199,54 @@ def train_model_copy(config, num_epochs=40000, lr=1e-3,
     
     criterion = cross_entropy_loss
     train_losses = []
-    
-    pbar = tqdm(range(num_epochs))
-    for epoch in pbar:
-        data, loss_mask = generate_token_copyset(config.n_tokens, 
-                                                 config.batch_size,
-                                                 config.max_len, min_len=config.min_len)
-        data, loss_mask = data.to(device), loss_mask.to(device)
-        # Prepare training data
-        input_seq, target_seq, copy_start_idx = prepare_training_data(data)
-        target_seq = data.argmax(dim=-1)
-        target_seq[~loss_mask] = -100 # ignore index in CE loss
-        
-        # Training step
-        model.train()
-        optimizer.zero_grad()
-        
-        loss, predictions = training_step(
-            model, input_seq, target_seq, copy_start_idx, criterion
-        )
-        
-        loss.backward()
-        optimizer.step()
-        train_losses.append(loss.item())
-        if run:
-            run.log({"loss":loss.item()})
-    
-    # Update learning rates
-    current_lr_mult = lr_schedule(epoch, num_epochs)
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr * current_lr_mult
-    
-    avg_loss = np.mean(train_losses)
-    pbar.set_description(f"Average Loss: {avg_loss:.6f}")
 
-    torch.save(model.state_dict(), f"models/copy_train/{cfg.run_name}/{cfg.run_name}.ckpt")
+    train_dataset, test_dataset = generate_token_copy_dataset(config.n_tokens,
+                                                              1e6,
+                                                              5e3,
+                                                              config.max_len,
+                                                              min_len=config.min_len
+                                                            )
+    # save test set somewhere:
+    torch.save(test_dataset, f"data/copy_test/{config.run_name}.pt")
+    loader = DataLoader(train_dataset, batch_size=config.batch_size,
+                         shuffle=True, pin_memory=True)
+    pbar = tqdm(range(num_epochs))
+    epoch = 0
+    while epoch <= num_epochs:
+        for data, loss_mask in loader:
+            data, loss_mask = data.to(device), loss_mask.to(device)
+            # Prepare training data
+            input_seq, target_seq, copy_start_idx = prepare_training_data(data)
+            target_seq = data.argmax(dim=-1)
+            target_seq[~loss_mask] = -100 # ignore index in CE loss
+            
+            # Training step
+            model.train()
+            optimizer.zero_grad()
+            
+            loss, predictions = training_step(
+                model, input_seq, target_seq, copy_start_idx, criterion
+            )
+            
+            loss.backward()
+            optimizer.step()
+            train_losses.append(loss.item())
+            if run:
+                run.log({"loss":loss.item()})
+            pbar.update(1)
+            pbar.set_description(f"Loss: {loss.item():.6f}")
+            epoch+=1
+            if epoch > num_epochs:
+                break
+    
+        # Update learning rates
+        current_lr_mult = lr_schedule(epoch, num_epochs)
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = lr * current_lr_mult    
+
+    torch.save(model.state_dict(), f"models/copy_train/{config.run_name}/{config.run_name}.ckpt")
     plt.plot(train_losses)
-    plt.savefig(f"models/copy_train/{cfg.run_name}/{cfg.run_name}_loss.png")
+    plt.savefig(f"models/copy_train/{config.run_name}/{config.run_name}_loss.png")
     
     return model, train_losses
 
@@ -416,17 +428,18 @@ if __name__ == "__main__":
 
     # Return a Config instance populated from args
     cfg = CopyConfig(**vars(args))
-    os.makedirs(f"models/{args.run_name}", exist_ok=True)
+    os.makedirs(f"models/copy_train/{args.run_name}", exist_ok=True)
     run = wandb.init(
         entity="mishaalkandapath",
         project="rnnsuperpos",
         config={
             "learning_rate": 1e-3,
             "batch_size": args.batch_size,
-            "n_hidden": args.d_hidden,
+            "n_hidden": args.d_hidden, 
             "max_len": args.max_len
         },
     )
+    # run=None
     torch.manual_seed(2)
     train_model_copy(cfg, run=run)
     # # Configuration
