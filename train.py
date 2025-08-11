@@ -10,7 +10,7 @@ import numpy as np
 from tqdm import tqdm 
 
 from rnn import RNN
-from datasets import generate_sparse_copyset    
+from datasets import generate_sparse_copyset, generate_token_copyset
 
 # Learning rate schedulers
 def linear_lr(step, steps):
@@ -32,6 +32,17 @@ class CopySuperPosConfig:
     n_correlated_pairs: int = 0
     n_anticorrelated_pairs: int = 0
     feat_mag_distn: Literal["unif", "normal"] = "unif"
+    gru: bool = False
+
+@dataclass
+class CopyConfig:
+    n_tokens: int = 30
+    d_hidden: int = 2
+    max_len: int = 9
+    min_len: int = 3
+    batch_size: int = 32
+    n_layers: int = 1
+    run_name: str
     gru: bool = False
 
 def add_delimiter_dimension(data, concat_del=True):
@@ -59,24 +70,24 @@ def add_delimiter_dimension(data, concat_del=True):
     enhanced_data = torch.cat([expanded_data, delimiter], dim=1)
     return enhanced_data
 
-def prepare_training_data(sparse_data):
+def prepare_training_data(data):
     """
     Prepare training data with delimiter token and teacher forcing
     Args:
-        sparse_data: (batch_size, copy_length, n_features)
+        data: (batch_size, copy_length, n_features)
     Returns:
         input_seq: (batch_size, seq_len, n_features + 1) - input + delimiter + target
         target_seq: (batch_size, seq_len, n_features) - targets (ignore positions then copy)
         copy_start_idx: index where copying should start in targets
     """
-    batch_size, copy_length, n_features = sparse_data.shape
+    batch_size, copy_length, n_features = data.shape
     
     # Add delimiter dimension to input data
-    input_with_delimiter = add_delimiter_dimension(sparse_data)
+    input_with_delimiter = add_delimiter_dimension(data)
     # input_with_delimiter: (batch_size, copy_length + 1, n_features + 1)
     
     # For teacher forcing, append the target sequence (original data with delimiter dim)
-    target_expanded = add_delimiter_dimension(sparse_data, concat_del=False)
+    target_expanded = add_delimiter_dimension(data, concat_del=False)
     target_expanded = target_expanded[:, :-1] # the last production does not need to be passed in
     # target_expanded: (batch_size, copy_length-1, n_features + 1)
     
@@ -84,12 +95,13 @@ def prepare_training_data(sparse_data):
     input_seq = torch.cat([input_with_delimiter, target_expanded], dim=1)
     
     # Target sequence: ignore first (copy_length) positions, then expect original data
-    target_seq = sparse_data.clone()
+    target_seq = data.clone()
     
     return input_seq, target_seq, copy_length
 
-def training_step(model, input_seq, target_generation, 
-                  copy_start_idx, criterion, importances):
+def training_step(model, 
+                  input_seq, target_generation, copy_start_idx,
+                  criterion, importances):
     """
     Single training step with teacher forcing
     Args:
@@ -161,9 +173,71 @@ def inference_generate(model, input_data):
 
 def mse_loss(pred, target, importances=1):
     """MSE loss function"""
-    return (importances * (pred - target) ** 2).mean()
+    return (loss_mask * importances * (pred - target) ** 2).mean()
 
-def train_model(config, feature_probabilities, importances=1, num_epochs=1000, 
+def cross_entropy_loss(pred, target, importances=1):
+    return nn.functional.cross_entropy(pred.transpose(1, 2), target)
+
+def train_model_copy(config, num_epochs=40000, lr=1e-3, 
+                     w_decay=0.1, lr_schedule=constant_lr):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    model = RNN(
+                input_size=config.n_tokens + 1,  # +1 for delimiter dimension
+                hidden_size=config.d_hidden,
+                out_size=config.n_tokens,  # Output original feature dimensions
+                out_act=nn.Identity, 
+                num_layers=1,
+                use_gru=config.gru
+            ).to(device)
+    
+    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=w_decay)
+    
+    criterion = mse_loss
+    train_losses = []
+    
+    pbar = tqdm(range(num_epochs))
+    for epoch in pbar:
+        epoch_losses = []
+        data, loss_mask = generate_token_copyset(config.n_tokens, 
+                                                 config.batch_size,
+                                                 config.max_len, min_len=config.min_len)
+        data, loss_mask = data.to(device), loss_mask.to(device)
+        # Prepare training data
+        input_seq, target_seq, copy_start_idx = prepare_training_data(data)
+        target_seq = data.argmax(dim=-1)
+        target_seq[~loss_mask] = -100 # ignore index in CE loss
+        
+        # Training step
+        model.train()
+        optimizer.zero_grad()
+        
+        loss, predictions = training_step(
+            models[inst_idx], input_seq, target_seq, copy_start_idx, criterion, importances
+        )
+        
+        loss.backward()
+        optimizers[inst_idx].step()
+        
+        epoch_losses.append(loss.item())
+        train_losses[inst_idx].append(loss.item())
+    
+    # Update learning rates
+    current_lr_mult = lr_schedule(epoch, num_epochs)
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr * current_lr_mult
+    
+    avg_loss = np.mean(epoch_losses)
+    pbar.set_description(f"Average Loss: {avg_loss:.6f}")
+
+    torch.save(model.state_dict(), f"models/copy_train/{run_name}/{run_name}.ckpt")
+    plt.plot(train_losses)
+    plt.savefig(f"models/copy_train/{run_name}/{run_name}_loss.png")
+    
+    return model, train_losses
+
+
+def train_model_superpos(config, feature_probabilities, importances=1, num_epochs=1000, 
                  lr=0.001, lr_schedule=constant_lr, w_decay=0):
     """
     Train RNN model on copy task
@@ -238,7 +312,44 @@ def train_model(config, feature_probabilities, importances=1, num_epochs=1000,
     
     return models, train_losses
 
-def evaluate_model(model, config, feature_probability, num_test_batches=10, importances=1):
+def evaluate_model_copy(config, model, num_test_batches):
+    device = next(model.parameters()).device
+    model.eval()
+    
+    total_mse = 0
+    perfect_copies = 0
+    total_sequences = 0
+
+    with torch.no_grad():
+        for batch_idx in range(num_test_batches):
+            # Generate test data
+            test_data, _ = generate_token_copyset(
+                                                 config.n_tokens, 
+                                                 1,
+                                                 config.max_len, min_len=config.min_len
+                                                )
+            
+            # Inference generation
+            generated, _ = inference_generate(model, test_data)
+            test_target = test_data.argmax(-1)
+            # Calculate MSE
+            loss = cross_entropy_loss(generated, test_target)
+            total_mse += loss.item()
+            
+            # Check for perfect reconstructions (within small tolerance)
+            perfect_batch = torch.count_nonzero(
+                nn.Softmax(dim=-1)(generated).eq(test_data)
+            ) == test_target.shape[1]
+            if perfect_batch:
+                perfect_copies += config.batch_size
+            total_sequences += config.batch_size
+    
+    avg_mse = total_mse / num_test_batches
+    perfect_copy_rate = perfect_copies / total_sequences
+    
+    return avg_mse, perfect_copy_rate
+
+def evaluate_model_superpos(model, config, feature_probability, num_test_batches=10, importances=1):
     """
     Evaluate model performance on copy task
     Args:
@@ -284,50 +395,69 @@ def evaluate_model(model, config, feature_probability, num_test_batches=10, impo
 
 # Example usage
 if __name__ == "__main__":
-    # Configuration
-    cfg = CopySuperPosConfig(n_inst=1, n_features=5, d_hidden=2, copy_length=3, batch_size=2)
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Train copy model")
+
+    parser.add_argument("--n_tokens", type=int, required=True, help="Number of tokens in vocab")
+    parser.add_argument("--batch_size", type=int, required=True, help="Training batch size")
+    parser.add_argument("--max_len", type=int, required=True, help="Maximum sequence length")
+    parser.add_argument("--min_len", type=int, required=True, help="Minimum sequence length")
+    parser.add_argument("--d_hidden", type=int, required=True, help="Hidden layer size")
+    parser.add_argument("--n_layers", type=int, required=True, help="Number of RNN layers")
+    parser.add_argument("--run_name", type=int, required=True, help="Name of run")
+    parser.add_argument("--gru", action="store_true", help="Use GRU?")
+
+    args = parser.parse_args()
+
+    # Return a Config instance populated from args
+    cfg = CopyConfig(**vars(args))
+    torch.manual_seed(2)
+    train_model_copy(cfg)
+    # # Configuration
+    # cfg = CopySuperPosConfig(n_inst=1, n_features=5, d_hidden=2, copy_length=3, batch_size=2)
     
-    # Create feature_probability levels (from paper setup)
-    feature_probabilities = torch.linspace(0.7, 0.9, cfg.n_inst).tolist()
+    # # Create feature_probability levels (from paper setup)
+    # feature_probabilities = torch.linspace(0.7, 0.9, cfg.n_inst).tolist()
     
-    print("Training RNN models on copy task...")
-    print(f"Config: {cfg}")
-    print(f"feature_probability levels: {feature_probabilities}")
+    # print("Training RNN models on copy task...")
+    # print(f"Config: {cfg}")
+    # print(f"feature_probability levels: {feature_probabilities}")
     
-    # Train models
-    models, losses = train_model(
-        cfg, 
-        feature_probabilities, 
-        num_epochs=500, 
-        lr=0.01, 
-        lr_schedule=cosine_decay_lr
-    )
+    # # Train models
+    # models, losses = train_model_superpos(
+    #     cfg, 
+    #     feature_probabilities, 
+    #     num_epochs=500, 
+    #     lr=0.01, 
+    #     lr_schedule=cosine_decay_lr
+    # )
     
-    # Evaluate models
-    print("\nEvaluating models...")
-    for i, (model, feature_probability) in enumerate(zip(models, feature_probabilities)):
-        mse, perfect_rate = evaluate_model(model, cfg, feature_probability, num_test_batches=5)
-        print(f"Model {i} (feature_probability={feature_probability:.2f}): MSE={mse:.6f}, Perfect copies={perfect_rate:.2f}")
+    # # Evaluate models
+    # print("\nEvaluating models...")
+    # for i, (model, feature_probability) in enumerate(zip(models, feature_probabilities)):
+    #     mse, perfect_rate = evaluate_model_superpos(model, cfg, feature_probability, num_test_batches=5)
+    #     print(f"Model {i} (feature_probability={feature_probability:.2f}): MSE={mse:.6f}, Perfect copies={perfect_rate:.2f}")
     
-    # # Plot training curves
-    # plt.figure(figsize=(10, 6))
-    # plt.plot(losses)
-    # plt.title("Training Loss")
-    # plt.xlabel("Epoch")
-    # plt.ylabel("MSE Loss")
-    # plt.yscale('log')
-    # plt.grid(True)
-    # plt.show()
+    # # # Plot training curves
+    # # plt.figure(figsize=(10, 6))
+    # # plt.plot(losses)
+    # # plt.title("Training Loss")
+    # # plt.xlabel("Epoch")
+    # # plt.ylabel("MSE Loss")
+    # # plt.yscale('log')
+    # # plt.grid(True)
+    # # plt.show()
     
-    # Test inference on a single example
-    print("\nTesting inference...")
-    test_model = models[0]
-    test_sparsity = feature_probabilities[0]
+    # # Test inference on a single example
+    # print("\nTesting inference...")
+    # test_model = models[0]
+    # test_sparsity = feature_probabilities[0]
     
-    # Generate single test sequence
-    test_input = generate_sparse_copyset(cfg.n_features, test_sparsity, cfg.copy_length, 1)
-    generated_output, _ = inference_generate(test_model, test_input, cfg.copy_length)
+    # # Generate single test sequence
+    # test_input = generate_sparse_copyset(cfg.n_features, test_sparsity, cfg.copy_length, 1)
+    # generated_output, _ = inference_generate(test_model, test_input, cfg.copy_length)
     
-    print(f"Input sequence:\n{test_input[0]}")
-    print(f"Generated sequence:\n{generated_output[0]}")
-    print(f"Reconstruction error: {mse_loss(generated_output, test_input).item():.6f}")
+    # print(f"Input sequence:\n{test_input[0]}")
+    # print(f"Generated sequence:\n{generated_output[0]}")
+    # print(f"Reconstruction error: {mse_loss(generated_output, test_input).item():.6f}")

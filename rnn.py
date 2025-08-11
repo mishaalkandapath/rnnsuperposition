@@ -50,15 +50,15 @@ class GRULayer(nn.Module):
         self.hidden_size = hidden_size
         
         # Reset gate parameters
-        self.input_to_reset = nn.Linear(input_size, hidden_size, bias=bias)
+        self.input_to_reset = nn.Linear(input_size, hidden_size, bias=False)
         self.hidden_to_reset = nn.Linear(hidden_size, hidden_size, bias=bias)
         
         # Update gate parameters
-        self.input_to_update = nn.Linear(input_size, hidden_size, bias=bias)
+        self.input_to_update = nn.Linear(input_size, hidden_size, bias=False)
         self.hidden_to_update = nn.Linear(hidden_size, hidden_size, bias=bias)
         
         # New gate parameters
-        self.input_to_new = nn.Linear(input_size, hidden_size, bias=bias)
+        self.input_to_new = nn.Linear(input_size, hidden_size, bias=False)
         self.hidden_to_new = nn.Linear(hidden_size, hidden_size, bias=bias)
         
     def forward(self, x, h_0=None):
@@ -113,7 +113,9 @@ class GRULayer(nn.Module):
 class RNN(nn.Module):
     """Base RNN class that can use either vanilla RNN cells or GRU cells"""
     
-    def __init__(self, input_size, hidden_size, out_size=0, num_layers=1, use_gru=False, hidden_bias=True, out_bias=True):
+    def __init__(self, input_size, hidden_size, 
+                 out_size=0, out_act=nn.ReLU, num_layers=1, 
+                 use_gru=False, hidden_bias=True, out_bias=True):
         super(RNN, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -133,6 +135,7 @@ class RNN(nn.Module):
                 self.layers.append(VanillaRNNLayer(layer_input_size, hidden_size, hidden_bias))
         if out_size: 
             self.layers.append(nn.Linear(hidden_size, out_size, bias=out_bias))
+            self.out_act = out_act
     
     def forward(self, x, h_0=None):
         """
@@ -164,7 +167,7 @@ class RNN(nn.Module):
             outputs, h_n = layer(outputs, h_0[i])
             final_hiddens.append(h_n)
         if self.out_size:
-            outputs = nn.ReLU()(self.layers[-1](outputs))
+            outputs = self.out_act(self.layers[-1](outputs))
         return outputs, final_hiddens
 
 
