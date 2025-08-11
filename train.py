@@ -2,10 +2,12 @@ from dataclasses import dataclass
 from typing import Literal
 import matplotlib.pyplot as plt
 import math
+import signal
+import sys
 
-import waitGPU
-waitGPU.wait(memory_ratio=0.001,
-             gpu_ids=[0,1], interval=10, nproc=1, ngpu=1)
+# import waitGPU
+# waitGPU.wait(memory_ratio=0.001,
+#              gpu_ids=[0,1], interval=10, nproc=1, ngpu=1)
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -15,6 +17,28 @@ from tqdm import tqdm
 
 from rnn import RNN
 from datasets import generate_sparse_copyset, generate_token_copy_dataset
+
+interrupted = False
+train_obj_global = None
+run_name_global = None
+
+def signal_handler(signum, frame):
+    global interrupted, train_obj_global, run_name_global
+    print("\n\nReceived interrupt signal (Ctrl+C). Saving model and exiting gracefully...")
+    interrupted = True
+    
+    if train_obj_global is not None and run_name_global is not None:
+        try:
+            os.makedirs(f"models/copy_train/{run_name_global}", exist_ok=True)
+            save_path = f"models/copy_train/{run_name_global}/interrupted_{run_name_global}.ckpt"
+            torch.save(train_obj_global.state_dict(), save_path)
+            print(f"Model saved to: {save_path}")
+        except Exception as e:
+            print(f"Error saving model: {e}")
+    
+    print("Exiting...")
+    sys.exit(0)
+
 
 # Learning rate schedulers
 def linear_lr(step, steps):
@@ -48,6 +72,7 @@ class CopyConfig:
     batch_size: int = 32
     n_layers: int = 1
     gru: bool = False
+    ctd_from: str = None
 
 def add_delimiter_dimension(data, concat_del=True):
     """
@@ -128,7 +153,7 @@ def training_step(model,
     
     return loss, outputs
 
-def inference_generate(model, input_data):
+def inference_generate(model, input_data, discrete=False, record_gates=False):
     """
     Generate sequence autoregressively during inference
     Args:
@@ -148,22 +173,34 @@ def inference_generate(model, input_data):
     
     # Process input + delimiter
     with torch.no_grad():
-        rnn_outputs, final_hiddens = model(input_with_delim)
+        if record_gates:
+            rnn_outputs, final_hiddens, r_t_seq, z_t_seq = model(input_with_delim, record_gates=True)
+        else:
+            rnn_outputs, final_hiddens = model(input_with_delim)
     # Start generation from the last hidden state
     current_hidden = [h.clone() for h in final_hiddens]
     generated_sequence = [rnn_outputs[:, -1]]
+    z_t_rest, r_t_rest = [], []
     
     # Generate autoregressively
     for step in range(copy_length-1):
         # Use previous generated output
         prev_output = generated_sequence[-1]  # (batch_size, n_features)
+        if discrete:
+            prev_output = nn.functional.one_hot(prev_output.argmax(-1),
+                                                prev_output.shape[-1])
         # Add delimiter dimension (0 for generation)
         next_input = torch.cat([prev_output.unsqueeze(1), 
                                 torch.zeros(batch_size, 1, 1, device=device)], dim=-1)
         
         # Forward pass for one step
         with torch.no_grad():
-            step_output, current_hidden = model(next_input, current_hidden)
+            if record_gates:
+                step_output, current_hidden, r_t_current, z_t_current = model(next_input, current_hidden, record_gates=True)
+                z_t_rest.append(z_t_current)
+                r_t_rest.append(r_t_current)
+            else:
+                step_output, current_hidden = model(next_input, current_hidden)
         
         # Extract the generated features (remove delimiter dimension if present)
         generated_step = step_output[:, 0, :]
@@ -172,7 +209,8 @@ def inference_generate(model, input_data):
     
     # Stack generated sequence
     generated = torch.stack(generated_sequence, dim=1)  # (batch_size, copy_length, n_features)
-    
+    if record_gates:
+        return generated, final_hiddens, torch.stack([r_t_seq, torch.stack(r_t_rest, dim=2)]), torch.stack([z_t_seq, torch.stack(z_t_rest, dim=2)], dim=2)
     return generated, final_hiddens
 
 def mse_loss(pred, target, importances=1):
@@ -182,8 +220,8 @@ def mse_loss(pred, target, importances=1):
 def cross_entropy_loss(pred, target, importances=1):
     return nn.functional.cross_entropy(pred.transpose(1, 2), target)
 
-def train_model_copy(config, num_epochs=40000, lr=1e-3, 
-                     w_decay=0.1, lr_schedule=constant_lr, run=None):
+def train_model_copy(config, num_epochs=40000, lr=1e-4, 
+                     w_decay=1e-3, lr_schedule=constant_lr, run=None):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     model = RNN(
@@ -194,6 +232,13 @@ def train_model_copy(config, num_epochs=40000, lr=1e-3,
                 num_layers=1,
                 use_gru=config.gru
             ).to(device)
+    
+    global train_obj_global, run_name_global
+    train_obj_global = model
+    run_name_global = config.run_name
+
+    if config.ctd_from:
+        model.load_state_dict(torch.load(f"models/copy_train/{config.ctd_from}/{config.ctd_from}.ckpt"))
     
     optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=w_decay)
     
@@ -229,6 +274,7 @@ def train_model_copy(config, num_epochs=40000, lr=1e-3,
             )
             
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
             train_losses.append(loss.item())
             if run:
@@ -326,7 +372,7 @@ def train_model_superpos(config, feature_probabilities, importances=1, num_epoch
     
     return models, train_losses
 
-def evaluate_model_copy(config, model, num_test_batches):
+def evaluate_model_copy(config, model):
     device = next(model.parameters()).device
     model.eval()
     
@@ -335,30 +381,29 @@ def evaluate_model_copy(config, model, num_test_batches):
     total_sequences = 0
 
     with torch.no_grad():
-        for batch_idx in range(num_test_batches):
             # Generate test data
-            test_data, _ = generate_token_copyset(
-                                                 config.n_tokens, 
-                                                 1,
-                                                 config.max_len, min_len=config.min_len
-                                                )
-            
+        test_dataset = torch.load(f"data/copy_test/{config.run_name}.pt")
+        for batch_idx in tqdm(range(len(test_dataset))):
             # Inference generation
-            generated, _ = inference_generate(model, test_data)
+            test_data, test_loss_mask = test_dataset[batch_idx]
+            generated, _ = inference_generate(model, test_data.unsqueeze(0),
+                                              discrete=True)
             test_target = test_data.argmax(-1)
+            test_target[~test_loss_mask] = -100
             # Calculate MSE
-            loss = cross_entropy_loss(generated, test_target)
+            loss = cross_entropy_loss(generated, test_target.unsqueeze(0))
             total_mse += loss.item()
-            
+            generated = generated.argmax(-1)
+            generated[~test_loss_mask.unsqueeze(0)] = -100
             # Check for perfect reconstructions (within small tolerance)
             perfect_batch = torch.all(
-                generated.argmax(-1) == test_target
+                generated == test_target
             )
             if perfect_batch:
                 perfect_copies += config.batch_size
             total_sequences += config.batch_size
     
-    avg_mse = total_mse / num_test_batches
+    avg_mse = total_mse / len(test_dataset)
     perfect_copy_rate = perfect_copies / total_sequences
     
     return avg_mse, perfect_copy_rate
@@ -413,6 +458,9 @@ if __name__ == "__main__":
     import os
     import wandb
 
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
     parser = argparse.ArgumentParser(description="Train copy model")
 
     parser.add_argument("--n_tokens", type=int, required=True, help="Number of tokens in vocab")
@@ -422,6 +470,7 @@ if __name__ == "__main__":
     parser.add_argument("--d_hidden", type=int, required=True, help="Hidden layer size")
     parser.add_argument("--n_layers", type=int, required=True, help="Number of RNN layers")
     parser.add_argument("--run_name", type=str, required=True, help="Name of run")
+    parser.add_argument("--ctd_from", type=str, default=None)
     parser.add_argument("--gru", action="store_true", help="Use GRU?")
 
     args = parser.parse_args()
