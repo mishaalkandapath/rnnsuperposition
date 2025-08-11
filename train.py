@@ -1,8 +1,11 @@
 from dataclasses import dataclass
 from typing import Literal
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import math
 
+import waitGPU
+waitGPU.wait(memory_ratio=0.001,
+             gpu_ids=[0,1], interval=10, nproc=1, ngpu=1)
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -36,13 +39,13 @@ class CopySuperPosConfig:
 
 @dataclass
 class CopyConfig:
+    run_name: str
     n_tokens: int = 30
     d_hidden: int = 2
     max_len: int = 9
     min_len: int = 3
     batch_size: int = 32
     n_layers: int = 1
-    run_name: str
     gru: bool = False
 
 def add_delimiter_dimension(data, concat_del=True):
@@ -59,16 +62,16 @@ def add_delimiter_dimension(data, concat_del=True):
     
     # Add delimiter at the end
     # Expand original data with 0s in delimiter dimension
-    expanded_data = torch.cat([data, torch.zeros(batch_size, seq_len, 1)], dim=-1)
+    expanded_data = torch.cat([data, torch.zeros(batch_size, seq_len, 1).to(data.device)], dim=-1).to(data.device)
     if not concat_del: return expanded_data
     
     # Create delimiter token: all zeros except delimiter dimension = 1
-    delimiter = torch.zeros(batch_size, 1, n_features + 1)
+    delimiter = torch.zeros(batch_size, 1, n_features + 1).to(data.device)
     delimiter[:, :, -1] = 1  # Set delimiter dimension to 1
     
     # Concatenate original data + delimiter
     enhanced_data = torch.cat([expanded_data, delimiter], dim=1)
-    return enhanced_data
+    return enhanced_data.to(data.device)
 
 def prepare_training_data(data):
     """
@@ -101,7 +104,7 @@ def prepare_training_data(data):
 
 def training_step(model, 
                   input_seq, target_generation, copy_start_idx,
-                  criterion, importances):
+                  criterion, importances=1):
     """
     Single training step with teacher forcing
     Args:
@@ -173,32 +176,31 @@ def inference_generate(model, input_data):
 
 def mse_loss(pred, target, importances=1):
     """MSE loss function"""
-    return (loss_mask * importances * (pred - target) ** 2).mean()
+    return (importances * (pred - target) ** 2).mean()
 
 def cross_entropy_loss(pred, target, importances=1):
     return nn.functional.cross_entropy(pred.transpose(1, 2), target)
 
 def train_model_copy(config, num_epochs=40000, lr=1e-3, 
-                     w_decay=0.1, lr_schedule=constant_lr):
+                     w_decay=0.1, lr_schedule=constant_lr, run=None):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     model = RNN(
                 input_size=config.n_tokens + 1,  # +1 for delimiter dimension
                 hidden_size=config.d_hidden,
                 out_size=config.n_tokens,  # Output original feature dimensions
-                out_act=nn.Identity, 
+                out_act=lambda x: x, 
                 num_layers=1,
                 use_gru=config.gru
             ).to(device)
     
-    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=w_decay)
+    optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=w_decay)
     
-    criterion = mse_loss
+    criterion = cross_entropy_loss
     train_losses = []
     
     pbar = tqdm(range(num_epochs))
     for epoch in pbar:
-        epoch_losses = []
         data, loss_mask = generate_token_copyset(config.n_tokens, 
                                                  config.batch_size,
                                                  config.max_len, min_len=config.min_len)
@@ -213,26 +215,26 @@ def train_model_copy(config, num_epochs=40000, lr=1e-3,
         optimizer.zero_grad()
         
         loss, predictions = training_step(
-            models[inst_idx], input_seq, target_seq, copy_start_idx, criterion, importances
+            model, input_seq, target_seq, copy_start_idx, criterion
         )
         
         loss.backward()
-        optimizers[inst_idx].step()
-        
-        epoch_losses.append(loss.item())
-        train_losses[inst_idx].append(loss.item())
+        optimizer.step()
+        train_losses.append(loss.item())
+        if run:
+            run.log({"loss":loss.item()})
     
     # Update learning rates
     current_lr_mult = lr_schedule(epoch, num_epochs)
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr * current_lr_mult
     
-    avg_loss = np.mean(epoch_losses)
+    avg_loss = np.mean(train_losses)
     pbar.set_description(f"Average Loss: {avg_loss:.6f}")
 
-    torch.save(model.state_dict(), f"models/copy_train/{run_name}/{run_name}.ckpt")
+    torch.save(model.state_dict(), f"models/copy_train/{cfg.run_name}/{cfg.run_name}.ckpt")
     plt.plot(train_losses)
-    plt.savefig(f"models/copy_train/{run_name}/{run_name}_loss.png")
+    plt.savefig(f"models/copy_train/{cfg.run_name}/{cfg.run_name}_loss.png")
     
     return model, train_losses
 
@@ -337,9 +339,9 @@ def evaluate_model_copy(config, model, num_test_batches):
             total_mse += loss.item()
             
             # Check for perfect reconstructions (within small tolerance)
-            perfect_batch = torch.count_nonzero(
-                nn.Softmax(dim=-1)(generated).eq(test_data)
-            ) == test_target.shape[1]
+            perfect_batch = torch.all(
+                generated.argmax(-1) == test_target
+            )
             if perfect_batch:
                 perfect_copies += config.batch_size
             total_sequences += config.batch_size
@@ -396,6 +398,8 @@ def evaluate_model_superpos(model, config, feature_probability, num_test_batches
 # Example usage
 if __name__ == "__main__":
     import argparse
+    import os
+    import wandb
 
     parser = argparse.ArgumentParser(description="Train copy model")
 
@@ -405,15 +409,26 @@ if __name__ == "__main__":
     parser.add_argument("--min_len", type=int, required=True, help="Minimum sequence length")
     parser.add_argument("--d_hidden", type=int, required=True, help="Hidden layer size")
     parser.add_argument("--n_layers", type=int, required=True, help="Number of RNN layers")
-    parser.add_argument("--run_name", type=int, required=True, help="Name of run")
+    parser.add_argument("--run_name", type=str, required=True, help="Name of run")
     parser.add_argument("--gru", action="store_true", help="Use GRU?")
 
     args = parser.parse_args()
 
     # Return a Config instance populated from args
     cfg = CopyConfig(**vars(args))
+    os.makedirs(f"models/{args.run_name}", exist_ok=True)
+    run = wandb.init(
+        entity="mishaalkandapath",
+        project="rnnsuperpos",
+        config={
+            "learning_rate": 1e-3,
+            "batch_size": args.batch_size,
+            "n_hidden": args.d_hidden,
+            "max_len": args.max_len
+        },
+    )
     torch.manual_seed(2)
-    train_model_copy(cfg)
+    train_model_copy(cfg, run=run)
     # # Configuration
     # cfg = CopySuperPosConfig(n_inst=1, n_features=5, d_hidden=2, copy_length=3, batch_size=2)
     

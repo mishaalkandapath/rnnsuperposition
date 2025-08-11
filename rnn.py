@@ -136,6 +136,7 @@ class RNN(nn.Module):
         if out_size: 
             self.layers.append(nn.Linear(hidden_size, out_size, bias=out_bias))
             self.out_act = out_act
+        print(self.layers)
     
     def forward(self, x, h_0=None):
         """
