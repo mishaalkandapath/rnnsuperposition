@@ -183,7 +183,7 @@ def inference_generate(model, input_data, discrete=False, record_gates=False):
     z_t_rest, r_t_rest = [], []
     
     # Generate autoregressively
-    for step in range(copy_length-1):
+    for _ in range(copy_length-1):
         # Use previous generated output
         prev_output = generated_sequence[-1]  # (batch_size, n_features)
         if discrete:
@@ -210,7 +210,7 @@ def inference_generate(model, input_data, discrete=False, record_gates=False):
     # Stack generated sequence
     generated = torch.stack(generated_sequence, dim=1)  # (batch_size, copy_length, n_features)
     if record_gates:
-        return generated, final_hiddens, torch.stack([r_t_seq, torch.stack(r_t_rest, dim=2)]), torch.stack([z_t_seq, torch.stack(z_t_rest, dim=2)], dim=2)
+        return generated, final_hiddens, torch.cat([r_t_seq, torch.cat(r_t_rest, dim=2)], dim=2), torch.cat([z_t_seq, torch.cat(z_t_rest, dim=2)], dim=2)
     return generated, final_hiddens
 
 def mse_loss(pred, target, importances=1):
@@ -220,7 +220,7 @@ def mse_loss(pred, target, importances=1):
 def cross_entropy_loss(pred, target, importances=1):
     return nn.functional.cross_entropy(pred.transpose(1, 2), target)
 
-def train_model_copy(config, num_epochs=40000, lr=1e-4, 
+def train_model_copy(config, num_epochs=90000, lr=1e-4, 
                      w_decay=1e-3, lr_schedule=constant_lr, run=None):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -239,20 +239,22 @@ def train_model_copy(config, num_epochs=40000, lr=1e-4,
 
     if config.ctd_from:
         model.load_state_dict(torch.load(f"models/copy_train/{config.ctd_from}/{config.ctd_from}.ckpt"))
+        train_dataset = torch.load(f"data/copy_test/{config.ctd_from}.pt")
     
     optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=w_decay)
     
     criterion = cross_entropy_loss
     train_losses = []
 
-    train_dataset, test_dataset = generate_token_copy_dataset(config.n_tokens,
-                                                              1e6,
-                                                              5e3,
-                                                              config.max_len,
-                                                              min_len=config.min_len
-                                                            )
-    # save test set somewhere:
-    torch.save(test_dataset, f"data/copy_test/{config.run_name}.pt")
+    if not config.ctd_from:
+        train_dataset, test_dataset = generate_token_copy_dataset(config.n_tokens,
+                                                                1e6,
+                                                                5e3,
+                                                                config.max_len,
+                                                                min_len=config.min_len
+                                                                )
+        # save test set somewhere:
+        torch.save(test_dataset, f"data/copy_test/{config.run_name}.pt")
     loader = DataLoader(train_dataset, batch_size=config.batch_size,
                          shuffle=True, pin_memory=True)
     pbar = tqdm(range(num_epochs))

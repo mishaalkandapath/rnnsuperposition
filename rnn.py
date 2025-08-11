@@ -112,7 +112,7 @@ class GRULayer(nn.Module):
         
         # Stack all outputs along time dimension
         outputs = torch.cat(outputs, dim=1)  # (batch_size, seq_len, hidden_size)
-        if record_gates: return outputs, h_t, torch.stack(r_record), torch.stack(z_record)
+        if record_gates: return outputs, h_t, torch.stack(r_record, dim=1), torch.stack(z_record, dim=1)
         return outputs, h_t
 
 
@@ -175,7 +175,7 @@ class RNN(nn.Module):
             if record_gates:
                 outputs, h_n, r_record, z_record = layer(outputs, h_0[i], record_gates=record_gates)
                 r_records.append(r_record)
-                z_record.append(z_record)
+                z_records.append(z_record)
             else:
                 outputs, h_n = layer(outputs, h_0[i], record_gates=record_gates)
             final_hiddens.append(h_n)
