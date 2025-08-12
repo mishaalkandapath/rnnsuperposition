@@ -64,3 +64,228 @@ def generate_token_copy_dataset(n_tokens, train_size, test_size,
                                                                 train_seq_indices)
     
     return TensorDataset(train_seq_one_hot, train_loss_mask), TensorDataset(test_seq_one_hot, test_loss_mask)
+
+""" 
+--- Two-step RL Task ---
+1. initial observation state - choose one of two actions. 
+2. Each action triggers one of two possible transitions -- ie. moves one of two states. 
+3. For each action, there is a high probability and low prob transition (symmetric)
+4. The choice of an action -> induces transition -> receives reward 
+5. Reward can be high or low, and this can vary trial to trial. 
+
+-- Specifics --
+p(S1|a1) = p(S2|a2) = 0.8
+p(S2|a1) = p(S1|a2) = 0.2
+p(r|S1) = 0.9, p(r|S2) = 0.1
+2.5% of this reward allocation switching trial to trial 
+Wang: train 10K episodes, 100 trials each. Tested w fixed weights on 300 eps
+
+
+RNN Train Setup:
+1. Learned initial state representation
+2. Input at t time consists, of observation ot, a_t-1, and varying reward:
+Delay 1:
+r -> from your choice last trial 
+a -> fixation action
+o -> curernt fixation cue state (no go signal)
+outputs:
+value and action, correct action says fixation actions
+
+Go:
+r -> 0
+a -> fixation action
+o -> fixation cue state (w go signal)
+output: value and action, correct action is one of a1 or a2
+
+Delay 2:
+r -> 0 
+a -> last action
+o -> resultant state
+value and action, correct action is fixation action
+----
+Incorrect choices of fixation action leads to a -1 reward. i.e the 0s get -0.1. if you choose fixation in go, that gets a similar L, but ig the following state would be the fixation state. 
+----
+Output vector has 4 logits, first three are for the three legal actions 
+----
+Inputs are concat one-hot vectors, except for the scalar reward. For Advantage actor critic, you sample the actions based off the softmax. 
+---
+d_hidden = 48
+"""
+import random
+import torch
+
+class TwoStepRLEnvironment:
+    def __init__(self, reward_switch_prob=0.025):
+        """
+        Two-step RL task environment.
+        
+        Args:
+            reward_switch_prob: Probability of switching reward allocation each trial (default 2.5%)
+        """
+        self.reward_switch_prob = reward_switch_prob
+        
+        # Action definitions
+        self.FIXATION_ACTION = 0
+        self.ACTION_1 = 1
+        self.ACTION_2 = 2
+        
+        # State definitions
+        self.FIXATION_STATE = 0
+        self.STATE_1 = 1
+        self.STATE_2 = 2
+        
+        # Phase definitions
+        self.DELAY_1 = 0  # Show fixation cue, no go signal
+        self.GO = 1       # Show fixation cue with go signal
+        self.DELAY_2 = 2  # Show resultant state
+        
+        # Transition probabilities
+        self.p_high = 0.8  # High probability transition
+        self.p_low = 0.2   # Low probability transition
+        
+        # Reward probabilities
+        self.reward_probs = {
+            self.STATE_1: 0.9,
+            self.STATE_2: 0.1
+        }
+        
+        self.reset_trial(reset_r=True)
+        
+    def reset_trial(self, reset_r=False):
+        """Reset for a new trial"""
+        self.phase = self.DELAY_1
+        self.current_state = self.FIXATION_STATE
+        self.last_action = self.FIXATION_ACTION
+        self.trial_complete = False
+        if reset_r:
+            self.last_reward = 0
+        
+        # Possibly switch reward allocation (2.5% chance)
+        if random.random() < self.reward_switch_prob:
+            self.reward_probs[self.STATE_1], self.reward_probs[self.STATE_2] = \
+                self.reward_probs[self.STATE_2], self.reward_probs[self.STATE_1]
+    
+    def get_observation(self):
+        """
+        Get current observation as concatenated one-hot vectors plus scalar reward.
+        
+        Returns:
+            dict with:
+            - observation: one-hot encoded current state (3-dim)
+            - last_action: one-hot encoded last action (3-dim) 
+            - reward: scalar reward from last trial
+            - go_signal: whether go signal is active
+            - phase: current phase of trial
+        """
+        # One-hot encode current state
+        obs = [0, 0, 0]
+        obs[self.current_state] = 1
+        
+        # One-hot encode last action
+        action_vec = [0, 0, 0]
+        action_vec[self.last_action] = 1
+        
+        # Go signal (only active in GO phase)
+        go_signal = 1 if self.phase == self.GO else 0
+        
+        return {
+            'observation': obs,
+            'last_action': action_vec,
+            'reward': self.last_reward,
+            'go_signal': go_signal,
+            'phase': self.phase
+        }
+    
+    def step(self, action):
+        """
+        Execute one step in the environment.
+        
+        Args:
+            action: Integer action (0=fixation, 1=action1, 2=action2)
+            
+        Returns:
+            observation, reward, done, info
+        """
+        reward = 0
+        
+        if self.phase == self.DELAY_1:
+            # Should choose fixation action
+            if action == self.FIXATION_ACTION:
+                reward = 0
+            else:
+                reward = -0.1  # Incorrect choice penalty
+            self.phase = self.GO
+                
+        elif self.phase == self.GO:
+            # Should choose action 1 or 2
+            if action == self.FIXATION_ACTION:
+                reward = -0.1  # Incorrect choice penalty
+                self.current_state = self.FIXATION_STATE
+            elif action in [self.ACTION_1, self.ACTION_2]:
+                # Determine next state based on transition probabilities
+                if action == self.ACTION_1:
+                    # p(S1|a1) = 0.8, p(S2|a1) = 0.2
+                    if random.random() < self.p_high:
+                        self.current_state = self.STATE_1
+                    else:
+                        self.current_state = self.STATE_2
+                else:  # action == ACTION_2
+                    # p(S2|a2) = 0.8, p(S1|a2) = 0.2
+                    if random.random() < self.p_high:
+                        self.current_state = self.STATE_2
+                    else:
+                        self.current_state = self.STATE_1
+                    
+            self.phase = self.DELAY_2
+                
+        elif self.phase == self.DELAY_2:
+            # Get reward based on resulting state
+            # Should choose fixation action
+            if action != self.FIXATION_ACTION or not self.current_state:
+                reward = -0.1  # Incorrect choice penalty
+            elif random.random() < self.reward_probs[self.current_state]:
+                reward = 1.0  # High reward
+            else:
+                reward = 0.0  # Low reward
+            
+        # Update last action and reward for next step
+        self.last_action = action
+        self.last_reward = reward  # This will be used in next trial
+            
+        observation = self.get_observation()
+        
+        return observation
+    
+    def get_correct_action(self):
+        """Get the correct action for current phase"""
+        if self.phase == self.DELAY_1:
+            return self.FIXATION_ACTION
+        elif self.phase == self.GO:
+            # In practice, this would depend on the learned policy
+            # Return None to indicate agent should choose
+            return None
+        elif self.phase == self.DELAY_2:
+            return self.FIXATION_ACTION
+    
+    def get_action_mask(self):
+        """Get mask for valid actions (for use with neural network output)"""
+        # All actions are technically possible, but some are incorrect
+        return [1, 1, 1]  # [fixation, action1, action2]
+    
+    def get_input_vector(self):
+        """
+        Get flattened input vector for neural network.
+        
+        Returns:
+            Concatenated vector: [obs(3) + last_action(3) + reward(1) + go_signal(1)]
+        """
+        obs_data = self.get_observation()
+        return (obs_data['observation'] + 
+                obs_data['last_action'] + 
+                [obs_data['reward']] +
+                [obs_data['go_signal']])
+    
+    def __str__(self):
+        phase_names = {0: "DELAY_1", 1: "GO", 2: "DELAY_2"}
+        state_names = {0: "FIXATION", 1: "STATE_1", 2: "STATE_2"}
+        return f"Phase: {phase_names[self.phase]}, State: {state_names[self.current_state]}"
