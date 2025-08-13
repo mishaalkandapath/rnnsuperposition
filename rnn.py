@@ -79,10 +79,13 @@ class GRULayer(nn.Module):
         outputs = []
         h_t = h_0
 
-        r_record, z_record = [], []
+        r_record, z_record, h_new_record, h_record = [], [], [], []
         
         # Process each time step
         for t in range(seq_len):
+            if record_gates:
+                h_record.append(h_t.detach().cpu())
+
             x_t = x[:, t, :]  # Current input: (batch_size, input_size)
             
             # Reset gate: r_t = sigmoid(W_ir @ x_t + W_hr @ h_{t-1} + b_r)
@@ -108,10 +111,11 @@ class GRULayer(nn.Module):
             if record_gates:
                 r_record.append(r_t.detach().cpu())
                 z_record.append(z_t.detach().cpu())
+                h_new_record.append(n_t.detach().cpu())
         
         # Stack all outputs along time dimension
         outputs = torch.cat(outputs, dim=1)  # (batch_size, seq_len, hidden_size)
-        if record_gates: return outputs, h_t, torch.stack(r_record, dim=1), torch.stack(z_record, dim=1)
+        if record_gates: return outputs, h_t, torch.stack(r_record, dim=1), torch.stack(z_record, dim=1), torch.stack(h_new_record, dim=1), torch.stack(h_record, dim=1)
         return outputs, h_t
 
 
@@ -176,22 +180,24 @@ class RNN(nn.Module):
         
         outputs = x
         final_hiddens = [] # per layer --for last timestep
-        r_records, z_records = [], []
+        r_records, z_records, h_new_records, h_records = [], [], [], []
         
         # Pass through each layer
         for i in range(len(self.layers) - (self.out_size != 0)):
             layer = self.layers[i]
             # outputs - the output of the hidden layer -- the h_t forall t
             if record_gates:
-                outputs, h_n, r_record, z_record = layer(outputs, h_0[i], record_gates=record_gates)
+                outputs, h_n, r_record, z_record, h_new_record, h_record = layer(outputs, h_0[i], record_gates=record_gates)
                 r_records.append(r_record)
                 z_records.append(z_record)
+                h_new_records.append(h_new_record)
+                h_records.append(h_record)
             else:
                 outputs, h_n = layer(outputs, h_0[i], record_gates=record_gates)
             final_hiddens.append(h_n)
         if self.out_size:
             outputs = self.out_act(self.layers[-1](outputs))
-        if record_gates: return outputs, final_hiddens, torch.stack(r_records), torch.stack(z_records)
+        if record_gates: return outputs, final_hiddens, torch.stack(r_records), torch.stack(z_records), torch.stack(h_new_records), torch.stack(h_records)
         return outputs, final_hiddens
 
 

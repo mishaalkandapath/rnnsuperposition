@@ -174,13 +174,13 @@ def inference_generate(model, input_data, discrete=False, record_gates=False):
     # Process input + delimiter
     with torch.no_grad():
         if record_gates:
-            rnn_outputs, final_hiddens, r_t_seq, z_t_seq = model(input_with_delim, record_gates=True)
+            rnn_outputs, final_hiddens, r_t_seq, z_t_seq, h_new_t_seq, h_t_seq = model(input_with_delim, record_gates=True)
         else:
             rnn_outputs, final_hiddens = model(input_with_delim)
     # Start generation from the last hidden state
     current_hidden = [h.clone() for h in final_hiddens]
     generated_sequence = [rnn_outputs[:, -1]]
-    z_t_rest, r_t_rest = [], []
+    z_t_rest, r_t_rest, h_new_t_rest, h_t_rest = [], [], [], []
     
     # Generate autoregressively
     for _ in range(copy_length-1):
@@ -196,9 +196,11 @@ def inference_generate(model, input_data, discrete=False, record_gates=False):
         # Forward pass for one step
         with torch.no_grad():
             if record_gates:
-                step_output, current_hidden, r_t_current, z_t_current = model(next_input, current_hidden, record_gates=True)
+                step_output, current_hidden, r_t_current, z_t_current, h_new_t_current, h_t_prev = model(next_input, current_hidden, record_gates=True)
                 z_t_rest.append(z_t_current)
                 r_t_rest.append(r_t_current)
+                h_new_t_rest.append(h_new_t_current)
+                h_t_rest.append(h_t_prev)
             else:
                 step_output, current_hidden = model(next_input, current_hidden)
         
@@ -210,7 +212,7 @@ def inference_generate(model, input_data, discrete=False, record_gates=False):
     # Stack generated sequence
     generated = torch.stack(generated_sequence, dim=1)  # (batch_size, copy_length, n_features)
     if record_gates:
-        return generated, final_hiddens, torch.cat([r_t_seq, torch.cat(r_t_rest, dim=2)], dim=2), torch.cat([z_t_seq, torch.cat(z_t_rest, dim=2)], dim=2)
+        return generated, final_hiddens, torch.cat([r_t_seq, torch.cat(r_t_rest, dim=2)], dim=2), torch.cat([z_t_seq, torch.cat(z_t_rest, dim=2)], dim=2), torch.cat([h_new_t_seq, torch.cat(h_new_t_rest, dim=2)], dim=2), torch.cat([h_t_seq, torch.cat(h_t_rest, dim=2)], dim=2) 
     return generated, final_hiddens
 
 def mse_loss(pred, target, importances=1):
