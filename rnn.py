@@ -120,13 +120,14 @@ class RNN(nn.Module):
     
     def __init__(self, input_size, hidden_size, 
                  out_size=0, out_act=nn.ReLU, num_layers=1, 
-                 use_gru=False, hidden_bias=True, out_bias=True):
+                 use_gru=False, hidden_bias=True, out_bias=True, learn_init=False):
         super(RNN, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.out_size = out_size
         self.num_layers = num_layers
         self.use_gru = use_gru
+        self.learn_init = learn_init
         
         # Create layers based on cell type
         self.layers = nn.ModuleList()
@@ -141,6 +142,11 @@ class RNN(nn.Module):
         if out_size: 
             self.layers.append(nn.Linear(hidden_size, out_size, bias=out_bias))
             self.out_act = out_act
+        if self.learn_init:
+            self.initial_states = nn.ParameterList([
+                nn.Parameter(torch.zeros(hidden_size)) 
+                for _ in range(num_layers)
+            ])
         print(self.layers)
     
     def forward(self, x, h_0=None, record_gates=False):
@@ -156,7 +162,12 @@ class RNN(nn.Module):
         batch_size = x.size(0)
         
         # Initialize hidden states for all layers if not provided
-        if h_0 is None:
+        if h_0 is None and self.learn_init:
+            h_0 = [
+                state.unsqueeze(0).expand(batch_size, -1)
+                for state in self.initial_states
+            ]
+        elif h_0 is None:
             h_0 = [None] * self.num_layers
         elif not isinstance(h_0, list):
             h_0 = [h_0] + [None] * (self.num_layers - 1)

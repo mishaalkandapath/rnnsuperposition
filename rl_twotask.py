@@ -37,7 +37,7 @@ class ActorCriticTrainer:
     Trainer class implementing advantage actor-critic algorithm for the two-step RL task.
     """
     
-    def __init__(self, model, env, lr=7e-4, gamma=0.9, 
+    def __init__(self, model, env, lr=7e-4, lr_init= 0, gamma=0.9, 
                  beta_entropy=0.005, beta_critic=0.05, logger=None, device=None):
         """
         Initialize trainer. Defaults as in Wang et. al (2017)
@@ -59,7 +59,19 @@ class ActorCriticTrainer:
         self.beta_critic = beta_critic
         
         # Separate optimizers for actor and critic (following pseudocode θ and θ_v)
-        self.optimizer = optim.Adam(model.parameters(), lr=lr)
+        if model.learn_init:
+            self.optimizer = torch.optim.Adam([
+                # Regular RNN parameters (weights, biases)
+                {'params': [p for name, p in model.named_parameters() 
+                            if 'initial_states' not in name], 
+                'lr': lr},
+                
+                # Initial state parameters  
+                {'params': model.initial_states.parameters(), 
+                'lr': lr_init} 
+            ], lr=lr)
+        else:
+            self.optimizer = optim.Adam(model.parameters(), lr=lr)
         
         # Training statistics
         self.training_stats = defaultdict(list)
@@ -94,7 +106,7 @@ class ActorCriticTrainer:
             return torch.argmax(policy_logits).item()
         else:
             action_probs = F.softmax(policy_logits, dim=0)
-            return torch.multinomial(action_probs, 1)
+            return int(torch.multinomial(action_probs, 1).item())
     
     def compute_returns(self, rewards, values, is_terminal=True):
         """
@@ -132,6 +144,7 @@ class ActorCriticTrainer:
         
         # Compute advantages
         advantages = returns - values
+        advantages = torch.clamp(advantages, -5.0, 5.0)
         
         # Actor loss: -∇_θ log π(a|s; θ) * (R - V(s; θ_v))
         log_probs = []
@@ -139,7 +152,8 @@ class ActorCriticTrainer:
         
         for i, logits in enumerate(policy_logits_history):
             dist = torch.distributions.Categorical(logits=logits)
-            log_prob = dist.log_prob(actions_history[i])
+            a = torch.tensor(actions_history[i], dtype=torch.long, device=logits.device)
+            log_prob = dist.log_prob(a)
             entropy = dist.entropy()
             
             log_probs.append(log_prob)
@@ -152,7 +166,9 @@ class ActorCriticTrainer:
         actor_loss = -(log_probs * advantages.detach()).mean() - self.beta_entropy * entropies.mean()
         
         # Critic loss: (R - V(s; θ_v))^2
-        critic_loss = F.mse_loss(values, returns)
+        critic_loss = 0.5 * F.mse_loss(values, returns)
+
+        # print(f"Mean ret: {returns.mean()} Std Ret: {returns.std()} Adv Mean :{advantages.mean()} Adv Std: {advantages.std()} Entropy: {entropy.item()}")
         
         return actor_loss, critic_loss, advantages.detach()
     
@@ -227,10 +243,10 @@ class ActorCriticTrainer:
             return 0, 0
             
         # Compute returns with bootstrapping
-        terminal_value = 0.0  # Terminal state has value 0
-        returns = self.compute_returns(episode_data['rewards'], 
-                                     episode_data['values'], 
-                                     terminal_value)
+        returns = self.compute_returns(
+                                     episode_data['rewards'], 
+                                     episode_data['values']
+                                    )
         
         # Compute losses
         actor_loss, critic_loss, advantages = self.compute_advantage_loss(
@@ -246,7 +262,7 @@ class ActorCriticTrainer:
         
         return actor_loss.item(), critic_loss.item()
     
-    def train(self, num_episodes=10000, trials_per_episode=100, 
+    def train(self, num_episodes=15000, trials_per_episode=100, 
               eval_every=-1, eval_episodes=10):
         """
         Main training loop following the advantage actor-critic algorithm.
@@ -276,12 +292,13 @@ class ActorCriticTrainer:
             self.training_stats['critic_losses'].append(critic_loss)
             
             # Periodic evaluation and reporting
-            if episode > 0 and (episode + 1) % eval_every == 0:
+            if eval_every > 0 and (episode + 1) % eval_every == 0:
                 self.evaluate_model(eval_episodes, trials_per_episode)
             
-            recent_reward = np.mean(self.training_stats['episode_rewards'][-eval_every:])
-            recent_actor_loss = np.mean(self.training_stats['actor_losses'][-eval_every:])
-            recent_critic_loss = np.mean(self.training_stats['critic_losses'][-eval_every:])
+            eval_range = min(50, episode)
+            recent_reward = np.mean(self.training_stats['episode_rewards'][-eval_range:])
+            recent_actor_loss = np.mean(self.training_stats['actor_losses'][-eval_range:])
+            recent_critic_loss = np.mean(self.training_stats['critic_losses'][-eval_range:])
                 
             pbar.set_description(f"R={recent_reward:6.2f}, aloss={recent_actor_loss:6.3f}, closs={recent_critic_loss:6.3f}")
 
@@ -290,7 +307,7 @@ class ActorCriticTrainer:
                          "Actor loss":recent_actor_loss,
                           "Critic Loss": recent_critic_loss })
         
-        torch.save(self.model.state_dict())
+        torch.save(self.model.state_dict(), f"models/rl_train/{run_name_global}/{run_name_global}.ckpt")
         return self.training_stats
     
     def evaluate_model(self, num_episodes=300, trials_per_episode=100):
@@ -354,10 +371,12 @@ if __name__ =="__main__":
     parser.add_argument("--run_name", type=str, required=True, help="Name of run")
     parser.add_argument("--ctd_from", type=str, default=None)
     parser.add_argument("--gru", action="store_true", help="Use GRU?")
-    parser.add_argument("--lr", default=7e-4)
-    parser.add_argument("--gamma", default=0.9)
-    parser.add_argument("--beta_entropy", default=0.005)
-    parser.add_argument("--beta_critic", default=0.005)
+    parser.add_argument("--lr", type=float, default=7e-4)
+    parser.add_argument("--lr_init", type=float, default=0)
+    parser.add_argument("--gamma", type=float, default=0.97)
+    parser.add_argument("--beta_entropy", type=float, default=0.001)
+    parser.add_argument("--beta_critic", type=float, default=0.1)
+    parser.add_argument("--learn_init", action="store_true")
 
     args = parser.parse_args()
 
@@ -367,10 +386,11 @@ if __name__ =="__main__":
         project="rnnsuperpos",
         config={
             "lr": args.lr,
+            "lr_init": args.lr_init,
             "gamma": args.gamma,
             "beta_entropy": args.beta_entropy,
             "beta_critic": args.beta_critic,
-            "n_hidden": args.d_hidden, 
+            "n_hidden": args.d_hidden
         },
     )
     # run = None
@@ -381,21 +401,20 @@ if __name__ =="__main__":
     env.reset_trial(reset_r=True)
     in_size = len(env.get_input_vector())
     model = RNN(input_size=in_size, hidden_size=48, out_size=4,
-                 out_act=lambda x: x, use_gru=args.gru)
+                 out_act=lambda x: x, use_gru=args.gru, learn_init=args.learn_init)
     
     if args.ctd_from:
         model.load_state_dict(torch.load(f"models/rl_train/{args.ctd_from}/{args.ctd_from}.ckpt"))
     
     trainer = ActorCriticTrainer(model, env, 
                                  lr=args.lr, 
+                                 lr_init=args.lr_init,
                                  gamma=args.gamma,
                                  beta_critic=args.beta_critic,
                                  beta_entropy=args.beta_entropy,
                                  logger=run)
-    
 
     train_obj_global = trainer
     run_name_global = args.run_name
     train_stats = trainer.train()
-
     print(train_stats)

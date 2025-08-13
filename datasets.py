@@ -2,6 +2,7 @@ import torch
 from torch.utils.data import TensorDataset
 torch.serialization.add_safe_globals([TensorDataset])
 import math
+import random
 
 def generate_sparse_copyset(n_features, feature_prob, copy_length, batch_size):
     """Generate sparse copy dataset"""
@@ -111,8 +112,6 @@ Inputs are concat one-hot vectors, except for the scalar reward. For Advantage a
 ---
 d_hidden = 48
 """
-import random
-import torch
 
 class TwoStepRLEnvironment:
     def __init__(self, reward_switch_prob=0.025):
