@@ -16,7 +16,7 @@ import numpy as np
 from tqdm import tqdm 
 
 from rnn import RNN
-from datasets import generate_sparse_copyset, generate_token_copy_dataset
+from datasets import generate_sparse_copyset, generate_token_copy_dataset, add_delimiter_dimension
 
 interrupted = False
 train_obj_global = None
@@ -73,63 +73,12 @@ class CopyConfig:
     n_layers: int = 1
     gru: bool = False
     ctd_from: str = None
-
-def add_delimiter_dimension(data, concat_del=True):
-    """
-    Add delimiter dimension to data
-    Args:
-        data: (batch_size, seq_len, n_features)
-        delimiter_pos: position to place delimiter, if None adds at end
-    Returns:
-        enhanced_data: (batch_size, seq_len + 1, n_features + 1) if delimiter added
-                      or (batch_size, seq_len, n_features + 1) if delimiter_pos specified
-    """
-    batch_size, seq_len, n_features = data.shape
-    
-    # Add delimiter at the end
-    # Expand original data with 0s in delimiter dimension
-    expanded_data = torch.cat([data, torch.zeros(batch_size, seq_len, 1).to(data.device)], dim=-1).to(data.device)
-    if not concat_del: return expanded_data
-    
-    # Create delimiter token: all zeros except delimiter dimension = 1
-    delimiter = torch.zeros(batch_size, 1, n_features + 1).to(data.device)
-    delimiter[:, :, -1] = 1  # Set delimiter dimension to 1
-    
-    # Concatenate original data + delimiter
-    enhanced_data = torch.cat([expanded_data, delimiter], dim=1)
-    return enhanced_data.to(data.device)
-
-def prepare_training_data(data):
-    """
-    Prepare training data with delimiter token and teacher forcing
-    Args:
-        data: (batch_size, copy_length, n_features)
-    Returns:
-        input_seq: (batch_size, seq_len, n_features + 1) - input + delimiter + target
-        target_seq: (batch_size, seq_len, n_features) - targets (ignore positions then copy)
-        copy_start_idx: index where copying should start in targets
-    """
-    batch_size, copy_length, n_features = data.shape
-    
-    # Add delimiter dimension to input data
-    input_with_delimiter = add_delimiter_dimension(data)
-    # input_with_delimiter: (batch_size, copy_length + 1, n_features + 1)
-    
-    # For teacher forcing, append the target sequence (original data with delimiter dim)
-    target_expanded = add_delimiter_dimension(data, concat_del=False)
-    target_expanded = target_expanded[:, :-1] # the last production does not need to be passed in
-    # target_expanded: (batch_size, copy_length-1, n_features + 1)
-    
-    # Full input sequence: input + delimiter + target (for teacher forcing)
-    input_seq = torch.cat([input_with_delimiter, target_expanded], dim=1)
-    
-    # Target sequence: ignore first (copy_length) positions, then expect original data
-    target_seq = data.clone()
-    
-    return input_seq, target_seq, copy_length
+    data_path: str = None
 
 def training_step(model, 
-                  input_seq, target_generation, copy_start_idx,
+                  data_seq,
+                  targets,
+                  loss_mask,
                   criterion, importances=1):
     """
     Single training step with teacher forcing
@@ -144,13 +93,9 @@ def training_step(model,
         predictions: model outputs for analysis
     """
     # Forward pass
-    outputs, hidden_states = model(input_seq)
-    
-    # Only compute loss on the generation part (after delimiter)
-    pred_generation = outputs[:, copy_start_idx:, :]
-    
-    loss = criterion(pred_generation, target_generation, importances)
-    
+    outputs, _ = model(data_seq)
+    targets[~loss_mask] = -100
+    loss = criterion(outputs, targets, importances)
     return loss, outputs
 
 def inference_generate(model, input_data, discrete=False, record_gates=False):
@@ -220,10 +165,12 @@ def mse_loss(pred, target, importances=1):
     return (importances * (pred - target) ** 2).mean()
 
 def cross_entropy_loss(pred, target, importances=1):
-    return nn.functional.cross_entropy(pred.transpose(1, 2), target)
+    return nn.functional.cross_entropy(pred.transpose(1, 2), target,
+                                       ignore_index=-100)
 
-def train_model_copy(config, num_epochs=90000, lr=1e-4, 
-                     w_decay=1e-3, lr_schedule=constant_lr, run=None):
+# 90K, 1e-4, 1e-3
+def train_model_copy(config, num_epochs=15000, lr=1e-3, 
+                     w_decay=1e-2, lr_schedule=constant_lr, run=None):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     model = RNN(
@@ -241,14 +188,16 @@ def train_model_copy(config, num_epochs=90000, lr=1e-4,
 
     if config.ctd_from:
         model.load_state_dict(torch.load(f"models/copy_train/{config.ctd_from}/{config.ctd_from}.ckpt"))
-        train_dataset = torch.load(f"data/copy_test/{config.ctd_from}.pt")
+    if config.data_path:
+        print(f"loading dataset {config.data_path}")
+        train_dataset = torch.load(f"data/copy_train/{config.data_path}.pt")
     
     optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=w_decay)
     
     criterion = cross_entropy_loss
     train_losses = []
 
-    if not config.ctd_from:
+    if not config.data_path:
         train_dataset, test_dataset = generate_token_copy_dataset(config.n_tokens,
                                                                 1e6,
                                                                 5e3,
@@ -256,25 +205,23 @@ def train_model_copy(config, num_epochs=90000, lr=1e-4,
                                                                 min_len=config.min_len
                                                                 )
         # save test set somewhere:
+        print("saving generated dataset")
+        torch.save(train_dataset, f"data/copy_train/{config.run_name}.pt")
         torch.save(test_dataset, f"data/copy_test/{config.run_name}.pt")
     loader = DataLoader(train_dataset, batch_size=config.batch_size,
                          shuffle=True, pin_memory=True)
     pbar = tqdm(range(num_epochs))
     epoch = 0
     while epoch <= num_epochs:
-        for data, loss_mask in loader:
-            data, loss_mask = data.to(device), loss_mask.to(device)
-            # Prepare training data
-            input_seq, target_seq, copy_start_idx = prepare_training_data(data)
-            target_seq = data.argmax(dim=-1)
-            target_seq[~loss_mask] = -100 # ignore index in CE loss
+        for data, loss_mask, targets in loader:
+            data, loss_mask, targets = data.to(device), loss_mask.to(device), targets.to(device)
             
             # Training step
             model.train()
             optimizer.zero_grad()
             
             loss, predictions = training_step(
-                model, input_seq, target_seq, copy_start_idx, criterion
+                model, data, targets, loss_mask, criterion
             )
             
             loss.backward()
@@ -376,7 +323,7 @@ def train_model_superpos(config, feature_probabilities, importances=1, num_epoch
     
     return models, train_losses
 
-def evaluate_model_copy(config, model):
+def evaluate_model_copy(config, model, data_path=None):
     device = next(model.parameters()).device
     model.eval()
     
@@ -386,19 +333,19 @@ def evaluate_model_copy(config, model):
 
     with torch.no_grad():
             # Generate test data
-        test_dataset = torch.load(f"data/copy_test/{config.run_name}.pt")
+        test_dataset = torch.load(f"data/copy_test/{config.run_name if not data_path else data_path}.pt")
         for batch_idx in tqdm(range(len(test_dataset))):
             # Inference generation
             test_data, test_loss_mask = test_dataset[batch_idx]
-            generated, _ = inference_generate(model, test_data.unsqueeze(0),
+            test_seq_len = test_loss_mask.sum(-1)
+            test_data = test_data[:test_seq_len].unsqueeze(0)
+            generated, _ = inference_generate(model, test_data,
                                               discrete=True)
             test_target = test_data.argmax(-1)
-            test_target[~test_loss_mask] = -100
             # Calculate MSE
-            loss = cross_entropy_loss(generated, test_target.unsqueeze(0))
+            loss = cross_entropy_loss(generated, test_target)
             total_mse += loss.item()
             generated = generated.argmax(-1)
-            generated[~test_loss_mask.unsqueeze(0)] = -100
             # Check for perfect reconstructions (within small tolerance)
             perfect_batch = torch.all(
                 generated == test_target
@@ -475,6 +422,7 @@ if __name__ == "__main__":
     parser.add_argument("--n_layers", type=int, required=True, help="Number of RNN layers")
     parser.add_argument("--run_name", type=str, required=True, help="Name of run")
     parser.add_argument("--ctd_from", type=str, default=None)
+    parser.add_argument("--data_path", type=str, default=None)
     parser.add_argument("--gru", action="store_true", help="Use GRU?")
 
     args = parser.parse_args()

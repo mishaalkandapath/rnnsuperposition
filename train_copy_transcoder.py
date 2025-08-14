@@ -52,8 +52,7 @@ class TranscoderLoss(nn.Module):
         sparsity_loss = self.lambda_sparsity * torch.sum(sparsity_terms)
         
         # Penalty loss: L_P(x) = λ_P * Σ ReLU(exp(t) - f_i(x)) * ||W_d,i||₂
-        threshold_expanded = threshold.expand_as(features)
-        penalty_terms = torch.relu(threshold_expanded - features) * decoder_norms.unsqueeze(0)
+        penalty_terms = torch.relu(threshold - features) * decoder_norms.unsqueeze(0)
         penalty_loss = self.lambda_penalty * torch.mean(penalty_terms)
         
         total_loss = reconstruction_loss + sparsity_loss + penalty_loss

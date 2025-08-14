@@ -1,5 +1,6 @@
 import torch
 from torch.utils.data import TensorDataset
+from torch.nn.utils.rnn import pad_sequence
 torch.serialization.add_safe_globals([TensorDataset])
 import math
 import random
@@ -50,6 +51,64 @@ def generate_unique_test_set(n_tokens, test_size,
 
     return test_one_hot, test_masks
 
+def add_delimiter_dimension(data, concat_del=True):
+    """
+    Add delimiter dimension to data
+    Args:
+        data: (batch_size, seq_len, n_features)
+        delimiter_pos: position to place delimiter, if None adds at end
+    Returns:
+        enhanced_data: (batch_size, seq_len + 1, n_features + 1) if delimiter added
+                      or (batch_size, seq_len, n_features + 1) if delimiter_pos specified
+    """
+    batch_size, seq_len, n_features = data.shape
+    
+    # Add delimiter at the end
+    # Expand original data with 0s in delimiter dimension
+    expanded_data = torch.cat([data, torch.zeros(batch_size, seq_len, 1).to(data.device)], dim=-1).to(data.device)
+    if not concat_del: return expanded_data
+    
+    # Create delimiter token: all zeros except delimiter dimension = 1
+    delimiter = torch.zeros(batch_size, 1, n_features + 1).to(data.device)
+    delimiter[:, :, -1] = 1  # Set delimiter dimension to 1
+    
+    # Concatenate original data + delimiter
+    enhanced_data = torch.cat([expanded_data, delimiter], dim=1)
+    return enhanced_data.to(data.device)
+
+def sort_seq_by_len(seq_one_hot, loss_mask, max_len, min_len, 
+                    add_delim=False, make_copy=False):
+    if add_delim:
+        seq_one_hot = add_delimiter_dimension(seq_one_hot)
+    sequence_lengths = loss_mask.sum(dim=-1)
+    sequences_by_length = [[] for _ in range(min_len, max_len+1)]
+    targets_by_length = [[] for _ in range(min_len, max_len+1)]
+    n_sequences = seq_one_hot.size(0)
+
+    for seq_idx in range(n_sequences):
+        actual_length = sequence_lengths[seq_idx].item()
+        sequence = seq_one_hot[seq_idx][:actual_length+add_delim]
+        sequence[-1, -1] = 1
+        sequences_by_length[actual_length-min_len].append(sequence.repeat(1+make_copy, 1)[:-2]) # last two are not reqd coz last token + del
+        targets_by_length[actual_length-min_len].append(torch.cat([torch.zeros((sequence.size(0)-1)), sequence.argmax(-1), sequence[-1:, :].argmax(-1)], dim=0)[:-2])
+    return sequences_by_length, targets_by_length
+
+def make_copy_targets(seq_one_hot, loss_mask, max_len, min_len):
+    # seq_one_hot: batch_size, max_len, 30
+    sequences_by_length, targets_by_length = sort_seq_by_len(seq_one_hot, loss_mask, 
+                                         max_len, min_len, 
+                                         add_delim=True, make_copy=True)
+
+    all_seqs = sum(sequences_by_length, start=[])
+    all_targs = sum(targets_by_length, start=[])
+    final_lengths = torch.tensor(
+                    [seq.size(0) for seq in all_seqs]
+                )
+    padded_seqs = pad_sequence(all_seqs, batch_first=True, padding_value=0.0)
+    padded_targs = pad_sequence(all_targs, batch_first=True, padding_value=0.0)
+    pad_masks = ((final_lengths.unsqueeze(1)/2)<= torch.arange(2*max_len).unsqueeze(0)) & (torch.arange(2*max_len).unsqueeze(0) < final_lengths.unsqueeze(1))
+    return padded_seqs, pad_masks, padded_targs
+
 def generate_token_copy_dataset(n_tokens, train_size, test_size, 
                                 max_len, min_len=2):
     train_seq_one_hot, train_loss_mask = generate_token_copyset(n_tokens,
@@ -64,7 +123,14 @@ def generate_token_copy_dataset(n_tokens, train_size, test_size,
                                                                 min_len, 
                                                                 train_seq_indices)
     
-    return TensorDataset(train_seq_one_hot, train_loss_mask), TensorDataset(test_seq_one_hot, test_loss_mask)
+    #make copy mechanism 
+    train_seq_one_hot, train_loss_mask, train_targs = make_copy_targets(train_seq_one_hot,
+                                                            train_loss_mask,
+                                                            max_len,
+                                                            min_len)
+
+    
+    return TensorDataset(train_seq_one_hot, train_loss_mask, train_targs.long()), TensorDataset(test_seq_one_hot, test_loss_mask)
 
 """ 
 --- Two-step RL Task ---

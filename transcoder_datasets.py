@@ -49,6 +49,18 @@ class TranscoderDataGenerator:
         unique_sequences, unique_masks = self._generate_unique_sequences(
             n_tokens, n_sequences, max_len, min_len
         )
+        sequence_lengths = unique_masks.sum(dim=1)
+        sequences_by_length = [[] for _ in range(min_len, max_len+1)]
+
+        for seq_idx in range(n_sequences):
+            actual_length = int(sequence_lengths[seq_idx])
+            if min_len <= actual_length <= max_len:
+                # Extract the sequence (only the valid part based on mask)
+                sequence = unique_sequences[seq_idx][:actual_length]
+                sequences_by_length[actual_length - min_len].append(sequence)
+            else: 
+                raise Exception
+
         print(f"Done generating sequences {unique_sequences.shape} {unique_masks.shape}")
         
         all_update_inputs = []
@@ -56,65 +68,62 @@ class TranscoderDataGenerator:
         all_hidden_inputs = []
         all_hidden_targets = []
         
-        # Process in batches for memory efficiency
-        batch_size = min(batch_size, n_sequences)
-        n_batches = (n_sequences + batch_size - 1) // batch_size
-        
-        with torch.no_grad():
-            for batch_idx in tqdm(range(n_batches)):
-                start_idx = batch_idx * batch_size
-                end_idx = min(start_idx + batch_size, n_sequences)
-                if start_idx >= end_idx: break
-                
-                batch_sequences = unique_sequences[start_idx:end_idx].to(self.device)
-                batch_masks = unique_masks[start_idx:end_idx].to(self.device)
-                batch_masks = torch.cat([batch_masks, batch_masks], dim=-1)
-                # Run RNN and record gates
-                outs, _, r_records, z_records, h_new_records, h_records =  inference_generate(self.rnn_model, batch_sequences, 
-                                   discrete=True, record_gates=True)
-                
-                # Extract data from single layer (index 0)
-                r_t = r_records[0]  # (batch_size, seq_len, 2*hidden_size)
-                z_t = z_records[0]  # (batch_size, seq_len, 2*hidden_size)  
-                h_new_t = h_new_records[0]  # (batch_size, 2*seq_len, hidden_size)
-                h_prev = h_records[0]  # (batch_size, 2*seq_len, hidden_size)
-                
-                outs = add_delimiter_dimension(outs, concat_del=False)
-                batch_sequences = add_delimiter_dimension(batch_sequences)
-                x_t = torch.cat([batch_sequences, outs],
-                                 dim=1)   # (batch_size, 2*seq_len, input_size)
-                
-                # Process each timestep
-                for t in range(2*max_len):
-                    # Get valid positions for this timestep
-                    valid_positions = batch_masks[:, t]  # (batch_size,)
+        for unique_sequences in sequences_by_length:
+            # Process in batches for memory efficiency
+            n_sequences = len(unique_sequences)
+            batch_size = min(batch_size, n_sequences)
+            n_batches = (n_sequences + batch_size - 1) // batch_size
+            unique_sequences = torch.stack(unique_sequences)
+            print(unique_sequences.shape)
+            with torch.no_grad():
+                for batch_idx in tqdm(range(n_batches)):
+                    start_idx = batch_idx * batch_size
+                    end_idx = min(start_idx + batch_size, n_sequences)
+                    if start_idx >= end_idx: break
                     
-                    if t >= max_len and valid_positions.sum() == 0:
-                        break
+                    batch_sequences = unique_sequences[start_idx:end_idx].to(self.device)
+                    # Run RNN and record gates
+                    outs, _, r_records, z_records, h_new_records, h_records =  inference_generate(self.rnn_model, batch_sequences, 
+                                    discrete=True, record_gates=True)
+                    
+                    outs = torch.nn.functional.one_hot(outs.argmax(-1), n_classes=30)
+                    
+                    # Extract data from single layer (index 0)
+                    r_t = r_records[0]  # (batch_size, seq_len, 2*hidden_size)
+                    z_t = z_records[0]  # (batch_size, seq_len, 2*hidden_size)  
+                    h_new_t = h_new_records[0]  # (batch_size, 2*seq_len, hidden_size)
+                    h_prev = h_records[0]  # (batch_size, 2*seq_len, hidden_size)
+                    
+                    outs = add_delimiter_dimension(outs, concat_del=False)
+                    batch_sequences = add_delimiter_dimension(batch_sequences)
+                    x_t = torch.cat([batch_sequences, outs],
+                                    dim=1)   # (batch_size, 2*seq_len, input_size)
+                    
+                    # Process each timestep
+                    for t in range(2*max_len):
+                        # Extract valid samples for this timestep
+                        valid_h_prev = h_prev[:, t]  # (n_valid, hidden_size)
+                        valid_x_t = x_t[:, t]      # (n_valid, input_size)
+                        valid_r_t = r_t[:, t]      # (n_valid, hidden_size)
+                        valid_z_t = z_t[:, t]      # (n_valid, hidden_size)
+                        valid_h_new_t = h_new_t[:, t]  # (n_valid, hidden_size)
                         
-                    # Extract valid samples for this timestep
-                    valid_h_prev = h_prev[valid_positions, t]  # (n_valid, hidden_size)
-                    valid_x_t = x_t[valid_positions, t]      # (n_valid, input_size)
-                    valid_r_t = r_t[valid_positions, t]      # (n_valid, hidden_size)
-                    valid_z_t = z_t[valid_positions, t]      # (n_valid, hidden_size)
-                    valid_h_new_t = h_new_t[valid_positions, t]  # (n_valid, hidden_size)
-                    
-                    # Prepare transcoder inputs and targets
-                    
-                    # Update gate transcoder: input = [h_{t-1}, x_t], target = z_t
-                    update_gate_input = torch.cat([valid_h_prev, valid_x_t], dim=1)
-                    update_gate_target = valid_z_t
-                    
-                    # Hidden context transcoder: input = [r_t ⊙ h_{t-1}, x_t], target = h̃_t
-                    gated_hidden = valid_r_t * valid_h_prev  # Element-wise multiplication
-                    hidden_context_input = torch.cat([gated_hidden, valid_x_t], dim=1)
-                    hidden_context_target = valid_h_new_t
-                    
-                    # Collect data
-                    all_update_inputs.append(update_gate_input)
-                    all_update_targets.append(update_gate_target)
-                    all_hidden_inputs.append(hidden_context_input)
-                    all_hidden_targets.append(hidden_context_target)
+                        # Prepare transcoder inputs and targets
+                        
+                        # Update gate transcoder: input = [h_{t-1}, x_t], target = z_t
+                        update_gate_input = torch.cat([valid_h_prev, valid_x_t], dim=1)
+                        update_gate_target = valid_z_t
+                        
+                        # Hidden context transcoder: input = [r_t ⊙ h_{t-1}, x_t], target = h̃_t
+                        gated_hidden = valid_r_t * valid_h_prev  # Element-wise multiplication
+                        hidden_context_input = torch.cat([gated_hidden, valid_x_t], dim=1)
+                        hidden_context_target = valid_h_new_t
+                        
+                        # Collect data
+                        all_update_inputs.append(update_gate_input)
+                        all_update_targets.append(update_gate_target)
+                        all_hidden_inputs.append(hidden_context_input)
+                        all_hidden_targets.append(hidden_context_target)
         
         # Concatenate all collected data
         dataset = {
@@ -181,7 +190,7 @@ def create_transcoder_dataloaders(dataset: StackDataset,
     n_samples = len(dataset)
     n_train = int(n_samples * train_split)
     
-    # Create indices for train/val split
+    # Create indices for train/val splits
     indices = torch.randperm(n_samples) if shuffle else torch.arange(n_samples)
     train_indices = indices[:n_train]
     val_indices = indices[n_train:]
