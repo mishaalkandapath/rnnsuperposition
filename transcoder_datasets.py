@@ -5,7 +5,7 @@ from torch.utils.data import StackDataset, Subset
 from tqdm import tqdm
 
 from datasets import generate_token_copyset
-from train import inference_generate
+from train import inference_generate, add_delimiter_dimension
 from rnn import RNN
 
 class TranscoderDataGenerator:
@@ -70,15 +70,19 @@ class TranscoderDataGenerator:
                 batch_masks = unique_masks[start_idx:end_idx].to(self.device)
                 batch_masks = torch.cat([batch_masks, batch_masks], dim=-1)
                 # Run RNN and record gates
-                _, _, r_records, z_records, h_new_records, h_records =  inference_generate(self.rnn_model, batch_sequences, 
+                outs, _, r_records, z_records, h_new_records, h_records =  inference_generate(self.rnn_model, batch_sequences, 
                                    discrete=True, record_gates=True)
                 
                 # Extract data from single layer (index 0)
-                r_t = r_records[0]  # (batch_size, seq_len, hidden_size)
-                z_t = z_records[0]  # (batch_size, seq_len, hidden_size)  
-                h_new_t = h_new_records[0]  # (batch_size, seq_len, hidden_size)
-                h_prev = h_records[0]  # (batch_size, seq_len, hidden_size)
-                x_t = batch_sequences  # (batch_size, seq_len, input_size)
+                r_t = r_records[0]  # (batch_size, seq_len, 2*hidden_size)
+                z_t = z_records[0]  # (batch_size, seq_len, 2*hidden_size)  
+                h_new_t = h_new_records[0]  # (batch_size, 2*seq_len, hidden_size)
+                h_prev = h_records[0]  # (batch_size, 2*seq_len, hidden_size)
+                
+                outs = add_delimiter_dimension(outs, concat_del=False)
+                batch_sequences = add_delimiter_dimension(batch_sequences)
+                x_t = torch.cat([batch_sequences, outs],
+                                 dim=1)   # (batch_size, 2*seq_len, input_size)
                 
                 # Process each timestep
                 for t in range(2*max_len):
@@ -121,8 +125,13 @@ class TranscoderDataGenerator:
         }
         
         print(f"Generated transcoder dataset with {dataset['update_gate_inputs'].shape[0]} samples")
-        dataset = StackDataset(**dataset)
-        return dataset
+        update_dataset = {"input": dataset["update_gate_inputs"],
+                          "output": dataset["update_gate_targets"]}
+        hidden_dataset = {"input": dataset["hidden_context_inputs"],
+                          "output": dataset["hidden_context_targets"]}
+        update_dataset = StackDataset(**update_dataset)
+        hidden_dataset = StackDataset(**hidden_dataset)
+        return update_dataset, hidden_dataset
     
     def _generate_unique_sequences(self, n_tokens: int, n_sequences: int, 
                                  max_len: int, min_len: int):
@@ -181,7 +190,7 @@ def create_transcoder_dataloaders(dataset: StackDataset,
     val_dataset = Subset(dataset, val_indices)
     
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=shuffle
+        train_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=64, persistent_workers=True
     )
     val_loader = torch.utils.data.DataLoader(
         val_dataset, batch_size=batch_size, shuffle=False
@@ -210,10 +219,11 @@ if __name__ == "__main__":
                 out_act=lambda x: x, use_gru=True, learn_init=False)
     rnn.load_state_dict(torch.load(args.model_path))
     generator = TranscoderDataGenerator(rnn)
-    dataset = generator.generate_transcoder_dataset(n_tokens=args.n_tokens,
+    update_dataset, hidden_dataset = generator.generate_transcoder_dataset(n_tokens=args.n_tokens,
                                                     n_sequences=args.n_sequences,
                                                     batch_size=args.batch_size,
                                                     max_len=args.max_len,
                                                     min_len=args.min_len)
     os.makedirs("data/copy_transcoder/", exist_ok=True)
-    torch.save(dataset, f"data/copy_transcoder/{args.dataset_name}.pt")
+    torch.save(update_dataset, f"data/copy_transcoder/{args.dataset_name}_update_gate.pt")
+    torch.save(hidden_dataset, f"data/copy_transcoder/{args.dataset_name}_hctx.pt")

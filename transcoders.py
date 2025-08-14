@@ -69,18 +69,17 @@ def set_transcoder_weights(p=0.01):
 
 class Transcoder(nn.Module):
     def __init__(self, input_size, out_size, n_feats, bias=True,
-                  threshhold=math.exp(0.1), bandwidth=0.1):
+                  threshhold=math.exp(0.1), bandwidth=2):
         super(Transcoder, self).__init__()
         self.input_size = input_size
         self.out_size = out_size
         self.n_feats = n_feats
-
         self.input_to_features = nn.Linear(input_size, n_feats, bias=bias)
         self.features_to_outputs = nn.Linear(n_feats, out_size, bias=bias)
         self.act = JumpReLU(torch.tensor(threshhold), bandwidth)
     
     def forward(self, x):
-        feats = self.input_to_features(x)
-        feats = self.act(feats)
+        pre_feats = self.input_to_features(x)
+        feats = self.act(pre_feats)
         replace_out = self.features_to_outputs(feats)
-        return replace_out
+        return replace_out, feats, pre_feats
