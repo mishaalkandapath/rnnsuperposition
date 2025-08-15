@@ -1,4 +1,5 @@
 import math
+import sys
 
 import torch
 import torch.nn as nn
@@ -11,8 +12,28 @@ from tqdm import tqdm
 
 from transcoders import Transcoder, set_transcoder_weights
 from transcoder_datasets import create_transcoder_dataloaders
-torch.serialization.add_safe_globals([StackDataset])
-from train import linear_lr
+# torch.serialization.add_safe_globals([StackDataset])
+
+interrupted = False
+train_obj_global = None
+run_name_global = None
+
+def signal_handler(signum, frame):
+    global interrupted, train_obj_global, run_name_global
+    print("\n\nReceived interrupt signal (Ctrl+C). Saving model and exiting gracefully...")
+    interrupted = True
+    
+    if train_obj_global is not None and run_name_global is not None:
+        try:
+            os.makedirs(f"models/copy_transcoder/{run_name_global}", exist_ok=True)
+            save_path = f"models/copy_transcoder/{run_name_global}/interrupted_{run_name_global}.ckpt"
+            torch.save(train_obj_global.transcoder.state_dict(), save_path)
+            print(f"Model saved to: {save_path}")
+        except Exception as e:
+            print(f"Error saving model: {e}")
+    
+    print("Exiting...")
+    sys.exit(0)
 
 def normalize_batch(x, eps=1e-8):
     """Normalize per batch to zero mean, unit variance."""
@@ -27,15 +48,37 @@ class TranscoderLoss(nn.Module):
     where L_P(x) = λ_P * Σ ReLU(exp(t) - f_i(x)) * ||W_d,i||₂
     """
     
-    def __init__(self, lambda_sparsity=1e-3, lambda_penalty=1e-4, c_sparsity=1.0):
+    def __init__(self, lambda_sparsity=1e-3, lambda_penalty=1e-4, 
+                 c_sparsity=1.0, sparse_sched=0, sparse_sched_off=1, w_detach=False):
         super().__init__()
         self.lambda_sparsity = lambda_sparsity
         self.lambda_penalty = lambda_penalty
         self.c_sparsity = c_sparsity
         self.mse_loss = nn.MSELoss()
+
+        # options for traiing variants
         self.total_steps = 0
         self.steps = 0
+        self.w_detach = w_detach
         self.eval = False
+
+        self.sparse_scheduler = self.set_lambda_sparse_schedule(sparse_sched, sparse_sched_off)
+
+    def set_lambda_sparse_schedule(self, typ, off=1):
+        x = (self.steps)/self.total_steps
+        match typ:
+            case 1: # linear rise + cut
+                return lambda: min(self.steps/off, 1)
+            case 2:
+                # smoother linear rise + cut
+                return lambda: 1/(1+math.exp(-10*(x-0.5)))
+            case 3:
+                # cosine annealing sparsity loss
+                x = (self.steps % off)/off
+                return lambda: math.sin(0.5*math.pi*x)
+            case _:
+                return lambda: x
+
         
     def forward(self, predictions, targets, features, 
                 decoder_weights, threshold):
@@ -51,7 +94,7 @@ class TranscoderLoss(nn.Module):
         """
         sparsity_coeff = self.lambda_sparsity
         if not self.eval:
-            sparsity_coeff *= self.steps/self.total_steps
+            sparsity_coeff *= self.sparse_scheduler()
         # Reconstruction loss: ||y - ŷ(x)||²₂
         reconstruction_loss = self.mse_loss(predictions, targets)
         
@@ -61,6 +104,7 @@ class TranscoderLoss(nn.Module):
         
         # Avoid division by zero
         decoder_norms = torch.clamp(decoder_norms, min=1e-8)
+        decoder_norms = decoder_norms if not self.w_detach else decoder_norms.detach()
         
         normalized_features = feature_magnitudes / decoder_norms.unsqueeze(0)  # Broadcast over batch
         sparsity_terms = torch.tanh(self.c_sparsity * normalized_features)
@@ -91,15 +135,13 @@ class TranscoderTrainer:
                  transcoder: nn.Module,
                  device: str = 'cuda',
                  lr: float = 1e-3,
-                 lambda_sparsity: float = 10,
-                 lambda_penalty: float = 3e-6,
-                 c_sparsity: float = 4.0):
+                 loss_fn: TranscoderLoss=TranscoderLoss(10, 3e-6, 4)):
         
         self.transcoder = transcoder.to(device)
         self.device = device
         
         # Initialize loss functions
-        self.loss_fn = TranscoderLoss(lambda_sparsity, lambda_penalty, c_sparsity)
+        self.loss_fn = loss_fn
         
         # Initialize optimizers
         self.optimizer = optim.Adam(self.transcoder.parameters(), lr=lr)
@@ -223,7 +265,7 @@ class TranscoderTrainer:
               val_loader: DataLoader, 
               n_epochs: int,
               save_path: str = None,
-              save_every: int = 10, run=None) -> None:
+              save_every: int = 25, run=None) -> None:
         """Train the transcoders"""
         
         self.loss_fn.total_steps = n_epochs * (len(train_loader.dataset)//train_loader.batch_size + 1)
@@ -300,7 +342,7 @@ def create_and_train_transcoders(dataset: Dict[str, torch.Tensor],
         device: Device to train on
         n_epochs: Number of training epochs
     """
-    
+    global run_name_global, train_obj_global
     # Create transcoders
     input_dim = hidden_size + input_size  # [h_{t-1}, x_t]
     
@@ -321,6 +363,10 @@ def create_and_train_transcoders(dataset: Dict[str, torch.Tensor],
     train_loader, val_loader = create_transcoder_dataloaders(dataset, batch_size=batch_size)
     print("--Created Dataloader--")
     # Create trainer
+    loss_fn = TranscoderLoss(train_cfg["l_sparsity"], train_cfg["l_penalty"],
+                             train_cfg["c_sparsity"], train_cfg["l_schedule"],
+                             train_cfg["l_schedule_offset"], train_cfg["w_det"])
+
     trainer = TranscoderTrainer(
         transcoder=transcoder,
         device=device,
@@ -329,6 +375,9 @@ def create_and_train_transcoders(dataset: Dict[str, torch.Tensor],
         lambda_penalty=train_cfg["l_penalty"],
         c_sparsity=train_cfg["c_sparsity"]
     )
+
+    train_obj_global = trainer
+    run_name_global = save_path.split("/")[-1]
     print("--Beginning Training--")
     # Train
     trainer.train(
@@ -345,7 +394,11 @@ if __name__ == "__main__":
     import argparse
     import os
     import wandb
+    import signal 
 
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+                  
     parser = argparse.ArgumentParser(description="Train Copy Transcoder")
 
     parser.add_argument("--input_size", type=int, required=True, help="Vocab Size")
@@ -357,7 +410,10 @@ if __name__ == "__main__":
     parser.add_argument("--l_sparsity", type=float, required=True)
     parser.add_argument("--l_penalty", type=float, required=True)
     parser.add_argument("--c_sparsity", type=float, required=True)
-
+    parser.add_argument("--n_epochs", type=int, required=True)
+    parser.add_argument("--lambda_sparse_schedule", type=int, required=True)
+    parser.add_argument("--l_sparse_offset", type=int, default=1)
+    parser.add_argument("--w_detach", action="store_true")
     parser.add_argument("--save_path", required=True)
 
     args = parser.parse_args()
@@ -372,13 +428,15 @@ if __name__ == "__main__":
             "l_penalty": args.l_penalty,
             "n_hidden": args.hidden_size,
             "bandwidth": 2,
-            "n_feats": args.n_feats
+            "n_feats": args.n_feats,
+            "n_epochs": args.n_epochs
         },
     )
     # run = None
     torch.manual_seed(2)
-
     train_cfg = {"lr": args.lr, "l_sparsity": args.l_sparsity, 
+                 "l_schedule": args.lambda_sparse_schedule, 
+                 "l_sched_offset": args.l_sparse_offset, "w_det": args.w_detach,
                  "l_penalty":args.l_penalty, "c_sparsity":args.c_sparsity}
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -390,4 +448,4 @@ if __name__ == "__main__":
     create_and_train_transcoders(dataset, train_cfg, 
                                  hidden_size=args.hidden_size, 
                                  input_size=args.input_size+1, 
-                                 n_feats=args.n_feats, device=device, n_epochs=250, batch_size=args.batch_size, save_path=args.save_path, run=run)
+                                 n_feats=args.n_feats, device=device, n_epochs=args.n_epochs, batch_size=args.batch_size, save_path=args.save_path, run=run)

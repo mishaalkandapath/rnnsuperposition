@@ -1,13 +1,13 @@
 #!/bin/sh
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=12
+#SBATCH --cpus-per-task=128
 #SBATCH --job-name=bash
 #SBATCH --output=%x-%j.out
 #SBATCH --error=%x-%j.out
 #SBATCH --gpus-per-node=v100l:2
-#SBATCH --mem=128G
+#SBATCH --mem=256G
 
-#SBATCH --time=11:0:0
+#SBATCH --time=3:0:0
 #SBATCH --account=def-gpenn
 
 if [ $# -eq 0 ]; then
