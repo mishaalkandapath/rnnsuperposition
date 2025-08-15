@@ -199,7 +199,7 @@ def create_transcoder_dataloaders(dataset: StackDataset,
     val_dataset = Subset(dataset, val_indices)
     
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=192, persistent_workers=True
+        train_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=40, persistent_workers=True
     )
     val_loader = torch.utils.data.DataLoader(
         val_dataset, batch_size=batch_size, shuffle=False

@@ -62,12 +62,12 @@ class TranscoderLoss(nn.Module):
         # Avoid division by zero
         decoder_norms = torch.clamp(decoder_norms, min=1e-8)
         
-        normalized_features = feature_magnitudes / decoder_norms.unsqueeze(0).detach()  # Broadcast over batch
+        normalized_features = feature_magnitudes / decoder_norms.unsqueeze(0)  # Broadcast over batch
         sparsity_terms = torch.tanh(self.c_sparsity * normalized_features)
-        sparsity_loss = sparsity_coeff * (self.steps/self.total_steps) * torch.sum(sparsity_terms)
+        sparsity_loss = sparsity_coeff * torch.sum(sparsity_terms)
         
         # Penalty loss: L_P(x) = λ_P * Σ ReLU(exp(t) - f_i(x)) * ||W_d,i||₂
-        penalty_terms = torch.relu(torch.exp(threshold) - features) #* decoder_norms.unsqueeze(0).detach()
+        penalty_terms = torch.relu(torch.exp(threshold) - features) * decoder_norms.unsqueeze(0)
         penalty_loss = self.lambda_penalty * torch.sum(penalty_terms)
         
         total_loss = reconstruction_loss + sparsity_loss + penalty_loss
@@ -166,6 +166,7 @@ class TranscoderTrainer:
                     run.log({"jrelu_thresh": self.transcoder.act.threshold.item()})
                     run.log({"features_active": torch.count_nonzero(features_activated)/inputs.size(0)})
                     run.log({"feature_magnitudes": torch.abs(features_activated[features_activated != 0]).mean()})
+                    run.log({"sparsity_coeff": self.loss_fn.steps/self.loss_fn.total_steps})
                 feature_activation_densities += (features != 0).sum(dim=0)
             
             self.loss_fn.steps +=1
@@ -227,6 +228,7 @@ class TranscoderTrainer:
         
         self.loss_fn.total_steps = n_epochs * (len(train_loader.dataset)//train_loader.batch_size + 1)
         best_val_loss = float('inf')
+        print("Running for ", n_epochs)
         pbar = tqdm(range(n_epochs))
         for epoch in pbar:
             # Train
@@ -284,7 +286,7 @@ def create_and_train_transcoders(dataset: Dict[str, torch.Tensor],
                                  input_size: int,
                                  n_feats: int = 512,
                                  device: str = 'cuda',
-                                 n_epochs: int = 100,
+                                 n_epochs: int = 500,
                                  batch_size=64,
                                  run=None, save_path=None):
     """
@@ -388,4 +390,4 @@ if __name__ == "__main__":
     create_and_train_transcoders(dataset, train_cfg, 
                                  hidden_size=args.hidden_size, 
                                  input_size=args.input_size+1, 
-                                 n_feats=args.n_feats, device=device, n_epochs=100, batch_size=args.batch_size, save_path=args.save_path, run=run)
+                                 n_feats=args.n_feats, device=device, n_epochs=250, batch_size=args.batch_size, save_path=args.save_path, run=run)
