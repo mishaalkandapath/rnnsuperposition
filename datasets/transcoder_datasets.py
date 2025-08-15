@@ -1,10 +1,11 @@
 from typing import Dict, Tuple
+import os
 
 import torch
 from torch.utils.data import StackDataset, Subset
 from tqdm import tqdm
 
-from task_datasets import generate_token_copyset
+from datasets.task_datasets import generate_token_copyset
 from training.train_copy import inference_generate, add_delimiter_dimension
 from models.rnn import RNN
 
@@ -199,7 +200,8 @@ def create_transcoder_dataloaders(dataset: StackDataset,
     val_dataset = Subset(dataset, val_indices)
     
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=8, persistent_workers=True
+        train_dataset, batch_size=batch_size, shuffle=shuffle, 
+        num_workers=len(os.sched_getaffinity(0)), persistent_workers=True #HERE
     )
     val_loader = torch.utils.data.DataLoader(
         val_dataset, batch_size=batch_size, shuffle=False

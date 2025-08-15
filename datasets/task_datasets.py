@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import TensorDataset
 from torch.nn.utils.rnn import pad_sequence
-# torch.serialization.add_safe_globals([TensorDataset])
+torch.serialization.add_safe_globals([TensorDataset])
 import math
 import random
 
