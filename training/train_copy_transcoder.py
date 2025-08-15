@@ -182,7 +182,7 @@ class TranscoderTrainer:
                     run.log({"jrelu_thresh": self.transcoder.act.threshold.item()})
                     run.log({"features_active": torch.count_nonzero(features_activated)/inputs.size(0)})
                     run.log({"feature_magnitudes": torch.abs(features_activated[features_activated != 0]).mean()})
-                    run.log({"sparsity_coeff": self.loss_fn.steps/self.loss_fn.total_steps})
+                    run.log({"sparsity_coeff": self.loss_fn.sparse_scheduler()})
                 feature_activation_densities += (features != 0).sum(dim=0)
             
             self.loss_fn.steps +=1

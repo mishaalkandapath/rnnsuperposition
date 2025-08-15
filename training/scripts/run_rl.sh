@@ -1,49 +1,102 @@
-#!/bin/sh
-#SBATCH --nodes=1
-#SBATCH --cpus-per-task=128
-#SBATCH --job-name=bash
-#SBATCH --output=%x-%j.out
-#SBATCH --error=%x-%j.out
-#SBATCH --gpus-per-node=v100l:2
-#SBATCH --mem=256G
+#!/bin/bash
 
-#SBATCH --time=3:0:0
-#SBATCH --account=def-gpenn
+#SBATCH --job-name=transcoder_mig
+#SBATCH --ntasks=8
+#SBATCH --cpus-per-task=6
+#SBATCH --gpus=nvidia_h100_80gb_hbm3_3g.40gb:8
+#SBATCH --time=5:00:00
+#SBATCH --mem-per-cpu=15G
 
-if [ $# -eq 0 ]; then
-    echo "Usage: $0 <filename>"
-    echo "Example: $0 myfile.py"
-    exit 1
-fi
 
-./compute_can_setup.sh $1
-cd $SLURM_TMPDIR
+./compute_can_setup.sh rnn_superpos/data
+cd $SLURM_TMPDIR/rnnsuperposition/
 module purge 
 module load opencv cuda gcc scipy-stack 
 source env/bin/activate
 
-#move code
-cp /home/mishaalk/projects/def-gpenn/mishaalk/lambdaBERT/*.py .
+# Set up environment
+export PYTHONPATH=$PYTHONPATH:$(pwd)
 
-#python models.py --discrete --model_path /home/mishaalk/projects/def-gpenn/mishaalk/lambdaBERT/lambdabertmodel_linear_last/best_linear_last.ckpt --save_dir /home/mishaalk/projects/def-gpenn/mishaalk/lambdaBERT/discrete_linear_last/ --batch_size 20 --finetune_discrete #--model_is_discrete #--bert_is_last
-# export BERT_TYPE="roberta_base"
-# python models.py --save_dir "/home/mishaalk/projects/def-gpenn/mishaalk/lambdaBERT/roberta_base_model/" --batch_size 150 --bert_is_last --custom_transformer
+# Model configuration - adjust these as needed
+INPUT_SIZE=30
+HIDDEN_SIZE=128
+N_FEATS=12288
+BATCH_SIZE=20480
+N_EPOCHS=250
+DATASET_PATH="./data/1M_128_update_gate.pt"
+BASE_SAVE_PATH="/home/mishaalk/projects/def-gpenn/mishaalk/rnnsuperposition/data/models/copy_transcoder"
 
-echo "----File is $1----"
+# Create base directory
+mkdir -p $BASE_SAVE_PATH
 
-export BERT_TYPE="bert_base"
-# python models.py --model_path "/home/mishaalk/projects/def-gpenn/mishaalk/lambdaBERT/bert_base_model/best_bert_base_r2.ckpt" --save_dir "/home/mishaalk/projects/def-gpenn/mishaalk/lambdaBERT/bert_base_model/" --batch_size 150 --bert_is_last --custom_transformer
-python models.py --save_dir "~/scratch/bb11_filt_model/" --batch_size 150 --bert_is_last --custom_transformer
-# python models.py --save_dir "/home/mishaalk/projects/def-gpenn/mishaalk/lambdaBERT/bert_base_filtered_model" --batch_size 150 --bert_is_last --custom_transformer
+# Define hyperparameter combinations
+# Each line: sparse_schedule, sparse_off, lr, l_sparsity, l_penalty, c_sparsity, detach_w_norm
+CONFIGS=(
+    "0 1 2e-4 6 3e-6 4 0"
+    "0 1 2e-4 6 3e-6 2 1"
+    "0 1 2e-4 8 3e-6 2 1"
+    "2 1 2e-4 8 3e-6 2 1"
+    "3 25 2e-4 8 3e-6 4 1"
+    "3 25 2e-4 8 3e-6 4 0"
+    "3 25 2e-4 8 3e-6 2 1"
+    "3 25 2e-4 6 3e-6 4 1"
+)
 
-# export BERT_TYPE="multilingual_bert"
-# python models.py --save_dir "/home/mishaalk/projects/def-gpenn/mishaalk/lambdaBERT/simple_lambda_model/" --batch_size 150 --bert_is_last --custom_transformer
-# python models.py --model_path "/home/mishaalk/projects/def-gpenn/mishaalk/lambdaBERT/multilingual_base/best_multilingual_base.ckpt" --save_dir "/home/mishaalk/projects/def-gpenn/mishaalk/lambdaBERT/multilingual_base/" --batch_size 150 --bert_is_last --custom_transformer
-# python models.py --save_dir "/home/mishaalk/projects/def-gpenn/mishaalk/lambdaBERT/linear_last/" --model_path /home/mishaalk/projects/def-gpenn/mishaalk/lambdaBERT/linear_last/train_r1_lin_last.ckpt --batch_size 20 --bert_is_last #--custom_transformer
-# python models.py --shuffled_mode --t_force --save_dir "/home/mishaalk/scratch/lambdaModelsNoTforce/" --batch_size 30
-# python models.py --shuffled_mode --save_dir "/home/mishaalk/scratch/lambdaPosModel/" --model_path /home/mishaalk/scratch/bestpost.ckpt
-# rem,ember not T Force is ur model w discrete
+run_training() {
+    local task_id=$1
+    local config="${CONFIGS[$task_id]}"
+    read -r sparse_sched sparse_off lr l_sparsity l_penalty c_sparsity detach_w_norm <<< "$config"
+    
+    # Set GPU for this task
+    export CUDA_VISIBLE_DEVICES=$task_id
+    
+    # Create experiment directory
+    local exp_name="sched${sparse_sched}_off${sparse_off}_lr${lr}_lsparse${l_sparsity}_lpen${l_penalty}_csparse${c_sparsity}_wdet${detach_w_norm}"
+    local save_path="${BASE_SAVE_PATH}/${exp_name}"
+    mkdir -p "$save_path"
+    
+    echo "Task $task_id: Running experiment $exp_name on GPU $task_id"
+    echo "Config: sparse_sched=$sparse_sched, sparse_off=$sparse_off, lr=$lr, l_sparsity=$l_sparsity, l_penalty=$l_penalty, c_sparsity=$c_sparsity, detach_w_norm=$detach_w_norm"
+    
+    # Build the command with conditional --w_detach flag
+    local cmd="python -u training/train_copy_transcoder.py \
+        --input_size $INPUT_SIZE \
+        --n_feats $N_FEATS \
+        --dataset_path $DATASET_PATH \
+        --batch_size $BATCH_SIZE \
+        --hidden_size $HIDDEN_SIZE \
+        --lr $lr \
+        --l_sparsity $l_sparsity \
+        --l_penalty $l_penalty \
+        --c_sparsity $c_sparsity \
+        --n_epochs $N_EPOCHS \
+        --lambda_sparse_schedule $sparse_sched \
+        --l_sparse_offset $sparse_off \
+        --save_path $save_path"
+    
+    # Add --w_detach flag if detach_w_norm is 1
+    if [ "$detach_w_norm" = "1" ]; then
+        cmd="$cmd --w_detach"
+    fi
+    
+    # Run the training
+    $cmd
+    
+    echo "Task $task_id: Completed experiment $exp_name"
+}
 
-# PREVIOUSLT  --cpus-per-task=1
+# Export function and variables for parallel execution
+export -f run_training
+export CONFIGS
+export BASE_SAVE_PATH INPUT_SIZE HIDDEN_SIZE N_FEATS BATCH_SIZE N_EPOCHS DATASET_PATH
 
-#salloc --time=1:30:0 --ntasks=12 --gres=gpu:v100l:2 --mem=128G --nodes=1 --account=def-gpenn
+# Get the task ID from Slurm
+TASK_ID=${SLURM_PROCID:-0}
+
+# Run the specific task
+run_training $TASK_ID
+
+# Wait for all tasks to complete (only needed if running all tasks from one node)
+wait
+
+echo "All experiments completed!"
