@@ -86,7 +86,7 @@ class TranscoderDataGenerator:
                     outs, _, r_records, z_records, h_new_records, h_records =  inference_generate(self.rnn_model, batch_sequences, 
                                     discrete=True, record_gates=True)
                     
-                    outs = torch.nn.functional.one_hot(outs.argmax(-1), n_classes=30)
+                    outs = torch.nn.functional.one_hot(outs.argmax(-1), num_classes=30)
                     
                     # Extract data from single layer (index 0)
                     r_t = r_records[0]  # (batch_size, seq_len, 2*hidden_size)
@@ -96,11 +96,11 @@ class TranscoderDataGenerator:
                     
                     outs = add_delimiter_dimension(outs, concat_del=False)
                     batch_sequences = add_delimiter_dimension(batch_sequences)
-                    x_t = torch.cat([batch_sequences, outs],
+                    x_t = torch.cat([batch_sequences, outs[:, :-1]],
                                     dim=1)   # (batch_size, 2*seq_len, input_size)
                     
                     # Process each timestep
-                    for t in range(2*max_len):
+                    for t in range(2*unique_sequences.size(1)):
                         # Extract valid samples for this timestep
                         valid_h_prev = h_prev[:, t]  # (n_valid, hidden_size)
                         valid_x_t = x_t[:, t]      # (n_valid, input_size)
@@ -199,7 +199,7 @@ def create_transcoder_dataloaders(dataset: StackDataset,
     val_dataset = Subset(dataset, val_indices)
     
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=64, persistent_workers=True
+        train_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=192, persistent_workers=True
     )
     val_loader = torch.utils.data.DataLoader(
         val_dataset, batch_size=batch_size, shuffle=False

@@ -1,3 +1,5 @@
+import math
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -10,6 +12,13 @@ from tqdm import tqdm
 from transcoders import Transcoder, set_transcoder_weights
 from transcoder_datasets import create_transcoder_dataloaders
 torch.serialization.add_safe_globals([StackDataset])
+from train import linear_lr
+
+def normalize_batch(x, eps=1e-8):
+    """Normalize per batch to zero mean, unit variance."""
+    mean = x.mean(dim=0, keepdim=True)
+    std = x.std(dim=0, keepdim=True).clamp_min(eps)
+    return (x - mean) / std
 
 class TranscoderLoss(nn.Module):
     """
@@ -24,6 +33,9 @@ class TranscoderLoss(nn.Module):
         self.lambda_penalty = lambda_penalty
         self.c_sparsity = c_sparsity
         self.mse_loss = nn.MSELoss()
+        self.total_steps = 0
+        self.steps = 0
+        self.eval = False
         
     def forward(self, predictions, targets, features, 
                 decoder_weights, threshold):
@@ -37,6 +49,9 @@ class TranscoderLoss(nn.Module):
 
             W_d is of shape out_vec x n_feats
         """
+        sparsity_coeff = self.lambda_sparsity
+        if not self.eval:
+            sparsity_coeff *= self.steps/self.total_steps
         # Reconstruction loss: ||y - ŷ(x)||²₂
         reconstruction_loss = self.mse_loss(predictions, targets)
         
@@ -47,16 +62,21 @@ class TranscoderLoss(nn.Module):
         # Avoid division by zero
         decoder_norms = torch.clamp(decoder_norms, min=1e-8)
         
-        normalized_features = feature_magnitudes * decoder_norms.unsqueeze(0)  # Broadcast over batch
+        normalized_features = feature_magnitudes / decoder_norms.unsqueeze(0).detach()  # Broadcast over batch
         sparsity_terms = torch.tanh(self.c_sparsity * normalized_features)
-        sparsity_loss = self.lambda_sparsity * torch.sum(sparsity_terms)
+        sparsity_loss = sparsity_coeff * (self.steps/self.total_steps) * torch.sum(sparsity_terms)
         
         # Penalty loss: L_P(x) = λ_P * Σ ReLU(exp(t) - f_i(x)) * ||W_d,i||₂
-        penalty_terms = torch.relu(threshold - features) * decoder_norms.unsqueeze(0)
-        penalty_loss = self.lambda_penalty * torch.mean(penalty_terms)
+        penalty_terms = torch.relu(torch.exp(threshold) - features) #* decoder_norms.unsqueeze(0).detach()
+        penalty_loss = self.lambda_penalty * torch.sum(penalty_terms)
         
         total_loss = reconstruction_loss + sparsity_loss + penalty_loss
-        
+        # print(
+        #     "Penalty threshold:", threshold.item(),
+        #     "Penalty features min/max:", features.min().item(), features.max().item(),
+        #     "Penalty inactive count:", (features == 0).sum().item()
+        # )
+        # print(penalty_loss)
         return {
             'total_loss': total_loss,
             'reconstruction_loss': reconstruction_loss,
@@ -95,7 +115,8 @@ class TranscoderTrainer:
     def train_epoch(self, train_loader: DataLoader, run=None) -> Dict[str, float]:
         """Train for one epoch"""
         self.transcoder.train()
-        
+        feature_activation_densities = torch.zeros((self.transcoder.n_feats)).to(torch.device("cuda"))
+        self.loss_fn.eval = False
         epoch_losses = {
             'total': 0, 'reconstruction': 0, 'sparsity': 0, 'penalty': 0
         }
@@ -107,6 +128,9 @@ class TranscoderTrainer:
             # Move data to device
             inputs = batch['input'].to(self.device)
             targets = batch['output'].to(self.device)
+
+            inputs = normalize_batch(inputs)
+            targets = normalize_batch(targets)
             
             # Train update gate transcoder
             self.optimizer.zero_grad()
@@ -124,6 +148,7 @@ class TranscoderTrainer:
             )
             
             loss_dict['total_loss'].backward()
+            torch.nn.utils.clip_grad_norm_(self.transcoder.parameters(), 1.0)
             self.optimizer.step()
             
             # Accumulate losses
@@ -131,18 +156,30 @@ class TranscoderTrainer:
                 epoch_losses[loss_type] += loss_dict[f'{loss_type}_loss'].item()
                 if run:
                     run.log({f"train_{loss_type}": loss_dict[f'{loss_type}_loss'].item()})
+
+            with torch.no_grad():
+                if run:
+                    run.log({"train_wdecoder_norms": torch.norm(self.transcoder.features_to_outputs.weight, dim=0).mean()})
+                    run.log({"train_bdecoder_norms": torch.norm(self.transcoder.features_to_outputs.bias)})
+                    run.log({"train_wencoder_norms": torch.norm(self.transcoder.input_to_features.weight, dim=0).mean()})
+                    run.log({"train_bencoder_norms": torch.norm(self.transcoder.input_to_features.bias)})
+                    run.log({"jrelu_thresh": self.transcoder.act.threshold.item()})
+                    run.log({"features_active": torch.count_nonzero(features_activated)/inputs.size(0)})
+                    run.log({"feature_magnitudes": torch.abs(features_activated[features_activated != 0]).mean()})
+                feature_activation_densities += (features != 0).sum(dim=0)
+            
+            self.loss_fn.steps +=1
         # Average losses
         for loss_type in epoch_losses:
             epoch_losses[loss_type] /= n_batches
-            if run:
-                    run.log({f"epoch_train_{loss_type}": loss_dict[f'{loss_type}_loss'].item()})
-                
+        if run:
+            run.log({"num_never_active": feature_activation_densities.size(0) - torch.count_nonzero(feature_activation_densities)})
         return epoch_losses
     
     def validate(self, val_loader: DataLoader, run=None) -> Dict[str, float]:
         """Validate the model"""
         self.transcoder.eval()
-        
+        self.loss_fn.eval = True
         epoch_losses = {
             'total': 0, 'reconstruction': 0, 'sparsity': 0, 'penalty': 0
         }
@@ -188,6 +225,7 @@ class TranscoderTrainer:
               save_every: int = 10, run=None) -> None:
         """Train the transcoders"""
         
+        self.loss_fn.total_steps = n_epochs * (len(train_loader.dataset)//train_loader.batch_size + 1)
         best_val_loss = float('inf')
         pbar = tqdm(range(n_epochs))
         for epoch in pbar:

@@ -13,7 +13,7 @@ def rectangle(x: torch.Tensor) -> torch.Tensor:
 class jumprelu(torch.autograd.Function):
     @staticmethod
     def forward(x: torch.Tensor, threshold: torch.Tensor, bandwidth: float) -> torch.Tensor:
-        return (x * (x > threshold)).to(x)
+        return (x * (x > torch.exp(threshold))).to(x)
 
     @staticmethod
     def setup_context(
@@ -55,7 +55,7 @@ def set_transcoder_weights(p=0.01):
         z_p = norm.ppf(p)
         row_norms = torch.linalg.norm(W, dim=1)  # L2 norm per row
         b = z_p * row_norms
-        return b
+        return b + math.exp(0.1)
 
     def custom_weights_init(m):
         in_dim = m.weight.size(-1)
@@ -69,7 +69,7 @@ def set_transcoder_weights(p=0.01):
 
 class Transcoder(nn.Module):
     def __init__(self, input_size, out_size, n_feats, bias=True,
-                  threshhold=math.exp(0.1), bandwidth=2):
+                  threshhold=0.1, bandwidth=2):
         super(Transcoder, self).__init__()
         self.input_size = input_size
         self.out_size = out_size
