@@ -13,7 +13,7 @@ from tqdm import tqdm
 from models.transcoders import Transcoder, set_transcoder_weights
 from datasets.transcoder_datasets import create_transcoder_dataloaders
 from training.train_utils import SignalManager, normalize_batch
-torch.serialization.add_safe_globals([StackDataset])
+# torch.serialization.add_safe_globals([StackDataset])
 
 class TranscoderLoss(nn.Module):
     """
@@ -49,6 +49,7 @@ class TranscoderLoss(nn.Module):
                 return lambda: 1/(1+math.exp(-10*((self.steps/self.total_steps)-0.5)))
             case 3:
                 # cosine annealing sparsity loss
+                # return lambda: 1/(1+math.exp(-20*(((self.steps % self.off)/self.off)-0.5))) if self.steps < 0.75*self.total_steps else 1
                 return lambda: math.sin(0.5*math.pi*(self.steps % self.off)/self.off)
             case _:
                 return lambda: (self.steps/self.total_steps)
@@ -264,13 +265,13 @@ class TranscoderTrainer:
             pbar.set_description(f"Train: {train_losses['total']:.4f}, Val: {val_losses['total']:.4f}")
             
             # Save best model
-            if epoch % save_every == 0 and save_path and val_losses['total'] < best_val_loss:
+            if epoch % save_every == 0 and save_path:
                 torch.save({
                     'transcoder': self.transcoder.state_dict(),
                     'epoch': epoch,
                     'train_history': self.train_history,
                     'val_history': self.val_history
-                }, f"{save_path}/best_val_loss.ckpt")
+                }, f"{save_path}/e{epoch}.ckpt")
         torch.save({
                     'transcoder': self.transcoder.state_dict(),
                     'epoch': epoch,

@@ -138,8 +138,8 @@ def train_model_copy(config, num_epochs=15000, lr=1e-3,
                                                                 )
         # save test set somewhere:
         print("saving generated dataset")
-        torch.save(train_dataset, f"{config.run_name}/{config.run_name.split("/")[-1]}.pt")
-        torch.save(test_dataset, f"{config.run_name}/{config.run_name.split("/")[-1]}.pt")
+        torch.save(train_dataset, f"{config.run_name}/{config.run_name.split('/')[-1]}.pt")
+        torch.save(test_dataset, f"{config.run_name}/{config.run_name.split('/')[-1]}.pt")
 
     loader = DataLoader(train_dataset, batch_size=config.batch_size,
                          shuffle=True, pin_memory=True)
