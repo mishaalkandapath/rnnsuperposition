@@ -203,6 +203,7 @@ def create_transcoder_dataloaders(dataset: StackDataset,
         train_dataset, batch_size=batch_size, shuffle=shuffle, 
         num_workers=len(os.sched_getaffinity(0)), persistent_workers=True #HERE
     )
+    print(f"-- Asked for {len(os.sched_getaffinity(0))} workers")
     val_loader = torch.utils.data.DataLoader(
         val_dataset, batch_size=batch_size, shuffle=False
     )
