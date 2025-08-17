@@ -49,8 +49,8 @@ class TranscoderLoss(nn.Module):
                 return lambda: 1/(1+math.exp(-10*((self.steps/self.total_steps)-0.5)))
             case 3:
                 # cosine annealing sparsity loss
-                # return lambda: 1/(1+math.exp(-20*(((self.steps % self.off)/self.off)-0.5))) if self.steps < 0.75*self.total_steps else 1
-                return lambda: math.sin(0.5*math.pi*(self.steps % self.off)/self.off)
+                return lambda: math.sin(0.5*math.pi*(self.steps % self.off)/self.off) if self.steps < 0.75*self.total_steps else 1
+            case 4: return lambda: 1
             case _:
                 return lambda: (self.steps/self.total_steps)
 
@@ -108,8 +108,8 @@ class TranscoderTrainer:
     
     def __init__(self, 
                  transcoder: nn.Module,
+                 optimizer: optim.Optimizer,
                  device: str = 'cuda',
-                 lr: float = 1e-3,
                  loss_fn: TranscoderLoss=TranscoderLoss(10, 3e-6, 4)):
         
         self.transcoder = transcoder.to(device)
@@ -119,7 +119,7 @@ class TranscoderTrainer:
         self.loss_fn = loss_fn
         
         # Initialize optimizers
-        self.optimizer = optim.Adam(self.transcoder.parameters(), lr=lr)
+        self.optimizer = optimizer
         
         # Training history
         self.train_history = {
@@ -245,7 +245,6 @@ class TranscoderTrainer:
         
         self.loss_fn.total_steps = n_epochs * (len(train_loader.dataset)//train_loader.batch_size + 1)
         self.loss_fn.off *= (len(train_loader.dataset)//train_loader.batch_size + 1)
-        best_val_loss = float('inf')
         print("Running for ", n_epochs)
         pbar = tqdm(range(n_epochs))
         for epoch in pbar:
@@ -266,18 +265,10 @@ class TranscoderTrainer:
             
             # Save best model
             if epoch % save_every == 0 and save_path:
-                torch.save({
-                    'transcoder': self.transcoder.state_dict(),
-                    'epoch': epoch,
-                    'train_history': self.train_history,
-                    'val_history': self.val_history
-                }, f"{save_path}/e{epoch}.ckpt")
-        torch.save({
-                    'transcoder': self.transcoder.state_dict(),
-                    'epoch': epoch,
-                    'train_history': self.train_history,
-                    'val_history': self.val_history
-                }, f"{save_path}/final_model.ckpt")
+                torch.save({"transcoder":self.transcoder.state_dict(),
+                            "optim": self.optimizer.state_dict()}, f"{save_path}/e{epoch}.ckpt")
+        torch.save({"transcoder":self.transcoder.state_dict(),
+                            "optim": self.optimizer.state_dict()}, f"{save_path}/final_model.ckpt")
     
     def plot_training_curves(self):
         """Plot training curves"""
@@ -326,6 +317,10 @@ def create_and_train_transcoders(dataset: Dict[str, torch.Tensor],
         out_size=hidden_size,  # Update gate size
         n_feats=n_feats
     )
+    optimizer = optim.Adam(transcoder.parameters(), lr=train_cfg["lr"])
+    if train_cfg["ctd_from"]:
+        transcoder.load_state_dict(torch.load(train_cfg["ctd_from"], weights_only=True)["transcoder"])
+        optimizer.load_state_dict(torch.load(train_cfg["ctd_from"], weights_only=True)["optim"])
     print("--Initialized Transcoder--")
     # Initialize weights
     weight_init_fn = set_transcoder_weights(p=0.01)
@@ -345,6 +340,7 @@ def create_and_train_transcoders(dataset: Dict[str, torch.Tensor],
 
     trainer = TranscoderTrainer(
         transcoder=transcoder,
+        optimizer=optimizer,
         device=device,
         lr=train_cfg["lr"],
         loss_fn=loss_fn
@@ -387,6 +383,7 @@ if __name__ == "__main__":
     parser.add_argument("--l_sparse_offset", type=int, default=1)
     parser.add_argument("--w_detach", action="store_true")
     parser.add_argument("--save_path", required=True)
+    parser.add_argument("--ctd_from", default=None)
 
     args = parser.parse_args()
 
@@ -409,7 +406,7 @@ if __name__ == "__main__":
     train_cfg = {"lr": args.lr, "l_sparsity": args.l_sparsity, 
                  "l_schedule": args.lambda_sparse_schedule, 
                  "l_sched_offset": args.l_sparse_offset, "w_det": args.w_detach,
-                 "l_penalty":args.l_penalty, "c_sparsity":args.c_sparsity}
+                 "l_penalty":args.l_penalty, "c_sparsity":args.c_sparsity, "ctd_from":args.ctd_from}
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     print("--Loading Dataset--")
