@@ -182,9 +182,9 @@ class TranscoderTrainer:
                     run.log({"train_bencoder_norms": torch.norm(self.transcoder.input_to_features.bias)})
                     run.log({"jrelu_thresh": self.transcoder.act.threshold.item()})
                     run.log({"features_active": torch.count_nonzero(features_activated)/inputs.size(0)})
-                    run.log({"feature_magnitudes": torch.abs(features_activated[features_activated != 0]).mean()})
+                    run.log({"feature_magnitudes": torch.abs(features_activated[features_activated > 0]).mean()})
                     run.log({"sparsity_coeff": self.loss_fn.sparse_scheduler()})
-                feature_activation_densities += (features != 0).sum(dim=0)
+                feature_activation_densities += (features_activated > 0).sum(dim=0)
             
             self.loss_fn.steps +=1
         # Average losses
@@ -264,7 +264,7 @@ class TranscoderTrainer:
             pbar.set_description(f"Train: {train_losses['total']:.4f}, Val: {val_losses['total']:.4f}")
             
             # Save best model
-            if epoch % save_every == 0 and save_path:
+            if epoch % 10 == 0 and save_path:
                 torch.save({"transcoder":self.transcoder.state_dict(),
                             "optim": self.optimizer.state_dict()}, f"{save_path}/e{epoch}.ckpt")
         torch.save({"transcoder":self.transcoder.state_dict(),
@@ -342,7 +342,6 @@ def create_and_train_transcoders(dataset: Dict[str, torch.Tensor],
         transcoder=transcoder,
         optimizer=optimizer,
         device=device,
-        lr=train_cfg["lr"],
         loss_fn=loss_fn
     )
 

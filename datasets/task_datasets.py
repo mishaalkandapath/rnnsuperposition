@@ -216,7 +216,7 @@ class TwoStepRLEnvironment:
         
         self.reset_trial(reset_r=True)
         
-    def reset_trial(self, reset_r=False):
+    def reset_trial(self, reset_r=False, manual_switch=False):
         """Reset for a new trial"""
         self.phase = self.DELAY_1
         self.current_state = self.FIXATION_STATE
@@ -226,7 +226,7 @@ class TwoStepRLEnvironment:
             self.last_reward = 0
         
         # Possibly switch reward allocation (2.5% chance)
-        if random.random() < self.reward_switch_prob:
+        if manual_switch or random.random() < self.reward_switch_prob:
             self.reward_probs[self.STATE_1], self.reward_probs[self.STATE_2] = \
                 self.reward_probs[self.STATE_2], self.reward_probs[self.STATE_1]
     

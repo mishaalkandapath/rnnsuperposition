@@ -74,7 +74,7 @@ class ActorCriticTrainer:
         
         return policy_logits, value_estimate, new_hidden
     
-    def select_action(self, policy_logits, inference=False):
+    def select_action(self, policy_logits, inference=False, phase=-1):
         """
         Select action based on policy logits.
         
@@ -82,7 +82,12 @@ class ActorCriticTrainer:
             policy_logits: Logits for each action
             inference: If True, use greedy selection; if False, sample
         """
-        if inference:
+        if inference and phase > 0: # only sample compatible actions
+            if phase != 1:
+                return 0
+            else:
+                return torch.argmax(policy_logits[:, :, 1:]) + 1
+        elif inference:        
             return torch.argmax(policy_logits).item()
         else:
             action_probs = F.softmax(policy_logits, dim=0)
@@ -163,7 +168,6 @@ class ActorCriticTrainer:
         Returns:
             episode_data: Dictionary with trajectory data and statistics
         """
-        # Storage for episode trajectory
         states_history = []
         actions_history = []
         rewards_history = []
@@ -176,25 +180,19 @@ class ActorCriticTrainer:
         for _ in range(trials_per_episode):
             self.env.reset_trial()
             
-            # Run through three phases of each trial
             for _ in range(3):  # DELAY_1, GO, DELAY_2
-                    
-                # Get observation and convert to input tensor
                 self.env.get_observation()
                 input_vec = self.env.get_input_vector()
                 input_tensor = torch.tensor(input_vec, dtype=torch.float32).unsqueeze(0).unsqueeze(0).to(self.device)
                 
-                # Forward pass
                 policy_logits, value_estimate, hidden_state = self.get_model_outputs(input_tensor, hidden_state)
                 
-                # Select action
                 action = self.select_action(policy_logits, inference=inference)
                 
-                # Take action in environment
+                # that action in environment
                 self.env.step(action)
                 reward = getattr(self.env, 'last_reward', 0)
                 
-                # Store trajectory data (only if not inference)
                 if not inference:
                     states_history.append(input_vec)
                     actions_history.append(action)
@@ -396,6 +394,6 @@ if __name__ =="__main__":
     sig_handler.register_handler()
 
     train_stats = trainer.train(run_name=args.run_name)
-    f = open(f"{args.run_name}/stats_{run_name.split('/')[-1]}.p", "wb")
+    f = open(f"{args.run_name}/stats_{args.run_name.split('/')[-1]}.p", "wb")
     pickle.dump(train_stats, f)
     f.close()
