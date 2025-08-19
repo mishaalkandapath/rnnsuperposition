@@ -200,8 +200,6 @@ class RNN(nn.Module):
         if record_gates: return outputs, final_hiddens, torch.stack(r_records), torch.stack(z_records), torch.stack(h_new_records), torch.stack(h_records)
         return outputs, final_hiddens
 
-
-# Example usage and testing
 if __name__ == "__main__":
     # Parameters
     batch_size = 2

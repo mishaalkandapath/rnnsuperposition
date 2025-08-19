@@ -82,11 +82,11 @@ class ActorCriticTrainer:
             policy_logits: Logits for each action
             inference: If True, use greedy selection; if False, sample
         """
-        if inference and phase > 0: # only sample compatible actions
+        if inference and phase >= 0: # only sample compatible actions
             if phase != 1:
                 return 0
             else:
-                return torch.argmax(policy_logits[:, :, 1:]) + 1
+                return torch.argmax(policy_logits[:, :, 1:]).item() + 1
         elif inference:        
             return torch.argmax(policy_logits).item()
         else:

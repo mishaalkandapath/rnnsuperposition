@@ -4,7 +4,7 @@ import sys
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader, StackDataset
+from torch.utils.data import DataLoader, StackDataset, ConcatDataset
 import numpy as np
 from typing import Dict, Tuple, List
 import matplotlib.pyplot as plt
@@ -370,7 +370,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--input_size", type=int, required=True, help="Vocab Size")
     parser.add_argument("--n_feats", type=int, required=True, help="Number of sequences to generate")
-    parser.add_argument("--dataset_path", type=str, required=True, help="Name of dataset")
+    parser.add_argument("--dataset_paths", nargs="+", type=str, required=True, help="Name of dataset")
     parser.add_argument("--batch_size", type=int, required=True)
     parser.add_argument("--hidden_size", type=int, required=True)
     parser.add_argument("--lr", type=float, required=True)
@@ -408,8 +408,11 @@ if __name__ == "__main__":
                  "l_penalty":args.l_penalty, "c_sparsity":args.c_sparsity, "ctd_from":args.ctd_from}
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    print("--Loading Dataset--")
-    dataset = torch.load(args.dataset_path)
+    print("--Loading Dataset(s)--")
+    datasets = []
+    for data_path in args.dataset_path:
+        datasets += [torch.load(data_path)]
+    dataset = ConcatDataset(datasets)
     print("--Finished Loading Dataset--")
     os.makedirs(args.save_path, exist_ok=True)
     create_and_train_transcoders(dataset, train_cfg, 
