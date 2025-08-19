@@ -11,4 +11,4 @@ pip install -r /home/mishaalk/scratch/requirements.txt
 deactivate
 
 cp -r /home/mishaalk/projects/def-gpenn/mishaalk/rnnsuperposition/ .
-cp -r /home/mishaalk/scratch/$FILENAME .
+cp -r /home/mishaalk/scratch/$FILENAME rnnsuperposition/

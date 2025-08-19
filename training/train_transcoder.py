@@ -13,7 +13,7 @@ from tqdm import tqdm
 from models.transcoders import Transcoder, set_transcoder_weights
 from datasets.transcoder_datasets import create_transcoder_dataloaders
 from training.train_utils import SignalManager, normalize_batch
-torch.serialization.add_safe_globals([StackDataset])
+# torch.serialization.add_safe_globals([StackDataset])
 
 class TranscoderLoss(nn.Module):
     """

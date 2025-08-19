@@ -43,7 +43,7 @@ class SignalManager:
         if self.train_obj_global is not None and self.run_name_global is not None:
             try:
                 os.makedirs(self.run_name_global, exist_ok=True)
-                save_path = f"{self.run_name_global}/interrupted_{self.run_name_global.split("/")[-1]}.ckpt"
+                save_path = f"{self.run_name_global}/interrupted_{self.run_name_global.split('/')[-1]}.ckpt"
                 torch.save(self.train_obj_global.state_dict(), save_path)
                 print(f"Model saved to: {save_path}")
             except Exception as e:

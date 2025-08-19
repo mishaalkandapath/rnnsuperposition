@@ -285,7 +285,7 @@ class ActorCriticTrainer:
                          "Actor loss":recent_actor_loss,
                           "Critic Loss": recent_critic_loss })
         
-        torch.save(self.model.state_dict(), f"{run_name}/{run_name.split("/")[-1]}.ckpt")
+        torch.save(self.model.state_dict(), f"{run_name}/{run_name.split('/')[-1]}.ckpt")
         return self.training_stats
     
     def evaluate_model(self, num_episodes=300, trials_per_episode=100):
