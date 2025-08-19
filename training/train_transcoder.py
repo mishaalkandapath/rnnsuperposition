@@ -77,11 +77,10 @@ class TranscoderLoss(nn.Module):
         decoder_norms = torch.norm(decoder_weights, dim=0)  # ||W_d,i||₂ for each feature
         feature_magnitudes = torch.abs(features)  # |f_i(x)|
         
-        # Avoid division by zero
         decoder_norms = torch.clamp(decoder_norms, min=1e-8)
         decoder_norms = decoder_norms if not self.w_detach else decoder_norms.detach()
         
-        normalized_features = feature_magnitudes / decoder_norms.unsqueeze(0)  # Broadcast over batch
+        normalized_features = feature_magnitudes / decoder_norms.unsqueeze(0)
         sparsity_terms = torch.tanh(self.c_sparsity * normalized_features)
         sparsity_loss = sparsity_coeff * torch.sum(sparsity_terms)
         
@@ -115,13 +114,10 @@ class TranscoderTrainer:
         self.transcoder = transcoder.to(device)
         self.device = device
         
-        # Initialize loss functions
         self.loss_fn = loss_fn
         
-        # Initialize optimizers
         self.optimizer = optimizer
         
-        # Training history
         self.train_history = {
             'total': [], 'reconstruction': [], 'sparsity': [], 'penalty': []
         }
@@ -142,20 +138,16 @@ class TranscoderTrainer:
         
         # pbar = tqdm(train_loader, total=n_batches)
         for batch in train_loader:
-            # Move data to device
             inputs = batch['input'].to(self.device)
             targets = batch['output'].to(self.device)
 
             inputs = normalize_batch(inputs)
             targets = normalize_batch(targets)
-            
-            # Train update gate transcoder
+        
             self.optimizer.zero_grad()
             
-            # Forward pass through encoder to get features
             predictions, features_activated, features = self.transcoder(inputs)
             
-            # Compute loss
             loss_dict = self.loss_fn(
                 predictions, 
                 targets,
@@ -168,7 +160,6 @@ class TranscoderTrainer:
             torch.nn.utils.clip_grad_norm_(self.transcoder.parameters(), 1.0)
             self.optimizer.step()
             
-            # Accumulate losses
             for loss_type in epoch_losses.keys():
                 epoch_losses[loss_type] += loss_dict[f'{loss_type}_loss'].item()
                 if run:
@@ -187,7 +178,6 @@ class TranscoderTrainer:
                 feature_activation_densities += (features_activated > 0).sum(dim=0)
             
             self.loss_fn.steps +=1
-        # Average losses
         for loss_type in epoch_losses:
             epoch_losses[loss_type] /= n_batches
         if run:
@@ -206,11 +196,9 @@ class TranscoderTrainer:
         
         with torch.no_grad():
             for batch in val_loader:
-                # Move data to device
                 inputs = normalize_batch(batch['input']).to(self.device)
                 targets = normalize_batch(batch['output']).to(self.device)
                 
-                # Update gate transcoder
                 features = self.transcoder.input_to_features(inputs)
                 features_activated = self.transcoder.act(features)
                 predictions = self.transcoder.features_to_outputs(features_activated)
@@ -223,11 +211,9 @@ class TranscoderTrainer:
                     self.transcoder.act.threshold
                 )
                 
-                # Accumulate losses
                 for loss_type in epoch_losses.keys():
                     epoch_losses[loss_type] += loss_dict[f'{loss_type}_loss'].item()
         
-        # Average losses
         for loss_type in epoch_losses:
             epoch_losses[loss_type] /= n_batches
             if run:
@@ -241,29 +227,24 @@ class TranscoderTrainer:
               n_epochs: int,
               save_path: str = None,
               save_every: int = 25, run=None) -> None:
-        """Train the transcoders"""
         
         self.loss_fn.total_steps = n_epochs * (len(train_loader.dataset)//train_loader.batch_size + 1)
         self.loss_fn.off *= (len(train_loader.dataset)//train_loader.batch_size + 1)
         print("Running for ", n_epochs)
         pbar = tqdm(range(n_epochs))
         for epoch in pbar:
-            # Train
             train_losses = self.train_epoch(train_loader, run=run)
             
             if epoch % save_every == 0:
-                # Validate
                 val_losses = self.validate(val_loader, run=run)
                 best_val_loss = val_losses['total']
 
-            # Store history
             for loss_type in train_losses.keys():
                 self.train_history[loss_type].append(train_losses[loss_type])
                 self.val_history[loss_type].append(val_losses[loss_type])
 
             pbar.set_description(f"Train: {train_losses['total']:.4f}, Val: {val_losses['total']:.4f}")
             
-            # Save best model
             if epoch % 10 == 0 and save_path:
                 torch.save({"transcoder":self.transcoder.state_dict(),
                             "optim": self.optimizer.state_dict()}, f"{save_path}/e{epoch}.ckpt")
@@ -288,7 +269,6 @@ class TranscoderTrainer:
         plt.tight_layout()
         plt.show()
 
-# Example usage
 def create_and_train_transcoders(dataset: Dict[str, torch.Tensor],
                                  train_cfg: Dict[str, float],
                                  hidden_size: int,
@@ -322,15 +302,12 @@ def create_and_train_transcoders(dataset: Dict[str, torch.Tensor],
         transcoder.load_state_dict(torch.load(train_cfg["ctd_from"], weights_only=True)["transcoder"])
         optimizer.load_state_dict(torch.load(train_cfg["ctd_from"], weights_only=True)["optim"])
     print("--Initialized Transcoder--")
-    # Initialize weights
     weight_init_fn = set_transcoder_weights(p=0.01)
     transcoder.input_to_features.apply(weight_init_fn)
     transcoder.features_to_outputs.apply(weight_init_fn)
     
-    # Create data loaders
     train_loader, val_loader = create_transcoder_dataloaders(dataset, batch_size=batch_size)
     print("--Created Dataloader--")
-    # Create trainer
     loss_fn = TranscoderLoss(lambda_sparsity=train_cfg["l_sparsity"], 
                              lambda_penalty=train_cfg["l_penalty"],
                              c_sparsity=train_cfg["c_sparsity"], 
@@ -350,7 +327,6 @@ def create_and_train_transcoders(dataset: Dict[str, torch.Tensor],
     sig_handler.register_handler()
 
     print("--Beginning Training--")
-    # Train
     trainer.train(
         train_loader=train_loader,
         val_loader=val_loader,

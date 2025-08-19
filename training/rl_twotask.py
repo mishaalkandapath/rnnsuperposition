@@ -37,23 +37,19 @@ class ActorCriticTrainer:
         self.gamma = gamma
         self.beta_entropy = beta_entropy
         self.beta_critic = beta_critic
-        
-        # Separate optimizers for actor and critic (following pseudocode θ and θ_v)
+    
         if model.learn_init:
             self.optimizer = torch.optim.Adam([
-                # Regular RNN parameters (weights, biases)
                 {'params': [p for name, p in model.named_parameters() 
                             if 'initial_states' not in name], 
                 'lr': lr},
                 
-                # Initial state parameters  
                 {'params': model.initial_states.parameters(), 
                 'lr': lr_init} 
             ], lr=lr)
         else:
             self.optimizer = optim.Adam(model.parameters(), lr=lr)
         
-        # Training statistics
         self.training_stats = defaultdict(list)
         self.logger = logger
 
@@ -68,7 +64,6 @@ class ActorCriticTrainer:
         """
         outputs, new_hidden = self.model(input_tensor, hidden_state)
         
-        # Extract policy logits (first 3) and value estimate (4th output)
         policy_logits = outputs[0, 0, :3]  # Actions: fixation, action1, action2
         value_estimate = outputs[0, 0, 3]
         
@@ -93,6 +88,20 @@ class ActorCriticTrainer:
             action_probs = F.softmax(policy_logits, dim=0)
             return int(torch.multinomial(action_probs, 1).item())
     
+    def select_action_batched(self, policy_logits, phase=-1):
+        """
+        Select action based on policy logits.
+        
+        Args:
+            policy_logits: Logits for each action
+            inference: If True, use greedy selection; if False, sample
+        """
+        #TODO: currently only for inference
+        actions = torch.zeros(policy_logits.size(0)).to(policy_logits.device)
+        if phase == 1:
+            actions = torch.argmax(policy_logits[:, :, 1:], dim=-1)[:, 0] + 1
+        return actions
+    
     def compute_returns(self, rewards, values, is_terminal=True):
         """
         Compute discounted returns using bootstrapping from pseudocode.
@@ -105,11 +114,9 @@ class ActorCriticTrainer:
         """
         returns = []
         
-        # Initialize R according to pseudocode
         if is_terminal:
             R = 0.0
         else:
-            # Bootstrap from last state value
             R = values[-1].item() if len(values) > 0 else 0.0
         
         # Work backwards: R ← r_i + γR
@@ -124,10 +131,7 @@ class ActorCriticTrainer:
         """
         Compute actor-critic loss components.
         """
-        # Convert to tensors
         values = torch.stack(values_history)
-        
-        # Compute advantages
         advantages = returns - values
         advantages = torch.clamp(advantages, -5.0, 5.0)
         
@@ -147,7 +151,6 @@ class ActorCriticTrainer:
         log_probs = torch.stack(log_probs)
         entropies = torch.stack(entropies)
         
-        # Actor loss with entropy regularization
         actor_loss = -(log_probs * advantages.detach()).mean() - self.beta_entropy * entropies.mean()
         
         # Critic loss: (R - V(s; θ_v))^2
@@ -189,7 +192,6 @@ class ActorCriticTrainer:
                 
                 action = self.select_action(policy_logits, inference=inference)
                 
-                # that action in environment
                 self.env.step(action)
                 reward = getattr(self.env, 'last_reward', 0)
                 
@@ -220,13 +222,10 @@ class ActorCriticTrainer:
         if len(episode_data['rewards']) == 0:
             return 0, 0
             
-        # Compute returns with bootstrapping
         returns = self.compute_returns(
                                      episode_data['rewards'], 
                                      episode_data['values']
                                     )
-        
-        # Compute losses
         actor_loss, critic_loss, advantages = self.compute_advantage_loss(
             episode_data['policy_logits'],
             episode_data['actions'],
@@ -256,20 +255,16 @@ class ActorCriticTrainer:
         print(f"Starting training for {num_episodes} episodes...")
         pbar = tqdm(range(num_episodes))
         for episode in pbar:
-            # Collect episode trajectory
             self.env.reset_trial(reset_r=True)
             episode_data = self.run_episode(trials_per_episode=trials_per_episode, 
                                           inference=False)
             
-            # Perform training update
             actor_loss, critic_loss = self.train_step(episode_data)
             
-            # Track statistics
             self.training_stats['episode_rewards'].append(episode_data['episode_reward'])
             self.training_stats['actor_losses'].append(actor_loss)
             self.training_stats['critic_losses'].append(critic_loss)
             
-            # Periodic evaluation and reporting
             if eval_every > 0 and (episode + 1) % eval_every == 0:
                 self.evaluate_model(eval_episodes, trials_per_episode)
             

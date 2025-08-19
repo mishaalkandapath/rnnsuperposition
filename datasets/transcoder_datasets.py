@@ -20,7 +20,7 @@ class TranscoderDataGenerator:
         """
         self.rnn_model = rnn_model
         self.device = device
-        self.rnn_model.eval()  # Set to eval mode
+        self.rnn_model.eval() 
         
     def generate_transcoder_dataset(self, 
                                   n_tokens: int,
@@ -45,7 +45,6 @@ class TranscoderDataGenerator:
             - 'hidden_context_targets': True hidden context values h̃_t (n_t)
         """
         
-        # Generate unique sequences
         print(f"Generating {n_sequences} unique sequences...")
         unique_sequences, unique_masks = self._generate_unique_sequences(
             n_tokens, n_sequences, max_len, min_len
@@ -56,7 +55,6 @@ class TranscoderDataGenerator:
         for seq_idx in range(n_sequences):
             actual_length = int(sequence_lengths[seq_idx])
             if min_len <= actual_length <= max_len:
-                # Extract the sequence (only the valid part based on mask)
                 sequence = unique_sequences[seq_idx][:actual_length]
                 sequences_by_length[actual_length - min_len].append(sequence)
             else: 
@@ -70,7 +68,6 @@ class TranscoderDataGenerator:
         all_hidden_targets = []
         
         for unique_sequences in sequences_by_length:
-            # Process in batches for memory efficiency
             n_sequences = len(unique_sequences)
             batch_size = min(batch_size, n_sequences)
             n_batches = (n_sequences + batch_size - 1) // batch_size
@@ -83,13 +80,11 @@ class TranscoderDataGenerator:
                     if start_idx >= end_idx: break
                     
                     batch_sequences = unique_sequences[start_idx:end_idx].to(self.device)
-                    # Run RNN and record gates
                     outs, _, r_records, z_records, h_new_records, h_records =  inference_generate(self.rnn_model, batch_sequences, 
                                     discrete=True, record_gates=True)
                     
                     outs = torch.nn.functional.one_hot(outs.argmax(-1), num_classes=30)
                     
-                    # Extract data from single layer (index 0)
                     r_t = r_records[0]  # (batch_size, seq_len, 2*hidden_size)
                     z_t = z_records[0]  # (batch_size, seq_len, 2*hidden_size)  
                     h_new_t = h_new_records[0]  # (batch_size, 2*seq_len, hidden_size)
@@ -187,11 +182,9 @@ def create_transcoder_dataloaders(dataset: StackDataset,
         train_loader, val_loader
     """
     
-    # Determine dataset size
     n_samples = len(dataset)
     n_train = int(n_samples * train_split)
     
-    # Create indices for train/val splits
     indices = torch.randperm(n_samples) if shuffle else torch.arange(n_samples)
     train_indices = indices[:n_train]
     val_indices = indices[n_train:]

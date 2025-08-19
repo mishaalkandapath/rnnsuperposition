@@ -9,7 +9,7 @@ from torch.utils.data import ConcatDataset, StackDataset, Subset
 from tqdm import tqdm
 
 from models.rnn import RNN
-from datasets.task_datasets import TwoStepRLEnvironment
+from datasets.task_datasets import TwoStepRLEnvironment, BatchedTwoStepRLEnvironment
 from training.rl_twotask import ActorCriticTrainer
 
 # naively, i can just sample trials from the environment in varying lengths and collect data and train 
@@ -43,7 +43,7 @@ Structure:
 class RLTranscoderDataGenerator:
     """Generate training data for RNN transcoders from RL task"""
     
-    def __init__(self, rl_agent: ActorCriticTrainer, device='cpu'):
+    def __init__(self, rl_agent: ActorCriticTrainer, batch_size: int, device='cpu'):
         """
         Args:
             rl_agent: Trained RL agent with RNN model
@@ -52,6 +52,7 @@ class RLTranscoderDataGenerator:
         self.rl_agent = rl_agent
         self.device = device
         self.rl_agent.model.eval()
+        self.batch_size = batch_size
         
     def generate_transcoder_dataset(self, 
                                     n_episodes: int,
@@ -93,122 +94,139 @@ class RLTranscoderDataGenerator:
                                       trials_per_episode: int, 
                                       initial_config: str) -> Dict[str, List]:
         assert initial_config in ['high_first', 'low_first']
-        episodes_data = []
+        all_episodes_data = []
         all_patterns_count = [0, 0, 0, 0]
         # Equal representation of reversal counts (1, 2, 3, 4)
+        n_batches = (n_episodes + self.batch_size - 1) // self.batch_size
         episodes_per_reversal = n_episodes // 4
         reversal_counts = [1, 2, 3, 4] * episodes_per_reversal
         
-        for episode_idx in tqdm(range(n_episodes)):
-            num_reversals = reversal_counts[episode_idx]
+        for batch_idx in tqdm(range(n_batches)):
+            start_idx = batch_idx * self.batch_size
+            end_idx = min(start_idx + self.batch_size, n_episodes)
+            current_batch_size = end_idx - start_idx
 
-            reversal_indices = sorted(random.sample(range(1, trials_per_episode-1), num_reversals))
-            
-            self.rl_agent.env.reset_trial(reset_r=True)
-            episode_data, patterns_count, _ = self._run_single_episode(
+            batch_reversal_counts = reversal_counts[start_idx:end_idx]
+            batch_data, batch_patterns, _ = self._run_batch_episodes(
+                current_batch_size,
+                batch_reversal_counts,
                 trials_per_episode, 
-                reversal_indices, 
                 initial_config
             )
-            all_patterns_count = (patterns_count if not all_patterns_count else [all_patterns_count[i] + list(patterns_count.values())[i] for i in range(4)])
-            episodes_data = (episode_data if not episodes_data else {k: torch.concat([episodes_data[k], episode_data[k]]) for k in episodes_data})
-            
+
+            all_episodes_data.append(batch_data)
+            all_patterns_count = [all_patterns_count[i] + batch_patterns[i] for i in range(4)]
+        
+        episodes_data = self._concatenate_batch_data(all_episodes_data)
         return (
             episodes_data, 
             OrderedDict([(["commonp", "common(1-p)",
                             "uncommonp", "uncommon(1-p)"][i], all_patterns_count[i]) for i in range(4)
                         ]))
+
+    def _concatenate_batch_data(self, all_batch_data: List[Dict]) -> Dict:
+        if not all_batch_data:
+            return {}
+        
+        keys = all_batch_data[0].keys()
+        concatenated = {}
+        
+        for key in keys:
+            concatenated[key] = torch.cat([batch_data[key] for batch_data in all_batch_data], dim=0)
+        
+        return concatenated
     
-    def _run_single_episode(self, trials_per_episode: int, 
-                            reversal_indices: List[int], 
-                            initial_config: str) -> Dict:
+    def _run_batch_episodes(self, batch_size: int, reversal_counts: List[int], 
+                            trials_per_episode: int, initial_config: str) -> Dict:
         
         #the hidden state of the curren trial must update in light of transition -- common or uncommon
         # the hidden state of the next trial D1 phase will change based on the reward given -- it'll also influence the action and what not. 
         # so both trials, collectively, inform a type of transition. 
+        env_batch = self.rl_agent.env
+        batch_reversal_indices = torch.zeros((batch_size, trials_per_episode))
+        for i in range(batch_size):
+            num_reversals = reversal_counts[i]
+            reversal_indices = sorted(random.sample(range(1, trials_per_episode-1), num_reversals))
+            batch_reversal_indices[i][reversal_indices] = 1
         
-        by_pattern = OrderedDict([("commonp", 0), ("common(1-p)", 0),
-                                  ("uncommonp", 0), ("uncommon(1-p)", 0)])
+        batch_patterns = [0, 0, 0, 0]
+        
+        env_batch.reset_trial_batch(reset_r=True)
         if initial_config == 'high_first':
-            self.rl_agent.env.reward_probs[1] = 0.9  # State 1
-            self.rl_agent.env.reward_probs[2] = 0.1  # State 2
+            env_batch.reward_probs[:, 1] = 0.9  # State 1
+            env_batch.reward_probs[:, 2] = 0.1  # State 2
         else:
-            self.rl_agent.env.reward_probs[1] = 0.1
-            self.rl_agent.env.reward_probs[2] = 0.9
+            env_batch.reward_probs[:, 1] = 0.1
+            env_batch.reward_probs[:, 2] = 0.9
             
-        actions_history = []
-        
+        actions_history = [[] for _ in range(batch_size)]
+        batch_pattern_mask = [[] for _ in range(batch_size)] 
         # RNN internal state
-        hidden_states = []
-        update_gates = []
-        reset_gates = []
-        new_contexts = []
-        inputs = []
+        batch_inputs = []
+        batch_hidden_states = []
+        batch_update_gates = []
+        batch_reset_gates = []
+        batch_new_contexts = []
         
-        hidden_state = None
-        reversal_idx = 0
-        state_pattern_mask = []
-        prev_trial_key = ""
+        hidden_states = None
         for trial in (range(trials_per_episode)):
-            if reversal_idx < len(reversal_indices) and trial == reversal_indices[reversal_idx]:
-                self.rl_agent.env.reset_trial(manual_switch=True)
-                reversal_idx += 1
-            else:
-                self.rl_agent.env.reset_trial()
-            curr_trial_key = ""
+            manual_switch = torch.zeros(batch_size, dtype=torch.bool)
+            switch_mask = batch_reversal_indices[:, trial] != 0
+            manual_switch[switch_mask] = 1
+            env_batch.reset_trial_batch(manual_switch=manual_switch)
+            
             for phase in range(3):  # DELAY_1, GO, DELAY_2
                 # Get observation and convert to input tensor
-                self.rl_agent.env.get_observation()
-                input_vec = self.rl_agent.env.get_input_vector()
-                input_tensor = torch.tensor(input_vec, dtype=torch.float32).unsqueeze(0).unsqueeze(0).to(self.device)
-
-                if phase == 2:
-                    if self.rl_agent.env.current_state == actions_history[-1]:
-                        curr_trial_key+="common"
-                    else:
-                        curr_trial_key+="uncommon"
-                    cur_rel_state = self.rl_agent.env.current_state
+                input_vectors = env_batch.get_input_vector_batch()
+                input_tensor = input_vectors.unsqueeze(1).to(self.device).to(dtype=torch.float32)
                 
                 with torch.no_grad():
-                    policy_logits, value_estimate, new_hidden_state, gate_data = self._forward_with_gates(
-                        input_tensor, hidden_state
+                    policy_logits, value_estimate, new_hidden_states, gate_data = self._forward_with_gates(
+                        input_tensor, hidden_states
                     )
                 
-                action = self.rl_agent.select_action(policy_logits,
-                                                     inference=True,
-                                                     phase=phase)
+                actions = self.rl_agent.select_action_batched(policy_logits,
+                                                              phase=phase)
                 # take that action
-                self.rl_agent.env.step(action)
-                reward = getattr(self.rl_agent.env, 'last_reward', 0)
+                _, rewards = env_batch.step_batch(actions)
+                        
+                for ep_idx in range(batch_size):
+                    if phase == 2:
+                        current_state = env_batch.current_state[ep_idx].item()
+                        last_action = actions_history[ep_idx][-1] if actions_history[ep_idx] else 0
+                        reward = rewards[ep_idx].item()
+                        
+                        if current_state == last_action:
+                            pattern_type = 0 if reward > 0 else 1  # common
+                        else:
+                            pattern_type = 2 if reward > 0 else 3  # uncommon
+                        
+                        batch_patterns[pattern_type] += 1
+                        batch_pattern_mask[ep_idx].append(pattern_type)
+                    else:
+                        batch_pattern_mask[ep_idx].append(batch_pattern_mask[ep_idx][-1] if trial else -1)
+                    actions_history[ep_idx].append(actions[ep_idx].item())
 
-                if phase == 2:
-                    p_reward = self.rl_agent.env.reward_probs[cur_rel_state]
-                    curr_trial_key += "p" if (reward > 0 and p_reward > 0.5) else "(1-p)"
-                    by_pattern[curr_trial_key] += 1
-                    state_pattern_mask += [list(by_pattern.keys()).index(curr_trial_key)]
-                    prev_trial_key = curr_trial_key
 
-                actions_history.append(action)
-                inputs.append(input_tensor.squeeze(0))
-                update_gates.append(gate_data['update_gate'].squeeze(0))
-                reset_gates.append(gate_data['reset_gate'].squeeze(0))
-                new_contexts.append(gate_data['new_context'].squeeze(0))
-                hidden_states.append(hidden_state[0] if hidden_state is not None else self.rl_agent.model.initial_states[0].detach().broadcast_to(new_hidden_state[0].shape)) # bcz learned init state
+                batch_inputs.append(input_tensor.squeeze(1))
+                batch_update_gates.append(gate_data['update_gate'].squeeze(1))
+                batch_reset_gates.append(gate_data['reset_gate'].squeeze(1))
+                batch_new_contexts.append(gate_data['new_context'].squeeze(1))
+                if hidden_states is not None:
+                    batch_hidden_states.append(hidden_states[0])
+                else:
+                    initial_hidden = self.rl_agent.model.initial_states[0].detach()
+                    batch_hidden_states.append(initial_hidden.broadcast_to(new_hidden_states[0].shape))
 
-                if phase != 2 and prev_trial_key:
-                    state_pattern_mask += [list(by_pattern.keys()).index(prev_trial_key)]
-                elif phase != 2: # only on initial transition
-                    state_pattern_mask += [-1]
-
-                hidden_state = new_hidden_state
+                hidden_states = new_hidden_states
         
         return {
-            'inputs': torch.concat(inputs),
-            'hidden_states': torch.concat(hidden_states),
-            'update_gates': torch.concat(update_gates),
-            'reset_gates': torch.concat(reset_gates),
-            'new_contexts': torch.concat(new_contexts),
-        }, by_pattern, torch.tensor(state_pattern_mask)
+            'inputs': torch.concat(batch_inputs),
+            'hidden_states': torch.concat(batch_hidden_states),
+            'update_gates': torch.concat(batch_update_gates).to(batch_inputs[0].device),
+            'reset_gates': torch.concat(batch_reset_gates).to(batch_inputs[0].device),
+            'new_contexts': torch.concat(batch_new_contexts).to(batch_inputs[0].device),
+        }, batch_patterns, torch.tensor(sum(batch_pattern_mask, start=[])).to(batch_inputs[0].device)
     
     def _forward_with_gates(self, input_tensor, hidden_state):        
         model = self.rl_agent.model
@@ -234,42 +252,46 @@ class RLTranscoderDataGenerator:
         """Balance uncommon transition and reward patterns distribution in the dataset"""
         
         if max_extra_episodes is None:
-            max_extra_episodes = 40*len(episodes_data)
+            max_extra_episodes = 40*len(episodes_data["inputs"])// (trials_per_episode * 3)
         
         print("Initial pattern counts:")
         for pattern, count in pattern_counts.items():
             print(f"  {pattern}: {count}")
         
         target_count = max(pattern_counts.values())
-        left_counts = OrderedDict([(k, target_count - pattern_counts[k]) for k in pattern_counts])
+        left_counts = [target_count - pattern_counts[k] for k in pattern_counts]
         extra_episodes = 0
-        og_count = max(left_counts.values())
+
+        og_count = max(left_counts)
         pbar = tqdm(total=og_count)
-        while extra_episodes < max_extra_episodes:
-            if all(count >= target_count for count in pattern_counts.values()):
-                break
-                
-            num_reversals = random.choice([1, 2, 3, 4])
-            reversal_indices = sorted(random.sample(range(1, trials_per_episode), num_reversals))
-            
-            episode_data, episode_patterns, pattern_mask = self._run_single_episode(trials_per_episode, reversal_indices, initial_config)
+        while extra_episodes < max_extra_episodes and max(left_counts):
+            batch_reversal_counts = [random.choice([1, 2, 3, 4]) for _ in range(self.batch_size)]
+
+            batch_data, batch_patterns, batch_pattern_mask = self._run_batch_episodes(
+                self.batch_size,
+                batch_reversal_counts,
+                trials_per_episode, 
+                initial_config
+            )
 
             # tally patterns, add when necessary
             update=False
-            for pattern in left_counts:
-                if left_counts[pattern]:
-                    update=True
-                    num_suitable = episode_patterns[pattern]
-                    take = min(num_suitable, left_counts[pattern])
-                    left_counts[pattern] -= take
-                    pattern_counts[pattern] += take
-                    indices = torch.where(pattern_mask == list(left_counts.keys()).index(pattern))[0][:take]
-
+            for pattern_idx in range(4):
+                if left_counts[pattern_idx]:
+                    num_suitable = batch_patterns[pattern_idx]
+                    take = min(num_suitable, left_counts[pattern_idx])
+                    left_counts[pattern_idx] -= take
+                    pattern_counts[["commonp", "common(1-p)",
+                                    "uncommonp", "uncommon(1-p)"][pattern_idx]] += take
+                    update = take > 0 if not update else update
+                    pattern_mask = batch_pattern_mask == pattern_idx
                     for key in episodes_data:
-                        episodes_data[key] = torch.concat([episodes_data[key], episode_data[key][indices]], dim=0)
+                        episodes_data[key] = torch.concat([episodes_data[key], batch_data[key][pattern_mask][:take]], dim=0)[:target_count]
+
             if update:
-                pbar.update(og_count - max(left_counts.values()))
-                og_count = max(left_counts.values())
+                pbar.update(og_count - max(left_counts))
+                og_count = max(left_counts)
+            extra_episodes += batch_size
         
         print(f"Generated {extra_episodes} additional episodes for balancing")
         print("Final pattern counts:")
@@ -279,7 +301,6 @@ class RLTranscoderDataGenerator:
         return episodes_data
     
     def _extract_transcoder_data(self, episodes_data: Dict[str, List]) -> Tuple[StackDataset, StackDataset]:
-        """Extract transcoder training data from episodes"""
 
         inputs = episodes_data['inputs']
         hidden_states = episodes_data['hidden_states']
@@ -311,7 +332,6 @@ def create_rl_transcoder_dataloaders(dataset: ConcatDataset,
                                    batch_size: int = 256,
                                    train_split: float = 0.9,
                                    shuffle: bool = True) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
-    """Create train/val dataloaders for transcoder training"""
     
     n_samples = len(dataset)
     n_train = int(n_samples * train_split)
@@ -349,23 +369,22 @@ if __name__ == "__main__":
     parser.add_argument("--initial_config", type=str, required=True)
     
     args = parser.parse_args()
-    device = torch.device("cpu")
-    env = TwoStepRLEnvironment()
-    env.get_observation()
-    env.reset_trial(reset_r=True)
-    in_size = len(env.get_input_vector())
+    device = torch.device("cpu") if not torch.cuda.is_available() else torch.device("cuda")
+    batch_size = 1024
+    env = BatchedTwoStepRLEnvironment(batch_size, reward_switch_prob=0, device=device)
+    in_size = 8
     model = RNN(input_size=in_size, hidden_size=48, out_size=4,
                  out_act=lambda x: x, use_gru=True, learn_init=True)
     model.load_state_dict(torch.load(args.model_path)) 
     agent = ActorCriticTrainer(model, env, device=device)
     
-    generator = RLTranscoderDataGenerator(agent, device=device)
+    generator = RLTranscoderDataGenerator(agent, batch_size, device=device)
     update_dataset, hidden_dataset = generator.generate_transcoder_dataset(
         n_episodes=args.n_episodes,
         trials_per_episode=args.trials_per_episode,
         balance_patterns=args.balance_patterns,
         max_extra_episodes=args.max_extra_episodes,
-        initial_config=args.initial_config
+        initial_config=args.initial_config, 
     )
     
     os.makedirs("/w/nobackup/436/lambda/data/rl_transcoder/", exist_ok=True)

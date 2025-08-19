@@ -33,7 +33,6 @@ def training_step(model,
         loss: scalar loss value
         predictions: model outputs for analysis
     """
-    # Forward pass
     outputs, _ = model(data_seq)
     targets[~loss_mask] = -100
     loss = criterion(outputs, targets, importances)
@@ -53,7 +52,6 @@ def inference_generate(model, input_data, discrete=False, record_gates=False):
     batch_size, copy_length, n_features = input_data.shape
     device = input_data.device
     
-    # Add delimiter dimension to input
     input_with_delim = add_delimiter_dimension(input_data)
     # input_with_delim: (batch_size, copy_length + 1, n_features + 1)
     
@@ -75,11 +73,9 @@ def inference_generate(model, input_data, discrete=False, record_gates=False):
         if discrete:
             prev_output = nn.functional.one_hot(prev_output.argmax(-1),
                                                 prev_output.shape[-1])
-        # Add delimiter dimension (0 for generation)
         next_input = torch.cat([prev_output.unsqueeze(1), 
                                 torch.zeros(batch_size, 1, 1, device=device)], dim=-1)
         
-        # Forward pass for one step
         with torch.no_grad():
             if record_gates:
                 step_output, current_hidden, r_t_current, z_t_current, h_new_t_current, h_t_prev = model(next_input, current_hidden, record_gates=True)
@@ -189,21 +185,17 @@ def evaluate_model_copy(config, model, data_path=None):
     total_sequences = 0
 
     with torch.no_grad():
-            # Generate test data
         test_dataset = torch.load(f"data/copy_test/{config.run_name if not data_path else data_path}.pt")
         for batch_idx in tqdm(range(len(test_dataset))):
-            # Inference generation
             test_data, test_loss_mask = test_dataset[batch_idx]
             test_seq_len = test_loss_mask.sum(-1)
             test_data = test_data[:test_seq_len].unsqueeze(0)
             generated, _ = inference_generate(model, test_data,
                                               discrete=True)
             test_target = test_data.argmax(-1)
-            # Calculate MSE
             loss = cross_entropy_loss(generated, test_target)
             total_mse += loss.item()
             generated = generated.argmax(-1)
-            # Check for perfect reconstructions (within small tolerance)
             perfect_batch = torch.all(
                 generated == test_target
             )
@@ -216,7 +208,6 @@ def evaluate_model_copy(config, model, data_path=None):
     
     return avg_mse, perfect_copy_rate
 
-# Example usage
 if __name__ == "__main__":
     import argparse
     import os
@@ -237,7 +228,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # Return a Config instance populated from args
     cfg = CopyConfig(**vars(args))
     os.makedirs(f"models/copy_train/{args.run_name}", exist_ok=True)
     run = wandb.init(

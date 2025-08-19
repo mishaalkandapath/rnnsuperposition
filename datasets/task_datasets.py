@@ -6,7 +6,6 @@ import math
 import random
 
 def generate_sparse_copyset(n_features, feature_prob, copy_length, batch_size):
-    """Generate sparse copy dataset"""
     feature_prob = 1 - math.pow(1 - feature_prob, 1/copy_length)
     batch_shape = (batch_size, copy_length, n_features)
     feat_mag = torch.rand(batch_shape)
@@ -26,9 +25,8 @@ def generate_token_copyset(n_tokens, batch_size, max_len, min_len=2):
 
 def generate_unique_test_set(n_tokens, test_size, 
                              max_len, min_len, train_indices):
-    # Convert train sequences (int form) to a set for fast lookup
     train_set = {tuple(row.tolist()) for row in train_indices}
-    seen = set(train_set)  # start with all train sequences
+    seen = set(train_set)
 
     test_indices = []
     test_masks = []
@@ -70,9 +68,8 @@ def add_delimiter_dimension(data, concat_del=True):
     
     # Create delimiter token: all zeros except delimiter dimension = 1
     delimiter = torch.zeros(batch_size, 1, n_features + 1).to(data.device)
-    delimiter[:, :, -1] = 1  # Set delimiter dimension to 1
+    delimiter[:, :, -1] = 1 
     
-    # Concatenate original data + delimiter
     enhanced_data = torch.cat([expanded_data, delimiter], dim=1)
     return enhanced_data.to(data.device)
 
@@ -204,11 +201,9 @@ class TwoStepRLEnvironment:
         self.GO = 1       # Show fixation cue with go signal
         self.DELAY_2 = 2  # Show resultant state
         
-        # Transition probabilities
-        self.p_high = 0.8  # High probability transition
-        self.p_low = 0.2   # Low probability transition
+        self.p_high = 0.8  
+        self.p_low = 0.2  
         
-        # Reward probabilities
         self.reward_probs = {
             self.STATE_1: 0.9,
             self.STATE_2: 0.1
@@ -225,7 +220,7 @@ class TwoStepRLEnvironment:
         if reset_r:
             self.last_reward = 0
         
-        # Possibly switch reward allocation (2.5% chance)
+        # Possibly switch reward allocation
         if manual_switch or random.random() < self.reward_switch_prob:
             self.reward_probs[self.STATE_1], self.reward_probs[self.STATE_2] = \
                 self.reward_probs[self.STATE_2], self.reward_probs[self.STATE_1]
@@ -242,15 +237,12 @@ class TwoStepRLEnvironment:
             - go_signal: whether go signal is active
             - phase: current phase of trial
         """
-        # One-hot encode current state
         obs = [0, 0, 0]
         obs[self.current_state] = 1
-        
-        # One-hot encode last action
+    
         action_vec = [0, 0, 0]
         action_vec[self.last_action] = 1
-        
-        # Go signal (only active in GO phase)
+    
         go_signal = 1 if self.phase == self.GO else 0
         
         return {
@@ -274,7 +266,6 @@ class TwoStepRLEnvironment:
         reward = 0
         
         if self.phase == self.DELAY_1:
-            # Should choose fixation action
             if action == self.FIXATION_ACTION:
                 reward = 0
             else:
@@ -282,19 +273,17 @@ class TwoStepRLEnvironment:
             self.phase = self.GO
                 
         elif self.phase == self.GO:
-            # Should choose action 1 or 2
             if action == self.FIXATION_ACTION:
                 reward = -0.1  # Incorrect choice penalty
                 self.current_state = self.FIXATION_STATE
             elif action in [self.ACTION_1, self.ACTION_2]:
-                # Determine next state based on transition probabilities
                 if action == self.ACTION_1:
                     # p(S1|a1) = 0.8, p(S2|a1) = 0.2
                     if random.random() < self.p_high:
                         self.current_state = self.STATE_1
                     else:
                         self.current_state = self.STATE_2
-                else:  # action == ACTION_2
+                else: 
                     # p(S2|a2) = 0.8, p(S1|a2) = 0.2
                     if random.random() < self.p_high:
                         self.current_state = self.STATE_2
@@ -304,38 +293,20 @@ class TwoStepRLEnvironment:
             self.phase = self.DELAY_2
                 
         elif self.phase == self.DELAY_2:
-            # Get reward based on resulting state
             # Should choose fixation action
             if action != self.FIXATION_ACTION or not self.current_state:
-                reward = -0.1  # Incorrect choice penalty
+                reward = -0.1  
             elif random.random() < self.reward_probs[self.current_state]:
-                reward = 1.0  # High reward
+                reward = 1.0  
             else:
-                reward = 0.0  # Low reward
-            
-        # Update last action and reward for next step
+                reward = 0.0 
+
         self.last_action = action
         self.last_reward = reward  # This will be used in next trial
             
         observation = self.get_observation()
         
         return observation
-    
-    def get_correct_action(self):
-        """Get the correct action for current phase"""
-        if self.phase == self.DELAY_1:
-            return self.FIXATION_ACTION
-        elif self.phase == self.GO:
-            # In practice, this would depend on the learned policy
-            # Return None to indicate agent should choose
-            return None
-        elif self.phase == self.DELAY_2:
-            return self.FIXATION_ACTION
-    
-    def get_action_mask(self):
-        """Get mask for valid actions (for use with neural network output)"""
-        # All actions are technically possible, but some are incorrect
-        return [1, 1, 1]  # [fixation, action1, action2]
     
     def get_input_vector(self):
         """
@@ -354,3 +325,161 @@ class TwoStepRLEnvironment:
         phase_names = {0: "DELAY_1", 1: "GO", 2: "DELAY_2"}
         state_names = {0: "FIXATION", 1: "STATE_1", 2: "STATE_2"}
         return f"Phase: {phase_names[self.phase]}, State: {state_names[self.current_state]}"
+
+class BatchedTwoStepRLEnvironment:
+    def __init__(self, batch_size: int, reward_switch_prob=0.025, device="cpu"):
+        self.batch_size = batch_size
+        self.reward_switch_prob = reward_switch_prob
+        
+        # Action definitions
+        self.FIXATION_ACTION = 0
+        self.ACTION_1 = 1
+        self.ACTION_2 = 2
+        
+        # State definitions
+        self.FIXATION_STATE = 0
+        self.STATE_1 = 1
+        self.STATE_2 = 2
+        
+        # Phase definitions
+        self.DELAY_1 = 0  # Show fixation cue, no go signal
+        self.GO = 1       # Show fixation cue with go signal
+        self.DELAY_2 = 2  # Show resultant state
+        
+        self.p_high = 0.8  
+        self.p_low = 0.2 
+        
+        self.device=device
+        self.reset_trial_batch(reset_r=True)
+        
+    def reset_trial_batch(self, reset_r=False, manual_switch=None):
+        """Reset for new trials across all environments in batch"""
+        self.phase = torch.zeros(self.batch_size, dtype=torch.long).to(self.device)
+        self.current_state = torch.zeros(self.batch_size, dtype=torch.long).to(self.device) 
+        self.last_action = torch.zeros(self.batch_size, dtype=torch.long).to(self.device) 
+        self.trial_complete = torch.zeros(self.batch_size, dtype=torch.bool).to(self.device)
+        
+        if reset_r:
+            self.last_reward = torch.zeros(self.batch_size).to(self.device)
+        
+        self.reward_probs = torch.zeros(self.batch_size, 3).to(self.device)
+        self.reward_probs[:, self.STATE_1] = 0.9
+        self.reward_probs[:, self.STATE_2] = 0.1
+        
+        if manual_switch is not None:
+            # manual_switch should be a boolean tensor of shape [batch_size]
+            switch_mask = manual_switch
+        else:
+            switch_mask = torch.rand(self.batch_size).to(self.device) < self.reward_switch_prob
+        
+        if switch_mask.any():
+            temp = self.reward_probs[switch_mask, self.STATE_1].clone()
+            self.reward_probs[switch_mask, self.STATE_1] = self.reward_probs[switch_mask, self.STATE_2]
+            self.reward_probs[switch_mask, self.STATE_2] = temp
+    
+    def get_observation_batch(self):
+        """
+        Get current observations for all environments in batch.
+        
+        Returns:
+            dict with batched observations
+        """
+        batch_size = self.batch_size
+        
+        obs = torch.zeros(batch_size, 3).to(self.device)
+        obs[:, self.current_state] = 1
+        
+        action_vec = torch.zeros(batch_size, 3).to(self.device)
+        action_vec[:, self.last_action.long()] = 1
+        
+        # Go signal (only active in GO phase) [batch_size]
+        go_signal = (self.phase == self.GO).float()
+        
+        return {
+            'observation': obs,
+            'last_action': action_vec,
+            'reward': self.last_reward,
+            'go_signal': go_signal,
+            'phase': self.phase
+        }
+    
+    def step_batch(self, actions):
+        """
+        Execute one step in all environments.
+        
+        Args:
+            actions: Tensor of actions [batch_size]
+            
+        Returns:
+            observations, rewards
+        """
+        rewards = torch.zeros(self.batch_size).to(self.device)
+
+        if self.phase[0] == self.DELAY_1: # batches in sync
+            # Correct action is fixation
+            correct_mask = (actions == self.FIXATION_ACTION)
+            incorrect_mask = (actions != self.FIXATION_ACTION)
+            rewards[correct_mask] = 0
+            rewards[incorrect_mask] = -0.1
+            self.phase += self.GO
+
+        elif self.phase[0] == self.GO:
+            fixation_go_mask = (actions == self.FIXATION_ACTION)
+            rewards[fixation_go_mask] = -0.1
+            self.current_state[fixation_go_mask] = self.FIXATION_STATE
+            
+            # ACTION_1
+            action1_mask = (actions == self.ACTION_1)
+            if action1_mask.any():
+                # p(S1|a1) = 0.8, p(S2|a1) = 0.2
+                rand_vals = torch.rand(action1_mask.sum())
+                high_prob_mask = rand_vals < self.p_high
+                
+                action1_indices = torch.where(action1_mask)[0]
+                self.current_state[action1_indices[high_prob_mask]] = self.STATE_1
+                self.current_state[action1_indices[~high_prob_mask]] = self.STATE_2
+            
+            # ACTION_2
+            action2_mask = (actions == self.ACTION_2)
+            if action2_mask.any():
+                # Transition probabilities: p(S2|a2) = 0.8, p(S1|a2) = 0.2
+                rand_vals = torch.rand(action2_mask.sum())
+                high_prob_mask = rand_vals < self.p_high
+                
+                action2_indices = torch.where(action2_mask)[0]
+                self.current_state[action2_indices[high_prob_mask]] = self.STATE_2
+                self.current_state[action2_indices[~high_prob_mask]] = self.STATE_1
+            
+            self.phase += 1
+        
+        elif self.phase[0] == self.DELAY_2:
+            # Correct action is fixation, and must be in a valid state
+            correct_mask = (actions == self.FIXATION_ACTION) & (self.current_state != 0)
+            incorrect_mask = ((actions != self.FIXATION_ACTION) | (self.current_state == 0))
+            
+            rewards[incorrect_mask] = -0.1
+            if correct_mask.any():
+                correct_indices = torch.where(correct_mask)[0]
+                states = self.current_state[correct_indices]
+                reward_probs = self.reward_probs[correct_indices, states]
+                rand_vals = torch.rand(len(correct_indices)).to(self.device)
+                reward_mask = rand_vals < reward_probs
+                
+                rewards[correct_indices[reward_mask]] = 1.0
+                rewards[correct_indices[~reward_mask]] = 0.0
+        
+        self.last_action = actions.clone()
+        self.last_reward = rewards.clone()
+        
+        observations = self.get_observation_batch()
+        
+        return observations, rewards
+    
+    def get_input_vector_batch(self):
+        obs_data = self.get_observation_batch()
+        return torch.cat([
+            obs_data['observation'],      
+            obs_data['last_action'], 
+            obs_data['reward'].unsqueeze(1),
+            obs_data['go_signal'].unsqueeze(1)
+        ], dim=1)

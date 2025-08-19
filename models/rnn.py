@@ -8,34 +8,26 @@ class VanillaRNNLayer(nn.Module):
         self.input_size = input_size
         self.hidden_size = hidden_size
         
-        # Input-to-hidden transformation
         self.input_to_hidden = nn.Linear(input_size, hidden_size, bias=bias)
-        # Hidden-to-hidden transformation
         self.hidden_to_hidden = nn.Linear(hidden_size, hidden_size, bias=bias)
-        # Activation function
         self.activation = nn.Tanh()
     
     def forward(self, x, h_0=None):
         batch_size, seq_len, _ = x.size()
         
-        # Initialize hidden state if not provided
         if h_0 is None:
             h_0 = torch.zeros(batch_size, self.hidden_size, device=x.device, dtype=x.dtype)
         
         outputs = []
         h_t = h_0
         
-        # Process each time step
         for t in range(seq_len):
             x_t = x[:, t, :]  # Current input: (batch_size, input_size)
-            
-            # RNN computation: h_t = tanh(W_ih @ x_t + W_hh @ h_{t-1} + b)
             h_t = self.activation(
                 self.input_to_hidden(x_t) + self.hidden_to_hidden(h_t)
             )
             outputs.append(h_t.unsqueeze(1))  # Add time dimension back
         
-        # Stack all outputs along time dimension
         outputs = torch.cat(outputs, dim=1)  # (batch_size, seq_len, hidden_size)
         
         return outputs, h_t
@@ -47,16 +39,13 @@ class GRULayer(nn.Module):
         super(GRULayer, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
-        
-        # Reset gate parameters
+    
         self.input_to_reset = nn.Linear(input_size, hidden_size, bias=False)
         self.hidden_to_reset = nn.Linear(hidden_size, hidden_size, bias=bias)
         
-        # Update gate parameters
         self.input_to_update = nn.Linear(input_size, hidden_size, bias=False)
         self.hidden_to_update = nn.Linear(hidden_size, hidden_size, bias=bias)
         
-        # New gate parameters
         self.input_to_new = nn.Linear(input_size, hidden_size, bias=False)
         self.hidden_to_new = nn.Linear(hidden_size, hidden_size, bias=bias)
         
@@ -72,7 +61,6 @@ class GRULayer(nn.Module):
         """
         batch_size, seq_len, _ = x.size()
         
-        # Initialize hidden state if not provided
         if h_0 is None:
             h_0 = torch.zeros(batch_size, self.hidden_size, device=x.device, dtype=x.dtype)
         
@@ -81,29 +69,24 @@ class GRULayer(nn.Module):
 
         r_record, z_record, h_new_record, h_record = [], [], [], []
         
-        # Process each time step
         for t in range(seq_len):
             if record_gates:
                 h_record.append(h_t.detach().cpu())
 
             x_t = x[:, t, :]  # Current input: (batch_size, input_size)
             
-            # Reset gate: r_t = sigmoid(W_ir @ x_t + W_hr @ h_{t-1} + b_r)
             r_t = torch.sigmoid(
                 self.input_to_reset(x_t) + self.hidden_to_reset(h_t)
             )
             
-            # Update gate: z_t = sigmoid(W_iz @ x_t + W_hz @ h_{t-1} + b_z)
             z_t = torch.sigmoid(
                 self.input_to_update(x_t) + self.hidden_to_update(h_t)
             )
             
-            # New gate: n_t = tanh(W_in @ x_t + W_hn @ (r_t * h_{t-1}) + b_n)
             n_t = torch.tanh(
                 self.input_to_new(x_t) + self.hidden_to_new(r_t * h_t)
             )
             
-            # Update hidden state: h_t = (1 - z_t) * n_t + z_t * h_{t-1}
             h_t = (1 - z_t) * h_t + z_t * n_t
             
             outputs.append(h_t.unsqueeze(1))  # Add time dimension back
@@ -113,7 +96,6 @@ class GRULayer(nn.Module):
                 z_record.append(z_t.detach().cpu())
                 h_new_record.append(n_t.detach().cpu())
         
-        # Stack all outputs along time dimension
         outputs = torch.cat(outputs, dim=1)  # (batch_size, seq_len, hidden_size)
         if record_gates: return outputs, h_t, torch.stack(r_record, dim=1), torch.stack(z_record, dim=1), torch.stack(h_new_record, dim=1), torch.stack(h_record, dim=1)
         return outputs, h_t
@@ -133,7 +115,6 @@ class RNN(nn.Module):
         self.use_gru = use_gru
         self.learn_init = learn_init
         
-        # Create layers based on cell type
         self.layers = nn.ModuleList()
         
         for i in range(num_layers):
@@ -165,7 +146,6 @@ class RNN(nn.Module):
         """
         batch_size = x.size(0)
         
-        # Initialize hidden states for all layers if not provided
         if h_0 is None and self.learn_init:
             h_0 = [
                 state.unsqueeze(0).expand(batch_size, -1)
@@ -182,7 +162,6 @@ class RNN(nn.Module):
         final_hiddens = [] # per layer --for last timestep
         r_records, z_records, h_new_records, h_records = [], [], [], []
         
-        # Pass through each layer
         for i in range(len(self.layers) - (self.out_size != 0)):
             layer = self.layers[i]
             # outputs - the output of the hidden layer -- the h_t forall t
@@ -208,7 +187,6 @@ if __name__ == "__main__":
     hidden_size = 32
     num_layers = 2
     
-    # Create sample input
     x = torch.randn(batch_size, seq_len, input_size)
     
     # Test single-layer vanilla RNN
