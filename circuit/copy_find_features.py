@@ -1,9 +1,11 @@
 from typing import Dict, List, Tuple, Optional
 from collections import defaultdict
 import string
+import pickle
 
 import torch
 import torch.nn as nn
+from torch.utils.data import DataLoader
 import numpy as np
 from tqdm import tqdm
 
@@ -53,54 +55,16 @@ class FeatureActivationAnalyzer:
             if mask[i]:  # Only include non-padded positions
                 tokens.append(self.idx_to_token[idx.item()])
         return tokens
-        
-    def generate_sequences_by_length(self, 
-                                   n_tokens: int,
-                                   sequences_per_length: int,
-                                   min_len: int = 2,
-                                   max_len: int = 9) -> Dict[int, List[Tuple[torch.Tensor, torch.Tensor, List[str]]]]:
-        """
-        Generate sequences organized by length
-        
-        Returns:
-            Dict mapping length -> list of (one_hot_seq, mask, token_list) tuples
-        """
-        sequences_by_length = defaultdict(list)
-        
-        for seq_len in range(min_len, max_len + 1):
-            print(f"Generating {sequences_per_length} sequences of length {seq_len}...")
-            
-            generated = 0
-            seen_sequences = set()
-            
-            while generated < sequences_per_length:
-                # Generate random sequence of exact length
-                indices = torch.randint(0, n_tokens, (seq_len,))
-                
-                # Create mask (all True for this length)
-                mask = torch.ones(seq_len, dtype=torch.bool)
-                
-                # Convert to tuple for set membership
-                seq_tuple = tuple(indices.tolist())
-                
-                if seq_tuple not in seen_sequences:
-                    seen_sequences.add(seq_tuple)
-                    
-                    # Create one-hot encoding
-                    one_hot = torch.nn.functional.one_hot(indices, num_classes=n_tokens).float()
-                    
-                    # Convert to token list
-                    tokens = tuple(self.idx_to_token[idx.item()] for idx in indices)
-                    
-                    sequences_by_length[seq_len].append((one_hot, mask, tokens))
-                    generated += 1
-                    
-        return sequences_by_length
-        
+    
+    def make_tokens(self, batch: Dict[str, torch.Tensor]) -> None:
+        ins = batch["inputs"]
+        tokens = []
+        for inp in ins:
+            tokens.append([self.idx_to_token[one_hot.argmax().item()] for one_hot in inp])
+        return tokens
+    
     def analyze_batch_activations(self, 
-                                batch_sequences: torch.Tensor,
-                                batch_masks: torch.Tensor,
-                                batch_tokens: List[List[str]]) -> None:
+                                 batch: Dict[str, torch.Tensor]) -> None:
         """
         Analyze feature activations for a batch of sequences of the same length
         
@@ -109,29 +73,12 @@ class FeatureActivationAnalyzer:
             batch_masks: (batch_size, seq_len) masks indicating valid positions
             batch_tokens: List of token sequences for each batch item
         """
-        batch_size, seq_len, _ = batch_sequences.shape
-        batch_sequences = batch_sequences.to(self.device)
-        
         with torch.no_grad():
-            # Run RNN to get internal states
-            outs, _, r_records, z_records, h_new_records, h_records = inference_generate(self.rnn_model, batch_sequences,
-                                discrete=True, record_gates=True)
-            
-            # Extract data from single layer (index 0)
-            r_t = r_records[0]  # (batch_size, seq_len, hidden_size)
-            z_t = z_records[0]  # (batch_size, seq_len, hidden_size)  
-            h_new_t = h_new_records[0]  # (batch_size, seq_len, hidden_size)
-            h_prev = h_records[0]  # (batch_size, seq_len, hidden_size)
-            outs = add_delimiter_dimension(outs, concat_del=False)
-            batch_sequences = add_delimiter_dimension(batch_sequences)
-            x_t = torch.cat([batch_sequences, outs],
-                                dim=1)   # (batch_size, 2*seq_len, input_size)
-            
-            # Process each timestep
+            seq_len = batch["outputs"].size(1)
             for t in range(2*seq_len):
-                valid_h_prev = h_prev[:, t]  # (n_valid, hidden_size)
-                valid_x_t = x_t[:, t]      # (n_valid, input_size)
-                valid_r_t = r_t[:, t]      # (n_valid, hidden_size)
+                valid_h_prev = batch["h_prevs"][:, t]
+                valid_x_t = batch["inputs"][:, t]
+                valid_r_t = batch["r_ts"][:, t]
                 
                 # Prepare transcoder inputs
                 update_gate_input = torch.cat([valid_h_prev, valid_x_t], dim=1)
@@ -140,36 +87,37 @@ class FeatureActivationAnalyzer:
                 
                 # Get feature activations from transcoders
                 _, update_activations, _ = self.update_transcoder(update_gate_input)
-                nonzero_update_acts = torch.nonzero(update_activations, as_tuple=False)
+                nonzero_update_acts = torch.nonzero(update_activations,
+                                                     as_tuple=False)
                 
                 # Hidden context transcoder  
                 _, hidden_activations, _ = self.hidden_transcoder(hidden_context_input)  # (n_valid, n_features)
-                nonzero_hidden_acts = torch.nonzero(hidden_activations, as_tuple=False)
-                
+                nonzero_hidden_acts = torch.nonzero(hidden_activations,
+                                                     as_tuple=False)
+                batch_keys = {}
                 # Store activations for each sequence and feature
                 for idx in range(nonzero_update_acts.shape[0]):
                     batch_idx, feat_idx = nonzero_update_acts[idx, 0].item(), nonzero_update_acts[idx, 1].item()
                     activation_magnitude = update_activations[batch_idx, feat_idx].item()
-                    sequence_tokens = batch_tokens[batch_idx]
-                    self.feature_activations['update'][feat_idx][sequence_tokens].append({
-                                    'positions': [t],
-                                    'magnitudes': [activation_magnitude]
-                                })
+                    if batch_idx not in batch_keys:
+                        batch_keys[batch_idx] = tuple(batch[batch_idx].argmax(-1).tolist()) 
+                    sequence_tokens = batch_keys[batch_idx]
+                    self.feature_activations['update'][feat_idx][sequence_tokens].append((t, activation_magnitude))
                 for idx in range(nonzero_hidden_acts.shape[0]):
                     batch_idx, feat_idx = nonzero_hidden_acts[idx, 0].item(), nonzero_hidden_acts[idx, 1].item()
                     activation_magnitude = hidden_activations[batch_idx, feat_idx].item()
-                    sequence_tokens = batch_tokens[batch_idx]
-                    self.feature_activations['hidden'][feat_idx][sequence_tokens].append({
-                                    'positions': [t],
-                                    'magnitudes': [activation_magnitude]
-                                })
+                    if batch_idx not in batch_keys:
+                        batch_keys[batch_idx] = tuple(batch[batch_idx].argmax(-1).tolist()) 
+                    sequence_tokens = batch_keys[batch_idx]
+                    self.feature_activations['hidden'][feat_idx][sequence_tokens].append((t, activation_magnitude))
                                 
     def analyze_all_sequences(self,
-                            n_tokens: int = 31,  # 26 + 4 + 1
+                            n_tokens: int = 30,  # 26 + 4 (delim added later)
                             sequences_per_length: int = 1000,
                             min_len: int = 2,
                             max_len: int = 9,
-                            batch_size: int = 32) -> None:
+                            batch_size: int = 32,
+                            cache=[]) -> None:
         """
         Analyze feature activations across all sequence lengths
         
@@ -180,27 +128,18 @@ class FeatureActivationAnalyzer:
             max_len: Maximum sequence length
             batch_size: Batch size for processing
         """
-        sequences_by_length = self.generate_sequences_by_length(
-            n_tokens, sequences_per_length, min_len, max_len
-        )
-        
+        print("Accumulating sequences...")
+        sequences_by_length = {}
+        for idx, path in enumerate(cache):
+            sequences_by_length[idx] = torch.load(path) 
+
+        print("Analyzing Features...")
         for seq_len in range(min_len, max_len + 1):
             sequences = sequences_by_length[seq_len]
-            print(f"Processing {len(sequences)} sequences of length {seq_len}...")
-            
-            # Process in batches
-            for batch_start in tqdm(range(0, len(sequences), batch_size), 
-                                  desc=f"Length {seq_len}"):
-                batch_end = min(batch_start + batch_size, len(sequences))
-                batch = sequences[batch_start:batch_end]
-                
-                # Extract batch components
-                batch_sequences = torch.stack([seq[0] for seq in batch])
-                batch_masks = torch.stack([seq[1] for seq in batch])
-                batch_tokens = [seq[2] for seq in batch]
-                
-                # Analyze this batch
-                self.analyze_batch_activations(batch_sequences, batch_masks, batch_tokens)
+            dataloader = DataLoader(sequences, batch_size, 
+                                    num_workers=len(os.sched_getaffinity(0)), persistent_workers=True)
+            for batch in tqdm(dataloader, desc=f"Length {seq_len}"):
+                self.analyze_batch_activations(batch)
                 
         print("Feature activation analysis complete!")
         
@@ -260,7 +199,6 @@ class FeatureActivationAnalyzer:
             total_activations = sum(len(entry['positions']) for entry in activations)
             feature_counts.append((feature_idx, total_activations))
             
-        # Sort by total activations (descending)
         feature_counts.sort(key=lambda x: x[1], reverse=True)
         
         return feature_counts[:top_k]
@@ -274,6 +212,7 @@ if __name__ == "__main__":
     parser.add_argument("--update_transcoder_path", required=True)
     parser.add_argument("--hidden_transcoder_path", required=True)
     parser.add_argument("--rnn_path", required=True)
+    parser.add_argument("--cached_sentences", nargs="+", default=None)
 
     args = parser.parse_args()
     rnn_model = RNN(input_size=31, hidden_size=128, use_gru=True, num_layers=1)
@@ -286,7 +225,6 @@ if __name__ == "__main__":
     update_transcoder.load_state_dict(torch.load(args.update_transcoder_path))
     hidden_transcoder.load_state_dict(torch.load(args.hidden_transcoder_path))
     
-    # Create analyzer
     analyzer = FeatureActivationAnalyzer(
         rnn_model=rnn_model,
         update_transcoder=update_transcoder, 
@@ -295,11 +233,12 @@ if __name__ == "__main__":
     )
     
     analyzer.analyze_all_sequences(
-        n_tokens=31,
+        n_tokens=30,
         sequences_per_length=200,
         min_len=3,
         max_len=8,
-        batch_size=64
+        batch_size=64,
+        cache=args.cached_sentences if args.cached_sentences else []
     )
     
     top_update_features = analyzer.get_most_active_features('update', top_k=20)
@@ -309,3 +248,8 @@ if __name__ == "__main__":
     for feature_idx, count in top_update_features:
         summary = analyzer.get_feature_summary('update', feature_idx)
         print(f"Feature {feature_idx}: {count} activations across {summary['n_sequences']} sequences")
+
+    # save feature data
+    os.makedirs("data/copy_transcoder_features/", exist_ok=True)
+    with open(f"data/copy_transcoder_features/{args.n_feats}_features.p"):
+        pickle.dump(analyzer.feature_activations)
