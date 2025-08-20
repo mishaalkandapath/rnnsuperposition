@@ -286,7 +286,7 @@ class RLTranscoderDataGenerator:
                     update = take > 0 if not update else update
                     pattern_mask = batch_pattern_mask == pattern_idx
                     for key in episodes_data:
-                        episodes_data[key] = torch.concat([episodes_data[key], batch_data[key][pattern_mask][:take]], dim=0)[:target_count]
+                        episodes_data[key] = torch.concat([episodes_data[key], batch_data[key][pattern_mask][:take]], dim=0)
 
             if update:
                 pbar.update(og_count - max(left_counts))
@@ -387,6 +387,6 @@ if __name__ == "__main__":
         initial_config=args.initial_config, 
     )
     
-    os.makedirs("/w/nobackup/436/lambda/data/rl_transcoder/", exist_ok=True)
-    torch.save(update_dataset, f"/w/nobackup/436/lambda/data/rl_transcoder/{args.dataset_name}_update_gate.pt")
-    torch.save(hidden_dataset, f"/w/nobackup/436/lambda/data/rl_transcoder/{args.dataset_name}_hctx.pt")
+    os.makedirs("data/rl_transcoder/", exist_ok=True)
+    torch.save(update_dataset, f"data/rl_transcoder/{args.dataset_name}_update_gate.pt")
+    torch.save(hidden_dataset, f"data/rl_transcoder/{args.dataset_name}_hctx.pt")

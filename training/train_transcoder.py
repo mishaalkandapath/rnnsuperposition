@@ -13,7 +13,7 @@ from tqdm import tqdm
 from models.transcoders import Transcoder, set_transcoder_weights
 from datasets.transcoder_datasets import create_transcoder_dataloaders
 from training.train_utils import SignalManager, normalize_batch
-# torch.serialization.add_safe_globals([StackDataset])
+torch.serialization.add_safe_globals([StackDataset])
 
 class TranscoderLoss(nn.Module):
     """
@@ -23,7 +23,7 @@ class TranscoderLoss(nn.Module):
     """
     
     def __init__(self, lambda_sparsity=1e-3, lambda_penalty=1e-4, 
-                 c_sparsity=1.0, sparse_sched=0, sparse_sched_off=1, w_detach=False):
+                 c_sparsity=1.0, sparse_sched=0, sparse_sched_off=1, w_detach=False, scale_pen_distance=False):
         super().__init__()
         self.lambda_sparsity = lambda_sparsity
         self.lambda_penalty = lambda_penalty
@@ -36,6 +36,7 @@ class TranscoderLoss(nn.Module):
         self.w_detach = w_detach
         self.off = sparse_sched_off
         self.eval = False
+        self.scale_pen_distance = scale_pen_distance
 
 
         self.sparse_scheduler = self.set_lambda_sparse_schedule(sparse_sched)
@@ -51,6 +52,8 @@ class TranscoderLoss(nn.Module):
                 # cosine annealing sparsity loss
                 return lambda: math.sin(0.5*math.pi*(self.steps % self.off)/self.off) if self.steps < 0.75*self.total_steps else 1
             case 4: return lambda: 1
+            case 5: 
+                return lambda: (self.steps/self.total_steps) * math.sin(0.5*math.pi*(self.steps % self.off)/self.off) if self.steps < 0.75*self.total_steps else 1
             case _:
                 return lambda: (self.steps/self.total_steps)
 
@@ -67,26 +70,30 @@ class TranscoderLoss(nn.Module):
 
             W_d is of shape out_vec x n_feats
         """
+        batch_size = targets.size(0)
         sparsity_coeff = self.lambda_sparsity
         if not self.eval:
             sparsity_coeff *= self.sparse_scheduler()
         # Reconstruction loss: ||y - ŷ(x)||²₂
         reconstruction_loss = self.mse_loss(predictions, targets)
+        with torch.no_grad():
+            normalized_reconstruction_loss = self.mse_loss(predictions/torch.norm(predictions, dim=-1, keepdim=True), targets/torch.norm(targets, dim=-1, keepdim=True))
         
-        # Sparsity loss: λ_S * Σ tanh(c * |f_i(x)| / ||W_d,i||₂)
+        # Sparsity loss: λ_S * Σ tanh(c * |f_i(x)|||W_d,i||₂)
         decoder_norms = torch.norm(decoder_weights, dim=0)  # ||W_d,i||₂ for each feature
         feature_magnitudes = torch.abs(features)  # |f_i(x)|
         
         decoder_norms = torch.clamp(decoder_norms, min=1e-8)
         decoder_norms = decoder_norms if not self.w_detach else decoder_norms.detach()
         
-        normalized_features = feature_magnitudes / decoder_norms.unsqueeze(0)
+        normalized_features = feature_magnitudes * decoder_norms.unsqueeze(0)
         sparsity_terms = torch.tanh(self.c_sparsity * normalized_features)
-        sparsity_loss = sparsity_coeff * torch.sum(sparsity_terms)
+        sparsity_loss = sparsity_coeff * torch.sum(sparsity_terms)/batch_size
         
         # Penalty loss: L_P(x) = λ_P * Σ ReLU(exp(t) - f_i(x)) * ||W_d,i||₂
-        penalty_terms = torch.relu(torch.exp(threshold) - features) * decoder_norms.unsqueeze(0)
-        penalty_loss = self.lambda_penalty * torch.sum(penalty_terms)
+        act_distance = torch.exp(threshold) - features if not self.scale_pen_distance else (torch.exp(threshold) - features)/torch.exp(threshold)
+        penalty_terms = torch.relu(act_distance) * decoder_norms.unsqueeze(0)
+        penalty_loss = self.lambda_penalty * torch.sum(penalty_terms)/batch_size
         
         total_loss = reconstruction_loss + sparsity_loss + penalty_loss
         # print(
@@ -98,6 +105,7 @@ class TranscoderLoss(nn.Module):
         return {
             'total_loss': total_loss,
             'reconstruction_loss': reconstruction_loss,
+            "norm_recon_loss": normalized_reconstruction_loss,
             'sparsity_loss': sparsity_loss,
             'penalty_loss': penalty_loss
         }
@@ -119,10 +127,10 @@ class TranscoderTrainer:
         self.optimizer = optimizer
         
         self.train_history = {
-            'total': [], 'reconstruction': [], 'sparsity': [], 'penalty': []
+            'total': [], 'reconstruction': [], 'sparsity': [], 'penalty': [], "norm_recon": []
         }
         self.val_history = {
-            'total': [], 'reconstruction': [], 'sparsity': [], 'penalty': []
+            'total': [], 'reconstruction': [], 'sparsity': [], 'penalty': [], "norm_recon": []
         }
         
     def train_epoch(self, train_loader: DataLoader, run=None) -> Dict[str, float]:
@@ -131,7 +139,7 @@ class TranscoderTrainer:
         feature_activation_densities = torch.zeros((self.transcoder.n_feats)).to(self.device)
         self.loss_fn.eval = False
         epoch_losses = {
-            'total': 0, 'reconstruction': 0, 'sparsity': 0, 'penalty': 0
+            'total': 0, 'reconstruction': 0, 'sparsity': 0, 'penalty': 0, "norm_recon": 0
         }
         
         n_batches = len(train_loader)
@@ -141,8 +149,8 @@ class TranscoderTrainer:
             inputs = batch['input'].to(self.device)
             targets = batch['output'].to(self.device)
 
-            inputs = normalize_batch(inputs)
-            targets = normalize_batch(targets)
+            inputs = (inputs)
+            targets = (targets)
         
             self.optimizer.zero_grad()
             
@@ -189,15 +197,15 @@ class TranscoderTrainer:
         self.transcoder.eval()
         self.loss_fn.eval = True
         epoch_losses = {
-            'total': 0, 'reconstruction': 0, 'sparsity': 0, 'penalty': 0
+            'total': 0, 'reconstruction': 0, 'sparsity': 0, 'penalty': 0, "norm_recon": 0
         }
         
         n_batches = len(val_loader)
         
         with torch.no_grad():
             for batch in val_loader:
-                inputs = normalize_batch(batch['input']).to(self.device)
-                targets = normalize_batch(batch['output']).to(self.device)
+                inputs = (batch['input']).to(self.device)
+                targets = (batch['output']).to(self.device)
                 
                 features = self.transcoder.input_to_features(inputs)
                 features_activated = self.transcoder.act(features)
@@ -313,7 +321,8 @@ def create_and_train_transcoders(dataset: Dict[str, torch.Tensor],
                              c_sparsity=train_cfg["c_sparsity"], 
                              sparse_sched=train_cfg["l_schedule"],
                              sparse_sched_off=train_cfg["l_sched_offset"],
-                             w_detach=train_cfg["w_det"])
+                             w_detach=train_cfg["w_det"],
+                             scale_pen_distance=train_cfg["scale_pen"])
 
     trainer = TranscoderTrainer(
         transcoder=transcoder,
@@ -357,6 +366,7 @@ if __name__ == "__main__":
     parser.add_argument("--lambda_sparse_schedule", type=int, required=True)
     parser.add_argument("--l_sparse_offset", type=int, default=1)
     parser.add_argument("--w_detach", action="store_true")
+    parser.add_argument("--scale_pen_distance", action="store_true")
     parser.add_argument("--save_path", required=True)
     parser.add_argument("--ctd_from", default=None)
 
@@ -373,7 +383,9 @@ if __name__ == "__main__":
             "n_hidden": args.hidden_size,
             "bandwidth": 2,
             "n_feats": args.n_feats,
-            "n_epochs": args.n_epochs
+            "n_epochs": args.n_epochs,
+            "w_det": int(args.w_detach),
+            "scale_pen_distance": int(args.scale_pen_distance)
         },
     )
     # run = None
@@ -381,12 +393,12 @@ if __name__ == "__main__":
     train_cfg = {"lr": args.lr, "l_sparsity": args.l_sparsity, 
                  "l_schedule": args.lambda_sparse_schedule, 
                  "l_sched_offset": args.l_sparse_offset, "w_det": args.w_detach,
-                 "l_penalty":args.l_penalty, "c_sparsity":args.c_sparsity, "ctd_from":args.ctd_from}
+                 "l_penalty":args.l_penalty, "c_sparsity":args.c_sparsity, "scale_pen": args.scale_pen_distance, "ctd_from":args.ctd_from}
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     print("--Loading Dataset(s)--")
     datasets = []
-    for data_path in args.dataset_path:
+    for data_path in args.dataset_paths:
         datasets += [torch.load(data_path)]
     dataset = ConcatDataset(datasets)
     print("--Finished Loading Dataset--")
