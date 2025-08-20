@@ -96,12 +96,6 @@ class TranscoderLoss(nn.Module):
         penalty_loss = self.lambda_penalty * torch.sum(penalty_terms)/batch_size
         
         total_loss = reconstruction_loss + sparsity_loss + penalty_loss
-        # print(
-        #     "Penalty threshold:", threshold.item(),
-        #     "Penalty features min/max:", features.min().item(), features.max().item(),
-        #     "Penalty inactive count:", (features == 0).sum().item()
-        # )
-        # print(penalty_loss)
         return {
             'total_loss': total_loss,
             'reconstruction_loss': reconstruction_loss,
@@ -350,6 +344,7 @@ if __name__ == "__main__":
     import argparse
     import os
     import wandb
+    import json
 
     parser = argparse.ArgumentParser(description="Train Copy Transcoder")
 
@@ -393,7 +388,8 @@ if __name__ == "__main__":
     train_cfg = {"lr": args.lr, "l_sparsity": args.l_sparsity, 
                  "l_schedule": args.lambda_sparse_schedule, 
                  "l_sched_offset": args.l_sparse_offset, "w_det": args.w_detach,
-                 "l_penalty":args.l_penalty, "c_sparsity":args.c_sparsity, "scale_pen": args.scale_pen_distance, "ctd_from":args.ctd_from}
+                 "l_penalty":args.l_penalty, "c_sparsity":args.c_sparsity, "scale_pen": args.scale_pen_distance, "ctd_from":args.ctd_from,
+                 "n_epochs": args.n_epochs, "n_feats": args.n_feats, "batch_size":args.batch_size}
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     print("--Loading Dataset(s)--")
@@ -403,6 +399,9 @@ if __name__ == "__main__":
     dataset = ConcatDataset(datasets)
     print("--Finished Loading Dataset--")
     os.makedirs(args.save_path, exist_ok=True)
+    with open(f"{args.save_path}/hyperparams.json", "w") as f:
+        json.dump(train_cfg, f, indent=4)
+
     create_and_train_transcoders(dataset, train_cfg, 
                                  hidden_size=args.hidden_size, 
                                  input_size=args.input_size+1, 

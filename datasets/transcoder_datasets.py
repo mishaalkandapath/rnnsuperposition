@@ -183,6 +183,7 @@ def create_transcoder_dataloaders(dataset: StackDataset,
     """
     
     n_samples = len(dataset)
+    print(f"-- Dataset is of length {n_samples}---")
     n_train = int(n_samples * train_split)
     
     indices = torch.randperm(n_samples) if shuffle else torch.arange(n_samples)

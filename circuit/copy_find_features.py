@@ -9,6 +9,7 @@ from tqdm import tqdm
 
 from models.rnn import RNN
 from models.transcoders import Transcoder
+from datasets.task_datasets import generate_unique_test_set
 from training.train_copy import inference_generate, add_delimiter_dimension
 class FeatureActivationAnalyzer:
     """Analyze feature activations across sequences for RNN transcoders"""
@@ -30,7 +31,6 @@ class FeatureActivationAnalyzer:
         self.hidden_transcoder = hidden_transcoder.to(device)
         self.device = device
         
-        # Set models to eval mode
         self.rnn_model.eval()
         self.update_transcoder.eval()
         self.hidden_transcoder.eval()
@@ -40,10 +40,9 @@ class FeatureActivationAnalyzer:
         self.token_to_idx = {token: idx for idx, token in enumerate(self.tokens)}
         self.idx_to_token = {idx: token for idx, token in enumerate(self.tokens)}
         
-        # Storage for feature activations
         self.feature_activations = {
-            'update': defaultdict(defaultdict(list)),  # feature_idx -> list of (sequence, positions, magnitudes)
-            'hidden': defaultdict(defaultdict(list))   # feature_idx -> list of (sequence, positions, magnitudes)
+            'update': defaultdict(defaultdict(list)),  # feature_idx -> sequence -> list of (positions, magnitudes)
+            'hidden': defaultdict(defaultdict(list))   # feature_idx -> sequence -> list of (positions, magnitudes)
         }
         
     def one_hot_to_tokens(self, one_hot_seq: torch.Tensor, mask: torch.Tensor) -> List[str]:
@@ -181,12 +180,10 @@ class FeatureActivationAnalyzer:
             max_len: Maximum sequence length
             batch_size: Batch size for processing
         """
-        print("Generating sequences by length...")
         sequences_by_length = self.generate_sequences_by_length(
             n_tokens, sequences_per_length, min_len, max_len
         )
         
-        print("Analyzing feature activations...")
         for seq_len in range(min_len, max_len + 1):
             sequences = sequences_by_length[seq_len]
             print(f"Processing {len(sequences)} sequences of length {seq_len}...")
@@ -268,22 +265,35 @@ class FeatureActivationAnalyzer:
         
         return feature_counts[:top_k]
 
-# Example usage
 if __name__ == "__main__":
-    # Assume you have trained models
-    rnn_model = RNN(input_size=31, hidden_size=64, use_gru=True, num_layers=1)
-    update_transcoder = Transcoder(input_size=95, out_size=64, n_feats=512)
-    hidden_transcoder = Transcoder(input_size=95, out_size=64, n_feats=512)
+    import argparse
+    import os
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--n_feats", type=int, required=True)
+    parser.add_argument("--update_transcoder_path", required=True)
+    parser.add_argument("--hidden_transcoder_path", required=True)
+    parser.add_argument("--rnn_path", required=True)
+
+    args = parser.parse_args()
+    rnn_model = RNN(input_size=31, hidden_size=128, use_gru=True, num_layers=1)
+    update_transcoder = Transcoder(input_size=159, out_size=128, 
+                                   n_feats=args.n_feats)
+    hidden_transcoder = Transcoder(input_size=159, out_size=128, 
+                                   n_feats=args.n_feats)
+    
+    rnn_model.load_state_dict(torch.load(args.rnn_path))
+    update_transcoder.load_state_dict(torch.load(args.update_transcoder_path))
+    hidden_transcoder.load_state_dict(torch.load(args.hidden_transcoder_path))
     
     # Create analyzer
     analyzer = FeatureActivationAnalyzer(
         rnn_model=rnn_model,
         update_transcoder=update_transcoder, 
         hidden_transcoder=hidden_transcoder,
-        device='cuda'
+        device=torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     )
     
-    # Run analysis
     analyzer.analyze_all_sequences(
         n_tokens=31,
         sequences_per_length=200,
@@ -292,7 +302,6 @@ if __name__ == "__main__":
         batch_size=64
     )
     
-    # Get most active features
     top_update_features = analyzer.get_most_active_features('update', top_k=20)
     top_hidden_features = analyzer.get_most_active_features('hidden', top_k=20)
     
