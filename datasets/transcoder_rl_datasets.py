@@ -345,7 +345,7 @@ def create_rl_transcoder_dataloaders(dataset: ConcatDataset,
     
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=batch_size, shuffle=shuffle,
-        num_workers=len(os.sched_getaffinity(0)), persistent_workers=True
+        num_workers=0#, persistent_workers=True
     )
     
     val_loader = torch.utils.data.DataLoader(

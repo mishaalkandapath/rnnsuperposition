@@ -1,4 +1,5 @@
 from typing import Dict, List, Optional
+import pickle 
 
 import dash
 from dash import dcc, html, Input, Output, callback, dash_table
@@ -8,6 +9,8 @@ import colorsys
 
 import pandas as pd
 import numpy as np
+
+from circuit.copy_find_features import FeatureActivationAnalyzer
 
 class InteractiveFeatureVisualizer:
     """Interactive web-based visualizer for RNN transcoder feature activations"""
@@ -41,7 +44,8 @@ class InteractiveFeatureVisualizer:
         
         return f"rgba({rgb_255[0]}, {rgb_255[1]}, {rgb_255[2]}, {0.3 + 0.7 * intensity})"
         
-    def _create_sequence_display(self, sequences_data: List[Dict], feature_idx: int) -> List[html.Div]:
+    def _create_sequence_display(self, sequences_data: List[Dict], 
+                                 feature_idx: int) -> List[html.Div]:
         """Create colored token displays for sequences"""
         if not sequences_data:
             return [html.Div("No activations found for this feature.", className="no-data")]
@@ -276,19 +280,18 @@ class InteractiveFeatureVisualizer:
         print(f"Starting interactive visualizer at http://{host}:{port}")
         self.app.run_server(host=host, port=port, debug=debug)
 
-# Usage example
 def launch_visualizer(analyzer):
-    """Launch the interactive visualizer"""
     visualizer = InteractiveFeatureVisualizer(analyzer)
     visualizer.run()
 
-# Example usage:
 if __name__ == "__main__":
-    # Assuming you have an analyzer with collected data:
-    # rnn_model, u
-    # analyzer = FeatureActivationAnalyzer(rnn_model, update_transcoder, hidden_transcoder)
-    # analyzer.analyze_all_sequences(...)
-    
-    # Launch visualizer:
-    # launch_visualizer(analyzer)
-    pass
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--feature_dict_path", required=True)
+
+    args = parser.parse_args()
+    with open(args.feature_dict_path, "rb") as f:
+        analysis_dict = pickle.load(f)
+    analyzer = FeatureActivationAnalyzer(None, None, None, "cpu")
+    analyzer.feature_activations = analysis_dict
+    launch_visualizer(analyzer)

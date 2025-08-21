@@ -68,7 +68,7 @@ class TranscoderDataGenerator:
         all_hidden_inputs = []
         all_hidden_targets = []
 
-        sequence_data = defaultdict(defaultdict(list))
+        sequence_data = defaultdict(lambda: defaultdict(list))
         
         for unique_sequences in sequences_by_length:
             n_sequences = len(unique_sequences)
@@ -97,13 +97,13 @@ class TranscoderDataGenerator:
                     batch_sequences = add_delimiter_dimension(batch_sequences)
                     x_t = torch.cat([batch_sequences, outs[:, :-1]],
                                     dim=1)   # (batch_size, 2*seq_len, input_size)
-                    
-                    sequences_by_length[x_t.size(1)//2]["inputs"].append(x_t)
-                    sequences_by_length[x_t.size(1)//2]["outputs"].append(outs[:, :-1])
-                    sequences_by_length[x_t.size(1)//2]["h_prevs"].append(h_prev)
-                    sequences_by_length[x_t.size(1)//2]["z_ts"].append(z_t)
-                    sequences_by_length[x_t.size(1)//2]["r_ts"].append(r_t)
-                    sequences_by_length[x_t.size(1)//2]["h_new_ts"].append(h_new_t)
+                    assert x_t.size(1)%2 == 0
+                    sequence_data[x_t.size(1)//2]["inputs"].append(x_t)
+                    sequence_data[x_t.size(1)//2]["outputs"].append(outs[:, :, :-1])
+                    sequence_data[x_t.size(1)//2]["h_prevs"].append(h_prev)
+                    sequence_data[x_t.size(1)//2]["z_ts"].append(z_t)
+                    sequence_data[x_t.size(1)//2]["r_ts"].append(r_t)
+                    sequence_data[x_t.size(1)//2]["h_new_ts"].append(h_new_t)
                     
                     # Process each timestep
                     for t in range(2*unique_sequences.size(1)):
@@ -139,8 +139,9 @@ class TranscoderDataGenerator:
             'hidden_context_targets': torch.cat(all_hidden_targets, dim=0)
         }
         sequence_datasets = []
-        for length in sequences_by_length:
-            sequence_datasets.append(StackDataset(**sequences_by_length[length]))
+        for length in sequence_data:
+            sequence_data[length] = {k: torch.cat(sequence_data[length][k]) for k in sequence_data[length]}
+            sequence_datasets.append(StackDataset(**sequence_data[length]))
         
         print(f"Generated transcoder dataset with {dataset['update_gate_inputs'].shape[0]} samples")
         update_dataset = {"input": dataset["update_gate_inputs"],
@@ -178,45 +179,6 @@ class TranscoderDataGenerator:
         
         return sequences_one_hot, masks
 
-def create_transcoder_dataloaders(dataset: StackDataset,
-                                batch_size: int = 256,
-                                train_split: float = 0.9,
-                                shuffle: bool = True) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
-    """
-    Create train/val dataloaders for transcoder training
-    
-    Args:
-        dataset: Output from generate_transcoder_dataset
-        batch_size: Batch size for dataloaders
-        train_split: Fraction of data to use for training
-        shuffle: Whether to shuffle the data
-    
-    Returns:
-        train_loader, val_loader
-    """
-    
-    n_samples = len(dataset)
-    print(f"-- Dataset is of length {n_samples}---")
-    n_train = int(n_samples * train_split)
-    
-    indices = torch.randperm(n_samples) if shuffle else torch.arange(n_samples)
-    train_indices = indices[:n_train]
-    val_indices = indices[n_train:]
-    
-    train_dataset = Subset(dataset, train_indices)
-    val_dataset = Subset(dataset, val_indices)
-    
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=shuffle, 
-        num_workers=len(os.sched_getaffinity(0)), persistent_workers=True #HERE
-    )
-    print(f"-- Asked for {len(os.sched_getaffinity(0))} workers")
-    val_loader = torch.utils.data.DataLoader(
-        val_dataset, batch_size=batch_size, shuffle=False
-    )
-    
-    return train_loader, val_loader
-
 if __name__ == "__main__":
     import argparse
     import os
@@ -243,8 +205,8 @@ if __name__ == "__main__":
                                                     batch_size=args.batch_size,
                                                     max_len=args.max_len,
                                                     min_len=args.min_len)
-    os.makedirs("data/copy_transcoder/", exist_ok=True)
-    torch.save(update_dataset, f"data/copy_transcoder/{args.dataset_name}_update_gate.pt")
-    torch.save(hidden_dataset, f"data/copy_transcoder/{args.dataset_name}_hctx.pt")
+    os.makedirs("/w/nobackup/436/lambda/data/copy_transcoder/", exist_ok=True)
+    torch.save(update_dataset, f"/w/nobackup/436/lambda/data/copy_transcoder/{args.dataset_name}_update_gate1.pt")
+    torch.save(hidden_dataset, f"/w/nobackup/436/lambda/data/copy_transcoder/{args.dataset_name}_hctx1.pt")
     for i in range(len(sequence_datasets)):
-        torch.save(sequence_datasets[i], f"data/copy_transcoder/{args.dataset_name}_seq{i+3}.pt")
+        torch.save(sequence_datasets[i], f"/w/nobackup/436/lambda/data/copy_transcoder/{args.dataset_name}_seq{i+3}.pt")

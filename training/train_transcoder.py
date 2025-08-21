@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from models.transcoders import Transcoder, set_transcoder_weights
-from datasets.transcoder_copy_datasets import create_transcoder_dataloaders
+from datasets.utils import create_transcoder_dataloaders, ConsolidatedStackDataset
 from training.train_utils import SignalManager, normalize_batch
 torch.serialization.add_safe_globals([StackDataset])
 
@@ -54,6 +54,10 @@ class TranscoderLoss(nn.Module):
             case 4: return lambda: 1
             case 5: 
                 return lambda: (self.steps/self.total_steps) * math.sin(0.5*math.pi*(self.steps % self.off)/self.off) if self.steps < 0.75*self.total_steps else 1
+            case 6:
+                return lambda: 1
+            case 7:
+                return lambda: 1 + min(self.steps/self.off, 1)
             case _:
                 return lambda: (self.steps/self.total_steps)
 
@@ -301,8 +305,13 @@ def create_and_train_transcoders(dataset: Dict[str, torch.Tensor],
     )
     optimizer = optim.Adam(transcoder.parameters(), lr=train_cfg["lr"])
     if train_cfg["ctd_from"]:
-        transcoder.load_state_dict(torch.load(train_cfg["ctd_from"], weights_only=True)["transcoder"])
-        optimizer.load_state_dict(torch.load(train_cfg["ctd_from"], weights_only=True)["optim"])
+        ckpt = torch.load(train_cfg["ctd_from"], weights_only=True, map_location=device)
+        transcoder.load_state_dict(ckpt["transcoder"])
+        optimizer.load_state_dict(ckpt["optim"])
+        for state in optimizer.state.values():
+            for k, v in state.items():
+                if isinstance(v, torch.Tensor):
+                    state[k] = v.cuda()
     print("--Initialized Transcoder--")
     weight_init_fn = set_transcoder_weights(p=0.01)
     transcoder.input_to_features.apply(weight_init_fn)
@@ -395,7 +404,7 @@ if __name__ == "__main__":
     print("--Loading Dataset(s)--")
     datasets = []
     for data_path in args.dataset_paths:
-        datasets += [torch.load(data_path)]
+        datasets += [torch.load(data_path, map_location=torch.device("cpu"))]
     dataset = ConcatDataset(datasets)
     print("--Finished Loading Dataset--")
     os.makedirs(args.save_path, exist_ok=True)
@@ -404,5 +413,5 @@ if __name__ == "__main__":
 
     create_and_train_transcoders(dataset, train_cfg, 
                                  hidden_size=args.hidden_size, 
-                                 input_size=args.input_size+1, 
+                                 input_size=args.input_size, 
                                  n_feats=args.n_feats, device=device, n_epochs=args.n_epochs, batch_size=args.batch_size, save_path=args.save_path, run=run)
