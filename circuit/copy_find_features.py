@@ -74,8 +74,8 @@ class FeatureActivationAnalyzer:
             batch_tokens: List of token sequences for each batch item
         """
         with torch.no_grad():
-            seq_len = batch["outputs"].size(1)
-            for t in range(2*seq_len):
+            seq_len = batch["inputs"].size(1)
+            for t in range(seq_len):
                 valid_h_prev = batch["h_prevs"][:, t].to(self.device)
                 valid_x_t = batch["inputs"][:, t].to(self.device)
                 valid_r_t = batch["r_ts"][:, t].to(self.device)
@@ -247,19 +247,22 @@ if __name__ == "__main__":
         sequences_per_length=200,
         min_len=3,
         max_len=9,
-        batch_size=8192,
+        batch_size=4096,
         cache=args.cached_sentences if args.cached_sentences else []
     )
-    
-    top_update_features = analyzer.get_most_active_features('update', top_k=20)
-    top_hidden_features = analyzer.get_most_active_features('hidden', top_k=20)
-    
-    print("Top Update Gate Features:")
-    for feature_idx, count in top_update_features:
-        summary = analyzer.get_feature_summary('update', feature_idx)
-        print(f"Feature {feature_idx}: {count} activations across {summary['n_sequences']} sequences")
+    # try:
+    #     top_update_features = analyzer.get_most_active_features('update', top_k=20)
+    #     top_hidden_features = analyzer.get_most_active_features('hidden', top_k=20)
+        
+    #     print("Top Update Gate Features:")
+    #     for feature_idx, count in top_update_features:
+    #         summary = analyzer.get_feature_summary('update', feature_idx)
+    #         print(f"Feature {feature_idx}: {count} activations across {summary['n_sequences']} sequences")
+    # except Exception as e:
+    #     print(e)
+    #     print("gotta work on this")
 
     # save feature data
     os.makedirs("/w/nobackup/436/lambda/data/copy_transcoder_features/", exist_ok=True)
-    with open(f"/w/nobackup/436/lambda/data/copy_transcoder_features/{args.n_feats}_features.p"):
+    with open(f"/w/nobackup/436/lambda/data/copy_transcoder_features/h{args.n_feats_hidden}_u{args.n_feats_update}_features.p"):
         pickle.dump(analyzer.feature_activations)
