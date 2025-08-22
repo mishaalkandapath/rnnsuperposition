@@ -1,4 +1,5 @@
 from typing import Dict, List, Tuple, Optional, Set
+import pickle
 
 import dash
 from dash import dcc, html, Input, Output, State, callback
@@ -10,6 +11,17 @@ import json
 import pandas as pd
 import numpy as np
 import torch 
+from torch.utils.data import StackDataset
+
+
+from circuit.edge_att import CircuitTracer
+from circuit.copy_find_features import CopyFeatureActivationAnalyzer
+from circuit.rl_find_features import RLFeatureActivationAnalyzer
+from circuit.graph_prune import GraphPruner
+
+from models.rnn import RNN
+from models.transcoders import Transcoder
+torch.serialization.add_safe_globals([StackDataset])
 
 class InteractiveCircuitVisualizer:
     """Interactive web-based visualizer for RNN circuit graphs with feature activation examples"""
@@ -17,6 +29,7 @@ class InteractiveCircuitVisualizer:
     def __init__(self, 
                  circuit_tracer,
                  feature_analyzer,
+                 datasets, 
                  pruner=None):
         """
         Args:
@@ -26,6 +39,7 @@ class InteractiveCircuitVisualizer:
         """
         self.circuit_tracer = circuit_tracer
         self.feature_analyzer = feature_analyzer
+        self.datasets = datasets
         self.pruner = pruner
         self.app = dash.Dash(__name__)
         
@@ -481,21 +495,28 @@ class InteractiveCircuitVisualizer:
                 return "", "Enter a sequence and click 'Generate Circuit'"
             
             # Parse input sequence
-            tokens = sequence_text.strip().split()
-            if not tokens:
-                return "", "Please enter a valid sequence"
+            options = sequence_text.strip().split()
+            if not options:
+                return "", "Enter in format sequence_length sequence_index"
+
+            dataset_idx, sequence_index = options
             
             # Convert to tensor (this is simplified - you'd need proper tokenization)
             # For now, assume each token maps to an index
             try:
                 # Create dummy sequence tensor - replace with your actual tokenization
-                sequence_tensor = torch.randn(1, len(tokens), 10)  # Adjust input_size as needed
-                self.current_sequence = sequence_tensor
+                sequence_tensor = self.datasets[dataset_idx][sequence_index]
+                if getattr(self.feature_analyzer, "cur_type"):
+                    self.feature_analyzer.cur_type=["commonp", "common_p", "uncommonp", "uncommon_p"][dataset_idx]
+                tokens = self.feature_analyzer.convert_sequence_to_text(sequence_tensor["inputs"], sequence_tensor["outputs"])
                 
                 # Identify active features (simplified - you'd use your actual feature detection)
+                data_dict = self.feature_analyzer.sequence_activations
                 active_features = {
-                    'update': [(t, f, 0.5) for t in range(len(tokens)) for f in range(5)],
-                    'hidden': [(t, f, 0.5) for t in range(len(tokens)) for f in range(5)]
+                    'update': [(t, 
+                                data_dict["update"][tokens][t]["features"][i], data_dict["update"][tokens][t]["magnitudes"][i]) for t in range(len(tokens)) for i in range(len(data_dict["update"][tokens][t]["features"]))],
+                    'hidden': [(t, 
+                                data_dict["hidden"][tokens][t]["features"][i], data_dict["hidden"][tokens][t]["magnitudes"][i]) for t in range(len(tokens)) for i in range(len(data_dict["hidden"][tokens][t]["features"]))]
                 }
                 
                 # Build circuit graph
@@ -603,18 +624,63 @@ class InteractiveCircuitVisualizer:
         self.app.run_server(host=host, port=port, debug=debug)
 
 # Usage example
-def launch_circuit_visualizer(circuit_tracer, feature_analyzer, pruner=None):
+def launch_circuit_visualizer(circuit_tracer, feature_analyzer, 
+                              datasets, pruner=None):
     """Launch the interactive circuit visualizer"""
-    visualizer = InteractiveCircuitVisualizer(circuit_tracer, feature_analyzer, pruner)
+    visualizer = InteractiveCircuitVisualizer(circuit_tracer, feature_analyzer,
+                                              datasets, pruner)
     visualizer.run()
 
-# Example usage:
 if __name__ == "__main__":
-    # Assuming you have the required components:
-    # circuit_tracer = CircuitTracer(rnn_model, update_transcoder, hidden_transcoder)
-    # feature_analyzer = FeatureActivationAnalyzer(rnn_model, update_transcoder, hidden_transcoder)
-    # pruner = GraphPruner()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--rl", action="store_true")
+    parser.add_argument("--copy", action="store_true")
+    parser.add_argument("--feature_dict_path")
+    parser.add_argument("--update_transcoder_path")
+    parser.add_argument("--hidden_transcoder_path")
+    parser.add_argument("--feature_dict_path")
+    parser.add_argument("--n_feats_hidden", type=int)
+    parser.add_argument("--n_feats_update", type=int)
+    parser.add_argument("--hidden_size", type=int)
+    parser.add_argument("--dataset_paths", nargs="+")
+
+    args = parser.parse_args()
     
-    # Launch visualizer:
-    # launch_circuit_visualizer(circuit_tracer, feature_analyzer, pruner)
-    pass
+    datasets = []
+    for dataset in args.dataset_paths:
+        datasets.append(torch.load(dataset, map_location=torch.device("cpu")))
+    if args.rl:
+        rnn_model = RNN(input_size=8, hidden_size=48, out_size=4, 
+                    use_gru=True, num_layers=1, learn_init=True)
+        update_transcoder = Transcoder(input_size=56, out_size=48, 
+                                    n_feats=args.n_feats_update)
+        hidden_transcoder = Transcoder(input_size=56, out_size=48, 
+                                    n_feats=args.n_feats_hidden)
+        analyzer = RLFeatureActivationAnalyzer
+    else:
+        rnn_model = RNN(input_size=31, hidden_size=128, out_size=30, 
+                    use_gru=True, num_layers=1)
+        update_transcoder = Transcoder(input_size=159, out_size=128, 
+                                    n_feats=args.n_feats_update)
+        hidden_transcoder = Transcoder(input_size=159, out_size=128, 
+                                    n_feats=args.n_feats_hidden)
+        analyzer = CopyFeatureActivationAnalyzer
+    
+    rnn_model.load_state_dict(torch.load(args.rnn_path))
+    update_transcoder.load_state_dict(torch.load(args.update_transcoder_path)["transcoder"])
+    hidden_transcoder.load_state_dict(torch.load(args.hidden_transcoder_path)["transcoder"])
+    
+    with open(args.feature_dict_path, "rb") as f:
+        analysis_dict = pickle.load(f)
+        analysis_dict_sequences = pickle.load(f.replace("features",
+                                                        "sequences"))
+
+    feature_analyzer = analyzer(rnn_model, update_transcoder, hidden_transcoder)
+    pruner = GraphPruner()
+    feature_analyzer.feature_activations = analysis_dict
+    feature_analyzer.sequence_activations = analysis_dict_sequences
+
+    circuit_tracer = CircuitTracer(rnn_model, update_transcoder, hidden_transcoder)
+    
+    launch_circuit_visualizer(circuit_tracer, feature_analyzer, datasets, pruner)

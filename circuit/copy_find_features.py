@@ -13,9 +13,7 @@ from models.rnn import RNN
 from models.transcoders import Transcoder
 torch.serialization.add_safe_globals([StackDataset])
 
-class CopyFeatureActivationAnalyzer:
-    """Analyze feature activations across sequences for RNN transcoders"""
-    
+class FeatureActivationAnalyzer:
     def __init__(self, 
                  rnn_model: nn.Module,
                  update_transcoder: nn.Module,
@@ -36,36 +34,26 @@ class CopyFeatureActivationAnalyzer:
             self.update_transcoder.eval()
             self.hidden_transcoder.eval()
 
-        self.device = device
-        
-        # Create token mapping (26 letters + 4 numbers + 1 delimiter)
-        self.tokens = list(string.ascii_lowercase) + ['0', '1', '2', '3'] + ['<DEL>']
-        self.token_to_idx = {token: idx for idx, token in enumerate(self.tokens)}
-        self.idx_to_token = {idx: token for idx, token in enumerate(self.tokens)}
-        
+        self.device = device    
         self.feature_activations = {
             'update': defaultdict(lambda:defaultdict(lambda: defaultdict(list))),  # feature_idx -> sequence -> list of (positions, magnitudes)
             'hidden': defaultdict(lambda:defaultdict(lambda: defaultdict(list)))   # feature_idx -> sequence -> list of (positions, magnitudes)
         }
-        
-    def one_hot_to_tokens(self, one_hot_seq: torch.Tensor, mask: torch.Tensor) -> List[str]:
-        """Convert one-hot sequence to readable tokens"""
-        indices = one_hot_seq.argmax(dim=-1)
-        tokens = []
-        for i, idx in enumerate(indices):
-            if mask[i]:  # Only include non-padded positions
-                tokens.append(self.idx_to_token[idx.item()])
-        return tokens
+        self.sequence_activations = {
+            'update': defaultdict(lambda:defaultdict(lambda: defaultdict(list))),  #  sequence -> position -> list of (feature_idx, magnitudes)
+            'hidden': defaultdict(lambda:defaultdict(lambda: defaultdict(list)))   # sequence -> position -> list of (feature_idx, magnitudes)
+        }
+    def convert_sequence_to_text(self, 
+                                 inputs: torch.Tensor, 
+                                 outputs: torch.Tensor) -> List[str]:
+        raise NotImplementedError
     
-    def make_tokens(self, batch: Dict[str, torch.Tensor]) -> None:
-        ins = batch["inputs"]
-        tokens = []
-        for inp in ins:
-            tokens.append([self.idx_to_token[one_hot.argmax().item()] for one_hot in inp])
-        return tokens
-    
-    def analyze_batch_activations(self, 
-                                 batch: Dict[str, torch.Tensor]) -> None:
+    def analyze_activations(self, 
+                                  batched,
+                                  valid_h_prev, 
+                                  valid_x_t,
+                                  valid_r_t,
+                                  t) -> None:
         """
         Analyze feature activations for a batch of sequences of the same length
         
@@ -74,76 +62,46 @@ class CopyFeatureActivationAnalyzer:
             batch_masks: (batch_size, seq_len) masks indicating valid positions
             batch_tokens: List of token sequences for each batch item
         """
-        with torch.no_grad():
-            seq_len = batch["inputs"].size(1)
-            for t in range(seq_len):
-                valid_h_prev = batch["h_prevs"][:, t].to(self.device)
-                valid_x_t = batch["inputs"][:, t].to(self.device)
-                valid_r_t = batch["r_ts"][:, t].to(self.device)
-                
-                # Prepare transcoder inputs
-                update_gate_input = torch.cat([valid_h_prev, valid_x_t], dim=1)
-                gated_hidden = valid_r_t * valid_h_prev
-                hidden_context_input = torch.cat([gated_hidden, valid_x_t], dim=1)
-                
-                # Get feature activations from transcoders
-                _, update_activations, _ = self.update_transcoder(update_gate_input)
-                nonzero_update_acts = torch.nonzero(update_activations,
-                                                     as_tuple=False)
-                
-                # Hidden context transcoder  
-                _, hidden_activations, _ = self.hidden_transcoder(hidden_context_input)  # (n_valid, n_features)
-                nonzero_hidden_acts = torch.nonzero(hidden_activations,
-                                                     as_tuple=False)
-                batch_keys = {}
-                # Store activations for each sequence and feature
-                for idx in range(nonzero_update_acts.shape[0]):
-                    batch_idx, feat_idx = nonzero_update_acts[idx, 0].item(), nonzero_update_acts[idx, 1].item()
-                    activation_magnitude = update_activations[batch_idx, feat_idx].item()
-                    if batch_idx not in batch_keys:
-                        batch_keys[batch_idx] = tuple(batch["inputs"][batch_idx].argmax(-1).tolist()) 
-                    sequence_tokens = batch_keys[batch_idx]
-                    self.feature_activations['update'][feat_idx][sequence_tokens]["positions"].append(t)
-                    self.feature_activations['update'][feat_idx][sequence_tokens]["magnitudes"].append(activation_magnitude)
-                for idx in range(nonzero_hidden_acts.shape[0]):
-                    batch_idx, feat_idx = nonzero_hidden_acts[idx, 0].item(), nonzero_hidden_acts[idx, 1].item()
-                    activation_magnitude = hidden_activations[batch_idx, feat_idx].item()
-                    if batch_idx not in batch_keys:
-                        batch_keys[batch_idx] = tuple(batch["inputs"][batch_idx].argmax(-1).tolist()) 
-                    sequence_tokens = batch_keys[batch_idx]
-                    self.feature_activations['hidden'][feat_idx][sequence_tokens]["positions"].append(t)
-                    self.feature_activations['hidden'][feat_idx][sequence_tokens]["magnitudes"].append(activation_magnitude)
-                                
-    def analyze_all_sequences(self,
-                            n_tokens: int = 30,  # 26 + 4 (delim added later)
-                            sequences_per_length: int = 1000,
-                            min_len: int = 2,
-                            max_len: int = 9,
-                            batch_size: int = 8192,
-                            cache=[]) -> None:
-        """
-        Analyze feature activations across all sequence lengths
+        # Prepare transcoder inputs
+        update_gate_input = torch.cat([valid_h_prev, valid_x_t], dim=1)
+        gated_hidden = valid_r_t * valid_h_prev
+        hidden_context_input = torch.cat([gated_hidden, valid_x_t], dim=1)
         
-        Args:
-            n_tokens: Total number of tokens in vocabulary
-            sequences_per_length: Number of sequences to generate per length
-            min_len: Minimum sequence length
-            max_len: Maximum sequence length
-            batch_size: Batch size for processing
-        """
-        print("Accumulating sequences...")
-        sequences_by_length = {}
-        for idx, path in enumerate(cache):
-            sequences_by_length[idx] = torch.load(path) 
-
-        print("Analyzing Features...")
-        for seq_len in range(min_len, max_len + 1):
-            sequences = sequences_by_length[seq_len - min_len]
-            dataloader = DataLoader(sequences, batch_size)
-            for batch in tqdm(dataloader, desc=f"Length {seq_len}"):
-                self.analyze_batch_activations(batch)
-                
-        print("Feature activation analysis complete!")
+        # Get feature activations from transcoders
+        _, update_activations, _ = self.update_transcoder(update_gate_input)
+        nonzero_update_acts = torch.nonzero(update_activations,
+                                                as_tuple=False)
+        
+        # Hidden context transcoder  
+        _, hidden_activations, _ = self.hidden_transcoder(hidden_context_input)  # (n_valid, n_features)
+        nonzero_hidden_acts = torch.nonzero(hidden_activations,
+                                                as_tuple=False)
+        batch_keys = {}
+        # Store activations for each sequence and feature
+        for idx in range(nonzero_update_acts.shape[0]):
+            batch_idx, feat_idx = nonzero_update_acts[idx, 0].item(), nonzero_update_acts[idx, 1].item()
+            activation_magnitude = update_activations[batch_idx, feat_idx].item()
+            if batch_idx not in batch_keys:
+                batch_keys[batch_idx] = self.convert_sequence_to_text(
+                    batched["inputs"][batch_idx],
+                    batched["outputs"][batch_idx])
+            sequence_tokens = batch_keys[batch_idx]
+            self.feature_activations['update'][feat_idx][sequence_tokens]["positions"].append(t)
+            self.feature_activations['update'][feat_idx][sequence_tokens]["magnitudes"].append(activation_magnitude)
+            self.sequence_activations["update"][sequence_tokens][t]["features"].append(feat_idx)
+            self.sequence_activations["update"][sequence_tokens][t]["magnitudes"].append(activation_magnitude)
+        for idx in range(nonzero_hidden_acts.shape[0]):
+            batch_idx, feat_idx = nonzero_hidden_acts[idx, 0].item(), nonzero_hidden_acts[idx, 1].item()
+            activation_magnitude = hidden_activations[batch_idx, feat_idx].item()
+            if batch_idx not in batch_keys:
+                batch_keys[batch_idx] = self.convert_sequence_to_text(
+                    batched["inputs"][batch_idx],
+                    batched["outputs"][batch_idx])
+            sequence_tokens = batch_keys[batch_idx]
+            self.feature_activations['hidden'][feat_idx][sequence_tokens]["positions"].append(t)
+            self.feature_activations['hidden'][feat_idx][sequence_tokens]["magnitudes"].append(activation_magnitude)
+            self.sequence_activations["hidden"][sequence_tokens][t]["features"].append(feat_idx)
+            self.sequence_activations["hidden"][sequence_tokens][t]["magnitudes"].append(activation_magnitude)
         
     def get_feature_summary(self, transcoder_type: str, feature_idx: int) -> Dict:
         """
@@ -170,7 +128,6 @@ class CopyFeatureActivationAnalyzer:
         for entry in activations:
             all_positions.extend(activations[entry]['positions'])
             all_magnitudes.extend(activations[entry]['magnitudes'])
-            
         return {
             "n_sequences": total_sequences,
             "n_activations": total_activations,
@@ -205,12 +162,93 @@ class CopyFeatureActivationAnalyzer:
         
         return feature_counts[:top_k]
 
+
+class CopyFeatureActivationAnalyzer(FeatureActivationAnalyzer):
+    """Analyze feature activations across sequences for RNN transcoders"""
+    
+    def __init__(self, 
+                 rnn_model: nn.Module,
+                 update_transcoder: nn.Module,
+                 hidden_transcoder: nn.Module,
+                 device: str = 'cuda'):
+        """
+        Args:
+            rnn_model: Trained RNN model
+            update_transcoder: Trained update gate transcoder
+            hidden_transcoder: Trained hidden context transcoder
+            device: Device to run analysis on
+        """
+        super().__init__(rnn_model, update_transcoder, hidden_transcoder, device)
+        # Create token mapping (26 letters + 4 numbers + 1 delimiter)
+        self.tokens = list(string.ascii_lowercase) + ['0', '1', '2', '3'] + ['<DEL>']
+        self.token_to_idx = {token: idx for idx, token in enumerate(self.tokens)}
+        self.idx_to_token = {idx: token for idx, token in enumerate(self.tokens)}
+
+    def convert_sequence_to_text(self, 
+                                 inputs: torch.Tensor, 
+                                 outputs: torch.Tensor) -> List[str]:
+        ret_list = [self.idx_to_token[inp.argmax().item()] for inp in inputs]
+        return tuple(ret_list)
+
+    def analyze_batch_activations(self, batch):
+        with torch.no_grad():
+            seq_len = batch["inputs"].size(1)
+            for t in range(seq_len):
+                valid_h_prev = batch["h_prevs"][:, t].to(self.device)
+                valid_x_t = batch["inputs"][:, t].to(self.device)
+                valid_r_t = batch["r_ts"][:, t].to(self.device)
+                self.analyze_activations(batch,
+                                         valid_h_prev, 
+                                         valid_x_t,
+                                         valid_r_t,
+                                         t)
+                                
+    def analyze_all_sequences(self,
+                            n_tokens: int = 30,  # 26 + 4 (delim added later)
+                            sequences_per_length: int = 1000,
+                            min_len: int = 2,
+                            max_len: int = 9,
+                            batch_size: int = 8192,
+                            cache=[]) -> None:
+        """
+        Analyze feature activations across all sequence lengths
+        
+        Args:
+            n_tokens: Total number of tokens in vocabulary
+            sequences_per_length: Number of sequences to generate per length
+            min_len: Minimum sequence length
+            max_len: Maximum sequence length
+            batch_size: Batch size for processing
+        """
+        print("Accumulating sequences...")
+        sequences_by_length = {}
+        for idx, path in enumerate(cache):
+            sequences_by_length[idx] = torch.load(path) 
+
+        print("Analyzing Features...")
+        for seq_len in range(min_len, max_len + 1):
+            sequences = sequences_by_length[seq_len - min_len]
+            dataloader = DataLoader(sequences, batch_size)
+            for batch in tqdm(dataloader, desc=f"Length {seq_len}"):
+                self.analyze_batch_activations(batch)
+        print("Feature activation analysis complete!")
+
 def collate_fn(batch):
   keys = list(batch[0].keys())
   return {
       k: torch.stack([x[k] for x in batch]) for k in keys
 }
-
+def convert_dict(d, leaf_key1, leaf_key2):
+    new_dict= {}
+    for typ in d:
+        new_dict[typ] = {}
+        for feature in d[typ]:
+            new_dict[typ][feature] = {}
+            for sequence in d[typ][feature]:
+                new_dict[typ][feature][sequence] = {leaf_key1: 
+                                                    d[typ][feature][sequence][leaf_key1],
+                                                    leaf_key2:d[typ][feature][sequence][leaf_key2]}
+    return new_dict
 if __name__ == "__main__":
     import argparse
     import os
@@ -271,6 +309,13 @@ if __name__ == "__main__":
                                                     "magnitudes":analyzer.feature_activations[typ][feature][sequence]["magnitudes"]}
     
     # save feature data
+    new_dict_features = convert_dict(analyzer.feature_activations, "positions",
+                                     "magnitudes")
+    new_dict_sequences = convert_dict(analyzer.sequence_activations, "features",
+                                      "magnitudes")
+    
     os.makedirs("/w/nobackup/436/lambda/data/copy_transcoder_features/", exist_ok=True)
     with open(f"/w/nobackup/436/lambda/data/copy_transcoder_features/h{args.n_feats_hidden}_u{args.n_feats_update}_features.p", "wb") as f:
-        pickle.dump(new_dict, f)
+        pickle.dump(new_dict_features, f)
+    with open(f"/w/nobackup/436/lambda/data/copy_transcoder_features/h{args.n_feats_hidden}_u{args.n_feats_update}_sequences.p", "wb") as f:
+        pickle.dump(new_dict_sequences, f)
