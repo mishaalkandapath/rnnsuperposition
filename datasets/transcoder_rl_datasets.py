@@ -314,9 +314,10 @@ class RLTranscoderDataGenerator:
                     for sequence_idx in range(len(sequence_dict[pattern][batch_idx])):
                         temp_dict = {}
                         for key in keys:
-                            zero = [torch.zeros(sequence_dict[pattern][batch_idx][sequence_idx][0][key].shape).to(self.device)]
+                            zero = [torch.zeros(sequence_dict[pattern][batch_idx][sequence_idx][0][key].shape).to(self.device) + 5]
                             left = 5 - len(sequence_dict[pattern][batch_idx][sequence_idx])
                             zero *= left
+                            assert sequence_dict[pattern][batch_idx][sequence_idx]
                             temp_dict[key] = torch.stack(zero + [s[key].to(self.device) for s in sequence_dict[pattern][batch_idx][sequence_idx]])
                         sequence_dict[pattern][batch_idx][sequence_idx] = temp_dict
                     if not sequence_dict[pattern][batch_idx]: continue
@@ -431,7 +432,7 @@ class RLTranscoderDataGenerator:
         )
 
         print(f"Generated transcoder dataset with {len(update_dataset)} samples")
-        print(f"Generated Sequences have {sequences[pattern]["inputs"].size(0)} each")
+        print(f"Generated Sequences have {sequences[0]["inputs"].size(0)} each")
 
         sequence_datasets = []
         for pattern in sequences:
@@ -504,7 +505,7 @@ if __name__ == "__main__":
     torch.save(hidden_dataset, f"/w/nobackup/436/lambda/data/rl_transcoder/{args.dataset_name}_hctx.pt")
     for i, dataset in enumerate(sequence_datasets):
         prefix = ["commonp", "common_p", "uncommonp", "uncommon_p"][i]
-        torch.save(dataset, f"/w/nobackup/436/lambda/data/rl_transcoder/{args.dataset_name}_{prefix}_rl.pt")
+        torch.save(dataset, f"/w/nobackup/436/lambda/data/rl_transcoder/{args.dataset_name}_{prefix}_{args.initial_config}_rl.pt")
  
 # ecah trial will have a context window of upto 3 trials before it, itself, and the trial after it. 
 # what is interesting is the relationship between the trials before it and itself.

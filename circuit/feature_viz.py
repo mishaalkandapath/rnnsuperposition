@@ -10,7 +10,7 @@ import colorsys
 import pandas as pd
 import numpy as np
 
-from circuit.copy_find_features import FeatureActivationAnalyzer
+from circuit.copy_find_features import CopyFeatureActivationAnalyzer
 
 class InteractiveFeatureVisualizer:
     """Interactive web-based visualizer for RNN transcoder feature activations"""
@@ -275,7 +275,7 @@ class InteractiveFeatureVisualizer:
             
             return self._create_sequence_display(sequences_data, feature_idx)
     
-    def run(self, host='127.0.0.1', port=8050, debug=True):
+    def run(self, host='0.0.0.0', port=8050, debug=True):
         """Run the Dash app"""
         print(f"Starting interactive visualizer at http://{host}:{port}")
         self.app.run_server(host=host, port=port, debug=debug)
@@ -292,6 +292,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     with open(args.feature_dict_path, "rb") as f:
         analysis_dict = pickle.load(f)
-    analyzer = FeatureActivationAnalyzer(None, None, None, "cpu")
+    analyzer = CopyFeatureActivationAnalyzer(None, None, None, "cpu")
     analyzer.feature_activations = analysis_dict
     launch_visualizer(analyzer)
