@@ -43,6 +43,8 @@ class FeatureActivationAnalyzer:
             'update': defaultdict(lambda:defaultdict(lambda: defaultdict(list))),  #  sequence -> position -> list of (feature_idx, magnitudes)
             'hidden': defaultdict(lambda:defaultdict(lambda: defaultdict(list)))   # sequence -> position -> list of (feature_idx, magnitudes)
         }
+        self.min_length = 0
+        self.max_length =0
     def convert_sequence_to_text(self, 
                                  inputs: torch.Tensor, 
                                  outputs: torch.Tensor) -> List[str]:
@@ -123,16 +125,27 @@ class FeatureActivationAnalyzer:
         total_sequences = len(activations)
         
         # Get all positions where this feature activates
-        all_positions = []
-        all_magnitudes = []
+        all_positions = list(range(self.max_length))
+        all_magnitudes = [1] * (self.max_length)
+        all_lengths = list(range(self.max_length+1))
         for entry in activations:
-            all_positions.extend(activations[entry]['positions'])
+            for position in activations[entry]['positions']:
+                true_len = len(entry)//2
+                assert len(entry) % 2 == 0
+                if position >= true_len: 
+                    position = 9 + (position-true_len)
+                    all_positions.append(position)
+                else: all_positions.append(position)
             all_magnitudes.extend(activations[entry]['magnitudes'])
+            all_lengths.append(len(entry))
         return {
             "n_sequences": total_sequences,
             "n_activations": total_activations,
             "avg_activations_per_sequence": total_activations / max(total_sequences, 1),
-            "position_distribution": np.bincount(all_positions).tolist(),
+            "position_distribution": (np.bincount(all_positions) - 1).tolist(),
+            "position_mag_distribution": (np.bincount(all_positions,
+                                                       all_magnitudes) - 1).tolist(),
+            "length distribution": (np.bincount(all_lengths) - 1).tolist(),
             "magnitude_stats": {
                 "mean": np.mean(all_magnitudes),
                 "std": np.std(all_magnitudes), 
@@ -183,6 +196,8 @@ class CopyFeatureActivationAnalyzer(FeatureActivationAnalyzer):
         self.tokens = list(string.ascii_lowercase) + ['0', '1', '2', '3'] + ['<DEL>']
         self.token_to_idx = {token: idx for idx, token in enumerate(self.tokens)}
         self.idx_to_token = {idx: token for idx, token in enumerate(self.tokens)}
+        self.min_length = 6
+        self.max_length = 18
 
     def convert_sequence_to_text(self, 
                                  inputs: torch.Tensor, 
