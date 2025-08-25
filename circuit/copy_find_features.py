@@ -128,17 +128,30 @@ class FeatureActivationAnalyzer:
         all_positions = list(range(self.max_length))
         all_magnitudes = [1] * (self.max_length)
         all_lengths = list(range(self.max_length+1))
+
+        if getattr(self, "tokens"):
+            all_tokens_og = list(range(len(self.tokens)))
+            all_tokens_copy = list(range(len(self.tokens)))
+            all_tokens_copy_prev = list(range(len(self.tokens)))
         for entry in activations:
             for position in activations[entry]['positions']:
                 true_len = len(entry)//2
                 assert len(entry) % 2 == 0
                 if position >= true_len: 
+                    if position > true_len and getattr(self, "tokens"):
+                        all_tokens_copy.append(self.token_to_idx[entry[position]])
+                        all_tokens_copy_prev.append(self.token_to_idx[entry[(position-true_len)]])
+                    elif getattr(self, "tokens"):
+                        all_tokens_og.append(self.token_to_idx[entry[position]])
                     position = 9 + (position-true_len)
                     all_positions.append(position)
-                else: all_positions.append(position)
+                else: 
+                    all_positions.append(position)
+                    if getattr(self, "tokens"):
+                        all_tokens_og.append(self.token_to_idx[entry[position]])
             all_magnitudes.extend(activations[entry]['magnitudes'])
             all_lengths.append(len(entry))
-        return {
+        stat_dict = {
             "n_sequences": total_sequences,
             "n_activations": total_activations,
             "avg_activations_per_sequence": total_activations / max(total_sequences, 1),
@@ -153,6 +166,11 @@ class FeatureActivationAnalyzer:
                 "max": np.max(all_magnitudes)
             } if all_magnitudes else None
         }
+        if getattr(self, "tokens"):
+            stat_dict["og_tokens_distribution"] = (np.bincount(all_tokens_og) - 1).tolist()
+            stat_dict["copy_tokens_distribution"] = (np.bincount(all_tokens_copy) - 1).tolist()
+            stat_dict["copy_tokens_prev_distribution"] = (np.bincount(all_tokens_copy_prev) - 1).tolist()
+        return stat_dict
         
     def get_most_active_features(self, transcoder_type: str, top_k: int = 10) -> List[Tuple[int, int]]:
         """

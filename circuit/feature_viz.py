@@ -109,7 +109,7 @@ class EnhancedInteractiveFeatureVisualizer:
         return f"rgba({r}, {g}, {b}, {alpha})"
         
     def _create_sequence_display(self, sequences_data: List[Dict], 
-                                 feature_idx: int) -> List[html.Div]:
+                                 max_magnitude: int) -> List[html.Div]:
         """Create colored token displays for sequences"""
         # sequences_data must be sorted according to whatever metric
         try:
@@ -122,9 +122,8 @@ class EnhancedInteractiveFeatureVisualizer:
                 if isinstance(seq_data, dict) and 'magnitudes' in seq_data:
                     all_magnitudes.extend(seq_data['magnitudes'])
             
-            max_magnitude = max(all_magnitudes) if all_magnitudes else 1.0
             sequence_divs = []
-            for seq_idx, seq_data in enumerate(sequences_data[:20]):  # Show up to 20 sequences
+            for seq_idx, seq_data in enumerate(sequences_data[:50]):  # Show up to 20 sequences
                 try:
                     if not isinstance(seq_data, dict):
                         print("SHOULD'VE BEEN A DICT? ", seq_data)
@@ -225,9 +224,14 @@ class EnhancedInteractiveFeatureVisualizer:
             update_features = [0]
             hidden_features = [0]
         
+        # Get available sequence lengths for the length filter dropdown
+        available_lengths = []
+        if self.all_sequences:
+            available_lengths = sorted(list(set(len(seq) for seq in self.all_sequences)))
+        
         self.app.layout = html.Div([
             html.H1("Enhanced RNN Transcoder Feature Activation Visualizer", 
-                   style={'text-align': 'center', 'margin-bottom': '30px'}),
+                style={'text-align': 'center', 'margin-bottom': '30px'}),
             
             # Control Panel
             html.Div([
@@ -258,11 +262,38 @@ class EnhancedInteractiveFeatureVisualizer:
             
             # Debug info
             html.Div(id='debug-info', style={'margin-bottom': '10px', 'padding': '10px', 
-                                           'background-color': '#fff3cd', 'border-radius': '5px'}),
+                                        'background-color': '#fff3cd', 'border-radius': '5px'}),
             
             # Feature Statistics
             html.Div(id='feature-stats', style={'margin-bottom': '20px', 'padding': '15px', 
-                                               'background-color': '#f8f9fa', 'border-radius': '5px'}),
+                                            'background-color': '#f8f9fa', 'border-radius': '5px'}),
+            
+            # NEW: Ranking Mode Controls
+            html.Div([
+                html.Label("Ranking Mode:", style={'font-weight': 'bold', 'margin-right': '10px'}),
+                dcc.RadioItems(
+                    id='ranking-mode',
+                    options=[
+                        {'label': 'Absolute Ranking (All Lengths)', 'value': 'absolute'},
+                        {'label': 'Length-Specific Ranking', 'value': 'length_specific'}
+                    ],
+                    value='absolute',
+                    inline=True,
+                    style={'margin': '10px 0'}
+                ),
+                
+                # Length filter dropdown (only shown when length-specific mode is selected)
+                html.Div([
+                    html.Label("Filter by Sequence Length:", style={'font-weight': 'bold', 'margin-right': '10px'}),
+                    dcc.Dropdown(
+                        id='length-filter',
+                        options=[{'label': f'Length {length}', 'value': length} for length in available_lengths],
+                        value=available_lengths[0] if available_lengths else None,
+                        placeholder="Select sequence length",
+                        style={'width': '200px', 'display': 'inline-block'}
+                    )
+                ], id='length-filter-container', style={'margin': '10px 0'})
+            ], style={'margin-bottom': '20px', 'padding': '15px', 'background-color': '#e3f2fd', 'border-radius': '5px'}),
             
             # Sorting Controls
             html.Div([
@@ -316,19 +347,19 @@ class EnhancedInteractiveFeatureVisualizer:
                 html.H4("Color Legend:", style={'margin-bottom': '10px'}),
                 html.Div([
                     html.Span("Inactive/Never Active", style={'background-color': 'rgba(200, 200, 200, 0.3)', 
-                                               'padding': '2px 8px', 'margin-right': '10px', 'border-radius': '3px'}),
+                                            'padding': '2px 8px', 'margin-right': '10px', 'border-radius': '3px'}),
                     html.Span("Low", style={'background-color': 'rgba(100, 100, 255, 0.5)', 
-                                          'padding': '2px 8px', 'margin-right': '10px', 'border-radius': '3px'}),
+                                        'padding': '2px 8px', 'margin-right': '10px', 'border-radius': '3px'}),
                     html.Span("Medium", style={'background-color': 'rgba(255, 100, 100, 0.7)', 
-                                             'padding': '2px 8px', 'margin-right': '10px', 'border-radius': '3px'}),
+                                            'padding': '2px 8px', 'margin-right': '10px', 'border-radius': '3px'}),
                     html.Span("High", style={'background-color': 'rgba(230, 0, 0, 1.0)', 
-                                           'padding': '2px 8px', 'border-radius': '3px'})
+                                        'padding': '2px 8px', 'border-radius': '3px'})
                 ])
             ], style={'margin-bottom': '20px', 'padding': '10px', 'background-color': '#f0f0f0', 'border-radius': '5px'}),
             
             # Main visualization area
             html.Div(id='sequence-display', style={'max-height': '600px', 'overflow-y': 'auto', 
-                                                  'border': '1px solid #ddd', 'padding': '10px'})
+                                                'border': '1px solid #ddd', 'padding': '10px'})
         ])
         
     def _setup_callbacks(self):
@@ -346,7 +377,7 @@ class EnhancedInteractiveFeatureVisualizer:
                     isinstance(self.analyzer.feature_activations, dict) and
                     transcoder_type in self.analyzer.feature_activations):
                     
-                    features = list(self.analyzer.feature_activations[transcoder_type].keys())
+                    features = sorted(list(self.analyzer.feature_activations[transcoder_type].keys()))
                 else:
                     features = [0]  # Default fallback
                 
@@ -359,6 +390,17 @@ class EnhancedInteractiveFeatureVisualizer:
                 traceback.print_exc()
                 return [{'label': 'Feature 0', 'value': 0}], 0
             
+        @self.app.callback(
+            Output('length-filter-container', 'style'),
+            [Input('ranking-mode', 'value')]
+        )
+        def toggle_length_filter(ranking_mode):
+            """Show/hide length filter based on ranking mode"""
+            if ranking_mode == 'length_specific':
+                return {'margin': '10px 0', 'display': 'block'}
+            else:
+                return {'margin': '10px 0', 'display': 'none'}
+
         @self.app.callback(
             Output('debug-info', 'children'),
             [Input('transcoder-type', 'value'),
@@ -558,7 +600,111 @@ class EnhancedInteractiveFeatureVisualizer:
                                         style={'margin': '10px 0'}
                                     )
                                 )
+                            # Plot 4: token Distribution for og tokens
+                            if stats.get('og_tokens_distribution'):
+                                og_tokens_dist = stats['og_tokens_distribution'] 
+                                tokens = list(range(len(og_tokens_dist)))
+                                total_count = sum(og_tokens_dist)
+                                normalized_token_counts = []
                                 
+                                for token_idx, token in enumerate(tokens):
+                                    token_count = og_tokens_dist[token_idx]
+                                    activation_rate = token_count / total_count if total_count > 0 else 0
+                                    normalized_token_counts.append(activation_rate)
+                                
+                                fig4 = go.Figure()
+                                fig4.add_trace(go.Bar(
+                                    x=self.analyzer.tokens,
+                                    y=normalized_token_counts,
+                                    name=f'Token OG Distribution {total_count/total_feature_activations}',
+                                    marker_color='lightcoral',
+                                    text=[f"{val:.3f}" for val in normalized_token_counts],
+                                    textposition='auto'
+                                ))
+                                fig4.update_layout(
+                                    title=f"Token Og Distribution {total_count/total_feature_activations}",
+                                    xaxis_title="Token Idx",
+                                    yaxis_title="Activation Rate",
+                                    height=300,
+                                    margin=dict(l=50, r=50, t=80, b=50)
+                                )
+                                
+                                stats_div.children.append(
+                                    dcc.Graph(
+                                        figure=fig4,
+                                        style={'margin': '10px 0'}
+                                    )
+                                )
+                            # Plot 4: token Distribution for og tokens
+                            if stats.get('copy_tokens_distribution'):
+                                copy_tokens_dist = stats['copy_tokens_distribution'] 
+                                tokens = list(range(len(copy_tokens_dist)))
+                                total_count = sum(copy_tokens_dist)
+                                normalized_copytoken_counts = []
+                                hover_texts = []
+                                
+                                for token_idx, token in enumerate(tokens):
+                                    token_count = copy_tokens_dist[token_idx]
+                                    activation_rate = token_count / total_count if total_count > 0 else 0
+                                    normalized_copytoken_counts.append(activation_rate)
+                                
+                                fig5 = go.Figure()
+                                fig5.add_trace(go.Bar(
+                                    x=self.analyzer.tokens,
+                                    y=normalized_copytoken_counts,
+                                    name=f'Token Copy Distribution {total_count/total_feature_activations}',
+                                    marker_color='lightcoral',
+                                    text=[f"{val:.3f}" for val in normalized_copytoken_counts],
+                                    textposition='auto'
+                                ))
+                                fig5.update_layout(
+                                    title=f"Token Copy Distribution {total_count/total_feature_activations}",
+                                    xaxis_title="Token Idx",
+                                    yaxis_title="Activation Rate",
+                                    height=300,
+                                    margin=dict(l=50, r=50, t=80, b=50)
+                                )
+                                
+                                stats_div.children.append(
+                                    dcc.Graph(
+                                        figure=fig5,
+                                        style={'margin': '10px 0'}
+                                    )
+                                )
+                            if stats.get('copy_tokens_prev_distribution'):
+                                copy_tokens_prev_dist = stats['copy_tokens_prev_distribution'] 
+                                tokens = list(range(len(copy_tokens_prev_dist)))
+                                total_count = sum(copy_tokens_prev_dist)
+                                normalized_copytokenprev_counts = []
+                                
+                                for token_idx, token in enumerate(tokens):
+                                    token_count = copy_tokens_prev_dist[token_idx]
+                                    activation_rate = token_count / total_count if total_count > 0 else 0
+                                    normalized_copytokenprev_counts.append(activation_rate)
+                                
+                                fig6 = go.Figure()
+                                fig6.add_trace(go.Bar(
+                                    x=self.analyzer.tokens,
+                                    y= normalized_copytokenprev_counts,
+                                    name=f'Token Copy Prev Distribution{total_count/total_feature_activations}',
+                                    marker_color='lightcoral',
+                                    text=[f"{val:.3f}" for val in normalized_copytokenprev_counts],
+                                    textposition='auto'
+                                ))
+                                fig6.update_layout(
+                                    title=f"Token Copy prev Distribution {total_count/total_feature_activations}",
+                                    xaxis_title="Token Idx",
+                                    yaxis_title="Activation Rate",
+                                    height=300,
+                                    margin=dict(l=50, r=50, t=80, b=50)
+                                )
+                                
+                                stats_div.children.append(
+                                    dcc.Graph(
+                                        figure=fig6,
+                                        style={'margin': '10px 0'}
+                                    )
+                                )                                
                     # except Exception as e:
                     #     stats_div.children.append(html.P(f"Error getting detailed stats: {str(e)}", style={'color': 'red'}))
                 
@@ -572,141 +718,144 @@ class EnhancedInteractiveFeatureVisualizer:
         @self.app.callback(
             Output('sequence-display', 'children'),
             [Input('transcoder-type', 'value'),
-             Input('feature-dropdown', 'value'),
-             Input('sort-option', 'value'),
-             Input('category-option', 'value'),
-             Input('include-inactive', 'value')]
+            Input('feature-dropdown', 'value'),
+            Input('sort-option', 'value'),
+            Input('category-option', 'value'),
+            Input('include-inactive', 'value'),
+            Input('ranking-mode', 'value'), 
+            Input('length-filter', 'value')]
         )
-        def update_sequence_display(transcoder_type, feature_idx, sort_option, category_option, 
-                               include_inactive, ranking_mode, length_filter):
-        """Update main sequence display with ranking options"""
-        try:
-            print(f"=== DEBUG: update_sequence_display called ===")
-            print(f"transcoder_type: {transcoder_type}, feature_idx: {feature_idx}")
-            print(f"sort_option: {sort_option}, category_option: {category_option}")
-            print(f"include_inactive: {include_inactive}")
-            print(f"ranking_mode: {ranking_mode}, length_filter: {length_filter}")  # NEW
-            
-            if feature_idx is None:
-                return [html.Div("No feature selected")]
-            
-            # Get active sequences data
-            active_sequences_data = []
-            if (hasattr(self.analyzer, 'feature_activations') and 
-                isinstance(self.analyzer.feature_activations, dict) and
-                transcoder_type in self.analyzer.feature_activations and
-                feature_idx in self.analyzer.feature_activations[transcoder_type]):
+        def update_sequence_display(transcoder_type, feature_idx, sort_option,
+                                     category_option, include_inactive, ranking_mode, length_filter):
+            """Update main sequence display with ranking options"""
+            try:
+                print(f"=== DEBUG: update_sequence_display called ===")
+                print(f"transcoder_type: {transcoder_type}, feature_idx: {feature_idx}")
+                print(f"sort_option: {sort_option}, category_option: {category_option}")
+                print(f"include_inactive: {include_inactive}")
+                print(f"ranking_mode: {ranking_mode}, length_filter: {length_filter}")
                 
-                feature_data = self.analyzer.feature_activations[transcoder_type][feature_idx]
+                if feature_idx is None:
+                    return [html.Div("No feature selected")]
                 
-                for seq_tuple, activations_list in feature_data.items():
-                    try:
-                        # Handle different data structures
-                        if isinstance(activations_list, list):
-                            # Combine all activations for this sequence
-                            all_positions = []
-                            all_magnitudes = []
-                            for activation in activations_list:
-                                if isinstance(activation, dict):
-                                    all_positions.extend(activation.get('positions', []))
-                                    all_magnitudes.extend(activation.get('magnitudes', []))
-                        elif isinstance(activations_list, dict):
-                            # Single activation dict
-                            all_positions = activations_list.get('positions', [])
-                            all_magnitudes = activations_list.get('magnitudes', [])
-                        else:
+                # Get active sequences data
+                active_sequences_data = []
+                if (hasattr(self.analyzer, 'feature_activations') and 
+                    isinstance(self.analyzer.feature_activations, dict) and
+                    transcoder_type in self.analyzer.feature_activations and
+                    feature_idx in self.analyzer.feature_activations[transcoder_type]):
+                    
+                    feature_data = self.analyzer.feature_activations[transcoder_type][feature_idx]
+                    
+                    for seq_tuple, activations_list in feature_data.items():
+                        try:
+                            # Handle different data structures
+                            if isinstance(activations_list, list):
+                                # Combine all activations for this sequence
+                                all_positions = []
+                                all_magnitudes = []
+                                for activation in activations_list:
+                                    if isinstance(activation, dict):
+                                        all_positions.extend(activation.get('positions', []))
+                                        all_magnitudes.extend(activation.get('magnitudes', []))
+                            elif isinstance(activations_list, dict):
+                                # Single activation dict
+                                all_positions = activations_list.get('positions', [])
+                                all_magnitudes = activations_list.get('magnitudes', [])
+                            else:
+                                continue
+                            
+                            # Convert seq_tuple to sequence
+                            if isinstance(seq_tuple, tuple):
+                                sequence = list(seq_tuple)
+                            elif isinstance(seq_tuple, str):
+                                sequence = [seq_tuple]
+                            else:
+                                sequence = [str(seq_tuple)]
+                            
+                            active_sequences_data.append({
+                                'sequence': sequence,
+                                'positions': all_positions,
+                                'magnitudes': all_magnitudes,
+                                'is_active': True
+                            })
+                            
+                        except Exception as e:
+                            print(f"Error processing active sequence {seq_tuple}: {e}")
                             continue
-                        
-                        # Convert seq_tuple to sequence
-                        if isinstance(seq_tuple, tuple):
-                            sequence = list(seq_tuple)
-                        elif isinstance(seq_tuple, str):
-                            sequence = [seq_tuple]
-                        else:
-                            sequence = [str(seq_tuple)]
-                        
-                        active_sequences_data.append({
-                            'sequence': sequence,
-                            'positions': all_positions,
-                            'magnitudes': all_magnitudes,
-                            'is_active': True
-                        })
-                        
-                    except Exception as e:
-                        print(f"Error processing active sequence {seq_tuple}: {e}")
-                        continue
-            
-            # Get inactive sequences data if requested
-            inactive_sequences_data = []
-            if 'include' in include_inactive and category_option == 'worst':
-                inactive_sequences_data = self._get_inactive_sequences_for_feature(transcoder_type, feature_idx)
-            
-            # Combine active and inactive sequences
-            all_sequences_data = active_sequences_data + inactive_sequences_data
-            
-            print(f"Active sequences: {len(active_sequences_data)}")
-            print(f"Inactive sequences: {len(inactive_sequences_data)}")
-            print(f"Total sequences: {len(all_sequences_data)}")
-            
-            if not all_sequences_data:
-                return [html.Div("No sequences found for this feature.")]
-            
-            # NEW: Apply length filtering if in length-specific mode
-            if ranking_mode == 'length_specific' and length_filter is not None:
-                all_sequences_data = [
-                    seq_data for seq_data in all_sequences_data 
-                    if len(seq_data.get('sequence', [])) == length_filter
-                ]
-                print(f"After length filtering (length={length_filter}): {len(all_sequences_data)} sequences")
+                
+                # Get inactive sequences data if requested
+                inactive_sequences_data = []
+                if 'include' in include_inactive and category_option == 'worst':
+                    inactive_sequences_data = self._get_inactive_sequences_for_feature(transcoder_type, feature_idx)
+                
+                # Combine active and inactive sequences
+                all_sequences_data = active_sequences_data + inactive_sequences_data
+                
+                print(f"Active sequences: {len(active_sequences_data)}")
+                print(f"Inactive sequences: {len(inactive_sequences_data)}")
+                print(f"Total sequences: {len(all_sequences_data)}")
                 
                 if not all_sequences_data:
-                    return [html.Div(f"No sequences of length {length_filter} found for this feature.")]
-            
-            # Sort sequences based on selected option
-            def get_sort_key(x, sort_option):
-                if sort_option == 'total':
-                    return sum(x.get('magnitudes', []))
-                elif sort_option == 'max':
-                    return max(x.get('magnitudes', [0])) if x.get('magnitudes') else 0
-                elif sort_option == 'positions':
-                    return len(x.get('positions', []))
-                elif sort_option == 'length':
-                    return len(x.get('sequence', []))
-                return 0
-            
-            # Sort and select sequences
-            if category_option == 'best':
-                # For best: only show active sequences, sorted by highest activation
-                sequences_to_show = [seq for seq in all_sequences_data if seq.get('is_active', True)]
-                sequences_to_show.sort(key=lambda x: get_sort_key(x, sort_option), reverse=True)
-            else:  # worst
-                # For worst: show all sequences (active + inactive), sorted by lowest activation
-                sequences_to_show = all_sequences_data
-                sequences_to_show.sort(key=lambda x: get_sort_key(x, sort_option), reverse=False)
-            
-            # Take top 20
-            sequences_to_show = sequences_to_show[:20]
-            
-            print(f"Showing {len(sequences_to_show)} sequences")
-            
-            # Add ranking mode info to the display
-            ranking_info = ""
-            if ranking_mode == 'length_specific' and length_filter is not None:
-                ranking_info = f" (Length {length_filter} only)"
-            
-            result = [html.Div([
-                html.H4(f"Sequences for Feature {feature_idx}{ranking_info}", 
-                       style={'margin-bottom': '15px'}),
-                *self._create_sequence_display(sequences_to_show, feature_idx)
-            ])]
-            
-            return result
-            
-        except Exception as e:
-            error_msg = f"Error in update_sequence_display: {str(e)}"
-            print(error_msg)
-            traceback.print_exc()
-            return [html.Div(error_msg)]
+                    return [html.Div("No sequences found for this feature.")]
+                
+                max_mag = max(map(lambda x: max(x.get("magnitudes", [0])), 
+                                  all_sequences_data))
+                if ranking_mode == 'length_specific' and length_filter is not None:
+                    all_sequences_data = [
+                        seq_data for seq_data in all_sequences_data 
+                        if len(seq_data.get('sequence', [])) == length_filter
+                    ]
+                    print(f"After length filtering (length={length_filter}): {len(all_sequences_data)} sequences")
+                    
+                    if not all_sequences_data:
+                        return [html.Div(f"No sequences of length {length_filter} found for this feature.")]
+                
+                # Sort sequences based on selected option
+                def get_sort_key(x, sort_option):
+                    if sort_option == 'total':
+                        return sum(x.get('magnitudes', []))
+                    elif sort_option == 'max':
+                        return max(x.get('magnitudes', [0])) if x.get('magnitudes') else 0
+                    elif sort_option == 'positions':
+                        return len(x.get('positions', []))
+                    elif sort_option == 'length':
+                        return len(x.get('sequence', []))
+                    return 0
+                
+                # Sort and select sequences
+                if category_option == 'best':
+                    # For best: only show active sequences, sorted by highest activation
+                    sequences_to_show = [seq for seq in all_sequences_data if seq.get('is_active', True)]
+                    sequences_to_show.sort(key=lambda x: get_sort_key(x, sort_option), reverse=True)
+                else:  # worst
+                    # For worst: show all sequences (active + inactive), sorted by lowest activation
+                    sequences_to_show = all_sequences_data
+                    sequences_to_show.sort(key=lambda x: get_sort_key(x, sort_option), reverse=False)
+                
+                # Take top 20
+                sequences_to_show = sequences_to_show
+                
+                print(f"Showing {len(sequences_to_show)} sequences")
+                
+                # Add ranking mode info to the display
+                ranking_info = ""
+                if ranking_mode == 'length_specific' and length_filter is not None:
+                    ranking_info = f" (Length {length_filter} only)"
+                
+                result = [html.Div([
+                    html.H4(f"Sequences for Feature {feature_idx}{ranking_info}", 
+                        style={'margin-bottom': '15px'}),
+                    *self._create_sequence_display(sequences_to_show, max_mag)
+                ])]
+                
+                return result
+                
+            except Exception as e:
+                error_msg = f"Error in update_sequence_display: {str(e)}"
+                print(error_msg)
+                traceback.print_exc()
+                return [html.Div(error_msg)]
     
     def run(self, host='0.0.0.0', port=8050, debug=True):
         """Run the Dash app"""
