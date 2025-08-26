@@ -6,6 +6,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from models.rnn import myModule
+
 #code adapted from https://github.com/safety-research/circuit-tracer/blob/main/
 def rectangle(x: torch.Tensor) -> torch.Tensor:
     return ((x > -0.5) & (x < 0.5)).to(x)
@@ -67,7 +69,7 @@ def set_transcoder_weights(p=0.01):
 
     return custom_weights_init
 
-class Transcoder(nn.Module):
+class Transcoder(myModule):
     def __init__(self, input_size, out_size, n_feats, bias=True,
                   threshhold=0.1, bandwidth=2):
         super(Transcoder, self).__init__()

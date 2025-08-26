@@ -4,7 +4,6 @@ import pickle
 import dash
 from dash import dcc, html, Input, Output, State, callback
 import plotly.graph_objects as go
-import plotly.express as px
 import networkx as nx
 
 import json
@@ -12,7 +11,6 @@ import pandas as pd
 import numpy as np
 import torch 
 from torch.utils.data import StackDataset
-
 
 from circuit.edge_att import CircuitTracer
 from circuit.copy_find_features import CopyFeatureActivationAnalyzer
@@ -24,29 +22,17 @@ from models.transcoders import Transcoder
 torch.serialization.add_safe_globals([StackDataset])
 
 class InteractiveCircuitVisualizer:
-    """Interactive web-based visualizer for RNN circuit graphs with feature activation examples"""
+    """Interactive web-based visualizer for RNN circuit graphs"""
     
-    def __init__(self, 
-                 circuit_tracer,
-                 feature_analyzer,
-                 datasets, 
-                 pruner=None):
-        """
-        Args:
-            circuit_tracer: CircuitTracer instance
-            feature_analyzer: FeatureActivationAnalyzer instance with collected data
-            pruner: Optional GraphPruner instance
-        """
+    def __init__(self, circuit_tracer, feature_analyzer, datasets, pruner=None):
         self.circuit_tracer = circuit_tracer
         self.feature_analyzer = feature_analyzer
         self.datasets = datasets
         self.pruner = pruner
         self.app = dash.Dash(__name__)
         
-        # Store current graph data
-        self.current_graph = None
-        self.current_sequence = None
-        self.layout_positions = {}
+        self.current_edge_weights = None 
+        self.current_tokens = None
         
         self._setup_layout()
         self._setup_callbacks()
@@ -56,160 +42,93 @@ class InteractiveCircuitVisualizer:
         parts = node_name.split('_')
         
         if node_name.startswith('x_'):
-            # Input node: x_t_dim
-            return {
-                'type': 'input',
-                'timestep': int(parts[1]) if len(parts) > 1 else 0,
-                'dimension': int(parts[2]) if len(parts) > 2 else 0,
-                'feature_idx': None
-            }
+            return {'type': 'input', 'timestep': int(parts[1]), 'dimension': int(parts[2])}
         elif node_name.startswith('f_z_'):
-            # Update gate feature: f_z_t_idx
-            return {
-                'type': 'feature_update',
-                'timestep': int(parts[2]) if len(parts) > 2 else 0,
-                'dimension': None,
-                'feature_idx': int(parts[3]) if len(parts) > 3 else 0
-            }
+            return {'type': 'feature_update', 'timestep': int(parts[2]), 'feature_idx': int(parts[3])}
         elif node_name.startswith('f_n_'):
-            # Hidden context feature: f_n_t_idx
-            return {
-                'type': 'feature_hidden',
-                'timestep': int(parts[2]) if len(parts) > 2 else 0,
-                'dimension': None,
-                'feature_idx': int(parts[3]) if len(parts) > 3 else 0
-            }
+            return {'type': 'feature_hidden', 'timestep': int(parts[2]), 'feature_idx': int(parts[3])}
         elif node_name.startswith('o_'):
-            # Output node: o_t_dim
-            return {
-                'type': 'output',
-                'timestep': int(parts[1]) if len(parts) > 1 else 0,
-                'dimension': int(parts[2]) if len(parts) > 2 else 0,
-                'feature_idx': None
-            }
-        elif node_name.startswith('e_'):
-            # Error node: e_z_t or e_n_t
-            return {
-                'type': 'error',
-                'timestep': int(parts[2]) if len(parts) > 2 else 0,
-                'dimension': None,
-                'feature_idx': None
-            }
+            return {'type': 'output', 'timestep': int(parts[1]), 'dimension': int(parts[2])}
         else:
-            return {
-                'type': 'unknown',
-                'timestep': 0,
-                'dimension': None,
-                'feature_idx': None
-            }
+            return {'type': 'unknown', 'timestep': 0}
     
     def _compute_graph_layout(self, edge_weights: Dict[Tuple[str, str], float]) -> Dict[str, Tuple[float, float]]:
         """Compute hierarchical layout for graph visualization"""
-        # Create NetworkX graph
         G = nx.DiGraph()
-        
-        # Add edges
         for (from_node, to_node), weight in edge_weights.items():
             G.add_edge(from_node, to_node, weight=abs(weight))
         
-        # Parse node information for layout
-        node_info = {}
-        for node in G.nodes():
-            node_info[node] = self._parse_node_info(node)
+        node_info = {node: self._parse_node_info(node) for node in G.nodes()}
         
         # Group nodes by timestep and type
         timesteps = {}
         for node, info in node_info.items():
             t = info['timestep']
             if t not in timesteps:
-                timesteps[t] = {'input': [], 'feature_update': [], 'feature_hidden': [], 'output': [], 'error': []}
+                timesteps[t] = {'input': [], 'feature_update': [], 'feature_hidden': [], 'output': []}
             timesteps[t][info['type']].append(node)
         
         positions = {}
-        
-        # Layout parameters
         timestep_width = 200
-        type_spacing = {'input': 80, 'feature_update': 60, 'feature_hidden': 60, 'output': 80, 'error': 100}
+        type_spacing = {'input': 80, 'feature_update': 60, 'feature_hidden': 60, 'output': 80}
         
         for t, nodes_by_type in timesteps.items():
             x_base = t * timestep_width
             
-            # Position input nodes at top
             for i, node in enumerate(nodes_by_type['input']):
                 positions[node] = (x_base - 50, 50 + i * type_spacing['input'])
             
-            # Position feature nodes in middle
             for i, node in enumerate(nodes_by_type['feature_update']):
                 positions[node] = (x_base, 200 + i * type_spacing['feature_update'])
                 
             for i, node in enumerate(nodes_by_type['feature_hidden']):
                 positions[node] = (x_base + 50, 200 + i * type_spacing['feature_hidden'])
             
-            # Position output nodes at bottom
             for i, node in enumerate(nodes_by_type['output']):
                 positions[node] = (x_base, 500 + i * type_spacing['output'])
-                
-            # Position error nodes on the side
-            for i, node in enumerate(nodes_by_type['error']):
-                positions[node] = (x_base + 100, 350 + i * type_spacing['error'])
         
         return positions
     
-    def _get_node_color(self, node_name: str, node_info: Dict) -> str:
+    def _get_node_color(self, node_type: str) -> str:
         """Get color for node based on type"""
         color_map = {
-            'input': '#4CAF50',          # Green
-            'feature_update': '#2196F3', # Blue  
-            'feature_hidden': '#FF9800', # Orange
-            'output': '#F44336',         # Red
-            'error': '#9C27B0'          # Purple
+            'input': '#4CAF50',
+            'feature_update': '#2196F3', 
+            'feature_hidden': '#FF9800',
+            'output': '#F44336'
         }
-        return color_map.get(node_info['type'], '#757575')
+        return color_map.get(node_type, '#757575')
     
-    def _get_edge_color(self, weight: float) -> str:
-        """Get edge color based on weight (positive = red, negative = blue)"""
-        if weight > 0:
-            intensity = min(abs(weight), 1.0)
-            return f'rgba(255, 0, 0, {0.3 + 0.7 * intensity})'
-        else:
-            intensity = min(abs(weight), 1.0) 
-            return f'rgba(0, 0, 255, {0.3 + 0.7 * intensity})'
-    
-    def _get_feature_examples(self, node_name: str, n_examples: int = 10) -> List[Dict]:
-        """Get top activating examples for a feature node"""
+    def _get_node_activation_magnitude(self, node_name: str, 
+                                        active_features: Dict) -> Optional[float]:
+        """Get activation magnitude for a given node"""
         node_info = self._parse_node_info(node_name)
         
-        if node_info['type'] not in ['feature_update', 'feature_hidden']:
-            return []
+        if node_info['type'] == 'feature_update':
+            timestep = node_info['timestep']
+            feature_idx = node_info['feature_idx']
+            
+            # Find matching activation in active_features
+            for t, feat_idx, magnitude in active_features.get('update', []):
+                if t == timestep and feat_idx == feature_idx:
+                    return float(magnitude)
+                    
+        elif node_info['type'] == 'feature_hidden':
+            timestep = node_info['timestep']
+            feature_idx = node_info['feature_idx']
+            
+            # Find matching activation in active_features
+            for t, feat_idx, magnitude in active_features.get('hidden', []):
+                if t == timestep and feat_idx == feature_idx:
+                    return float(magnitude)
         
-        transcoder_type = 'update' if node_info['type'] == 'feature_update' else 'hidden'
-        feature_idx = node_info['feature_idx']
-        
-        if feature_idx not in self.feature_analyzer.feature_activations[transcoder_type]:
-            return []
-        
-        # Collect all activations with their sequences
-        examples = []
-        for seq_tuple, activations_list in self.feature_analyzer.feature_activations[transcoder_type][feature_idx].items():
-            for activation in activations_list:
-                for pos, magnitude in zip(activation['positions'], activation['magnitudes']):
-                    examples.append({
-                        'sequence': list(seq_tuple),
-                        'position': pos,
-                        'magnitude': magnitude,
-                        'context_start': max(0, pos - 3),
-                        'context_end': min(len(seq_tuple), pos + 4)
-                    })
-        
-        # Sort by magnitude and take top examples
-        examples.sort(key=lambda x: x['magnitude'], reverse=True)
-        return examples[:n_examples]
+        return None
     
     def _create_circuit_graph(self, edge_weights: Dict[Tuple[str, str], float], 
-                            kept_nodes: Optional[Set[str]] = None) -> go.Figure:
-        """Create interactive circuit graph visualization"""
+                        kept_nodes: Optional[Set[str]] = None,
+                        active_features: Optional[Dict] = None) -> go.Figure:
+        """Create interactive circuit graph visualization with hover activation magnitudes"""
         if kept_nodes:
-            # Filter edges to only include kept nodes
             filtered_edges = {
                 (from_node, to_node): weight 
                 for (from_node, to_node), weight in edge_weights.items()
@@ -219,20 +138,12 @@ class InteractiveCircuitVisualizer:
             filtered_edges = edge_weights
         
         if not filtered_edges:
-            # Return empty figure
             fig = go.Figure()
-            fig.update_layout(
-                title="No edges to display",
-                xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-                yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
-            )
+            fig.update_layout(title="No edges to display")
             return fig
         
-        # Compute layout
         positions = self._compute_graph_layout(filtered_edges)
-        self.layout_positions = positions
         
-        # Extract nodes and parse info
         all_nodes = set()
         for from_node, to_node in filtered_edges.keys():
             all_nodes.add(from_node)
@@ -240,13 +151,11 @@ class InteractiveCircuitVisualizer:
         
         node_info = {node: self._parse_node_info(node) for node in all_nodes}
         
-        # Create figure
         fig = go.Figure()
         
         # Add edges
         edge_x = []
         edge_y = []
-        edge_info = []
         
         for (from_node, to_node), weight in filtered_edges.items():
             if from_node in positions and to_node in positions:
@@ -255,9 +164,7 @@ class InteractiveCircuitVisualizer:
                 
                 edge_x.extend([x0, x1, None])
                 edge_y.extend([y0, y1, None])
-                edge_info.append(f"{from_node} → {to_node}: {weight:.3f}")
         
-        # Add edge trace
         fig.add_trace(go.Scatter(
             x=edge_x, y=edge_y,
             line=dict(width=1, color='rgba(125,125,125,0.5)'),
@@ -266,8 +173,8 @@ class InteractiveCircuitVisualizer:
             showlegend=False
         ))
         
-        # Add nodes by type for better legend
-        node_types = ['input', 'feature_update', 'feature_hidden', 'output', 'error']
+        # Add nodes by type
+        node_types = ['input', 'feature_update', 'feature_hidden', 'output']
         
         for node_type in node_types:
             nodes_of_type = [node for node, info in node_info.items() if info['type'] == node_type]
@@ -278,7 +185,7 @@ class InteractiveCircuitVisualizer:
             node_x = [positions[node][0] for node in nodes_of_type if node in positions]
             node_y = [positions[node][1] for node in nodes_of_type if node in positions]
             node_text = []
-            node_hover = []
+            hover_text = []
             
             for node in nodes_of_type:
                 if node not in positions:
@@ -286,72 +193,57 @@ class InteractiveCircuitVisualizer:
                     
                 info = node_info[node]
                 
-                # Create display text
                 if info['type'] == 'input':
                     text = f"x_{info['timestep']}_{info['dimension']}"
+                    hover_info = f"Input Node<br>Timestep: {info['timestep']}<br>Dimension: {info['dimension']}"
                 elif info['type'] in ['feature_update', 'feature_hidden']:
-                    text = f"f_{info['feature_idx']}"
+                    text = f"f_{info.get('feature_idx', 0)}"
+                    
+                    # Get activation magnitude if available
+                    activation_mag = None
+                    if active_features:
+                        activation_mag = self._get_node_activation_magnitude(node, active_features)
+                    
+                    hover_info = f"{'Feature Update' if info['type'] == 'feature_update' else 'Feature Hidden'}<br>" \
+                            f"Timestep: {info['timestep']}<br>" \
+                            f"Feature: {info.get('feature_idx', 0)}"
+                    
+                    if activation_mag is not None:
+                        hover_info += f"<br><b>Activation Magnitude: {activation_mag:.4f}</b>"
+                    else:
+                        hover_info += "<br>Activation Magnitude: N/A"
+                        
                 elif info['type'] == 'output':
                     text = f"o_{info['timestep']}_{info['dimension']}"
+                    hover_info = f"Output Node<br>Timestep: {info['timestep']}<br>Dimension: {info['dimension']}"
                 else:
                     text = node
+                    hover_info = f"Unknown Node: {node}"
                 
                 node_text.append(text)
-                
-                # Create hover info
-                hover_info = f"<b>{node}</b><br>"
-                hover_info += f"Type: {info['type']}<br>"
-                hover_info += f"Timestep: {info['timestep']}<br>"
-                
-                if info['feature_idx'] is not None:
-                    hover_info += f"Feature: {info['feature_idx']}<br>"
-                    
-                    # Add top examples for feature nodes
-                    examples = self._get_feature_examples(node, 5)
-                    if examples:
-                        hover_info += "<br><b>Top Activations:</b><br>"
-                        for i, example in enumerate(examples[:3]):
-                            context = example['sequence'][example['context_start']:example['context_end']]
-                            context_str = ' '.join(context)
-                            hover_info += f"{i+1}. {context_str} ({example['magnitude']:.3f})<br>"
-                
-                node_hover.append(hover_info)
+                hover_text.append(hover_info)
             
-            # Add node trace
             fig.add_trace(go.Scatter(
                 x=node_x, y=node_y,
                 mode='markers+text',
                 marker=dict(
                     size=12,
-                    color=self._get_node_color(nodes_of_type[0] if nodes_of_type else '', 
-                                             node_info[nodes_of_type[0]] if nodes_of_type else {}),
+                    color=self._get_node_color(node_type),
                     line=dict(width=2, color='white')
                 ),
                 text=node_text,
                 textposition="middle center",
                 textfont=dict(size=8, color='white'),
-                hovertemplate='%{hovertext}<extra></extra>',
-                hovertext=node_hover,
                 name=node_type.replace('_', ' ').title(),
-                customdata=[node for node in nodes_of_type if node in positions]
+                hovertext=hover_text,
+                hoverinfo='text'
             ))
         
-        # Update layout
         fig.update_layout(
             title="RNN Circuit Graph",
             showlegend=True,
             hovermode='closest',
             margin=dict(b=20,l=5,r=5,t=40),
-            annotations=[ 
-                dict(
-                    text="Hover over feature nodes to see top activating examples",
-                    showarrow=False,
-                    xref="paper", yref="paper",
-                    x=0.005, y=-0.002,
-                    xanchor='left', yanchor='bottom',
-                    font=dict(size=12, color='gray')
-                )
-            ],
             xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
             yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
             plot_bgcolor='white'
@@ -359,276 +251,116 @@ class InteractiveCircuitVisualizer:
         
         return fig
     
-    def _create_feature_detail_panel(self, node_name: str) -> html.Div:
-        """Create detailed panel for selected feature node"""
-        if not node_name:
-            return html.Div("Click on a feature node to see detailed examples")
-        
-        node_info = self._parse_node_info(node_name)
-        
-        if node_info['type'] not in ['feature_update', 'feature_hidden']:
-            return html.Div(f"Selected node {node_name} is not a feature node")
-        
-        examples = self._get_feature_examples(node_name, 10)
-        
-        if not examples:
-            return html.Div(f"No activations found for {node_name}")
-        
-        # Create examples display
-        example_divs = []
-        
-        for i, example in enumerate(examples):
-            sequence = example['sequence']
-            pos = example['position']
-            magnitude = example['magnitude']
-            
-            # Create colored token display
-            token_spans = []
-            for j, token in enumerate(sequence):
-                if j == pos:
-                    # Highlight the activating position
-                    color = f'rgba(255, 0, 0, {0.3 + 0.7 * min(magnitude, 1.0)})'
-                    token_spans.append(
-                        html.Span(
-                            token,
-                            style={
-                                'background-color': color,
-                                'padding': '2px 4px',
-                                'margin': '1px',
-                                'border-radius': '3px',
-                                'font-family': 'monospace',
-                                'font-weight': 'bold',
-                                'border': '2px solid red'
-                            }
-                        )
-                    )
-                else:
-                    token_spans.append(
-                        html.Span(
-                            token,
-                            style={
-                                'padding': '2px 4px',
-                                'margin': '1px',
-                                'font-family': 'monospace',
-                                'color': '#666'
-                            }
-                        )
-                    )
-            
-            example_div = html.Div([
-                html.Div([
-                    html.Strong(f"Example {i+1}: "),
-                    html.Span(f"Magnitude: {magnitude:.3f}, Position: {pos}")
-                ], style={'margin-bottom': '5px', 'font-size': '12px'}),
-                html.Div(token_spans, style={'margin-bottom': '10px'})
-            ], style={'border': '1px solid #ddd', 'padding': '8px', 'margin': '5px', 'border-radius': '3px'})
-            
-            example_divs.append(example_div)
-        
-        return html.Div([
-            html.H4(f"Feature {node_info['feature_idx']} ({node_info['type'].replace('_', ' ').title()})"),
-            html.P(f"Top {len(examples)} activating examples:"),
-            html.Div(example_divs, style={'max-height': '400px', 'overflow-y': 'auto'})
-        ])
-    
     def _setup_layout(self):
         """Setup the Dash app layout"""
         self.app.layout = html.Div([
             html.H1("RNN Circuit Visualizer", 
                    style={'text-align': 'center', 'margin-bottom': '20px'}),
             
-            # Control Panel
+            # Input controls
             html.Div([
-                html.Div([
-                    html.Label("Input Sequence (space-separated):", style={'font-weight': 'bold'}),
-                    dcc.Input(
-                        id='sequence-input',
-                        type='text',
-                        placeholder='Enter sequence tokens separated by spaces',
-                        value='the quick brown fox jumps',
-                        style={'width': '100%', 'margin': '5px 0'}
-                    )
-                ], style={'width': '70%', 'display': 'inline-block'}),
-                
-                html.Div([
-                    html.Button('Generate Circuit', id='generate-button', 
-                              style={'margin': '5px', 'padding': '10px'}),
-                    html.Button('Prune Graph', id='prune-button',
-                              style={'margin': '5px', 'padding': '10px'})
-                ], style={'width': '28%', 'float': 'right', 'text-align': 'right'})
-            ], style={'margin-bottom': '20px'}),
+                html.Label("Dataset Index and Sequence Index:", style={'font-weight': 'bold'}),
+                dcc.Input(
+                    id='sequence-input',
+                    type='text',
+                    placeholder='e.g., 0 42',
+                    value='0 0',
+                    style={'width': '200px', 'margin': '5px 10px'}
+                ),
+                html.Button('Generate Circuit', id='generate-button', 
+                          style={'margin': '5px', 'padding': '10px'})
+            ], style={'margin-bottom': '20px', 'text-align': 'center'}),
             
-            # Graph Statistics
+            # Status display
             html.Div(id='graph-stats', style={'margin-bottom': '10px', 'padding': '10px', 
-                                             'background-color': '#f8f9fa', 'border-radius': '5px'}),
+                                             'background-color': '#f8f9fa', 'border-radius': '5px',
+                                             'text-align': 'center'}),
             
-            # Main content area
-            html.Div([
-                # Graph display
-                html.Div([
-                    dcc.Graph(id='circuit-graph', style={'height': '600px'})
-                ], style={'width': '70%', 'display': 'inline-block'}),
-                
-                # Feature detail panel
-                html.Div([
-                    html.Div(id='feature-details', style={'height': '580px', 'overflow-y': 'auto'})
-                ], style={'width': '28%', 'float': 'right', 'border': '1px solid #ddd', 
-                         'padding': '10px', 'margin-left': '2%'})
-            ]),
-            
-            # Hidden div to store graph data
-            html.Div(id='graph-data', style={'display': 'none'})
+            # Graph display
+            dcc.Graph(id='circuit-graph', style={'height': '700px'})
         ])
     
     def _setup_callbacks(self):
-        """Setup interactive callbacks"""
-        
         @self.app.callback(
-            [Output('graph-data', 'children'),
-             Output('graph-stats', 'children')],
+            [Output('circuit-graph', 'figure'),
+            Output('graph-stats', 'children')],
             [Input('generate-button', 'n_clicks')],
             [State('sequence-input', 'value')]
         )
-        def generate_circuit(n_clicks, sequence_text):
-            """Generate circuit graph from input sequence"""
+        def generate_and_display_circuit(n_clicks, sequence_text):
+            """Generate and display circuit graph"""
             if not n_clicks or not sequence_text:
-                return "", "Enter a sequence and click 'Generate Circuit'"
+                return go.Figure(), "Enter dataset and sequence indices, then click 'Generate Circuit'"
             
-            # Parse input sequence
-            options = sequence_text.strip().split()
-            if not options:
-                return "", "Enter in format sequence_length sequence_index"
-
-            dataset_idx, sequence_index = options
-            
-            # Convert to tensor (this is simplified - you'd need proper tokenization)
-            # For now, assume each token maps to an index
             try:
-                # Create dummy sequence tensor - replace with your actual tokenization
+                options = sequence_text.strip().split()
+                if len(options) < 2:
+                    return go.Figure(), "Enter format: dataset_index sequence_index"
+
+                dataset_idx, sequence_index = map(int, options)
                 sequence_tensor = self.datasets[dataset_idx][sequence_index]
-                if getattr(self.feature_analyzer, "cur_type"):
-                    self.feature_analyzer.cur_type=["commonp", "common_p", "uncommonp", "uncommon_p"][dataset_idx]
-                tokens = self.feature_analyzer.convert_sequence_to_text(sequence_tensor["inputs"], sequence_tensor["outputs"])
                 
-                # Identify active features (simplified - you'd use your actual feature detection)
+                if hasattr(self.feature_analyzer, "cur_type"):
+                    self.feature_analyzer.cur_type = ["commonp", "common_p", "uncommonp", "uncommon_p"][dataset_idx]
+                
+                tokens = self.feature_analyzer.convert_sequence_to_text(
+                    sequence_tensor["inputs"], sequence_tensor["outputs"]
+                )
+                
+                # Get active features
                 data_dict = self.feature_analyzer.sequence_activations
                 active_features = {
-                    'update': [(t, 
-                                data_dict["update"][tokens][t]["features"][i], data_dict["update"][tokens][t]["magnitudes"][i]) for t in range(len(tokens)) for i in range(len(data_dict["update"][tokens][t]["features"]))],
-                    'hidden': [(t, 
-                                data_dict["hidden"][tokens][t]["features"][i], data_dict["hidden"][tokens][t]["magnitudes"][i]) for t in range(len(tokens)) for i in range(len(data_dict["hidden"][tokens][t]["features"]))]
+                    'update': [(t, data_dict["update"][tokens][t]["features"][i], 
+                            data_dict["update"][tokens][t]["magnitudes"][i]) 
+                            for t in range(len(tokens)) 
+                            for i in range(len(data_dict["update"][tokens][t]["features"]))],
+                    'hidden': [(t, data_dict["hidden"][tokens][t]["features"][i], 
+                            data_dict["hidden"][tokens][t]["magnitudes"][i]) 
+                            for t in range(len(tokens)) 
+                            for i in range(len(data_dict["hidden"][tokens][t]["features"]))]
                 }
+                
+                print(f"Building circuit with {sum(len(v) for v in active_features.values())} active features")
                 
                 # Build circuit graph
                 edge_weights = self.circuit_tracer.build_circuit_graph(sequence_tensor, active_features)
                 
-                # Store graph data
-                graph_data = {
-                    'edge_weights': edge_weights,
-                    'kept_nodes': None,
-                    'tokens': tokens
-                }
-                
-                stats = f"Generated circuit with {len(edge_weights)} edges for sequence: '{sequence_text}'"
-                
-                return json.dumps(graph_data), stats
-                
-            except Exception as e:
-                return "", f"Error generating circuit: {str(e)}"
-        
-        @self.app.callback(
-            Output('graph-data', 'children', allow_duplicate=True),
-            [Input('prune-button', 'n_clicks')],
-            [State('graph-data', 'children')],
-            prevent_initial_call=True
-        )
-        def prune_circuit(n_clicks, graph_data_json):
-            """Prune the circuit graph"""
-            if not n_clicks or not graph_data_json or not self.pruner:
-                return graph_data_json
-            
-            try:
-                graph_data = json.loads(graph_data_json)
-                edge_weights = graph_data['edge_weights']
-                
-                # Convert string keys back to tuples
-                edge_weights = {eval(k): v for k, v in edge_weights.items()}
-                
-                # Prune graph
-                pruned_edges, kept_nodes = self.pruner.prune_graph(edge_weights)
-                
-                # Update graph data
-                graph_data['edge_weights'] = {str(k): v for k, v in pruned_edges.items()}
-                graph_data['kept_nodes'] = list(kept_nodes)
-                
-                return json.dumps(graph_data)
-                
-            except Exception as e:
-                return graph_data_json
-        
-        @self.app.callback(
-            [Output('circuit-graph', 'figure'),
-             Output('graph-stats', 'children', allow_duplicate=True)],
-            [Input('graph-data', 'children')],
-            prevent_initial_call=True
-        )
-        def update_graph_display(graph_data_json):
-            """Update graph visualization"""
-            if not graph_data_json:
-                return go.Figure(), "No graph data"
-            
-            try:
-                graph_data = json.loads(graph_data_json)
-                edge_weights = graph_data['edge_weights']
-                kept_nodes = set(graph_data['kept_nodes']) if graph_data['kept_nodes'] else None
-                
-                # Convert string keys back to tuples
-                edge_weights = {eval(k): v for k, v in edge_weights.items()}
-                
-                fig = self._create_circuit_graph(edge_weights, kept_nodes)
-                
-                n_edges = len(edge_weights)
-                n_nodes = len(kept_nodes) if kept_nodes else len(set(sum(edge_weights.keys(), ())))
-                stats = f"Displaying {n_nodes} nodes and {n_edges} edges"
-                if kept_nodes:
-                    stats += " (pruned)"
+                # Auto-prune if pruner exists
+                if self.pruner:
+                    print(f"Auto-pruning {len(edge_weights)} edges..")
+                    pruned_edges, kept_nodes = self.pruner.prune_graph(edge_weights, sequence_tensor["outputs"])
+                    print(f"After pruning: {len(pruned_edges)} edges, {len(kept_nodes)} nodes")
+                    import pickle
+                    with open("sequence_example.p", "wb") as f:
+                        pickle.dump(sequence_tensor, f)
+                    with open("sequence_weights_example.p", "wb") as f:
+                        pickle.dump(edge_weights, f)
+                    
+                    # Pass active_features to the graph creation function
+                    fig = self._create_circuit_graph(pruned_edges, kept_nodes, active_features)
+                    stats = f"Circuit for '{' '.join(tokens)}': {len(kept_nodes)} nodes, {len(pruned_edges)} edges (pruned from {len(edge_weights)})"
+                else:
+                    # Pass active_features to the graph creation function
+                    fig = self._create_circuit_graph(edge_weights, None, active_features)
+                    all_nodes = set(sum(edge_weights.keys(), ()))
+                    stats = f"Circuit for '{' '.join(tokens)}': {len(all_nodes)} nodes, {len(edge_weights)} edges (no pruning)"
                 
                 return fig, stats
                 
             except Exception as e:
-                return go.Figure(), f"Error displaying graph: {str(e)}"
-        
-        @self.app.callback(
-            Output('feature-details', 'children'),
-            [Input('circuit-graph', 'clickData')]
-        )
-        def update_feature_details(click_data):
-            """Update feature details panel when node is clicked"""
-            if not click_data:
-                return self._create_feature_detail_panel(None)
+                print(f"Error: {e}")
+                import traceback
+                traceback.print_exc()
+                return go.Figure(), f"Error: {str(e)}"
             
-            try:
-                # Extract clicked node information
-                point = click_data['points'][0]
-                if 'customdata' in point:
-                    node_name = point['customdata']
-                    return self._create_feature_detail_panel(node_name)
-                else:
-                    return self._create_feature_detail_panel(None)
-            except:
-                return self._create_feature_detail_panel(None)
-    
-    def run(self, host='127.0.0.1', port=8051, debug=True):
+    def run(self, host='0.0.0.0', port=8051, debug=True):
         """Run the Dash app"""
         print(f"Starting circuit visualizer at http://{host}:{port}")
         self.app.run_server(host=host, port=port, debug=debug)
 
-# Usage example
-def launch_circuit_visualizer(circuit_tracer, feature_analyzer, 
-                              datasets, pruner=None):
+def launch_circuit_visualizer(circuit_tracer, feature_analyzer, datasets, pruner=None):
     """Launch the interactive circuit visualizer"""
-    visualizer = InteractiveCircuitVisualizer(circuit_tracer, feature_analyzer,
-                                              datasets, pruner)
+    visualizer = InteractiveCircuitVisualizer(circuit_tracer, feature_analyzer, datasets, pruner)
     visualizer.run()
 
 if __name__ == "__main__":
@@ -637,9 +369,9 @@ if __name__ == "__main__":
     parser.add_argument("--rl", action="store_true")
     parser.add_argument("--copy", action="store_true")
     parser.add_argument("--feature_dict_path")
+    parser.add_argument("--rnn_path")
     parser.add_argument("--update_transcoder_path")
     parser.add_argument("--hidden_transcoder_path")
-    parser.add_argument("--feature_dict_path")
     parser.add_argument("--n_feats_hidden", type=int)
     parser.add_argument("--n_feats_update", type=int)
     parser.add_argument("--hidden_size", type=int)
@@ -650,21 +382,17 @@ if __name__ == "__main__":
     datasets = []
     for dataset in args.dataset_paths:
         datasets.append(torch.load(dataset, map_location=torch.device("cpu")))
+        
     if args.rl:
         rnn_model = RNN(input_size=8, hidden_size=48, out_size=4, 
                     use_gru=True, num_layers=1, learn_init=True)
-        update_transcoder = Transcoder(input_size=56, out_size=48, 
-                                    n_feats=args.n_feats_update)
-        hidden_transcoder = Transcoder(input_size=56, out_size=48, 
-                                    n_feats=args.n_feats_hidden)
+        update_transcoder = Transcoder(input_size=56, out_size=48, n_feats=args.n_feats_update)
+        hidden_transcoder = Transcoder(input_size=56, out_size=48, n_feats=args.n_feats_hidden)
         analyzer = RLFeatureActivationAnalyzer
     else:
-        rnn_model = RNN(input_size=31, hidden_size=128, out_size=30, 
-                    use_gru=True, num_layers=1)
-        update_transcoder = Transcoder(input_size=159, out_size=128, 
-                                    n_feats=args.n_feats_update)
-        hidden_transcoder = Transcoder(input_size=159, out_size=128, 
-                                    n_feats=args.n_feats_hidden)
+        rnn_model = RNN(input_size=31, hidden_size=128, out_size=30, use_gru=True, num_layers=1)
+        update_transcoder = Transcoder(input_size=159, out_size=128, n_feats=args.n_feats_update)
+        hidden_transcoder = Transcoder(input_size=159, out_size=128, n_feats=args.n_feats_hidden)
         analyzer = CopyFeatureActivationAnalyzer
     
     rnn_model.load_state_dict(torch.load(args.rnn_path))
@@ -673,14 +401,14 @@ if __name__ == "__main__":
     
     with open(args.feature_dict_path, "rb") as f:
         analysis_dict = pickle.load(f)
-        analysis_dict_sequences = pickle.load(f.replace("features",
-                                                        "sequences"))
+    with open(args.feature_dict_path.replace("features.p", "sequences.p"), "rb") as f:
+        analysis_dict_sequences = pickle.load(f)
 
     feature_analyzer = analyzer(rnn_model, update_transcoder, hidden_transcoder)
     pruner = GraphPruner()
     feature_analyzer.feature_activations = analysis_dict
     feature_analyzer.sequence_activations = analysis_dict_sequences
 
-    circuit_tracer = CircuitTracer(rnn_model, update_transcoder, hidden_transcoder)
+    circuit_tracer = CircuitTracer(rnn_model, update_transcoder, hidden_transcoder, device="cpu")
     
     launch_circuit_visualizer(circuit_tracer, feature_analyzer, datasets, pruner)

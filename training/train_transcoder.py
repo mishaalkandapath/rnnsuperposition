@@ -92,7 +92,8 @@ class TranscoderLoss(nn.Module):
         
         normalized_features = feature_magnitudes * decoder_norms.unsqueeze(0)
         sparsity_terms = torch.tanh(self.c_sparsity * normalized_features)
-        sparsity_loss = sparsity_coeff * torch.sum(sparsity_terms)/batch_size
+        max_multiplier = torch.max(torch.sum(sparsity_terms, dim=-1))
+        sparsity_loss = max_multiplier * (sparsity_coeff**2) * torch.sum(sparsity_terms)/batch_size
         
         # Penalty loss: L_P(x) = λ_P * Σ ReLU(exp(t) - f_i(x)) * ||W_d,i||₂
         act_distance = torch.exp(threshold) - features if not self.scale_pen_distance else (torch.exp(threshold) - features)/torch.exp(threshold)

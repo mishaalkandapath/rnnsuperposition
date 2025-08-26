@@ -3,503 +3,320 @@ from dataclasses import dataclass
 
 import torch
 import torch.nn as nn
-import numpy as np
 
 @dataclass
 class CircuitNode:
-    """Represents a node in the circuit graph"""
+    """Represents a node in the circuit graph.
+    name:
+        Use patterns like: "x_{t}_{i}", "f_z_{t}_{j}", "f_n_{t}_{j}", "o_{t}_{k}".
+    node_type:
+        'input' | 'feature' | 'output'
+    timestep:
+        Integer time index.
+    feature_idx:
+        For feature nodes (index in the feature bank) or output nodes (index in output dim).
+    input_dim:
+        For input nodes (input dimension index).
+    """
     name: str
-    node_type: str  # 'feature', 'input', 'output'
+    node_type: str
     timestep: int
-    feature_idx: Optional[int] = None  # For feature nodes
-    input_dim: Optional[int] = None   # For input nodes
-    
+    feature_idx: Optional[int] = None
+    input_dim: Optional[int] = None
+
 class CircuitTracer:
-    """Compute edge attribution weights for RNN transcoder circuits"""
-    
-    def __init__(self, 
-                 rnn_model: nn.Module,
-                 update_transcoder: nn.Module, 
-                 hidden_transcoder: nn.Module,
-                 device: str = 'cuda'):
-        """
-        Args:
-            rnn_model: Trained RNN model
-            update_transcoder: Trained update gate transcoder  
-            hidden_transcoder: Trained hidden context transcoder
-            device: Device for computations
-        """
+    """Compute edge attribution weights for RNN transcoder circuits.
+
+    This rewrite fixes shape inconsistencies and attribution logic:
+    - Within a single timestep, edge weights are computed using the local
+      linear maps only (no Jacobian chaining across that timestep).
+    - Across time, we propagate *only* through the hidden-to-hidden linearized
+      transition A_t = d h_t / d h_{t-1} and multiply the initial and final
+      local maps at the endpoints.
+    """
+
+    def __init__(
+        self,
+        rnn_model: nn.Module,
+        update_transcoder: nn.Module,
+        hidden_transcoder: nn.Module,
+        device: str = "cuda",
+    ):
         self.rnn_model = rnn_model.to(device)
         self.update_transcoder = update_transcoder.to(device)
         self.hidden_transcoder = hidden_transcoder.to(device)
         self.device = device
-        
-        # Set to eval mode
+
         self.rnn_model.eval()
         self.update_transcoder.eval()
         self.hidden_transcoder.eval()
-        
-        # Extract weight matrices
-        self.W_z_h = self.update_transcoder.input_to_features.weight[:, :rnn_model.hidden_size]  # Hidden part
-        self.W_z_x = self.update_transcoder.input_to_features.weight[:, rnn_model.hidden_size:]   # Input part
-        self.M_z = self.update_transcoder.features_to_outputs.weight  # Decoder matrix
-        self.b_z_enc = self.update_transcoder.input_to_features.bias
-        self.b_z_dec = self.update_transcoder.features_to_outputs.bias
-        
-        self.W_n_h = self.hidden_transcoder.input_to_features.weight[:, :rnn_model.hidden_size]   # Hidden part  
-        self.W_n_x = self.hidden_transcoder.input_to_features.weight[:, rnn_model.hidden_size:]    # Input part
-        self.M_n = self.hidden_transcoder.features_to_outputs.weight  # Decoder matrix
-        self.b_n_enc = self.hidden_transcoder.input_to_features.bias
-        self.b_n_dec = self.hidden_transcoder.features_to_outputs.bias
-        
-        # Output weights (assuming final linear layer exists)
-        if hasattr(rnn_model, 'layers') and len(rnn_model.layers) > rnn_model.num_layers:
-            self.W_o = rnn_model.layers[-1].weight  # Output layer weights
+
+        # Update gate encoder splits: [h_{t-1}, x_t] -> pf^z_t -> ReLU -> f^z_t
+        Wz_enc = self.update_transcoder.input_to_features.weight  # (Fz, H+X)
+        Hz = rnn_model.hidden_size
+        self.W_z_h = Wz_enc[:, :Hz]   # (Fz, H)
+        self.W_z_x = Wz_enc[:, Hz:]   # (Fz, X)
+        self.M_z = self.update_transcoder.features_to_outputs.weight  # (H, Fz), f^z -> z_hat
+
+        # Hidden (new content) encoder: [r_t * h_{t-1}, x_t] -> pf^n_t -> ReLU -> f^n_t
+        Wn_enc = self.hidden_transcoder.input_to_features.weight  # (Fn, H+X)
+        self.W_n_h = Wn_enc[:, :Hz]   # (Fn, H)
+        self.W_n_x = Wn_enc[:, Hz:]   # (Fn, X)
+        self.M_n = self.hidden_transcoder.features_to_outputs.weight  # (H, Fn), f^n -> n_hat
+
+        # Output projection: o_t = W_o h_t (+ b)  [assumed linear]
+        if hasattr(rnn_model, "layers") and len(rnn_model.layers) > rnn_model.num_layers:
+            self.W_o = rnn_model.layers[-1].weight.to(device)  # (O, H)
         else:
-            self.W_o = torch.eye(rnn_model.hidden_size, device=device)  # Identity if no output layer
-            
-    def run_forward_pass(self, sequence: torch.Tensor) -> Dict[str, torch.Tensor]:
+            print("No output weight?")
+            self.W_o = torch.eye(Hz, device=device)  # (H, H)
+
+    @torch.no_grad()
+    def run_forward_pass(self, sequence: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """Copy tensors to device and cache per-timestep values we need.
+
+        Expected keys in `sequence`:
+          - inputs: (T, X)
+          - h_prevs: (T, H)
+          - h_new_ts: (T, H)      # n_hat (model's new content)
+          - z_ts: (T, H)
+          - r_ts: (T, H)          # reset gate (used upstream to make gated_hidden)
+          - outputs: (T, O)
         """
-        Run forward pass and collect all intermediate activations
-        
-        Args:
-            sequence: Input sequence (1, seq_len, input_size) 
-            
-        Returns:
-            Dictionary containing all intermediate values
+        acts = {k: v.detach().to(self.device).clone() for k, v in sequence.items()}
+
+        T = acts["inputs"].shape[0]
+        H = self.rnn_model.hidden_size
+
+        z = acts["z_ts"]
+        # h_t = (1 - z_t) ⊙ h_{t-1} + z_t ⊙ h~_t  (using symbols from the user's code)
+        acts["h_ts"] = (1.0 - z) * acts["h_prevs"] + z * acts["h_new_ts"]  # (T, H)
+
+        # Pre/post feature activations are assumed to be produced by calling the transcoders.
+        # We compute per-timestep masks needed for local linear maps.
+        acts["pf_z"], acts["f_z"], acts["z_hat"], acts["e_z"] = [], [], [], []
+        acts["pf_n"], acts["f_n"], acts["n_hat"], acts["e_n"] = [], [], [], []
+
+        for t in range(T):
+            h_prev_t = acts["h_prevs"][t]            # (H,)
+            x_t = acts["inputs"][t]                 # (X,)
+            r_t = acts["r_ts"][t]                   # (H,)
+
+            # Update gate transcoder input: concat[h_prev_t, x_t]
+            z_in = torch.cat([h_prev_t, x_t], dim=0)
+            z_hat_t, f_z_t, pf_z_t = self.update_transcoder(z_in)
+            e_z_t = z[t] - z_hat_t  # model gate minus transcoder pred
+
+            acts["pf_z"].append(pf_z_t)
+            acts["f_z"].append(f_z_t)
+            acts["z_hat"].append(z_hat_t)
+            acts["e_z"].append(e_z_t)
+
+            # Hidden/new-content transcoder input: concat[r_t * h_prev_t, x_t]
+            gated_hidden = r_t * h_prev_t
+            n_in = torch.cat([gated_hidden, x_t], dim=0)
+            n_hat_t, f_n_t, pf_n_t = self.hidden_transcoder(n_in)
+            e_n_t = acts["h_new_ts"][t] - n_hat_t
+
+            acts["pf_n"].append(pf_n_t)
+            acts["f_n"].append(f_n_t)
+            acts["n_hat"].append(n_hat_t)
+            acts["e_n"].append(e_n_t)
+
+        # Stack lists to (T, ·)
+        for key in ["pf_z", "f_z", "z_hat", "e_z", "pf_n", "f_n", "n_hat", "e_n"]:
+            acts[key] = torch.stack(acts[key], dim=0)
+
+        return acts
+
+    def _relu_mask(self, v: torch.Tensor) -> torch.Tensor:
+        """Elementwise ReLU' mask for pre-activations (1 if > 0 else 0)."""
+        return (v > 0).to(v.dtype)
+
+    def _local_influence_to_hidden(self, node: CircuitNode, acts: Dict[str, torch.Tensor]) -> torch.Tensor:
+        """Column vector v (H,) giving the effect on h_t from a unit at `node` at its timestep.
+
+        Cases handled:
+          - x_{t,i} -> h_t via z and n branches with ReLU masks
+          - f_z_{t,j} -> h_t via M_z and diag(-h_prev - n_hat - e_n)
+          - f_n_{t,j} -> h_t via M_n and diag(z_hat + e_z)
+          - o_{t,k} is not a valid source in this formulation (returns zeros)
         """
-        with torch.no_grad():
-            # Run RNN to get gates and hidden states
-            outputs, final_hidden, r_records, z_records, h_new_records, h_records = self.rnn_model(
-                sequence, record_gates=True
-            )
-            
-            seq_len = sequence.shape[1]
-            activations = {}
-            
-            # Store RNN activations (remove layer dimension since we have single layer)
-            activations['r_t'] = r_records[0]  # (1, seq_len, hidden_size)
-            activations['z_t'] = z_records[0]  # (1, seq_len, hidden_size) 
-            activations['n_t'] = h_new_records[0]  # (1, seq_len, hidden_size)
-            activations['h_t'] = outputs  # (1, seq_len, hidden_size)
-            activations['h_prev'] = h_records[0]  # (1, seq_len, hidden_size)
-            activations['x_t'] = sequence  # (1, seq_len, input_size)
-            activations['o_t'] = torch.matmul(outputs, self.W_o.T)  # (1, seq_len, output_size)
-            
-            # Compute transcoder activations
-            for t in range(seq_len):
-                h_prev_t = activations['h_prev'][0, t]  # (hidden_size,)
-                x_t = activations['x_t'][0, t]  # (input_size,)
-                r_t = activations['r_t'][0, t]  # (hidden_size,)
-                
-                # Update gate transcoder
-                z_input = torch.cat([h_prev_t, x_t])  # Concatenate hidden and input
-                pf_z_t = torch.matmul(self.update_transcoder.input_to_features.weight, z_input) + self.b_z_enc
-                f_z_t = torch.relu(pf_z_t)
-                z_hat_t = torch.matmul(self.M_z, f_z_t) + self.b_z_dec
-                e_z_t = activations['z_t'][0, t] - z_hat_t
-                
-                activations[f'pf_z_{t}'] = pf_z_t
-                activations[f'f_z_{t}'] = f_z_t
-                activations[f'z_hat_{t}'] = z_hat_t
-                activations[f'e_z_{t}'] = e_z_t
-                
-                # Hidden context transcoder
-                gated_hidden = r_t * h_prev_t
-                n_input = torch.cat([gated_hidden, x_t])
-                pf_n_t = torch.matmul(self.hidden_transcoder.input_to_features.weight, n_input) + self.b_n_enc
-                f_n_t = torch.relu(pf_n_t)
-                n_hat_t = torch.matmul(self.M_n, f_n_t) + self.b_n_dec
-                e_n_t = activations['n_t'][0, t] - n_hat_t
-                
-                activations[f'pf_n_{t}'] = pf_n_t
-                activations[f'f_n_{t}'] = f_n_t  
-                activations[f'n_hat_{t}'] = n_hat_t
-                activations[f'e_n_{t}'] = e_n_t
-                
-        return activations
-        
-    def get_node_vectors(self, node: CircuitNode, 
-                         activations: Dict[str, torch.Tensor],
-                         from_node = None, ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
+        t = node.timestep
+        h_prev = acts["h_prevs"][t]        # (H,)
+        z_hat = acts["z_hat"][t]          # (H,)
+        n_hat = acts["n_hat"][t]          # (H,)
+        e_z = acts["e_z"][t]              # (H,)
+        e_n = acts["e_n"][t]              # (H,)
+
+        Dz = torch.diag(-(h_prev + n_hat + e_n))  # (H,H), d h_t / d z_hat_t
+        Dn = torch.diag(z_hat + e_z)              # (H,H), d h_t / d n_hat_t
+
+        if node.node_type == "input":
+            i = node.input_dim
+            # z path: x -> pf^z -> f^z -> z_hat -> h
+            mask_z = self._relu_mask(acts["pf_z"][t])  # (Fz,)
+            # Column of W_z_x for input i: (Fz,)
+            col_Wzx = self.W_z_x[:, i]
+            zhat_from_x = self.M_z @ (mask_z * col_Wzx)  # (H,)
+
+            # n path: x -> pf^n -> f^n -> n_hat -> h
+            mask_n = self._relu_mask(acts["pf_n"][t])  # (Fn,)
+            col_Wnx = self.W_n_x[:, i]                  # (Fn,)
+            nhat_from_x = self.M_n @ (mask_n * col_Wnx)  # (H,)
+
+            v = Dz @ zhat_from_x + Dn @ nhat_from_x      # (H,)
+            return v
+
+        if node.node_type == "feature":
+            j = node.feature_idx
+            if node.name.startswith("f_z_"):
+                # z_hat from feature j is M_z[:, j]
+                v = Dz @ self.M_z[:, j]
+                return v
+            if node.name.startswith("f_n_"):
+                v = Dn @ self.M_n[:, j]
+                return v
+
+        # Outputs as sources aren't supported; return zeros
+        H = acts["h_ts"].shape[1]
+        return torch.zeros(H, device=self.device, dtype=acts["h_ts"].dtype)
+
+    def _local_sensitivity_from_hidden(self, node: CircuitNode, acts: Dict[str, torch.Tensor]) -> torch.Tensor:
+        """Row vector w (H,) giving d node / d h_t at node.timestep.
+
+        Cases:
+          - o_{t,k}: w = W_o[k, :]
+          - f_z_{t+Δ,j} (when used as *target* at its own time):
+                w = mask_z_j * W_z_h[j, :]  (but note: this maps h_t -> pf^z_{t+1};
+                only meaningful if used with h_t at the *same* t feeding into t+1 feature)
+          - f_n_{t+Δ,j}: analogous with W_n_h
+          - x_{t,i} is not a valid *target* from hidden in the same timestep.
         """
-        Get input and output vectors for a node
-        
-        Returns:
-            (input_vector, output_vector) - either can be None based on node type
+        t = node.timestep
+        if node.node_type == "output":
+            k = node.feature_idx
+            return self.W_o[k, :] - self.W_o.mean(dim=0)  # (H,)
+
+        if node.node_type == "feature":
+            j = node.feature_idx
+            if node.name.startswith("f_z_"):
+                mask = self._relu_mask(acts["pf_z"][t])
+                # row vector: (1,H)
+                return mask[j] * self.W_z_h[j, :]
+            if node.name.startswith("f_n_"):
+                mask = self._relu_mask(acts["pf_n"][t])
+                return mask[j] * self.W_n_h[j, :]
+
+        H = acts["h_ts"].shape[1]
+        return torch.zeros(H, device=self.device, dtype=acts["h_ts"].dtype)
+
+    # -----------------------------
+    # Across-time propagation A_t = d h_t / d h_{t-1}
+    # -----------------------------
+    def _A_t(self, t: int, acts: Dict[str, torch.Tensor]) -> torch.Tensor:
+        """Linearized hidden transition Jacobian A_t = d h_t / d h_{t-1} (H,H).
+
+        A_t = diag(1 - (z_hat_t + e_z_t))
+              + diag(-(h_{t-1} + n_hat_t + e_n_t)) @ M_z @ diag(ReLU'(pf^z_t)) @ W_z_h
+              + diag( z_hat_t + e_z_t)              @ M_n @ diag(ReLU'(pf^n_t)) @ W_n_h
         """
-        if node.node_type == 'input':
-            # Input nodes only have output vectors (columns of encoding matrices)
-            if f'x_{node.timestep}' in node.name:
-                if 'z' in node.name:
-                    output_vector = self.W_z_x[:, node.input_dim]  # Column of input-to-features matrix
-                else:  # 'n' in node.name
-                    output_vector = self.W_n_x[:, node.input_dim]
-                return None, output_vector
-            
-        elif node.node_type == 'feature':
-            if 'f_z' in node.name:
-                # Update gate feature node
-                input_vector = self.W_z_h[:, node.feature_idx] if from_node and 'h' in from_node.name else self.W_z_x[:, node.feature_idx]
-                output_vector = self.M_z[node.feature_idx, :]  # Row of decoder matrix
-                return input_vector, output_vector
-            elif 'f_n' in node.name:
-                # Hidden context feature node  
-                input_vector = self.W_n_h[:, node.feature_idx] if from_node and 'h' in from_node.name else self.W_n_x[:, node.feature_idx]
-                output_vector = self.M_n[node.feature_idx, :]
-                return input_vector, output_vector
-                
-        elif node.node_type == 'output':
-            # Output nodes only have input vectors
-            o_t = activations['o_t'][0, node.timestep]  # (output_size,)
-            mean_o = torch.mean(o_t)
-            
-            # Gradient of (o_ti - mean(o_t)) w.r.t hidden state
-            grad_input = self.W_o[node.feature_idx, :]  # Row of output weight matrix
-            return grad_input, None
-            
-        return None, None
-        
-    def compute_jacobians(self, activations: Dict[str, torch.Tensor], timestep: int) -> Dict[str, torch.Tensor]:
-        """Compute all Jacobian matrices for a given timestep"""
-        jacobians = {}
-        
-        # Extract values for this timestep
-        h_prev = activations['h_prev'][0, timestep]
-        z_hat = activations[f'z_hat_{timestep}']
-        n_hat = activations[f'n_hat_{timestep}'] 
-        e_z = activations[f'e_z_{timestep}']
-        e_n = activations[f'e_n_{timestep}']
-        f_z = activations[f'f_z_{timestep}']
-        f_n = activations[f'f_n_{timestep}']
-        pf_z = activations[f'pf_z_{timestep}']
-        pf_n = activations[f'pf_n_{timestep}']
-        
-        # ∂ẑ_t/∂f^z_t = M^z (element-wise, so just M^z for matrix multiply)
-        jacobians['z_hat_to_f_z'] = self.M_z
-        
-        # ∂n̂_t/∂f^n_t = M^n  
-        jacobians['n_hat_to_f_n'] = self.M_n
-        
-        # ∂ĥ_t/∂ẑ_t = -[h_{t-1} + n̂_t + ê_{n_t}] (diagonal)
-        diag_h_z = -(h_prev + n_hat + e_n)
-        jacobians['h_hat_to_z_hat'] = torch.diag(diag_h_z)
-        
-        # ∂ĥ_t/∂n̂_t = [ẑ_t + ê_{z_t}] (diagonal)
-        diag_h_n = z_hat + e_z
-        jacobians['h_hat_to_n_hat'] = torch.diag(diag_h_n)
-        
-        # ∂ĥ_t/∂h_{t-1} = 1 - [ẑ_t + ê_{z_t}] (diagonal)
-        diag_h_prev = 1 - (z_hat + e_z)
-        jacobians['h_hat_to_h_prev'] = torch.diag(diag_h_prev)
-        
-        # ∂ĥ_t/∂ê_{z_t} = -[h_{t-1} + n̂_t + ê_{n_t}] (diagonal)  
-        jacobians['h_hat_to_e_z'] = torch.diag(-diag_h_z)
-        
-        # ∂ĥ_t/∂ê_{n_t} = [ẑ_t + ê_{z_t}] (diagonal)
-        jacobians['h_hat_to_e_n'] = torch.diag(diag_h_n)
-        
-        # ∂f^z_t/∂pf^z_t = f^z_t (element-wise, diagonal with ReLU derivative)
-        relu_deriv_z = (pf_z > 0).float()
-        jacobians['f_z_to_pf_z'] = torch.diag(relu_deriv_z)
-        
-        # ∂f^n_t/∂pf^n_t = f^n_t (element-wise, diagonal with ReLU derivative) 
-        relu_deriv_n = (pf_n > 0).float()
-        jacobians['f_n_to_pf_n'] = torch.diag(relu_deriv_n)
-        
-        # ∂pf^n_t/∂h_{t-1} = W^n_h
-        jacobians['pf_n_to_h_prev'] = self.W_n_h
-        
-        # ∂pf^z_t/∂h_{t-1} = W^z_h  
-        jacobians['pf_z_to_h_prev'] = self.W_z_h
-        
-        # ∂pf^n_t/∂x_t = W^n_x
-        jacobians['pf_n_to_x'] = self.W_n_x
-        
-        # ∂pf^z_t/∂x_t = W^z_x
-        jacobians['pf_z_to_x'] = self.W_z_x
-        
-        return jacobians
-        
-    def compute_edge_weights(self, 
-                           from_node: CircuitNode, 
-                           to_node: CircuitNode,
-                           activations: Dict[str, torch.Tensor]) -> torch.Tensor:
+        h_prev = acts["h_prevs"][t]
+        z_hat = acts["z_hat"][t]
+        n_hat = acts["n_hat"][t]
+        e_z = acts["e_z"][t]
+        e_n = acts["e_n"][t]
+
+        Ddir = torch.diag(1.0 - (z_hat + e_z))
+        Dz = torch.diag(-(h_prev + n_hat + e_n))
+        Dn = torch.diag(z_hat + e_z)
+
+        mask_z = self._relu_mask(acts["pf_z"][t])
+        mask_n = self._relu_mask(acts["pf_n"][t])
+
+        A = Ddir
+        if self.M_z.numel() > 0:
+            A = A + Dz @ (self.M_z @ torch.diag(mask_z) @ self.W_z_h)
+        if self.M_n.numel() > 0:
+            A = A + Dn @ (self.M_n @ torch.diag(mask_n) @ self.W_n_h)
+        return A
+
+    # -----------------------------
+    # Public: compute a single edge weight
+    # -----------------------------
+    def compute_edge_weight(self, from_node: CircuitNode, to_node: CircuitNode, acts: Dict[str, torch.Tensor]) -> torch.Tensor:
+        """Return scalar edge weight from `from_node` to `to_node`.
+
+        Within-timestep:  weight = w_t @ v_t
+        Across-time (t0 < t1): weight = w_{t1} @ (A_{t1} ... A_{t0+1}) @ v_{t0}
         """
-        Compute edge attribution weights between two nodes
-        
-        Args:
-            from_node: Source node
-            to_node: Target node  
-            activations: All intermediate activations
-            
-        Returns:
-            Edge weight tensor
-        """
-        # Get node vectors
-        from_input_vec, from_output_vec = self.get_node_vectors(from_node, activations)
-        to_input_vec, to_output_vec = self.get_node_vectors(to_node, activations, from_node=from_node)
-        
-        if from_output_vec is None or to_input_vec is None:
+        t0, t1 = from_node.timestep, to_node.timestep
+        if t0 > t1:
+            # No backward-in-time causal edges
             return torch.tensor(0.0, device=self.device)
-            
-        # Compute Jacobians for the relevant timesteps
-        jacobians = {}
-        for t in range(max(from_node.timestep, to_node.timestep) + 1):
-            jacobians[f't_{t}'] = self.compute_jacobians(activations, t)
-            
-        # Chain the Jacobians between nodes based on the circuit path
-        # This is a simplified version - full implementation would need to trace
-        # the specific path between any two nodes through the circuit
-        
-        if from_node.timestep == to_node.timestep:
-            # Same timestep - direct connection through Jacobian
-            t = from_node.timestep
-            jacobian_chain = self._get_single_timestep_jacobian(from_node, to_node, jacobians[f't_{t}'])
-        else:
-            # Cross-timestep connection (e.g., h_{t-1} -> h_t)
-            # Simplified: assume identity for now
-            jacobian_chain = torch.eye(from_output_vec.shape[0], device=self.device)
-            
-        # Final edge weight: input_vector^T @ jacobian_chain @ output_vector
-        edge_weight = torch.matmul(
-            to_input_vec.unsqueeze(0),
-            torch.matmul(jacobian_chain, from_output_vec.unsqueeze(1))
-        ).squeeze()
-        
-        return edge_weight
 
-    def _get_single_timestep_jacobian(self, from_node: CircuitNode, 
-                                      to_node: CircuitNode, 
-                                      jacobians_t: Dict[str, torch.Tensor]) -> torch.Tensor:
-        """Get Jacobian for same-timestep connections"""
-        if 'f_z' in from_node.name and 'h_hat' in to_node.name:
-            # f_z -> z_hat -> h_hat path
-            return torch.matmul(
-                jacobians_t['h_hat_to_z_hat'],
-                jacobians_t['z_hat_to_f_z']
-            )
-        elif 'f_n' in from_node.name and 'h_hat' in to_node.name:
-            # f_n -> n_hat -> h_hat path  
-            return torch.matmul(
-                jacobians_t['h_hat_to_n_hat'],
-                jacobians_t['n_hat_to_f_n']
-            )
-        elif 'x' in from_node.name and 'f_z' in to_node.name:
-            # x -> pf_z -> f_z path
-            return torch.matmul(
-                jacobians_t['f_z_to_pf_z'],
-                jacobians_t['pf_z_to_x']
-            )
-        elif 'x' in from_node.name and 'f_n' in to_node.name:
-            # x -> pf_n -> f_n path
-            return torch.matmul(
-                jacobians_t['f_n_to_pf_n'], 
-                jacobians_t['pf_n_to_x']
-            )
-        elif 'h' in from_node.name and 'f_z' in to_node.name:
-            # h_{t-1} -> pf_z -> f_z path (same timestep case)
-            return torch.matmul(
-                jacobians_t['f_z_to_pf_z'],
-                jacobians_t['pf_z_to_h_prev']
-            )
-        elif 'h' in from_node.name and 'f_n' in to_node.name:
-            # h_{t-1} -> pf_n -> f_n path (same timestep case)  
-            return torch.matmul(
-                jacobians_t['f_n_to_pf_n'],
-                jacobians_t['pf_n_to_h_prev']
-            )
-        else:
-            # Default to identity for unrecognized paths
-            return torch.eye(from_node.feature_idx or activations['h_t'].shape[2], device=self.device)
+        v = self._local_influence_to_hidden(from_node, acts)  # (H,)
+        w = self._local_sensitivity_from_hidden(to_node, acts)  # (H,)
 
-    def _chain_jacobians_across_time(self, from_node: CircuitNode, to_node: CircuitNode,
-                                    jacobians: Dict[str, Dict[str, torch.Tensor]], 
-                                    activations: Dict[str, torch.Tensor]) -> torch.Tensor:
-        """Chain Jacobians across multiple timesteps"""
-        start_t = from_node.timestep
-        end_t = to_node.timestep
-        
-        if start_t > end_t:
-            # Backward connection (shouldn't happen in causal RNN, but handle gracefully)
-            return torch.zeros((activations['h_t'].shape[2], activations['h_t'].shape[2]), device=self.device)
-        
-        # Initialize with identity matrix
-        hidden_size = activations['h_t'].shape[2]
-        jacobian_chain = torch.eye(hidden_size, device=self.device)
-        
-        # Chain from start_t to end_t
-        for t in range(start_t + 1, end_t + 1):
-            # Get the Jacobian ∂h_t/∂h_{t-1} for this timestep
-            # This involves chaining through: h_{t-1} -> z_t, n_t -> h_t
-            
-            # Path 1: h_{t-1} -> z_t -> h_t (through update gate)
-            # ∂h_t/∂h_{t-1} via update gate = ∂h_t/∂z_t * ∂z_t/∂h_{t-1}
-            jacobian_h_to_z = jacobians[f't_{t}']['h_hat_to_z_hat']  # ∂h_t/∂z_t
-            jacobian_z_to_h_prev = jacobians[f't_{t}']['pf_z_to_h_prev']  # ∂z_t/∂h_{t-1} (through encoder)
-            
-            # Need to account for ReLU nonlinearity in features
-            jacobian_z_features = jacobians[f't_{t}']['f_z_to_pf_z']  # ReLU derivative
-            jacobian_z_decode = jacobians[f't_{t}']['z_hat_to_f_z']   # Decoder
-            
-            # Chain: h_{t-1} -> pf_z -> f_z -> z_hat -> h_t
-            path1 = torch.matmul(
-                torch.matmul(jacobian_h_to_z, jacobian_z_decode),
-                torch.matmul(jacobian_z_features, jacobian_z_to_h_prev)
-            )
-            
-            # Path 2: h_{t-1} -> n_t -> h_t (through new content)
-            # ∂h_t/∂h_{t-1} via new content = ∂h_t/∂n_t * ∂n_t/∂h_{t-1}
-            jacobian_h_to_n = jacobians[f't_{t}']['h_hat_to_n_hat']  # ∂h_t/∂n_t
-            jacobian_n_to_h_prev = jacobians[f't_{t}']['pf_n_to_h_prev']  # ∂n_t/∂h_{t-1} (through encoder)
-            
-            # Need to account for ReLU and reset gate
-            jacobian_n_features = jacobians[f't_{t}']['f_n_to_pf_n']  # ReLU derivative  
-            jacobian_n_decode = jacobians[f't_{t}']['n_hat_to_f_n']   # Decoder
-            
-            # Chain: h_{t-1} -> pf_n -> f_n -> n_hat -> h_t
-            path2 = torch.matmul(
-                torch.matmul(jacobian_h_to_n, jacobian_n_decode),
-                torch.matmul(jacobian_n_features, jacobian_n_to_h_prev)
-            )
-            
-            # Path 3: Direct h_{t-1} -> h_t (through 1-z term)
-            # ∂h_t/∂h_{t-1} direct = diagonal(1 - z_t)
-            path3 = jacobians[f't_{t}']['h_hat_to_h_prev']
-            
-            # Total Jacobian for this timestep: sum of all paths
-            timestep_jacobian = path1 + path2 + path3
-            
-            # Chain with accumulated Jacobian
-            jacobian_chain = torch.matmul(timestep_jacobian, jacobian_chain)
-        
-        # Handle connection from specific node type at start_t to specific node type at end_t
-        
-        # Get the initial connection from from_node to hidden state at start_t
-        if from_node.node_type == 'feature':
-            if 'f_z' in from_node.name:
-                # f_z -> z_hat -> h_t
-                initial_jacobian = torch.matmul(
-                    jacobians[f't_{start_t}']['h_hat_to_z_hat'],
-                    jacobians[f't_{start_t}']['z_hat_to_f_z']
-                )
-            elif 'f_n' in from_node.name:
-                # f_n -> n_hat -> h_t
-                initial_jacobian = torch.matmul(
-                    jacobians[f't_{start_t}']['h_hat_to_n_hat'],
-                    jacobians[f't_{start_t}']['n_hat_to_f_n']
-                )
-            else:
-                initial_jacobian = torch.eye(hidden_size, device=self.device)
-        elif from_node.node_type == 'input':
-            if 'z' in from_node.name:
-                # x -> pf_z -> f_z -> z_hat -> h_t
-                initial_jacobian = torch.matmul(
-                    torch.matmul(
-                        jacobians[f't_{start_t}']['h_hat_to_z_hat'],
-                        jacobians[f't_{start_t}']['z_hat_to_f_z']
-                    ),
-                    torch.matmul(
-                        jacobians[f't_{start_t}']['f_z_to_pf_z'],
-                        jacobians[f't_{start_t}']['pf_z_to_x']
-                    )
-                )
-            else:  # 'n' in from_node.name
-                # x -> pf_n -> f_n -> n_hat -> h_t
-                initial_jacobian = torch.matmul(
-                    torch.matmul(
-                        jacobians[f't_{start_t}']['h_hat_to_n_hat'],
-                        jacobians[f't_{start_t}']['n_hat_to_f_n']
-                    ),
-                    torch.matmul(
-                        jacobians[f't_{start_t}']['f_n_to_pf_n'],
-                        jacobians[f't_{start_t}']['pf_n_to_x']
-                    )
-                )
-        else:  # from_node.node_type == 'output' or hidden
-            initial_jacobian = torch.eye(hidden_size, device=self.device)
-        
-        # Get the final connection from hidden state at end_t to to_node
-        if to_node.node_type == 'output':
-            # h_t -> o_t
-            final_jacobian = self.W_o  # (output_size, hidden_size)
-        else:
-            final_jacobian = torch.eye(hidden_size, device=self.device)
-        
-        # Chain everything together
-        if from_node.timestep == end_t:
-            # No time chaining needed, just initial connection
-            full_jacobian = torch.matmul(final_jacobian, initial_jacobian)
-        else:
-            # Chain: initial -> time propagation -> final
-            full_jacobian = torch.matmul(
-                final_jacobian,
-                torch.matmul(jacobian_chain, initial_jacobian)
-            )
-        
-        return full_jacobian
-            
-    def build_circuit_graph(self, 
-                        sequence: torch.Tensor,
-                        active_features: Dict[str, List[Tuple[int, int, float]]]) -> Dict[Tuple[str, str], float]:
+        if torch.all(v == 0) or torch.all(w == 0):
+            return torch.tensor(0.0, device=self.device)
+
+        # Same timestep: just local maps
+        if t0 == t1:
+            return torch.dot(w, v)
+
+        # Across-time propagation
+        A = torch.eye(v.shape[0], device=self.device, dtype=v.dtype)
+        for t in range(t0 + 1, t1 + 1):
+            A = self._A_t(t, acts) @ A
+        return torch.dot(w, A @ v)
+
+    def build_circuit_graph(
+        self,
+        sequence: Dict[str, torch.Tensor],
+        active_features: Dict[str, List[Tuple[int, int, float]]],
+    ) -> Dict[Tuple[str, str], float]:
+        """Build edge map {(from_name, to_name): weight} for relevant nodes.
+
+        active_features: {
+          'update': [(t, feat_idx, magnitude), ...],
+          'hidden': [(t, feat_idx, magnitude), ...],
+        }
+        Only features with magnitude >= 1e-5 are included.
         """
-        Build complete circuit graph with edge weights
-        
-        Args:
-            sequence: Input sequence
-            active_features: Dict mapping 'update'/'hidden' to list of (timestep, feature_idx, magnitude)
-            
-        Returns:
-            Dictionary mapping (from_node_name, to_node_name) -> edge_weight
-        """
-        activations = self.run_forward_pass(sequence)
-        seq_len = sequence.shape[1]
-        
-        # Create all nodes
-        nodes = []
-        
-        # Input nodes
-        for t in range(seq_len):
-            for i in range(sequence.shape[2]):  # Input dimensions
-                nodes.append(CircuitNode(f'x_{t}_{i}', 'input', t, input_dim=i))
-                
-        # Feature nodes (only active ones)
-        for transcoder_type, features in active_features.items():
-            for timestep, feature_idx, magnitude in features:
-                if transcoder_type == 'update':
-                    nodes.append(CircuitNode(f'f_z_{timestep}_{feature_idx}', 'feature', timestep, feature_idx))
-                else:  # hidden
-                    nodes.append(CircuitNode(f'f_n_{timestep}_{feature_idx}', 'feature', timestep, feature_idx))
-                    
-        # Output nodes
-        for t in range(seq_len):
-            for i in range(activations['o_t'].shape[2]):  # Output dimensions
-                nodes.append(CircuitNode(f'o_{t}_{i}', 'output', t, feature_idx=i))
-                
-        # Compute edge weights between all relevant pairs
-        edge_weights = {}
-        
-        for i, from_node in enumerate(nodes):
-            for j, to_node in enumerate(nodes):
-                if i != j:  # No self-loops
-                    try:
-                        weight = self.compute_edge_weights(from_node, to_node, activations)
-                        if abs(weight.item()) > 1e-6:  # Only store significant weights
-                            edge_weights[(from_node.name, to_node.name)] = weight.item()
-                    except Exception as e:
-                        # Skip problematic edge combinations
-                        continue
-                        
+        acts = self.run_forward_pass(sequence)
+        T = sequence["inputs"].shape[0]
+        nodes: List[CircuitNode] = []
+        # Inputs # TODO ull need to change this for RL
+        for t in range(T): # only the active one is required.
+                active_dim = sequence["inputs"][t].argmax().item()
+                nodes.append(CircuitNode(f"x_{t}_{active_dim}", "input", t, input_dim=active_dim))
+
+        # Features (only active)
+        for kind, feats in active_features.items():
+            for t, j, mag in feats:
+                if mag < 1e-5:
+                    continue
+                if kind == "update":
+                    nodes.append(CircuitNode(f"f_z_{t}_{j}", "feature", t, feature_idx=j))
+                elif kind == "hidden":
+                    nodes.append(CircuitNode(f"f_n_{t}_{j}", "feature", t, feature_idx=j))
+
+        # Outputs
+        top_3 = torch.argsort(sequence["outputs"], dim=-1, descending=True)
+        for t in range(T):
+            if t < T//2: continue
+            for k in top_3[t-T//2].tolist():
+                nodes.append(CircuitNode(f"o_{t}_{k}", "output", t, feature_idx=k))
+
+        # Compute edges
+        edge_weights: Dict[Tuple[str, str], float] = {}
+        for i, src in enumerate(nodes):
+            for j, dst in enumerate(nodes):
+                if i == j:
+                    continue
+                w = self.compute_edge_weight(src, dst, acts)
+                if torch.isfinite(w) and abs(float(w)) > 1e-6:
+                    edge_weights[(src.name, dst.name)] = float(w)
+
         return edge_weights
-
-# Example usage
-if __name__ == "__main__":
-    # Example usage:
-    # tracer = CircuitTracer(rnn_model, update_transcoder, hidden_transcoder)
-    # sequence = torch.randn(1, 5, 31)  # Batch=1, seq_len=5, input_dim=31
-    # active_features = {
-    #     'update': [(0, 10, 0.8), (1, 15, 0.6)],  # (timestep, feature_idx, magnitude) 
-    #     'hidden': [(0, 5, 0.9), (2, 20, 0.7)]
-    # }
-    # edge_weights = tracer.build_circuit_graph(sequence, active_features)
-    pass

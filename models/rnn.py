@@ -2,7 +2,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class VanillaRNNLayer(nn.Module):
+class myModule(nn.Module):
+    def device(self):
+        return next(self.parameters()).device
+
+class VanillaRNNLayer(myModule):
     def __init__(self, input_size, hidden_size, bias=True):
         super(VanillaRNNLayer, self).__init__()
         self.input_size = input_size
@@ -32,7 +36,7 @@ class VanillaRNNLayer(nn.Module):
         
         return outputs, h_t
 
-class GRULayer(nn.Module):
+class GRULayer(myModule):
     """Custom GRU layer built from scratch using PyTorch primitives"""
     
     def __init__(self, input_size, hidden_size, bias=True):
@@ -101,7 +105,7 @@ class GRULayer(nn.Module):
         return outputs, h_t
 
 
-class RNN(nn.Module):
+class RNN(myModule):
     """Base RNN class that can use either vanilla RNN cells or GRU cells"""
     
     def __init__(self, input_size, hidden_size, 

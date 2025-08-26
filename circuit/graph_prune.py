@@ -10,9 +10,9 @@ class GraphPruner:
     """
     
     def __init__(self, 
-                 node_threshold: float = 0.8,
-                 edge_threshold: float = 0.98,
-                 top_k_logits: int = 10,
+                 node_threshold: float = 0.98,
+                 edge_threshold: float = 0.99,
+                 top_k_logits: int = 3,
                  logit_prob_threshold: float = 0.95):
         """
         Args:
@@ -124,6 +124,7 @@ class GraphPruner:
                     logit_weights[i] = 1.0 / sum(1 for n in node_names if n.startswith('o_'))
         else:
             # Use provided probabilities
+            output_probs = torch.nn.Softmax(dim=-1)(output_probs)
             for i, name in enumerate(node_names):
                 if name.startswith('o_'):  # Output/logit nodes
                     # Extract timestep and output dimension from name like 'o_2_5'
@@ -132,9 +133,10 @@ class GraphPruner:
                         try:
                             t = int(parts[1])
                             dim = int(parts[2])
-                            if t < output_probs.shape[0] and dim < output_probs.shape[1]:
-                                logit_weights[i] = output_probs[t, dim]
+                            if t - output_probs.shape[0] >= 0 and dim < output_probs.shape[1]:
+                                logit_weights[i] = output_probs[t - output_probs.shape[0], dim]
                         except ValueError:
+                            print("shudnt have happenedhere")
                             continue
                             
         return logit_weights
@@ -167,7 +169,7 @@ class GraphPruner:
         logit_weights = self.get_logit_weights(node_names, output_probs)
         
         # Calculate influence on logits for each node
-        influence_on_logits = torch.matmul(B, logit_weights)
+        influence_on_logits = torch.matmul(logit_weights, B)
         
         # Separate logit and non-logit nodes
         logit_nodes = []
@@ -213,7 +215,7 @@ class GraphPruner:
             for i, name in logit_nodes:
                 nodes_to_keep.add(name)
                 
-        # Always keep embedding and error nodes
+        # Always keep embedding, error, and output nodes
         for name in node_names:
             if name.startswith('x_') or name.startswith('e_'):  # Input/embedding or error nodes
                 nodes_to_keep.add(name)
@@ -258,13 +260,13 @@ class GraphPruner:
         logit_weights = self.get_logit_weights(node_names, output_probs)
         
         # Calculate node influence scores
-        node_scores = torch.matmul(B, logit_weights)
+        node_scores = torch.matmul(logit_weights, B)
         
         # For logit nodes, set score to their probability
         for i, name in enumerate(node_names):
             if logit_weights[i] > 0:  # Logit node
                 node_scores[i] = logit_weights[i]
-                
+        
         # Calculate edge scores: edge score = target_node_score * normalized_edge_weight
         edge_scores = A_norm * node_scores.unsqueeze(0)  # Broadcasting
         
@@ -273,6 +275,7 @@ class GraphPruner:
         edge_scores_nonzero = edge_scores_flat[edge_scores_flat > 0]
         
         if len(edge_scores_nonzero) == 0:
+            print("uh well shet")
             return filtered_edges
             
         sorted_scores, sorted_indices = torch.sort(edge_scores_nonzero, descending=True)
@@ -287,7 +290,7 @@ class GraphPruner:
             threshold_score = sorted_scores[threshold_idx].item()
         else:
             threshold_score = 0.0
-            
+        print(threshold_idx, sorted_scores.shape)
         # Create edge mask
         edge_mask = edge_scores >= threshold_score
         
@@ -316,16 +319,26 @@ class GraphPruner:
             (pruned_edge_weights, kept_nodes)
         """
         # Extract all unique node names
+        self.top_k_logits = output_probs.size(0)
         all_nodes = set()
         for from_node, to_node in edge_weights.keys():
             all_nodes.add(from_node)
             all_nodes.add(to_node)
         node_names = list(all_nodes)
-        
         # Step 1: Prune nodes
         kept_nodes = self.prune_nodes_by_indirect_influence(edge_weights, node_names, output_probs)
-        
         # Step 2: Prune edges
         pruned_edges = self.prune_edges_by_thresholded_influence(edge_weights, kept_nodes, output_probs)
         
         return pruned_edges, kept_nodes
+    
+if __name__ == "__main__":
+    import pickle
+    pruner = GraphPruner()
+    with open("/w/150/lambda_squad/misc/rnnsuperposition/sequence_example.p", "rb") as f:
+        sequences = pickle.load(f)
+    
+    with open("/w/150/lambda_squad/misc/rnnsuperposition/sequence_weights_example.p", "rb") as f:
+        edge_weights = pickle.load(f)
+
+    pruner.prune_graph(edge_weights, sequences["outputs"])

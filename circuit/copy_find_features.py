@@ -352,3 +352,7 @@ if __name__ == "__main__":
         pickle.dump(new_dict_features, f)
     with open(f"/w/nobackup/436/lambda/data/copy_transcoder_features/h{args.n_feats_hidden}_u{args.n_feats_update}_sequences.p", "wb") as f:
         pickle.dump(new_dict_sequences, f)
+
+"""
+python -m circuit.copy_find_features --n_feats_hidden 128 --n_feats_update 64 --update_transcoder_path /w/150/lambda_squad/misc/rnnsuperposition/data/models/copy_transcoder/local_models/64_update_transcoder/final_model.ckpt --hidden_transcoder_path /w/150/lambda_squad/misc/rnnsuperposition/data/models/copy_transcoder/local_models/128_hctx_transcoder_hsparse_hc/final_model.ckpt --rnn_path /w/150/lambda_squad/misc/rnnsuperposition/data/models/copy_train/copy_128_high/copy_128_high.ckpt --cached_sentences /w/nobackup/436/lambda/data/copy_transcoder/1M_128_seq3.pt /w/nobackup/436/lambda/data/copy_transcoder/1M_128_seq4.pt /w/nobackup/436/lambda/data/copy_transcoder/1M_128_seq4.pt /w/nobackup/436/lambda/data/copy_transcoder/1M_128_seq5.pt /w/nobackup/436/lambda/data/copy_transcoder/1M_128_seq6.pt /w/nobackup/436/lambda/data/copy_transcoder/1M_128_seq7.pt /w/nobackup/436/lambda/data/copy_transcoder/1M_128_seq8.pt /w/nobackup/436/lambda/data/copy_transcoder/1M_128_seq9.pt
+"""
