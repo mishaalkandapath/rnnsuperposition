@@ -105,72 +105,7 @@ class FeatureActivationAnalyzer:
             self.sequence_activations["hidden"][sequence_tokens][t]["features"].append(feat_idx)
             self.sequence_activations["hidden"][sequence_tokens][t]["magnitudes"].append(activation_magnitude)
         
-    def get_feature_summary(self, transcoder_type: str, feature_idx: int) -> Dict:
-        """
-        Get summary statistics for a specific feature
-        
-        Args:
-            transcoder_type: 'update' or 'hidden'
-            feature_idx: Index of the feature to analyze
-            
-        Returns:
-            Dictionary with feature statistics
-        """
-        if feature_idx not in self.feature_activations[transcoder_type]:
-            return {"n_sequences": 0, "n_activations": 0}
-            
-        activations = self.feature_activations[transcoder_type][feature_idx]
-        
-        total_activations = sum(len(activations[entry]['positions']) for entry in activations)
-        total_sequences = len(activations)
-        
-        # Get all positions where this feature activates
-        all_positions = list(range(self.max_length))
-        all_magnitudes = [1] * (self.max_length)
-        all_lengths = list(range(self.max_length+1))
-
-        if getattr(self, "tokens"):
-            all_tokens_og = list(range(len(self.tokens)))
-            all_tokens_copy = list(range(len(self.tokens)))
-            all_tokens_copy_prev = list(range(len(self.tokens)))
-        for entry in activations:
-            for position in activations[entry]['positions']:
-                true_len = len(entry)//2
-                assert len(entry) % 2 == 0
-                if position >= true_len: 
-                    if position > true_len and getattr(self, "tokens"):
-                        all_tokens_copy.append(self.token_to_idx[entry[position]])
-                        all_tokens_copy_prev.append(self.token_to_idx[entry[(position-true_len)]])
-                    elif getattr(self, "tokens"):
-                        all_tokens_og.append(self.token_to_idx[entry[position]])
-                    position = 9 + (position-true_len)
-                    all_positions.append(position)
-                else: 
-                    all_positions.append(position)
-                    if getattr(self, "tokens"):
-                        all_tokens_og.append(self.token_to_idx[entry[position]])
-            all_magnitudes.extend(activations[entry]['magnitudes'])
-            all_lengths.append(len(entry))
-        stat_dict = {
-            "n_sequences": total_sequences,
-            "n_activations": total_activations,
-            "avg_activations_per_sequence": total_activations / max(total_sequences, 1),
-            "position_distribution": (np.bincount(all_positions) - 1).tolist(),
-            "position_mag_distribution": (np.bincount(all_positions,
-                                                       all_magnitudes) - 1).tolist(),
-            "length distribution": (np.bincount(all_lengths) - 1).tolist(),
-            "magnitude_stats": {
-                "mean": np.mean(all_magnitudes),
-                "std": np.std(all_magnitudes), 
-                "min": np.min(all_magnitudes),
-                "max": np.max(all_magnitudes)
-            } if all_magnitudes else None
-        }
-        if getattr(self, "tokens"):
-            stat_dict["og_tokens_distribution"] = (np.bincount(all_tokens_og) - 1).tolist()
-            stat_dict["copy_tokens_distribution"] = (np.bincount(all_tokens_copy) - 1).tolist()
-            stat_dict["copy_tokens_prev_distribution"] = (np.bincount(all_tokens_copy_prev) - 1).tolist()
-        return stat_dict
+    
         
     def get_most_active_features(self, transcoder_type: str, top_k: int = 10) -> List[Tuple[int, int]]:
         """
@@ -192,6 +127,9 @@ class FeatureActivationAnalyzer:
         feature_counts.sort(key=lambda x: x[1], reverse=True)
         
         return feature_counts[:top_k]
+
+    def get_feature_summary(self, transcoder_type, feature_idx):
+        raise NotImplementedError
 
 
 class CopyFeatureActivationAnalyzer(FeatureActivationAnalyzer):
@@ -265,6 +203,73 @@ class CopyFeatureActivationAnalyzer(FeatureActivationAnalyzer):
             for batch in tqdm(dataloader, desc=f"Length {seq_len}"):
                 self.analyze_batch_activations(batch)
         print("Feature activation analysis complete!")
+    
+    def get_feature_summary(self, transcoder_type: str, feature_idx: int) -> Dict:
+        """
+        Get summary statistics for a specific feature
+        
+        Args:
+            transcoder_type: 'update' or 'hidden'
+            feature_idx: Index of the feature to analyze
+            
+        Returns:
+            Dictionary with feature statistics
+        """
+        if feature_idx not in self.feature_activations[transcoder_type]:
+            return {"n_sequences": 0, "n_activations": 0}
+            
+        activations = self.feature_activations[transcoder_type][feature_idx]
+        
+        total_activations = sum(len(activations[entry]['positions']) for entry in activations)
+        total_sequences = len(activations)
+        
+        # Get all positions where this feature activates
+        all_positions = list(range(self.max_length))
+        all_magnitudes = [1] * (self.max_length)
+        all_lengths = list(range(self.max_length+1))
+
+        if getattr(self, "tokens"):
+            all_tokens_og = list(range(len(self.tokens)))
+            all_tokens_copy = list(range(len(self.tokens)))
+            all_tokens_copy_prev = list(range(len(self.tokens)))
+        for entry in activations:
+            for position in activations[entry]['positions']:
+                true_len = len(entry)//2
+                assert len(entry) % 2 == 0
+                if position >= true_len: 
+                    if position > true_len and getattr(self, "tokens"):
+                        all_tokens_copy.append(self.token_to_idx[entry[position]])
+                        all_tokens_copy_prev.append(self.token_to_idx[entry[(position-true_len)]])
+                    elif getattr(self, "tokens"):
+                        all_tokens_og.append(self.token_to_idx[entry[position]])
+                    position = 9 + (position-true_len)
+                    all_positions.append(position)
+                else: 
+                    all_positions.append(position)
+                    if getattr(self, "tokens"):
+                        all_tokens_og.append(self.token_to_idx[entry[position]])
+            all_magnitudes.extend(activations[entry]['magnitudes'])
+            all_lengths.append(len(entry))
+        stat_dict = {
+            "n_sequences": total_sequences,
+            "n_activations": total_activations,
+            "avg_activations_per_sequence": total_activations / max(total_sequences, 1),
+            "position_distribution": (np.bincount(all_positions) - 1).tolist(),
+            "position_mag_distribution": (np.bincount(all_positions,
+                                                       all_magnitudes) - 1).tolist(),
+            "length distribution": (np.bincount(all_lengths) - 1).tolist(),
+            "magnitude_stats": {
+                "mean": np.mean(all_magnitudes),
+                "std": np.std(all_magnitudes), 
+                "min": np.min(all_magnitudes),
+                "max": np.max(all_magnitudes)
+            } if all_magnitudes else None
+        }
+        if getattr(self, "tokens"):
+            stat_dict["og_tokens_distribution"] = (np.bincount(all_tokens_og) - 1).tolist()
+            stat_dict["copy_tokens_distribution"] = (np.bincount(all_tokens_copy) - 1).tolist()
+            stat_dict["copy_tokens_prev_distribution"] = (np.bincount(all_tokens_copy_prev) - 1).tolist()
+        return stat_dict
 
 def collate_fn(batch):
   keys = list(batch[0].keys())

@@ -12,12 +12,13 @@ import pandas as pd
 import numpy as np
 
 from circuit.copy_find_features import CopyFeatureActivationAnalyzer
+from circuit.rl_find_features import RLFeatureActivationAnalyzer
 
 class EnhancedInteractiveFeatureVisualizer:
     """Interactive web-based visualizer for RNN transcoder feature activations with inactive sequence support"""
     
     def __init__(self, analyzer, all_sequences=None, 
-                 hidden_features=None, update_features=None):
+                 hidden_features=None, update_features=None, rl=False):
         """
         Args:
             analyzer: FeatureActivationAnalyzer instance with collected data
@@ -35,6 +36,7 @@ class EnhancedInteractiveFeatureVisualizer:
         self.hidden_features = hidden_features
         self.update_features = update_features
         self._inactive_sequences_cache = {}
+        self.rl = rl
 
         self.app = dash.Dash(__name__)        
         self._setup_layout()
@@ -137,6 +139,8 @@ class EnhancedInteractiveFeatureVisualizer:
                     pos_to_magnitude = {pos: mag for pos, mag in zip(positions, magnitudes)}
                     
                     # Create token spans
+                    if self.rl:
+                        sequence_type, sequence = sequence[0], sequence[1:]
                     token_spans = []
                     for pos, token in enumerate(sequence):
                         magnitude = pos_to_magnitude.get(pos, 0)
@@ -181,7 +185,7 @@ class EnhancedInteractiveFeatureVisualizer:
                     
                     seq_div = html.Div([
                         html.Div([
-                            html.Strong(f"Sequence {seq_idx + 1} (Length {seq_length}): "),
+                            html.Strong(f"Sequence {seq_idx + 1} {'('+sequence_type+')' if self.rl else ''} (Length {seq_length}): "),
                             html.Span(info_text, style={'color': '#999' if is_inactive else '#666'})
                         ], style={'margin-bottom': '5px', 'font-size': '12px'}),
                         html.Div(token_spans, style={'margin-bottom': '15px'})
@@ -268,12 +272,15 @@ class EnhancedInteractiveFeatureVisualizer:
             html.Div(id='feature-stats', style={'margin-bottom': '20px', 'padding': '15px', 
                                             'background-color': '#f8f9fa', 'border-radius': '5px'}),
             
-            # NEW: Ranking Mode Controls
             html.Div([
                 html.Label("Ranking Mode:", style={'font-weight': 'bold', 'margin-right': '10px'}),
                 dcc.RadioItems(
                     id='ranking-mode',
                     options=[
+                        {'label': 'Absolute Ranking (All Lengths)', 'value': 'absolute'},
+                        {'label': 'Length-Specific Ranking', 'value': 'length_specific'},
+                        {'label': 'By Sequence Type', 'value': 'by_type'}
+                    ] if self.rl else [
                         {'label': 'Absolute Ranking (All Lengths)', 'value': 'absolute'},
                         {'label': 'Length-Specific Ranking', 'value': 'length_specific'}
                     ],
@@ -292,7 +299,19 @@ class EnhancedInteractiveFeatureVisualizer:
                         placeholder="Select sequence length",
                         style={'width': '200px', 'display': 'inline-block'}
                     )
-                ], id='length-filter-container', style={'margin': '10px 0'})
+                ], id='length-filter-container', style={'margin': '10px 0'}),
+                
+                # Sequence type filter dropdown (only shown when by-type mode is selected)
+                html.Div([
+                    html.Label("Filter by Sequence Type:", style={'font-weight': 'bold', 'margin-right': '10px'}),
+                    dcc.Dropdown(
+                        id='type-filter',
+                        options=[],  # Will be populated dynamically
+                        value=None,
+                        placeholder="Select sequence type",
+                        style={'width': '200px', 'display': 'inline-block'}
+                    )
+                ], id='type-filter-container', style={'margin': '10px 0', 'display': 'none'})
             ], style={'margin-bottom': '20px', 'padding': '15px', 'background-color': '#e3f2fd', 'border-radius': '5px'}),
             
             # Sorting Controls
@@ -391,15 +410,53 @@ class EnhancedInteractiveFeatureVisualizer:
                 return [{'label': 'Feature 0', 'value': 0}], 0
             
         @self.app.callback(
-            Output('length-filter-container', 'style'),
+            [Output('length-filter-container', 'style'),
+            Output('type-filter-container', 'style')],
             [Input('ranking-mode', 'value')]
         )
-        def toggle_length_filter(ranking_mode):
-            """Show/hide length filter based on ranking mode"""
+        def toggle_filters(ranking_mode):
+            """Show/hide filters based on ranking mode"""
+            length_style = {'margin': '10px 0', 'display': 'none'}
+            type_style = {'margin': '10px 0', 'display': 'none'}
+            
             if ranking_mode == 'length_specific':
-                return {'margin': '10px 0', 'display': 'block'}
-            else:
-                return {'margin': '10px 0', 'display': 'none'}
+                length_style['display'] = 'block'
+            elif ranking_mode == 'by_type' and self.rl:
+                type_style['display'] = 'block'
+            
+            return length_style, type_style
+    
+        @self.app.callback(
+            [Output('type-filter', 'options'),
+            Output('type-filter', 'value')],
+            [Input('transcoder-type', 'value'),
+            Input('feature-dropdown', 'value')]
+        )
+        def update_type_filter_options(transcoder_type, feature_idx):
+            """Update type filter options based on available sequence types for the feature"""
+            if not self.rl or feature_idx is None:
+                return [], None
+            
+            try:
+                # Get all sequence types for this feature
+                sequence_types = set()
+                if (hasattr(self.analyzer, 'feature_activations') and 
+                    isinstance(self.analyzer.feature_activations, dict) and
+                    transcoder_type in self.analyzer.feature_activations and
+                    feature_idx in self.analyzer.feature_activations[transcoder_type]):
+                    
+                    feature_data = self.analyzer.feature_activations[transcoder_type][feature_idx]
+                    for seq_tuple, _ in feature_data.items():
+                        if isinstance(seq_tuple, tuple) and len(seq_tuple) > 0:
+                            sequence_types.add(seq_tuple[0])  # First element is sequence type
+                
+                options = [{'label': f'{seq_type}', 'value': seq_type} for seq_type in sorted(sequence_types)]
+                value = sorted(sequence_types)[0] if sequence_types else None
+                
+                return options, value
+            except Exception as e:
+                print(f"Error updating type filter options: {e}")
+                return [], None
 
         @self.app.callback(
             Output('debug-info', 'children'),
@@ -706,9 +763,40 @@ class EnhancedInteractiveFeatureVisualizer:
                                     )
                                 )                                
                         if stats.get('start_distribution'):
+                            x_axis_by_type = {2: ["high_first", "low_first"],
+                                              3: ["d1", "go", "d2"],
+                                              5: ["1b", "2b", "3b", "a", "n"]}
                             for key in stats:
                                 if "distribution" in key:
-                                    pass
+                                    dist = stats[key]
+                                    if stats['n_activations'] > 0:
+                                        entries = list(range(len(dist)))
+                                        entry_counts = dist 
+                                        normalized_entry_counts = [count / (stats['n_activations'] if "_mag" not in key else stats['n_magnitudes']) for count in entry_counts]
+                                        
+                                        fig_plot = go.Figure()
+                                        fig_plot.add_trace(go.Bar(
+                                            x=x_axis_by_type[len(entries)],
+                                            y=normalized_entry_counts,
+                                            name=key,
+                                            marker_color='lightgreen',
+                                            text=[f"{val:.3f}<br>({dist[entry]} acts)" for val, entry in zip(normalized_entry_counts, entries)],
+                                            textposition='auto'
+                                        ))
+                                        fig_plot.update_layout(
+                                            title=f"Feature {feature_idx} {key}({sum(dist)/(stats['n_activations'] if "_mag" not in key else stats['n_magnitudes'])})",
+                                            xaxis_title= " ".join(key.split("_")[:1] if "ommon" not in key else key.split("_")[:2]),
+                                            yaxis_title="Proportion of Feature's Activations",
+                                            height=300,
+                                            margin=dict(l=50, r=50, t=60, b=50)
+                                        )
+                                        
+                                        stats_div.children.append(
+                                            dcc.Graph(
+                                                figure=fig_plot,
+                                                style={'margin': '10px 0'}
+                                            )
+                                        )
                                     #normalize and plot this. 
                     # except Exception as e:
                     #     stats_div.children.append(html.P(f"Error getting detailed stats: {str(e)}", style={'color': 'red'}))
@@ -868,7 +956,8 @@ class EnhancedInteractiveFeatureVisualizer:
         self.app.run_server(host=host, port=port, debug=debug)
 
 def launch_enhanced_visualizer(analyzer, all_sequences=None, 
-                               features_hidden=None, features_update=None):
+                               features_hidden=None, features_update=None,
+                               rl=False):
     """
     Launch the enhanced visualizer with inactive sequence support
     
@@ -878,7 +967,8 @@ def launch_enhanced_visualizer(analyzer, all_sequences=None,
         total_features: Total number of features in the model
     """
     visualizer = EnhancedInteractiveFeatureVisualizer(analyzer, all_sequences, 
-                                                      features_hidden, features_update)
+                                                      features_hidden, features_update,
+                                                      rl=rl)
     visualizer.run()
 
 if __name__ == "__main__":
@@ -887,9 +977,10 @@ if __name__ == "__main__":
     parser.add_argument("--feature_dict_path", required=True)
     parser.add_argument("--features_hidden", type=int, required=True)
     parser.add_argument("--features_update", type=int, required=True)
+    parser.add_argument("--rl", action="store_true")
 
     args = parser.parse_args()
-    
+     
     # Load feature activations
     with open(args.feature_dict_path, "rb") as f:
         analysis_dict = pickle.load(f)
@@ -902,8 +993,8 @@ if __name__ == "__main__":
             all_sequences.extend(list(sequences))
     
     # Create analyzer
-    analyzer = CopyFeatureActivationAnalyzer(None, None, None, "cpu")
+    analyzer = CopyFeatureActivationAnalyzer(None, None, None, "cpu") if not args.rl else RLFeatureActivationAnalyzer(None, None, None, "cpu")
     analyzer.feature_activations = analysis_dict
     
     launch_enhanced_visualizer(analyzer, all_sequences, args.features_hidden,
-                               args.features_update)
+                               args.features_update, args.rl)

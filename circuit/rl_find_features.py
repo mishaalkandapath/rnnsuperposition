@@ -21,7 +21,8 @@ class RLFeatureActivationAnalyzer(FeatureActivationAnalyzer):
                  rnn_model: nn.Module,
                  update_transcoder: nn.Module,
                  hidden_transcoder: nn.Module,
-                 device: str = 'cuda'):
+                 device: str = 'cuda',
+                 rl=False):
         """
         Args:
             rnn_model: Trained RNN model
@@ -123,7 +124,7 @@ class RLFeatureActivationAnalyzer(FeatureActivationAnalyzer):
         activations = self.feature_activations[transcoder_type][feature_idx]
         
         total_activations = sum(len(activations[entry]['positions']) for entry in activations)
-        total_magnitudes= sum(len(activations[entry]['magnitudes']) for entry in activations)
+        total_magnitudes= sum(sum(activations[entry]['magnitudes']) for entry in activations)
         total_sequences = len(activations)
         
         # Get all positions where this feature activates
@@ -157,8 +158,8 @@ class RLFeatureActivationAnalyzer(FeatureActivationAnalyzer):
         types = ["commonp", "common_p", "uncommonp", "uncommon_p"]
         starts = ["high_first", "low_first"]
         for entry in activations:
-            num_trials = len(self.sequence_activations[entry].keys())//3
-            assert len(self.sequence_activations[entry].keys()) % 3 == 0
+            num_trials = len(self.sequence_activations[transcoder_type][entry].keys())//3
+            assert len(self.sequence_activations[transcoder_type][entry].keys()) % 3 == 0
             for idx, position in enumerate(activations[entry]['positions']):
                 trial_idx = position//3
                 if trial_idx < num_trials - 2:
@@ -167,8 +168,8 @@ class RLFeatureActivationAnalyzer(FeatureActivationAnalyzer):
                     trial_idx = 3 + (num_trials - 1==trial_idx)
 
                 phase_idx = position % 3
-                start = starts.index(entry[0].split("_")[0])
-                tpe = types.index(entry[0].split("_")[1])
+                start = starts.index("_".join(entry[0].split("_")[:2]))
+                tpe = types.index("_".join(entry[0].split("_")[2:]))
 
                 assert 0<= trial_idx <=4 and 0 <= phase_idx <= 2
 
