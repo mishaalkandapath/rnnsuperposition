@@ -75,17 +75,20 @@ class InteractiveCircuitVisualizer:
         for t, nodes_by_type in timesteps.items():
             x_base = t * timestep_width
             
-            for i, node in enumerate(nodes_by_type['input']):
-                positions[node] = (x_base - 50, 50 + i * type_spacing['input'])
+            # Place output nodes at the top (lowest y-values)
+            for i, node in enumerate(nodes_by_type['output']):
+                positions[node] = (x_base, -100 - i * type_spacing['output'])
             
+            # Place input nodes at the bottom
+            for i, node in enumerate(nodes_by_type['input']):
+                positions[node] = (x_base - 50, 400 + i * type_spacing['input'])
+            
+            # Place feature nodes in the middle
             for i, node in enumerate(nodes_by_type['feature_update']):
-                positions[node] = (x_base, 200 + i * type_spacing['feature_update'])
+                positions[node] = (x_base, 150 + i * type_spacing['feature_update'])
                 
             for i, node in enumerate(nodes_by_type['feature_hidden']):
-                positions[node] = (x_base + 50, 200 + i * type_spacing['feature_hidden'])
-            
-            for i, node in enumerate(nodes_by_type['output']):
-                positions[node] = (x_base, 500 + i * type_spacing['output'])
+                positions[node] = (x_base + 50, 150 + i * type_spacing['feature_hidden'])
         
         return positions
     
@@ -125,8 +128,8 @@ class InteractiveCircuitVisualizer:
         return None
     
     def _create_circuit_graph(self, edge_weights: Dict[Tuple[str, str], float], 
-                        kept_nodes: Optional[Set[str]] = None,
-                        active_features: Optional[Dict] = None) -> go.Figure:
+                    kept_nodes: Optional[Set[str]] = None,
+                    active_features: Optional[Dict] = None) -> go.Figure:
         """Create interactive circuit graph visualization with hover activation magnitudes"""
         if kept_nodes:
             filtered_edges = {
@@ -153,25 +156,98 @@ class InteractiveCircuitVisualizer:
         
         fig = go.Figure()
         
-        # Add edges
-        edge_x = []
-        edge_y = []
+        # Create edge mappings for highlighting
+        node_to_outgoing = {}  # node -> [target_nodes]
+        node_to_incoming = {}  # node -> [source_nodes]
+        edge_to_coords = {}    # (from, to) -> (x0, y0, x1, y1)
+        edge_to_weight = {}    # (from, to) -> weight
         
         for (from_node, to_node), weight in filtered_edges.items():
             if from_node in positions and to_node in positions:
                 x0, y0 = positions[from_node]
                 x1, y1 = positions[to_node]
+                edge_to_coords[(from_node, to_node)] = (x0, y0, x1, y1)
+                edge_to_weight[(from_node, to_node)] = weight
                 
-                edge_x.extend([x0, x1, None])
-                edge_y.extend([y0, y1, None])
+                if from_node not in node_to_outgoing:
+                    node_to_outgoing[from_node] = []
+                if to_node not in node_to_incoming:
+                    node_to_incoming[to_node] = []
+                    
+                node_to_outgoing[from_node].append(to_node)
+                node_to_incoming[to_node].append(from_node)
+        
+        # Add default edges (gray)
+        default_edge_x = []
+        default_edge_y = []
+        for coords in edge_to_coords.values():
+            x0, y0, x1, y1 = coords
+            default_edge_x.extend([x0, x1, None])
+            default_edge_y.extend([y0, y1, None])
         
         fig.add_trace(go.Scatter(
-            x=edge_x, y=edge_y,
+            x=default_edge_x, y=default_edge_y,
             line=dict(width=1, color='rgba(125,125,125,0.5)'),
             hoverinfo='none',
             mode='lines',
-            showlegend=False
+            showlegend=False,
+            name='default_edges'
         ))
+        
+        # Add individual edge traces for each possible edge (hidden by default)
+        for (from_node, to_node), coords in edge_to_coords.items():
+            x0, y0, x1, y1 = coords
+            weight = edge_to_weight[(from_node, to_node)]
+            
+            # Calculate midpoint for label placement
+            mid_x = (x0 + x1) / 2
+            mid_y = (y0 + y1) / 2
+            
+            # Purple trace for outgoing edges
+            fig.add_trace(go.Scatter(
+                x=[x0, x1], y=[y0, y1],
+                line=dict(width=3, color='purple'),
+                hoverinfo='none',
+                mode='lines',
+                showlegend=False,
+                visible=False,
+                name=f'outgoing_{from_node}_{to_node}'
+            ))
+            
+            # Yellow trace for incoming edges  
+            fig.add_trace(go.Scatter(
+                x=[x0, x1], y=[y0, y1],
+                line=dict(width=3, color='gold'),
+                hoverinfo='none',
+                mode='lines',
+                showlegend=False,
+                visible=False,
+                name=f'incoming_{from_node}_{to_node}'
+            ))
+            
+            # Purple weight label for outgoing edges
+            fig.add_trace(go.Scatter(
+                x=[mid_x], y=[mid_y],
+                mode='text',
+                text=[f'{weight:.3f}'],
+                textfont=dict(size=10, color='black'),
+                showlegend=False,
+                visible=False,
+                hoverinfo='none',
+                name=f'outgoing_label_{from_node}_{to_node}'
+            ))
+            
+            # Yellow weight label for incoming edges
+            fig.add_trace(go.Scatter(
+                x=[mid_x], y=[mid_y],
+                mode='text',
+                text=[f'{weight:.3f}'],
+                textfont=dict(size=10, color='darkgoldenrod'),
+                showlegend=False,
+                visible=False,
+                hoverinfo='none',
+                name=f'incoming_label_{from_node}_{to_node}'
+            ))
         
         # Add nodes by type
         node_types = ['input', 'feature_update', 'feature_hidden', 'output']
@@ -182,16 +258,20 @@ class InteractiveCircuitVisualizer:
             if not nodes_of_type:
                 continue
                 
-            node_x = [positions[node][0] for node in nodes_of_type if node in positions]
-            node_y = [positions[node][1] for node in nodes_of_type if node in positions]
+            node_x = []
+            node_y = []
             node_text = []
             hover_text = []
+            node_ids = []
             
             for node in nodes_of_type:
                 if node not in positions:
                     continue
                     
                 info = node_info[node]
+                x, y = positions[node]
+                node_x.append(x)
+                node_y.append(y)
                 
                 if info['type'] == 'input':
                     text = f"x_{info['timestep']}_{info['dimension']}"
@@ -222,6 +302,7 @@ class InteractiveCircuitVisualizer:
                 
                 node_text.append(text)
                 hover_text.append(hover_info)
+                node_ids.append(node)
             
             fig.add_trace(go.Scatter(
                 x=node_x, y=node_y,
@@ -236,9 +317,11 @@ class InteractiveCircuitVisualizer:
                 textfont=dict(size=8, color='white'),
                 name=node_type.replace('_', ' ').title(),
                 hovertext=hover_text,
-                hoverinfo='text'
+                hoverinfo='text',
+                customdata=node_ids
             ))
         
+        # Store edge mappings in the figure for the clientside callback
         fig.update_layout(
             title="RNN Circuit Graph",
             showlegend=True,
@@ -246,16 +329,101 @@ class InteractiveCircuitVisualizer:
             margin=dict(b=20,l=5,r=5,t=40),
             xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
             yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-            plot_bgcolor='white'
+            plot_bgcolor='white',
+            # Store edge mapping data for clientside callback
+            uirevision='constant',  # Prevents layout reset
+            meta={
+                'node_to_outgoing': node_to_outgoing,
+                'node_to_incoming': node_to_incoming,
+                'all_edges': list(edge_to_coords.keys()),
+                'edge_weights': {f"{from_node}_{to_node}": weight 
+                for (from_node, to_node), weight in filtered_edges.items()}
+            }
         )
         
         return fig
+
+    def _add_clientside_callbacks(self):
+        """Add clientside callbacks for edge highlighting"""
+        
+        # Clientside callback for hover highlighting
+        self.app.clientside_callback(
+            """
+            function(hoverData, figure) {
+                if (!figure || !figure.data) {
+                    return window.dash_clientside.no_update;
+                }
+                
+                // Clone the figure to avoid mutation
+                let newFig = JSON.parse(JSON.stringify(figure));
+                
+                // Hide all edge highlight traces and labels
+                for (let i = 0; i < newFig.data.length; i++) {
+                    if (newFig.data[i].name && 
+                        (newFig.data[i].name.startsWith('outgoing_') || 
+                        newFig.data[i].name.startsWith('incoming_'))) {
+                        newFig.data[i].visible = false;
+                    }
+                }
+                
+                // If no hover data, just return with hidden highlights
+                if (!hoverData || !hoverData.points || hoverData.points.length === 0) {
+                    return newFig;
+                }
+                
+                let point = hoverData.points[0];
+                if (!point.customdata) {
+                    return newFig;
+                }
+                
+                let hoveredNode = point.customdata;
+                let nodeToOutgoing = figure.layout.meta ? figure.layout.meta.node_to_outgoing : {};
+                let nodeToIncoming = figure.layout.meta ? figure.layout.meta.node_to_incoming : {};
+                
+                // Show outgoing edges (purple) and their labels
+                if (nodeToOutgoing[hoveredNode]) {
+                    for (let targetNode of nodeToOutgoing[hoveredNode]) {
+                        let edgeTraceName = 'outgoing_' + hoveredNode + '_' + targetNode;
+                        let labelTraceName = 'outgoing_label_' + hoveredNode + '_' + targetNode;
+                        
+                        for (let i = 0; i < newFig.data.length; i++) {
+                            if (newFig.data[i].name === edgeTraceName || 
+                                newFig.data[i].name === labelTraceName) {
+                                newFig.data[i].visible = true;
+                            }
+                        }
+                    }
+                }
+                
+                // Show incoming edges (yellow) and their labels
+                if (nodeToIncoming[hoveredNode]) {
+                    for (let sourceNode of nodeToIncoming[hoveredNode]) {
+                        let edgeTraceName = 'incoming_' + sourceNode + '_' + hoveredNode;
+                        let labelTraceName = 'incoming_label_' + sourceNode + '_' + hoveredNode;
+                        
+                        for (let i = 0; i < newFig.data.length; i++) {
+                            if (newFig.data[i].name === edgeTraceName || 
+                                newFig.data[i].name === labelTraceName) {
+                                newFig.data[i].visible = true;
+                            }
+                        }
+                    }
+                }
+                
+                return newFig;
+            }
+            """,
+            Output('circuit-graph', 'figure', allow_duplicate=True),
+            [Input('circuit-graph', 'hoverData')],
+            [State('circuit-graph', 'figure')],
+            prevent_initial_call=True
+        )
     
     def _setup_layout(self):
         """Setup the Dash app layout"""
         self.app.layout = html.Div([
             html.H1("RNN Circuit Visualizer", 
-                   style={'text-align': 'center', 'margin-bottom': '20px'}),
+                style={'text-align': 'center', 'margin-bottom': '20px'}),
             
             # Input controls
             html.Div([
@@ -268,13 +436,53 @@ class InteractiveCircuitVisualizer:
                     style={'width': '200px', 'margin': '5px 10px'}
                 ),
                 html.Button('Generate Circuit', id='generate-button', 
-                          style={'margin': '5px', 'padding': '10px'})
+                        style={'margin': '5px', 'padding': '10px'})
             ], style={'margin-bottom': '20px', 'text-align': 'center'}),
+            
+            # New controls for edge normalization and thresholds
+            html.Div([
+                # Toggle for normalized edges
+                html.Div([
+                    html.Label("Use Normalized Edge Weights:", style={'font-weight': 'bold', 'margin-right': '10px'}),
+                    dcc.Checklist(
+                        id='normalize-toggle',
+                        options=[{'label': 'Normalized', 'value': 'normalized'}],
+                        value=[],
+                        style={'display': 'inline-block'}
+                    )
+                ], style={'margin-bottom': '10px', 'text-align': 'center'}),
+                
+                # Threshold controls
+                html.Div([
+                    html.Label("Node Threshold:", style={'font-weight': 'bold', 'margin-right': '10px'}),
+                    dcc.Input(
+                        id='node-threshold-input',
+                        type='number',
+                        placeholder='0.98',
+                        value=0.98,
+                        step=0.01,
+                        min=0,
+                        max=1,
+                        style={'width': '100px', 'margin-right': '20px'}
+                    ),
+                    html.Label("Edge Threshold:", style={'font-weight': 'bold', 'margin-right': '10px'}),
+                    dcc.Input(
+                        id='edge-threshold-input',
+                        type='number',
+                        placeholder='0.99',
+                        value=0.99,
+                        step=0.01,
+                        min=0,
+                        max=1,
+                        style={'width': '100px'}
+                    )
+                ], style={'margin-bottom': '10px', 'text-align': 'center'})
+            ], style={'margin-bottom': '20px', 'padding': '10px', 'background-color': '#f8f9fa', 'border-radius': '5px'}),
             
             # Status display
             html.Div(id='graph-stats', style={'margin-bottom': '10px', 'padding': '10px', 
-                                             'background-color': '#f8f9fa', 'border-radius': '5px',
-                                             'text-align': 'center'}),
+                                            'background-color': '#f8f9fa', 'border-radius': '5px',
+                                            'text-align': 'center'}),
             
             # Graph display
             dcc.Graph(id='circuit-graph', style={'height': '700px'})
@@ -285,9 +493,12 @@ class InteractiveCircuitVisualizer:
             [Output('circuit-graph', 'figure'),
             Output('graph-stats', 'children')],
             [Input('generate-button', 'n_clicks')],
-            [State('sequence-input', 'value')]
+            [State('sequence-input', 'value'),
+            State('normalize-toggle', 'value'),
+            State('node-threshold-input', 'value'),
+            State('edge-threshold-input', 'value')]
         )
-        def generate_and_display_circuit(n_clicks, sequence_text):
+        def generate_and_display_circuit(n_clicks, sequence_text, normalize_toggle, node_threshold, edge_threshold):
             """Generate and display circuit graph"""
             if not n_clicks or not sequence_text:
                 return go.Figure(), "Enter dataset and sequence indices, then click 'Generate Circuit'"
@@ -323,27 +534,42 @@ class InteractiveCircuitVisualizer:
                 print(f"Building circuit with {sum(len(v) for v in active_features.values())} active features")
                 
                 # Build circuit graph
-                edge_weights = self.circuit_tracer.build_circuit_graph(sequence_tensor, active_features)
+                edge_weights, edge_weights_normalized = self.circuit_tracer.build_circuit_graph(sequence_tensor, active_features)
+                
+                # Choose which edge weights to use based on toggle
+                use_normalized = 'normalized' in normalize_toggle
+                selected_edge_weights = edge_weights_normalized if use_normalized else edge_weights
                 
                 # Auto-prune if pruner exists
                 if self.pruner:
-                    print(f"Auto-pruning {len(edge_weights)} edges..")
-                    pruned_edges, kept_nodes = self.pruner.prune_graph(edge_weights, sequence_tensor["outputs"])
+                    # Update pruner thresholds if provided
+                    if node_threshold is not None:
+                        self.pruner.node_threshold = node_threshold
+                    if edge_threshold is not None:
+                        self.pruner.edge_threshold = edge_threshold
+                    
+                    print(f"Auto-pruning {len(selected_edge_weights)} edges with node_threshold={self.pruner.node_threshold}, edge_threshold={self.pruner.edge_threshold}")
+                    pruned_edges, kept_nodes = self.pruner.prune_graph(selected_edge_weights, sequence_tensor["outputs"])
                     print(f"After pruning: {len(pruned_edges)} edges, {len(kept_nodes)} nodes")
+                    
                     import pickle
                     with open("sequence_example.p", "wb") as f:
                         pickle.dump(sequence_tensor, f)
                     with open("sequence_weights_example.p", "wb") as f:
-                        pickle.dump(edge_weights, f)
+                        pickle.dump(selected_edge_weights, f)
+                    with open("active_features.p", "wb") as f:
+                        pickle.dump(active_features, f)
                     
                     # Pass active_features to the graph creation function
                     fig = self._create_circuit_graph(pruned_edges, kept_nodes, active_features)
-                    stats = f"Circuit for '{' '.join(tokens)}': {len(kept_nodes)} nodes, {len(pruned_edges)} edges (pruned from {len(edge_weights)})"
+                    edge_type = "normalized" if use_normalized else "raw"
+                    stats = f"Circuit for '{' '.join(tokens)}' ({edge_type} edges): {len(kept_nodes)} nodes, {len(pruned_edges)} edges (pruned from {len(selected_edge_weights)}) | Thresholds: node={self.pruner.node_threshold}, edge={self.pruner.edge_threshold}"
                 else:
                     # Pass active_features to the graph creation function
-                    fig = self._create_circuit_graph(edge_weights, None, active_features)
-                    all_nodes = set(sum(edge_weights.keys(), ()))
-                    stats = f"Circuit for '{' '.join(tokens)}': {len(all_nodes)} nodes, {len(edge_weights)} edges (no pruning)"
+                    fig = self._create_circuit_graph(selected_edge_weights, None, active_features)
+                    all_nodes = set(sum(selected_edge_weights.keys(), ()))
+                    edge_type = "normalized" if use_normalized else "raw"
+                    stats = f"Circuit for '{' '.join(tokens)}' ({edge_type} edges): {len(all_nodes)} nodes, {len(selected_edge_weights)} edges (no pruning)"
                 
                 return fig, stats
                 
@@ -352,6 +578,8 @@ class InteractiveCircuitVisualizer:
                 import traceback
                 traceback.print_exc()
                 return go.Figure(), f"Error: {str(e)}"
+        
+        self._add_clientside_callbacks()
             
     def run(self, host='0.0.0.0', port=8051, debug=True):
         """Run the Dash app"""

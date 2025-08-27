@@ -705,6 +705,11 @@ class EnhancedInteractiveFeatureVisualizer:
                                         style={'margin': '10px 0'}
                                     )
                                 )                                
+                        if stats.get('start_distribution'):
+                            for key in stats:
+                                if "distribution" in key:
+                                    pass
+                                    #normalize and plot this. 
                     # except Exception as e:
                     #     stats_div.children.append(html.P(f"Error getting detailed stats: {str(e)}", style={'color': 'red'}))
                 

@@ -105,6 +105,132 @@ class RLFeatureActivationAnalyzer(FeatureActivationAnalyzer):
                     self.analyze_batch_activations(batch)
                     
             print("Feature activation analysis complete!")
+    
+    def get_feature_summary(self, transcoder_type: str, feature_idx: int) -> Dict:
+        """
+        Get summary statistics for a specific feature
+        
+        Args:
+            transcoder_type: 'update' or 'hidden'
+            feature_idx: Index of the feature to analyze
+            
+        Returns:
+            Dictionary with feature statistics
+        """
+        if feature_idx not in self.feature_activations[transcoder_type]:
+            return {"n_sequences": 0, "n_activations": 0}
+            
+        activations = self.feature_activations[transcoder_type][feature_idx]
+        
+        total_activations = sum(len(activations[entry]['positions']) for entry in activations)
+        total_magnitudes= sum(len(activations[entry]['magnitudes']) for entry in activations)
+        total_sequences = len(activations)
+        
+        # Get all positions where this feature activates
+        all_starts = [0, 1] # 0 - high first, 1 - lowfirst
+        all_phases = [0, 1, 2] # delay 1, go, delay 2 phases
+        all_trials = [0, 1, 2, 3, 4] # 0-2 pre-core trial, 3 core trial, 4 the trial after
+        #finer metrics:
+        commonp_phases = [0, 1, 2]
+        commonp_trials = [0, 1, 2, 3, 4]
+        common_p_phases = [0, 1, 2]
+        common_p_trials = [0, 1, 2, 3, 4]
+        uncommonp_phases = [0, 1, 2]
+        uncommonp_trials = [0, 1, 2, 3, 4]
+        uncommon_p_phases = [0, 1, 2]
+        uncommon_p_trials = [0, 1, 2, 3, 4]
+
+        #magnitudes:
+        all_starts_mags = [1, 1] # 0 - high first, 1 - lowfirst
+        all_phases_mags = [1, 1, 1] # delay 1, go, delay 2 phases
+        all_trials_mags = [1, 1, 1, 1, 1] # 0-2 pre-core trial, 3 core trial, 4 the trial after
+        #finer metrics:
+        commonp_phases_mags = [1, 1 ,1]
+        commonp_trials_mags = [1, 1, 1, 1, 1]
+        common_p_phases_mags = [1, 1, 1]
+        common_p_trials_mags = [1, 1, 1, 1, 1]
+        uncommonp_phases_mags = [1, 1, 1]
+        uncommonp_trials_mags = [1, 1, 1, 1, 1]
+        uncommon_p_phases_mags = [1, 1, 1]
+        uncommon_p_trials_mags = [1, 1, 1, 1, 1]
+
+        types = ["commonp", "common_p", "uncommonp", "uncommon_p"]
+        starts = ["high_first", "low_first"]
+        for entry in activations:
+            num_trials = len(self.sequence_activations[entry].keys())//3
+            assert len(self.sequence_activations[entry].keys()) % 3 == 0
+            for idx, position in enumerate(activations[entry]['positions']):
+                trial_idx = position//3
+                if trial_idx < num_trials - 2:
+                    trial_idx = num_trials - 3 - trial_idx
+                else:
+                    trial_idx = 3 + (num_trials - 1==trial_idx)
+
+                phase_idx = position % 3
+                start = starts.index(entry[0].split("_")[0])
+                tpe = types.index(entry[0].split("_")[1])
+
+                assert 0<= trial_idx <=4 and 0 <= phase_idx <= 2
+
+                all_starts.append(start)
+                all_starts_mags.append(activations[entry]["magnitudes"][idx])
+                all_phases.append(phase_idx)
+                all_phases_mags.append(activations[entry]["magnitudes"][idx])
+                all_trials.append(trial_idx)
+                all_trials_mags.append(activations[entry]["magnitudes"][idx])
+
+                if tpe == 0:
+                    commonp_phases.append(phase_idx)
+                    commonp_phases_mags.append(activations[entry]["magnitudes"][idx])
+                    commonp_trials.append(trial_idx)
+                    commonp_trials_mags.append(activations[entry]["magnitudes"][idx])
+                elif tpe==1:
+                    common_p_phases.append(phase_idx)
+                    common_p_phases_mags.append(activations[entry]["magnitudes"][idx])
+                    common_p_trials.append(trial_idx)
+                    common_p_trials_mags.append(activations[entry]["magnitudes"][idx])
+                elif tpe == 2:
+                    uncommonp_phases.append(phase_idx)
+                    uncommonp_phases_mags.append(activations[entry]["magnitudes"][idx])
+                    uncommonp_trials.append(trial_idx)
+                    uncommonp_trials_mags.append(activations[entry]["magnitudes"][idx])
+                elif tpe == 3:
+                    uncommon_p_phases.append(phase_idx)
+                    uncommon_p_phases_mags.append(activations[entry]["magnitudes"][idx])
+                    uncommon_p_trials.append(trial_idx)
+                    uncommon_p_trials_mags.append(activations[entry]["magnitudes"][idx])
+                else:
+                    print("WRONG TYPE ", tpe)
+
+        stat_dict = {
+            "n_sequences": total_sequences,
+            "n_activations": total_activations,
+            "n_magnitudes": total_magnitudes,
+            "avg_activations_per_sequence": total_activations / max(total_sequences, 1),
+            "start_distribution": (np.bincount(all_starts) - 1).tolist(),
+            "start_distribution_mag": (np.bincount(all_starts, all_starts_mags) - 1).tolist(),
+            "phase_distribution": (np.bincount(all_phases) - 1).tolist(),
+            "phase_distribution_mag": (np.bincount(all_phases, all_phases_mags) - 1).tolist(),
+            "trial_distribution": (np.bincount(all_trials) - 1).tolist(),
+            "trial_distribution_mag": (np.bincount(all_trials, all_trials_mags) - 1).tolist(),
+            "commonp_phases_distribution": (np.bincount(commonp_phases) - 1).tolist(),
+            "commonp_phases_distribution_mag": (np.bincount(commonp_phases, commonp_phases_mags) - 1).tolist(),
+            "commonp_trials_distribution": (np.bincount(commonp_trials) - 1).tolist(),
+            "commonp_trials_distribution_mag": (np.bincount(commonp_trials, commonp_trials_mags) - 1).tolist(),
+            "common_p_phases_distribution": (np.bincount(common_p_phases) - 1).tolist(),
+            "common_p_phases_distribution_mag": (np.bincount(common_p_phases, common_p_phases_mags) - 1).tolist(),
+            "common_p_trials_distribution": (np.bincount(common_p_trials) - 1).tolist(),
+            "common_p_trials_distribution_mag": (np.bincount(common_p_trials, common_p_trials_mags) - 1).tolist(),
+            "uncommonp_phases_distribution": (np.bincount(uncommonp_phases) - 1).tolist(),
+            "uncommonp_phases_distribution_mag": (np.bincount(uncommonp_phases, uncommonp_phases_mags) - 1).tolist(),
+            "uncommonp_trials_distribution": (np.bincount(uncommonp_trials) - 1).tolist(),
+            "uncommonp_trials_distribution_mag": (np.bincount(uncommonp_trials, uncommonp_trials_mags) - 1).tolist(),
+            "uncommon_p_phases_distribution": (np.bincount(uncommon_p_phases) - 1).tolist(),
+            "uncommon_p_phases_distribution_mag": (np.bincount(uncommon_p_phases, uncommon_p_phases_mags) - 1).tolist(),
+            "uncommon_p_trials_distribution": (np.bincount(uncommon_p_trials) - 1).tolist(),
+            "uncommon_p_trials_distribution_mag": (np.bincount(uncommon_p_trials, uncommon_p_trials_mags) - 1).tolist(),
+        }
+        return stat_dict
 
 if __name__ == "__main__":
     import argparse

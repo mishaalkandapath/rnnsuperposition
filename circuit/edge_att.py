@@ -86,7 +86,6 @@ class CircuitTracer:
         acts = {k: v.detach().to(self.device).clone() for k, v in sequence.items()}
 
         T = acts["inputs"].shape[0]
-        H = self.rnn_model.hidden_size
 
         z = acts["z_ts"]
         # h_t = (1 - z_t) ⊙ h_{t-1} + z_t ⊙ h~_t  (using symbols from the user's code)
@@ -149,24 +148,12 @@ class CircuitTracer:
         e_z = acts["e_z"][t]              # (H,)
         e_n = acts["e_n"][t]              # (H,)
 
-        Dz = torch.diag(-(h_prev + n_hat + e_n))  # (H,H), d h_t / d z_hat_t
+        Dz = torch.diag(-h_prev + n_hat + e_n)  # (H,H), d h_t / d z_hat_t
         Dn = torch.diag(z_hat + e_z)              # (H,H), d h_t / d n_hat_t
 
         if node.node_type == "input":
-            i = node.input_dim
-            # z path: x -> pf^z -> f^z -> z_hat -> h
-            mask_z = self._relu_mask(acts["pf_z"][t])  # (Fz,)
-            # Column of W_z_x for input i: (Fz,)
-            col_Wzx = self.W_z_x[:, i]
-            zhat_from_x = self.M_z @ (mask_z * col_Wzx)  # (H,)
-
-            # n path: x -> pf^n -> f^n -> n_hat -> h
-            mask_n = self._relu_mask(acts["pf_n"][t])  # (Fn,)
-            col_Wnx = self.W_n_x[:, i]                  # (Fn,)
-            nhat_from_x = self.M_n @ (mask_n * col_Wnx)  # (H,)
-
-            v = Dz @ zhat_from_x + Dn @ nhat_from_x      # (H,)
-            return v
+            print("SHOULDNT COME HERE -- input on hidden")
+            raise Exception()
 
         if node.node_type == "feature":
             j = node.feature_idx
@@ -211,9 +198,7 @@ class CircuitTracer:
         H = acts["h_ts"].shape[1]
         return torch.zeros(H, device=self.device, dtype=acts["h_ts"].dtype)
 
-    # -----------------------------
-    # Across-time propagation A_t = d h_t / d h_{t-1}
-    # -----------------------------
+    # A_t = d h_t / d h_{t-1}
     def _A_t(self, t: int, acts: Dict[str, torch.Tensor]) -> torch.Tensor:
         """Linearized hidden transition Jacobian A_t = d h_t / d h_{t-1} (H,H).
 
@@ -241,9 +226,6 @@ class CircuitTracer:
             A = A + Dn @ (self.M_n @ torch.diag(mask_n) @ self.W_n_h)
         return A
 
-    # -----------------------------
-    # Public: compute a single edge weight
-    # -----------------------------
     def compute_edge_weight(self, from_node: CircuitNode, to_node: CircuitNode, acts: Dict[str, torch.Tensor]) -> torch.Tensor:
         """Return scalar edge weight from `from_node` to `to_node`.
 
@@ -251,10 +233,25 @@ class CircuitTracer:
         Across-time (t0 < t1): weight = w_{t1} @ (A_{t1} ... A_{t0+1}) @ v_{t0}
         """
         t0, t1 = from_node.timestep, to_node.timestep
-        if t0 > t1:
-            # No backward-in-time causal edges
+        if not (0 <=t1-t0 <= 1):
+            # No backward-in-time causal edges, and nothing more than one time-step away
             return torch.tensor(0.0, device=self.device)
-
+        elif from_node.node_type == "input":
+            if to_node.node_type != "feature" or t0!=t1:
+                return torch.tensor(0.0, device=self.device)
+            else:
+                mask_z = self._relu_mask(acts["pf_z"][t0])
+                mask_n = self._relu_mask(acts["pf_n"][t0])
+                return self.W_z_x[to_node.feature_idx, from_node.input_dim] * mask_z[to_node.feature_idx] if "f_z" in to_node.name else self.W_n_x[to_node.feature_idx, from_node.input_dim] * mask_n[to_node.feature_idx]
+        elif to_node.node_type == "output" and (from_node.node_type != 
+                                                "feature" or t1-t0>0):
+            #outputs can only be directly influenced by features in the same timestep
+            return torch.tensor(0.0, device=self.device)
+        elif (from_node.node_type == "feature" 
+              and to_node.node_type == "feature" and t1 == t0):
+                # there are no feature-feature influence sin teh same timestep
+                return torch.tensor(0.0, device=self.device)
+        
         v = self._local_influence_to_hidden(from_node, acts)  # (H,)
         w = self._local_sensitivity_from_hidden(to_node, acts)  # (H,)
 
@@ -265,10 +262,9 @@ class CircuitTracer:
         if t0 == t1:
             return torch.dot(w, v)
 
-        # Across-time propagation
+        # Across-time propagation if off by 1
         A = torch.eye(v.shape[0], device=self.device, dtype=v.dtype)
-        for t in range(t0 + 1, t1 + 1):
-            A = self._A_t(t, acts) @ A
+        A = self._A_t(t0+1, acts) @ A
         return torch.dot(w, A @ v)
 
     def build_circuit_graph(
@@ -303,20 +299,95 @@ class CircuitTracer:
                     nodes.append(CircuitNode(f"f_n_{t}_{j}", "feature", t, feature_idx=j))
 
         # Outputs
-        top_3 = torch.argsort(sequence["outputs"], dim=-1, descending=True)
+        sorted_outs = torch.argsort(sequence["outputs"], dim=-1, descending=True)
         for t in range(T):
             if t < T//2: continue
-            for k in top_3[t-T//2].tolist():
+            for k in sorted_outs[t-T//2].tolist():
                 nodes.append(CircuitNode(f"o_{t}_{k}", "output", t, feature_idx=k))
 
         # Compute edges
         edge_weights: Dict[Tuple[str, str], float] = {}
+        edge_weights_normalized: Dict[Tuple[str, str], float] = {}
+        source_dest_types: Dict[Tuple[str, str], Tuple[str, str, float]] = {}
         for i, src in enumerate(nodes):
             for j, dst in enumerate(nodes):
                 if i == j:
                     continue
                 w = self.compute_edge_weight(src, dst, acts)
-                if torch.isfinite(w) and abs(float(w)) > 1e-6:
-                    edge_weights[(src.name, dst.name)] = float(w)
+                if not torch.isfinite(w) or abs(float(w)) < 1e-6:
+                    continue
+                edge_weights[(src.name, dst.name)] = float(w)
+                src_type = src.node_type
+                dst_type = dst.node_type
+                if src_type == "feature":
+                    src_type += src.name[2]
+                if dst_type == "feature":
+                    dst_type += dst.name[2] # n or z?
+                src_t, dst_t = src.name.split("_")[-2], dst.name.split("_")[-2]
+                src_type += src_t
+                dst_type += dst_t
+                if (src_type, dst_type) not in source_dest_types:
+                    source_dest_types[(src_type, dst_type)] = []
+                source_dest_types[(src_type, dst_type)].append((src.name, dst.name, float(w)))
+        
+        #normalize:
+        for src_type, dst_type in source_dest_types:
+            max_weight = max(source_dest_types[(src_type, dst_type)], key=lambda x: x[2])[2]
+            if abs(float(max_weight)) < 1e-6: continue # nothing to add
+            new_weights = [(x[0], x[1], x[2]/max_weight) for x in source_dest_types[(src_type, dst_type)]]
+            for edge in new_weights:
+                edge_weights_normalized[(edge[0], edge[1])] = edge[2]
 
-        return edge_weights
+        return edge_weights, edge_weights_normalized
+
+if __name__ == "__main__":
+    import pickle
+    from models.rnn import RNN
+    from models.transcoders import Transcoder
+    from circuit.copy_find_features import CopyFeatureActivationAnalyzer
+    from torch.utils.data import StackDataset
+    torch.serialization.add_safe_globals([StackDataset])
+
+
+    rnn_model = RNN(input_size=31, hidden_size=128, out_size=30, use_gru=True, num_layers=1)
+    rnn_model.load_state_dict(torch.load("/w/150/lambda_squad/misc/rnnsuperposition/data/models/copy_train/copy_128_high/copy_128_high.ckpt"))
+    update_transcoder = Transcoder(input_size=159, out_size=128, n_feats=64)
+    hidden_transcoder = Transcoder(input_size=159, out_size=128, n_feats=128)
+    hidden_transcoder.load_state_dict(torch.load("/w/150/lambda_squad/misc/rnnsuperposition/data/models/copy_transcoder/local_models/128_hctx_transcoder_hsparse_hc/final_model.ckpt")["transcoder"])
+    update_transcoder.load_state_dict(torch.load("/w/150/lambda_squad/misc/rnnsuperposition/data/models/copy_transcoder/local_models/64_update_transcoder/final_model.ckpt")["transcoder"])
+
+    datasets = torch.load("/w/nobackup/436/lambda/data/copy_transcoder/1M_128_seq3.pt")
+    sequence_index = 0
+    sequence_tensor = datasets[sequence_index]
+    feature_analyzer = CopyFeatureActivationAnalyzer(rnn_model, update_transcoder, hidden_transcoder)
+    
+    tokens = feature_analyzer.convert_sequence_to_text(
+        sequence_tensor["inputs"], sequence_tensor["outputs"]
+    )
+    
+    # Get active features
+    with open("/w/nobackup/436/lambda/data/copy_transcoder_features/h128_u64_features.p".replace("features.p", "sequences.p"), "rb") as f:
+        analysis_dict_sequences = pickle.load(f)
+    data_dict = analysis_dict_sequences
+    feature_analyzer.sequence_activations = analysis_dict_sequences
+    active_features = {
+        'update': [(t, data_dict["update"][tokens][t]["features"][i], 
+                data_dict["update"][tokens][t]["magnitudes"][i]) 
+                for t in range(len(tokens)) 
+                for i in range(len(data_dict["update"][tokens][t]["features"]))],
+        'hidden': [(t, data_dict["hidden"][tokens][t]["features"][i], 
+                data_dict["hidden"][tokens][t]["magnitudes"][i]) 
+                for t in range(len(tokens)) 
+                for i in range(len(data_dict["hidden"][tokens][t]["features"]))]
+    }
+
+    circuit_tracer = CircuitTracer(rnn_model, update_transcoder, hidden_transcoder)
+    # with open("/w/150/lambda_squad/misc/rnnsuperposition/sequence_example.p", "rb") as f:
+    #     sequences = pickle.load(f)
+    
+    # with open("/w/150/lambda_squad/misc/rnnsuperposition/active_features.p", "rb") as f:
+    #     active_features = pickle.load(f)
+
+    circuit_tracer.build_circuit_graph(sequence_tensor, active_features)
+
+#("f_n" in src.name or "f_z " in src.name) and dst.name in ("o_3_1", "o_4_28", "o_5_28") and src.name.split("_")[-2] == dst.name.split("_")[-2]
