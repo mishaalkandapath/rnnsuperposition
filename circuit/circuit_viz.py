@@ -32,6 +32,7 @@ class InteractiveCircuitVisualizer:
         self.app = dash.Dash(__name__)
         
         self.current_edge_weights = None 
+        self.current_edge_weights_normalized = None  # Add this line
         self.current_tokens = None
         
         self._setup_layout()
@@ -53,12 +54,21 @@ class InteractiveCircuitVisualizer:
             return {'type': 'unknown', 'timestep': 0}
     
     def _compute_graph_layout(self, edge_weights: Dict[Tuple[str, str], float]) -> Dict[str, Tuple[float, float]]:
-        """Compute hierarchical layout for graph visualization"""
+        """Compute hierarchical layout for graph visualization with nodes sorted by contribution"""
         G = nx.DiGraph()
         for (from_node, to_node), weight in edge_weights.items():
             G.add_edge(from_node, to_node, weight=abs(weight))
         
         node_info = {node: self._parse_node_info(node) for node in G.nodes()}
+        
+        # Calculate total incoming weight (contribution) for each node
+        node_contributions = {}
+        for node in G.nodes():
+            total_incoming = 0
+            for (from_node, to_node), weight in edge_weights.items():
+                if to_node == node:
+                    total_incoming += abs(weight)
+            node_contributions[node] = total_incoming
         
         # Group nodes by timestep and type
         timesteps = {}
@@ -68,6 +78,11 @@ class InteractiveCircuitVisualizer:
                 timesteps[t] = {'input': [], 'feature_update': [], 'feature_hidden': [], 'output': []}
             timesteps[t][info['type']].append(node)
         
+        # Sort nodes within each type by contribution (highest contribution at bottom)
+        for t in timesteps:
+            for node_type in timesteps[t]:
+                timesteps[t][node_type].sort(key=lambda node: node_contributions.get(node, 0), reverse=True)
+        
         positions = {}
         timestep_width = 200
         type_spacing = {'input': 80, 'feature_update': 60, 'feature_hidden': 60, 'output': 80}
@@ -76,14 +91,17 @@ class InteractiveCircuitVisualizer:
             x_base = t * timestep_width
             
             # Place output nodes at the top (lowest y-values)
+            # Sorted by contribution - highest contribution nodes at bottom of their group
             for i, node in enumerate(nodes_by_type['output']):
                 positions[node] = (x_base, -100 - i * type_spacing['output'])
             
             # Place input nodes at the bottom
+            # Sorted by contribution - highest contribution nodes at bottom of their group
             for i, node in enumerate(nodes_by_type['input']):
                 positions[node] = (x_base - 50, 400 + i * type_spacing['input'])
             
             # Place feature nodes in the middle
+            # Sorted by contribution - highest contribution nodes at bottom of their group
             for i, node in enumerate(nodes_by_type['feature_update']):
                 positions[node] = (x_base, 150 + i * type_spacing['feature_update'])
                 
@@ -128,17 +146,30 @@ class InteractiveCircuitVisualizer:
         return None
     
     def _create_circuit_graph(self, edge_weights: Dict[Tuple[str, str], float], 
-                    kept_nodes: Optional[Set[str]] = None,
-                    active_features: Optional[Dict] = None) -> go.Figure:
-        """Create interactive circuit graph visualization with hover activation magnitudes"""
+                display_edge_weights: Dict[Tuple[str, str], float],
+                kept_nodes: Optional[Set[str]] = None,
+                active_features: Optional[Dict] = None) -> go.Figure:
+        """Create interactive circuit graph visualization with hover activation magnitudes
+        
+        Args:
+            edge_weights: Edge weights used for graph structure and pruning
+            display_edge_weights: Edge weights to display on the graph (may be different from edge_weights)
+            kept_nodes: Nodes to keep after pruning
+            active_features: Active feature information for hover display
+        """
         if kept_nodes:
             filtered_edges = {
                 (from_node, to_node): weight 
                 for (from_node, to_node), weight in edge_weights.items()
                 if from_node in kept_nodes and to_node in kept_nodes
             }
+            filtered_display_edges = {
+                (from_node, to_node): display_edge_weights.get((from_node, to_node), weight)
+                for (from_node, to_node), weight in filtered_edges.items()
+            }
         else:
             filtered_edges = edge_weights
+            filtered_display_edges = display_edge_weights
         
         if not filtered_edges:
             fig = go.Figure()
@@ -160,14 +191,15 @@ class InteractiveCircuitVisualizer:
         node_to_outgoing = {}  # node -> [target_nodes]
         node_to_incoming = {}  # node -> [source_nodes]
         edge_to_coords = {}    # (from, to) -> (x0, y0, x1, y1)
-        edge_to_weight = {}    # (from, to) -> weight
+        edge_to_weight = {}    # (from, to) -> weight (display weight)
         
-        for (from_node, to_node), weight in filtered_edges.items():
+        for (from_node, to_node) in filtered_edges.keys():
             if from_node in positions and to_node in positions:
                 x0, y0 = positions[from_node]
                 x1, y1 = positions[to_node]
                 edge_to_coords[(from_node, to_node)] = (x0, y0, x1, y1)
-                edge_to_weight[(from_node, to_node)] = weight
+                # Use display weight for labels
+                edge_to_weight[(from_node, to_node)] = filtered_display_edges.get((from_node, to_node), filtered_edges[(from_node, to_node)])
                 
                 if from_node not in node_to_outgoing:
                     node_to_outgoing[from_node] = []
@@ -197,7 +229,7 @@ class InteractiveCircuitVisualizer:
         # Add individual edge traces for each possible edge (hidden by default)
         for (from_node, to_node), coords in edge_to_coords.items():
             x0, y0, x1, y1 = coords
-            weight = edge_to_weight[(from_node, to_node)]
+            weight = edge_to_weight[(from_node, to_node)]  # Use display weight
             
             # Calculate midpoint for label placement
             mid_x = (x0 + x1) / 2
@@ -249,7 +281,9 @@ class InteractiveCircuitVisualizer:
                 name=f'incoming_label_{from_node}_{to_node}'
             ))
         
-        # Add nodes by type
+        # ... (rest of the node creation code remains the same) ...
+        
+        # Add nodes by type (this part remains unchanged)
         node_types = ['input', 'feature_update', 'feature_hidden', 'output']
         
         for node_type in node_types:
@@ -337,7 +371,7 @@ class InteractiveCircuitVisualizer:
                 'node_to_incoming': node_to_incoming,
                 'all_edges': list(edge_to_coords.keys()),
                 'edge_weights': {f"{from_node}_{to_node}": weight 
-                for (from_node, to_node), weight in filtered_edges.items()}
+                for (from_node, to_node), weight in edge_to_weight.items()}
             }
         )
         
@@ -441,11 +475,22 @@ class InteractiveCircuitVisualizer:
             
             # New controls for edge normalization and thresholds
             html.Div([
-                # Toggle for normalized edges
+                # Toggle for normalized edges (for pruning)
                 html.Div([
-                    html.Label("Use Normalized Edge Weights:", style={'font-weight': 'bold', 'margin-right': '10px'}),
+                    html.Label("Use Normalized Edge Weights for Pruning:", style={'font-weight': 'bold', 'margin-right': '10px'}),
                     dcc.Checklist(
                         id='normalize-toggle',
+                        options=[{'label': 'Normalized', 'value': 'normalized'}],
+                        value=[],
+                        style={'display': 'inline-block'}
+                    )
+                ], style={'margin-bottom': '10px', 'text-align': 'center'}),
+                
+                # Toggle for displayed edge weights (independent of pruning)
+                html.Div([
+                    html.Label("Display Edge Weights As:", style={'font-weight': 'bold', 'margin-right': '10px'}),
+                    dcc.Checklist(
+                        id='display-normalize-toggle',
                         options=[{'label': 'Normalized', 'value': 'normalized'}],
                         value=[],
                         style={'display': 'inline-block'}
@@ -492,21 +537,68 @@ class InteractiveCircuitVisualizer:
         @self.app.callback(
             [Output('circuit-graph', 'figure'),
             Output('graph-stats', 'children')],
-            [Input('generate-button', 'n_clicks')],
+            [Input('generate-button', 'n_clicks'),
+            Input('display-normalize-toggle', 'value'),  # Add display toggle as input
+            Input('normalize-toggle', 'value')],  # Add pruning toggle as input
             [State('sequence-input', 'value'),
-            State('normalize-toggle', 'value'),
             State('node-threshold-input', 'value'),
-            State('edge-threshold-input', 'value')]
+            State('edge-threshold-input', 'value'),
+            State('circuit-graph', 'figure')]  # Keep current figure state
         )
-        def generate_and_display_circuit(n_clicks, sequence_text, normalize_toggle, node_threshold, edge_threshold):
+        def generate_and_display_circuit(n_clicks, display_normalize_toggle, normalize_toggle,
+                                        sequence_text, node_threshold, edge_threshold, current_figure):
             """Generate and display circuit graph"""
+            ctx = dash.callback_context
+            
+            # Check if this is just a display toggle change
+            display_triggered = ctx.triggered and any(
+                prop_id in ['display-normalize-toggle.value', 'normalize-toggle.value'] 
+                for prop_id in [t['prop_id'] for t in ctx.triggered]
+            )
+            
+            # Use cached data if available for display/normalization toggles
+            if display_triggered and self.current_edge_weights is not None and self.current_edge_weights_normalized is not None:
+                use_normalized_for_pruning = 'normalized' in normalize_toggle
+                use_normalized_for_display = 'normalized' in display_normalize_toggle
+                
+                # Choose which edge weights to use for pruning
+                selected_edge_weights = self.current_edge_weights_normalized if use_normalized_for_pruning else self.current_edge_weights
+                
+                # Choose which edge weights to display
+                display_edge_weights = self.current_edge_weights_normalized if use_normalized_for_display else self.current_edge_weights
+                
+                # Get cached data for re-pruning if needed
+                if hasattr(self, 'current_sequence_tensor') and hasattr(self, 'current_active_features'):
+                    if self.pruner:
+                        # Update pruner thresholds if provided
+                        if node_threshold is not None:
+                            self.pruner.node_threshold = node_threshold
+                        if edge_threshold is not None:
+                            self.pruner.edge_threshold = edge_threshold
+                        
+                        pruned_edges, kept_nodes = self.pruner.prune_graph(selected_edge_weights, self.current_sequence_tensor["outputs"])
+                        fig = self._create_circuit_graph(pruned_edges, display_edge_weights, kept_nodes, self.current_active_features)
+                        
+                        pruning_type = "normalized" if use_normalized_for_pruning else "raw"
+                        display_type = "normalized" if use_normalized_for_display else "raw"
+                        stats = f"Circuit for '{' '.join(self.current_tokens)}' (pruning: {pruning_type}, display: {display_type}): {len(kept_nodes)} nodes, {len(pruned_edges)} edges"
+                    else:
+                        fig = self._create_circuit_graph(selected_edge_weights, display_edge_weights, None, self.current_active_features)
+                        all_nodes = set(sum(selected_edge_weights.keys(), ()))
+                        pruning_type = "normalized" if use_normalized_for_pruning else "raw"
+                        display_type = "normalized" if use_normalized_for_display else "raw"
+                        stats = f"Circuit for '{' '.join(self.current_tokens)}' (pruning: {pruning_type}, display: {display_type}): {len(all_nodes)} nodes, {len(selected_edge_weights)} edges"
+                    
+                    return fig, stats
+            
+            # If no cached data or this is a generate button click
             if not n_clicks or not sequence_text:
-                return go.Figure(), "Enter dataset and sequence indices, then click 'Generate Circuit'"
+                return current_figure or go.Figure(), "Enter dataset and sequence indices, then click 'Generate Circuit'"
             
             try:
                 options = sequence_text.strip().split()
                 if len(options) < 2:
-                    return go.Figure(), "Enter format: dataset_index sequence_index"
+                    return current_figure or go.Figure(), "Enter format: dataset_index sequence_index"
 
                 dataset_idx, sequence_index = map(int, options)
                 sequence_tensor = self.datasets[dataset_idx][sequence_index]
@@ -533,12 +625,22 @@ class InteractiveCircuitVisualizer:
                 
                 print(f"Building circuit with {sum(len(v) for v in active_features.values())} active features")
                 
-                # Build circuit graph
+                # Build circuit graph - get both normalized and raw edge weights
                 edge_weights, edge_weights_normalized = self.circuit_tracer.build_circuit_graph(sequence_tensor, active_features)
                 
-                # Choose which edge weights to use based on toggle
-                use_normalized = 'normalized' in normalize_toggle
-                selected_edge_weights = edge_weights_normalized if use_normalized else edge_weights
+                # Cache both edge weight types and other data
+                self.current_edge_weights = edge_weights
+                self.current_edge_weights_normalized = edge_weights_normalized
+                self.current_sequence_tensor = sequence_tensor
+                self.current_active_features = active_features
+                self.current_tokens = tokens
+                
+                # Choose which edge weights to use for pruning
+                use_normalized_for_pruning = 'normalized' in normalize_toggle
+                use_normalized_for_display = 'normalized' in display_normalize_toggle
+                
+                selected_edge_weights = edge_weights_normalized if use_normalized_for_pruning else edge_weights
+                display_edge_weights = edge_weights_normalized if use_normalized_for_display else edge_weights
                 
                 # Auto-prune if pruner exists
                 if self.pruner:
@@ -552,24 +654,16 @@ class InteractiveCircuitVisualizer:
                     pruned_edges, kept_nodes = self.pruner.prune_graph(selected_edge_weights, sequence_tensor["outputs"])
                     print(f"After pruning: {len(pruned_edges)} edges, {len(kept_nodes)} nodes")
                     
-                    import pickle
-                    with open("sequence_example.p", "wb") as f:
-                        pickle.dump(sequence_tensor, f)
-                    with open("sequence_weights_example.p", "wb") as f:
-                        pickle.dump(selected_edge_weights, f)
-                    with open("active_features.p", "wb") as f:
-                        pickle.dump(active_features, f)
-                    
-                    # Pass active_features to the graph creation function
-                    fig = self._create_circuit_graph(pruned_edges, kept_nodes, active_features)
-                    edge_type = "normalized" if use_normalized else "raw"
-                    stats = f"Circuit for '{' '.join(tokens)}' ({edge_type} edges): {len(kept_nodes)} nodes, {len(pruned_edges)} edges (pruned from {len(selected_edge_weights)}) | Thresholds: node={self.pruner.node_threshold}, edge={self.pruner.edge_threshold}"
+                    fig = self._create_circuit_graph(pruned_edges, display_edge_weights, kept_nodes, active_features)
+                    pruning_type = "normalized" if use_normalized_for_pruning else "raw"
+                    display_type = "normalized" if use_normalized_for_display else "raw"
+                    stats = f"Circuit for '{' '.join(tokens)}' (pruning: {pruning_type}, display: {display_type}): {len(kept_nodes)} nodes, {len(pruned_edges)} edges (pruned from {len(selected_edge_weights)}) | Thresholds: node={self.pruner.node_threshold}, edge={self.pruner.edge_threshold}"
                 else:
-                    # Pass active_features to the graph creation function
-                    fig = self._create_circuit_graph(selected_edge_weights, None, active_features)
+                    fig = self._create_circuit_graph(selected_edge_weights, display_edge_weights, None, active_features)
                     all_nodes = set(sum(selected_edge_weights.keys(), ()))
-                    edge_type = "normalized" if use_normalized else "raw"
-                    stats = f"Circuit for '{' '.join(tokens)}' ({edge_type} edges): {len(all_nodes)} nodes, {len(selected_edge_weights)} edges (no pruning)"
+                    pruning_type = "normalized" if use_normalized_for_pruning else "raw"
+                    display_type = "normalized" if use_normalized_for_display else "raw"
+                    stats = f"Circuit for '{' '.join(tokens)}' (pruning: {pruning_type}, display: {display_type}): {len(all_nodes)} nodes, {len(selected_edge_weights)} edges (no pruning)"
                 
                 return fig, stats
                 
@@ -577,7 +671,7 @@ class InteractiveCircuitVisualizer:
                 print(f"Error: {e}")
                 import traceback
                 traceback.print_exc()
-                return go.Figure(), f"Error: {str(e)}"
+                return current_figure or go.Figure(), f"Error: {str(e)}"
         
         self._add_clientside_callbacks()
             

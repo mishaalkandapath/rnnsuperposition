@@ -290,7 +290,6 @@ class GraphPruner:
             threshold_score = sorted_scores[threshold_idx].item()
         else:
             threshold_score = 0.0
-        print(threshold_idx, sorted_scores.shape)
         # Create edge mask
         edge_mask = edge_scores >= threshold_score
         

@@ -332,7 +332,7 @@ class CircuitTracer:
         
         #normalize:
         for src_type, dst_type in source_dest_types:
-            max_weight = max(source_dest_types[(src_type, dst_type)], key=lambda x: x[2])[2]
+            max_weight = max(max(source_dest_types[(src_type, dst_type)], key=lambda x: x[2])[2], abs(min(source_dest_types[(src_type, dst_type)], key=lambda x: x[2])[2]))
             if abs(float(max_weight)) < 1e-6: continue # nothing to add
             new_weights = [(x[0], x[1], x[2]/max_weight) for x in source_dest_types[(src_type, dst_type)]]
             for edge in new_weights:
@@ -356,8 +356,8 @@ if __name__ == "__main__":
     hidden_transcoder.load_state_dict(torch.load("/w/150/lambda_squad/misc/rnnsuperposition/data/models/copy_transcoder/local_models/128_hctx_transcoder_hsparse_hc/final_model.ckpt")["transcoder"])
     update_transcoder.load_state_dict(torch.load("/w/150/lambda_squad/misc/rnnsuperposition/data/models/copy_transcoder/local_models/64_update_transcoder/final_model.ckpt")["transcoder"])
 
-    datasets = torch.load("/w/nobackup/436/lambda/data/copy_transcoder/1M_128_seq3.pt")
-    sequence_index = 0
+    datasets = torch.load("/w/nobackup/436/lambda/data/copy_transcoder/1M_128_seq4.pt")
+    sequence_index = 84
     sequence_tensor = datasets[sequence_index]
     feature_analyzer = CopyFeatureActivationAnalyzer(rnn_model, update_transcoder, hidden_transcoder)
     
@@ -388,6 +388,9 @@ if __name__ == "__main__":
     # with open("/w/150/lambda_squad/misc/rnnsuperposition/active_features.p", "rb") as f:
     #     active_features = pickle.load(f)
 
-    circuit_tracer.build_circuit_graph(sequence_tensor, active_features)
+    edge_weights, _ =circuit_tracer.build_circuit_graph(sequence_tensor, active_features)
+    from circuit.graph_prune import GraphPruner
+    pruner = GraphPruner(0.9, 0.95)
+    pruner.prune_graph(edge_weights, sequence_tensor["outputs"])
 
 #("f_n" in src.name or "f_z " in src.name) and dst.name in ("o_3_1", "o_4_28", "o_5_28") and src.name.split("_")[-2] == dst.name.split("_")[-2]
