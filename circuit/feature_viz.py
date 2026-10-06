@@ -1,6 +1,7 @@
 from typing import Dict, List, Optional, Set, Tuple
 import pickle 
 import traceback
+import os
 
 import dash
 from dash import dcc, html, Input, Output, callback, dash_table
@@ -18,7 +19,7 @@ class EnhancedInteractiveFeatureVisualizer:
     """Interactive web-based visualizer for RNN transcoder feature activations with inactive sequence support"""
     
     def __init__(self, analyzer, all_sequences=None, 
-                 hidden_features=None, update_features=None, rl=False):
+                 hidden_features=None, update_features=None, reset_features=None, rl=False):
         """
         Args:
             analyzer: FeatureActivationAnalyzer instance with collected data
@@ -26,15 +27,16 @@ class EnhancedInteractiveFeatureVisualizer:
             total_features: Total number of features (for finding features that never activate)
         """
         self.analyzer = analyzer
-        self.all_sequences = set(all_sequences) if all_sequences else None
+        self.all_sequences = set(all_sequences) if all_sequences else set()
         self.all_counts = {}
         for sequence in self.all_sequences:
             self.all_counts[len(sequence)] = self.all_counts.get(len(sequence), 0) + 1
 
-        assert sum(self.all_counts.values()) == len(self.all_sequences), f"{sum(self.all_counts.values())} {len(self.all_sequences)}\n{self.all_sequences[0]}"
+        assert sum(self.all_counts.values()) == len(self.all_sequences)
 
         self.hidden_features = hidden_features
         self.update_features = update_features
+        self.reset_features = reset_features
         self._inactive_sequences_cache = {}
         self.rl = rl
 
@@ -210,28 +212,48 @@ class EnhancedInteractiveFeatureVisualizer:
         
         try:
             # Get available features for dropdowns with error handling
+            reset_features = []
             update_features = []
             hidden_features = []
             
             if hasattr(self.analyzer, 'feature_activations') and isinstance(self.analyzer.feature_activations, dict):
                 if 'update' in self.analyzer.feature_activations:
                     update_features = list(self.analyzer.feature_activations['update'].keys())
+                if 'reset' in self.analyzer.feature_activations:
+                    reset_features = list(self.analyzer.feature_activations['reset'].keys())
                 if 'hidden' in self.analyzer.feature_activations:
                     hidden_features = list(self.analyzer.feature_activations['hidden'].keys())
+
+            # Width is authoritative: a feature that never fires must remain
+            # inspectable, not disappear from the UI.
+            if self.update_features is not None:
+                update_features = list(range(self.update_features))
+            if self.hidden_features is not None:
+                hidden_features = list(range(self.hidden_features))
+            if self.reset_features is not None:
+                reset_features = list(range(self.reset_features))
             
             # Fallback if no features found
-            if not update_features and not hidden_features:
+            if not reset_features and not update_features and not hidden_features:
                 update_features = [0]  # Default feature
                 
         except Exception as e:
             print(f"Error getting features: {e}")
             update_features = [0]
+            reset_features = [0]
             hidden_features = [0]
         
         # Get available sequence lengths for the length filter dropdown
         available_lengths = []
         if self.all_sequences:
             available_lengths = sorted(list(set(len(seq) for seq in self.all_sequences)))
+
+        transcoder_options = [
+            {'label': 'Update Gate', 'value': 'update'},
+            {'label': 'Hidden Context', 'value': 'hidden'},
+        ]
+        if self.reset_features is not None:
+            transcoder_options.insert(0, {'label': 'Reset Gate', 'value': 'reset'})
         
         self.app.layout = html.Div([
             html.H1("Enhanced RNN Transcoder Feature Activation Visualizer", 
@@ -243,10 +265,7 @@ class EnhancedInteractiveFeatureVisualizer:
                     html.Label("Transcoder Type:", style={'font-weight': 'bold'}),
                     dcc.RadioItems(
                         id='transcoder-type',
-                        options=[
-                            {'label': 'Update Gate', 'value': 'update'},
-                            {'label': 'Hidden Context', 'value': 'hidden'}
-                        ],
+                        options=transcoder_options,
                         value='update',
                         inline=True,
                         style={'margin': '10px 0'}
@@ -351,12 +370,12 @@ class EnhancedInteractiveFeatureVisualizer:
                     options=[
                         {'label': 'Include sequences where feature never activates (for "worst" view)', 'value': 'include'}
                     ],
-                    value=['include'] if self.all_sequences is not None else [],
+                    value=['include'] if self.all_sequences else [],
                     style={'margin': '10px 0'}
                 ),
                 html.Div(
                     f"Total sequences available: {len(self.all_sequences) if self.all_sequences else 'Unknown'}" +
-                    (f", Total features: {self.hidden_features+self.update_features}"),
+                    (f", Total features: {sum(n for n in (self.hidden_features, self.update_features, self.reset_features) if n is not None)}"),
                     style={'font-size': '12px', 'color': '#666', 'margin-left': '20px'}
                 )
             ], style={'margin-bottom': '20px', 'padding': '10px', 'background-color': '#f9f9f9', 'border-radius': '5px'}),
@@ -396,7 +415,13 @@ class EnhancedInteractiveFeatureVisualizer:
                     isinstance(self.analyzer.feature_activations, dict) and
                     transcoder_type in self.analyzer.feature_activations):
                     
-                    features = sorted(list(self.analyzer.feature_activations[transcoder_type].keys()))
+                    feature_count = {
+                        "reset": self.reset_features,
+                        "update": self.update_features,
+                        "hidden": self.hidden_features,
+                    }.get(transcoder_type)
+                    features = (list(range(feature_count)) if feature_count is not None
+                                else sorted(list(self.analyzer.feature_activations[transcoder_type].keys())))
                 else:
                     features = [0]  # Default fallback
                 
@@ -709,14 +734,14 @@ class EnhancedInteractiveFeatureVisualizer:
                                 fig5.add_trace(go.Bar(
                                     x=self.analyzer.tokens,
                                     y=normalized_copytoken_counts,
-                                    name=f'Token Copy Distribution {total_count/total_feature_activations}',
+                                    name=f'Copy-phase input token distribution {total_count/total_feature_activations}',
                                     marker_color='lightcoral',
                                     text=[f"{val:.3f}" for val in normalized_copytoken_counts],
                                     textposition='auto'
                                 ))
                                 fig5.update_layout(
-                                    title=f"Token Copy Distribution {total_count/total_feature_activations}",
-                                    xaxis_title="Token Idx",
+                                    title=f"Copy-phase input-token distribution {total_count/total_feature_activations}",
+                                    xaxis_title="Input token (not the concurrently predicted output)",
                                     yaxis_title="Activation Rate",
                                     height=300,
                                     margin=dict(l=50, r=50, t=80, b=50)
@@ -743,14 +768,14 @@ class EnhancedInteractiveFeatureVisualizer:
                                 fig6.add_trace(go.Bar(
                                     x=self.analyzer.tokens,
                                     y= normalized_copytokenprev_counts,
-                                    name=f'Token Copy Prev Distribution{total_count/total_feature_activations}',
+                                    name=f'Previous copy-phase input-token distribution {total_count/total_feature_activations}',
                                     marker_color='lightcoral',
                                     text=[f"{val:.3f}" for val in normalized_copytokenprev_counts],
                                     textposition='auto'
                                 ))
                                 fig6.update_layout(
-                                    title=f"Token Copy prev Distribution {total_count/total_feature_activations}",
-                                    xaxis_title="Token Idx",
+                                    title=f"Previous copy-phase input-token distribution {total_count/total_feature_activations}",
+                                    xaxis_title="Input token",
                                     yaxis_title="Activation Rate",
                                     height=300,
                                     margin=dict(l=50, r=50, t=80, b=50)
@@ -772,7 +797,9 @@ class EnhancedInteractiveFeatureVisualizer:
                                     if stats['n_activations'] > 0:
                                         entries = list(range(len(dist)))
                                         entry_counts = dist 
-                                        normalized_entry_counts = [count / (stats['n_activations'] if "_mag" not in key else stats['n_magnitudes']) for count in entry_counts]
+                                        denominator = (stats['n_activations'] if "_mag" not in key
+                                                       else stats['n_magnitudes'])
+                                        normalized_entry_counts = [count / denominator for count in entry_counts]
                                         
                                         fig_plot = go.Figure()
                                         fig_plot.add_trace(go.Bar(
@@ -784,7 +811,7 @@ class EnhancedInteractiveFeatureVisualizer:
                                             textposition='auto'
                                         ))
                                         fig_plot.update_layout(
-                                            title=f"Feature {feature_idx} {key}({sum(dist)/(stats['n_activations'] if "_mag" not in key else stats['n_magnitudes'])})",
+                                            title=f"Feature {feature_idx} {key} ({sum(dist) / denominator})",
                                             xaxis_title= " ".join(key.split("_")[:1] if "ommon" not in key else key.split("_")[:2]),
                                             yaxis_title="Proportion of Feature's Activations",
                                             height=300,
@@ -956,7 +983,7 @@ class EnhancedInteractiveFeatureVisualizer:
         self.app.run_server(host=host, port=port, debug=debug)
 
 def launch_enhanced_visualizer(analyzer, all_sequences=None, 
-                               features_hidden=None, features_update=None,
+                               features_hidden=None, features_update=None, features_reset=None,
                                rl=False):
     """
     Launch the enhanced visualizer with inactive sequence support
@@ -967,7 +994,7 @@ def launch_enhanced_visualizer(analyzer, all_sequences=None,
         total_features: Total number of features in the model
     """
     visualizer = EnhancedInteractiveFeatureVisualizer(analyzer, all_sequences, 
-                                                      features_hidden, features_update,
+                                                      features_hidden, features_update, features_reset,
                                                       rl=rl)
     visualizer.run()
 
@@ -977,7 +1004,10 @@ if __name__ == "__main__":
     parser.add_argument("--feature_dict_path", required=True)
     parser.add_argument("--features_hidden", type=int, required=True)
     parser.add_argument("--features_update", type=int, required=True)
+    parser.add_argument("--features_reset", type=int)
     parser.add_argument("--rl", action="store_true")
+    parser.add_argument("--allow_legacy_feature_cache", action="store_true",
+                        help="Allow cache without provenance/full-sequence metadata (unsafe)")
 
     args = parser.parse_args()
      
@@ -985,16 +1015,25 @@ if __name__ == "__main__":
     with open(args.feature_dict_path, "rb") as f:
         analysis_dict = pickle.load(f)
     
-    # Load all sequences if provided
-    all_sequences = []
-    for transcoder_type in analysis_dict:
-        for feature in analysis_dict[transcoder_type]:
-            sequences = analysis_dict[transcoder_type][feature].keys()
-            all_sequences.extend(list(sequences))
+    metadata_path = args.feature_dict_path.replace("_features.p", "_metadata.p")
+    if os.path.exists(metadata_path):
+        with open(metadata_path, "rb") as f:
+            all_sequences = pickle.load(f).get("all_sequences", [])
+    else:
+        if not args.allow_legacy_feature_cache:
+            parser.error(
+                "Feature cache has no metadata; regenerate it with circuit.copy_find_features "
+                "or pass --allow_legacy_feature_cache explicitly."
+            )
+        # Legacy caches cannot know about sequences with no activations.
+        all_sequences = []
+        for transcoder_type in analysis_dict:
+            for feature in analysis_dict[transcoder_type]:
+                all_sequences.extend(analysis_dict[transcoder_type][feature].keys())
     
     # Create analyzer
     analyzer = CopyFeatureActivationAnalyzer(None, None, None, "cpu") if not args.rl else RLFeatureActivationAnalyzer(None, None, None, "cpu")
     analyzer.feature_activations = analysis_dict
     
     launch_enhanced_visualizer(analyzer, all_sequences, args.features_hidden,
-                               args.features_update, args.rl)
+                               args.features_update, args.features_reset, args.rl)

@@ -40,6 +40,8 @@ class TranscoderDataGenerator:
             
         Returns:
             Dict with keys:
+            - 'reset_gate_inputs': Concatenated [h_{t-1}, x_t] for reset gate
+            - 'reset_gate_targets': True reset gate values r_t
             - 'update_gate_inputs': Concatenated [h_{t-1}, x_t] for update gate
             - 'update_gate_targets': True update gate values z_t
             - 'hidden_context_inputs': Concatenated [r_t ⊙ h_{t-1}, x_t] for hidden context
@@ -63,6 +65,8 @@ class TranscoderDataGenerator:
 
         print(f"Done generating sequences {unique_sequences.shape} {unique_masks.shape}")
         
+        all_reset_inputs = []
+        all_reset_targets = []
         all_update_inputs = []
         all_update_targets = []
         all_hidden_inputs = []
@@ -83,10 +87,13 @@ class TranscoderDataGenerator:
                     if start_idx >= end_idx: break
                     
                     batch_sequences = unique_sequences[start_idx:end_idx].to(self.device)
-                    outs, _, r_records, z_records, h_new_records, h_records =  inference_generate(self.rnn_model, batch_sequences, 
+                    logits, _, r_records, z_records, h_new_records, h_records =  inference_generate(self.rnn_model, batch_sequences, 
                                     discrete=True, record_gates=True)
-                    
-                    outs = torch.nn.functional.one_hot(outs.argmax(-1), num_classes=30)
+
+                    # Keep raw readout logits for circuit-output probabilities.
+                    # The one-hot copy is only the autoregressive token stream
+                    # fed back into the RNN at later timesteps.
+                    outs = torch.nn.functional.one_hot(logits.argmax(-1), num_classes=30)
                     
                     r_t = r_records[0]  # (batch_size, 2*seq_len, hidden_size)
                     z_t = z_records[0]  # (batch_size, 2*seq_len, hidden_size)  
@@ -100,6 +107,7 @@ class TranscoderDataGenerator:
                     assert x_t.size(1)%2 == 0
                     sequence_data[x_t.size(1)//2]["inputs"].append(x_t)
                     sequence_data[x_t.size(1)//2]["outputs"].append(outs[:, :, :-1])
+                    sequence_data[x_t.size(1)//2]["logits"].append(logits)
                     sequence_data[x_t.size(1)//2]["h_prevs"].append(h_prev)
                     sequence_data[x_t.size(1)//2]["z_ts"].append(z_t)
                     sequence_data[x_t.size(1)//2]["r_ts"].append(r_t)
@@ -116,6 +124,12 @@ class TranscoderDataGenerator:
                         
                         # Prepare transcoder inputs and targets
                         
+                        # Reset/update transcoders: input = [h_{t-1}, x_t].
+                        # Keeping r_t as an explicit target lets the replacement
+                        # graph expose reset-feature -> candidate-feature paths.
+                        reset_gate_input = torch.cat([valid_h_prev, valid_x_t], dim=1)
+                        reset_gate_target = valid_r_t
+
                         # Update gate transcoder: input = [h_{t-1}, x_t], target = z_t
                         update_gate_input = torch.cat([valid_h_prev, valid_x_t], dim=1)
                         update_gate_target = valid_z_t
@@ -126,6 +140,8 @@ class TranscoderDataGenerator:
                         hidden_context_target = valid_h_new_t
                         
                         # Collect data
+                        all_reset_inputs.append(reset_gate_input)
+                        all_reset_targets.append(reset_gate_target)
                         all_update_inputs.append(update_gate_input)
                         all_update_targets.append(update_gate_target)
                         all_hidden_inputs.append(hidden_context_input)
@@ -133,6 +149,8 @@ class TranscoderDataGenerator:
         
         # Concatenate all collected data
         dataset = {
+            'reset_gate_inputs': torch.cat(all_reset_inputs, dim=0),
+            'reset_gate_targets': torch.cat(all_reset_targets, dim=0),
             'update_gate_inputs': torch.cat(all_update_inputs, dim=0),
             'update_gate_targets': torch.cat(all_update_targets, dim=0),
             'hidden_context_inputs': torch.cat(all_hidden_inputs, dim=0),
@@ -144,13 +162,16 @@ class TranscoderDataGenerator:
             sequence_datasets.append(StackDataset(**sequence_data[length]))
         
         print(f"Generated transcoder dataset with {dataset['update_gate_inputs'].shape[0]} samples")
+        reset_dataset = {"input": dataset["reset_gate_inputs"],
+                         "output": dataset["reset_gate_targets"]}
         update_dataset = {"input": dataset["update_gate_inputs"],
                           "output": dataset["update_gate_targets"]}
         hidden_dataset = {"input": dataset["hidden_context_inputs"],
                           "output": dataset["hidden_context_targets"]}
+        reset_dataset = StackDataset(**reset_dataset)
         update_dataset = StackDataset(**update_dataset)
         hidden_dataset = StackDataset(**hidden_dataset)
-        return update_dataset, hidden_dataset, sequence_datasets
+        return reset_dataset, update_dataset, hidden_dataset, sequence_datasets
     
     def _generate_unique_sequences(self, n_tokens: int, n_sequences: int, 
                                  max_len: int, min_len: int):
@@ -193,6 +214,8 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, required=True)
     parser.add_argument("--hidden_size", type=int, required=True)
     parser.add_argument("--model_path", required=True)
+    parser.add_argument("--output_dir", required=True,
+                        help="Directory for reset/update/candidate datasets and trace sequences")
 
     args = parser.parse_args()
     rnn = RNN(input_size=args.n_tokens+1, hidden_size=args.hidden_size,
@@ -200,13 +223,14 @@ if __name__ == "__main__":
                 out_act=lambda x: x, use_gru=True, learn_init=False)
     rnn.load_state_dict(torch.load(args.model_path))
     generator = TranscoderDataGenerator(rnn)
-    update_dataset, hidden_dataset, sequence_datasets = generator.generate_transcoder_dataset(n_tokens=args.n_tokens,
+    reset_dataset, update_dataset, hidden_dataset, sequence_datasets = generator.generate_transcoder_dataset(n_tokens=args.n_tokens,
                                                     n_sequences=args.n_sequences,
                                                     batch_size=args.batch_size,
                                                     max_len=args.max_len,
                                                     min_len=args.min_len)
-    os.makedirs("/w/nobackup/436/lambda/data/copy_transcoder/", exist_ok=True)
-    torch.save(update_dataset, f"/w/nobackup/436/lambda/data/copy_transcoder/{args.dataset_name}_update_gate1.pt")
-    torch.save(hidden_dataset, f"/w/nobackup/436/lambda/data/copy_transcoder/{args.dataset_name}_hctx1.pt")
+    os.makedirs(args.output_dir, exist_ok=True)
+    torch.save(reset_dataset, os.path.join(args.output_dir, f"{args.dataset_name}_reset_gate.pt"))
+    torch.save(update_dataset, os.path.join(args.output_dir, f"{args.dataset_name}_update_gate.pt"))
+    torch.save(hidden_dataset, os.path.join(args.output_dir, f"{args.dataset_name}_hctx.pt"))
     for i in range(len(sequence_datasets)):
-        torch.save(sequence_datasets[i], f"/w/nobackup/436/lambda/data/copy_transcoder/{args.dataset_name}_seq{i+3}.pt")
+        torch.save(sequence_datasets[i], os.path.join(args.output_dir, f"{args.dataset_name}_seq{i+3}.pt"))

@@ -1,5 +1,6 @@
 import math
 import sys
+import json
 
 import torch
 import torch.nn as nn
@@ -10,10 +11,25 @@ from typing import Dict, Tuple, List
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from models.transcoders import Transcoder, set_transcoder_weights
+from models.transcoders import Transcoder, initialize_paired_dpi, set_transcoder_weights
 from datasets.utils import create_transcoder_dataloaders, ConsolidatedStackDataset
 from training.train_utils import SignalManager, normalize_batch
 torch.serialization.add_safe_globals([StackDataset])
+
+
+def sample_paired_dpi_calibration(dataset, n_samples: int, dpi_seed: int = None):
+    """Sample paired training rows without materializing the whole dataset."""
+    if len(dataset) == 0:
+        raise ValueError("Cannot sample DPI calibration data from an empty dataset")
+    generator = None if dpi_seed is None else torch.Generator().manual_seed(dpi_seed)
+    indices = torch.randint(len(dataset), (n_samples,), generator=generator)
+    examples = [dataset[int(index)] for index in indices]
+    try:
+        inputs = torch.stack([example["input"] for example in examples])
+        targets = torch.stack([example["output"] for example in examples])
+    except KeyError as exc:
+        raise ValueError("Paired DPI requires dataset examples with 'input' and 'output' keys") from exc
+    return inputs, targets
 
 class TranscoderLoss(nn.Module):
     """
@@ -132,7 +148,7 @@ class TranscoderTrainer:
             'total': [], 'reconstruction': [], 'sparsity': [], 'penalty': [], "norm_recon": []
         }
         
-    def train_epoch(self, train_loader: DataLoader, run=None) -> Dict[str, float]:
+    def train_epoch(self, train_loader: DataLoader, run=None, epoch: int = None) -> Dict[str, float]:
         """Train for one epoch"""
         self.transcoder.train()
         feature_activation_densities = torch.zeros((self.transcoder.n_feats)).to(self.device)
@@ -143,8 +159,9 @@ class TranscoderTrainer:
         
         n_batches = len(train_loader)
         
-        # pbar = tqdm(train_loader, total=n_batches)
-        for batch in train_loader:
+        description = f"Epoch {epoch + 1}" if epoch is not None else "Training"
+        pbar = tqdm(train_loader, total=n_batches, leave=False, desc=description)
+        for batch in pbar:
             inputs = batch['input'].to(self.device)
             targets = batch['output'].to(self.device)
 
@@ -185,6 +202,7 @@ class TranscoderTrainer:
                 feature_activation_densities += (features_activated > 0).sum(dim=0)
             
             self.loss_fn.steps +=1
+            pbar.set_postfix(loss=f"{loss_dict['total_loss'].item():.4g}")
         for loss_type in epoch_losses:
             epoch_losses[loss_type] /= n_batches
         if run:
@@ -232,31 +250,60 @@ class TranscoderTrainer:
               train_loader: DataLoader, 
               val_loader: DataLoader, 
               n_epochs: int,
+              previous_epochs: int = 0,
               save_path: str = None,
-              save_every: int = 25, run=None) -> None:
-        
-        self.loss_fn.total_steps = n_epochs * (len(train_loader.dataset)//train_loader.batch_size + 1)
-        self.loss_fn.off *= (len(train_loader.dataset)//train_loader.batch_size + 1)
-        print("Running for ", n_epochs)
+              save_every: int = 25, run=None) -> Dict[str, float]:
+        if previous_epochs < 0:
+            raise ValueError("previous_epochs must be non-negative")
+
+        # Put a resumed run on the same batch-level schedule timeline as an
+        # uninterrupted run. --n_epochs is the number of *additional* epochs.
+        steps_per_epoch = len(train_loader)
+        self.loss_fn.total_steps = (previous_epochs + n_epochs) * steps_per_epoch
+        self.loss_fn.off *= steps_per_epoch
+        self.loss_fn.steps = previous_epochs * steps_per_epoch
+        print(f"Running for {n_epochs} more epochs (resuming after {previous_epochs} epochs)")
         pbar = tqdm(range(n_epochs))
+        final_val_losses = None
         for epoch in pbar:
-            train_losses = self.train_epoch(train_loader, run=run)
+            absolute_epoch = previous_epochs + epoch
+            train_losses = self.train_epoch(train_loader, run=run, epoch=absolute_epoch)
             
-            if epoch % save_every == 0:
+            if epoch % save_every == 0 or epoch == n_epochs - 1:
                 val_losses = self.validate(val_loader, run=run)
-                best_val_loss = val_losses['total']
+                final_val_losses = val_losses
 
             for loss_type in train_losses.keys():
                 self.train_history[loss_type].append(train_losses[loss_type])
-                self.val_history[loss_type].append(val_losses[loss_type])
+                self.val_history[loss_type].append(
+                    val_losses[loss_type]
+                    if epoch % save_every == 0 or epoch == n_epochs - 1
+                    else float("nan")
+                )
 
             pbar.set_description(f"Train: {train_losses['total']:.4f}, Val: {val_losses['total']:.4f}")
             
-            if epoch % 10 == 0 and save_path:
+            if absolute_epoch % 10 == 0 and save_path:
                 torch.save({"transcoder":self.transcoder.state_dict(),
-                            "optim": self.optimizer.state_dict()}, f"{save_path}/e{epoch}.ckpt")
-        torch.save({"transcoder":self.transcoder.state_dict(),
-                            "optim": self.optimizer.state_dict()}, f"{save_path}/final_model.ckpt")
+                            "optim": self.optimizer.state_dict()},
+                           f"{save_path}/e{absolute_epoch}.ckpt")
+        if save_path:
+            torch.save({"transcoder":self.transcoder.state_dict(),
+                        "optim": self.optimizer.state_dict()},
+                       f"{save_path}/final_model.ckpt")
+        self.final_metrics = {
+            "previous_epochs": previous_epochs,
+            "final_train": train_losses,
+            "final_validation": final_val_losses,
+            "validation_epochs": [
+                previous_epochs + i for i, losses in enumerate(self.val_history["total"])
+                if not math.isnan(losses)
+            ],
+        }
+        if save_path:
+            with open(f"{save_path}/training_metrics.json", "w") as f:
+                json.dump(self.final_metrics, f, indent=2)
+        return self.final_metrics
     
     def plot_training_curves(self):
         """Plot training curves"""
@@ -284,7 +331,14 @@ def create_and_train_transcoders(dataset: Dict[str, torch.Tensor],
                                  device: str = 'cuda',
                                  n_epochs: int = 500,
                                  batch_size=64,
-                                 run=None, save_path=None):
+                                 run=None, save_path=None,
+                                 *,
+                                 num_workers: int = None,
+                                 split_seed: int = None,
+                                 init_mode: str = "random",
+                                 dpi_scale: float = 0.4,
+                                 dpi_calibration_samples: int = 8192,
+                                 dpi_seed: int = None):
     """
     Create and train transcoder models
     
@@ -296,7 +350,17 @@ def create_and_train_transcoders(dataset: Dict[str, torch.Tensor],
         device: Device to train on
         n_epochs: Number of training epochs
     """
-    # Create transcoders
+    if init_mode not in {"random", "paired_dpi"}:
+        raise ValueError(f"Unknown init_mode: {init_mode}")
+
+    # Split before sampling DPI examples so calibration never sees validation
+    # rows.
+    train_loader, val_loader = create_transcoder_dataloaders(
+        dataset, batch_size=batch_size, num_workers=num_workers,
+        split_seed=split_seed)
+    print("--Created Dataloader--")
+
+    # Create transcoder
     input_dim = hidden_size + input_size  # [h_{t-1}, x_t]
     
     transcoder = Transcoder(
@@ -305,21 +369,37 @@ def create_and_train_transcoders(dataset: Dict[str, torch.Tensor],
         n_feats=n_feats
     )
     optimizer = optim.Adam(transcoder.parameters(), lr=train_cfg["lr"])
-    if train_cfg["ctd_from"]:
+    continuing = bool(train_cfg["ctd_from"])
+    if continuing and init_mode != "random":
+        raise ValueError("Continuation training cannot also apply a fresh initialization")
+    if continuing:
         ckpt = torch.load(train_cfg["ctd_from"], weights_only=True, map_location=device)
         transcoder.load_state_dict(ckpt["transcoder"])
         optimizer.load_state_dict(ckpt["optim"])
         for state in optimizer.state.values():
             for k, v in state.items():
                 if isinstance(v, torch.Tensor):
-                    state[k] = v.cuda()
+                    state[k] = v.to(device)
     print("--Initialized Transcoder--")
-    weight_init_fn = set_transcoder_weights(p=0.01)
-    transcoder.input_to_features.apply(weight_init_fn)
-    transcoder.features_to_outputs.apply(weight_init_fn)
-    
-    train_loader, val_loader = create_transcoder_dataloaders(dataset, batch_size=batch_size)
-    print("--Created Dataloader--")
+    initialization_metadata = {"mode": init_mode}
+    if not continuing:
+        if init_mode == "paired_dpi":
+            calibration_count = max(n_feats, dpi_calibration_samples)
+            calibration_inputs, calibration_targets = sample_paired_dpi_calibration(
+                train_loader.dataset, calibration_count, dpi_seed=dpi_seed)
+            dpi_generator = None if dpi_seed is None else torch.Generator().manual_seed(dpi_seed)
+            initialization_metadata.update(initialize_paired_dpi(
+                transcoder, calibration_inputs, calibration_targets,
+                datapoint_scale=dpi_scale, generator=dpi_generator))
+            initialization_metadata["dpi_seed"] = dpi_seed
+            print("--Initialized Transcoder with paired DPI--")
+        else:
+            weight_init_fn = set_transcoder_weights(p=0.01)
+            transcoder.input_to_features.apply(weight_init_fn)
+            transcoder.features_to_outputs.apply(weight_init_fn)
+    if save_path:
+        with open(f"{save_path}/initialization.json", "w") as f:
+            json.dump(initialization_metadata, f, indent=2)
     loss_fn = TranscoderLoss(lambda_sparsity=train_cfg["l_sparsity"], 
                              lambda_penalty=train_cfg["l_penalty"],
                              c_sparsity=train_cfg["c_sparsity"], 
@@ -344,6 +424,7 @@ def create_and_train_transcoders(dataset: Dict[str, torch.Tensor],
         train_loader=train_loader,
         val_loader=val_loader,
         n_epochs=n_epochs,
+        previous_epochs=train_cfg.get("previous_epochs", 0),
         save_path=save_path,
         run=run
     )
@@ -362,6 +443,7 @@ if __name__ == "__main__":
     parser.add_argument("--n_feats", type=int, required=True, help="Number of sequences to generate")
     parser.add_argument("--dataset_paths", nargs="+", type=str, required=True, help="Name of dataset")
     parser.add_argument("--batch_size", type=int, required=True)
+    parser.add_argument("--num_workers", type=int, default=None)
     parser.add_argument("--hidden_size", type=int, required=True)
     parser.add_argument("--lr", type=float, required=True)
     parser.add_argument("--l_sparsity", type=float, required=True)
@@ -374,8 +456,23 @@ if __name__ == "__main__":
     parser.add_argument("--scale_pen_distance", action="store_true")
     parser.add_argument("--save_path", required=True)
     parser.add_argument("--ctd_from", default=None)
+    parser.add_argument("--previous_epochs", type=int, default=0,
+                        help="Completed epochs represented by --ctd_from")
+    parser.add_argument("--seed", type=int, default=2)
+    parser.add_argument("--split_seed", type=int, default=None,
+                        help="Train/validation split seed; defaults to --seed")
+    parser.add_argument("--init_mode", choices=["random", "paired_dpi"], default="random",
+                        help="Weight initialization; paired_dpi uses paired training examples")
+    parser.add_argument("--dpi_scale", type=float, default=0.4,
+                        help="Data-point contribution to paired-DPI initialization")
+    parser.add_argument("--dpi_calibration_samples", type=int, default=8192,
+                        help="Training rows sampled to calibrate paired-DPI initialization")
+    parser.add_argument("--dpi_seed", type=int, default=None,
+                        help="DPI sample seed; defaults to --split_seed")
 
     args = parser.parse_args()
+    if args.previous_epochs and not args.ctd_from:
+        parser.error("--previous_epochs requires --ctd_from")
 
     run = wandb.init(
         entity="mishaalkandapath",
@@ -389,17 +486,28 @@ if __name__ == "__main__":
             "bandwidth": 2,
             "n_feats": args.n_feats,
             "n_epochs": args.n_epochs,
+            "previous_epochs": args.previous_epochs,
+            "seed": args.seed,
+            "split_seed": args.split_seed if args.split_seed is not None else args.seed,
+            "init_mode": args.init_mode,
+            "dpi_scale": args.dpi_scale,
+            "dpi_calibration_samples": args.dpi_calibration_samples,
+            "dpi_seed": args.dpi_seed if args.dpi_seed is not None else (args.split_seed if args.split_seed is not None else args.seed),
             "w_det": int(args.w_detach),
             "scale_pen_distance": int(args.scale_pen_distance)
         },
     )
     # run = None
-    torch.manual_seed(2)
+    torch.manual_seed(args.seed)
     train_cfg = {"lr": args.lr, "l_sparsity": args.l_sparsity, 
                  "l_schedule": args.lambda_sparse_schedule, 
                  "l_sched_offset": args.l_sparse_offset, "w_det": args.w_detach,
                  "l_penalty":args.l_penalty, "c_sparsity":args.c_sparsity, "scale_pen": args.scale_pen_distance, "ctd_from":args.ctd_from,
-                 "n_epochs": args.n_epochs, "n_feats": args.n_feats, "batch_size":args.batch_size}
+                 "n_epochs": args.n_epochs, "n_feats": args.n_feats, "batch_size":args.batch_size,
+                 "num_workers": args.num_workers, "previous_epochs": args.previous_epochs,
+                 "init_mode": args.init_mode, "dpi_scale": args.dpi_scale,
+                 "dpi_calibration_samples": args.dpi_calibration_samples,
+                 "dpi_seed": args.dpi_seed if args.dpi_seed is not None else (args.split_seed if args.split_seed is not None else args.seed)}
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     print("--Loading Dataset(s)--")
@@ -415,4 +523,10 @@ if __name__ == "__main__":
     create_and_train_transcoders(dataset, train_cfg, 
                                  hidden_size=args.hidden_size, 
                                  input_size=args.input_size, 
-                                 n_feats=args.n_feats, device=device, n_epochs=args.n_epochs, batch_size=args.batch_size, save_path=args.save_path, run=run)
+                                 n_feats=args.n_feats, device=device, n_epochs=args.n_epochs,
+                                 batch_size=args.batch_size, num_workers=args.num_workers,
+                                 split_seed=args.split_seed if args.split_seed is not None else args.seed,
+                                 init_mode=args.init_mode, dpi_scale=args.dpi_scale,
+                                 dpi_calibration_samples=args.dpi_calibration_samples,
+                                 dpi_seed=args.dpi_seed if args.dpi_seed is not None else (args.split_seed if args.split_seed is not None else args.seed),
+                                 save_path=args.save_path, run=run)

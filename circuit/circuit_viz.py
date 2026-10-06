@@ -7,13 +7,14 @@ import plotly.graph_objects as go
 import networkx as nx
 
 import json
+import os
 import pandas as pd
 import numpy as np
 import torch 
 from torch.utils.data import StackDataset
 
 from circuit.edge_att import CircuitTracer
-from circuit.copy_find_features import CopyFeatureActivationAnalyzer
+from circuit.copy_find_features import CopyFeatureActivationAnalyzer, checkpoint_fingerprint
 from circuit.rl_find_features import RLFeatureActivationAnalyzer
 from circuit.graph_prune import GraphPruner
 
@@ -46,8 +47,14 @@ class InteractiveCircuitVisualizer:
             return {'type': 'input', 'timestep': int(parts[1]), 'dimension': int(parts[2])}
         elif node_name.startswith('f_z_'):
             return {'type': 'feature_update', 'timestep': int(parts[2]), 'feature_idx': int(parts[3])}
+        elif node_name.startswith('f_r_'):
+            return {'type': 'feature_reset', 'timestep': int(parts[2]), 'feature_idx': int(parts[3])}
         elif node_name.startswith('f_n_'):
             return {'type': 'feature_hidden', 'timestep': int(parts[2]), 'feature_idx': int(parts[3])}
+        elif node_name.startswith('h_'):
+            return {'type': 'hidden_state', 'timestep': int(parts[1]), 'dimension': int(parts[2])}
+        elif node_name.startswith('e_'):
+            return {'type': 'error', 'gate': parts[1], 'timestep': int(parts[2])}
         elif node_name.startswith('o_'):
             return {'type': 'output', 'timestep': int(parts[1]), 'dimension': int(parts[2])}
         else:
@@ -75,7 +82,7 @@ class InteractiveCircuitVisualizer:
         for node, info in node_info.items():
             t = info['timestep']
             if t not in timesteps:
-                timesteps[t] = {'input': [], 'feature_update': [], 'feature_hidden': [], 'output': []}
+                timesteps[t] = {'input': [], 'error': [], 'feature_reset': [], 'feature_update': [], 'feature_hidden': [], 'hidden_state': [], 'output': []}
             timesteps[t][info['type']].append(node)
         
         # Sort nodes within each type by contribution (highest contribution at bottom)
@@ -85,7 +92,7 @@ class InteractiveCircuitVisualizer:
         
         positions = {}
         timestep_width = 200
-        type_spacing = {'input': 80, 'feature_update': 60, 'feature_hidden': 60, 'output': 80}
+        type_spacing = {'input': 80, 'error': 24, 'feature_reset': 60, 'feature_update': 60, 'feature_hidden': 60, 'hidden_state': 24, 'output': 80}
         
         for t, nodes_by_type in timesteps.items():
             x_base = t * timestep_width
@@ -99,14 +106,23 @@ class InteractiveCircuitVisualizer:
             # Sorted by contribution - highest contribution nodes at bottom of their group
             for i, node in enumerate(nodes_by_type['input']):
                 positions[node] = (x_base - 50, 400 + i * type_spacing['input'])
+
+            for i, node in enumerate(nodes_by_type['error']):
+                positions[node] = (x_base - 80, 120 + i * type_spacing['error'])
             
             # Place feature nodes in the middle
             # Sorted by contribution - highest contribution nodes at bottom of their group
+            for i, node in enumerate(nodes_by_type['feature_reset']):
+                positions[node] = (x_base - 40, 120 + i * type_spacing['feature_reset'])
+
             for i, node in enumerate(nodes_by_type['feature_update']):
                 positions[node] = (x_base, 150 + i * type_spacing['feature_update'])
                 
             for i, node in enumerate(nodes_by_type['feature_hidden']):
                 positions[node] = (x_base + 50, 150 + i * type_spacing['feature_hidden'])
+
+            for i, node in enumerate(nodes_by_type['hidden_state']):
+                positions[node] = (x_base + 90, 150 + i * type_spacing['hidden_state'])
         
         return positions
     
@@ -114,8 +130,11 @@ class InteractiveCircuitVisualizer:
         """Get color for node based on type"""
         color_map = {
             'input': '#4CAF50',
+            'error': '#616161',
+            'feature_reset': '#E57373',
             'feature_update': '#2196F3', 
             'feature_hidden': '#FF9800',
+            'hidden_state': '#8E7CC3',
             'output': '#F44336'
         }
         return color_map.get(node_type, '#757575')
@@ -125,7 +144,13 @@ class InteractiveCircuitVisualizer:
         """Get activation magnitude for a given node"""
         node_info = self._parse_node_info(node_name)
         
-        if node_info['type'] == 'feature_update':
+        if node_info['type'] == 'feature_reset':
+            timestep = node_info['timestep']
+            feature_idx = node_info['feature_idx']
+            for t, feat_idx, magnitude in active_features.get('reset', []):
+                if t == timestep and feat_idx == feature_idx:
+                    return float(magnitude)
+        elif node_info['type'] == 'feature_update':
             timestep = node_info['timestep']
             feature_idx = node_info['feature_idx']
             
@@ -284,7 +309,7 @@ class InteractiveCircuitVisualizer:
         # ... (rest of the node creation code remains the same) ...
         
         # Add nodes by type (this part remains unchanged)
-        node_types = ['input', 'feature_update', 'feature_hidden', 'output']
+        node_types = ['input', 'feature_reset', 'feature_update', 'feature_hidden', 'hidden_state', 'output']
         
         for node_type in node_types:
             nodes_of_type = [node for node, info in node_info.items() if info['type'] == node_type]
@@ -310,7 +335,7 @@ class InteractiveCircuitVisualizer:
                 if info['type'] == 'input':
                     text = f"x_{info['timestep']}_{info['dimension']}"
                     hover_info = f"Input Node<br>Timestep: {info['timestep']}<br>Dimension: {info['dimension']}"
-                elif info['type'] in ['feature_update', 'feature_hidden']:
+                elif info['type'] in ['feature_reset', 'feature_update', 'feature_hidden']:
                     text = f"f_{info.get('feature_idx', 0)}"
                     
                     # Get activation magnitude if available
@@ -318,7 +343,8 @@ class InteractiveCircuitVisualizer:
                     if active_features:
                         activation_mag = self._get_node_activation_magnitude(node, active_features)
                     
-                    hover_info = f"{'Feature Update' if info['type'] == 'feature_update' else 'Feature Hidden'}<br>" \
+                    feature_label = {'feature_reset': 'Feature Reset', 'feature_update': 'Feature Update', 'feature_hidden': 'Feature Hidden'}[info['type']]
+                    hover_info = f"{feature_label}<br>" \
                             f"Timestep: {info['timestep']}<br>" \
                             f"Feature: {info.get('feature_idx', 0)}"
                     
@@ -326,10 +352,21 @@ class InteractiveCircuitVisualizer:
                         hover_info += f"<br><b>Activation Magnitude: {activation_mag:.4f}</b>"
                     else:
                         hover_info += "<br>Activation Magnitude: N/A"
+
+                elif info['type'] == 'hidden_state':
+                    text = f"h_{info['timestep']}_{info['dimension']}"
+                    hover_info = f"Hidden State Coordinate<br>Timestep: {info['timestep']}<br>Dimension: {info['dimension']}"
+
+                elif info['type'] == 'error':
+                    text = f"e_{info['gate']}_{info['timestep']}"
+                    hover_info = (f"Frozen reconstruction residual ({info['gate']} gate)<br>"
+                                  f"Timestep: {info['timestep']}<br>"
+                                  "Source-only: unexplained by the transcoder")
                         
                 elif info['type'] == 'output':
                     text = f"o_{info['timestep']}_{info['dimension']}"
-                    hover_info = f"Output Node<br>Timestep: {info['timestep']}<br>Dimension: {info['dimension']}"
+                    hover_info = (f"Output Node<br>Timestep: {info['timestep']}<br>Dimension: {info['dimension']}<br>"
+                                  "Incoming edges are effects on the centered logit")
                 else:
                     text = node
                     hover_info = f"Unknown Node: {node}"
@@ -475,13 +512,14 @@ class InteractiveCircuitVisualizer:
             
             # New controls for edge normalization and thresholds
             html.Div([
-                # Toggle for normalized edges (for pruning)
+                # Pruning must preserve cross-bank attribution scale.
                 html.Div([
-                    html.Label("Use Normalized Edge Weights for Pruning:", style={'font-weight': 'bold', 'margin-right': '10px'}),
+                    html.Label("Pruning uses raw attribution edges (normalization is display-only).", style={'font-weight': 'bold', 'margin-right': '10px'}),
                     dcc.Checklist(
                         id='normalize-toggle',
                         options=[{'label': 'Normalized', 'value': 'normalized'}],
                         value=[],
+                        disabled=True,
                         style={'display': 'inline-block'}
                     )
                 ], style={'margin-bottom': '10px', 'text-align': 'center'}),
@@ -558,11 +596,12 @@ class InteractiveCircuitVisualizer:
             
             # Use cached data if available for display/normalization toggles
             if display_triggered and self.current_edge_weights is not None and self.current_edge_weights_normalized is not None:
-                use_normalized_for_pruning = 'normalized' in normalize_toggle
                 use_normalized_for_display = 'normalized' in display_normalize_toggle
                 
-                # Choose which edge weights to use for pruning
-                selected_edge_weights = self.current_edge_weights_normalized if use_normalized_for_pruning else self.current_edge_weights
+                # Group-normalized weights are a display aid only. Using them
+                # for pruning would arbitrarily change relative importance
+                # across gate banks.
+                selected_edge_weights = self.current_edge_weights
                 
                 # Choose which edge weights to display
                 display_edge_weights = self.current_edge_weights_normalized if use_normalized_for_display else self.current_edge_weights
@@ -576,18 +615,16 @@ class InteractiveCircuitVisualizer:
                         if edge_threshold is not None:
                             self.pruner.edge_threshold = edge_threshold
                         
-                        pruned_edges, kept_nodes = self.pruner.prune_graph(selected_edge_weights, self.current_sequence_tensor["outputs"])
+                        pruned_edges, kept_nodes = self.pruner.prune_graph(selected_edge_weights, self.current_output_logits)
                         fig = self._create_circuit_graph(pruned_edges, display_edge_weights, kept_nodes, self.current_active_features)
                         
-                        pruning_type = "normalized" if use_normalized_for_pruning else "raw"
                         display_type = "normalized" if use_normalized_for_display else "raw"
-                        stats = f"Circuit for '{' '.join(self.current_tokens)}' (pruning: {pruning_type}, display: {display_type}): {len(kept_nodes)} nodes, {len(pruned_edges)} edges"
+                        stats = f"Circuit for '{' '.join(self.current_tokens)}' (pruning: raw attribution, display: {display_type}): {len(kept_nodes)} nodes, {len(pruned_edges)} edges"
                     else:
                         fig = self._create_circuit_graph(selected_edge_weights, display_edge_weights, None, self.current_active_features)
                         all_nodes = set(sum(selected_edge_weights.keys(), ()))
-                        pruning_type = "normalized" if use_normalized_for_pruning else "raw"
                         display_type = "normalized" if use_normalized_for_display else "raw"
-                        stats = f"Circuit for '{' '.join(self.current_tokens)}' (pruning: {pruning_type}, display: {display_type}): {len(all_nodes)} nodes, {len(selected_edge_weights)} edges"
+                        stats = f"Circuit for '{' '.join(self.current_tokens)}' (pruning: raw attribution, display: {display_type}): {len(all_nodes)} nodes, {len(selected_edge_weights)} edges"
                     
                     return fig, stats
             
@@ -610,18 +647,10 @@ class InteractiveCircuitVisualizer:
                     sequence_tensor["inputs"], sequence_tensor["outputs"]
                 )
                 
-                # Get active features
-                data_dict = self.feature_analyzer.sequence_activations
-                active_features = {
-                    'update': [(t, data_dict["update"][tokens][t]["features"][i], 
-                            data_dict["update"][tokens][t]["magnitudes"][i]) 
-                            for t in range(len(tokens)) 
-                            for i in range(len(data_dict["update"][tokens][t]["features"]))],
-                    'hidden': [(t, data_dict["hidden"][tokens][t]["features"][i], 
-                            data_dict["hidden"][tokens][t]["magnitudes"][i]) 
-                            for t in range(len(tokens)) 
-                            for i in range(len(data_dict["hidden"][tokens][t]["features"]))]
-                }
+                # Recompute live activations from the checkpoint currently
+                # loaded in the tracer. Cached analyses are for feature
+                # browsing only and must not decide circuit membership.
+                active_features = self.circuit_tracer.get_active_features(sequence_tensor)
                 
                 print(f"Building circuit with {sum(len(v) for v in active_features.values())} active features")
                 
@@ -634,12 +663,12 @@ class InteractiveCircuitVisualizer:
                 self.current_sequence_tensor = sequence_tensor
                 self.current_active_features = active_features
                 self.current_tokens = tokens
+                self.current_output_logits = self.circuit_tracer.run_forward_pass(sequence_tensor)["logits"].detach().cpu()
                 
                 # Choose which edge weights to use for pruning
-                use_normalized_for_pruning = 'normalized' in normalize_toggle
                 use_normalized_for_display = 'normalized' in display_normalize_toggle
                 
-                selected_edge_weights = edge_weights_normalized if use_normalized_for_pruning else edge_weights
+                selected_edge_weights = edge_weights
                 display_edge_weights = edge_weights_normalized if use_normalized_for_display else edge_weights
                 
                 # Auto-prune if pruner exists
@@ -651,19 +680,17 @@ class InteractiveCircuitVisualizer:
                         self.pruner.edge_threshold = edge_threshold
                     
                     print(f"Auto-pruning {len(selected_edge_weights)} edges with node_threshold={self.pruner.node_threshold}, edge_threshold={self.pruner.edge_threshold}")
-                    pruned_edges, kept_nodes = self.pruner.prune_graph(selected_edge_weights, sequence_tensor["outputs"])
+                    pruned_edges, kept_nodes = self.pruner.prune_graph(selected_edge_weights, self.current_output_logits)
                     print(f"After pruning: {len(pruned_edges)} edges, {len(kept_nodes)} nodes")
                     
                     fig = self._create_circuit_graph(pruned_edges, display_edge_weights, kept_nodes, active_features)
-                    pruning_type = "normalized" if use_normalized_for_pruning else "raw"
                     display_type = "normalized" if use_normalized_for_display else "raw"
-                    stats = f"Circuit for '{' '.join(tokens)}' (pruning: {pruning_type}, display: {display_type}): {len(kept_nodes)} nodes, {len(pruned_edges)} edges (pruned from {len(selected_edge_weights)}) | Thresholds: node={self.pruner.node_threshold}, edge={self.pruner.edge_threshold}"
+                    stats = f"Circuit for '{' '.join(tokens)}' (pruning: raw attribution, display: {display_type}): {len(kept_nodes)} nodes, {len(pruned_edges)} edges (pruned from {len(selected_edge_weights)}) | Thresholds: node={self.pruner.node_threshold}, edge={self.pruner.edge_threshold}"
                 else:
                     fig = self._create_circuit_graph(selected_edge_weights, display_edge_weights, None, active_features)
                     all_nodes = set(sum(selected_edge_weights.keys(), ()))
-                    pruning_type = "normalized" if use_normalized_for_pruning else "raw"
                     display_type = "normalized" if use_normalized_for_display else "raw"
-                    stats = f"Circuit for '{' '.join(tokens)}' (pruning: {pruning_type}, display: {display_type}): {len(all_nodes)} nodes, {len(selected_edge_weights)} edges (no pruning)"
+                    stats = f"Circuit for '{' '.join(tokens)}' (pruning: raw attribution, display: {display_type}): {len(all_nodes)} nodes, {len(selected_edge_weights)} edges (no pruning)"
                 
                 return fig, stats
                 
@@ -694,10 +721,14 @@ if __name__ == "__main__":
     parser.add_argument("--rnn_path")
     parser.add_argument("--update_transcoder_path")
     parser.add_argument("--hidden_transcoder_path")
+    parser.add_argument("--reset_transcoder_path")
     parser.add_argument("--n_feats_hidden", type=int)
     parser.add_argument("--n_feats_update", type=int)
+    parser.add_argument("--n_feats_reset", type=int)
     parser.add_argument("--hidden_size", type=int)
     parser.add_argument("--dataset_paths", nargs="+")
+    parser.add_argument("--allow_legacy_feature_cache", action="store_true",
+                        help="Allow a cache without provenance metadata (unsafe; circuit membership is still recomputed live)")
 
     args = parser.parse_args()
     
@@ -710,27 +741,50 @@ if __name__ == "__main__":
                     use_gru=True, num_layers=1, learn_init=True)
         update_transcoder = Transcoder(input_size=56, out_size=48, n_feats=args.n_feats_update)
         hidden_transcoder = Transcoder(input_size=56, out_size=48, n_feats=args.n_feats_hidden)
+        reset_transcoder = Transcoder(input_size=56, out_size=48, n_feats=args.n_feats_reset) if args.reset_transcoder_path else None
         analyzer = RLFeatureActivationAnalyzer
     else:
         rnn_model = RNN(input_size=31, hidden_size=128, out_size=30, use_gru=True, num_layers=1)
         update_transcoder = Transcoder(input_size=159, out_size=128, n_feats=args.n_feats_update)
         hidden_transcoder = Transcoder(input_size=159, out_size=128, n_feats=args.n_feats_hidden)
+        reset_transcoder = Transcoder(input_size=159, out_size=128, n_feats=args.n_feats_reset) if args.reset_transcoder_path else None
         analyzer = CopyFeatureActivationAnalyzer
     
     rnn_model.load_state_dict(torch.load(args.rnn_path))
     update_transcoder.load_state_dict(torch.load(args.update_transcoder_path)["transcoder"])
     hidden_transcoder.load_state_dict(torch.load(args.hidden_transcoder_path)["transcoder"])
+    if reset_transcoder:
+        reset_transcoder.load_state_dict(torch.load(args.reset_transcoder_path)["transcoder"])
     
+    metadata_path = args.feature_dict_path.replace("_features.p", "_metadata.p")
+    if not os.path.exists(metadata_path):
+        if not args.allow_legacy_feature_cache:
+            raise ValueError(
+                "Feature cache has no provenance metadata. Re-run circuit.copy_find_features "
+                "or pass --allow_legacy_feature_cache explicitly."
+            )
+    else:
+        with open(metadata_path, "rb") as f:
+            metadata = pickle.load(f)
+        expected_fingerprints = {
+            "rnn": checkpoint_fingerprint(args.rnn_path),
+            "update": checkpoint_fingerprint(args.update_transcoder_path),
+            "hidden": checkpoint_fingerprint(args.hidden_transcoder_path),
+            "reset": checkpoint_fingerprint(args.reset_transcoder_path) if args.reset_transcoder_path else None,
+        }
+        if metadata.get("checkpoint_fingerprints") != expected_fingerprints:
+            raise ValueError("Feature cache was generated with different checkpoint(s); refusing to mix models.")
+
     with open(args.feature_dict_path, "rb") as f:
         analysis_dict = pickle.load(f)
     with open(args.feature_dict_path.replace("features.p", "sequences.p"), "rb") as f:
         analysis_dict_sequences = pickle.load(f)
 
-    feature_analyzer = analyzer(rnn_model, update_transcoder, hidden_transcoder)
+    feature_analyzer = analyzer(rnn_model, update_transcoder, hidden_transcoder, reset_transcoder=reset_transcoder)
     pruner = GraphPruner()
     feature_analyzer.feature_activations = analysis_dict
     feature_analyzer.sequence_activations = analysis_dict_sequences
 
-    circuit_tracer = CircuitTracer(rnn_model, update_transcoder, hidden_transcoder, device="cpu")
+    circuit_tracer = CircuitTracer(rnn_model, update_transcoder, hidden_transcoder, reset_transcoder=reset_transcoder, device="cpu")
     
     launch_circuit_visualizer(circuit_tracer, feature_analyzer, datasets, pruner)

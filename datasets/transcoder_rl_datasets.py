@@ -70,7 +70,8 @@ class RLTranscoderDataGenerator:
             max_extra_episodes: Maximum extra episodes to collect for balancing
             
         Returns:
-            Tuple of (update_gate_dataset, hidden_context_dataset)
+            Tuple of (reset_gate_dataset, update_gate_dataset,
+            hidden_context_dataset, sequence_datasets)
         """
         
         # Generate initial episodes with controlled reversals
@@ -86,9 +87,9 @@ class RLTranscoderDataGenerator:
                                                    initial_config,
                                                    trials_per_episode, max_extra_episodes)
         
-        update_dataset, hidden_dataset, sequence_datasetes = self._extract_transcoder_data(episodes_data, sequences)
+        reset_dataset, update_dataset, hidden_dataset, sequence_datasetes = self._extract_transcoder_data(episodes_data, sequences)
         
-        return update_dataset, hidden_dataset, sequence_datasetes
+        return reset_dataset, update_dataset, hidden_dataset, sequence_datasetes
     
     def _generate_controlled_episodes(self, n_episodes: int, 
                                       trials_per_episode: int, 
@@ -408,7 +409,7 @@ class RLTranscoderDataGenerator:
     
     def _extract_transcoder_data(self, episodes_data: Dict[str, List],
                                  sequences: Dict[str, 
-                                                       Dict[str, torch.Tensor]]) -> Tuple[StackDataset, StackDataset]:
+                                                       Dict[str, torch.Tensor]]) -> Tuple[StackDataset, StackDataset, StackDataset, List[StackDataset]]:
 
         inputs = episodes_data['inputs']
         hidden_states = episodes_data['hidden_states']
@@ -416,11 +417,21 @@ class RLTranscoderDataGenerator:
         reset_gates = episodes_data['reset_gates']
         new_contexts = episodes_data['new_contexts']
 
-        inputs_update = torch.concat([inputs, hidden_states], dim=-1)
+        # Keep the shared transcoder convention used by the tracer and feature
+        # analyzers: [h_{t-1}, x_t] (and [r_t*h_{t-1}, x_t] for candidate).
+        # Previous RL files used [x_t, h_{t-1}], which silently permuted every
+        # encoder column at analysis time.
+        inputs_update = torch.concat([hidden_states, inputs], dim=-1)
+        inputs_reset = inputs_update
+        targets_reset = reset_gates
         targets_update = update_gates
-        inputs_hidden = torch.concat([inputs, hidden_states * reset_gates], dim=-1)
+        inputs_hidden = torch.concat([hidden_states * reset_gates, inputs], dim=-1)
         targets_hidden = new_contexts
 
+        reset_dataset = StackDataset(
+            input=inputs_reset,
+            output=targets_reset
+        )
         update_dataset = StackDataset(
             input=inputs_update,
             output=targets_update
@@ -432,13 +443,14 @@ class RLTranscoderDataGenerator:
         )
 
         print(f"Generated transcoder dataset with {len(update_dataset)} samples")
-        print(f"Generated Sequences have {sequences[0]["inputs"].size(0)} each")
+        first_sequence_group = next(iter(sequences.values()))
+        print(f"Generated Sequences have {first_sequence_group['inputs'].size(0)} each")
 
         sequence_datasets = []
         for pattern in sequences:
             sequence_datasets.append(StackDataset(**sequences[pattern]))
         
-        return update_dataset, hidden_dataset, sequence_datasets
+        return reset_dataset, update_dataset, hidden_dataset, sequence_datasets
 
 
 def create_rl_transcoder_dataloaders(dataset: ConcatDataset,
@@ -480,6 +492,8 @@ if __name__ == "__main__":
     parser.add_argument("--balance_patterns", action='store_true', help="Balance transition/reward patterns")
     parser.add_argument("--max_extra_episodes", type=int, default=None, help="Max extra episodes for balancing")
     parser.add_argument("--initial_config", type=str, required=True)
+    parser.add_argument("--output_dir", required=True,
+                        help="Directory for reset/update/candidate datasets and trace sequences")
     
     args = parser.parse_args()
     device = torch.device("cpu") if not torch.cuda.is_available() else torch.device("cuda")
@@ -492,7 +506,7 @@ if __name__ == "__main__":
     agent = ActorCriticTrainer(model, env, device=device)
     
     generator = RLTranscoderDataGenerator(agent, batch_size, device=device)
-    update_dataset, hidden_dataset, sequence_datasets = generator.generate_transcoder_dataset(
+    reset_dataset, update_dataset, hidden_dataset, sequence_datasets = generator.generate_transcoder_dataset(
         n_episodes=args.n_episodes,
         trials_per_episode=args.trials_per_episode,
         balance_patterns=args.balance_patterns,
@@ -500,12 +514,13 @@ if __name__ == "__main__":
         initial_config=args.initial_config, 
     )
     
-    os.makedirs("/w/nobackup/436/lambda/data/rl_transcoder/", exist_ok=True)
-    torch.save(update_dataset, f"/w/nobackup/436/lambda/data/rl_transcoder/{args.dataset_name}_update_gate.pt")
-    torch.save(hidden_dataset, f"/w/nobackup/436/lambda/data/rl_transcoder/{args.dataset_name}_hctx.pt")
+    os.makedirs(args.output_dir, exist_ok=True)
+    torch.save(reset_dataset, os.path.join(args.output_dir, f"{args.dataset_name}_reset_gate.pt"))
+    torch.save(update_dataset, os.path.join(args.output_dir, f"{args.dataset_name}_update_gate.pt"))
+    torch.save(hidden_dataset, os.path.join(args.output_dir, f"{args.dataset_name}_hctx.pt"))
     for i, dataset in enumerate(sequence_datasets):
         prefix = ["commonp", "common_p", "uncommonp", "uncommon_p"][i]
-        torch.save(dataset, f"/w/nobackup/436/lambda/data/rl_transcoder/{args.dataset_name}_{prefix}_{args.initial_config}_rl.pt")
+        torch.save(dataset, os.path.join(args.output_dir, f"{args.dataset_name}_{prefix}_{args.initial_config}_rl.pt"))
  
 # ecah trial will have a context window of upto 3 trials before it, itself, and the trial after it. 
 # what is interesting is the relationship between the trials before it and itself.

@@ -22,6 +22,7 @@ class RLFeatureActivationAnalyzer(FeatureActivationAnalyzer):
                  update_transcoder: nn.Module,
                  hidden_transcoder: nn.Module,
                  device: str = 'cuda',
+                 reset_transcoder: Optional[nn.Module] = None,
                  rl=False):
         """
         Args:
@@ -30,7 +31,7 @@ class RLFeatureActivationAnalyzer(FeatureActivationAnalyzer):
             hidden_transcoder: Trained hidden context transcoder
             device: Device to run analysis on
         """
-        super().__init__(rnn_model, update_transcoder, hidden_transcoder, device)
+        super().__init__(rnn_model, update_transcoder, hidden_transcoder, device, reset_transcoder)
         self.cur_type=None
 
     def convert_sequence_to_text(self, 
@@ -240,7 +241,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--n_feats_hidden", type=int, required=True)
     parser.add_argument("--n_feats_update", type=int, required=True)
+    parser.add_argument("--n_feats_reset", type=int)
     parser.add_argument("--update_transcoder_path", required=True)
+    parser.add_argument("--reset_transcoder_path")
     parser.add_argument("--hidden_transcoder_path", required=True)
     parser.add_argument("--rnn_path", required=True)
     parser.add_argument("--cached_sequences", nargs="+", default=None)
@@ -252,15 +255,20 @@ if __name__ == "__main__":
                                    n_feats=args.n_feats_update)
     hidden_transcoder = Transcoder(input_size=56, out_size=48, 
                                    n_feats=args.n_feats_hidden)
+    reset_transcoder = (Transcoder(input_size=56, out_size=48, n_feats=args.n_feats_reset)
+                        if args.reset_transcoder_path else None)
     
     rnn_model.load_state_dict(torch.load(args.rnn_path))
     update_transcoder.load_state_dict(torch.load(args.update_transcoder_path)["transcoder"])
     hidden_transcoder.load_state_dict(torch.load(args.hidden_transcoder_path)["transcoder"])
+    if reset_transcoder:
+        reset_transcoder.load_state_dict(torch.load(args.reset_transcoder_path)["transcoder"])
     
     analyzer = RLFeatureActivationAnalyzer(
         rnn_model=rnn_model,
         update_transcoder=update_transcoder, 
         hidden_transcoder=hidden_transcoder,
+        reset_transcoder=reset_transcoder,
         device=torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     )
     
@@ -282,7 +290,8 @@ if __name__ == "__main__":
     new_dict_sequences = convert_dict(analyzer.sequence_activations, "features",
                                       "magnitudes")
     os.makedirs("/w/nobackup/436/lambda/data/rl_transcoder_features/", exist_ok=True)
-    with open(f"/w/nobackup/436/lambda/data/rl_transcoder_features/h{args.n_feats_hidden}_u{args.n_feats_update}_features.p", "wb") as f:
+    reset_suffix = f"_r{args.n_feats_reset}" if reset_transcoder else ""
+    with open(f"/w/nobackup/436/lambda/data/rl_transcoder_features/h{args.n_feats_hidden}_u{args.n_feats_update}{reset_suffix}_features.p", "wb") as f:
         pickle.dump(new_dict_features, f)
-    with open(f"/w/nobackup/436/lambda/data/rl_transcoder_features/h{args.n_feats_hidden}_u{args.n_feats_update}_sequences.p", "wb") as f:
+    with open(f"/w/nobackup/436/lambda/data/rl_transcoder_features/h{args.n_feats_hidden}_u{args.n_feats_update}{reset_suffix}_sequences.p", "wb") as f:
         pickle.dump(new_dict_sequences, f)

@@ -8,9 +8,10 @@ import torch.nn as nn
 class CircuitNode:
     """Represents a node in the circuit graph.
     name:
-        Use patterns like: "x_{t}_{i}", "f_z_{t}_{j}", "f_n_{t}_{j}", "o_{t}_{k}".
+        Use patterns like: "x_{t}_{i}", "f_r_{t}_{j}", "f_z_{t}_{j}",
+        "f_n_{t}_{j}", "o_{t}_{k}".
     node_type:
-        'input' | 'feature' | 'output'
+        'input' | 'feature' | 'hidden' | 'error' | 'output'
     timestep:
         Integer time index.
     feature_idx:
@@ -23,16 +24,15 @@ class CircuitNode:
     timestep: int
     feature_idx: Optional[int] = None
     input_dim: Optional[int] = None
+    hidden_dim: Optional[int] = None
 
 class CircuitTracer:
     """Compute edge attribution weights for RNN transcoder circuits.
 
-    This rewrite fixes shape inconsistencies and attribution logic:
-    - Within a single timestep, edge weights are computed using the local
-      linear maps only (no Jacobian chaining across that timestep).
-    - Across time, we propagate *only* through the hidden-to-hidden linearized
-      transition A_t = d h_t / d h_{t-1} and multiply the initial and final
-      local maps at the endpoints.
+    Edges are prompt-specific linear attributions: the active scalar at the
+    source times its local derivative on the target. Hidden coordinates are
+    explicit nodes, so direct recurrent carry and gate-mediated recurrence are
+    represented as distinct paths.
     """
 
     def __init__(
@@ -41,15 +41,19 @@ class CircuitTracer:
         update_transcoder: nn.Module,
         hidden_transcoder: nn.Module,
         device: str = "cuda",
+        reset_transcoder: Optional[nn.Module] = None,
     ):
         self.rnn_model = rnn_model.to(device)
         self.update_transcoder = update_transcoder.to(device)
         self.hidden_transcoder = hidden_transcoder.to(device)
+        self.reset_transcoder = reset_transcoder.to(device) if reset_transcoder else None
         self.device = device
 
         self.rnn_model.eval()
         self.update_transcoder.eval()
         self.hidden_transcoder.eval()
+        if self.reset_transcoder:
+            self.reset_transcoder.eval()
 
         # Update gate encoder splits: [h_{t-1}, x_t] -> pf^z_t -> ReLU -> f^z_t
         Wz_enc = self.update_transcoder.input_to_features.weight  # (Fz, H+X)
@@ -64,12 +68,22 @@ class CircuitTracer:
         self.W_n_x = Wn_enc[:, Hz:]   # (Fn, X)
         self.M_n = self.hidden_transcoder.features_to_outputs.weight  # (H, Fn), f^n -> n_hat
 
+        # Reset gate encoder: [h_{t-1}, x_t] -> f^r_t -> r_hat.  This is
+        # optional so existing two-transcoder analyses remain loadable.
+        if self.reset_transcoder:
+            Wr_enc = self.reset_transcoder.input_to_features.weight
+            self.W_r_h = Wr_enc[:, :Hz]
+            self.W_r_x = Wr_enc[:, Hz:]
+            self.M_r = self.reset_transcoder.features_to_outputs.weight
+
         # Output projection: o_t = W_o h_t (+ b)  [assumed linear]
         if hasattr(rnn_model, "layers") and len(rnn_model.layers) > rnn_model.num_layers:
             self.W_o = rnn_model.layers[-1].weight.to(device)  # (O, H)
+            self.b_o = rnn_model.layers[-1].bias.to(device)
         else:
             print("No output weight?")
             self.W_o = torch.eye(Hz, device=device)  # (H, H)
+            self.b_o = torch.zeros(Hz, device=device)
 
     @torch.no_grad()
     def run_forward_pass(self, sequence: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
@@ -91,15 +105,39 @@ class CircuitTracer:
         # h_t = (1 - z_t) ⊙ h_{t-1} + z_t ⊙ h~_t  (using symbols from the user's code)
         acts["h_ts"] = (1.0 - z) * acts["h_prevs"] + z * acts["h_new_ts"]  # (T, H)
 
+        # New trace datasets retain the actual output logits.  Older datasets
+        # saved only argmax one-hot tokens; recover their logits from the saved
+        # hidden states and the frozen RNN output projection instead of
+        # softmaxing those one-hot feedback tokens.
+        if "logits" not in acts:
+            output_steps = acts["outputs"].shape[0]
+            acts["logits"] = torch.nn.functional.linear(
+                acts["h_ts"][-output_steps:], self.W_o, self.b_o)
+
         # Pre/post feature activations are assumed to be produced by calling the transcoders.
         # We compute per-timestep masks needed for local linear maps.
         acts["pf_z"], acts["f_z"], acts["z_hat"], acts["e_z"] = [], [], [], []
         acts["pf_n"], acts["f_n"], acts["n_hat"], acts["e_n"] = [], [], [], []
+        if self.reset_transcoder:
+            acts["pf_r"], acts["f_r"], acts["r_hat"], acts["e_r"] = [], [], [], []
+        else:
+            # A two-transcoder graph still uses the real reset gate inside the
+            # candidate input. Treat it as entirely unexplained residual so
+            # that its effect is visible rather than silently frozen away.
+            acts["e_r"] = acts["r_ts"].clone()
 
         for t in range(T):
             h_prev_t = acts["h_prevs"][t]            # (H,)
             x_t = acts["inputs"][t]                 # (X,)
             r_t = acts["r_ts"][t]                   # (H,)
+
+            if self.reset_transcoder:
+                r_in = torch.cat([h_prev_t, x_t], dim=0)
+                r_hat_t, f_r_t, pf_r_t = self.reset_transcoder(r_in)
+                acts["pf_r"].append(pf_r_t)
+                acts["f_r"].append(f_r_t)
+                acts["r_hat"].append(r_hat_t)
+                acts["e_r"].append(r_t - r_hat_t)
 
             # Update gate transcoder input: concat[h_prev_t, x_t]
             z_in = torch.cat([h_prev_t, x_t], dim=0)
@@ -123,114 +161,105 @@ class CircuitTracer:
             acts["e_n"].append(e_n_t)
 
         # Stack lists to (T, ·)
-        for key in ["pf_z", "f_z", "z_hat", "e_z", "pf_n", "f_n", "n_hat", "e_n"]:
+        keys = ["pf_z", "f_z", "z_hat", "e_z", "pf_n", "f_n", "n_hat", "e_n"]
+        if self.reset_transcoder:
+            keys += ["pf_r", "f_r", "r_hat", "e_r"]
+        for key in keys:
             acts[key] = torch.stack(acts[key], dim=0)
 
         return acts
 
-    def _relu_mask(self, v: torch.Tensor) -> torch.Tensor:
-        """Elementwise ReLU' mask for pre-activations (1 if > 0 else 0)."""
-        return (v > 0).to(v.dtype)
+    @staticmethod
+    def _feature_mask(features: torch.Tensor) -> torch.Tensor:
+        """Derivative mask of the actual JumpReLU output.
 
-    def _local_influence_to_hidden(self, node: CircuitNode, acts: Dict[str, torch.Tensor]) -> torch.Tensor:
-        """Column vector v (H,) giving the effect on h_t from a unit at `node` at its timestep.
-
-        Cases handled:
-          - x_{t,i} -> h_t via z and n branches with ReLU masks
-          - f_z_{t,j} -> h_t via M_z and diag(-h_prev - n_hat - e_n)
-          - f_n_{t,j} -> h_t via M_n and diag(z_hat + e_z)
-          - o_{t,k} is not a valid source in this formulation (returns zeros)
+        A positive preactivation is not sufficient: JumpReLU activates only
+        above its learned threshold.  The cached feature output is exactly
+        zero when inactive, so this also works if the activation module is
+        changed later.
         """
+        return (features > 0).to(features.dtype)
+
+    @staticmethod
+    def _active_features_from_acts(acts: Dict[str, torch.Tensor]) -> Dict[str, List[Tuple[int, int, float]]]:
+        """Return the features active in this exact traced forward pass.
+
+        Circuit construction must not depend on a separately cached feature
+        analysis, which may have been made with another dictionary checkpoint.
+        """
+        result = {}
+        for kind, key in (("reset", "f_r"), ("update", "f_z"), ("hidden", "f_n")):
+            if key not in acts:
+                continue
+            active = torch.nonzero(acts[key] > 0, as_tuple=False)
+            result[kind] = [
+                (int(t), int(j), float(acts[key][t, j])) for t, j in active.tolist()
+            ]
+        return result
+
+    def get_active_features(self, sequence: Dict[str, torch.Tensor]) -> Dict[str, List[Tuple[int, int, float]]]:
+        """Public helper for visualizers: live, checkpoint-consistent features."""
+        return self._active_features_from_acts(self.run_forward_pass(sequence))
+
+    def _source_value(self, node: CircuitNode, acts: Dict[str, torch.Tensor]) -> torch.Tensor:
+        """Prompt-specific scalar represented by a source node."""
         t = node.timestep
-        h_prev = acts["h_prevs"][t]        # (H,)
-        z_hat = acts["z_hat"][t]          # (H,)
-        n_hat = acts["n_hat"][t]          # (H,)
-        e_z = acts["e_z"][t]              # (H,)
-        e_n = acts["e_n"][t]              # (H,)
-
-        Dz = torch.diag(-h_prev + n_hat + e_n)  # (H,H), d h_t / d z_hat_t
-        Dn = torch.diag(z_hat + e_z)              # (H,H), d h_t / d n_hat_t
-
         if node.node_type == "input":
-            print("SHOULDNT COME HERE -- input on hidden")
-            raise Exception()
-
+            return acts["inputs"][t, node.input_dim]
+        if node.node_type == "hidden":
+            return acts["h_ts"][t, node.hidden_dim]
         if node.node_type == "feature":
-            j = node.feature_idx
+            if node.name.startswith("f_r_"):
+                return acts["f_r"][t, node.feature_idx]
             if node.name.startswith("f_z_"):
-                # z_hat from feature j is M_z[:, j]
-                v = Dz @ self.M_z[:, j]
-                return v
-            if node.name.startswith("f_n_"):
-                v = Dn @ self.M_n[:, j]
-                return v
+                return acts["f_z"][t, node.feature_idx]
+            return acts["f_n"][t, node.feature_idx]
+        if node.node_type == "error":
+            raise ValueError("Error nodes are vector-valued source adjustments")
+        raise ValueError(f"{node.name} cannot be an attribution-edge source")
 
-        # Outputs as sources aren't supported; return zeros
-        H = acts["h_ts"].shape[1]
-        return torch.zeros(H, device=self.device, dtype=acts["h_ts"].dtype)
+    def _attribution_weight(
+        self, from_node: CircuitNode, virtual_weight: torch.Tensor, acts: Dict[str, torch.Tensor]
+    ) -> torch.Tensor:
+        """Prompt-specific edge attribution = source value × local weight."""
+        return self._source_value(from_node, acts) * virtual_weight
 
-    def _local_sensitivity_from_hidden(self, node: CircuitNode, acts: Dict[str, torch.Tensor]) -> torch.Tensor:
-        """Row vector w (H,) giving d node / d h_t at node.timestep.
-
-        Cases:
-          - o_{t,k}: w = W_o[k, :]
-          - f_z_{t+Δ,j} (when used as *target* at its own time):
-                w = mask_z_j * W_z_h[j, :]  (but note: this maps h_t -> pf^z_{t+1};
-                only meaningful if used with h_t at the *same* t feeding into t+1 feature)
-          - f_n_{t+Δ,j}: analogous with W_n_h
-          - x_{t,i} is not a valid *target* from hidden in the same timestep.
-        """
-        t = node.timestep
-        if node.node_type == "output":
-            k = node.feature_idx
-            return self.W_o[k, :] - self.W_o.mean(dim=0)  # (H,)
-
-        if node.node_type == "feature":
-            j = node.feature_idx
-            if node.name.startswith("f_z_"):
-                mask = self._relu_mask(acts["pf_z"][t])
-                # row vector: (1,H)
-                return mask[j] * self.W_z_h[j, :]
-            if node.name.startswith("f_n_"):
-                mask = self._relu_mask(acts["pf_n"][t])
-                return mask[j] * self.W_n_h[j, :]
-
-        H = acts["h_ts"].shape[1]
-        return torch.zeros(H, device=self.device, dtype=acts["h_ts"].dtype)
-
-    # A_t = d h_t / d h_{t-1}
-    def _A_t(self, t: int, acts: Dict[str, torch.Tensor]) -> torch.Tensor:
-        """Linearized hidden transition Jacobian A_t = d h_t / d h_{t-1} (H,H).
-
-        A_t = diag(1 - (z_hat_t + e_z_t))
-              + diag(-(h_{t-1} + n_hat_t + e_n_t)) @ M_z @ diag(ReLU'(pf^z_t)) @ W_z_h
-              + diag( z_hat_t + e_z_t)              @ M_n @ diag(ReLU'(pf^n_t)) @ W_n_h
-        """
+    def _feature_to_hidden_weight(
+        self, from_node: CircuitNode, to_node: CircuitNode, acts: Dict[str, torch.Tensor]
+    ) -> torch.Tensor:
+        """Direct local edge from a gate/candidate feature to h_t[i]."""
+        t, j, i = from_node.timestep, from_node.feature_idx, to_node.hidden_dim
         h_prev = acts["h_prevs"][t]
-        z_hat = acts["z_hat"][t]
-        n_hat = acts["n_hat"][t]
-        e_z = acts["e_z"][t]
-        e_n = acts["e_n"][t]
+        Dz = -h_prev + acts["n_hat"][t] + acts["e_n"][t]
+        Dn = acts["z_hat"][t] + acts["e_z"][t]
+        if from_node.name.startswith("f_z_"):
+            return Dz[i] * self.M_z[i, j]
+        if from_node.name.startswith("f_n_"):
+            return Dn[i] * self.M_n[i, j]
+        # Reset features feed h_t only via reset -> candidate -> h_t.
+        return torch.tensor(0.0, device=self.device)
 
-        Ddir = torch.diag(1.0 - (z_hat + e_z))
-        Dz = torch.diag(-(h_prev + n_hat + e_n))
-        Dn = torch.diag(z_hat + e_z)
-
-        mask_z = self._relu_mask(acts["pf_z"][t])
-        mask_n = self._relu_mask(acts["pf_n"][t])
-
-        A = Ddir
-        if self.M_z.numel() > 0:
-            A = A + Dz @ (self.M_z @ torch.diag(mask_z) @ self.W_z_h)
-        if self.M_n.numel() > 0:
-            A = A + Dn @ (self.M_n @ torch.diag(mask_n) @ self.W_n_h)
-        return A
+    def _hidden_to_feature_weight(
+        self, from_node: CircuitNode, to_node: CircuitNode, acts: Dict[str, torch.Tensor]
+    ) -> torch.Tensor:
+        """Local h_t[i] -> gate feature at t+1 edge, holding sibling routes fixed."""
+        t, i, j = to_node.timestep, from_node.hidden_dim, to_node.feature_idx
+        if to_node.name.startswith("f_z_"):
+            return self._feature_mask(acts["f_z"][t])[j] * self.W_z_h[j, i]
+        if to_node.name.startswith("f_n_"):
+            # The reset-mediated part has its own h -> f_r -> f_n path.
+            return (self._feature_mask(acts["f_n"][t])[j]
+                    * self.W_n_h[j, i] * acts["r_ts"][t, i])
+        if self.reset_transcoder and to_node.name.startswith("f_r_"):
+            return self._feature_mask(acts["f_r"][t])[j] * self.W_r_h[j, i]
+        return torch.tensor(0.0, device=self.device)
 
     def compute_edge_weight(self, from_node: CircuitNode, to_node: CircuitNode, acts: Dict[str, torch.Tensor]) -> torch.Tensor:
         """Return scalar edge weight from `from_node` to `to_node`.
 
-        Within-timestep:  weight = w_t @ v_t
-        Across-time (t0 < t1): weight = w_{t1} @ (A_{t1} ... A_{t0+1}) @ v_{t0}
+        The graph decomposes each hidden transition into feature -> h,
+        h -> h through the direct carry, and h -> next-gate-feature edges.
+        This avoids double-counting routes through gate features.
         """
         t0, t1 = from_node.timestep, to_node.timestep
         if not (0 <=t1-t0 <= 1):
@@ -240,32 +269,64 @@ class CircuitTracer:
             if to_node.node_type != "feature" or t0!=t1:
                 return torch.tensor(0.0, device=self.device)
             else:
-                mask_z = self._relu_mask(acts["pf_z"][t0])
-                mask_n = self._relu_mask(acts["pf_n"][t0])
-                return self.W_z_x[to_node.feature_idx, from_node.input_dim] * mask_z[to_node.feature_idx] if "f_z" in to_node.name else self.W_n_x[to_node.feature_idx, from_node.input_dim] * mask_n[to_node.feature_idx]
-        elif to_node.node_type == "output" and (from_node.node_type != 
-                                                "feature" or t1-t0>0):
-            #outputs can only be directly influenced by features in the same timestep
+                if "f_z" in to_node.name:
+                    return self._attribution_weight(from_node, self.W_z_x[to_node.feature_idx, from_node.input_dim] * self._feature_mask(acts["f_z"][t0])[to_node.feature_idx], acts)
+                if "f_n" in to_node.name:
+                    return self._attribution_weight(from_node, self.W_n_x[to_node.feature_idx, from_node.input_dim] * self._feature_mask(acts["f_n"][t0])[to_node.feature_idx], acts)
+                if self.reset_transcoder and "f_r" in to_node.name:
+                    return self._attribution_weight(from_node, self.W_r_x[to_node.feature_idx, from_node.input_dim] * self._feature_mask(acts["f_r"][t0])[to_node.feature_idx], acts)
             return torch.tensor(0.0, device=self.device)
-        elif (from_node.node_type == "feature" 
-              and to_node.node_type == "feature" and t1 == t0):
-                # there are no feature-feature influence sin teh same timestep
+
+        if from_node.node_type == "feature" and to_node.node_type == "hidden":
+            if t0 == t1:
+                return self._attribution_weight(from_node, self._feature_to_hidden_weight(from_node, to_node, acts), acts)
+            return torch.tensor(0.0, device=self.device)
+
+        if from_node.node_type == "hidden":
+            if to_node.node_type == "output" and t0 == t1:
+                return self._attribution_weight(from_node, (self.W_o[to_node.feature_idx, from_node.hidden_dim]
+                        - self.W_o[:, from_node.hidden_dim].mean()), acts)
+            if to_node.node_type == "hidden" and t1 == t0 + 1:
+                if from_node.hidden_dim == to_node.hidden_dim:
+                    return self._attribution_weight(from_node, 1.0 - acts["z_ts"][t1, from_node.hidden_dim], acts)
                 return torch.tensor(0.0, device=self.device)
-        
-        v = self._local_influence_to_hidden(from_node, acts)  # (H,)
-        w = self._local_sensitivity_from_hidden(to_node, acts)  # (H,)
-
-        if torch.all(v == 0) or torch.all(w == 0):
+            if to_node.node_type == "feature" and t1 == t0 + 1:
+                return self._attribution_weight(from_node, self._hidden_to_feature_weight(from_node, to_node, acts), acts)
             return torch.tensor(0.0, device=self.device)
 
-        # Same timestep: just local maps
-        if t0 == t1:
-            return torch.dot(w, v)
+        if (from_node.node_type == "feature" and to_node.node_type == "feature" and t1 == t0):
+            # The reset factor creates the one same-timestep feature path:
+            # f_r -> r -> (r*h_prev) -> candidate preactivation -> f_n.
+            if (self.reset_transcoder and from_node.name.startswith("f_r_")
+                    and to_node.name.startswith("f_n_")):
+                t = t0
+                j, k = from_node.feature_idx, to_node.feature_idx
+                reset_delta = torch.diag(acts["h_prevs"][t]) @ self.M_r[:, j]
+                return self._attribution_weight(from_node, (self._feature_mask(acts["f_n"][t])[k]
+                        * torch.dot(self.W_n_h[k, :], reset_delta)), acts)
+            return torch.tensor(0.0, device=self.device)
 
-        # Across-time propagation if off by 1
-        A = torch.eye(v.shape[0], device=self.device, dtype=v.dtype)
-        A = self._A_t(t0+1, acts) @ A
-        return torch.dot(w, A @ v)
+        if from_node.node_type == "error":
+            if from_node.name.startswith("e_z_") and to_node.node_type == "hidden" and t0 == t1:
+                i = to_node.hidden_dim
+                h_prev = acts["h_prevs"][t0]
+                virtual_weight = -h_prev[i] + acts["n_hat"][t0, i] + acts["e_n"][t0, i]
+                return acts["e_z"][t0, i] * virtual_weight
+            if from_node.name.startswith("e_n_") and to_node.node_type == "hidden" and t0 == t1:
+                i = to_node.hidden_dim
+                virtual_weight = acts["z_hat"][t0, i] + acts["e_z"][t0, i]
+                return acts["e_n"][t0, i] * virtual_weight
+            if (from_node.name.startswith("e_r_") and to_node.node_type == "feature"
+                    and to_node.name.startswith("f_n_") and t0 == t1):
+                j = to_node.feature_idx
+                virtual_weight = (self._feature_mask(acts["f_n"][t0])[j]
+                                  * self.W_n_h[j, :] * acts["h_prevs"][t0])
+                return torch.dot(acts["e_r"][t0], virtual_weight)
+            return torch.tensor(0.0, device=self.device)
+
+        # All feature-to-output and feature-to-next-feature paths now factor
+        # through h. Keeping shortcut edges would count them twice.
+        return torch.tensor(0.0, device=self.device)
 
     def build_circuit_graph(
         self,
@@ -274,14 +335,13 @@ class CircuitTracer:
     ) -> Dict[Tuple[str, str], float]:
         """Build edge map {(from_name, to_name): weight} for relevant nodes.
 
-        active_features: {
-          'update': [(t, feat_idx, magnitude), ...],
-          'hidden': [(t, feat_idx, magnitude), ...],
-        }
-        Only features with magnitude >= 1e-5 are included.
+        ``active_features`` is retained for call compatibility but deliberately
+        ignored: features are recomputed from the loaded models on this exact
+        sequence, preventing stale feature-cache/model mismatches.
         """
         acts = self.run_forward_pass(sequence)
         T = sequence["inputs"].shape[0]
+        active_features = self._active_features_from_acts(acts)
         nodes: List[CircuitNode] = []
         # Inputs # TODO ull need to change this for RL
         for t in range(T): # only the active one is required.
@@ -293,13 +353,30 @@ class CircuitTracer:
             for t, j, mag in feats:
                 if mag < 1e-5:
                     continue
-                if kind == "update":
+                if kind == "reset" and self.reset_transcoder:
+                    nodes.append(CircuitNode(f"f_r_{t}_{j}", "feature", t, feature_idx=j))
+                elif kind == "update":
                     nodes.append(CircuitNode(f"f_z_{t}_{j}", "feature", t, feature_idx=j))
                 elif kind == "hidden":
                     nodes.append(CircuitNode(f"f_n_{t}_{j}", "feature", t, feature_idx=j))
 
+        # Post-update hidden coordinates. Scalar nodes are necessary because
+        # the carry map is diagonal but gate and decoder maps mix coordinates.
+        hidden_size = acts["h_ts"].shape[1]
+        for t in range(T):
+            for i in range(hidden_size):
+                nodes.append(CircuitNode(f"h_{t}_{i}", "hidden", t, hidden_dim=i))
+
+        # Frozen reconstruction residuals are source-only nodes, analogous to
+        # error nodes in a local replacement model. They expose computation
+        # not captured by the feature dictionaries.
+        for t in range(T):
+            nodes.append(CircuitNode(f"e_z_{t}", "error", t))
+            nodes.append(CircuitNode(f"e_n_{t}", "error", t))
+            nodes.append(CircuitNode(f"e_r_{t}", "error", t))
+
         # Outputs
-        sorted_outs = torch.argsort(sequence["outputs"], dim=-1, descending=True)
+        sorted_outs = torch.argsort(acts["logits"], dim=-1, descending=True)
         for t in range(T):
             if t < T//2: continue
             for k in sorted_outs[t-T//2].tolist():
@@ -391,6 +468,6 @@ if __name__ == "__main__":
     edge_weights, _ =circuit_tracer.build_circuit_graph(sequence_tensor, active_features)
     from circuit.graph_prune import GraphPruner
     pruner = GraphPruner(0.9, 0.95)
-    pruner.prune_graph(edge_weights, sequence_tensor["outputs"])
+    pruner.prune_graph(edge_weights, circuit_tracer.run_forward_pass(sequence_tensor)["logits"].cpu())
 
 #("f_n" in src.name or "f_z " in src.name) and dst.name in ("o_3_1", "o_4_28", "o_5_28") and src.name.split("_")[-2] == dst.name.split("_")[-2]

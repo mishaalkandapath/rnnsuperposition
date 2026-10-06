@@ -33,7 +33,9 @@ class ConsolidatedStackDataset(Dataset):
 def create_transcoder_dataloaders(dataset: ConsolidatedStackDataset,
                                 batch_size: int = 256,
                                 train_split: float = 0.9,
-                                shuffle: bool = True) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
+                                shuffle: bool = True,
+                                num_workers: int = None,
+                                split_seed: int = None) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
     """
     Create train/val dataloaders for transcoder training
     
@@ -51,20 +53,27 @@ def create_transcoder_dataloaders(dataset: ConsolidatedStackDataset,
     print(f"-- Dataset is of length {n_samples}---")
     n_train = int(n_samples * train_split)
     
-    indices = torch.randperm(n_samples) if shuffle else torch.arange(n_samples)
+    split_generator = None
+    if split_seed is not None:
+        split_generator = torch.Generator().manual_seed(split_seed)
+    indices = (torch.randperm(n_samples, generator=split_generator)
+               if shuffle else torch.arange(n_samples))
     train_indices = indices[:n_train]
     val_indices = indices[n_train:]
     
     train_dataset = Subset(dataset, train_indices)
     val_dataset = Subset(dataset, val_indices)
     
+    if num_workers is None:
+        num_workers = min(64, len(os.sched_getaffinity(0)))
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=batch_size, shuffle=shuffle, 
-        num_workers=min(64, len(os.sched_getaffinity(0))), persistent_workers=True
+        num_workers=num_workers, persistent_workers=num_workers > 0
     )
-    print(f"-- Asked for {min(64, len(os.sched_getaffinity(0)))} workers")
+    print(f"-- Using {num_workers} DataLoader workers")
     val_loader = torch.utils.data.DataLoader(
-        val_dataset, batch_size=batch_size, shuffle=False
+        val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers,
+        persistent_workers=num_workers > 0
     )
     
     return train_loader, val_loader

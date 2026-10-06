@@ -18,8 +18,8 @@ class GraphPruner:
         Args:
             node_threshold: Threshold for node pruning (keep nodes with cumulative influence <= threshold)
             edge_threshold: Threshold for edge pruning 
-            top_k_logits: Maximum number of logit nodes to keep
-            logit_prob_threshold: Keep logit nodes until cumulative prob > threshold
+            top_k_logits: Maximum number of logit nodes to keep *per timestep*
+            logit_prob_threshold: Per-timestep cumulative probability threshold
         """
         self.node_threshold = node_threshold
         self.edge_threshold = edge_threshold
@@ -101,15 +101,59 @@ class GraphPruner:
             
         return B
         
-    def get_logit_weights(self, 
-                         node_names: List[str], 
+    @staticmethod
+    def _output_nodes_by_timestep(node_names: List[str]) -> Dict[int, Dict[int, str]]:
+        output_nodes: Dict[int, Dict[int, str]] = {}
+        for name in node_names:
+            if not name.startswith("o_"):
+                continue
+            _, timestep, token = name.split("_")
+            output_nodes.setdefault(int(timestep), {})[int(token)] = name
+        return output_nodes
+
+    def _selected_logit_probabilities(
+        self, node_names: List[str], output_logits: torch.Tensor
+    ) -> Dict[str, float]:
+        """Select output nodes independently for every output timestep."""
+        output_nodes = self._output_nodes_by_timestep(node_names)
+        timesteps = sorted(output_nodes)
+        if not timesteps:
+            return {}
+        if output_logits.ndim != 2:
+            raise ValueError("output logits must have shape (timesteps, vocabulary)")
+        if len(timesteps) != output_logits.shape[0]:
+            raise ValueError(
+                f"Graph has {len(timesteps)} output timesteps but received "
+                f"{output_logits.shape[0]} rows of logits"
+            )
+
+        probabilities = torch.softmax(output_logits, dim=-1)
+        selected: Dict[str, float] = {}
+        for row, timestep in enumerate(timesteps):
+            cumulative = 0.0
+            kept = 0
+            for token in torch.argsort(probabilities[row], descending=True).tolist():
+                if kept >= self.top_k_logits or cumulative >= self.logit_prob_threshold:
+                    break
+                name = output_nodes[timestep].get(token)
+                if name is None:
+                    continue
+                probability = float(probabilities[row, token])
+                selected[name] = probability / len(timesteps)
+                cumulative += probability
+                kept += 1
+        return selected
+
+    def get_logit_weights(self,
+                         node_names: List[str],
                          output_probs: torch.Tensor = None) -> torch.Tensor:
         """
         Get weights for logit nodes based on output probabilities
         
         Args:
             node_names: List of node names
-            output_probs: Output probabilities for each timestep/token
+            output_probs: Raw output logits for each timestep/token. (The
+                historical argument name is retained for API compatibility.)
             
         Returns:
             logit_weights: Vector where entry is prob for logit nodes, 0 for others
@@ -123,21 +167,12 @@ class GraphPruner:
                 if name.startswith('o_'):  # Output/logit nodes
                     logit_weights[i] = 1.0 / sum(1 for n in node_names if n.startswith('o_'))
         else:
-            # Use provided probabilities
-            output_probs = torch.nn.Softmax(dim=-1)(output_probs)
+            # Each timestep has an independent token distribution. Select
+            # candidate logits per timestep, then weight timesteps equally.
+            selected = self._selected_logit_probabilities(node_names, output_probs)
             for i, name in enumerate(node_names):
-                if name.startswith('o_'):  # Output/logit nodes
-                    # Extract timestep and output dimension from name like 'o_2_5'
-                    parts = name.split('_')
-                    if len(parts) >= 3:
-                        try:
-                            t = int(parts[1])
-                            dim = int(parts[2])
-                            if t - output_probs.shape[0] >= 0 and dim < output_probs.shape[1]:
-                                logit_weights[i] = output_probs[t - output_probs.shape[0], dim]
-                        except ValueError:
-                            print("shudnt have happenedhere")
-                            continue
+                if name in selected:
+                    logit_weights[i] = selected[name]
                             
         return logit_weights
         
@@ -195,21 +230,13 @@ class GraphPruner:
             if total_influence > 0 and cumulative_influence / total_influence >= self.node_threshold:
                 break
                 
-        # Prune logit nodes separately
+        # Select logits separately at every output timestep. The old global
+        # 95%-mass budget mixed independent token distributions and could drop
+        # whole timesteps.
         if output_probs is not None:
-            # Sort logit nodes by probability
-            logit_probs = [(name, logit_weights[i].item()) for i, name in logit_nodes]
-            logit_probs.sort(key=lambda x: x[1], reverse=True)
-            
-            cumulative_prob = 0.0
-            logit_count = 0
-            
-            for name, prob in logit_probs:
-                if cumulative_prob >= self.logit_prob_threshold or logit_count >= self.top_k_logits:
-                    break
-                nodes_to_keep.add(name)
-                cumulative_prob += prob
-                logit_count += 1
+            for i, name in logit_nodes:
+                if logit_weights[i] > 0:
+                    nodes_to_keep.add(name)
         else:
             # Keep all logit nodes if no probabilities provided
             for i, name in logit_nodes:
@@ -268,7 +295,9 @@ class GraphPruner:
                 node_scores[i] = logit_weights[i]
         
         # Calculate edge scores: edge score = target_node_score * normalized_edge_weight
-        edge_scores = A_norm * node_scores.unsqueeze(0)  # Broadcasting
+        # A[j, i] is i -> j. Allocate each target j's influence across the
+        # incoming edges in row j, rather than weighting by source i.
+        edge_scores = A_norm * node_scores.unsqueeze(1)
         
         # Flatten edge scores and sort
         edge_scores_flat = edge_scores.flatten()
@@ -318,7 +347,6 @@ class GraphPruner:
             (pruned_edge_weights, kept_nodes)
         """
         # Extract all unique node names
-        self.top_k_logits = output_probs.size(0)
         all_nodes = set()
         for from_node, to_node in edge_weights.keys():
             all_nodes.add(from_node)
