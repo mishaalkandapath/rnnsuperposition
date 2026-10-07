@@ -16,6 +16,7 @@ class SignalManager:
         self.interrupted = False
         self.train_obj_global: Optional[Any] = None
         self.run_name_global: Optional[str] = None
+        self.checkpoint_fn: Optional[Any] = None
         self._handler_registered = False
     
     def register_handler(self):
@@ -25,10 +26,15 @@ class SignalManager:
             signal.signal(signal.SIGTERM, self._signal_handler)
             self._handler_registered = True
     
-    def set_training_context(self, train_obj: Any, run_name: str):
-        """Set the training object and run name for saving."""
+    def set_training_context(self, train_obj: Any, run_name: str, checkpoint_fn=None):
+        """Set the training object and run name for saving.
+
+        checkpoint_fn, if given, returns the object to save instead of the
+        bare state_dict (e.g. a resumable {"transcoder", "optim"} dict).
+        """
         self.train_obj_global = train_obj
         self.run_name_global = run_name
+        self.checkpoint_fn = checkpoint_fn
     
     def clear_training_context(self):
         """Clear the training context."""
@@ -44,7 +50,9 @@ class SignalManager:
             try:
                 os.makedirs(self.run_name_global, exist_ok=True)
                 save_path = f"{self.run_name_global}/interrupted_{self.run_name_global.split('/')[-1]}.ckpt"
-                torch.save(self.train_obj_global.state_dict(), save_path)
+                checkpoint = (self.checkpoint_fn() if self.checkpoint_fn is not None
+                              else self.train_obj_global.state_dict())
+                torch.save(checkpoint, save_path)
                 print(f"Model saved to: {save_path}")
             except Exception as e:
                 print(f"Error saving model: {e}")

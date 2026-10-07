@@ -23,10 +23,20 @@ def generate_token_copyset(n_tokens, batch_size, max_len, min_len=2):
     sequence_one_hot *= length_mask.unsqueeze(-1)
     return sequence_one_hot, length_mask
 
-def generate_unique_test_set(n_tokens, test_size, 
-                             max_len, min_len, train_indices):
-    train_set = {tuple(row.tolist()) for row in train_indices}
-    seen = set(train_set)
+def sequence_key(seq: torch.Tensor, seq_len: int) -> tuple:
+    """Identity of a copy sequence: its length plus its real tokens.
+
+    Padding is 0, which is also the token 'a', so the padded row alone cannot
+    tell "xyz" from "xyza"; including the length keeps both as distinct
+    sequences while still rejecting true repeats.
+    """
+    seq_len = int(seq_len)
+    return (seq_len, *seq[:seq_len].tolist())
+
+
+def generate_unique_test_set(n_tokens, test_size,
+                             max_len, min_len, train_indices, train_lengths):
+    seen = {sequence_key(row, length) for row, length in zip(train_indices, train_lengths)}
 
     test_indices = []
     test_masks = []
@@ -36,7 +46,7 @@ def generate_unique_test_set(n_tokens, test_size,
         seq_len = torch.randint(min_len, max_len+1, (1,))
         mask = torch.arange(max_len) < seq_len
         seq = seq * mask  # zero out pads if needed
-        tup = tuple(seq.tolist())
+        tup = sequence_key(seq, seq_len)
 
         if tup not in seen:
             seen.add(tup)
@@ -117,8 +127,9 @@ def generate_token_copy_dataset(n_tokens, train_size, test_size,
     test_seq_one_hot, test_loss_mask = generate_unique_test_set(n_tokens,
                                                                 test_size,
                                                                 max_len,
-                                                                min_len, 
-                                                                train_seq_indices)
+                                                                min_len,
+                                                                train_seq_indices,
+                                                                train_loss_mask.sum(dim=1))
     
     #make copy mechanism 
     train_seq_one_hot, train_loss_mask, train_targs = make_copy_targets(train_seq_one_hot,

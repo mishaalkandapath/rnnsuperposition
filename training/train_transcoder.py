@@ -1,3 +1,4 @@
+import copy
 import math
 import sys
 import json
@@ -11,10 +12,17 @@ from typing import Dict, Tuple, List
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from models.transcoders import Transcoder, initialize_paired_dpi, set_transcoder_weights
+from models.rnn import RNN
+from models.transcoders import (Transcoder, compute_normalization, fold_normalization_,
+                                initialize_paired_dpi, normalize_inputs, normalize_targets,
+                                set_transcoder_weights, unfold_normalization_)
 from datasets.utils import create_transcoder_dataloaders, ConsolidatedStackDataset
+from training.splice_eval import SPLICE_TARGETS, SpliceEvaluator, load_splice_traces
 from training.train_utils import SignalManager, normalize_batch
 torch.serialization.add_safe_globals([StackDataset])
+
+# Training rows sampled to estimate the --normalize means and scales.
+NORMALIZATION_SAMPLES = 65536
 
 
 def sample_paired_dpi_calibration(dataset, n_samples: int, dpi_seed: int = None):
@@ -34,13 +42,19 @@ def sample_paired_dpi_calibration(dataset, n_samples: int, dpi_seed: int = None)
 class TranscoderLoss(nn.Module):
     """
     Custom loss function for transcoder training:
-    L(x,y) = ||y - ŷ(x)||²₂ + λ_S * Σ tanh(c * |f_i(x)| / ||W_d,i||₂) + L_P(x)
+    L(x,y) = ||y - ŷ(x)||²₂ + λ_S * Σ tanh(c * |f_i(x)| * ||W_d,i||₂) + L_P(x)
     where L_P(x) = λ_P * Σ ReLU(exp(t) - f_i(x)) * ||W_d,i||₂
+
+    legacy_sparsity reproduces the older variant
+    λ_S² * max_b(Σ_i tanh(...)) * Σ tanh(...), which scales the penalty by the
+    soft L0 of the densest sample in the batch.
     """
-    
-    def __init__(self, lambda_sparsity=1e-3, lambda_penalty=1e-4, 
-                 c_sparsity=1.0, sparse_sched=0, sparse_sched_off=1, w_detach=False, scale_pen_distance=False):
+
+    def __init__(self, lambda_sparsity=1e-3, lambda_penalty=1e-4,
+                 c_sparsity=1.0, sparse_sched=0, sparse_sched_off=1, w_detach=False, scale_pen_distance=False,
+                 legacy_sparsity=False):
         super().__init__()
+        self.legacy_sparsity = legacy_sparsity
         self.lambda_sparsity = lambda_sparsity
         self.lambda_penalty = lambda_penalty
         self.c_sparsity = c_sparsity
@@ -91,13 +105,18 @@ class TranscoderLoss(nn.Module):
             W_d is of shape out_vec x n_feats
         """
         batch_size = targets.size(0)
-        sparsity_coeff = self.lambda_sparsity
-        if not self.eval:
-            sparsity_coeff *= self.sparse_scheduler()
-        # Reconstruction loss: ||y - ŷ(x)||²₂
-        reconstruction_loss = self.mse_loss(predictions, targets)
+        # Validation uses the same scheduled coefficient so train and val
+        # totals are comparable at every point in training.
+        sparsity_coeff = self.lambda_sparsity * self.sparse_scheduler()
+        # Reconstruction loss: ||y - ŷ(x)||²₂, summed over output dims and
+        # averaged over the batch (as in the paper), so λ_S does not silently
+        # scale with the hidden size.
+        reconstruction_loss = ((predictions - targets) ** 2).sum(dim=-1).mean()
         with torch.no_grad():
-            normalized_reconstruction_loss = self.mse_loss(predictions/torch.norm(predictions, dim=-1, keepdim=True), targets/torch.norm(targets, dim=-1, keepdim=True))
+            # eps: with --normalize, centred targets can have near-zero norm.
+            normalized_reconstruction_loss = self.mse_loss(
+                predictions / torch.norm(predictions, dim=-1, keepdim=True).clamp_min(1e-8),
+                targets / torch.norm(targets, dim=-1, keepdim=True).clamp_min(1e-8))
         
         # Sparsity loss: λ_S * Σ tanh(c * |f_i(x)|||W_d,i||₂)
         decoder_norms = torch.norm(decoder_weights, dim=0)  # ||W_d,i||₂ for each feature
@@ -108,8 +127,12 @@ class TranscoderLoss(nn.Module):
         
         normalized_features = feature_magnitudes * decoder_norms.unsqueeze(0)
         sparsity_terms = torch.tanh(self.c_sparsity * normalized_features)
-        max_multiplier = torch.max(torch.sum(sparsity_terms, dim=-1))
-        sparsity_loss = max_multiplier * (sparsity_coeff**2) * torch.sum(sparsity_terms)/batch_size
+        if self.legacy_sparsity:
+            # Not in the paper; kept only to reproduce checkpoints trained with it.
+            max_multiplier = torch.max(torch.sum(sparsity_terms, dim=-1))
+            sparsity_loss = max_multiplier * (sparsity_coeff**2) * torch.sum(sparsity_terms)/batch_size
+        else:
+            sparsity_loss = sparsity_coeff * torch.sum(sparsity_terms)/batch_size
         
         # Penalty loss: L_P(x) = λ_P * Σ ReLU(exp(t) - f_i(x)) * ||W_d,i||₂
         act_distance = torch.exp(threshold) - features if not self.scale_pen_distance else (torch.exp(threshold) - features)/torch.exp(threshold)
@@ -132,22 +155,56 @@ class TranscoderTrainer:
                  transcoder: nn.Module,
                  optimizer: optim.Optimizer,
                  device: str = 'cuda',
-                 loss_fn: TranscoderLoss=TranscoderLoss(10, 3e-6, 4)):
-        
+                 loss_fn: TranscoderLoss=TranscoderLoss(10, 3e-6, 4),
+                 splice_evaluator=None,
+                 normalization=None):
+
         self.transcoder = transcoder.to(device)
         self.device = device
+        self.splice_evaluator = splice_evaluator
+        # With normalization the transcoder trains in normalised units; every
+        # saved checkpoint and the splice eval use folded raw-unit weights.
+        self.normalization = ({k: v.to(device) for k, v in normalization.items()}
+                              if normalization is not None else None)
         
         self.loss_fn = loss_fn
         
         self.optimizer = optimizer
-        
+        self.completed_epochs = 0
+
         self.train_history = {
             'total': [], 'reconstruction': [], 'sparsity': [], 'penalty': [], "norm_recon": []
         }
         self.val_history = {
             'total': [], 'reconstruction': [], 'sparsity': [], 'penalty': [], "norm_recon": []
         }
-        
+
+    def _prepare_batch(self, batch):
+        inputs = batch['input'].to(self.device)
+        targets = batch['output'].to(self.device)
+        if self.normalization is not None:
+            inputs = normalize_inputs(inputs, self.normalization)
+            targets = normalize_targets(targets, self.normalization)
+        return inputs, targets
+
+    def raw_transcoder(self) -> nn.Module:
+        """The transcoder in raw units (a folded copy when normalising)."""
+        if self.normalization is None:
+            return self.transcoder
+        return fold_normalization_(copy.deepcopy(self.transcoder), self.normalization)
+
+    def checkpoint(self) -> Dict:
+        """Resumable checkpoint. "transcoder" always holds raw-unit weights so
+        every consumer can load it as a plain Transcoder; "normalization" lets
+        --ctd_from unfold back to the units the optimizer state lives in."""
+        return {
+            "transcoder": self.raw_transcoder().state_dict(),
+            "optim": self.optimizer.state_dict(),
+            "normalization": ({k: v.cpu() for k, v in self.normalization.items()}
+                              if self.normalization is not None else None),
+            "completed_epochs": self.completed_epochs,
+        }
+
     def train_epoch(self, train_loader: DataLoader, run=None, epoch: int = None) -> Dict[str, float]:
         """Train for one epoch"""
         self.transcoder.train()
@@ -162,12 +219,8 @@ class TranscoderTrainer:
         description = f"Epoch {epoch + 1}" if epoch is not None else "Training"
         pbar = tqdm(train_loader, total=n_batches, leave=False, desc=description)
         for batch in pbar:
-            inputs = batch['input'].to(self.device)
-            targets = batch['output'].to(self.device)
+            inputs, targets = self._prepare_batch(batch)
 
-            inputs = (inputs)
-            targets = (targets)
-        
             self.optimizer.zero_grad()
             
             predictions, features_activated, features = self.transcoder(inputs)
@@ -181,7 +234,9 @@ class TranscoderTrainer:
             )
             
             loss_dict['total_loss'].backward()
-            torch.nn.utils.clip_grad_norm_(self.transcoder.parameters(), 1.0)
+            grad_norm = torch.nn.utils.clip_grad_norm_(self.transcoder.parameters(), 1.0)
+            if run:
+                run.log({"grad_norm_preclip": grad_norm.item()})
             self.optimizer.step()
             
             for loss_type in epoch_losses.keys():
@@ -195,7 +250,10 @@ class TranscoderTrainer:
                     run.log({"train_bdecoder_norms": torch.norm(self.transcoder.features_to_outputs.bias)})
                     run.log({"train_wencoder_norms": torch.norm(self.transcoder.input_to_features.weight, dim=0).mean()})
                     run.log({"train_bencoder_norms": torch.norm(self.transcoder.input_to_features.bias)})
-                    run.log({"jrelu_thresh": self.transcoder.act.threshold.item()})
+                    log_thresholds = self.transcoder.act.threshold
+                    run.log({"jrelu_thresh": log_thresholds.mean().item(),
+                             "jrelu_thresh_min": log_thresholds.min().item(),
+                             "jrelu_thresh_max": log_thresholds.max().item()})
                     run.log({"features_active": torch.count_nonzero(features_activated)/inputs.size(0)})
                     run.log({"feature_magnitudes": torch.abs(features_activated[features_activated > 0]).mean()})
                     run.log({"sparsity_coeff": self.loss_fn.sparse_scheduler()})
@@ -218,15 +276,29 @@ class TranscoderTrainer:
         }
         
         n_batches = len(val_loader)
-        
+        # Running sums for fraction of variance unexplained over the whole
+        # validation set: FVU = SSE / Σ||y - ȳ||². Float64 since N is large.
+        sse = torch.zeros((), dtype=torch.float64, device=self.device)
+        target_sum = None
+        target_sq_sum = torch.zeros((), dtype=torch.float64, device=self.device)
+        n_rows = 0
+
         with torch.no_grad():
             for batch in val_loader:
-                inputs = (batch['input']).to(self.device)
-                targets = (batch['output']).to(self.device)
-                
+                # FVU is invariant to the affine normalisation, so it is
+                # comparable between normalised and raw runs.
+                inputs, targets = self._prepare_batch(batch)
+
                 features = self.transcoder.input_to_features(inputs)
                 features_activated = self.transcoder.act(features)
                 predictions = self.transcoder.features_to_outputs(features_activated)
+
+                targets64 = targets.double()
+                sse += ((predictions.double() - targets64) ** 2).sum()
+                batch_sum = targets64.sum(dim=0)
+                target_sum = batch_sum if target_sum is None else target_sum + batch_sum
+                target_sq_sum += (targets64 ** 2).sum()
+                n_rows += targets.size(0)
                 
                 loss_dict = self.loss_fn(
                     predictions,
@@ -243,7 +315,18 @@ class TranscoderTrainer:
             epoch_losses[loss_type] /= n_batches
             if run:
                 run.log({f"valid_{loss_type}": epoch_losses[loss_type]})
-                
+
+        total_variance = target_sq_sum - (target_sum ** 2).sum() / max(n_rows, 1)
+        epoch_losses["fvu"] = (sse / total_variance.clamp_min(1e-12)).item()
+        if run:
+            run.log({"valid_fvu": epoch_losses["fvu"]})
+
+        if self.splice_evaluator is not None:
+            splice_metrics = self.splice_evaluator.evaluate(self.raw_transcoder())
+            epoch_losses.update(splice_metrics)
+            if run:
+                run.log({f"valid_{k}": v for k, v in splice_metrics.items()})
+
         return epoch_losses
     
     def train(self, 
@@ -265,9 +348,11 @@ class TranscoderTrainer:
         print(f"Running for {n_epochs} more epochs (resuming after {previous_epochs} epochs)")
         pbar = tqdm(range(n_epochs))
         final_val_losses = None
+        self.completed_epochs = previous_epochs
         for epoch in pbar:
             absolute_epoch = previous_epochs + epoch
             train_losses = self.train_epoch(train_loader, run=run, epoch=absolute_epoch)
+            self.completed_epochs = absolute_epoch + 1
             
             if epoch % save_every == 0 or epoch == n_epochs - 1:
                 val_losses = self.validate(val_loader, run=run)
@@ -284,13 +369,9 @@ class TranscoderTrainer:
             pbar.set_description(f"Train: {train_losses['total']:.4f}, Val: {val_losses['total']:.4f}")
             
             if absolute_epoch % 10 == 0 and save_path:
-                torch.save({"transcoder":self.transcoder.state_dict(),
-                            "optim": self.optimizer.state_dict()},
-                           f"{save_path}/e{absolute_epoch}.ckpt")
+                torch.save(self.checkpoint(), f"{save_path}/e{absolute_epoch}.ckpt")
         if save_path:
-            torch.save({"transcoder":self.transcoder.state_dict(),
-                        "optim": self.optimizer.state_dict()},
-                       f"{save_path}/final_model.ckpt")
+            torch.save(self.checkpoint(), f"{save_path}/final_model.ckpt")
         self.final_metrics = {
             "previous_epochs": previous_epochs,
             "final_train": train_losses,
@@ -338,7 +419,12 @@ def create_and_train_transcoders(dataset: Dict[str, torch.Tensor],
                                  init_mode: str = "random",
                                  dpi_scale: float = 0.4,
                                  dpi_calibration_samples: int = 8192,
-                                 dpi_seed: int = None):
+                                 dpi_seed: int = None,
+                                 rnn_path: str = None,
+                                 splice_target: str = None,
+                                 splice_sequence_paths: List[str] = None,
+                                 splice_samples: float = 0.05,
+                                 splice_traces: List[Dict] = None):
     """
     Create and train transcoder models
     
@@ -352,13 +438,30 @@ def create_and_train_transcoders(dataset: Dict[str, torch.Tensor],
     """
     if init_mode not in {"random", "paired_dpi"}:
         raise ValueError(f"Unknown init_mode: {init_mode}")
+    if rnn_path and (splice_target is None or not (splice_sequence_paths or splice_traces)):
+        raise ValueError("Splice eval (--rnn_path) also needs a splice target and trace sequence paths")
 
     # Split before sampling DPI examples so calibration never sees validation
     # rows.
-    train_loader, val_loader = create_transcoder_dataloaders(
+    train_loader, val_loader, val_sequence_ids = create_transcoder_dataloaders(
         dataset, batch_size=batch_size, num_workers=num_workers,
-        split_seed=split_seed)
+        split_seed=split_seed, return_val_sequence_ids=True)
     print("--Created Dataloader--")
+
+    splice_evaluator = None
+    if rnn_path:
+        # Copy-task GRU: input = vocab + delimiter, output = vocab.
+        rnn_model = RNN(input_size=input_size, hidden_size=hidden_size,
+                        out_size=input_size - 1, out_act=lambda x: x, use_gru=True)
+        rnn_model.load_state_dict(torch.load(rnn_path, map_location=device))
+        # Callers running many configs (the sweep) pass preloaded traces.
+        if splice_traces is None:
+            splice_traces = load_splice_traces(splice_sequence_paths)
+        splice_evaluator = SpliceEvaluator(
+            rnn_model, splice_target, splice_traces, splice_samples,
+            val_sequence_ids=val_sequence_ids,
+            seed=split_seed if split_seed is not None else 0, device=device)
+        del splice_traces  # the evaluator keeps only its sampled sequences
 
     # Create transcoder
     input_dim = hidden_size + input_size  # [h_{t-1}, x_t]
@@ -370,23 +473,55 @@ def create_and_train_transcoders(dataset: Dict[str, torch.Tensor],
     )
     optimizer = optim.Adam(transcoder.parameters(), lr=train_cfg["lr"])
     continuing = bool(train_cfg["ctd_from"])
+    normalize = train_cfg.get("normalize", False)
+    normalization = None
     if continuing and init_mode != "random":
         raise ValueError("Continuation training cannot also apply a fresh initialization")
     if continuing:
         ckpt = torch.load(train_cfg["ctd_from"], weights_only=True, map_location=device)
         transcoder.load_state_dict(ckpt["transcoder"])
+        normalization = ckpt.get("normalization")
+        if normalize != (normalization is not None):
+            raise ValueError("--normalize must match how the --ctd_from checkpoint was trained")
+        if normalization is not None:
+            # Checkpoints hold raw-unit weights; the optimizer state belongs to
+            # the normalised-unit weights, so unfold before resuming.
+            # (The transcoder is still on CPU here; the trainer moves both.)
+            normalization = {k: v.cpu() for k, v in normalization.items()}
+            unfold_normalization_(transcoder, normalization)
         optimizer.load_state_dict(ckpt["optim"])
-        for state in optimizer.state.values():
+        for param, state in optimizer.state.items():
             for k, v in state.items():
                 if isinstance(v, torch.Tensor):
+                    # Moments saved for a legacy scalar threshold must match
+                    # the per-feature threshold now ("step" stays scalar).
+                    if k != "step" and v.ndim == 0 and param.ndim == 1:
+                        v = v.expand_as(param).clone()
                     state[k] = v.to(device)
     print("--Initialized Transcoder--")
     initialization_metadata = {"mode": init_mode}
+    if normalize and not continuing:
+        norm_inputs, norm_targets = sample_paired_dpi_calibration(
+            train_loader.dataset, NORMALIZATION_SAMPLES, dpi_seed=split_seed)
+        normalization = compute_normalization(norm_inputs, norm_targets)
+        print(f"--Normalizing: input scale {normalization['input_scale'].item():.4g}, "
+              f"target scale {normalization['target_scale'].item():.4g}--")
+    if normalization is not None:
+        initialization_metadata["normalization"] = {
+            "input_scale": float(normalization["input_scale"]),
+            "target_scale": float(normalization["target_scale"]),
+            "samples": NORMALIZATION_SAMPLES,
+        }
     if not continuing:
         if init_mode == "paired_dpi":
             calibration_count = max(n_feats, dpi_calibration_samples)
             calibration_inputs, calibration_targets = sample_paired_dpi_calibration(
                 train_loader.dataset, calibration_count, dpi_seed=dpi_seed)
+            if normalization is not None:
+                # DPI initialises the normalised-unit weights being trained.
+                cpu_norm = {k: v.cpu() for k, v in normalization.items()}
+                calibration_inputs = normalize_inputs(calibration_inputs.float(), cpu_norm)
+                calibration_targets = normalize_targets(calibration_targets.float(), cpu_norm)
             dpi_generator = None if dpi_seed is None else torch.Generator().manual_seed(dpi_seed)
             initialization_metadata.update(initialize_paired_dpi(
                 transcoder, calibration_inputs, calibration_targets,
@@ -406,17 +541,23 @@ def create_and_train_transcoders(dataset: Dict[str, torch.Tensor],
                              sparse_sched=train_cfg["l_schedule"],
                              sparse_sched_off=train_cfg["l_sched_offset"],
                              w_detach=train_cfg["w_det"],
-                             scale_pen_distance=train_cfg["scale_pen"])
+                             scale_pen_distance=train_cfg["scale_pen"],
+                             legacy_sparsity=train_cfg.get("legacy_sparsity", False))
 
     trainer = TranscoderTrainer(
         transcoder=transcoder,
         optimizer=optimizer,
         device=device,
-        loss_fn=loss_fn
+        loss_fn=loss_fn,
+        splice_evaluator=splice_evaluator,
+        normalization=normalization
     )
 
     sig_handler = SignalManager()
-    sig_handler.set_training_context(trainer.transcoder, save_path)
+    # Same format as regular checkpoints so --ctd_from can resume from it;
+    # completed_epochs is the value to pass as --previous_epochs.
+    sig_handler.set_training_context(trainer.transcoder, save_path,
+                                     checkpoint_fn=trainer.checkpoint)
     sig_handler.register_handler()
 
     print("--Beginning Training--")
@@ -454,6 +595,10 @@ if __name__ == "__main__":
     parser.add_argument("--l_sparse_offset", type=int, default=1)
     parser.add_argument("--w_detach", action="store_true")
     parser.add_argument("--scale_pen_distance", action="store_true")
+    parser.add_argument("--normalize", action="store_true",
+                        help="Train on centred, scalar-scaled inputs/targets; checkpoints are folded back to raw units")
+    parser.add_argument("--legacy_sparsity", action="store_true",
+                        help="Use the older λ²·max-batch-L0 sparsity loss instead of the paper's")
     parser.add_argument("--save_path", required=True)
     parser.add_argument("--ctd_from", default=None)
     parser.add_argument("--previous_epochs", type=int, default=0,
@@ -469,10 +614,20 @@ if __name__ == "__main__":
                         help="Training rows sampled to calibrate paired-DPI initialization")
     parser.add_argument("--dpi_seed", type=int, default=None,
                         help="DPI sample seed; defaults to --split_seed")
+    parser.add_argument("--rnn_path", default=None,
+                        help="Copy-task GRU checkpoint; enables the splice eval at validation steps")
+    parser.add_argument("--splice_target", choices=SPLICE_TARGETS, default=None,
+                        help="Gate this transcoder replaces in the splice eval")
+    parser.add_argument("--splice_sequence_paths", nargs="+", default=None,
+                        help="Trace sequence files (*_seqN.pt) to run the splice eval on")
+    parser.add_argument("--splice_samples", type=float, default=0.05,
+                        help="Held-out sequences to splice: <=1 is a fraction, >1 a count")
 
     args = parser.parse_args()
     if args.previous_epochs and not args.ctd_from:
         parser.error("--previous_epochs requires --ctd_from")
+    if args.rnn_path and (args.splice_target is None or not args.splice_sequence_paths):
+        parser.error("--rnn_path requires --splice_target and --splice_sequence_paths")
 
     run = wandb.init(
         entity="mishaalkandapath",
@@ -494,7 +649,11 @@ if __name__ == "__main__":
             "dpi_calibration_samples": args.dpi_calibration_samples,
             "dpi_seed": args.dpi_seed if args.dpi_seed is not None else (args.split_seed if args.split_seed is not None else args.seed),
             "w_det": int(args.w_detach),
-            "scale_pen_distance": int(args.scale_pen_distance)
+            "scale_pen_distance": int(args.scale_pen_distance),
+            "legacy_sparsity": int(args.legacy_sparsity),
+            "normalize": int(args.normalize),
+            "splice_target": args.splice_target if args.rnn_path else None,
+            "splice_samples": args.splice_samples if args.rnn_path else None
         },
     )
     # run = None
@@ -502,7 +661,7 @@ if __name__ == "__main__":
     train_cfg = {"lr": args.lr, "l_sparsity": args.l_sparsity, 
                  "l_schedule": args.lambda_sparse_schedule, 
                  "l_sched_offset": args.l_sparse_offset, "w_det": args.w_detach,
-                 "l_penalty":args.l_penalty, "c_sparsity":args.c_sparsity, "scale_pen": args.scale_pen_distance, "ctd_from":args.ctd_from,
+                 "l_penalty":args.l_penalty, "c_sparsity":args.c_sparsity, "scale_pen": args.scale_pen_distance, "legacy_sparsity": args.legacy_sparsity, "normalize": args.normalize, "ctd_from":args.ctd_from,
                  "n_epochs": args.n_epochs, "n_feats": args.n_feats, "batch_size":args.batch_size,
                  "num_workers": args.num_workers, "previous_epochs": args.previous_epochs,
                  "init_mode": args.init_mode, "dpi_scale": args.dpi_scale,
@@ -529,4 +688,7 @@ if __name__ == "__main__":
                                  init_mode=args.init_mode, dpi_scale=args.dpi_scale,
                                  dpi_calibration_samples=args.dpi_calibration_samples,
                                  dpi_seed=args.dpi_seed if args.dpi_seed is not None else (args.split_seed if args.split_seed is not None else args.seed),
+                                 rnn_path=args.rnn_path, splice_target=args.splice_target,
+                                 splice_sequence_paths=args.splice_sequence_paths,
+                                 splice_samples=args.splice_samples,
                                  save_path=args.save_path, run=run)

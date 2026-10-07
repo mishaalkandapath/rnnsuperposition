@@ -28,15 +28,15 @@ class jumprelu(torch.autograd.Function):
         x, threshold = ctx.saved_tensors
         bandwidth = ctx.bandwidth
         x_grad = (x > threshold) * grad_output  # We don't apply STE to x input
-        # Banded straight-through estimator for the log-threshold parameter.
-        # The factor of threshold accounts for d exp(log_threshold) / d
-        # log_threshold.  The old version mixed log- and linear-space values.
-        threshold_grad = torch.sum(
+        # Banded straight-through estimator for the log-threshold, exactly as
+        # given in the January 2025 circuits update: -exp(t)/ε inside the band.
+        # Reduce over every leading (batch/time) dim down to the threshold's
+        # shape: (n_feats,) for per-feature thresholds, () for legacy scalars.
+        threshold_grad = (
             -(threshold / bandwidth)
             * rectangle((x - threshold) / bandwidth)
-            * grad_output,
-            dim=0,
-        )
+            * grad_output
+        ).sum_to_size(threshold.shape)
         return x_grad, threshold_grad, None
 
 
@@ -48,6 +48,14 @@ class JumpReLU(torch.nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return jumprelu.apply(x, self.threshold, self.bandwidth)  # type: ignore
+
+    def _load_from_state_dict(self, state_dict, prefix, *args, **kwargs):
+        # Older checkpoints stored one log-threshold shared by all features.
+        # Broadcast it so they load into per-feature thresholds unchanged.
+        key = prefix + "threshold"
+        if key in state_dict and state_dict[key].ndim == 0 and self.threshold.ndim == 1:
+            state_dict[key] = state_dict[key].expand_as(self.threshold).clone()
+        super()._load_from_state_dict(state_dict, prefix, *args, **kwargs)
 
     def extra_repr(self) -> str:
         return f"threshold={self.threshold}, bandwidth={self.bandwidth}"
@@ -80,13 +88,71 @@ class Transcoder(myModule):
         self.n_feats = n_feats
         self.input_to_features = nn.Linear(input_size, n_feats, bias=bias)
         self.features_to_outputs = nn.Linear(n_feats, out_size, bias=bias)
-        self.act = JumpReLU(torch.tensor(threshhold), bandwidth)
+        # One learned log-threshold per feature (t ∈ R^m), as in the
+        # January 2025 circuits update and circuit-tracer.
+        self.act = JumpReLU(torch.full((n_feats,), float(threshhold)), bandwidth)
     
     def forward(self, x):
         pre_feats = self.input_to_features(x)
         feats = self.act(pre_feats)
         replace_out = self.features_to_outputs(feats)
         return replace_out, feats, pre_feats
+
+
+@torch.no_grad()
+def compute_normalization(inputs: torch.Tensor, targets: torch.Tensor) -> dict[str, torch.Tensor]:
+    """Centring means and scalar scales so centred vectors have mean norm sqrt(d).
+
+    One scalar per side (not per dimension) so the objective is only
+    rescaled, and the relative scale of h vs the one-hot token is preserved.
+    """
+    def stats(v):
+        v = v.float()
+        mean = v.mean(dim=0)
+        scale = (v - mean).norm(dim=-1).mean() / math.sqrt(v.shape[-1])
+        return mean, scale.clamp_min(1e-8)
+
+    input_mean, input_scale = stats(inputs)
+    target_mean, target_scale = stats(targets)
+    return {"input_mean": input_mean, "input_scale": input_scale,
+            "target_mean": target_mean, "target_scale": target_scale}
+
+
+def normalize_inputs(x: torch.Tensor, norm: dict[str, torch.Tensor]) -> torch.Tensor:
+    return (x - norm["input_mean"]) / norm["input_scale"]
+
+
+def normalize_targets(y: torch.Tensor, norm: dict[str, torch.Tensor]) -> torch.Tensor:
+    return (y - norm["target_mean"]) / norm["target_scale"]
+
+
+@torch.no_grad()
+def fold_normalization_(transcoder: Transcoder, norm: dict[str, torch.Tensor]) -> Transcoder:
+    """In place: weights trained on normalised data -> weights on raw data.
+
+    With x' = (x - μx)/sx and y = sy·y' + μy:
+      W_e·x' + b_e = (W_e/sx)·x + (b_e - W_e·μx/sx)   -> identical preactivations,
+      sy·(W_d·f + b_d) + μy                          -> raw-unit reconstruction.
+    Feature activations and thresholds are unchanged, so the folded transcoder
+    is a drop-in raw-unit Transcoder.
+    """
+    enc, dec = transcoder.input_to_features, transcoder.features_to_outputs
+    enc.bias.sub_(enc.weight @ norm["input_mean"] / norm["input_scale"])
+    enc.weight.div_(norm["input_scale"])
+    dec.weight.mul_(norm["target_scale"])
+    dec.bias.mul_(norm["target_scale"]).add_(norm["target_mean"])
+    return transcoder
+
+
+@torch.no_grad()
+def unfold_normalization_(transcoder: Transcoder, norm: dict[str, torch.Tensor]) -> Transcoder:
+    """In place: exact inverse of fold_normalization_ (used to resume training)."""
+    enc, dec = transcoder.input_to_features, transcoder.features_to_outputs
+    enc.bias.add_(enc.weight @ norm["input_mean"])
+    enc.weight.mul_(norm["input_scale"])
+    dec.bias.sub_(norm["target_mean"]).div_(norm["target_scale"])
+    dec.weight.div_(norm["target_scale"])
+    return transcoder
 
 
 @torch.no_grad()

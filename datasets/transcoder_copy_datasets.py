@@ -6,7 +6,7 @@ import torch
 from torch.utils.data import StackDataset, Subset
 from tqdm import tqdm
 
-from datasets.task_datasets import generate_token_copyset
+from datasets.task_datasets import generate_token_copyset, sequence_key
 from training.train_copy import inference_generate, add_delimiter_dimension
 from models.rnn import RNN
 
@@ -54,13 +54,20 @@ class TranscoderDataGenerator:
         )
         sequence_lengths = unique_masks.sum(dim=1)
         sequences_by_length = [[] for _ in range(min_len, max_len+1)]
+        # Every row and trace sequence carries the id of the sequence it came
+        # from, so train/val can be split by sequence instead of by row. A
+        # random per-run prefix keeps ids unique across separately generated
+        # files that are later concatenated.
+        run_prefix = int(torch.randint(0, 2**30, (1,))) << 32
+        sequence_ids_by_length = [[] for _ in range(min_len, max_len+1)]
 
         for seq_idx in range(n_sequences):
             actual_length = int(sequence_lengths[seq_idx])
             if min_len <= actual_length <= max_len:
                 sequence = unique_sequences[seq_idx][:actual_length]
                 sequences_by_length[actual_length - min_len].append(sequence)
-            else: 
+                sequence_ids_by_length[actual_length - min_len].append(run_prefix + seq_idx)
+            else:
                 raise Exception
 
         print(f"Done generating sequences {unique_sequences.shape} {unique_masks.shape}")
@@ -71,22 +78,29 @@ class TranscoderDataGenerator:
         all_update_targets = []
         all_hidden_inputs = []
         all_hidden_targets = []
+        all_sequence_ids = []
 
         sequence_data = defaultdict(lambda: defaultdict(list))
-        
-        for unique_sequences in sequences_by_length:
+
+        for unique_sequences, length_sequence_ids in zip(sequences_by_length, sequence_ids_by_length):
             n_sequences = len(unique_sequences)
-            batch_size = min(batch_size, n_sequences)
-            n_batches = (n_sequences + batch_size - 1) // batch_size
+            if n_sequences == 0:
+                continue
+            # Per-length batch size, so a small length group does not shrink
+            # the batch size for every later length.
+            length_batch_size = min(batch_size, n_sequences)
+            n_batches = (n_sequences + length_batch_size - 1) // length_batch_size
             unique_sequences = torch.stack(unique_sequences)
+            length_sequence_ids = torch.tensor(length_sequence_ids, dtype=torch.long)
             print(unique_sequences.shape)
             with torch.no_grad():
                 for batch_idx in tqdm(range(n_batches)):
-                    start_idx = batch_idx * batch_size
-                    end_idx = min(start_idx + batch_size, n_sequences)
+                    start_idx = batch_idx * length_batch_size
+                    end_idx = min(start_idx + length_batch_size, n_sequences)
                     if start_idx >= end_idx: break
                     
                     batch_sequences = unique_sequences[start_idx:end_idx].to(self.device)
+                    batch_sequence_ids = length_sequence_ids[start_idx:end_idx]
                     logits, _, r_records, z_records, h_new_records, h_records =  inference_generate(self.rnn_model, batch_sequences, 
                                     discrete=True, record_gates=True)
 
@@ -112,6 +126,7 @@ class TranscoderDataGenerator:
                     sequence_data[x_t.size(1)//2]["z_ts"].append(z_t)
                     sequence_data[x_t.size(1)//2]["r_ts"].append(r_t)
                     sequence_data[x_t.size(1)//2]["h_new_ts"].append(h_new_t)
+                    sequence_data[x_t.size(1)//2]["seq_id"].append(batch_sequence_ids)
                     
                     # Process each timestep
                     for t in range(2*unique_sequences.size(1)):
@@ -146,6 +161,7 @@ class TranscoderDataGenerator:
                         all_update_targets.append(update_gate_target)
                         all_hidden_inputs.append(hidden_context_input)
                         all_hidden_targets.append(hidden_context_target)
+                        all_sequence_ids.append(batch_sequence_ids)
         
         # Concatenate all collected data
         dataset = {
@@ -162,12 +178,16 @@ class TranscoderDataGenerator:
             sequence_datasets.append(StackDataset(**sequence_data[length]))
         
         print(f"Generated transcoder dataset with {dataset['update_gate_inputs'].shape[0]} samples")
+        row_sequence_ids = torch.cat(all_sequence_ids, dim=0)
         reset_dataset = {"input": dataset["reset_gate_inputs"],
-                         "output": dataset["reset_gate_targets"]}
+                         "output": dataset["reset_gate_targets"],
+                         "seq_id": row_sequence_ids}
         update_dataset = {"input": dataset["update_gate_inputs"],
-                          "output": dataset["update_gate_targets"]}
+                          "output": dataset["update_gate_targets"],
+                          "seq_id": row_sequence_ids}
         hidden_dataset = {"input": dataset["hidden_context_inputs"],
-                          "output": dataset["hidden_context_targets"]}
+                          "output": dataset["hidden_context_targets"],
+                          "seq_id": row_sequence_ids}
         reset_dataset = StackDataset(**reset_dataset)
         update_dataset = StackDataset(**update_dataset)
         hidden_dataset = StackDataset(**hidden_dataset)
@@ -186,7 +206,7 @@ class TranscoderDataGenerator:
             seq_len = torch.randint(min_len, max_len+1, (1,))
             mask = torch.arange(max_len) < seq_len
             seq = seq * mask  # zero out pads if needed
-            tup = tuple(seq.tolist())
+            tup = sequence_key(seq, seq_len)
             
             if tup not in seen:
                 seen.add(tup)

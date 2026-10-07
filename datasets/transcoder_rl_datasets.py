@@ -332,8 +332,12 @@ class RLTranscoderDataGenerator:
                     temp_dict[key] = torch.concat([s[key] for s in sequence_dict[pattern] if s])
                 sequence_dict[pattern] = temp_dict
 
-            return ret_dict, batch_patterns, torch.tensor(sum(batch_pattern_mask, start=[])).to(batch_inputs[0].device), sequence_dict
-        return ret_dict, batch_patterns, torch.tensor(sum(batch_pattern_mask, start=[])).to(batch_inputs[0].device)
+        # ret_dict rows are step-major (row = step * batch_size + episode), so
+        # the per-row pattern labels must be flattened the same way.
+        row_patterns = torch.tensor(batch_pattern_mask).T.reshape(-1).to(batch_inputs[0].device)
+        if make_sequences:
+            return ret_dict, batch_patterns, row_patterns, sequence_dict
+        return ret_dict, batch_patterns, row_patterns
     
     def _forward_with_gates(self, input_tensor, hidden_state):        
         model = self.rl_agent.model
@@ -371,6 +375,17 @@ class RLTranscoderDataGenerator:
 
         og_count = max(left_counts)
         pbar = tqdm(total=og_count)
+
+        # A pattern instance is one trial's phase-2 row (labelled with that
+        # trial's outcome) plus the next trial's phase-0/1 rows, which inherit
+        # the label. Give every row the id of the instance it belongs to so
+        # whole instances are added; pattern counts are in instances.
+        n_steps = trials_per_episode * 3
+        row = torch.arange(n_steps * self.batch_size)
+        step, episode = row // self.batch_size, row % self.batch_size
+        trial, phase = step // 3, step % 3
+        instance_ids = episode * trials_per_episode + trial - (phase != 2).long()
+
         while extra_episodes < max_extra_episodes and max(left_counts):
             batch_reversal_counts = [random.choice([1, 2, 3, 4]) for _ in range(self.batch_size)]
 
@@ -391,14 +406,16 @@ class RLTranscoderDataGenerator:
                     pattern_counts[["commonp", "common(1-p)",
                                     "uncommonp", "uncommon(1-p)"][pattern_idx]] += take
                     update = take > 0 if not update else update
-                    pattern_mask = batch_pattern_mask == pattern_idx
+                    pattern_rows = (batch_pattern_mask == pattern_idx).cpu()
+                    chosen = torch.unique(instance_ids[pattern_rows])[:take]
+                    keep = pattern_rows & torch.isin(instance_ids, chosen)
                     for key in episodes_data:
-                        episodes_data[key] = torch.concat([episodes_data[key], batch_data[key][pattern_mask][:take]], dim=0)
+                        episodes_data[key] = torch.concat([episodes_data[key], batch_data[key][keep.to(batch_data[key].device)]], dim=0)
 
             if update:
                 pbar.update(og_count - max(left_counts))
                 og_count = max(left_counts)
-            extra_episodes += batch_size
+            extra_episodes += self.batch_size
         
         print(f"Generated {extra_episodes} additional episodes for balancing")
         print("Final pattern counts:")

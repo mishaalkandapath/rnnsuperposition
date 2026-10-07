@@ -12,6 +12,7 @@ from pathlib import Path
 import torch
 from torch.utils.data import ConcatDataset, StackDataset
 
+from training.splice_eval import load_splice_traces
 from training.train_transcoder import create_and_train_transcoders
 
 
@@ -47,6 +48,16 @@ def parse_args():
     p.add_argument("--schedule", type=int, default=1)
     p.add_argument("--schedule-offset", type=int, default=220)
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    p.add_argument("--rnn-path", default=None,
+                   help="Copy-task GRU checkpoint; enables the splice eval for each run's target")
+    p.add_argument("--splice-sequence-paths", nargs="+", default=None,
+                   help="Trace sequence files (*_seqN.pt) for the splice eval")
+    p.add_argument("--splice-samples", type=float, default=0.05,
+                   help="Held-out sequences to splice: <=1 is a fraction, >1 a count")
+    p.add_argument("--normalize", action="store_true",
+                   help="Train on centred, scalar-scaled inputs/targets; checkpoints are folded back to raw units")
+    p.add_argument("--legacy-sparsity", action="store_true",
+                   help="Use the older λ²·max-batch-L0 sparsity loss the PROFILES were tuned with")
     p.add_argument("--dry-run", action="store_true")
     return p.parse_args()
 
@@ -58,6 +69,8 @@ def load_dataset(paths):
 
 def main():
     args = parse_args()
+    if args.rnn_path and not args.splice_sequence_paths:
+        raise SystemExit("--rnn-path requires --splice-sequence-paths")
     target_paths = {
         "reset": args.reset_datasets,
         "update": args.update_datasets,
@@ -71,6 +84,8 @@ def main():
         return
 
     datasets = {target: load_dataset(paths) for target, paths in target_paths.items()}
+    # Load splice traces once for the whole sweep instead of once per run.
+    splice_traces = load_splice_traces(args.splice_sequence_paths) if args.rnn_path else None
     results_path = args.output_dir / "sweep_results.jsonl"
     for target, width, profile_name, seed, init_mode in configs:
         torch.manual_seed(seed)
@@ -80,7 +95,9 @@ def main():
         cfg = {
             "lr": args.lr, "l_schedule": args.schedule,
             "l_sched_offset": args.schedule_offset, "w_det": False,
-            "scale_pen": False, "ctd_from": None, "n_epochs": args.epochs,
+            "scale_pen": False, "legacy_sparsity": args.legacy_sparsity,
+            "normalize": args.normalize,
+            "ctd_from": None, "n_epochs": args.epochs,
             "n_feats": width, "batch_size": args.batch_size,
             "init_mode": init_mode, "dpi_scale": args.dpi_scale,
             "dpi_calibration_samples": args.dpi_calibration_samples,
@@ -96,6 +113,8 @@ def main():
             num_workers=args.num_workers, split_seed=seed, init_mode=init_mode,
             dpi_scale=args.dpi_scale, dpi_calibration_samples=args.dpi_calibration_samples,
             dpi_seed=args.dpi_seed if args.dpi_seed is not None else seed,
+            rnn_path=args.rnn_path, splice_target=target,
+            splice_samples=args.splice_samples, splice_traces=splice_traces,
         )
         result = {"target": target, "width": width, "profile": profile_name,
                   "seed": seed, "init_mode": init_mode, **trainer.final_metrics}
