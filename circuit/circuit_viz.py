@@ -51,8 +51,8 @@ class InteractiveCircuitVisualizer:
             return {'type': 'feature_reset', 'timestep': int(parts[2]), 'feature_idx': int(parts[3])}
         elif node_name.startswith('f_n_'):
             return {'type': 'feature_hidden', 'timestep': int(parts[2]), 'feature_idx': int(parts[3])}
-        elif node_name.startswith('h_'):
-            return {'type': 'hidden_state', 'timestep': int(parts[1]), 'dimension': int(parts[2])}
+        elif node_name == 'h_init':
+            return {'type': 'initial', 'timestep': -1}
         elif node_name.startswith('e_'):
             return {'type': 'error', 'gate': parts[1], 'timestep': int(parts[2])}
         elif node_name.startswith('o_'):
@@ -82,7 +82,7 @@ class InteractiveCircuitVisualizer:
         for node, info in node_info.items():
             t = info['timestep']
             if t not in timesteps:
-                timesteps[t] = {'input': [], 'error': [], 'feature_reset': [], 'feature_update': [], 'feature_hidden': [], 'hidden_state': [], 'output': []}
+                timesteps[t] = {'input': [], 'error': [], 'feature_reset': [], 'feature_update': [], 'feature_hidden': [], 'initial': [], 'output': []}
             timesteps[t][info['type']].append(node)
         
         # Sort nodes within each type by contribution (highest contribution at bottom)
@@ -92,7 +92,7 @@ class InteractiveCircuitVisualizer:
         
         positions = {}
         timestep_width = 200
-        type_spacing = {'input': 80, 'error': 24, 'feature_reset': 60, 'feature_update': 60, 'feature_hidden': 60, 'hidden_state': 24, 'output': 80}
+        type_spacing = {'input': 80, 'error': 24, 'feature_reset': 60, 'feature_update': 60, 'feature_hidden': 60, 'initial': 24, 'output': 80}
         
         for t, nodes_by_type in timesteps.items():
             x_base = t * timestep_width
@@ -121,8 +121,8 @@ class InteractiveCircuitVisualizer:
             for i, node in enumerate(nodes_by_type['feature_hidden']):
                 positions[node] = (x_base + 50, 150 + i * type_spacing['feature_hidden'])
 
-            for i, node in enumerate(nodes_by_type['hidden_state']):
-                positions[node] = (x_base + 90, 150 + i * type_spacing['hidden_state'])
+            for i, node in enumerate(nodes_by_type['initial']):
+                positions[node] = (x_base, 150 + i * type_spacing['initial'])
         
         return positions
     
@@ -134,7 +134,7 @@ class InteractiveCircuitVisualizer:
             'feature_reset': '#E57373',
             'feature_update': '#2196F3', 
             'feature_hidden': '#FF9800',
-            'hidden_state': '#8E7CC3',
+            'initial': '#8E7CC3',
             'output': '#F44336'
         }
         return color_map.get(node_type, '#757575')
@@ -170,7 +170,68 @@ class InteractiveCircuitVisualizer:
         
         return None
     
-    def _create_circuit_graph(self, edge_weights: Dict[Tuple[str, str], float], 
+    @staticmethod
+    def _format_pieces(pieces, top_k: int = 5) -> str:
+        shown = ", ".join(f"{name} {v:+.3f}" for name, v in pieces[:top_k])
+        more = f" (+{len(pieces) - top_k} more)" if len(pieces) > top_k else ""
+        return shown + more
+
+    def _read_gate_hover(self, node: str, top_k: int = 5) -> str:
+        """Gate-view line for a candidate feature: its memory input
+        W_n_h . (r_t * h_{t-1}) split by the reset-gate pieces at t."""
+        acts = getattr(self, 'current_acts', None)
+        if acts is None or not node.startswith('f_n_'):
+            return ""
+        pieces = self.circuit_tracer.read_gate_pieces(acts, node)
+        total = sum(v for _, v in pieces)
+        return f"<br><b>memory input {total:+.3f} via r_t</b>: {self._format_pieces(pieces, top_k)}"
+
+    def _gate_ranking_text(self, top_k: int = 8) -> List[str]:
+        """Top gate pieces by exact effect on the current view's target
+        (probability-weighted logits, or the root of a rooted graph)."""
+        acts = getattr(self, 'current_acts', None)
+        if acts is None or self.current_edge_weights is None:
+            return []
+        targets = getattr(self, 'current_target_weights', None)
+        root = next(iter(targets)) if targets else None
+        if targets is None:
+            names = [n.name for n in self.circuit_tracer._build_nodes(acts)]
+            pruner = self.pruner or GraphPruner()
+            weights = pruner.get_logit_weights(names, self.current_output_logits)
+            targets = {n: float(w) for n, w in zip(names, weights) if w > 0}
+        ranking = self.circuit_tracer.gate_feature_ranking(
+            acts, targets, root=root, edges=self.current_edge_weights)
+        features = [r for r in ranking if r[0].startswith(('f_z_', 'f_r_'))]
+        other = [r for r in ranking if not r[0].startswith(('f_z_', 'f_r_'))]
+        fmt = lambda rows: ", ".join(f"{name} ({where}) {score:+.4f}" for name, score, where in rows[:top_k])
+        target = f"root {root}" if root else "weighted logits"
+        return [f"Top gate features by effect on {target} (drop if removed; paste into Explain):",
+                "  " + (fmt(features) or "none"),
+                "Largest error / bias gate pieces: " + (fmt(other[:3]) or "none")]
+
+    def _split_edge_text(self, edge_text: str, top_k: int = 5) -> List[str]:
+        """Per-step gate splits of one folded edge, for the 'Split edge' box."""
+        acts = getattr(self, 'current_acts', None)
+        if acts is None:
+            return ["Generate a circuit first."]
+        parts = (edge_text or "").split()
+        if len(parts) != 2:
+            return ["Enter: source_node target_node (e.g. f_n_0_5 f_n_6_3)"]
+        src, dst = parts
+        weights = self.current_edge_weights or {}
+        if (src, dst) not in weights:
+            return [f"No edge {src} -> {dst} in the current graph."]
+        lines = [f"{src} -> {dst}: weight {weights[(src, dst)]:+.4f}"]
+        for step, gate, role in self.circuit_tracer.edge_gate_steps(src, dst):
+            pieces = self.circuit_tracer.split_edge_by_gate(src, dst, acts, step)
+            symbol = "z" if gate == "update" else "r"
+            factor = f"1-{symbol}_{step}" if role == "carry" else f"{symbol}_{step}"
+            lines.append(f"step {step} ({role}, {factor}): {self._format_pieces(pieces, top_k)}")
+        if len(lines) == 1:
+            lines.append("Ungated edge (input -> feature).")
+        return lines
+
+    def _create_circuit_graph(self, edge_weights: Dict[Tuple[str, str], float],
                 display_edge_weights: Dict[Tuple[str, str], float],
                 kept_nodes: Optional[Set[str]] = None,
                 active_features: Optional[Dict] = None) -> go.Figure:
@@ -309,7 +370,7 @@ class InteractiveCircuitVisualizer:
         # ... (rest of the node creation code remains the same) ...
         
         # Add nodes by type (this part remains unchanged)
-        node_types = ['input', 'feature_reset', 'feature_update', 'feature_hidden', 'hidden_state', 'output']
+        node_types = ['input', 'error', 'initial', 'feature_reset', 'feature_update', 'feature_hidden', 'output']
         
         for node_type in node_types:
             nodes_of_type = [node for node, info in node_info.items() if info['type'] == node_type]
@@ -352,14 +413,16 @@ class InteractiveCircuitVisualizer:
                         hover_info += f"<br><b>Activation Magnitude: {activation_mag:.4f}</b>"
                     else:
                         hover_info += "<br>Activation Magnitude: N/A"
+                    hover_info += self._read_gate_hover(node)
 
-                elif info['type'] == 'hidden_state':
-                    text = f"h_{info['timestep']}_{info['dimension']}"
-                    hover_info = f"Hidden State Coordinate<br>Timestep: {info['timestep']}<br>Dimension: {info['dimension']}"
+                elif info['type'] == 'initial':
+                    text = "h_init"
+                    hover_info = ("Hidden state entering the window<br>"
+                                  "Source-only: learned initial state (RL) or zero (copy)")
 
                 elif info['type'] == 'error':
                     text = f"e_{info['gate']}_{info['timestep']}"
-                    hover_info = (f"Frozen reconstruction residual ({info['gate']} gate)<br>"
+                    hover_info = ("Frozen candidate reconstruction residual<br>"
                                   f"Timestep: {info['timestep']}<br>"
                                   "Source-only: unexplained by the transcoder")
                         
@@ -517,9 +580,8 @@ class InteractiveCircuitVisualizer:
                     html.Label("Pruning uses raw attribution edges (normalization is display-only).", style={'font-weight': 'bold', 'margin-right': '10px'}),
                     dcc.Checklist(
                         id='normalize-toggle',
-                        options=[{'label': 'Normalized', 'value': 'normalized'}],
+                        options=[{'label': 'Normalized', 'value': 'normalized', 'disabled': True}],
                         value=[],
-                        disabled=True,
                         style={'display': 'inline-block'}
                     )
                 ], style={'margin-bottom': '10px', 'text-align': 'center'}),
@@ -541,8 +603,8 @@ class InteractiveCircuitVisualizer:
                     dcc.Input(
                         id='node-threshold-input',
                         type='number',
-                        placeholder='0.98',
-                        value=0.98,
+                        placeholder='0.8',
+                        value=0.8,
                         step=0.01,
                         min=0,
                         max=1,
@@ -552,8 +614,8 @@ class InteractiveCircuitVisualizer:
                     dcc.Input(
                         id='edge-threshold-input',
                         type='number',
-                        placeholder='0.99',
-                        value=0.99,
+                        placeholder='0.98',
+                        value=0.98,
                         step=0.01,
                         min=0,
                         max=1,
@@ -562,8 +624,28 @@ class InteractiveCircuitVisualizer:
                 ], style={'margin-bottom': '10px', 'text-align': 'center'})
             ], style={'margin-bottom': '20px', 'padding': '10px', 'background-color': '#f8f9fa', 'border-radius': '5px'}),
             
+            # Gate view: split an edge by the gate features of each step it
+            # spans, or switch to a graph rooted at a gate feature.
+            html.Div([
+                html.Div([
+                    html.Label("Split edge by gate:", style={'font-weight': 'bold', 'margin-right': '10px'}),
+                    dcc.Input(id='split-edge-input', type='text', placeholder='f_n_0_5 f_n_6_3',
+                              style={'width': '220px', 'margin-right': '5px'}),
+                    html.Button('Split', id='split-edge-button', style={'margin-right': '30px'}),
+                    html.Label("Explain gate feature:", style={'font-weight': 'bold', 'margin-right': '10px'}),
+                    dcc.Input(id='gate-feature-input', type='text', placeholder='f_z_3_12',
+                              style={'width': '120px', 'margin-right': '5px'}),
+                    html.Button('Explain', id='explain-gate-button', style={'margin-right': '5px'}),
+                    html.Button('Main graph', id='main-graph-button'),
+                ], style={'text-align': 'center'}),
+                html.Div(id='split-edge-output', style={'margin-top': '10px', 'font-family': 'monospace',
+                                                        'font-size': '12px', 'text-align': 'left'}),
+                html.Div(id='gate-ranking', style={'margin-top': '10px', 'font-family': 'monospace',
+                                                   'font-size': '12px', 'text-align': 'left'}),
+            ], style={'margin-bottom': '20px', 'padding': '10px', 'background-color': '#f8f9fa', 'border-radius': '5px'}),
+
             # Status display
-            html.Div(id='graph-stats', style={'margin-bottom': '10px', 'padding': '10px', 
+            html.Div(id='graph-stats', style={'margin-bottom': '10px', 'padding': '10px',
                                             'background-color': '#f8f9fa', 'border-radius': '5px',
                                             'text-align': 'center'}),
             
@@ -573,25 +655,70 @@ class InteractiveCircuitVisualizer:
     
     def _setup_callbacks(self):
         @self.app.callback(
+            Output('split-edge-output', 'children'),
+            [Input('split-edge-button', 'n_clicks')],
+            [State('split-edge-input', 'value')],
+            prevent_initial_call=True
+        )
+        def split_edge(n_clicks, edge_text):
+            return [html.Div(line) for line in self._split_edge_text(edge_text)]
+
+        @self.app.callback(
+            Output('gate-ranking', 'children'),
+            [Input('graph-stats', 'children')],
+            prevent_initial_call=True
+        )
+        def rank_gates(stats):
+            # Refreshes whenever the graph is redrawn (generate, view switch, toggles).
+            return [html.Div(line) for line in self._gate_ranking_text()]
+
+        @self.app.callback(
             [Output('circuit-graph', 'figure'),
             Output('graph-stats', 'children')],
             [Input('generate-button', 'n_clicks'),
             Input('display-normalize-toggle', 'value'),  # Add display toggle as input
-            Input('normalize-toggle', 'value')],  # Add pruning toggle as input
+            Input('normalize-toggle', 'value'),  # Add pruning toggle as input
+            Input('explain-gate-button', 'n_clicks'),
+            Input('main-graph-button', 'n_clicks')],
             [State('sequence-input', 'value'),
             State('node-threshold-input', 'value'),
             State('edge-threshold-input', 'value'),
+            State('gate-feature-input', 'value'),
             State('circuit-graph', 'figure')]  # Keep current figure state
         )
         def generate_and_display_circuit(n_clicks, display_normalize_toggle, normalize_toggle,
-                                        sequence_text, node_threshold, edge_threshold, current_figure):
+                                        explain_clicks, main_clicks,
+                                        sequence_text, node_threshold, edge_threshold, gate_feature,
+                                        current_figure):
             """Generate and display circuit graph"""
             ctx = dash.callback_context
-            
-            # Check if this is just a display toggle change
+            triggered = [t['prop_id'] for t in ctx.triggered] if ctx.triggered else []
+
+            # View switches: a graph rooted at a gate feature (its target
+            # replaces the logits in pruning), or back to the main graph.
+            if 'explain-gate-button.n_clicks' in triggered:
+                if getattr(self, 'current_acts', None) is None:
+                    return current_figure or go.Figure(), "Generate a circuit first."
+                try:
+                    edges, normalized, targets = self.circuit_tracer.gate_feature_graph(
+                        self.current_acts, (gate_feature or "").strip())
+                except ValueError as e:
+                    return current_figure or go.Figure(), f"Error: {e}"
+                self.current_edge_weights, self.current_edge_weights_normalized = edges, normalized
+                self.current_target_weights = targets
+            elif 'main-graph-button.n_clicks' in triggered:
+                if getattr(self, 'main_edge_weights', None) is None:
+                    return current_figure or go.Figure(), "Generate a circuit first."
+                self.current_edge_weights, self.current_edge_weights_normalized = self.main_edge_weights
+                self.current_target_weights = None
+            view = (f"rooted at {next(iter(self.current_target_weights))}"
+                    if getattr(self, 'current_target_weights', None) else "main graph")
+
+            # Check if this is just a display toggle change (or a view switch)
             display_triggered = ctx.triggered and any(
-                prop_id in ['display-normalize-toggle.value', 'normalize-toggle.value'] 
-                for prop_id in [t['prop_id'] for t in ctx.triggered]
+                prop_id in ['display-normalize-toggle.value', 'normalize-toggle.value',
+                            'explain-gate-button.n_clicks', 'main-graph-button.n_clicks']
+                for prop_id in triggered
             )
             
             # Use cached data if available for display/normalization toggles
@@ -615,16 +742,18 @@ class InteractiveCircuitVisualizer:
                         if edge_threshold is not None:
                             self.pruner.edge_threshold = edge_threshold
                         
-                        pruned_edges, kept_nodes = self.pruner.prune_graph(selected_edge_weights, self.current_output_logits)
+                        pruned_edges, kept_nodes = self.pruner.prune_graph(
+                            selected_edge_weights, self.current_output_logits,
+                            target_weights=getattr(self, 'current_target_weights', None))
                         fig = self._create_circuit_graph(pruned_edges, display_edge_weights, kept_nodes, self.current_active_features)
-                        
+
                         display_type = "normalized" if use_normalized_for_display else "raw"
-                        stats = f"Circuit for '{' '.join(self.current_tokens)}' (pruning: raw attribution, display: {display_type}): {len(kept_nodes)} nodes, {len(pruned_edges)} edges"
+                        stats = f"Circuit for '{' '.join(self.current_tokens)}', {view} (pruning: raw attribution, display: {display_type}): {len(kept_nodes)} nodes, {len(pruned_edges)} edges"
                     else:
                         fig = self._create_circuit_graph(selected_edge_weights, display_edge_weights, None, self.current_active_features)
                         all_nodes = set(sum(selected_edge_weights.keys(), ()))
                         display_type = "normalized" if use_normalized_for_display else "raw"
-                        stats = f"Circuit for '{' '.join(self.current_tokens)}' (pruning: raw attribution, display: {display_type}): {len(all_nodes)} nodes, {len(selected_edge_weights)} edges"
+                        stats = f"Circuit for '{' '.join(self.current_tokens)}', {view} (pruning: raw attribution, display: {display_type}): {len(all_nodes)} nodes, {len(selected_edge_weights)} edges"
                     
                     return fig, stats
             
@@ -650,20 +779,25 @@ class InteractiveCircuitVisualizer:
                 # Recompute live activations from the checkpoint currently
                 # loaded in the tracer. Cached analyses are for feature
                 # browsing only and must not decide circuit membership.
-                active_features = self.circuit_tracer.get_active_features(sequence_tensor)
-                
+                acts = self.circuit_tracer.run_forward_pass(sequence_tensor)
+                active_features = self.circuit_tracer.get_active_features(sequence_tensor, acts=acts)
+
                 print(f"Building circuit with {sum(len(v) for v in active_features.values())} active features")
-                
+
                 # Build circuit graph - get both normalized and raw edge weights
-                edge_weights, edge_weights_normalized = self.circuit_tracer.build_circuit_graph(sequence_tensor, active_features)
-                
+                edge_weights, edge_weights_normalized = self.circuit_tracer.build_circuit_graph(
+                    sequence_tensor, active_features, acts=acts)
+
                 # Cache both edge weight types and other data
                 self.current_edge_weights = edge_weights
                 self.current_edge_weights_normalized = edge_weights_normalized
+                self.main_edge_weights = (edge_weights, edge_weights_normalized)
+                self.current_target_weights = None
                 self.current_sequence_tensor = sequence_tensor
                 self.current_active_features = active_features
                 self.current_tokens = tokens
-                self.current_output_logits = self.circuit_tracer.run_forward_pass(sequence_tensor)["logits"].detach().cpu()
+                self.current_acts = acts
+                self.current_output_logits = acts["logits"].detach().cpu()
                 
                 # Choose which edge weights to use for pruning
                 use_normalized_for_display = 'normalized' in display_normalize_toggle
@@ -685,12 +819,12 @@ class InteractiveCircuitVisualizer:
                     
                     fig = self._create_circuit_graph(pruned_edges, display_edge_weights, kept_nodes, active_features)
                     display_type = "normalized" if use_normalized_for_display else "raw"
-                    stats = f"Circuit for '{' '.join(tokens)}' (pruning: raw attribution, display: {display_type}): {len(kept_nodes)} nodes, {len(pruned_edges)} edges (pruned from {len(selected_edge_weights)}) | Thresholds: node={self.pruner.node_threshold}, edge={self.pruner.edge_threshold}"
+                    stats = f"Circuit for '{' '.join(tokens)}', main graph (pruning: raw attribution, display: {display_type}): {len(kept_nodes)} nodes, {len(pruned_edges)} edges (pruned from {len(selected_edge_weights)}) | Thresholds: node={self.pruner.node_threshold}, edge={self.pruner.edge_threshold}"
                 else:
                     fig = self._create_circuit_graph(selected_edge_weights, display_edge_weights, None, active_features)
                     all_nodes = set(sum(selected_edge_weights.keys(), ()))
                     display_type = "normalized" if use_normalized_for_display else "raw"
-                    stats = f"Circuit for '{' '.join(tokens)}' (pruning: raw attribution, display: {display_type}): {len(all_nodes)} nodes, {len(selected_edge_weights)} edges (no pruning)"
+                    stats = f"Circuit for '{' '.join(tokens)}', main graph (pruning: raw attribution, display: {display_type}): {len(all_nodes)} nodes, {len(selected_edge_weights)} edges (no pruning)"
                 
                 return fig, stats
                 
@@ -785,6 +919,10 @@ if __name__ == "__main__":
     feature_analyzer.feature_activations = analysis_dict
     feature_analyzer.sequence_activations = analysis_dict_sequences
 
-    circuit_tracer = CircuitTracer(rnn_model, update_transcoder, hidden_transcoder, reset_transcoder=reset_transcoder, device="cpu")
+    # RL: the readout is 3 policy logits + 1 value unit, and the agent acts at
+    # every step. Copy: all readout units are logits, emitted in the second half.
+    tracer_kwargs = dict(output_dims=3, outputs_at="all") if args.rl else {}
+    circuit_tracer = CircuitTracer(rnn_model, update_transcoder, hidden_transcoder, reset_transcoder=reset_transcoder,
+                                   device="cpu", **tracer_kwargs)
     
     launch_circuit_visualizer(circuit_tracer, feature_analyzer, datasets, pruner)

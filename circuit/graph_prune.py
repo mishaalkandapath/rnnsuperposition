@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple, Set
+from typing import Dict, List, Optional, Tuple, Set
 
 import torch
 import numpy as np
@@ -10,9 +10,9 @@ class GraphPruner:
     """
     
     def __init__(self, 
-                 node_threshold: float = 0.98,
-                 edge_threshold: float = 0.99,
-                 top_k_logits: int = 3,
+                 node_threshold: float = 0.8,
+                 edge_threshold: float = 0.98,
+                 top_k_logits: int = 10,
                  logit_prob_threshold: float = 0.95):
         """
         Args:
@@ -20,6 +20,9 @@ class GraphPruner:
             edge_threshold: Threshold for edge pruning 
             top_k_logits: Maximum number of logit nodes to keep *per timestep*
             logit_prob_threshold: Per-timestep cumulative probability threshold
+
+        Defaults follow Ameisen et al. (2025): node 0.8, edge 0.98, up to 10
+        logits covering 95% of the probability.
         """
         self.node_threshold = node_threshold
         self.edge_threshold = edge_threshold
@@ -146,22 +149,28 @@ class GraphPruner:
 
     def get_logit_weights(self,
                          node_names: List[str],
-                         output_probs: torch.Tensor = None) -> torch.Tensor:
+                         output_probs: torch.Tensor = None,
+                         target_weights: Optional[Dict[str, float]] = None) -> torch.Tensor:
         """
         Get weights for logit nodes based on output probabilities
-        
+
         Args:
             node_names: List of node names
             output_probs: Raw output logits for each timestep/token. (The
                 historical argument name is retained for API compatibility.)
-            
+            target_weights: Explicit {node name: weight} targets, replacing
+                the logits (e.g. a rooted gate-feature graph).
+
         Returns:
             logit_weights: Vector where entry is prob for logit nodes, 0 for others
         """
         n_nodes = len(node_names)
         logit_weights = torch.zeros(n_nodes)
-        
-        if output_probs is None:
+
+        if target_weights is not None:
+            for i, name in enumerate(node_names):
+                logit_weights[i] = target_weights.get(name, 0.0)
+        elif output_probs is None:
             # If no probabilities provided, use uniform weights for output nodes
             for i, name in enumerate(node_names):
                 if name.startswith('o_'):  # Output/logit nodes
@@ -179,15 +188,17 @@ class GraphPruner:
     def prune_nodes_by_indirect_influence(self, 
                                         edge_weights: Dict[Tuple[str, str], float],
                                         node_names: List[str],
-                                        output_probs: torch.Tensor = None) -> Set[str]:
+                                        output_probs: torch.Tensor = None,
+                                        target_weights: Optional[Dict[str, float]] = None) -> Set[str]:
         """
         Prune nodes based on indirect influence on logits
-        
+
         Args:
             edge_weights: Dict of edge weights
             node_names: List of all node names
             output_probs: Output probabilities
-            
+            target_weights: Explicit targets replacing the logits (see get_logit_weights)
+
         Returns:
             Set of node names to keep
         """
@@ -201,17 +212,19 @@ class GraphPruner:
         B = self.compute_indirect_influence_matrix(A_norm)
         
         # Get logit weights
-        logit_weights = self.get_logit_weights(node_names, output_probs)
-        
+        logit_weights = self.get_logit_weights(node_names, output_probs, target_weights)
+
         # Calculate influence on logits for each node
         influence_on_logits = torch.matmul(logit_weights, B)
-        
+
         # Separate logit and non-logit nodes
         logit_nodes = []
         non_logit_nodes = []
-        
+        is_target = ((lambda name: name in target_weights) if target_weights is not None
+                     else (lambda name: name.startswith('o_')))
+
         for i, name in enumerate(node_names):
-            if name.startswith('o_'):  # Logit/output nodes
+            if is_target(name):  # Logit/output (or explicit target) nodes
                 logit_nodes.append((i, name))
             else:
                 non_logit_nodes.append((i, name, influence_on_logits[i].item()))
@@ -233,7 +246,7 @@ class GraphPruner:
         # Select logits separately at every output timestep. The old global
         # 95%-mass budget mixed independent token distributions and could drop
         # whole timesteps.
-        if output_probs is not None:
+        if output_probs is not None or target_weights is not None:
             for i, name in logit_nodes:
                 if logit_weights[i] > 0:
                     nodes_to_keep.add(name)
@@ -241,10 +254,11 @@ class GraphPruner:
             # Keep all logit nodes if no probabilities provided
             for i, name in logit_nodes:
                 nodes_to_keep.add(name)
-                
-        # Always keep embedding, error, and output nodes
+
+        # Always keep source nodes: inputs, errors, and the hidden state
+        # entering the window (h_init), which is source-only like an input.
         for name in node_names:
-            if name.startswith('x_') or name.startswith('e_'):  # Input/embedding or error nodes
+            if name.startswith(('x_', 'e_')) or name == 'h_init':
                 nodes_to_keep.add(name)
                 
         return nodes_to_keep
@@ -252,15 +266,17 @@ class GraphPruner:
     def prune_edges_by_thresholded_influence(self,
                                            edge_weights: Dict[Tuple[str, str], float],
                                            kept_nodes: Set[str],
-                                           output_probs: torch.Tensor = None) -> Dict[Tuple[str, str], float]:
+                                           output_probs: torch.Tensor = None,
+                                           target_weights: Optional[Dict[str, float]] = None) -> Dict[Tuple[str, str], float]:
         """
         Prune edges based on thresholded influence
-        
+
         Args:
             edge_weights: Dict of edge weights
             kept_nodes: Set of nodes that survived node pruning
             output_probs: Output probabilities
-            
+            target_weights: Explicit targets replacing the logits (see get_logit_weights)
+
         Returns:
             Pruned edge weights dict
         """
@@ -284,8 +300,8 @@ class GraphPruner:
         B = self.compute_indirect_influence_matrix(A_norm)
         
         # Get logit weights
-        logit_weights = self.get_logit_weights(node_names, output_probs)
-        
+        logit_weights = self.get_logit_weights(node_names, output_probs, target_weights)
+
         # Calculate node influence scores
         node_scores = torch.matmul(logit_weights, B)
         
@@ -335,14 +351,17 @@ class GraphPruner:
         
     def prune_graph(self, 
                    edge_weights: Dict[Tuple[str, str], float],
-                   output_probs: torch.Tensor = None) -> Tuple[Dict[Tuple[str, str], float], Set[str]]:
+                   output_probs: torch.Tensor = None,
+                   target_weights: Optional[Dict[str, float]] = None) -> Tuple[Dict[Tuple[str, str], float], Set[str]]:
         """
         Full graph pruning pipeline
-        
+
         Args:
             edge_weights: Dict of edge weights
             output_probs: Output probabilities for logit nodes
-            
+            target_weights: Explicit {node: weight} targets replacing the
+                logits, e.g. {gate feature: 1.0} for a rooted gate-feature graph
+
         Returns:
             (pruned_edge_weights, kept_nodes)
         """
@@ -353,9 +372,9 @@ class GraphPruner:
             all_nodes.add(to_node)
         node_names = list(all_nodes)
         # Step 1: Prune nodes
-        kept_nodes = self.prune_nodes_by_indirect_influence(edge_weights, node_names, output_probs)
+        kept_nodes = self.prune_nodes_by_indirect_influence(edge_weights, node_names, output_probs, target_weights)
         # Step 2: Prune edges
-        pruned_edges = self.prune_edges_by_thresholded_influence(edge_weights, kept_nodes, output_probs)
+        pruned_edges = self.prune_edges_by_thresholded_influence(edge_weights, kept_nodes, output_probs, target_weights)
         
         return pruned_edges, kept_nodes
     
