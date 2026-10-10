@@ -4,9 +4,11 @@ For every run directory, every periodic checkpoint (e{N}.ckpt) and the final
 checkpoint are evaluated on:
   - validation FVU (and L0 / dead-feature fraction), on the same held-out
     rows the run was validated on (same split rule and seed as training);
-  - optionally, the splice eval (training/splice_eval.py): the copy-task GRU
+  - optionally, the splice eval (training/splice_eval.py): the task's GRU
     with this gate replaced by the checkpoint, compared with the original
-    model on the same inputs: KL, top-1 agreement, task accuracy.
+    model on the same inputs. Copy: KL, top-1 agreement, task accuracy.
+    RL (--task rl, or recorded in the run's metadata): policy KL at GO and
+    DELAY steps, a1/a2 choice agreement at GO, value-head difference.
 
 Run directories from training/sweep_transcoders.py carry their target and
 seed in sweep_metadata.json. For other runs pass --target and --split_seed
@@ -30,14 +32,18 @@ import torch
 from torch.utils.data import ConcatDataset, StackDataset
 
 from datasets.utils import create_transcoder_dataloaders
-from models.rnn import RNN
 from models.transcoders import Transcoder
-from training.splice_eval import SPLICE_TARGETS, SpliceEvaluator, load_splice_traces
+from training.splice_eval import (SPLICE_TARGETS, SPLICE_TASKS, build_task_rnn,
+                                  load_task_traces, make_splice_evaluator)
 
 torch.serialization.add_safe_globals([StackDataset])
 
 METRICS = ["fvu", "l0", "dead_fraction",
-           "splice_kl", "splice_top1_agreement", "splice_task_acc", "original_task_acc"]
+           # copy splice eval
+           "splice_kl", "splice_top1_agreement", "splice_task_acc", "original_task_acc",
+           # RL splice eval
+           "splice_kl_go", "splice_kl_delay", "splice_go_agreement", "splice_value_mae", "splice_value_nmae",
+           "splice_nonfinite_frac"]
 
 
 def parse_args():
@@ -55,11 +61,13 @@ def parse_args():
     p.add_argument("--num_workers", type=int, default=4)
     p.add_argument("--max_val_rows", type=int, default=None,
                    help="Evaluate FVU on at most this many validation rows (same rows for every checkpoint)")
-    p.add_argument("--rnn_path", default=None, help="Copy-task GRU checkpoint; enables the splice eval")
+    p.add_argument("--task", choices=SPLICE_TASKS, default=None,
+                   help="Task of the GRU; read from the run's metadata if absent (default copy)")
+    p.add_argument("--rnn_path", default=None, help="Task GRU checkpoint; enables the splice eval")
     p.add_argument("--splice_sequence_paths", nargs="+", default=None,
-                   help="Trace sequence files (datasets/transcoder_copy_datasets.py) for the splice eval")
+                   help="Trace files for the splice eval (copy: *_seqN.pt; rl: *_rl.pt windows)")
     p.add_argument("--splice_samples", type=float, default=0.05,
-                   help="Sequences for the splice eval: <= 1 is a fraction, > 1 a count")
+                   help="Sequences / windows for the splice eval: <= 1 is a fraction, > 1 a count")
     p.add_argument("--splice_seed", type=int, default=0,
                    help="Seed for sampling splice sequences. Runs whose datasets carry no sequence "
                         "ids all share one sample, so their splice metrics are comparable")
@@ -88,7 +96,8 @@ def run_settings(run_dir: Path, args) -> Dict:
         print(f"-- {run_dir.name}: split seed {split_seed} (from metadata)")
     n_epochs = hyper.get("n_epochs", meta.get("config", {}).get("n_epochs"))
     previous = hyper.get("previous_epochs", 0) or 0
-    return {"target": target, "split_seed": int(split_seed),
+    task = args.task or meta.get("task") or hyper.get("task") or "copy"
+    return {"target": target, "split_seed": int(split_seed), "task": task,
             "final_epoch": None if n_epochs is None else n_epochs + previous}
 
 
@@ -177,7 +186,13 @@ def plot(rows: List[Dict], out_dir: Path):
     labels = {"fvu": "Validation FVU", "l0": "L0 (active features / row)",
               "dead_fraction": "Dead-feature fraction", "splice_kl": "Splice KL(original || spliced)",
               "splice_top1_agreement": "Top-1 agreement with original",
-              "splice_task_acc": "Task accuracy", "original_task_acc": "Original task accuracy"}
+              "splice_task_acc": "Task accuracy", "original_task_acc": "Original task accuracy",
+              "splice_kl_go": "Policy KL at GO (original || spliced)",
+              "splice_kl_delay": "Policy KL at DELAY steps (original || spliced)",
+              "splice_go_agreement": "a1/a2 choice agreement at GO",
+              "splice_value_mae": "Value-head |original - spliced|",
+              "splice_value_nmae": "Value-head error / std(original value)",
+              "splice_nonfinite_frac": "Fraction of steps where the spliced agent diverged"}
 
     def draw(ax, metric):
         for run in runs:
@@ -188,7 +203,7 @@ def plot(rows: List[Dict], out_dir: Path):
             ref = [r["original_task_acc"] for r in rows if r.get("original_task_acc") is not None]
             if ref:
                 ax.axhline(ref[0], color="black", linestyle="--", linewidth=1, label="original model")
-        if metric in ("fvu", "splice_kl"):
+        if metric in ("fvu", "splice_kl", "splice_kl_go", "splice_kl_delay", "splice_value_mae", "splice_value_nmae"):
             ax.set_yscale("log")
         ax.set_title(labels[metric])
         ax.set_xlabel("epoch")
@@ -224,8 +239,7 @@ def main():
     if args.rnn_path and not args.splice_sequence_paths:
         raise ValueError("--rnn_path needs --splice_sequence_paths")
 
-    splice_traces = load_splice_traces(args.splice_sequence_paths) if args.rnn_path else None
-    val_cache, splice_cache, rows = {}, {}, []
+    trace_cache, val_cache, splice_cache, rows = {}, {}, {}, []
     for run_dir in args.run_dirs:
         settings = run_settings(run_dir, args)
         ckpts = checkpoints(run_dir, settings["final_epoch"], args.skip_final)
@@ -240,17 +254,18 @@ def main():
         if args.rnn_path:
             # With held-out sequence ids the sample must come from this run's
             # held-out set; without them every run shares one sample.
-            key = (settings["target"], seed if val_sequence_ids is not None else None)
+            task = settings["task"]
+            key = (task, settings["target"], seed if val_sequence_ids is not None else None)
             if key not in splice_cache:
+                if task not in trace_cache:
+                    trace_cache[task] = load_task_traces(task, args.splice_sequence_paths)
                 probe = load_transcoder(ckpts[0]["path"], "cpu")
                 hidden_size = probe.out_size
                 input_size = probe.input_size - hidden_size
-                # Copy-task GRU: input = vocab + delimiter, output = vocab.
-                rnn = RNN(input_size=input_size, hidden_size=hidden_size, out_size=input_size - 1,
-                          out_act=lambda x: x, use_gru=True)
+                rnn = build_task_rnn(task, input_size, hidden_size)
                 rnn.load_state_dict(torch.load(args.rnn_path, map_location="cpu"))
-                splice_cache[key] = SpliceEvaluator(
-                    rnn, settings["target"], splice_traces, args.splice_samples,
+                splice_cache[key] = make_splice_evaluator(
+                    task, rnn, settings["target"], trace_cache[task], args.splice_samples,
                     val_sequence_ids=val_sequence_ids, seed=args.splice_seed, device=device)
             evaluator = splice_cache[key]
 

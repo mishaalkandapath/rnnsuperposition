@@ -89,7 +89,14 @@ class RLFeatureActivationAnalyzer(FeatureActivationAnalyzer):
 
                 assert n_zero <= 3
                 for key in sequence:
-                    sequences_by_type_by_length[pattern][5 - n_zero][key].append(sequence[key][n_zero:])
+                    # Per-trial tensors are (5, 3, ·) and lose their padded
+                    # trials; per-window metadata (seq_id, core_trial, ...)
+                    # is scalar and kept as is (core_trial still indexes the
+                    # padded window).
+                    value = sequence[key]
+                    if value.dim() >= 2:
+                        value = value[n_zero:]
+                    sequences_by_type_by_length[pattern][5 - n_zero][key].append(value)
 
         for seq_typ in sequences_by_type_by_length:
             self.cur_type=seq_typ

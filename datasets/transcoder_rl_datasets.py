@@ -43,16 +43,31 @@ Structure:
 class RLTranscoderDataGenerator:
     """Generate training data for RNN transcoders from RL task"""
     
-    def __init__(self, rl_agent: ActorCriticTrainer, batch_size: int, device='cpu'):
+    INVALID = 4  # trial label: fixation at GO or no fixation at DELAY_2
+
+    def __init__(self, rl_agent: ActorCriticTrainer, batch_size: int, device='cpu',
+                 action_mode: str = "sample"):
         """
         Args:
             rl_agent: Trained RL agent with RNN model
             device: Device to run computations on
+            action_mode: "sample" draws every action from the agent's full
+                3-way policy, as in training (so the traces follow its own
+                behaviour, errors included). "greedy" forces fixation at the
+                delays and takes the argmax over a1/a2 at GO (previous behaviour).
         """
+        if action_mode not in ("sample", "greedy"):
+            raise ValueError(f"action_mode must be 'sample' or 'greedy', got {action_mode!r}")
+        self.action_mode = action_mode
         self.rl_agent = rl_agent
         self.device = device
         self.rl_agent.model.eval()
         self.batch_size = batch_size
+        # Episode ids, unique within a run (balancing episodes included) and,
+        # via a random per-run prefix, across separately generated files that
+        # may be concatenated for training (e.g. high_first + low_first).
+        self.run_prefix = int(torch.randint(0, 2**30, (1,))) << 32
+        self.next_episode = 0
         
     def generate_transcoder_dataset(self, 
                                     n_episodes: int,
@@ -99,39 +114,42 @@ class RLTranscoderDataGenerator:
         all_patterns_count = [0, 0, 0, 0]
         # Equal representation of reversal counts (1, 2, 3, 4)
         n_batches = (n_episodes + self.batch_size - 1) // self.batch_size
-        episodes_per_reversal = n_episodes // 4
-        reversal_counts = [1, 2, 3, 4] * episodes_per_reversal
+        reversal_counts = [1 + i % 4 for i in range(n_episodes)]
         
-        all_batch_sequences = OrderedDict(
-            [(c, defaultdict(torch.Tensor))for c in range(4)] 
-                                           )
+        window_parts = {pattern: [] for pattern in range(4)}
         for batch_idx in tqdm(range(n_batches)):
             start_idx = batch_idx * self.batch_size
             end_idx = min(start_idx + self.batch_size, n_episodes)
             current_batch_size = end_idx - start_idx
 
             batch_reversal_counts = reversal_counts[start_idx:end_idx]
-            batch_data, batch_patterns, _, batch_sequences = self._run_batch_episodes(
+            batch_data, batch_patterns, _, trace = self._run_batch_episodes(
                 current_batch_size,
                 batch_reversal_counts,
-                trials_per_episode, 
+                trials_per_episode,
                 initial_config,
                 make_sequences=True
             )
-            least_sequences = min(batch_sequences[i]["inputs"].size(0) for i in range(4))
-            if not all_batch_sequences[0]: 
-                all_batch_sequences = {pattern: {k: batch_sequences[pattern][k][:least_sequences] for k in batch_sequences[pattern]} for pattern in batch_sequences}
-            else:
-                all_batch_sequences = {pattern: {k: 
-                                                torch.concat([
-                                                    batch_sequences[pattern][k][:least_sequences],all_batch_sequences[pattern][k]])
-                                                    for k in batch_sequences[pattern]} 
-                                                    for pattern in batch_sequences}
+            # Same number of windows per pattern from every batch: the rarest
+            # pattern's count (0 if a pattern never occurs, e.g. in a small
+            # last batch). Only the kept windows are built.
+            index = [self._window_index(trace, pattern) for pattern in range(4)]
+            # A random subset of each pattern's windows, so frequent patterns
+            # are drawn from across the batch's episodes (not the first few).
+            least_sequences = min(len(episodes) for episodes, _ in index)
+            for pattern, (episodes, cores) in enumerate(index):
+                keep = torch.randperm(len(episodes))[:least_sequences].sort().values.to(episodes.device)
+                window_parts[pattern].append(self._build_windows(
+                    trace, episodes[keep], cores[keep], pattern))
+            del trace
 
             all_episodes_data.append(batch_data)
             all_patterns_count = [all_patterns_count[i] + batch_patterns[i] for i in range(4)]
-        
+
         episodes_data = self._concatenate_batch_data(all_episodes_data)
+        all_batch_sequences = {pattern: {key: torch.cat([part[key] for part in parts])
+                                         for key in parts[0]}
+                               for pattern, parts in window_parts.items()}
         return (
             episodes_data, 
             OrderedDict([(["commonp", "common(1-p)",
@@ -151,193 +169,163 @@ class RLTranscoderDataGenerator:
         
         return concatenated
     
-    def _run_batch_episodes(self, batch_size: int, reversal_counts: List[int], 
+    def _run_batch_episodes(self, batch_size: int, reversal_counts: List[int],
                             trials_per_episode: int, initial_config: str,
-                            make_sequences=False) -> Dict:
-        #the hidden state of the curren trial must update in light of transition -- common or uncommon
-        # the hidden state of the next trial D1 phase will change based on the reward given -- it'll also influence the action and what not. 
-        # so both trials, collectively, inform a type of transition. 
+                            make_sequences=False) -> Tuple:
+        """Run one batch of episodes, recording every step as batched tensors.
+
+        Returns (ret_dict, batch_patterns, row_patterns[, trace]): step-major
+        gate rows (row = step * batch_size + episode), counts of valid trials
+        per pattern, per-row labels, and, if make_sequences, a trace from
+        which _build_windows builds trace windows (only for windows kept).
+        """
+        # The hidden state of the current trial updates in light of the
+        # transition (common or uncommon); the next trial's DELAY_1 state then
+        # updates on the reward, so the two trials together inform a pattern.
         env_batch = self.rl_agent.env
+        episode_ids = self.run_prefix + self.next_episode + torch.arange(batch_size, dtype=torch.long)
+        self.next_episode += batch_size
         batch_reversal_indices = torch.zeros((batch_size, trials_per_episode))
         for i in range(batch_size):
             num_reversals = reversal_counts[i]
             reversal_indices = sorted(random.sample(range(1, trials_per_episode-1), num_reversals))
             batch_reversal_indices[i][reversal_indices] = 1
-        
-        batch_patterns = [0, 0, 0, 0]
-        
-        #  sequence data for feature analysis and circuit vizualization
-        # type -> list of sequences by batch
-        sequence_dict = defaultdict(lambda: [[] for _ in range(batch_size)])
-        
-        # Context window for each episode (max 3 trials)
-        context_windows = [[] for _ in range(batch_size)]
-        # Track previous trial types for each episode
-        prev_trial_types = [None for _ in range(batch_size)]
-        
-        env_batch.reset_trial_batch(reset_r=True)
-        if initial_config == 'high_first':
-            env_batch.reward_probs[:, 1] = 0.9  # State 1
-            env_batch.reward_probs[:, 2] = 0.1  # State 2
-        else:
-            env_batch.reward_probs[:, 1] = 0.1
-            env_batch.reward_probs[:, 2] = 0.9
-            
-        actions_history = [[] for _ in range(batch_size)]
-        batch_pattern_mask = [[] for _ in range(batch_size)] 
-        # RNN internal state
-        batch_inputs = []
-        batch_hidden_states = []
-        batch_update_gates = []
-        batch_reset_gates = []
-        batch_new_contexts = []
-        
+
+        # Fresh trial state and start allocation for this batch; it then
+        # persists across trials and is swapped in place at each reversal.
+        env_batch.set_batch_size(batch_size, high_first=(initial_config == 'high_first'))
+
+        steps = defaultdict(list)   # per step: (batch, ·) tensors
+        p_s1 = []                   # per trial: S1 reward probability, (batch,)
         hidden_states = None
-        for trial in (range(trials_per_episode)):
+        for trial in range(trials_per_episode):
             manual_switch = torch.zeros(batch_size, dtype=torch.bool)
             switch_mask = batch_reversal_indices[:, trial] != 0
             manual_switch[switch_mask] = 1
             env_batch.reset_trial_batch(manual_switch=manual_switch)
-            
-            # Store trial data for each episode
-            trial_data = [{} for _ in range(batch_size)]
-            
+            p_s1.append(env_batch.reward_probs[:, env_batch.STATE_1].clone().to(self.device))
+
             for phase in range(3):  # DELAY_1, GO, DELAY_2
                 # Get observation and convert to input tensor
                 input_vectors = env_batch.get_input_vector_batch()
                 input_tensor = input_vectors.unsqueeze(1).to(self.device).to(dtype=torch.float32)
-                
+
                 with torch.no_grad():
                     policy_logits, value_estimate, new_hidden_states, gate_data = self._forward_with_gates(
                         input_tensor, hidden_states
                     )
-                
+
                 actions = self.rl_agent.select_action_batched(policy_logits,
-                                                            phase=phase)
+                                                            phase=phase,
+                                                            sample=self.action_mode == "sample")
                 # take that action
                 _, rewards = env_batch.step_batch(actions)
-                
-                # Store phase data for each episode
-                for ep_idx in range(batch_size):
-                    if make_sequences:
-                        if 'inputs' not in trial_data[ep_idx]:
-                            trial_data[ep_idx]['inputs'] = []
-                            trial_data[ep_idx]['h_prevs'] = []
-                            trial_data[ep_idx]['z_ts'] = []
-                            trial_data[ep_idx]['r_ts'] = []
-                            trial_data[ep_idx]['h_new_ts'] = []
-                            trial_data[ep_idx]['outputs'] = []
-                        
-                        trial_data[ep_idx]['inputs'].append(input_tensor[ep_idx].squeeze(0))
-                        trial_data[ep_idx]['z_ts'].append(gate_data['update_gate'][ep_idx].squeeze(0))
-                        trial_data[ep_idx]['r_ts'].append(gate_data['reset_gate'][ep_idx].squeeze(0))
-                        trial_data[ep_idx]['h_new_ts'].append(gate_data['new_context'][ep_idx].squeeze(0))
-                        trial_data[ep_idx]['outputs'].append(torch.concat([policy_logits[ep_idx], value_estimate[ep_idx].unsqueeze(0)], dim=-1).squeeze(0))
-                        
-                        if hidden_states is not None:
-                            trial_data[ep_idx]['h_prevs'].append(hidden_states[0][ep_idx])
-                        else:
-                            initial_hidden = self.rl_agent.model.initial_states[0].detach()
-                            trial_data[ep_idx]['h_prevs'].append(initial_hidden)
-                        
-                    if phase == 2:
-                        current_state = env_batch.current_state[ep_idx].item()
-                        last_action = actions_history[ep_idx][-1] if actions_history[ep_idx] else 0
-                        reward = rewards[ep_idx].item()
-                        
-                        # Determine current trial type
-                        if current_state == last_action:
-                            pattern_type = 0 if reward > 0 else 1  # common
-                        else:
-                            pattern_type = 2 if reward > 0 else 3  # uncommon
-                        
-                        batch_patterns[pattern_type] += 1
-                        batch_pattern_mask[ep_idx].append(pattern_type)
-                        
-                        if make_sequences:
-                            # 1. If there's a previous trial type, add current trial to that sequence
-                            trial_stacked = {key: torch.stack(val) for key, val in trial_data[ep_idx].items()}
-                            if prev_trial_types[ep_idx] is not None:
-                                # Find the most recent sequence of the previous trial type
-                                prev_type_sequences = sequence_dict[prev_trial_types[ep_idx]][ep_idx]
-                                if prev_type_sequences:  # If there are existing sequences for this type
-                                    # Add current trial to the most recent sequence
-                                    last_sequence = prev_type_sequences[-1]
-                                    assert len(last_sequence) < 5  # Max length is 5
-                                    last_sequence.append(trial_stacked)
-                        
-                            # 2. Create new sequence starting with context + current trial
-                            new_sequence = []
-                            
-                            # Add context trials (up to 3 previous trials)
-                            for context_trial in context_windows[ep_idx]:
-                                new_sequence.append(context_trial)
-                            
-                            # Add current trial as the "target" trial
-                            new_sequence.append(trial_stacked)
-                            sequence_dict[pattern_type][ep_idx].append(new_sequence)
-                            
-                            # 3. Update context window (max 3 trials)
-                            context_windows[ep_idx].append(trial_stacked)
-                            if len(context_windows[ep_idx]) > 3:
-                                context_windows[ep_idx].pop(0)  # Remove earliest trial
-                            
-                            # Update previous trial type
-                            prev_trial_types[ep_idx] = pattern_type
-                    else:
-                        batch_pattern_mask[ep_idx].append(batch_pattern_mask[ep_idx][-1] if trial else -1)
-                    actions_history[ep_idx].append(actions[ep_idx].item())
 
-                batch_inputs.append(input_tensor.squeeze(1))
-                batch_update_gates.append(gate_data['update_gate'].squeeze(1))
-                batch_reset_gates.append(gate_data['reset_gate'].squeeze(1))
-                batch_new_contexts.append(gate_data['new_context'].squeeze(1))
                 if hidden_states is not None:
-                    batch_hidden_states.append(hidden_states[0])
+                    h_prev = hidden_states[0]
                 else:
                     initial_hidden = self.rl_agent.model.initial_states[0].detach()
-                    batch_hidden_states.append(initial_hidden.broadcast_to(new_hidden_states[0].shape))
+                    h_prev = initial_hidden.broadcast_to(new_hidden_states[0].shape)
+                steps["inputs"].append(input_tensor.squeeze(1))
+                steps["hidden_states"].append(h_prev)
+                steps["update_gates"].append(gate_data['update_gate'].squeeze(1))
+                steps["reset_gates"].append(gate_data['reset_gate'].squeeze(1))
+                steps["new_contexts"].append(gate_data['new_context'].squeeze(1))
+                steps["outputs"].append(torch.cat([policy_logits[:, 0], value_estimate], dim=-1))
+                steps["actions"].append(actions.long().to(self.device))
+                steps["rewards"].append(rewards.to(self.device))
+                steps["states"].append(env_batch.current_state.clone().to(self.device))
 
-                hidden_states = new_hidden_states    
-        ret_dict = {
-            'inputs': torch.concat(batch_inputs),
-            'hidden_states': torch.concat(batch_hidden_states),
-            'update_gates': torch.concat(batch_update_gates).to(batch_inputs[0].device),
-            'reset_gates': torch.concat(batch_reset_gates).to(batch_inputs[0].device),
-            'new_contexts': torch.concat(batch_new_contexts).to(batch_inputs[0].device),
+                hidden_states = new_hidden_states
+
+        n_steps = 3 * trials_per_episode
+        stacked = {key: torch.stack(values) for key, values in steps.items()}   # (step, batch, ·)
+        dev = stacked["inputs"].device
+        gate_keys = ["inputs", "hidden_states", "update_gates", "reset_gates", "new_contexts"]
+        ret_dict = {key: stacked[key].reshape(n_steps * batch_size, -1) for key in gate_keys}
+        # rows are step-major (row = step * batch_size + episode)
+        ret_dict['episode_ids'] = episode_ids.repeat(n_steps).to(dev)
+
+        # Trial labels (batch, trial). With sampled actions a trial can be
+        # invalid: fixation at GO leaves the agent in the fixation state, and
+        # acting at DELAY_2 replaces the outcome with a penalty, so the
+        # common/uncommon x rewarded labels don't apply. (A DELAY_1 error only
+        # costs a penalty; the trial is otherwise normal.)
+        def by_trial(key):  # (step, batch) -> (batch, trial, phase)
+            return stacked[key].reshape(trials_per_episode, 3, batch_size).permute(2, 0, 1)
+        actions = by_trial("actions")
+        go_action = actions[:, :, 1]
+        state = by_trial("states")[:, :, 2]
+        rewarded = by_trial("rewards")[:, :, 2] > 0
+        common = state == go_action
+        pattern = torch.where(common, torch.where(rewarded, 0, 1), torch.where(rewarded, 2, 3))
+        invalid = (go_action == env_batch.FIXATION_ACTION) | (actions[:, :, 2] != env_batch.FIXATION_ACTION)
+        pattern[invalid] = self.INVALID
+        batch_patterns = [int((pattern == p).sum()) for p in range(4)]
+
+        # Per-row labels: a trial's DELAY_2 row carries its label; the next
+        # trial's DELAY_1/GO rows inherit it (-1 on the first trial).
+        previous = torch.cat([torch.full((batch_size, 1), -1, dtype=pattern.dtype, device=dev),
+                              pattern[:, :-1]], dim=1)
+        row_patterns = torch.stack([previous, previous, pattern], dim=-1).permute(1, 2, 0).reshape(-1)
+
+        if not make_sequences:
+            return ret_dict, batch_patterns, row_patterns
+        trace_keys = {"inputs": "inputs", "outputs": "outputs", "h_prevs": "hidden_states",
+                      "h_new_ts": "new_contexts", "z_ts": "update_gates", "r_ts": "reset_gates"}
+        trace = {
+            # (batch, trial, phase, ·) views of the step records
+            "per_trial": {name: stacked[key].reshape(trials_per_episode, 3, batch_size, -1).permute(2, 0, 1, 3)
+                          for name, key in trace_keys.items()},
+            "pattern": pattern,
+            "episode_ids": episode_ids.to(dev),
+            "p_s1": torch.stack(p_s1, dim=1),
+            "d1_error": actions[:, :, 0] != env_batch.FIXATION_ACTION,
+            "start_high": initial_config == "high_first",
         }
-        if make_sequences: 
-            # make sequences dicts:
-            keys = ["inputs", "outputs", "h_prevs",
-                        "h_new_ts", "z_ts", "r_ts"]
-            for pattern in sequence_dict:
-                for batch_idx in range(len(sequence_dict[pattern])):
-                    for sequence_idx in range(len(sequence_dict[pattern][batch_idx])):
-                        temp_dict = {}
-                        for key in keys:
-                            zero = [torch.zeros(sequence_dict[pattern][batch_idx][sequence_idx][0][key].shape).to(self.device) + 5]
-                            left = 5 - len(sequence_dict[pattern][batch_idx][sequence_idx])
-                            zero *= left
-                            assert sequence_dict[pattern][batch_idx][sequence_idx]
-                            temp_dict[key] = torch.stack(zero + [s[key].to(self.device) for s in sequence_dict[pattern][batch_idx][sequence_idx]])
-                        sequence_dict[pattern][batch_idx][sequence_idx] = temp_dict
-                    if not sequence_dict[pattern][batch_idx]: continue
-                    temp_dict = {} 
-                    for key in keys:
-                        temp_dict[key] = torch.stack([s[key] for s in sequence_dict[pattern][batch_idx]])
-                    sequence_dict[pattern][batch_idx] = temp_dict
-                assert sequence_dict[pattern]
-                temp_dict = {}
-                for key in keys:
-                    temp_dict[key] = torch.concat([s[key] for s in sequence_dict[pattern] if s])
-                sequence_dict[pattern] = temp_dict
+        return ret_dict, batch_patterns, row_patterns, trace
 
-        # ret_dict rows are step-major (row = step * batch_size + episode), so
-        # the per-row pattern labels must be flattened the same way.
-        row_patterns = torch.tensor(batch_pattern_mask).T.reshape(-1).to(batch_inputs[0].device)
-        if make_sequences:
-            return ret_dict, batch_patterns, row_patterns, sequence_dict
-        return ret_dict, batch_patterns, row_patterns
+    @staticmethod
+    def _window_index(trace: Dict, pattern: int) -> Tuple[torch.Tensor, torch.Tensor]:
+        """(episode, core trial) of every window of a pattern, in episode order, then time."""
+        return torch.nonzero(trace["pattern"] == pattern, as_tuple=True)
+
+    @staticmethod
+    def _build_windows(trace: Dict, episodes: torch.Tensor, cores: torch.Tensor, pattern: int) -> Dict[str, torch.Tensor]:
+        """Trace windows for the given (episode, core trial) pairs.
+
+        A window is up to 3 context trials before the core trial, the core
+        trial, and the following trial if there is one, left-padded with whole
+        trials of 5s to 5 trials. Per-window scalars: seq_id (episode id),
+        core_trial (index of the core trial in the padded window), has_next,
+        trial_in_episode, start_high (episode started with S1 = 0.9), pattern
+        (0-3), p_s1 (S1 reward prob at the core trial), d1_error (the agent did
+        not fixate at the core trial's DELAY_1).
+        """
+        n_trials = trace["pattern"].shape[1]
+        dev = trace["pattern"].device
+        n_context = cores.clamp(max=3)
+        has_next = cores + 1 < n_trials
+        pad = 5 - (n_context + 1 + has_next.long())
+        offset = torch.arange(5, device=dev)[None, :] - pad[:, None]      # position among real trials
+        real = offset >= 0
+        trial_index = ((cores - n_context)[:, None] + offset).clamp(min=0)  # padding rows are replaced
+        windows = {}
+        for name, data in trace["per_trial"].items():
+            gathered = data[episodes[:, None], trial_index]                  # (window, 5, phase, ·)
+            windows[name] = torch.where(real[:, :, None, None], gathered, torch.full_like(gathered, 5))
+        n = len(cores)
+        windows.update({
+            "seq_id": trace["episode_ids"][episodes],
+            "core_trial": pad + n_context,
+            "has_next": has_next,
+            "trial_in_episode": cores,
+            "start_high": torch.full((n,), trace["start_high"], dtype=torch.bool, device=dev),
+            "pattern": torch.full((n,), pattern, dtype=torch.long, device=dev),
+            "p_s1": trace["p_s1"][episodes, cores].float(),
+            "d1_error": trace["d1_error"][episodes, cores],
+        })
+        return windows
     
     def _forward_with_gates(self, input_tensor, hidden_state):        
         model = self.rl_agent.model
@@ -386,6 +374,9 @@ class RLTranscoderDataGenerator:
         trial, phase = step // 3, step % 3
         instance_ids = episode * trials_per_episode + trial - (phase != 2).long()
 
+        # Kept rows are collected and concatenated once at the end; appending
+        # to the growing dataset every batch would copy it each time.
+        extra_rows = defaultdict(list)
         while extra_episodes < max_extra_episodes and max(left_counts):
             batch_reversal_counts = [random.choice([1, 2, 3, 4]) for _ in range(self.batch_size)]
 
@@ -407,16 +398,21 @@ class RLTranscoderDataGenerator:
                                     "uncommonp", "uncommon(1-p)"][pattern_idx]] += take
                     update = take > 0 if not update else update
                     pattern_rows = (batch_pattern_mask == pattern_idx).cpu()
-                    chosen = torch.unique(instance_ids[pattern_rows])[:take]
+                    # random instances, not the lowest ids (= first episodes)
+                    candidates = torch.unique(instance_ids[pattern_rows])
+                    chosen = candidates[torch.randperm(len(candidates))[:take]]
                     keep = pattern_rows & torch.isin(instance_ids, chosen)
                     for key in episodes_data:
-                        episodes_data[key] = torch.concat([episodes_data[key], batch_data[key][keep.to(batch_data[key].device)]], dim=0)
+                        extra_rows[key].append(batch_data[key][keep.to(batch_data[key].device)])
 
             if update:
                 pbar.update(og_count - max(left_counts))
                 og_count = max(left_counts)
             extra_episodes += self.batch_size
-        
+
+        for key in episodes_data:
+            episodes_data[key] = torch.cat([episodes_data[key]] + extra_rows[key], dim=0)
+
         print(f"Generated {extra_episodes} additional episodes for balancing")
         print("Final pattern counts:")
         for pattern, count in pattern_counts.items():
@@ -445,26 +441,36 @@ class RLTranscoderDataGenerator:
         inputs_hidden = torch.concat([hidden_states * reset_gates, inputs], dim=-1)
         targets_hidden = new_contexts
 
+        # seq_id = episode id: create_transcoder_dataloaders splits on it, so
+        # validation holds out whole episodes. (Trace windows overlap within
+        # an episode, so splitting by window would leak.)
+        seq_ids = episodes_data['episode_ids']
         reset_dataset = StackDataset(
             input=inputs_reset,
-            output=targets_reset
+            output=targets_reset,
+            seq_id=seq_ids
         )
         update_dataset = StackDataset(
             input=inputs_update,
-            output=targets_update
+            output=targets_update,
+            seq_id=seq_ids
         )
-        
+
         hidden_dataset = StackDataset(
             input=inputs_hidden,
-            output=targets_hidden
+            output=targets_hidden,
+            seq_id=seq_ids
         )
 
         print(f"Generated transcoder dataset with {len(update_dataset)} samples")
         first_sequence_group = next(iter(sequences.values()))
         print(f"Generated Sequences have {first_sequence_group['inputs'].size(0)} each")
 
+        # In pattern order 0-3 (commonp, common_p, uncommonp, uncommon_p): the
+        # caller names the saved files by position. (The dict is ordered by
+        # first occurrence, which mislabelled the files.)
         sequence_datasets = []
-        for pattern in sequences:
+        for pattern in range(4):
             sequence_datasets.append(StackDataset(**sequences[pattern]))
         
         return reset_dataset, update_dataset, hidden_dataset, sequence_datasets
@@ -509,6 +515,9 @@ if __name__ == "__main__":
     parser.add_argument("--balance_patterns", action='store_true', help="Balance transition/reward patterns")
     parser.add_argument("--max_extra_episodes", type=int, default=None, help="Max extra episodes for balancing")
     parser.add_argument("--initial_config", type=str, required=True)
+    parser.add_argument("--action_mode", choices=["sample", "greedy"], default="sample",
+                        help="sample: every action from the agent's full policy (as in training); "
+                             "greedy: fixation at delays, argmax a1/a2 at GO (previous behaviour)")
     parser.add_argument("--output_dir", required=True,
                         help="Directory for reset/update/candidate datasets and trace sequences")
     
@@ -519,10 +528,10 @@ if __name__ == "__main__":
     in_size = 8
     model = RNN(input_size=in_size, hidden_size=48, out_size=4,
                  out_act=lambda x: x, use_gru=True, learn_init=True)
-    model.load_state_dict(torch.load(args.model_path)) 
+    model.load_state_dict(torch.load(args.model_path, map_location=device))
     agent = ActorCriticTrainer(model, env, device=device)
     
-    generator = RLTranscoderDataGenerator(agent, batch_size, device=device)
+    generator = RLTranscoderDataGenerator(agent, batch_size, device=device, action_mode=args.action_mode)
     reset_dataset, update_dataset, hidden_dataset, sequence_datasets = generator.generate_transcoder_dataset(
         n_episodes=args.n_episodes,
         trials_per_episode=args.trials_per_episode,

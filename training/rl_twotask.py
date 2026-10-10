@@ -88,15 +88,20 @@ class ActorCriticTrainer:
             action_probs = F.softmax(policy_logits, dim=0)
             return int(torch.multinomial(action_probs, 1).item())
     
-    def select_action_batched(self, policy_logits, phase=-1):
+    def select_action_batched(self, policy_logits, phase=-1, sample=False):
         """
-        Select action based on policy logits.
-        
+        Select actions for a batch from policy logits (batch, 1, 3).
+
         Args:
-            policy_logits: Logits for each action
-            inference: If True, use greedy selection; if False, sample
+            phase: Trial phase (0 = DELAY_1, 1 = GO, 2 = DELAY_2).
+            sample: Sample from the full 3-way policy, as in training, so
+                invalid actions (no fixation at a delay, fixation at GO) can
+                occur. If False, force fixation at the delays and take the
+                argmax over a1/a2 at GO.
         """
-        #TODO: currently only for inference
+        if sample:
+            probs = F.softmax(policy_logits[:, 0, :], dim=-1)
+            return torch.multinomial(probs, 1)[:, 0]
         actions = torch.zeros(policy_logits.size(0)).to(policy_logits.device)
         if phase == 1:
             actions = torch.argmax(policy_logits[:, :, 1:], dim=-1)[:, 0] + 1

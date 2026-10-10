@@ -12,12 +12,12 @@ from typing import Dict, Tuple, List
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from models.rnn import RNN
 from models.transcoders import (Transcoder, compute_normalization, fold_normalization_,
                                 initialize_paired_dpi, normalize_inputs, normalize_targets,
                                 set_transcoder_weights, unfold_normalization_)
 from datasets.utils import create_transcoder_dataloaders, ConsolidatedStackDataset
-from training.splice_eval import SPLICE_TARGETS, SpliceEvaluator, load_splice_traces
+from training.splice_eval import (SPLICE_TARGETS, SPLICE_TASKS, build_task_rnn,
+                                  load_task_traces, make_splice_evaluator)
 from training.train_utils import SignalManager, normalize_batch
 torch.serialization.add_safe_globals([StackDataset])
 
@@ -424,17 +424,19 @@ def create_and_train_transcoders(dataset: Dict[str, torch.Tensor],
                                  splice_target: str = None,
                                  splice_sequence_paths: List[str] = None,
                                  splice_samples: float = 0.05,
-                                 splice_traces: List[Dict] = None):
+                                 splice_traces: List[Dict] = None,
+                                 task: str = "copy"):
     """
     Create and train transcoder models
-    
+
     Args:
         dataset: Output from TranscoderDataGenerator
         hidden_size: Hidden size of the GRU
-        input_size: Input size to the GRU 
+        input_size: Input size to the GRU
         n_feats: Number of features in transcoder
         device: Device to train on
         n_epochs: Number of training epochs
+        task: "copy" or "rl": the GRU architecture and splice eval to use
     """
     if init_mode not in {"random", "paired_dpi"}:
         raise ValueError(f"Unknown init_mode: {init_mode}")
@@ -450,15 +452,13 @@ def create_and_train_transcoders(dataset: Dict[str, torch.Tensor],
 
     splice_evaluator = None
     if rnn_path:
-        # Copy-task GRU: input = vocab + delimiter, output = vocab.
-        rnn_model = RNN(input_size=input_size, hidden_size=hidden_size,
-                        out_size=input_size - 1, out_act=lambda x: x, use_gru=True)
+        rnn_model = build_task_rnn(task, input_size, hidden_size)
         rnn_model.load_state_dict(torch.load(rnn_path, map_location=device))
         # Callers running many configs (the sweep) pass preloaded traces.
         if splice_traces is None:
-            splice_traces = load_splice_traces(splice_sequence_paths)
-        splice_evaluator = SpliceEvaluator(
-            rnn_model, splice_target, splice_traces, splice_samples,
+            splice_traces = load_task_traces(task, splice_sequence_paths)
+        splice_evaluator = make_splice_evaluator(
+            task, rnn_model, splice_target, splice_traces, splice_samples,
             val_sequence_ids=val_sequence_ids,
             seed=split_seed if split_seed is not None else 0, device=device)
         del splice_traces  # the evaluator keeps only its sampled sequences
@@ -614,14 +614,16 @@ if __name__ == "__main__":
                         help="Training rows sampled to calibrate paired-DPI initialization")
     parser.add_argument("--dpi_seed", type=int, default=None,
                         help="DPI sample seed; defaults to --split_seed")
+    parser.add_argument("--task", choices=SPLICE_TASKS, default="copy",
+                        help="Task of the GRU (architecture and splice eval)")
     parser.add_argument("--rnn_path", default=None,
-                        help="Copy-task GRU checkpoint; enables the splice eval at validation steps")
+                        help="Task GRU checkpoint; enables the splice eval at validation steps")
     parser.add_argument("--splice_target", choices=SPLICE_TARGETS, default=None,
                         help="Gate this transcoder replaces in the splice eval")
     parser.add_argument("--splice_sequence_paths", nargs="+", default=None,
-                        help="Trace sequence files (*_seqN.pt) to run the splice eval on")
+                        help="Trace files to run the splice eval on (copy: *_seqN.pt; rl: *_rl.pt windows)")
     parser.add_argument("--splice_samples", type=float, default=0.05,
-                        help="Held-out sequences to splice: <=1 is a fraction, >1 a count")
+                        help="Held-out sequences / windows to splice: <=1 is a fraction, >1 a count")
 
     args = parser.parse_args()
     if args.previous_epochs and not args.ctd_from:
@@ -652,6 +654,7 @@ if __name__ == "__main__":
             "scale_pen_distance": int(args.scale_pen_distance),
             "legacy_sparsity": int(args.legacy_sparsity),
             "normalize": int(args.normalize),
+            "task": args.task,
             "splice_target": args.splice_target if args.rnn_path else None,
             "splice_samples": args.splice_samples if args.rnn_path else None
         },
@@ -666,7 +669,9 @@ if __name__ == "__main__":
                  "num_workers": args.num_workers, "previous_epochs": args.previous_epochs,
                  "init_mode": args.init_mode, "dpi_scale": args.dpi_scale,
                  "dpi_calibration_samples": args.dpi_calibration_samples,
-                 "dpi_seed": args.dpi_seed if args.dpi_seed is not None else (args.split_seed if args.split_seed is not None else args.seed)}
+                 "dpi_seed": args.dpi_seed if args.dpi_seed is not None else (args.split_seed if args.split_seed is not None else args.seed),
+                 "split_seed": args.split_seed if args.split_seed is not None else args.seed,
+                 "task": args.task}
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     print("--Loading Dataset(s)--")
@@ -690,5 +695,5 @@ if __name__ == "__main__":
                                  dpi_seed=args.dpi_seed if args.dpi_seed is not None else (args.split_seed if args.split_seed is not None else args.seed),
                                  rnn_path=args.rnn_path, splice_target=args.splice_target,
                                  splice_sequence_paths=args.splice_sequence_paths,
-                                 splice_samples=args.splice_samples,
+                                 splice_samples=args.splice_samples, task=args.task,
                                  save_path=args.save_path, run=run)

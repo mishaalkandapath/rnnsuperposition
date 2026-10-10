@@ -357,29 +357,45 @@ class BatchedTwoStepRLEnvironment:
         self.GO = 1       # Show fixation cue with go signal
         self.DELAY_2 = 2  # Show resultant state
         
-        self.p_high = 0.8  
-        self.p_low = 0.2 
-        
+        self.p_high = 0.8
+        self.p_low = 0.2
+
         self.device=device
-        self.reset_trial_batch(reset_r=True)
-        
+        self.set_batch_size(batch_size)
+
+    def set_batch_size(self, batch_size: int, high_first: bool = True):
+        """(Re)size the batch: fresh trial state and reward allocation."""
+        self.batch_size = batch_size
+        self.set_reward_allocation(high_first)
+        self.reset_trial_batch(reset_r=True,
+                               manual_switch=torch.zeros(batch_size, dtype=torch.bool, device=self.device))
+
+    def set_reward_allocation(self, high_first: bool = True):
+        """Set every episode's reward probabilities: S1 = 0.9, S2 = 0.1 if
+        high_first, else swapped. Persists until reversed (as in
+        TwoStepRLEnvironment, the allocation is not reset between trials)."""
+        self.reward_probs = torch.zeros(self.batch_size, 3, device=self.device)
+        self.reward_probs[:, self.STATE_1] = 0.9 if high_first else 0.1
+        self.reward_probs[:, self.STATE_2] = 0.1 if high_first else 0.9
+
     def reset_trial_batch(self, reset_r=False, manual_switch=None):
-        """Reset for new trials across all environments in batch"""
+        """Reset for new trials across all environments in batch.
+
+        The reward allocation carries over from the previous trial; episodes
+        selected by manual_switch (or randomly, with reward_switch_prob) swap
+        it in place, so a reversal lasts until the next one.
+        """
         self.phase = torch.zeros(self.batch_size, dtype=torch.long).to(self.device)
-        self.current_state = torch.zeros(self.batch_size, dtype=torch.long).to(self.device) 
-        self.last_action = torch.zeros(self.batch_size, dtype=torch.long).to(self.device) 
+        self.current_state = torch.zeros(self.batch_size, dtype=torch.long).to(self.device)
+        self.last_action = torch.zeros(self.batch_size, dtype=torch.long).to(self.device)
         self.trial_complete = torch.zeros(self.batch_size, dtype=torch.bool).to(self.device)
-        
+
         if reset_r:
             self.last_reward = torch.zeros(self.batch_size).to(self.device)
-        
-        self.reward_probs = torch.zeros(self.batch_size, 3).to(self.device)
-        self.reward_probs[:, self.STATE_1] = 0.9
-        self.reward_probs[:, self.STATE_2] = 0.1
-        
+
         if manual_switch is not None:
             # manual_switch should be a boolean tensor of shape [batch_size]
-            switch_mask = manual_switch
+            switch_mask = manual_switch.to(self.device)
         else:
             switch_mask = torch.rand(self.batch_size).to(self.device) < self.reward_switch_prob
         
@@ -397,11 +413,14 @@ class BatchedTwoStepRLEnvironment:
         """
         batch_size = self.batch_size
         
+        # One-hot per episode. (obs[:, idx] = 1 would set every index present
+        # anywhere in the batch, in every row.)
+        rows = torch.arange(batch_size, device=self.device)
         obs = torch.zeros(batch_size, 3).to(self.device)
-        obs[:, self.current_state] = 1
-        
+        obs[rows, self.current_state] = 1
+
         action_vec = torch.zeros(batch_size, 3).to(self.device)
-        action_vec[:, self.last_action.long()] = 1
+        action_vec[rows, self.last_action.long()] = 1
         
         # Go signal (only active in GO phase) [batch_size]
         go_signal = (self.phase == self.GO).float()
@@ -443,7 +462,7 @@ class BatchedTwoStepRLEnvironment:
             action1_mask = (actions == self.ACTION_1)
             if action1_mask.any():
                 # p(S1|a1) = 0.8, p(S2|a1) = 0.2
-                rand_vals = torch.rand(action1_mask.sum())
+                rand_vals = torch.rand(int(action1_mask.sum()), device=self.device)
                 high_prob_mask = rand_vals < self.p_high
                 
                 action1_indices = torch.where(action1_mask)[0]
@@ -454,7 +473,7 @@ class BatchedTwoStepRLEnvironment:
             action2_mask = (actions == self.ACTION_2)
             if action2_mask.any():
                 # Transition probabilities: p(S2|a2) = 0.8, p(S1|a2) = 0.2
-                rand_vals = torch.rand(action2_mask.sum())
+                rand_vals = torch.rand(int(action2_mask.sum()), device=self.device)
                 high_prob_mask = rand_vals < self.p_high
                 
                 action2_indices = torch.where(action2_mask)[0]

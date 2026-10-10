@@ -12,7 +12,7 @@ from pathlib import Path
 import torch
 from torch.utils.data import ConcatDataset, StackDataset
 
-from training.splice_eval import load_splice_traces
+from training.splice_eval import SPLICE_TASKS, load_task_traces
 from training.train_transcoder import create_and_train_transcoders
 
 
@@ -48,12 +48,14 @@ def parse_args():
     p.add_argument("--schedule", type=int, default=1)
     p.add_argument("--schedule-offset", type=int, default=220)
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    p.add_argument("--task", choices=SPLICE_TASKS, default="copy",
+                   help="Task of the GRU (architecture and splice eval)")
     p.add_argument("--rnn-path", default=None,
-                   help="Copy-task GRU checkpoint; enables the splice eval for each run's target")
+                   help="Task GRU checkpoint; enables the splice eval for each run's target")
     p.add_argument("--splice-sequence-paths", nargs="+", default=None,
-                   help="Trace sequence files (*_seqN.pt) for the splice eval")
+                   help="Trace files for the splice eval (copy: *_seqN.pt; rl: *_rl.pt windows)")
     p.add_argument("--splice-samples", type=float, default=0.05,
-                   help="Held-out sequences to splice: <=1 is a fraction, >1 a count")
+                   help="Held-out sequences / windows to splice: <=1 is a fraction, >1 a count")
     p.add_argument("--normalize", action="store_true",
                    help="Train on centred, scalar-scaled inputs/targets; checkpoints are folded back to raw units")
     p.add_argument("--legacy-sparsity", action="store_true",
@@ -85,7 +87,7 @@ def main():
 
     datasets = {target: load_dataset(paths) for target, paths in target_paths.items()}
     # Load splice traces once for the whole sweep instead of once per run.
-    splice_traces = load_splice_traces(args.splice_sequence_paths) if args.rnn_path else None
+    splice_traces = load_task_traces(args.task, args.splice_sequence_paths) if args.rnn_path else None
     results_path = args.output_dir / "sweep_results.jsonl"
     for target, width, profile_name, seed, init_mode in configs:
         torch.manual_seed(seed)
@@ -105,7 +107,7 @@ def main():
         }
         with (run_dir / "sweep_metadata.json").open("w") as f:
             json.dump({"target": target, "seed": seed, "init_mode": init_mode, "input_size": args.input_size,
-                       "hidden_size": args.hidden_size, "config": cfg}, f, indent=2)
+                       "hidden_size": args.hidden_size, "task": args.task, "config": cfg}, f, indent=2)
         trainer, _ = create_and_train_transcoders(
             datasets[target], cfg, hidden_size=args.hidden_size,
             input_size=args.input_size, n_feats=width, device=args.device,
@@ -114,7 +116,7 @@ def main():
             dpi_scale=args.dpi_scale, dpi_calibration_samples=args.dpi_calibration_samples,
             dpi_seed=args.dpi_seed if args.dpi_seed is not None else seed,
             rnn_path=args.rnn_path, splice_target=target,
-            splice_samples=args.splice_samples, splice_traces=splice_traces,
+            splice_samples=args.splice_samples, splice_traces=splice_traces, task=args.task,
         )
         result = {"target": target, "width": width, "profile": profile_name,
                   "seed": seed, "init_mode": init_mode, **trainer.final_metrics}
