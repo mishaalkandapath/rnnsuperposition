@@ -1,0 +1,75 @@
+{
+  "label": "late original-phase positions and the <DEL> step (length/position ramp)",
+  "predicate": "((phase == 1) & (L >= 5)) | ((phase == 0) & (t >= 7))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires at the end of the input sequence. Its main site is the <DEL> step (71% of activation mass, active at 71% of delimiters), and it also fires at late original positions: never before t=3, rare at t=4-5, and active at 35%/74%/89% of orig_idx 6/7/8. Activation ramps up within a sequence through the late original tokens and peaks at <DEL>; the top examples are all L=9 delimiters. Magnitude and firing rate grow with L (L=3-4 delimiters barely fire). Somewhat higher on first occurrences of a token and when s/b is an early original token. Silent throughout the copy phase (t > L) and at early original positions. Errors: misses weak activations at <DEL> for L=4 and at t=5-6, and has false positives at short-L delimiters and t=7-8 steps where it stays off. Dev F1 0.82, mass recall 0.93.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 169,
+    "predicate": "((phase == 1) & (L >= 5)) | ((phase == 0) & (t >= 7))",
+    "split": "test",
+    "precision": 0.8173012601471679,
+    "recall": 0.8281994754182456,
+    "f1": 0.8227142781312323,
+    "mass_recall": 0.9312775805939053,
+    "correlation": 0.7207936727128087,
+    "n_active": 654998,
+    "n_predicted": 663732,
+    "coverage_by_activation_quartile": [
+      0.589618320610687,
+      0.7934167938931298,
+      0.9344789891846668,
+      0.9952854673921673
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 169,
+    "predicate": "((phase == 1) & (L >= 5)) | ((phase == 0) & (t >= 7))",
+    "split": "dev",
+    "precision": 0.8169209389535497,
+    "recall": 0.8282056532329292,
+    "f1": 0.8225245924527499,
+    "mass_recall": 0.9311832534774875,
+    "correlation": 0.7206293729762979,
+    "n_active": 654422,
+    "n_predicted": 663462,
+    "coverage_by_activation_quartile": [
+      0.5907301688202145,
+      0.7920858648215836,
+      0.9349958742092235,
+      0.9950123773723297
+    ]
+  },
+  "gate": "hidden",
+  "feature": 169,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The position and length facts check out. Firing in the original phase depends only on absolute position, not on L: at orig_idx 5/6/7/8 the rate is about 0.047/0.354/0.74/0.888 whatever L is. orig_idx 0-3 never fire, orig_idx 4 fires about 0.1% of the time, and copy-phase activation is 0. The delimiter firing rate is 0.11/0.47/0.80/0.94/0.98/0.98 for L=4..9.",
+      "The claim 'activation is somewhat higher on first occurrences' is confounded. in_first=1 has a 1.7x lift only because <DEL> always counts as a first occurrence. Within the original phase at t>=5, repeated tokens fire MORE often (0.409 when in_first==0 vs 0.351 when in_first==1).",
+      "Firing is systematically modulated by which tokens appeared earlier, and the predicate ignores this. At t=6 the base rate is 0.354. It is 0.557 if b was seen earlier, 0.51 for s, about 0.47 for q/y/w/a/l/k, but 0.219 for '2', 0.244 for c and about 0.25 for 1/j/i/o. The explanation mentions only s and b as 'early original token' and understates the effect. A signed score D = n_seen(bsqywalkevg) - n_seen(2c1jiohxfp3t) separates the borderline cases cleanly. At t=6, precision rises from 0.35 to 0.81 at D>=3. At t=7, precision is 0.97 at D>=3 (base about 0.74). For L=5 delimiters it rises from 0.47 to 0.86.",
+      "The 'scattered' errors listed in the explanation (misses at t=5-6, false positives at t=7 steps and at L=5-6 delimiters) are mostly this one content-dependent class, not noise. Adding the history score lifts test F1 from 0.823 to 0.861 and mass recall from 0.931 to 0.963.",
+      "The label (a length/position ramp) is fine as a first-order description. But it presents the feature as purely positional, when the threshold region (t=6-7, L=5-6 delimiters) depends on a graded token-identity factor."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "end-of-input ramp: <DEL> step (stronger for longer L) and late original positions t>=6, gated near threshold by which tokens came earlier (b/s/q/y/w/a/l/k/e/v/g raise firing; digits 1-3 and c/j/i/o/h/x/f/p/t lower it)",
+    "better_predicate": "((phase==1)&((L>=6)|((L==5)&((n_seen([tok(c) for c in 'bsqywalkevg'])-n_seen([tok(c) for c in '2c1jiohxfp3t']))>=0)))) | ((phase==0)&((t>=8)|((t==7)&((n_seen([tok(c) for c in 'bsqywalkevg'])-n_seen([tok(c) for c in '2c1jiohxfp3t']))>=-2))|((t==6)&((n_seen([tok(c) for c in 'bsqywalkevg'])-n_seen([tok(c) for c in '2c1jiohxfp3t']))>=1))))",
+    "better_predicate_test_f1": 0.8607
+  },
+  "final_label": "end-of-input ramp: <DEL> step (stronger for longer L) and late original positions t>=6, gated near threshold by which tokens came earlier (b/s/q/y/w/a/l/k/e/v/g raise firing; digits 1-3 and c/j/i/o/h/x/f/p/t lower it)",
+  "scorecard": {
+    "format": "slot2",
+    "summary": "Graded preference over the first original token (most: s, b, v, e, q, l; least: 2, 0, m, o) and the second original token (most: s, b, y, l, q, v; least: 0, c, 2, o); timing cues that raise it most: t=7, phase=1, recall_idx=0.",
+    "test_f1": 0.8794885518881951,
+    "test_precision": 0.8570592377304036,
+    "test_recall": 0.9031233683156284,
+    "full_test_f1": 0.9653722534228557,
+    "full_n_cues": 542,
+    "top40_test_f1": 0.878472952924586,
+    "slot2_test_f1": 0.8794885518881951,
+    "file": "scorecards/hidden_169.json"
+  }
+}

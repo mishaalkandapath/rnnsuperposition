@@ -1,0 +1,64 @@
+{
+  "label": "copy-phase input p early in the recall (recall_idx 1-3)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"p\")) & (recall_idx <= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase when the fed-back input token is p, i.e. the model just output p as one of the first few original tokens. 99% of activation mass is on in_tok == p. It never fires in the original phase or on the delimiter step. Magnitude falls off steeply with position: strongest at recall_idx 1, where p was the first original token (53% of mass, ~96% precision, max activations ~4.6). It is weaker at recall_idx 2 (41% of mass), weak and unreliable at recall_idx 3 (6% of mass, ~40% precision), and essentially absent from recall_idx 4 on. A p fed back directly after another p (e.g. p p ...) fires only about half as strongly. It does not fire on p in the original phase or on other tokens. False positives are mostly p inputs at recall_idx 3 (and some at 2) that stay silent.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 83,
+    "predicate": "(phase == 2) & (in_tok == tok(\"p\")) & (recall_idx <= 3)",
+    "split": "test",
+    "precision": 0.7228179500667665,
+    "recall": 0.9640823596081712,
+    "f1": 0.8261970560688229,
+    "mass_recall": 0.9932517944528628,
+    "correlation": 0.7137468934349934,
+    "n_active": 37057,
+    "n_predicted": 49426,
+    "coverage_by_activation_quartile": [
+      0.8684295736643282,
+      0.9880181347150259,
+      0.999892055267703,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 83,
+    "predicate": "(phase == 2) & (in_tok == tok(\"p\")) & (recall_idx <= 3)",
+    "split": "dev",
+    "precision": 0.7255849697656076,
+    "recall": 0.9652148180032821,
+    "f1": 0.8284190353044402,
+    "mass_recall": 0.9935455492844059,
+    "correlation": 0.715557366323496,
+    "n_active": 37171,
+    "n_predicted": 49447,
+    "coverage_by_activation_quartile": [
+      0.8739911761540945,
+      0.9869794468955128,
+      0.9998923921231034,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 83,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The basic claims check out: all activation is in the copy phase (share 1.000; nothing on original or delimiter steps), 99.4% of mass is on in_tok == p, and mass by recall_idx is 1: 53%, 2: 41%, 3: 5.7%, 4 and later about 0.",
+      "There is a systematic gap the explanation misses: firing depends strongly on how many outputs are still to come (to_go = L-1-recall_idx), not only on recall_idx. Dev precision for p inputs by (recall_idx, L): r=1 is 0.39 at L=3, 0.82 at L=4 and 0.98-1.0 at L>=5. r=2 is 0.00 at L=3, 0.07 at L=4, 0.85 at L=5 and 1.0 at L>=6. r=3 rises steadily with L: 0.00 at L=4, 0.007 at L=5, 0.20 at L=6, 0.55 at L=7, 0.75 at L=8, 0.84 at L=9.",
+      "So the false positives are not 'mostly p at recall_idx 3 (and some at 2)' scattered across sequences. They are p inputs in short sequences, where few outputs remain. The claimed '~96% precision at recall_idx 1' holds only for L>=5. A p at recall_idx 2 in an L=3 or L=4 sequence is almost never active.",
+      "The test misses on the original predicate confirm this. The false positives (13,700 steps) are dominated by short sequences, e.g. 'p c u z <DEL> *p*' (L=4, recall 1, silent), '1 p 2 <DEL> 1 *p*' (L=3, silent) and 'k m p d <DEL> k m *p*'.",
+      "The label overclaims: 'early in the recall (recall_idx 1-3)' leaves out the required condition that at least 2-3 outputs are still to come.",
+      "Adding the to_go condition raises test F1 from 0.826 to 0.926, with precision going from 0.723 to 0.913 and mass recall staying at 0.989."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input p within the first ~3 recall steps, but only when at least 2-3 outputs are still to come (silent in short sequences near the end)",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"p\")) & (((recall_idx<=2) & (to_go>=2)) | ((recall_idx==3) & (to_go>=3)))",
+    "better_predicate_test_f1": 0.926
+  },
+  "final_label": "copy-phase input p within the first ~3 recall steps, but only when at least 2-3 outputs are still to come (silent in short sequences near the end)"
+}

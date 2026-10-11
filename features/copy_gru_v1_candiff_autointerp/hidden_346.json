@@ -1,0 +1,61 @@
+{
+  "label": "copy phase, from the 3rd output onward",
+  "predicate": "(phase == 2) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Positional copy-phase feature. Fires almost only during the copy phase (100% of mass; essentially never on original tokens or the <DEL> step), turning on from recall_idx 2 (rate 0.78) and rising to ~0.97 by recall_idx 8. At recall_idx 1 it is weak (rate 0.16, 1.6% of mass). Activation grows as the copy continues: in top examples it ramps across the copy phase, and longer sequences and later recall positions carry more mass. Copy-phase input token 1 has the largest mass share (0.099 against ~0.03-0.05 for other tokens), and the top examples peak on a fed-back 1. Apart from that it does not depend much on token identity (in_tok, out_tok, first_tok lift are all flat). False positives are mostly at early copy steps (recall_idx 2-3) in short sequences.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 346,
+    "predicate": "(phase == 2) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.8746648565335053,
+    "recall": 0.9603775691978155,
+    "f1": 0.9155194419503785,
+    "mass_recall": 0.9841601870622406,
+    "correlation": 0.6996846599341033,
+    "n_active": 2032687,
+    "n_predicted": 2231880,
+    "coverage_by_activation_quartile": [
+      0.8891831899435624,
+      0.9729068110797132,
+      0.9830293680092567,
+      0.9963909786272731
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 346,
+    "predicate": "(phase == 2) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.8740310919832509,
+    "recall": 0.9604931888628737,
+    "f1": 0.9152246383101512,
+    "mass_recall": 0.9841441477215704,
+    "correlation": 0.6993187834505398,
+    "n_active": 2030865,
+    "n_predicted": 2231765,
+    "coverage_by_activation_quartile": [
+      0.889731878191985,
+      0.9727682405124124,
+      0.982994429956905,
+      0.9964783461620276
+    ]
+  },
+  "gate": "hidden",
+  "feature": 346,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Core claims check out. Activation mass by phase: original 0.000, delimiter 0.000, copy 1.000. Firing rate by recall_idx: 0.16 at 1, 0.775 at 2, 0.82 at 3, 0.90 at 4, rising to 0.976 at 8. Test score: P 0.875, R 0.960, F1 0.916, mass recall 0.984, which matches the report.",
+      "The explanation's claim that 'false positives are mostly early copy steps in short sequences' is wrong about length. At recall_idx 2, precision is 0.84 for L<=4 and 0.77 for L>=7, so short sequences are not where the problem lies. The false positives sit at early recall_idx (2-3) and late in the sequence (to_go>=5 precision 0.80, to_go<=2 precision 0.90) at every length.",
+      "'Token identity matters little' overstates it. A fed-back 'g' suppresses the feature: precision is 0.50 for (phase==2)&(recall_idx>=2)&(in_tok==g), against 0.87 overall, and 0.36 at recall_idx 2-3. Fed-back b, e, w, x and q at recall_idx 2 also give precision of about 0.60-0.65. In the other direction, prev_tok==1 at recall_idx 2 gives 0.97. These steps are a small fraction of the copy phase, though. Excluding g at recall_idx<=3 moves dev F1 only from 0.915 to 0.917, so this is token modulation, not a counterexample class.",
+      "The 'ramps up' claim holds only loosely. Activation is not monotonic within a sequence: test examples show dips and dropouts in the middle of the copy, e.g. 'h e n n 0 r g i h' goes silent at several steps. The misses (1.6% of mass) are scattered weak activations at recall_idx 1 with no clear pattern."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

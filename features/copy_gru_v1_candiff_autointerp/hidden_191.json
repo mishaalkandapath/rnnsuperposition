@@ -1,0 +1,64 @@
+{
+  "label": "copy-phase input token i (fed-back i, not first copy output)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"i\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, at steps where the fed-back input is the letter i (the model just output i), from recall_idx >= 2 onward, i.e. when the i is original token 1 or later. It is 100% specific to in_tok i: it never fires on i during the original phase, on the delimiter, or on any other input token, and output, previous and next tokens do not matter. Roughly 25% of qualifying steps are silent, mostly when the i is original token 1 (recall_idx 2, rate about 1.2%) and some at the last copy step. Requiring recall_idx >= 3 raises precision to 0.87 but costs some recall. Magnitude: the top activations come from an i at original positions 2-3 in long sequences. When i repeats in a run (i i i), the first copied i is strongest and later ones decay (e.g. 0.91 -> 0.65 -> 0.21).",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 191,
+    "predicate": "(phase == 2) & (in_tok == tok(\"i\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.7543307510221648,
+    "recall": 0.9999465135766371,
+    "f1": 0.8599443426530001,
+    "mass_recall": 0.9999921947238511,
+    "correlation": 0.7394446926397598,
+    "n_active": 56089,
+    "n_predicted": 74352,
+    "coverage_by_activation_quartile": [
+      0.9997860657491264,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 191,
+    "predicate": "(phase == 2) & (in_tok == tok(\"i\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.7550349472783888,
+    "recall": 0.9999823002584163,
+    "f1": 0.8604150009518371,
+    "mass_recall": 0.9999990071465591,
+    "correlation": 0.7378073224607953,
+    "n_active": 56498,
+    "n_predicted": 74827,
+    "coverage_by_activation_quartile": [
+      0.9999292035398231,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 191,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claim holds. All activation mass is on copy-phase steps where the fed-back input is i: on test, recall is 0.99995 and mass recall is 0.99999, and the 3 missed steps carry 0.0% of the mass. It never fires in the original phase or on <DEL>.",
+      "There is a systematic gap the explanation does not mention: firing depends on sequence length and on absolute step t. The rule's precision by L (dev) is 0.14 at L=4, 0.47 at L=5, 0.63 at L=6, 0.68 at L=7 and 0.75 at L=9. Short sequences are mostly silent even when recall_idx >= 3. The firing rate by t climbs from 0.001 at t=6 and 0.007 at t=8 to about 0.03 at t >= 11.",
+      "Silence at recall_idx 2 also depends on length, which the explanation leaves out. Precision there is 0.37 overall (dev), 0.17 when L <= 5 and 0.53 when L >= 7.",
+      "The claim that some silent steps fall at the last copy step is not supported. Precision at to_go == 0 is 0.72, against 0.75 overall, so the last step is not a distinct silent class.",
+      "The predicate (phase==2)&(in_tok==i)&(recall_idx>=2) has test precision 0.754, so about 25% of its steps are silent, and those silent steps follow the length and position pattern above. They are not scattered noise.",
+      "Adding absolute-time gating raises test F1 from 0.860 to 0.899: (t>=8)&((recall_idx>=3)|(L>=7)) gives precision 0.846, recall 0.958 and mass recall 0.986."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase fed-back input i, late in the sequence (t >= 8; mostly silent in short sequences)",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"i\")) & (recall_idx >= 2) & (t >= 8) & ((recall_idx >= 3) | (L >= 7))",
+    "better_predicate_test_f1": 0.899
+  },
+  "final_label": "copy-phase fed-back input i, late in the sequence (t >= 8; mostly silent in short sequences)"
+}

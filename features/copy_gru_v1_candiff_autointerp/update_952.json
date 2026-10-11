@@ -1,0 +1,64 @@
+{
+  "label": "First copy step (input v echoed back after <DEL>) in sequences of length >= 6",
+  "predicate": "(recall_idx == 1) & (in_tok == tok(\"v\")) & (L >= 6)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only at step t = L+1, the first copy-phase step after <DEL>, when the input is v. Since the model is copying, that input is its own echoed first original token, so first_tok == v too. Activations are tied to length: almost none for L = 5, none for L <= 4, and the activation mass grows with L (share rises from 0.12 at L = 6 to 0.34 at L = 9). It does not fire in the original or delimiter phases, at any other copy position, or for any other first token; there are fewer than 0.5% stray activations on other tokens (m, 3, h, b, d). The output token and later history have no effect on it.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 952,
+    "predicate": "(recall_idx == 1) & (in_tok == tok(\"v\")) & (L >= 6)",
+    "split": "test",
+    "precision": 0.9993757246053687,
+    "recall": 0.9769834350479512,
+    "f1": 0.9880527267116342,
+    "mass_recall": 0.9987985611277437,
+    "correlation": 0.936907806157463,
+    "n_active": 11470,
+    "n_predicted": 11213,
+    "coverage_by_activation_quartile": [
+      0.9079497907949791,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 952,
+    "predicate": "(recall_idx == 1) & (in_tok == tok(\"v\")) & (L >= 6)",
+    "split": "dev",
+    "precision": 0.9995559502664298,
+    "recall": 0.9744588744588745,
+    "f1": 0.9868478737395878,
+    "mass_recall": 0.9986758076059137,
+    "correlation": 0.9371764156033872,
+    "n_active": 11550,
+    "n_predicted": 11260,
+    "coverage_by_activation_quartile": [
+      0.8978531855955678,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 952,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Only nitpicks, nothing systematic. The predicate scores test P 0.999 / R 0.977 / F1 0.988 / mass recall 0.999, which matches the reported numbers.",
+      "All activations are in the copy phase at recall_idx == 1 (t = L+1). There are 0 activations in the original or delimiter phases or at any other recall_idx. That confirms the claim.",
+      "first_tok == v gives the same score as in_tok == v. The predicate (recall_idx == 1) & (in_tok == v) & (first_tok != v) predicts nothing, which confirms the echo claim.",
+      "Length dependence checks out. L == 5 with v at recall_idx 1 has precision 0.04 and mass recall 0.0005. L <= 4 has precision 0. Mass share by L is 0.12, 0.24, 0.30, 0.34 for L = 6 to 9. On dev, dropping the L condition gives about 11366/16980 = 0.67 precision.",
+      "Test misses (264 steps, 0.1% of mass) are all tiny activations, 0.00 to 0.11 relative to max. They are either stray m/h at t = 10 for L = 9 or v at L = 5. This is scattered, low-magnitude noise.",
+      "There are 7 test false positives, all at L = 6 with several v tokens in the original sequence. That is too few to matter.",
+      "Minor wording point: the step t = L+1 is the first step whose input is an echoed token (orig(0)), and it outputs orig(1). So 'first copy step' is only accurate if read as the first echoed input. The predicate and explanation make this clear."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

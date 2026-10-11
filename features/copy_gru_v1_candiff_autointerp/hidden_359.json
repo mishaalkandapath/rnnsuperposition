@@ -1,0 +1,61 @@
+{
+  "label": "copy phase (after the delimiter), any token",
+  "predicate": "phase == 2",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Broad copy-phase feature. It fires at almost every copy-phase step (t > L, ~91% rate) whatever the token, and essentially never in the original phase (108 of 3.2M steps) or at the <DEL> step (0.9%, negligible mass). The firing rate rises with absolute step t and with recall_idx: about 13% at t=5, over 90% from t=10 on, and about 98% at t=16-17. So the steps it misses are mostly early copy steps in short sequences. Magnitude goes up when the input token is a digit, mainly 3 and 2 (in_tok 3 carries about 2x the mass of a typical letter). The top activations are on a fed-back 3 late in the copy, often with v/o/w just before it. Otherwise it shows almost no selectivity by token identity, out_tok, first_tok or repeat counts.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 359,
+    "predicate": "phase == 2",
+    "split": "test",
+    "precision": 0.9089282838192014,
+    "recall": 0.9980493871224984,
+    "f1": 0.9514063330967988,
+    "mass_recall": 0.9996151103316706,
+    "correlation": 0.7285147824090218,
+    "n_active": 2487936,
+    "n_predicted": 2731880,
+    "coverage_by_activation_quartile": [
+      0.9924499665586253,
+      0.9997507974481659,
+      0.9999967844832022,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 359,
+    "predicate": "phase == 2",
+    "split": "dev",
+    "precision": 0.908963984822999,
+    "recall": 0.9980690386996157,
+    "f1": 0.9514348198009634,
+    "mass_recall": 0.9996106188237577,
+    "correlation": 0.7286826394065247,
+    "n_active": 2487880,
+    "n_predicted": 2731765,
+    "coverage_by_activation_quartile": [
+      0.9925350097271572,
+      0.9997411450713057,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 359,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The per-t firing rates in the explanation are wrong. '13% at t=5', 'over 90% from t=10', '98% at t=16-17' are rates over ALL steps at that t, so original-phase steps are mixed in. Restricted to copy steps (phase==2), the rate is 51% at t=4, 76% at t=5, 91% at t=6, 92% at t=8 and 88% at t=12. The qualitative point still holds: misses fall mostly on early copy steps of short sequences (L=3 copy rate 70%, L=4 recall_idx=1 74%, L=9 92%). But the drop is much milder than claimed and is confined to t<=5.",
+      "The rate is not monotone in t or recall_idx. Copy-phase rate dips to about 88-90% at t=12-13 and recall_idx=3-4, after 93% at recall_idx=2.",
+      "The token claim checks out and is stronger than stated. When the input is a fed-back 3 or 2, the feature fires on 99.98% / 99.8% of those copy steps (all digits 96%), against about 90% for letters. in_tok 3 carries 8.0% of the mass vs about 3% for a letter like 'a'.",
+      "No systematic counterexample class found. The test split has 4853 missed active steps, all of them <DEL>/original-phase steps carrying 0.0% of the mass. False positives sit in the lowest activation quartile (coverage per quartile: 0.992, 0.9998, 1.0, 1.0). Adding t thresholds lowers F1: t>=6 gives 0.942, t>=7 0.914, and (t>=8 | recall_idx>=2) 0.917, so 'phase == 2' is the best simple predicate. Test scores reproduce: P 0.909, R 0.998, F1 0.951, mass recall 0.9996."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

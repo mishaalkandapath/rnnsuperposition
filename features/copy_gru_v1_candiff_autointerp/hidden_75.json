@@ -1,0 +1,61 @@
+{
+  "label": "copy phase (steps after the first output), strongest early",
+  "predicate": "phase == 2",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires on nearly every copy-phase step (t > L, i.e. inputs are the fed-back outputs), about 91% of them, and almost never in the original phase or on the delimiter step (0.01% of mass outside the copy phase). Magnitude is largest at the first copy steps (recall_idx 1-2, about 48% of mass) and decays over later steps. It is also boosted when the fed-back input is a digit, especially 1 or 0: the top examples are sequences starting with 1 0, where the step whose input is 1 sits near max activation. The token identity barely changes the firing rate. Misses are tiny activations on the delimiter step or on late original steps. False positives are scattered copy steps where the feature stays off, mostly mid-to-late in the sequence.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 75,
+    "predicate": "phase == 2",
+    "split": "test",
+    "precision": 0.9091526714204138,
+    "recall": 0.9995038087607332,
+    "f1": 0.952189738976451,
+    "mass_recall": 0.9998959583113609,
+    "correlation": 0.6973588158454064,
+    "n_active": 2484929,
+    "n_predicted": 2731880,
+    "coverage_by_activation_quartile": [
+      0.998137574790779,
+      0.999885710974322,
+      0.9999919514770649,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 75,
+    "predicate": "phase == 2",
+    "split": "dev",
+    "precision": 0.909218765157325,
+    "recall": 0.9995002040229954,
+    "f1": 0.9522243514628471,
+    "mass_recall": 0.9998994829399033,
+    "correlation": 0.6977662352883544,
+    "n_active": 2485014,
+    "n_predicted": 2731765,
+    "coverage_by_activation_quartile": [
+      0.998103835146333,
+      0.999900201849807,
+      0.9999967806996506,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 75,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Core claims hold. The test split gives precision 0.909, recall 0.9995, F1 0.952 and mass recall 0.9999. Original and delimiter steps together hold about 0.0% of the mass (503 and 739 active dev steps). Copy-phase firing rate is 0.909. recall_idx 1 and 2 each hold 0.241 of the mass, which matches the claimed ~48%. Per-step mass falls at later recall_idx. A fed-back 1 has a high mass share (0.108 vs about 0.035 for letters at similar rates). The top examples are sequences starting with 1 0.",
+      "One sub-claim overstates: 'Token identity barely changes the firing rate' is true for the overall in_tok marginals but not inside the copy phase. Copy-phase precision for the step right after a fed-back '0' (prev_tok==0) is only 0.51 (n=74,644), and 0.448 at recall_idx>=3. prev_tok=='f' gives 0.748. in_tok=='3' gives 0.768, falling to 0.681 at recall_idx>=3, and prev 0 followed by in 3 gives 0.193. At the other end, in_tok=='1' gives 1.00, prev 'k'/'l'/'y'/'q' give about 0.99, and prev 'c','d','i','o','u','h' give about 0.81-0.85. So the 'off' copy steps are partly a token-history effect, not purely scattered noise.",
+      "The token-history effect does not give a better predicate. Excluding (prev_tok==0)&(recall_idx>=3) moves test F1 only from 0.9522 to 0.9528 (precision 0.919, recall 0.989). No single position, length or digit-count slice is far off: by L, precision runs 0.896-0.924; by n_digits, 0.885-0.925; by recall_idx, 0.85-0.97.",
+      "Missed activations (1,233 test steps, 0.0% of mass) are tiny values on the delimiter step or on late original steps, as described."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase==2)&~((prev_tok==tok('0'))&(recall_idx>=3))",
+    "better_predicate_test_f1": 0.9528
+  }
+}

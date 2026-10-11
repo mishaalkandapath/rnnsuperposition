@@ -1,0 +1,62 @@
+{
+  "label": "fed-back \"o\" in copy phase (o at original position >= 2, not last step)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"o\")) & (recall_idx >= 3) & (to_go >= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, almost exclusively (99.8% of mass) when the fed-back input token is \"o\", i.e. right after the model has re-emitted an original \"o\". It requires that \"o\" to come from original position 2 or later (recall_idx >= 3); it never fires on o at original positions 0-1, never in the original or delimiter phase, and is weak or absent on the final output step. Magnitude is largest when the o was at original position 2-3 (t around 10-13, e.g. \"j h o w ... <DEL> j h [o]\"), and falls off for later positions and when few outputs remain (to_go 0-1). It is token-specific: other letters and digits almost never activate it. Remaining false positives are mostly o fed back late in the copy with only 1 output left.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 534,
+    "predicate": "(phase == 2) & (in_tok == tok(\"o\")) & (recall_idx >= 3) & (to_go >= 1)",
+    "split": "test",
+    "precision": 0.7268257926612042,
+    "recall": 0.9328476498201549,
+    "f1": 0.8170495654843748,
+    "mass_recall": 0.9805770204024876,
+    "correlation": 0.7137419845625883,
+    "n_active": 32806,
+    "n_predicted": 42105,
+    "coverage_by_activation_quartile": [
+      0.7921238722262862,
+      0.948671055840039,
+      0.9909767101572979,
+      0.9996341909523229
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 534,
+    "predicate": "(phase == 2) & (in_tok == tok(\"o\")) & (recall_idx >= 3) & (to_go >= 1)",
+    "split": "dev",
+    "precision": 0.7289193045244602,
+    "recall": 0.9313743665801508,
+    "f1": 0.8178032204240543,
+    "mass_recall": 0.9804000396367162,
+    "correlation": 0.7139872523107514,
+    "n_active": 32364,
+    "n_predicted": 41353,
+    "coverage_by_activation_quartile": [
+      0.7875417130144605,
+      0.9458657767890248,
+      0.992584352984798,
+      0.9995056235323199
+    ]
+  },
+  "gate": "update",
+  "feature": 534,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The label's 'o at original position >= 2' overclaims. Dev precision grid for in_tok==o in the copy phase with to_go>=1: recall_idx 3 gives 0.82-0.995 and recall_idx 4 gives 0.86-0.999, but recall_idx 5 gives only 0.50-0.77, recall_idx 6 gives 0.15-0.25 and recall_idx 7 gives 0.15. An 'o' from original position 5 or later mostly does not fire (dev score for recall_idx>=6: precision 0.13, recall 0.065). Those late-position 'o' steps are a systematic class of false positives.",
+      "The explanation blames most false positives on an 'o' fed back late with only 1 output left. That is only part of it. Test misses show false positives like 'b i b l n 2 o z 0 <DEL> b i b l n 2 *o* z' (t=16, recall_idx 7). These are late original positions and are not limited to to_go==1.",
+      "The explanation's own numbers point to the fix: capping recall_idx at 3..5 helps. Combining that cap with to_go>=1 gives dev F1 0.875 against 0.817 for the original predicate. That suggests the upper limit belongs in the label.",
+      "Claims that hold up: the feature fires only in the copy phase (100% of mass), 99.8% of mass is on in_tok o, it never fires for recall_idx<=2 (0.02% of mass), to_go==0 is weak (precision about 0.1-0.2), and magnitude peaks at t 10-13 and recall_idx 3-4."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "fed-back \"o\" in copy phase that came from original position 2-4 (strongest at 2-3), not on the final step",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"o\")) & (recall_idx >= 3) & (recall_idx <= 5) & (to_go >= 1)",
+    "better_predicate_test_f1": 0.876
+  },
+  "final_label": "fed-back \"o\" in copy phase that came from original position 2-4 (strongest at 2-3), not on the final step"
+}

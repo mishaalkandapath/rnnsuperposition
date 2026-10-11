@@ -1,0 +1,62 @@
+{
+  "label": "input w at original position >= 4",
+  "predicate": "(phase == 0) & (in_tok == tok(\"w\")) & (t >= 4)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token-specific feature: fires when the input token is the letter w during the original (pre-<DEL>) phase. It is silent at positions 0-2. At position 3 it fires only weakly (about 0.01-0.05 of max, 0.6% of mass), and from position 4 on it fires every time (precision 1.0 on dev). Magnitude rises with position and as <DEL> gets closer: the largest activations (~3.5) are w as the last original token of L=9 sequences. A second w in a sequence fires more weakly than the first (in_first=0 holds 18% of mass). Never fires on the delimiter or in the copy phase, including when w is fed back or output, and essentially never on any other input token.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 205,
+    "predicate": "(phase == 0) & (in_tok == tok(\"w\")) & (t >= 4)",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.8745953847760259,
+    "f1": 0.9331031025455356,
+    "mass_recall": 0.9942655828607155,
+    "correlation": 0.924821134890967,
+    "n_active": 47885,
+    "n_predicted": 41880,
+    "coverage_by_activation_quartile": [
+      0.4984129635816906,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 205,
+    "predicate": "(phase == 0) & (in_tok == tok(\"w\")) & (t >= 4)",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.8748778311307526,
+    "f1": 0.9332638282923291,
+    "mass_recall": 0.9942456482880078,
+    "correlation": 0.9247382423385919,
+    "n_active": 47066,
+    "n_predicted": 41177,
+    "coverage_by_activation_quartile": [
+      0.49953259114472676,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 205,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core label and predicate hold up. Test split: precision 1.000, recall 0.875, F1 0.933, mass recall 0.994, and 0 false positives. The feature is silent in the delimiter and copy phases and at t=0-2. Its firing on tokens other than w is scattered noise (about 12 steps in the dev split). All misses are the weak w at t=3 (about 0.02-0.05 of max, 0.6% of mass). Coverage by quartile is 0.50/1/1/1, so only the bottom quartile is missed.",
+      "The claim 'magnitude rises ... as <DEL> gets closer' is false; magnitude depends only on absolute position t. Mean activation is mass_recall/recall at fixed t. At t=6: to_go=0 gives 1.487 and to_go=2 gives 1.488. At t=4: to_go=0 gives 0.573 and to_go=3 gives 0.575. The largest values come from w at t=8. That position only exists as the last token of L=9 sequences, so 'closeness to <DEL>' is a confound of position.",
+      "The claim 'a second w in a sequence fires more weakly than the first' is false once position is held fixed. At t=6: in_first==1 gives a mean ratio of 1.489 and in_first==0 gives 1.484, essentially identical. In the profile examples a repeated w often fires more strongly ('3 p f u [w:0.29] [w:0.54]'), because the repeat sits at a later position.",
+      "Minor: the t=3 activations are small but they happen every time (5877 fires out of about 500000/30 w's at t=3, i.e. near 100% of w's there). So the feature fires on w at t>=3 with a strongly rising magnitude, not a sharp cutoff at t=4. The predicate's t>=4 choice is a reasonable F1 tradeoff, but the label's '>= 4' is a threshold artifact."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "input w in the original phase at position >= 4 (weak at t=3); magnitude grows with absolute position t, not with distance to <DEL> or with repeat count",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "input w in the original phase at position >= 4 (weak at t=3); magnitude grows with absolute position t, not with distance to <DEL> or with repeat count"
+}

@@ -1,0 +1,62 @@
+{
+  "label": "token b fed back as the first or second copied token",
+  "predicate": "(in_tok == tok(\"b\")) & isin(recall_idx, [1,2])",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the input is b and that b is the first or second copied token, i.e. orig(0) or orig(1) == b being fed back (recall_idx 1 or 2). Magnitude is much larger at recall_idx 1, where b is the first original token and the step right after <DEL> (about 0.8-1.0 of max; 83% of activation mass). At recall_idx 2, where b was the second original token, it is weak (about 0.02-0.3 of max). Never fires during the original phase or on the delimiter, on b at later copy positions, or on other tokens. Most false positives are short sequences (L=3-4) with b in position 1, where the activation drops to zero; misses are tiny activations of about 0.01.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 433,
+    "predicate": "(in_tok == tok(\"b\")) & isin(recall_idx, [1,2])",
+    "split": "test",
+    "precision": 0.9437435555285983,
+    "recall": 0.9989406779661016,
+    "f1": 0.9705579640083586,
+    "mass_recall": 0.9999649594587348,
+    "correlation": 0.8245118928485116,
+    "n_active": 31152,
+    "n_predicted": 32974,
+    "coverage_by_activation_quartile": [
+      0.9957627118644068,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 433,
+    "predicate": "(in_tok == tok(\"b\")) & isin(recall_idx, [1,2])",
+    "split": "dev",
+    "precision": 0.9428494203856087,
+    "recall": 0.9991725279271825,
+    "f1": 0.9701942242618087,
+    "mass_recall": 0.999977008513875,
+    "correlation": 0.8229570914715407,
+    "n_active": 31421,
+    "n_predicted": 33298,
+    "coverage_by_activation_quartile": [
+      0.9966904276985743,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 433,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold. Activity is copy-phase only (orig/delimiter share 0). in_tok b carries 100% of the activation mass, and recall_idx 1 and 2 carry 83.5% and 16.5% of it. recall_idx 2 activations sit only in the bottom two activation quartiles, which matches 'weak'. b & recall_idx==1 has dev precision 1.0.",
+      "There is a systematic false-positive class tied to sequence length, and the predicate does not encode it. For b & recall_idx==2: L=3 has test precision 0.002 (essentially never fires); L=4 has test precision 0.41; L>=5 has dev precision 0.998. Nearly all of the ~1855 test false positives are L=3/4 sequences with b in position 1, e.g. '3 b x d <DEL> 3 *b*'. The explanation mentions this, but the label and predicate leave it out, so the label overclaims for 'second copied token'.",
+      "The misses (33 on test) are scattered tiny activations of 0.01-0.10 holding 0.0% of the mass. This is noise and not a systematic gap.",
+      "Adding L>=5 to the recall_idx==2 branch raises test precision from 0.944 to 0.999 and F1 from 0.971 to 0.983, with mass recall 0.997. Using L>=4 instead gives F1 0.977."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "token b fed back as the first copied token (strong), or weakly as the second copied token in longer sequences (L>=5)",
+    "better_predicate": "(in_tok == tok(\"b\")) & ((recall_idx==1) | ((recall_idx==2) & (L>=5)))",
+    "better_predicate_test_f1": 0.983
+  },
+  "final_label": "token b fed back as the first copied token (strong), or weakly as the second copied token in longer sequences (L>=5)"
+}

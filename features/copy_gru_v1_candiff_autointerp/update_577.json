@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input of digit 2 fed back at recall position >= 3",
+  "predicate": "(phase == 2) & (in_tok == tok(\"2\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, at steps where the fed-back input token is the digit 2 (in_tok 2 holds 99% of activations and essentially all of the mass). It is nearly silent when the 2 is fed back early: at recall_idx 2 the rate is only about 0.006, and it is zero at recall_idx 0-1. From recall_idx 3 on it fires reliably, so the 2 must be original token 2 or later. The activation rate is flat (~0.034) from recall_idx 4 on, and the lowest-quartile activations are mostly the early-position cases. It never fires in the original phase or at the delimiter, even on a 2 input, and almost never on other tokens. It does not depend on out_tok, next_out or first_tok.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 577,
+    "predicate": "(phase == 2) & (in_tok == tok(\"2\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9209455936033374,
+    "recall": 0.9413834153622004,
+    "f1": 0.9310523587350958,
+    "mass_recall": 0.9744732894579725,
+    "correlation": 0.8879471277044324,
+    "n_active": 56281,
+    "n_predicted": 57530,
+    "coverage_by_activation_quartile": [
+      0.793262738966669,
+      0.9880597014925373,
+      0.987135749822317,
+      0.9970859985785359
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 577,
+    "predicate": "(phase == 2) & (in_tok == tok(\"2\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.920441627338179,
+    "recall": 0.942154442877292,
+    "f1": 0.9311714788548328,
+    "mass_recall": 0.9739611888299768,
+    "correlation": 0.8868915314874273,
+    "n_active": 56720,
+    "n_predicted": 58058,
+    "coverage_by_activation_quartile": [
+      0.7999294781382228,
+      0.9839210155148096,
+      0.9870239774330042,
+      0.9977433004231312
+    ]
+  },
+  "gate": "update",
+  "feature": 577,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The position condition is wrong, and the misses come in a clear pattern. At recall_idx 2 the feature is not 'nearly silent'. It fires almost every time when L is 3 or 4 (dev precision 1.00 for L=3 and 0.99 for L=4, about 2,900 steps), and never when L is 5 or more. The average rate of 0.006 hides this. These short-sequence cases make up most of the predicate's 3,299 missed test activations, which are concentrated in the lowest activation quartile (coverage 0.79).",
+      "False positives also follow a pattern. On a fed-back 2, recall_idx 3 fires reliably for L=4-6 (precision 0.96-1.00) but only partly for L=7, 8 and 9 (0.55, 0.32 and 0.53). The 4,548 test false positives are mostly of this kind, e.g. 'u k 2 p r p s f e <DEL> u k *2*'.",
+      "to_go also matters strongly, which the explanation leaves out. Restricted to copy-phase 2 inputs, precision is 1.00 at to_go 0, 0.97 at to_go 1, 0.67 at to_go 2, 0.51 at to_go 3, 0.33 at to_go 4, 0.18 at to_go 5 and 0.00 at to_go 6 or more. So whether a fed-back 2 fires depends on both how far into recall it is and its distance from the end of the sequence, not on recall_idx alone.",
+      "These claims hold up: no firing in the original phase or at the delimiter, almost all activation mass on in_tok 2, and a flat rate of about 1.00 from recall_idx 4 on for every L."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input of digit 2 fed back late in recall (recall_idx >= 4, or recall_idx 3 for L <= 7, or near the end of short sequences)",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"2\")) & ((recall_idx >= 4) | ((recall_idx == 3) & (L <= 7)) | ((recall_idx == 2) & (L <= 4)))",
+    "better_predicate_test_f1": 0.963
+  },
+  "final_label": "copy-phase input of digit 2 fed back late in recall (recall_idx >= 4, or recall_idx 3 for L <= 7, or near the end of short sequences)"
+}

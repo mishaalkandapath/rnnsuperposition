@@ -1,0 +1,62 @@
+{
+  "label": "token right after the digit 1 early in the original sequence",
+  "predicate": "(prev_tok == tok(\"1\")) & (phase == 0) & (t <= 5)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires during the original-input phase on the step immediately after the input digit 1 (prev_tok == 1, 26.8x lift, 93% of activation mass), whatever the current token is. Only fires for early positions (t = 1..5; essentially nothing at t >= 6). Magnitude depends on where the 1 sits: strongest when 1 is the third original token (t = 3; e.g. w i 1 [x] reaches max and holds about half the top quartile), strong at t = 2 and 4, weak (second quartile) when 1 is the first token (t = 1). A repeated 1 (second occurrence) mostly does not trigger it. Never fires in the copy phase, and almost never on <DEL>. Missed activations (about 8% of mass) are diffuse low-magnitude firings in early original positions with no preceding 1.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 474,
+    "predicate": "(prev_tok == tok(\"1\")) & (phase == 0) & (t <= 5)",
+    "split": "test",
+    "precision": 0.8016324777145312,
+    "recall": 0.7467360312140463,
+    "f1": 0.7732110947090358,
+    "mass_recall": 0.9229350591301576,
+    "correlation": 0.7487222966416209,
+    "n_active": 79964,
+    "n_predicted": 74488,
+    "coverage_by_activation_quartile": [
+      0.25171327097193735,
+      0.8123155419938972,
+      0.9233154919713871,
+      0.9995998199189635
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 474,
+    "predicate": "(prev_tok == tok(\"1\")) & (phase == 0) & (t <= 5)",
+    "split": "dev",
+    "precision": 0.7976142227986275,
+    "recall": 0.7426260644252418,
+    "f1": 0.7691385767790262,
+    "mass_recall": 0.9212000730367668,
+    "correlation": 0.7464020206178749,
+    "n_active": 79503,
+    "n_predicted": 74022,
+    "coverage_by_activation_quartile": [
+      0.23968605353189776,
+      0.8119843026765949,
+      0.9195009056148118,
+      0.9993459119496856
+    ]
+  },
+  "gate": "update",
+  "feature": 474,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The t=5 boundary is too generous. At t=5 the predicate (prev_tok==1) has dev precision 0.29 (11,064 predicted steps, 2.8% of mass). Many of the test-split false positives are at step 5, e.g. 'y a g f 1 *z*'. At t=4 precision is only 0.67, against 1.00 at t=1, 0.97 at t=2 and 0.87 at t=3. So the feature fades out over t=4..5 rather than firing cleanly through t=5.",
+      "The claim 'a second occurrence of 1 mostly does not trigger it' holds only loosely. After a second 1, precision is 0.22 and mass recall 1.5%. But some top examples do fire strongly on the step after a repeated 1, e.g. 'b i 1 1 [r:0.82]'.",
+      "Missed activations are about 25% of active steps but only 7.7% of the mass (test). They are low-magnitude (mostly 0.02-0.24 of max) and spread over t=3..4 with no clear token pattern. The largest other prev_tok, m, has precision 0.09 at t=2..4 and only 2% of mass. I treat this as scattered noise, not a systematic class.",
+      "The other claims check out. Copy phase is exactly 0 active steps. The delimiter carries 0.4% of mass. t>=6 is essentially silent. t=1 always fires after a leading 1 (precision 1.0) but carries low mass. t=2..4 carry the bulk of the mass, with t=3 the peak (35.7%).",
+      "The tightened predicate (t<=4, first occurrence of 1) improves test F1 only slightly, from 0.773 to 0.793, with precision 0.92 and mass recall 0.88. That is not enough to overturn the verdict."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(prev_tok == tok(\"1\")) & (phase == 0) & (t <= 4) & (n_seen([tok(\"1\")]) == 1)",
+    "better_predicate_test_f1": 0.793
+  }
+}

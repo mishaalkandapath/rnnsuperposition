@@ -1,0 +1,64 @@
+{
+  "label": "copy phase, from the 3rd output onward",
+  "predicate": "(phase == 2) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Positional copy-phase feature, independent of token identity. Fires on essentially every copy-phase step from recall_idx 3 onward (rate ~0.9-1.0), partly at recall_idx 2 (~52%) and rarely at recall_idx 1 (~12%); never fires in the original phase, on the delimiter, or on the first copy output (recall_idx 0). No token, L, digit, or repeat dependence (rates flat ~0.33 across in_tok/out_tok/prev_tok/first_tok/L). Magnitude increases toward the end of the copy phase: the top activations are the last output step of short (L=3) sequences, and the activation mass is concentrated at to_go 0-2. Within long sequences, early copy steps fire weakly (lowest quartile). Missed activations are mostly weak firing at recall_idx 1, which hold 1.6% of the mass; false positives are mostly recall_idx 2 in long sequences. A refinement that also requires recall_idx >= 3 or to_go <= 1 gives F1 0.93 on dev.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 127,
+    "predicate": "(phase == 2) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.8699464128895819,
+    "recall": 0.9706080547407234,
+    "f1": 0.9175245942387719,
+    "mass_recall": 0.9837552435456635,
+    "correlation": 0.7183493101857625,
+    "n_active": 2000412,
+    "n_predicted": 2231880,
+    "coverage_by_activation_quartile": [
+      0.9164152184649962,
+      0.99216561388354,
+      0.9934833424314591,
+      0.9803680441828984
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 127,
+    "predicate": "(phase == 2) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.8701494108922758,
+    "recall": 0.9705807384128202,
+    "f1": 0.9176252782865933,
+    "mass_recall": 0.9837250782543265,
+    "correlation": 0.7184522690918459,
+    "n_active": 2000832,
+    "n_predicted": 2231765,
+    "coverage_by_activation_quartile": [
+      0.9163807855931932,
+      0.9921912484406487,
+      0.9934467261619166,
+      0.9803041934555226
+    ]
+  },
+  "gate": "hidden",
+  "feature": 127,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The onset isn't a flat partial rate. It is a clean rule on L / to_go, and the explanation hides that. Dev firing rate at recall_idx 1: L=3 1.000, L=4 0.627, L>=5 0.000-0.001. At recall_idx 2: L=3 1.0, L=4 1.0, L=5 0.991, L=6 0.433, L=7 0.169, L=8 0.152, L=9 0.338. So the '12% at recall_idx 1' and '52% at recall_idx 2' figures are averages over a nearly deterministic split, not partial firing.",
+      "The claim that firing is flat across L is false in the onset region. Whether the feature has turned on at recall_idx 1-2 depends almost entirely on L (equivalently, on to_go <= 2).",
+      "The recorded predicate's false positives form one systematic class: recall_idx 2 in sequences with L>=6. On dev, (phase==2)&(recall_idx==2)&(L>=7) has precision 0.219 over 249k steps. That accounts for most of the predicate's roughly 231k test false positives.",
+      "'Never fires in the original phase' is slightly overstated. There are 352 activations at t=2 in the original phase, which is negligible (0.000 of the mass).",
+      "The checks that held up: it is silent on the delimiter and at recall_idx 0. Firing rate is 0.96-0.998 for recall_idx 3-6 and about 0.90-0.91 for recall_idx 7-8. It is token-independent. Mass is concentrated at to_go 0-2 (about 82%). The top activations are short sequences near the end, e.g. L=4 at to_go 0 fires at precision 1.0.",
+      "A better predicate that adds the to_go <= 2 onset rule reaches test F1 0.958 (precision 0.962, recall 0.955, mass recall 0.990). The recorded predicate gets 0.918, and the agent's refined predicate gets 0.931 on test. The remaining misses are weak activations at recall_idx 1 or 2 in long sequences, and the remaining false positives are scattered dropouts late in long sequences. That looks like noise."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy phase after the first output, once recall_idx >= 3 or within the last 3 outputs (to_go <= 2)",
+    "better_predicate": "(phase == 2) & (recall_idx >= 1) & ((recall_idx >= 3) | (to_go <= 2))",
+    "better_predicate_test_f1": 0.958
+  },
+  "final_label": "copy phase after the first output, once recall_idx >= 3 or within the last 3 outputs (to_go <= 2)"
+}

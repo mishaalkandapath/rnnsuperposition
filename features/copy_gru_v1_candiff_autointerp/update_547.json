@@ -1,0 +1,60 @@
+{
+  "label": "sequence began with g: late original-phase steps and <DEL>",
+  "predicate": "(first_tok == tok(\"g\")) & (t >= 3) & (phase <= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires when the first original token was g, from step 3 of the original phase through the <DEL> step. It does not depend on the current input token. It is silent at t=0..2 and essentially silent in the copy phase (64 activations in total). The ramp matters: activation is weak at t=3, about 0.2-0.3 of max, and grows to about 0.8-1.0 of max at middle original positions. Sequences that start with g g are among the strongest. Weak residual firing (under ~0.15 of max) happens when g is the second original token. This is the main source of missed activations: 3.4% of activation mass. Inactive false positives are mostly the t=3 step.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 547,
+    "predicate": "(first_tok == tok(\"g\")) & (t >= 3) & (phase <= 1)",
+    "split": "test",
+    "precision": 0.9845155383206765,
+    "recall": 0.8211722689547512,
+    "f1": 0.8954558536271731,
+    "mass_recall": 0.9648591004131125,
+    "correlation": 0.9197161137502999,
+    "n_active": 89041,
+    "n_predicted": 74268,
+    "coverage_by_activation_quartile": [
+      0.3268945689771349,
+      0.9578167115902965,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 547,
+    "predicate": "(first_tok == tok(\"g\")) & (t >= 3) & (phase <= 1)",
+    "split": "dev",
+    "precision": 0.9844485642263627,
+    "recall": 0.828081000729231,
+    "f1": 0.8995198401091937,
+    "mass_recall": 0.9660007650169652,
+    "correlation": 0.919336401896088,
+    "n_active": 89135,
+    "n_predicted": 74977,
+    "coverage_by_activation_quartile": [
+      0.3502513013821576,
+      0.9620804164422905,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 547,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor caveat: the main predicate's recall is 0.82 on test, and it covers only 33% of the lowest activation quartile. The missed steps (15.9k, 3.5% of mass) are almost all weak firings (0.01-0.21 of max) when orig(1)==g and t>=4. The explanation already says this. Only some sequences with g in second position fire: misses start with t, i, 2, p, q, while inactive cases start with c, z, h, v, x, 1, f. A predicate for this class alone gets precision 0.27 and F1 0.21. Adding (orig(1)==g)&(t>=5) to the predicate lowers test F1 to 0.852, which confirms why it was rejected.",
+      "Claims checked: copy phase has 64 activations in the dev split, and first_tok==g in the copy phase gets F1 0.0001. Rows that start with neither g nor g-second have precision 0.00015. Firing is zero at t=0..2. The ramp is real: first_tok==g at t==3 sits in the bottom quartiles (2.9% coverage in Q3, 0.1% in Q4), while orig_idx>=5 has precision 1.0 and covers 60% of the top quartile. Sequences starting g g are overrepresented in the top quartile (8.2% coverage vs 2.4% overall recall). All 1150 test false positives are at step 3 in the shown examples, which matches the claim.",
+      "The label matches the predicate and does not overclaim. Test scores reproduce exactly: P 0.985, R 0.821, F1 0.895, mass recall 0.965."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

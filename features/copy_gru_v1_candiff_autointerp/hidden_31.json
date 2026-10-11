@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input x (fed-back x, from the 3rd original position onward)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"x\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase when the fed-back input token is x, i.e. the model just output an x and now receives it as input (the x is original token recall_idx-1). It never fires during the original phase or on the delimiter, including on original-phase x inputs, and essentially never on any other input token. Magnitude grows with how late the x sits in the original sequence: x at original position 1 (recall_idx 2) gives weak activations (~0.02-0.2 of max), position 2 gives ~0.3-0.5, and x at later positions reaches 0.7-1.0. Some x inputs at original position 2 still do not fire. The output token, the previous token and the first token have no effect.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 31,
+    "predicate": "(phase == 2) & (in_tok == tok(\"x\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9899921677834828,
+    "recall": 0.9546347112431398,
+    "f1": 0.971992002597447,
+    "mass_recall": 0.9912617175381946,
+    "correlation": 0.9103737580107101,
+    "n_active": 59583,
+    "n_predicted": 57455,
+    "coverage_by_activation_quartile": [
+      0.819280343716434,
+      0.9992615467239527,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 31,
+    "predicate": "(phase == 2) & (in_tok == tok(\"x\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9892357186331623,
+    "recall": 0.9550559911354364,
+    "f1": 0.9718454231728567,
+    "mass_recall": 0.9914222159887999,
+    "correlation": 0.9100661720646988,
+    "n_active": 59563,
+    "n_predicted": 57505,
+    "coverage_by_activation_quartile": [
+      0.8206299106843059,
+      0.9995970720569471,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 31,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "No refuting evidence. Dev profile: 100% of activation mass is in the copy phase; original phase and delimiter have 0 active steps; phase0 & in_tok==x scores precision 0 and recall 0.",
+      "in_tok==x carries 1.000 of the mass. Other tokens fire on only 17 or fewer steps each (h 17, 1 8, f 8), which is scattered noise.",
+      "Position dependence holds. recall_idx 1 (x at original position 0) never fires. recall_idx 2 holds 0.9% of mass at a 0.5% rate, with weak 0.02-0.17 activations in the misses. recall_idx 3 holds 12.8% of mass over 15.6k active steps, while recall_idx 4 holds 23.6% over 13.9k, so mean magnitude rises after position 2 as claimed.",
+      "Test misses: 2703 steps (0.9% of mass), all weak x inputs at recall_idx 2 with no other systematic class. Test false positives: 575 steps, almost all x at original position 2 (recall_idx 3, precision 0.962 alone). recall_idx >= 4 alone has precision 0.99995. This is a mild soft edge at the cutoff, not a missing variable.",
+      "Reproduced the test scores: precision 0.990, recall 0.955, F1 0.972, mass recall 0.991. recall_idx >= 2 trades precision for recall and gets a lower F1 of 0.890, so the >= 3 cutoff is justified."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

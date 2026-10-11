@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input y, from the 3rd copied token on",
+  "predicate": "(phase == 2) & (in_tok == tok(\"y\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token-specific copy-phase feature: fires only when the fed-back input is the letter y during the copy phase, and only once the copy is at least 3 tokens in (recall_idx >= 3, i.e. the y being fed back is original token 2 or later). It never fires in the original phase, on the delimiter, or on any other input token. It is silent on y fed back at recall_idx 1-2, and y at recall_idx 3 gives mostly weak activations: with recall_idx >= 4 precision is 0.996 but the lowest activation quartile is mostly lost. Activations get stronger later in the copy; the top examples are y fed back from original positions 4-6 (up to 2.48). In repeated-y sequences the first copied y activates more strongly than later ones. Its rate does not depend on out_tok, prev_tok, first_tok or in_count.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 181,
+    "predicate": "(phase == 2) & (in_tok == tok(\"y\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9433775180043836,
+    "recall": 0.9998525046553218,
+    "f1": 0.9707943611546207,
+    "mass_recall": 0.9999822310256969,
+    "correlation": 0.873093455795551,
+    "n_active": 54239,
+    "n_predicted": 57486,
+    "coverage_by_activation_quartile": [
+      0.9994100294985251,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 181,
+    "predicate": "(phase == 2) & (in_tok == tok(\"y\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9441225809798869,
+    "recall": 0.9998351678540686,
+    "f1": 0.9711805308475059,
+    "mass_recall": 0.9999811224054692,
+    "correlation": 0.8740032596994893,
+    "n_active": 54601,
+    "n_predicted": 57823,
+    "coverage_by_activation_quartile": [
+      0.9993407076404659,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 181,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Core predicate holds up on test: P 0.943, R 0.9999, F1 0.971, mass recall 1.0. Only 8 misses, all tiny (<=0.08 of max) y inputs at recall_idx 2 in L=3/4 sequences, carrying 0.0% of the mass.",
+      "Every false positive is at recall_idx==3 (P 0.81 there, vs 0.996 at recall_idx>=4). I found no clean variable that explains which recall_idx-3 cases fire. Precision by L ranges from 0.73 to 0.92 (L=3 has no activations), digits in orig(0)/orig(1) give 0.75-0.87, and in_count==1 vs >=2 gives 0.83 vs 0.73. It looks like a soft, graded threshold, not a separate class of exceptions. The one sizeable effect is orig(1)==y (a 'y y' repeat), where precision drops to 0.49 on 547 steps.",
+      "The explanation's claim 'first copied y fires more strongly than later ones' overgeneralizes. It holds for adjacent repeats (e.g. 'c u b [y:0.91] [y:0.57]'), but in profile examples a later y at a later position fires more strongly: 'f u [y:0.15] n r [y:0.71]', '1 s 0 [y:0.43] h [y:0.86]', 'v g [y:0.15] z f [y:0.46]'. Position in the copy matters more than which occurrence it is.",
+      "Small inaccuracy: the top example is y from original position 7 ('d z n q f f b [y:1.00]'), not 4-6, though most top examples are at positions 4-6. The max of 2.477 is correct.",
+      "These claims check out: no activity in the original phase or on the delimiter, no activity on any input token other than y, and no dependence of the firing rate on out_tok, prev_tok or first_tok (all show flat lift)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

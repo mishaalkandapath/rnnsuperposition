@@ -1,0 +1,63 @@
+{
+  "label": "first token is q/e/x (t=0); plus the first copy step of length-3 sequences",
+  "predicate": "((t == 0) & isin(in_tok, [tok(\"q\"), tok(\"e\"), tok(\"x\")])) | ((recall_idx == 1) & (L == 3))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Two parts. (1) At t=0 it fires whenever the first input token is q, e or x, and on every such step (dev precision 1.0, about 91% of active steps, 84% of activation mass). The value is fixed per token: q about 0.19 of max, x about 0.17, e about 0.04. It never fires at t=0 for any other token. (2) At step L+1 (recall_idx 1, where the input is the fed-back orig(0) and the output is orig(1)) it fires mostly when L=3, on about 37% of those steps, plus a few L=4 cases (70 steps). These carry the largest activations (up to max, e.g. n c f <DEL> [n] c), and the strength varies with the sequence content. The last original token (c/d/f/o/r/digits) raises the firing rate there to about 68%. It is silent at t=1..3, at the delimiter, and at all later copy steps, and the rest of the original phase does not depend on the token. On dev, the t=0 clause alone gets F1 0.95 / mass 0.84, and adding the L=3 copy clause gets F1 0.93 / mass 0.995.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 75,
+    "predicate": "((t == 0) & isin(in_tok, [tok(\"q\"), tok(\"e\"), tok(\"x\")])) | ((recall_idx == 1) & (L == 3))",
+    "split": "test",
+    "precision": 0.8642823306489815,
+    "recall": 0.9921152800435019,
+    "f1": 0.9237974683544303,
+    "mass_recall": 0.9940808775445773,
+    "correlation": 0.7785213794280014,
+    "n_active": 11034,
+    "n_predicted": 12666,
+    "coverage_by_activation_quartile": [
+      0.989851395433128,
+      0.9865893439652048,
+      0.9981870920957215,
+      0.9938361131254533
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 75,
+    "predicate": "((t == 0) & isin(in_tok, [tok(\"q\"), tok(\"e\"), tok(\"x\")])) | ((recall_idx == 1) & (L == 3))",
+    "split": "dev",
+    "precision": 0.8688615628718762,
+    "recall": 0.9936490655053529,
+    "f1": 0.9270749566174291,
+    "mass_recall": 0.9951244585023723,
+    "correlation": 0.7792242536316345,
+    "n_active": 11022,
+    "n_predicted": 12605,
+    "coverage_by_activation_quartile": [
+      0.9923802612481858,
+      0.9880261248185777,
+      0.9996370235934664,
+      0.9945553539019963
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 75,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The t=0 part holds up. (t==0) & q/e/x has dev precision 1.0, recall 0.907 and mass 0.841. t=0 with any other token is never active (0 of 89,999 steps). The unit is also silent at t=1..3, at the delimiter and at copy steps beyond recall_idx 1.",
+      "The copy clause is the main systematic source of false positives. (recall_idx==1)&(L==3) has precision of only 0.365 (dev). On test, 1,719 of 1,802 predicate-true-but-inactive steps are L=3 first-copy steps. The label says 'plus the first copy step of length-3 sequences', which reads as unconditional. In fact it fires on only about a third of those steps.",
+      "Whether the unit fires at the L=3 first copy step depends on all three original tokens, not mainly on the last one. Precision by token ranges from 0.0 (orig(0)=r) to 0.89 (orig(0)=q) for orig(0), from 0.05 to 0.71 for orig(1), and from 0.08 to 0.73 for orig(2). The explanation focuses on the last token being c/d/f/o/r/digits, which leaves out most of this dependence.",
+      "The claim that a last token of c/d/f/o/r/digits raises the firing rate to about 68% did not check out: it measures 0.60 on dev.",
+      "The L=4 part is negligible (70 steps, precision 0.005), and the predicate correctly leaves it out. The remaining misses (87 on test) are scattered L=4 first-copy steps and hold 0.6% of the mass."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "First input token is q/e/x (t=0); also the first copy step (t=L+1) of length-3 sequences, but only for certain combinations of the three original tokens",
+    "better_predicate": "((t == 0) & isin(in_tok, [tok(\"q\"), tok(\"e\"), tok(\"x\")])) | ((recall_idx == 1) & (L == 3) & ((isin(orig(0), [tok('c'),tok('e'),tok('k'),tok('n'),tok('o'),tok('q'),tok('t'),tok('w'),tok('z'),tok('1'),tok('2')]).astype(np.int64) + isin(orig(1), [tok('c'),tok('d'),tok('f'),tok('k'),tok('o'),tok('r'),tok('u'),tok('p'),tok('2')]).astype(np.int64) + isin(orig(2), [tok('c'),tok('d'),tok('f'),tok('o'),tok('r'),tok('l'),tok('p'),tok('2'),tok('3')]).astype(np.int64)) >= 2))",
+    "better_predicate_test_f1": 0.976
+  },
+  "final_label": "First input token is q/e/x (t=0); also the first copy step (t=L+1) of length-3 sequences, but only for certain combinations of the three original tokens"
+}

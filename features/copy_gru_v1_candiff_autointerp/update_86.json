@@ -1,0 +1,61 @@
+{
+  "label": "copy phase: input l while the next output is also l (repeated-l run)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"l\")) & (out_tok == tok(\"l\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, and only when the input token is l (the model fed back an l it just produced). It is strongest when the token being output is also l, so the original sequence had consecutive l s. Activation is largest at the first step of an l run inside the copy (e.g. l l l ... <DEL> [l:1.0] [l:0.5] l): it drops on the second step and is usually gone by the last l of the run. Top examples are early copy positions (recall_idx 1-2). Weak residual firing (about 10% of mass, mostly the lowest quartile) happens on copy-phase l inputs whose output is not l, usually when l appears again later in the original. Never fires in the original or delimiter phases, and never on any input token other than l. Dev: P 0.94, R 0.65, mass recall 0.90.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 86,
+    "predicate": "(phase == 2) & (in_tok == tok(\"l\")) & (out_tok == tok(\"l\"))",
+    "split": "test",
+    "precision": 0.939453125,
+    "recall": 0.6584531143052703,
+    "f1": 0.7742454728370222,
+    "mass_recall": 0.9006432504356443,
+    "correlation": 0.849319345569035,
+    "n_active": 4383,
+    "n_predicted": 3072,
+    "coverage_by_activation_quartile": [
+      0.1624087591240876,
+      0.531934306569343,
+      0.9397810218978102,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 86,
+    "predicate": "(phase == 2) & (in_tok == tok(\"l\")) & (out_tok == tok(\"l\"))",
+    "split": "dev",
+    "precision": 0.9410621761658031,
+    "recall": 0.6528869916872613,
+    "f1": 0.7709245257991776,
+    "mass_recall": 0.8958986550286447,
+    "correlation": 0.8501872201800589,
+    "n_active": 4451,
+    "n_predicted": 3088,
+    "coverage_by_activation_quartile": [
+      0.17969451931716082,
+      0.4941599281221923,
+      0.9389038634321654,
+      0.9991007194244604
+    ]
+  },
+  "gate": "update",
+  "feature": 86,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the claim that weak tail firing happens 'usually when l appears again later in the original' holds only by mass. Among active steps with input l and output not l: in_count>=2 gives recall 0.164 (mass 0.067); in_count==1 gives recall 0.184 (mass 0.037). By step count the two are roughly equal.",
+      "Minor: false positives lean toward late copy positions. Precision of the predicate at recall_idx>=5 is 0.83 and at to_go==0 is 0.86, versus 0.99 at recall_idx<=2. Test FP examples are mostly l-l pairs near the end of the sequence. This is mild and does not need a new predicate.",
+      "The weak tail (35% of active steps, 10% of mass, lowest quartile) cannot be captured cleanly. Any predicate covering copy-phase l inputs with a non-l output has precision below 0.05. For example, adding recall_idx==1 raises recall to 0.83 but drops F1 to 0.31. So the F1 of 0.77 reflects an unstructured low-magnitude tail rather than a missed systematic class.",
+      "Verified: the feature never fires in the original or delimiter phases, and only ever on input l (mass share 1.000). Precision for input l and output l is 0.94 (test 0.939, F1 0.774, mass recall 0.90). The first step of a run fires strongest (prev_tok != l: precision 0.945, mass 0.88). The rarer follow-on l-l steps with prev_tok == l have precision 0.82 and are weaker, which matches the 'halves on next step' claim."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

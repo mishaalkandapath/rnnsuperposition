@@ -1,0 +1,64 @@
+{
+  "label": "L=3 sequences, step right after <DEL> (outputting 2nd original token)",
+  "predicate": "(L == 3) & (recall_idx == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase of very short sequences. Main case: L=3 at t=4 (input = first original token fed back after <DEL>, output = orig(1)); fires on ~93% of such steps and holds ~89% of activation mass. Weaker spillover at the next step (L=3 recall_idx=2, t=5) and at L=4 t=5 (recall_idx=1); these are low-magnitude misses. Never fires in the original or delimiter phase, nor for L>=5. Magnitude is modulated by the first token (c, n, f highest; c gives the top activations) and is lower when the sequence has more digits.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 36,
+    "predicate": "(L == 3) & (recall_idx == 1)",
+    "split": "test",
+    "precision": 0.9166666666666666,
+    "recall": 0.7194092827004219,
+    "f1": 0.806146572104019,
+    "mass_recall": 0.8912049717577356,
+    "correlation": 0.8322168767948187,
+    "n_active": 3318,
+    "n_predicted": 2604,
+    "coverage_by_activation_quartile": [
+      0.3156626506024096,
+      0.6518072289156627,
+      0.9155609167671894,
+      0.9951749095295537
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 36,
+    "predicate": "(L == 3) & (recall_idx == 1)",
+    "split": "dev",
+    "precision": 0.9297504798464491,
+    "recall": 0.7136122569239834,
+    "f1": 0.8074679113185531,
+    "mass_recall": 0.8866667219571629,
+    "correlation": 0.8419451224178227,
+    "n_active": 3394,
+    "n_predicted": 2605,
+    "coverage_by_activation_quartile": [
+      0.2779740871613663,
+      0.6713780918727915,
+      0.910377358490566,
+      0.9952830188679245
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 36,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced the test scores for (L == 3) & (recall_idx == 1): P 0.917, R 0.719, F1 0.806, mass recall 0.891. It covers 99.5% of the top activation quartile.",
+      "Missed activations are exactly the two weak secondary cases the explanation names. L=3 recall_idx=2 (test P 0.054 on its own) almost always follows an active recall_idx=1 step, so it looks like carry-over. L=4 recall_idx=1 (test P 0.03) has very small activations (about 0.02-0.09 of max). Adding either case lowers F1: with both added, F1 is 0.28; L=3 with recall_idx>=1 gives 0.64. Adding recall_idx=2 only for the high-magnitude first tokens (f, c, n, u, z) gives dev F1 0.802, also no gain.",
+      "The roughly 8% false positives (L=3, t=4, inactive) are spread across many first tokens (t, o, w, b, m, p, k, ...) with no systematic class. This fits the claim that magnitude depends on the first token, so weak first tokens fall below the threshold.",
+      "Phase claims check out: zero activations in the original and delimiter phases, none for L>=5, none at t>=7.",
+      "First-token claim checks out: c, n and f have the highest first_tok rates and mass, and 11 of the 12 top examples start with c.",
+      "The digit claim is only loosely supported. The n_digits breakdown is confounded by L, and restricting the predicate to n_digits==0 keeps precision at 0.92. This is minor and not tested directly as magnitude.",
+      "Not a problem with the unit: the user mentioned the subsampled data in features/copy_transcoder_v2_1of5, but this evaluation used features/copy_gru_v1_neuron_baseline_store as the computed task specified. The dev split shows only about 2.6k L=3 sequences out of 100k."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

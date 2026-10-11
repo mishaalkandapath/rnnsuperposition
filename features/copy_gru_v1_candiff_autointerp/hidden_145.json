@@ -1,0 +1,63 @@
+{
+  "label": "Broad positional feature: first ~5 original-input steps and all copy-output steps (off at <DEL> and late original inputs)",
+  "predicate": "(phase == 2) | ((phase == 0) & (t <= 4))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Dense feature (active on ~78% of all steps, every sequence) whose structure is mainly positional. It fires at every step t=0 (rate 1.0) and nearly always at t=1-3. Its firing rate then drops through the original phase (orig_idx 4: 0.65, 5: 0.46, 7: 0.14, 8: 0.08). It is mostly silent at the <DEL> step (rate 0.22) and turns back on for nearly the whole copy phase (recall_idx>=1, rate 0.91-0.98). Magnitude is largest early in the original phase: t=1 and t=2 each carry ~13% of activation mass, and the top activations are sequences beginning c c c, where the third c reaches the max. Input tokens c, t, 2, 3 have a mildly higher rate and mass, and repeated tokens (in_first=0) fire slightly more often, but token identity is a weak modulator. It does not depend on first_tok, next_out, digit count, or correctness. Within the copy phase activations are small (~0.1-0.4 of max). Predicate F1 ~0.92 on dev; adding to_go or in_first conditions did not help.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 145,
+    "predicate": "(phase == 2) | ((phase == 0) & (t <= 4))",
+    "split": "test",
+    "precision": 0.9117713640920618,
+    "recall": 0.9292174696869522,
+    "f1": 0.9204117529985469,
+    "mass_recall": 0.9542737990620528,
+    "correlation": 0.42511898222678646,
+    "n_active": 5036610,
+    "n_predicted": 5132982,
+    "coverage_by_activation_quartile": [
+      0.8564860664271935,
+      0.9383156772846508,
+      0.9527570936630367,
+      0.9693110919094756
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 145,
+    "predicate": "(phase == 2) | ((phase == 0) & (t <= 4))",
+    "split": "dev",
+    "precision": 0.9117437923470442,
+    "recall": 0.9291104717829157,
+    "f1": 0.9203452131536067,
+    "mass_recall": 0.9543337389098541,
+    "correlation": 0.425478671262564,
+    "n_active": 5037232,
+    "n_predicted": 5133180,
+    "coverage_by_activation_quartile": [
+      0.8559907504756581,
+      0.9381247478774057,
+      0.952678772786324,
+      0.9696476159922751
+    ]
+  },
+  "gate": "hidden",
+  "feature": 145,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The stated facts hold up on dev. The feature is active on 77.9% of steps and in every sequence. The t=0 rate is 1.00, t=1-3 rates are 0.97/0.91/0.81, and orig_idx 4-8 rates are 0.65/0.46/0.27/0.14/0.08. The <DEL> rate is 0.215, and copy rates for recall_idx>=1 are 0.91-0.98. Mass peaks at t=1 and t=2 (13% each), and the top activations come from sequences starting 'c c c'. Test scores for the predicate reproduce exactly (P 0.912, R 0.929, F1 0.920, mass recall 0.954). 'phase != 1' gets test F1 0.896.",
+      "Missed class 1: late original-phase c/t/2/3 tokens. The explanation calls token identity a weak effect, but in the late original phase it is strong. When in_tok is c, t, 2 or 3, (phase==0)&(t>=5) fires at precision 0.80 (0.86 for repeated tokens) on 111k steps. For other tokens it is much lower: v/o/j 0.41, e/a/b 0.19, and about 0.24-0.39 overall for t>=5. The misses output shows these steps, e.g. [3:0.20] [c:0.32] at t=5,6 and [c:0.28] at t=5.",
+      "Missed class 2: <DEL> firing depends on sequence length, which the explanation does not mention. The <DEL> rate is 0.73 for L=3, 0.58 for L<=4 and 0.47 for L<=5, but only 0.05 for L>=7. 'Mostly off at <DEL>' is true only for longer sequences.",
+      "False positives from t=3-4 in the original phase are a large share of the 453k test false positives (t=4 rate is only 0.65, t=3 is 0.81). They show no clear pattern: to_go and in_first do not separate them. This looks like a graded falloff, not a sharp cutoff at t<=4.",
+      "Adding both missed classes raises test F1 from 0.920 to 0.930 and mass recall from 0.954 to 0.979. The core positional story is right, but the label and predicate leave out two systematic subclasses, so this is not upheld as stated."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Broad positional feature: on at the first ~4-5 original inputs and through the whole copy phase. Late original inputs fire mainly when the token is c/t/2/3. <DEL> fires only in short sequences (L<=4).",
+    "better_predicate": "(phase == 2) | ((phase == 0) & ((t <= 4) | isin(in_tok,[tok('c'),tok('t'),tok('2'),tok('3')]))) | ((phase==1)&(L<=4))",
+    "better_predicate_test_f1": 0.93
+  },
+  "final_label": "Broad positional feature: on at the first ~4-5 original inputs and through the whole copy phase. Late original inputs fire mainly when the token is c/t/2/3. <DEL> fires only in short sequences (L<=4)."
+}

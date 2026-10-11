@@ -1,0 +1,63 @@
+{
+  "label": "token i fed back early in the copy phase (as copied token 0, or token 1 in short sequences)",
+  "predicate": "(in_tok == tok(\"i\")) & (phase == 2) & ((recall_idx == 1) | ((recall_idx == 2) & (L <= 6)))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only when the input token is i, almost entirely in the copy phase (99.5% of mass), where the fed-back i is an early original token. It fires most strongly at the first copy step after <DEL> (recall_idx 1, input = original token 0 = i). That case holds 87% of the mass, and every top example is a sequence starting with i, near max activation. Weaker activations come from i fed back at recall_idx 2 (original token 1 = i), and these fade as L grows: frequent for L<=6, rare for L>=7. It does not fire on any other token, at the delimiter, or on i during the original phase except for a trace at orig_idx 4-6 where i repeats an earlier token (in_first=0). It also does not fire on i fed back at recall_idx >= 3.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 43,
+    "predicate": "(in_tok == tok(\"i\")) & (phase == 2) & ((recall_idx == 1) | ((recall_idx == 2) & (L <= 6)))",
+    "split": "test",
+    "precision": 0.8513917094731812,
+    "recall": 0.918112332531776,
+    "f1": 0.8834941426830024,
+    "mass_recall": 0.9886614912552198,
+    "correlation": 0.7465203311474158,
+    "n_active": 23288,
+    "n_predicted": 25113,
+    "coverage_by_activation_quartile": [
+      0.7126417038818276,
+      0.960666437650292,
+      0.9991411885949846,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 43,
+    "predicate": "(in_tok == tok(\"i\")) & (phase == 2) & ((recall_idx == 1) | ((recall_idx == 2) & (L <= 6)))",
+    "split": "dev",
+    "precision": 0.8548406162575357,
+    "recall": 0.9186568428184282,
+    "f1": 0.8856005714868864,
+    "mass_recall": 0.9886102047785834,
+    "correlation": 0.7460174651594812,
+    "n_active": 23616,
+    "n_predicted": 25379,
+    "coverage_by_activation_quartile": [
+      0.7201897018970189,
+      0.9544376693766937,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 43,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The main claims hold up. The feature fires only on input i (100% of mass), 99.5% of the mass is in the copy phase, recall_idx 1 carries 87% and recall_idx 2 carries 12%, and it never fires at the delimiter.",
+      "Systematic false positives at recall_idx 1 for L=9: precision of i & copy & recall_idx==1 & L==9 is only 0.243 (n=2792) on test. For L=3..7 it is about 1.0 and for L=8 it is 0.909. The test-split misses output shows this directly: many inactive *i* at step 10, all from L=9 sequences starting with i. The explanation says the fade with L applies only to recall_idx 2, but it also applies to recall_idx 1.",
+      "The claim that recall_idx 2 fires 'frequently for L<=6' is too coarse. Test precision at recall_idx 2 by L: L=3 0.316, L=4 0.943, L=5 0.975, L=6 0.696, L=7 0.128, L=8 0.005, L=9 0.001. L=3 is mostly inactive, so the window is roughly L 4-6, not L<=6.",
+      "There is a small uncovered class at recall_idx 3 for L=4: test precision 0.196 over 2446 steps. The explanation says it never fires at recall_idx >= 3, which is wrong, though the mass here is tiny (0.4%).",
+      "The trace activity in the original phase at orig_idx 4-6 is confirmed (0.5% of mass) and is negligible."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "token i fed back at the start of the copy phase: as copied token 0 (L<=8; mostly silent at L=9), or as copied token 1 for mid-length sequences (L 4-6)",
+    "better_predicate": "(in_tok == tok(\"i\")) & (phase == 2) & (((recall_idx == 1) & (L <= 8)) | ((recall_idx == 2) & (L >= 4) & (L <= 6)))",
+    "better_predicate_test_f1": 0.911
+  },
+  "final_label": "token i fed back at the start of the copy phase: as copied token 0 (L<=8; mostly silent at L=9), or as copied token 1 for mid-length sequences (L 4-6)"
+}

@@ -1,0 +1,63 @@
+{
+  "label": "first copy-phase step after re-reading a leading z (L>=4)",
+  "predicate": "(recall_idx == 1) & (in_tok == tok(\"z\")) & (L >= 4)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires at step t = L+1, the step right after <DEL>. There the model has fed back its first output and is emitting original token 1. The feature fires when that fed-back input is z, meaning the sequence started with z. This holds 97% of activation mass with precision 1.0 on dev. Every top example (about 0.95-1.0 of max) is z ... <DEL> z, mostly with L=6-8. Some z-start sequences reach only about 0.3-0.6 of max, so magnitude varies with context, but I did not isolate what drives it. It is silent for L=3 (z-start sequences of length 3 are the only false positives). About a third of active steps are missed, but they carry only 3% of mass: very weak blips (<0.05 of max) at the same step with other first tokens, plus a few at recall_idx 2. It does not fire in the original or delimiter phases, or on z inputs at other positions.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 627,
+    "predicate": "(recall_idx == 1) & (in_tok == tok(\"z\")) & (L >= 4)",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.6676631992792202,
+    "f1": 0.8007170747280272,
+    "mass_recall": 0.9707504493085254,
+    "correlation": 0.9687327413773107,
+    "n_active": 24418,
+    "n_predicted": 16303,
+    "coverage_by_activation_quartile": [
+      0.0001638001638001638,
+      0.6705978705978706,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 627,
+    "predicate": "(recall_idx == 1) & (in_tok == tok(\"z\")) & (L >= 4)",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.6673397066095269,
+    "f1": 0.8004843931492968,
+    "mass_recall": 0.9704998824035641,
+    "correlation": 0.9691592469642545,
+    "n_active": 24268,
+    "n_predicted": 16195,
+    "coverage_by_activation_quartile": [
+      0.0,
+      0.6693588264381078,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 627,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Checks pass. On test, the predicate has precision 1.0 (0 false positives in 16303 predicted steps) and mass recall 0.971. In the dev profile, the copy phase holds 100% of mass and recall_idx 1 holds 99.2%. in_tok z holds 97.8% of mass, and there is no meaningful activation in the original or delimiter phases (37 tiny blips at orig_idx 7-8).",
+      "Misses on test are all weak, under about 0.13 of max: 8115 steps holding 2.9% of mass. They sit at step L+1 and are spread across non-z first tokens, plus some recall_idx 2 steps. They read as scattered noise, not a systematic class.",
+      "The magnitude driver the explanation left open is mostly sequence length. Mean activation per predicate step (mass share / count) for L=4 is about half that of L>=5: 0.075/2451 vs 0.153/2704, and about 0.18-0.19/2750 for L=6-9. This likely accounts for the reported 0.3-0.6-of-max z-start cases. Activation grows with L and saturates around L>=6. It is a minor omission, not a refutation.",
+      "Minor overclaim: L=3 is not fully silent. The z-start L=3 predicate is 11% precise (47 of 419 steps fire), with negligible mass of 0.00015. 'Nearly silent' would be accurate.",
+      "The next output token does not systematically drive magnitude. Digit outputs and repeated-token sequences carry mass roughly in proportion to their counts. out_tok == z is somewhat weaker (0.032 of mass over 492 steps)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "first copy-phase step after re-reading a leading z (L>=4; strength grows with L, roughly half as strong at L=4)",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "first copy-phase step after re-reading a leading z (L>=4; strength grows with L, roughly half as strong at L=4)"
+}

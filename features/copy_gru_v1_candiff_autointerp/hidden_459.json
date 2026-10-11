@@ -1,0 +1,65 @@
+{
+  "label": "copy-phase input v (fed-back copy of v), from the 3rd recalled position onward",
+  "predicate": "(phase == 2) & (in_tok == tok(\"v\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the fed-back input token is v (the model having just output v), i.e. the step whose recall_idx is one past the original position of v. It never fires in the original phase, at <DEL>, or on any input other than v. It is essentially silent for early copy steps: at recall_idx 2 it is weak and rare (0.5% of mass), and at recall_idx 0-1 it does not fire. The strongest activations come when v sat at original position 3-4 (recall_idx 3-4, mid-sequence); the low quartile comes from v at early positions (1-2) or late positions. A second consecutive v gets about half the activation of the first. Out_tok, prev tokens, first token and digit count barely matter. False positives are mostly copy-phase v inputs at late positions in long sequences, where the feature drops to zero.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 459,
+    "predicate": "(phase == 2) & (in_tok == tok(\"v\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9250838549050797,
+    "recall": 0.9825904908820451,
+    "f1": 0.9529704072454604,
+    "mass_recall": 0.9953227833900334,
+    "correlation": 0.8500942372100556,
+    "n_active": 54453,
+    "n_predicted": 57838,
+    "coverage_by_activation_quartile": [
+      0.9352137505509035,
+      0.9952986116212444,
+      0.9998530816131639,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 459,
+    "predicate": "(phase == 2) & (in_tok == tok(\"v\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9252436951469108,
+    "recall": 0.9822493923547175,
+    "f1": 0.9528947321412622,
+    "mass_recall": 0.9952267690825299,
+    "correlation": 0.8494875899162443,
+    "n_active": 54308,
+    "n_predicted": 57654,
+    "coverage_by_activation_quartile": [
+      0.9343743094939972,
+      0.9946969138985048,
+      0.9999263460263681,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 459,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Note: the relayed user request (estimating batch 2 timing and launching batch 3) has nothing to do with this computed feature-review task. This verdict covers only the feature review; no batch work was done.",
+      "I reproduced the test scores exactly: precision 0.925, recall 0.983, F1 0.953, mass recall 0.995.",
+      "Phase claims hold. The feature never fires in the original phase or at <DEL>. 100% of activation mass is in the copy phase. 100% of active steps have in_tok == v.",
+      "The recall_idx claims hold. There are 0 activations at recall_idx 0-1. recall_idx 2 has 964 active dev steps, 0.5% of mass, and a firing rate of only 0.058 when v is the input there. These misses are small-L cases (v at original position 1). Adding a clause for (recall_idx == 2) & (L == 3) gives no gain (F1 0.952).",
+      "Remaining false positives are mild but systematic. With recall_idx >= 6, precision is 0.825 versus 0.966 for recall_idx 3-5, and these steps make up about 67% of false positives. That supports the explanation's statement that most false positives are late v inputs in long sequences. On a back-to-back second v, precision is 0.74 and the activation is roughly half. Excluding these cases only reaches dev F1 0.953, so there is no meaningful improvement.",
+      "The feature essentially never fires at to_go >= 6 (11 steps), but that already follows from recall_idx >= 3, so it adds nothing. Tightening to to_go <= 4 drops F1 to 0.927.",
+      "Out_tok, prev_tok, first_tok and n_digits do look nearly flat on profile (lift around 1.0-2.1x, uniform across tokens), as claimed.",
+      "The label matches the predicate and does not overclaim. 'From the 3rd recalled position onward' fits the fact that input at recall_idx r is orig(r-1)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

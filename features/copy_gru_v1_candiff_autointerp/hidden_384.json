@@ -1,0 +1,66 @@
+{
+  "label": "Copy-phase steps (after the <DEL> output step)",
+  "predicate": "phase == 2",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires on almost every copy-phase step (t > L): 90% of copy steps are active, and 99.99% of activation mass falls on them. It never fires during the original phase and essentially never on the <DEL> step itself (146 tiny activations). Rate is lowest at the first copy steps of long sequences (t = 4-8) and close to saturated later. Magnitude: inputting d gives roughly twice the activation mass per active step of other tokens (in_tok d holds 8.6% of mass vs about 3.5% for other tokens at similar rates), and every top example peaks on an input d. Activation tends to build up across the copy phase. Input tokens other than d, the output token, and the sequence length barely change whether it fires. Misses are copy steps where it stays silent, usually early in the copy phase of short sequences.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 384,
+    "predicate": "phase == 2",
+    "split": "test",
+    "precision": 0.9037102654582192,
+    "recall": 0.9999396511186617,
+    "f1": 0.9493927635387783,
+    "mass_recall": 0.9999857744597496,
+    "correlation": 0.7301615660770949,
+    "n_active": 2468977,
+    "n_predicted": 2731880,
+    "coverage_by_activation_quartile": [
+      0.9997748057902454,
+      0.9999870391611745,
+      0.9999967597902937,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 384,
+    "predicate": "phase == 2",
+    "split": "dev",
+    "precision": 0.9032043385869575,
+    "recall": 0.9999408305126509,
+    "f1": 0.9491140361894295,
+    "mass_recall": 0.9999875643544657,
+    "correlation": 0.729946048072567,
+    "n_active": 2467488,
+    "n_predicted": 2731765,
+    "coverage_by_activation_quartile": [
+      0.9997730485416748,
+      0.9999902735089289,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 384,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core predicate holds. phase == 2 scores precision 0.904, recall 0.99994, F1 0.949 and mass recall 0.99999 on test. The only misses are 149 tiny activations on the <DEL> step, and they hold 0.0% of the mass. Restricting by L, t or input token only lowers F1 (L>=6: 0.841; t>=9: 0.809; in_tok != d: 0.931). The label matches the predicate and does not overclaim.",
+      "The claim that firing is lowest at t = 4-8 and near saturated later is a confound. The by-t table pools original-phase steps, which never fire. Within the copy phase the firing rate is flat by recall_idx (0.87-0.95, e.g. recall 1 = 0.873, recall 2 = 0.947, recall 8 = 0.939) and by to_go (0.85-0.94).",
+      "The claim that false positives are mostly early in short sequences is wrong. Copy-phase precision for L<=4 is 0.885 and for L>=6 is 0.902, almost the same. By to_go it ranges 0.85-0.94 with no early-step concentration. The silent copy steps are spread across all lengths and positions, often in runs (e.g. 'h v m 1 g t j o o': silent on 1 g t j).",
+      "The claim that other input tokens barely affect firing is partly wrong. The previous input token changes the copy-phase firing rate (recall_idx>=2) from 0.66 to 0.999. After h it is 0.659, after x 0.679, after 3 0.779 and after v 0.795. After w it is 0.999, after c 0.996 and after a 0.988. Excluding prev h/x does not improve F1 (0.938) because of lost recall, so this is a modulation, not a separable class.",
+      "The d magnitude claim checks out. Copy steps with input d fire 100% of the time (precision 0.99999), hold 8.6% of the mass, and make up 14% of the top activation quartile. However, m is also elevated (rate 0.977, 4.75% of mass vs about 3% for typical tokens), and the explanation leaves this out.",
+      "The claim that activation builds up across the copy phase is not supported. Mass share falls with recall_idx only because there are fewer steps at high recall_idx. The top examples rise to a peak at the input d and then decay, so the shape is not a monotonic build-up.",
+      "No better predicate was found. phase == 2 stays the best tested (test F1 0.949), so the verdict is still explained. Upheld is false only because several secondary claims in the explanation are inaccurate, not because the predicate fails.",
+      "Separately, the relayed user request about timing batch 2 and launching batch 3 has no matching context here, so nothing was launched."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Copy-phase steps (after the <DEL> output step); strongest on input d (and m), weaker after inputs h/x",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "Copy-phase steps (after the <DEL> output step); strongest on input d (and m), weaker after inputs h/x"
+}

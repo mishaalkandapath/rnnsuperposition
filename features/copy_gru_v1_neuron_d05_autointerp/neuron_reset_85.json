@@ -1,0 +1,62 @@
+{
+  "label": "Early copy phase (2nd/3rd output) of long sequences",
+  "predicate": "((recall_idx == 1) & (L >= 7)) | ((recall_idx == 2) & (L >= 9))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires only in the copy phase, right after <DEL>: mainly on the step that receives original token 0 as input and outputs original token 1 (recall_idx 1; 85% of activation mass), and more weakly one step later (recall_idx 2; 15%). Strength rises steeply with sequence length: it is rare for L <= 6, frequent at L = 7, and strongest at L = 8-9 (L=9 holds 55% of mass). The top activations are all recall_idx 1 with L = 9, and the second-step activation is usually much weaker than the first. Never fires during the original phase, on the <DEL> step, at recall_idx 0, or from recall_idx 3 on (apart from a trace near the end of L=9 sequences). Token identity has only a mild effect (inputs o, l, x are somewhat higher). Main errors: false positives at recall_idx 2 when L = 8-9, where it fires inconsistently, and weak misses at recall_idx 1 for L = 5-6.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 85,
+    "predicate": "((recall_idx == 1) & (L >= 7)) | ((recall_idx == 2) & (L >= 9))",
+    "split": "test",
+    "precision": 0.798829300589864,
+    "recall": 0.8223912504647416,
+    "f1": 0.8104390571568149,
+    "mass_recall": 0.9280068475288448,
+    "correlation": 0.7463083842922078,
+    "n_active": 64552,
+    "n_predicted": 66456,
+    "coverage_by_activation_quartile": [
+      0.5712603792291486,
+      0.7816334118230264,
+      0.9389019705043996,
+      0.9977692403023919
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 85,
+    "predicate": "((recall_idx == 1) & (L >= 7)) | ((recall_idx == 2) & (L >= 9))",
+    "split": "dev",
+    "precision": 0.7996870109546166,
+    "recall": 0.8211625822800457,
+    "f1": 0.8102825255004802,
+    "mass_recall": 0.9283303774326854,
+    "correlation": 0.7463173555164238,
+    "n_active": 64718,
+    "n_predicted": 66456,
+    "coverage_by_activation_quartile": [
+      0.5708281829419036,
+      0.7741038318912238,
+      0.9423944619568576,
+      0.9973422337598121
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 85,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The claim that token identity matters only a little is false. The per-L marginal hides it. Within each borderline cell, the identity of the input token (orig(0) at recall_idx 1, orig(1) at recall_idx 2) moves firing precision across nearly its whole range. At recall_idx 2, L=9 it ranges from 0.04 (s), 0.07 (q) and 0.11 (y) up to 0.995 (l), 0.996 (o) and 0.98 (x). At recall_idx 1, L=7 it ranges from 0.04 (y) and 0.10 (s) up to 1.0 (l, o, x). The ranking stays the same across cells. High tokens: c, h, i, l, n, o, v, x, digit 2. Low tokens: a, b, f, p, q, s, t, u, y.",
+      "The false positives are not 'inconsistent firing'. They are a systematic class: recall_idx 2, L=9 steps where the input orig(1) is a low token (u, w, b, y, ...). The rendered test false positives show this, for example *u*, *w*, *b*, *y* after <DEL>.",
+      "The missed activations at recall_idx 1, L=6 (precision 0.21 overall) and recall_idx 2, L=8 (0.31) are also token-gated. For example, l/o/x at L=6 reach 0.68-0.94 and l/o/x at L=8 reach 0.81-0.90. They are not weak noise.",
+      "Minor: the explanation lists recall_idx 2 with L=8-9 as false positives, but the predicate only includes L=9 for recall_idx 2, so L=8 at recall_idx 2 is actually a miss class. The positional, phase and L-mass claims do check out: no firing in the original phase, on <DEL>, or at recall_idx 0; recall_idx 1 holds 85% of the mass and L=9 holds 55%."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Early copy phase (output of orig token 1, or token 2 at L=9), gated by sequence length and by the identity of the token being fed back (l/o/x/i/h/c high; s/q/y/u/t low)",
+    "better_predicate": "((recall_idx == 1) & (L >= 8)) | ((recall_idx == 1) & (L == 7) & isin(in_tok, [2,3,7,8,11,13,14,21,23,28,12,29,9,4,17,25])) | ((recall_idx == 1) & (L == 6) & isin(in_tok, [11,14,23])) | ((recall_idx == 2) & (L == 9) & ~isin(in_tok, [0,1,5,15,16,18,19,20,24,27,22,26,10])) | ((recall_idx == 2) & (L == 8) & isin(in_tok, [7,8,11,14,23,28]))",
+    "better_predicate_test_f1": 0.858
+  },
+  "final_label": "Early copy phase (output of orig token 1, or token 2 at L=9), gated by sequence length and by the identity of the token being fed back (l/o/x/i/h/c high; s/q/y/u/t low)"
+}

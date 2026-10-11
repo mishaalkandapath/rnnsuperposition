@@ -1,0 +1,64 @@
+{
+  "label": "copy-phase input u, late in the copy (recall_idx >= 5)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"u\")) & (recall_idx >= 5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost only when the fed-back input token is the letter u during the copy phase, i.e. right after the model has just output u. 99.9% of activations and mass have in_tok = u, and 99.9% fall in the copy phase. It is gated by position: it is essentially silent for u inputs early in the copy (recall_idx 0-3), weak at recall_idx 4, and strong from recall_idx 5 to 8 (also t >= 12-13). Because recall_idx >= 5 needs L >= 6, it mostly fires in long sequences (L = 9 carries 59% of mass). The top activations (about 3.5) are at the final copy steps (t = 16-17) of L = 9 sequences, and the low-quartile examples are u inputs at early copy positions. It does not fire on u in the original phase, on the delimiter, on other tokens, or on the token being output (out_tok is flat). There is a tiny residue at recall_idx 1 and on other letters. Dev F1 0.88.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 316,
+    "predicate": "(phase == 2) & (in_tok == tok(\"u\")) & (recall_idx >= 5)",
+    "split": "test",
+    "precision": 0.8777801848642404,
+    "recall": 0.8774316959613094,
+    "f1": 0.8776059058173745,
+    "mass_recall": 0.9706200978912277,
+    "correlation": 0.8194570846072652,
+    "n_active": 27707,
+    "n_predicted": 27696,
+    "coverage_by_activation_quartile": [
+      0.5855348635773062,
+      0.9263750541359896,
+      0.9978345604157643,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 316,
+    "predicate": "(phase == 2) & (in_tok == tok(\"u\")) & (recall_idx >= 5)",
+    "split": "dev",
+    "precision": 0.8808736171877779,
+    "recall": 0.878685732533797,
+    "f1": 0.8797783146227086,
+    "mass_recall": 0.9712456358234066,
+    "correlation": 0.8228043999703972,
+    "n_active": 28183,
+    "n_predicted": 28113,
+    "coverage_by_activation_quartile": [
+      0.584870848708487,
+      0.9314504683508373,
+      0.9984388305421515,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 316,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claim holds. 99.9% of activation mass has in_tok=u in the copy phase, the feature is silent on the delimiter and close to silent in the original phase, and out_tok, prev_tok and next_out are flat.",
+      "The position gate is described wrongly. It is not a threshold on recall_idx alone. Holding recall_idx fixed, the firing rate still rises steeply with L. Precision of u-in-copy by cell: L=6 r=5 is 0.24, L=7 r=5 is 0.72, L=8 r=5 is 0.93, L=9 r=5 is 0.99. For r=4 it goes 0.03, 0.14, 0.31, 0.54 across L=6..9. So the explanation is wrong to say the bias toward long sequences comes only from 'recall_idx>=5 needs L>=6'. Length has its own effect: the feature depends on both recall_idx and t (it follows roughly 2t-L, i.e. t+recall_idx).",
+      "Running misses with --split test shows a systematic false-positive class: u inputs at recall_idx=5 in short sequences (L=6, t=11, and some L=7, t=12), e.g. '1 r t c u z <DEL> 1 r t c *u*'. The missed activations are also systematic: u at recall_idx=4 when L=9 (54% active there) and L=8 (31%). Neither is scattered noise.",
+      "The claim 'strong from recall_idx 5 to 8' overclaims. At recall_idx 5 the feature is weak when L=6 and only partial when L=7.",
+      "The residues are small, as claimed. u at recall_idx=1 with L=9 (t=10) fires 9% of the time but holds only 0.2% of mass. u at orig_idx=8 fires 4.5% of the time.",
+      "Test scores for the alternatives: (recall_idx>=5)&(L>=7) gives F1 0.899 with precision 0.951. t+recall_idx>=17, which here selects exactly the same steps as ((r>=5)&(L>=7))|((r==4)&(L==9)), gives F1 0.908 with mass recall 0.982. The original predicate scores 0.878."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input u, late in a long copy (fires more the later the copy position and the longer the sequence; roughly t + recall_idx >= 17)",
+    "better_predicate": "(phase == 2) & (in_tok == tok('u')) & (t + recall_idx >= 17)",
+    "better_predicate_test_f1": 0.908
+  },
+  "final_label": "copy-phase input u, late in a long copy (fires more the later the copy position and the longer the sequence; roughly t + recall_idx >= 17)"
+}

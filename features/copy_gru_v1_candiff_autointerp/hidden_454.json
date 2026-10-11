@@ -1,0 +1,62 @@
+{
+  "label": "input f in the original phase, from position 3 onward",
+  "predicate": "(phase == 0) & (in_tok == tok(\"f\")) & (t >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Single-token detector for the letter f during the original (pre-<DEL>) phase. Essentially all activation (>99.99% of mass) is at steps where the input is f with t < L. It never fires at t = 0 or 1, fires weakly at t = 2 (3% of mass), and the firing rate given f rises with position (about 2.7x lift at orig_idx 3 up to about 4x at 7-8). It also fires more for longer sequences. It does NOT fire on the <DEL> step, in the copy phase (including when f is fed back or output), or on any other token. Magnitude is higher when this is the first f in the sequence (in_first) and when the earlier tokens are letters rather than digits. The top examples are prefixes of letters like k/t/w/s with no digits; activations are weak when digits come before the f. False positives are mostly repeated f, or f after prefixes with many digits.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 454,
+    "predicate": "(phase == 0) & (in_tok == tok(\"f\")) & (t >= 3)",
+    "split": "test",
+    "precision": 0.7370495788833897,
+    "recall": 0.9201734417344174,
+    "f1": 0.8184938771574582,
+    "mass_recall": 0.9663563824485084,
+    "correlation": 0.7264169253101557,
+    "n_active": 46125,
+    "n_predicted": 57585,
+    "coverage_by_activation_quartile": [
+      0.8011619840443982,
+      0.8924637932529702,
+      0.9870783106408811,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 454,
+    "predicate": "(phase == 0) & (in_tok == tok(\"f\")) & (t >= 3)",
+    "split": "dev",
+    "precision": 0.7354116706634692,
+    "recall": 0.9184027777777778,
+    "f1": 0.8167834327292379,
+    "mass_recall": 0.965967741040565,
+    "correlation": 0.7234954295487646,
+    "n_active": 46080,
+    "n_predicted": 57546,
+    "coverage_by_activation_quartile": [
+      0.8025173611111112,
+      0.8844618055555555,
+      0.9866319444444445,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 454,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Factual claims hold on dev and test. The feature is active only in the original phase (delimiter and copy phases are 0 of 3.23M steps). in_tok f carries 1.000 of the activation mass, with one stray activation on a digit. It is 0 at t=0 and t=1, and t=2 holds 3.4% of mass. Lift given f rises from 2.7x at orig_idx 3 to 4.0x at orig_idx 7-8. Firing rate rises with L.",
+      "On the test split the predicate scores P 0.737, R 0.920, F1 0.818, mass recall 0.966, matching the reported numbers.",
+      "Misses are all f at t=2 with low activations (0.03-0.27 of max). Adding t=2 to the predicate brings recall to 1.0 but precision falls to 0.62 (F1 0.767), so leaving t=2 out is reasonable. Strictly, the label 'from position 3 onward' is a slight simplification, but the explanation reports the weak t=2 firing.",
+      "The false positives (about 26% of predicted steps) are graded, not a sharp class. Precision given f is 0.58 at t=3 and 0.84 at t>=6. It is 0.64 for L<=5 and 0.77 for L>=8. It is 0.63 for repeated f vs 0.75 for the first f, and 0.61 with 2+ prior digits vs 0.79 with none. These are soft modulators already described in the explanation, and none of them works as a clean exclusion.",
+      "Refinements give no meaningful improvement. n_seen(DIGITS)<t-1 reaches F1 0.821, n_seen(LETTERS)>=3 gives 0.812, and in_first gives 0.779 with lower recall, so the simple predicate is close to optimal."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

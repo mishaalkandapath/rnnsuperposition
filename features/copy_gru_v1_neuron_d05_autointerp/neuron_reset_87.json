@@ -1,0 +1,62 @@
+{
+  "label": "Early copy-phase step (recall of 2nd original token) in long sequences",
+  "predicate": "(recall_idx == 1) & (L >= 7) | (recall_idx == 2) & (L == 9)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, almost entirely at the step just after the delimiter output, i.e. where the input is the fed-back first original token and the model outputs original token 1 (recall_idx==1, 89% of activation mass). Rate there increases steeply with sequence length: rare for L<=5, ~50% overall, and near-always for L>=7. A weaker second activation appears at recall_idx==2 (11% of mass), mainly for L=9. Magnitude is largest at recall_idx 1 in long sequences (top examples are L=9, with recall_idx 2 at ~0.2-0.6 of max); token identity has only a small effect (digits and repeated tokens slightly higher). Never fires in the original phase, on the delimiter step, at recall_idx 0, or at recall_idx >= 3.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 87,
+    "predicate": "(recall_idx == 1) & (L >= 7) | (recall_idx == 2) & (L == 9)",
+    "split": "test",
+    "precision": 0.8342060912483448,
+    "recall": 0.859157548895019,
+    "f1": 0.8464979920905162,
+    "mass_recall": 0.952237245391787,
+    "correlation": 0.7730624154458656,
+    "n_active": 64526,
+    "n_predicted": 66456,
+    "coverage_by_activation_quartile": [
+      0.611269526407141,
+      0.848251921646417,
+      0.9777447151447524,
+      0.999380075630773
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 87,
+    "predicate": "(recall_idx == 1) & (L >= 7) | (recall_idx == 2) & (L == 9)",
+    "split": "dev",
+    "precision": 0.8353647526182737,
+    "recall": 0.8574539725688867,
+    "f1": 0.846265243902439,
+    "mass_recall": 0.9516340012009172,
+    "correlation": 0.7732679682394054,
+    "n_active": 64744,
+    "n_predicted": 66456,
+    "coverage_by_activation_quartile": [
+      0.6062646731743482,
+      0.847707895712344,
+      0.9760904485357716,
+      0.9997528728530829
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 87,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Overclaim: the explanation says the unit fires on 'nearly all' recall_idx==1 steps for L>=7. On dev it fires on 76% of them at L=7, 98% at L=8 and 100% at L=9. L=7 alone carries most of the predicate's false positives.",
+      "The recall_idx==2 clause is only 60% precise at L=9. It also leaves out a matching tail at recall_idx==2, L=8, where the unit fires on 24% of steps (2% of activation mass). Likewise recall_idx==1, L=6 fires on 25% of steps (2.3% of mass) and is missed. These misses are systematic, not scattered noise, but they are low in magnitude. Firing rate falls off smoothly as L - recall_idx shrinks, and it is lower at recall_idx 2 than at recall_idx 1, so the hard L cutoffs are an approximation of a graded effect.",
+      "There is a mild token-composition effect that the explanation only hints at: sequences with more digits fire more often in the borderline cells (recall_idx 1, L=7: 89% with 2 or more digits vs 67% with none; recall_idx 2, L=9: 70% vs 49%). Adding this to the predicate does not improve test F1 (0.8475 vs 0.8465).",
+      "The label mentions only the recall of the 2nd original token, while the predicate also includes recall_idx 2 at L=9 (about 9-11% of activation mass). This is a minor underspecification."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Early copy-phase step (mainly recall of 2nd original token, weaker for 3rd) in long sequences; firing rate grows with L",
+    "better_predicate": "(recall_idx == 1) & (L >= 7) | (recall_idx == 2) & (L == 9) | (recall_idx==1)&(L==6)&(n_digits>=3)",
+    "better_predicate_test_f1": 0.8475
+  },
+  "final_label": "Early copy-phase step (mainly recall of 2nd original token, weaker for 3rd) in long sequences; firing rate grows with L"
+}

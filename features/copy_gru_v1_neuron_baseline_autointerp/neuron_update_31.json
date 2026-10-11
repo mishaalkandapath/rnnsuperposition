@@ -1,0 +1,63 @@
+{
+  "label": "last copy step of length-3 sequences",
+  "predicate": "(L == 3) & (t == 5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost only on the final output step of length-3 sequences (t=5, input = 2nd original token fed back, outputting the 3rd original token); ~96% of such steps are active and they hold ~93% of activation mass, covering essentially all of the top two activation quartiles. Never active in the original or delimiter phases, nor on first-occurrence inputs. Remaining ~7% of mass is weak activations (<~0.15 of max) scattered over copy-phase steps of longer sequences, mostly at or near the final step (to_go 0-2). Magnitude only weakly varies with the input token (3, l, r, u, z inputs among the top). False positives are a few L=3 final steps with inputs like a, d, f.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 31,
+    "predicate": "(L == 3) & (t == 5)",
+    "split": "test",
+    "precision": 0.956605222734255,
+    "recall": 0.744026284348865,
+    "f1": 0.837029569892473,
+    "mass_recall": 0.9315847782267708,
+    "correlation": 0.8818402689403267,
+    "n_active": 3348,
+    "n_predicted": 2604,
+    "coverage_by_activation_quartile": [
+      0.22819593787335724,
+      0.7562724014336918,
+      0.991636798088411,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 31,
+    "predicate": "(L == 3) & (t == 5)",
+    "split": "dev",
+    "precision": 0.9554702495201536,
+    "recall": 0.7398929845422116,
+    "f1": 0.8339755402915061,
+    "mass_recall": 0.9301358008041594,
+    "correlation": 0.8836260287582274,
+    "n_active": 3364,
+    "n_predicted": 2605,
+    "coverage_by_activation_quartile": [
+      0.20927467300832342,
+      0.760998810939358,
+      0.990487514863258,
+      0.9988109393579072
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 31,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Provenance is unverified. The user asked for the baseline on the subsampled data in features/copy_transcoder_v2_1of5, but every score here came from features/copy_gru_v1_neuron_baseline_store, and I was not allowed to check whether that store was built from the 1/5 data. The interpretation holds for that store. Whether it answers the user's request is still unconfirmed.",
+      "'Never active when the input is a token's first appearance' is true but trivial. In the copy phase in_first is always 0, because every fed-back input repeats an original token, so the predicate selects 0 steps. It adds no information.",
+      "'Magnitude depends only weakly on input token (3, l, r, u, z top)' comes from the pooled profile. That profile mixes the L=3 core with the weak tail, where inputs l and 3 are over-represented among the misses. Treating l/3 at to_go 0 in longer sequences as a secondary trigger only reaches about 4% precision, though, so it is not a real secondary class.",
+      "Recall of 0.744 means about 26% of active steps (857 test steps, 6.8% of mass) fall outside the predicate. They are diffuse weak activations on the final 1-2 steps of L>=4 sequences (to_go==0 holds 98.5% of mass overall but has only 1.6% precision). Restricting to particular lengths (6/7/9), input tokens, repeated tokens (in_count>1) or copy errors (correct==0) did not isolate them. So this is a low-rate tail, not a systematic missed class.",
+      "False positives (113 test steps, about 4% of L=3/t=5) are scattered across tokens with no visible pattern."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "last copy step of length-3 sequences (with a weak, low-rate tail on final copy steps of longer sequences)",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "last copy step of length-3 sequences (with a weak, low-rate tail on final copy steps of longer sequences)"
+}

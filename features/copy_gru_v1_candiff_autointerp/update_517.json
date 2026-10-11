@@ -1,0 +1,63 @@
+{
+  "label": "early original-phase steps (t=2-4) after the sequence starts with s",
+  "predicate": "(phase == 0) & (((orig(0) == tok(\"s\")) & (t >= 2) & (t <= 4)) | ((orig(1) == tok(\"s\")) & (t >= 3) & (t <= 4)))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires during the original (input) phase, 2-4 steps after an s that was among the first two tokens. When the sequence starts with s it fires at t=2..4; when s is the second token it fires at t=3..4. 99% of the activation mass is in the original phase and it peaks at t=3. When the first token is s, the rate is 18.6x baseline and that case holds 86% of the mass. The largest activations (about 4.1) come from sequences starting s s, at t=3, whatever the input token is. s as the second token gives weaker activations (mostly the second quartile). It does not fire at t=0 or 1, almost never at t>=6 or in the delimiter/copy phases, and barely at all without an early s. The rest of the activity (about 3% of mass) is tiny scattered activations at t=2-3. False positives are mostly s-second sequences at t=3-4 where it stays silent. Dev: P 0.86, R 0.82, F1 0.84, mass recall 0.97.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 517,
+    "predicate": "(phase == 0) & (((orig(0) == tok(\"s\")) & (t >= 2) & (t <= 4)) | ((orig(1) == tok(\"s\")) & (t >= 3) & (t <= 4)))",
+    "split": "test",
+    "precision": 0.8660030022912223,
+    "recall": 0.8184126035988949,
+    "f1": 0.8415355086372361,
+    "mass_recall": 0.9708412491423724,
+    "correlation": 0.8111029374523239,
+    "n_active": 80358,
+    "n_predicted": 75942,
+    "coverage_by_activation_quartile": [
+      0.35087108013937285,
+      0.9486311597809856,
+      0.9824779730200607,
+      0.9916869928816765
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 517,
+    "predicate": "(phase == 0) & (((orig(0) == tok(\"s\")) & (t >= 2) & (t <= 4)) | ((orig(1) == tok(\"s\")) & (t >= 3) & (t <= 4)))",
+    "split": "dev",
+    "precision": 0.8646931656918527,
+    "recall": 0.8179685343637869,
+    "f1": 0.8406821185648432,
+    "mass_recall": 0.9708601280398302,
+    "correlation": 0.8096072518405956,
+    "n_active": 79706,
+    "n_predicted": 75399,
+    "coverage_by_activation_quartile": [
+      0.34967631856275405,
+      0.94946554925478,
+      0.9809796246110609,
+      0.9917695473251029
+    ]
+  },
+  "gate": "update",
+  "feature": 517,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most of the factual claims hold. On the dev split, 99.1% of the activation mass is in the original phase. There are no activations at t=0 or t=1, the peak is at t=3 (50% of mass), and only 58 activations occur at t=6 and 1 at t=7. The delimiter phase holds 0.7% of mass and the copy phase 0.2%. The s-first clause alone scores precision 0.99 with mass recall 0.84 on test. Sequences starting 's s' at t=3 have precision 1.0.",
+      "Systematic false positives in the s-second clause. On test, with orig(1)==s, orig(0)!=s and t in 3..4, precision is only 0.67. These false positives are not scattered: whether the feature fires depends strongly on the first token. Dev precision by orig(0): b 1.00, d 0.99, t 0.99, w 0.99, f/i/n/v 0.98, but e 0.06, h 0.01, o 0.00, '2' 0.00, '3' 0.04, and roughly 0.4-0.5 for c, g, k, q and '0'. The third token makes no difference (precision 0.65-0.70 for every orig(2) tested).",
+      "The explanation says false positives are 's-second sequences at t=3-4 where the feature stays silent' but does not say they are predictable from the first token. That class accounts for most of the 10,176 test false positives.",
+      "Minor: the predicate is right to leave out t=5 for s-first sequences (precision 0.17) and the delimiter phase (precision 0.002). The missed activations are tiny and scattered, for example b-first at t=2 (precision 0.14, mass 0.2%). That part of the explanation is accurate.",
+      "The label 'after the sequence starts with s' undersells the s-second clause, which holds about 13% of mass and is not 'starts with s'. It also does not mention that the s-second case is gated by the first token."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "early original-phase steps (t=2-4) after an s at position 0, or t=3-4 after an s at position 1 unless the first token is e, h, o, 2 or 3 (weaker for c, g, k, q, 0)",
+    "better_predicate": "(phase == 0) & (((orig(0) == tok('s')) & (t >= 2) & (t <= 4)) | ((orig(1) == tok('s')) & ~isin(orig(0), [tok(c) for c in ['e','h','o','2','3','c','g','k','q','0']]) & (t >= 3) & (t <= 4)))",
+    "better_predicate_test_f1": 0.87
+  },
+  "final_label": "early original-phase steps (t=2-4) after an s at position 0, or t=3-4 after an s at position 1 unless the first token is e, h, o, 2 or 3 (weaker for c, g, k, q, 0)"
+}

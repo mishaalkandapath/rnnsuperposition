@@ -1,0 +1,61 @@
+{
+  "label": "3rd original token after an opening pair drawn from {p,k}",
+  "predicate": "(t == 2) & isin(orig(0), [tok(\"p\"),tok(\"k\")]) & isin(orig(1), [tok(\"p\"),tok(\"k\")])",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only at step t=2 (third original token; 4 activations at t=3) when both of the first two original tokens are p or k (pp, pk, kp, kk); the input token at t=2 can be anything. Never fires in the delimiter or copy phases. On dev the predicate has precision 1.0 and recall 0.94 (mass recall 0.99). How strong the activation is depends on which prefix it is: in the quartile examples p-k is highest (max activation 1.59 with t as the third token, so t gives an extra boost), then p-p, then k-p, with k-k weakest. The remaining misses are weak (~0.05-0.09 of max) and come from prefixes like m-p, m-k, j-k, a-k, mostly with t as the third token. It does not fire at t=2 for other prefixes, or on p/k tokens elsewhere in the sequence.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 751,
+    "predicate": "(t == 2) & isin(orig(0), [tok(\"p\"),tok(\"k\")]) & isin(orig(1), [tok(\"p\"),tok(\"k\")])",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.9311671654553227,
+    "f1": 0.9643568740314368,
+    "mass_recall": 0.9821226065591301,
+    "correlation": 0.8863316475337375,
+    "n_active": 2339,
+    "n_predicted": 2178,
+    "coverage_by_activation_quartile": [
+      0.7247863247863248,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 751,
+    "predicate": "(t == 2) & isin(orig(0), [tok(\"p\"),tok(\"k\")]) & isin(orig(1), [tok(\"p\"),tok(\"k\")])",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.9363360762234734,
+    "f1": 0.9671214493401924,
+    "mass_recall": 0.9855431208462184,
+    "correlation": 0.8798163304428971,
+    "n_active": 2309,
+    "n_predicted": 2162,
+    "coverage_by_activation_quartile": [
+      0.745674740484429,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 751,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Test split: there are 161 missed activations, but together they hold only 1.8% of activation mass. They are not random. Nearly all are step 2 where orig(1) is p or k, the input token is t, and orig(0) is some other letter (m, r, a, j...), at 0.05-0.12 of max. The explanation already says this. The weak tail is broader than the cases it lists: r-p-t (0.12) and r-k-t also appear.",
+      "Adding that tail (t==2 & orig(1) in {p,k} & (orig(0) in {p,k} | in_tok==t)) is not an improvement. It raises recall to 0.996 but drops precision to 0.72 and test F1 to 0.836, with 903 false positives such as l-k-t, f-k-t and e-p-t. The tail fires only for some first letters and only weakly, so it is best treated as noise.",
+      "The 4 activations at t=3 (8 on test) are tiny (0.03-0.13). They come from p p {p,k} t or m p {p,k} t, and are negligible.",
+      "Every factual claim checked out. Activity is zero in the delimiter and copy phases, and zero at t=0, 1 and t>=4. The predicate has 0 false positives on test (precision 1.0). The magnitude order holds by activation quartile: pk is mostly in the top quartile, pp in Q3, kp in Q2 and kk in Q1. A t at step 2 carries extra weight (3.4x lift for in_tok t)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

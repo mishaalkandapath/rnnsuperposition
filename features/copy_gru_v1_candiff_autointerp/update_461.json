@@ -1,0 +1,64 @@
+{
+  "label": "copy phase: input t whose next output is m (recalling a t->m bigram, recall_idx >= 3)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"t\")) & (out_tok == tok(\"m\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase (never in the original phase or on <DEL>), almost always (98% of mass) when the fed-back input is t. The strong activations are when the token being output right after t is m, i.e. the original sequence contained the bigram t m and the model is replaying it. This covers 61% of active steps and 83% of activation mass, at 92% precision. It needs recall_idx >= 3: the same t->m replay at recall positions 0-2 is silent, which accounts for most false positives without this condition. Weak residual activity (mostly below 0.25 of max) shows up on copy-phase t inputs followed by other outputs (often t t, or t then a digit/letter), and occasionally on m inputs after t m (t m m). Does not fire on t in the original phase, or on any other input tokens.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 461,
+    "predicate": "(phase == 2) & (in_tok == tok(\"t\")) & (out_tok == tok(\"m\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9215486500254713,
+    "recall": 0.6068433411606843,
+    "f1": 0.7317961165048544,
+    "mass_recall": 0.8268770045473472,
+    "correlation": 0.8016181357383475,
+    "n_active": 2981,
+    "n_predicted": 1963,
+    "coverage_by_activation_quartile": [
+      0.1903485254691689,
+      0.46308724832214765,
+      0.8174496644295302,
+      0.9570469798657718
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 461,
+    "predicate": "(phase == 2) & (in_tok == tok(\"t\")) & (out_tok == tok(\"m\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9217704580545548,
+    "recall": 0.6100136239782016,
+    "f1": 0.734166837466694,
+    "mass_recall": 0.8293426928047111,
+    "correlation": 0.8044300953283634,
+    "n_active": 2936,
+    "n_predicted": 1943,
+    "coverage_by_activation_quartile": [
+      0.19754768392370572,
+      0.4782016348773842,
+      0.7929155313351499,
+      0.9713896457765667
+    ]
+  },
+  "gate": "update",
+  "feature": 461,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Main claims reproduce on test. Predicate P=0.922, R=0.607, F1=0.732, mass recall 0.827. Coverage by activation quartile is 0.19 / 0.46 / 0.82 / 0.96, so the strong activations are well covered and the misses sit in the weak tail.",
+      "Phase claim confirmed: on dev, copy phase holds 100% of the activation mass, with 0 activations in the original phase and 0 on <DEL>. Input t holds 97.7% of the mass and input m 2.3%. No other input token ever fires.",
+      "The recall_idx >= 3 condition holds up. t->m with recall_idx < 3: precision 0.037, mass 0.7%. Moving the cut to recall_idx >= 2 lowers precision to 0.743. Adding correct==1 or to_go<=5 changes nothing (the conditions are redundant).",
+      "Copy-phase t alone is far too broad: precision 0.031 at mass recall 0.979. So the out_tok == m condition is essential, as claimed.",
+      "Minor inaccuracy in the explanation: the m-input misses are not 'm after t m'. Copy-phase m with prev_tok == t covers only 0.4% of active steps (0.1% of mass). The m firings come from in m -> out m ('m m' replays, e.g. '0 d f d m m m i'), and that pattern overall has precision 0.055 and mass 2%.",
+      "Residual misses: copy-phase t with recall_idx >= 3 and out != m covers 32% of active steps but only 14.5% of mass, at a 1.7% firing rate. The largest named subclass, 't t' (out t), has precision 0.21 and 7.7% of mass. Adding it to the predicate lowers F1 to 0.648. This is a diffuse weak tail, not a clean systematic class.",
+      "False positives (152 on dev, 154 on test) are scattered t->m replays. They lean slightly toward the last step (precision at to_go==0 is 0.83, vs 0.96 for to_go>=1), but excluding the last step costs far more recall than it gains."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

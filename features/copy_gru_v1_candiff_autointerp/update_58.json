@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input f fed back early in recall (recall_idx 2-4), not at last step",
+  "predicate": "(phase == 2) & (in_tok == tok(\"f\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase when the fed-back input token is the letter f (i.e. orig(1..3) == f being re-input at recall_idx 2-4). Never fires in the original or delimiter phase, never on any other input token, and essentially never when f is re-input as orig(0) (recall_idx 1) or late (recall_idx >= 5). Mostly silent at the final step (to_go == 0). Magnitude is largest at recall_idx 2 (f was the second original token; all top examples are of this form, about 59% of mass) and decreases at recall_idx 3 and 4; weakest activations occur near the end of the sequence (small to_go) and for short L. Dev F1 0.92, mass recall 0.998.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 58,
+    "predicate": "(phase == 2) & (in_tok == tok(\"f\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+    "split": "test",
+    "precision": 0.8705821968030503,
+    "recall": 0.9781677376833087,
+    "f1": 0.9212445685909373,
+    "mass_recall": 0.9978255093393564,
+    "correlation": 0.814095781282327,
+    "n_active": 36414,
+    "n_predicted": 40914,
+    "coverage_by_activation_quartile": [
+      0.9132249560632689,
+      0.99945079086116,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 58,
+    "predicate": "(phase == 2) & (in_tok == tok(\"f\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+    "split": "dev",
+    "precision": 0.8705023719742124,
+    "recall": 0.9787466834432014,
+    "f1": 0.9214565306963329,
+    "mass_recall": 0.9979907286072648,
+    "correlation": 0.8137944876793193,
+    "n_active": 36559,
+    "n_predicted": 41105,
+    "coverage_by_activation_quartile": [
+      0.9152078774617067,
+      0.999781181619256,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 58,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Main source of false positives: in the recall_idx 4 slice (f fed back as orig(3)), precision on test is only 0.63 with to_go>=1, falling to 0.41 at L=6 / to_go=1 and about 0.70 for L>=7. I looked for a history rule that separates firing from silent cases (correct, in_count, digits or vowels among earlier originals, n_digits) and found none; every slice sits at 0.66-0.77. So these look like weak activations near the firing threshold, not a separate class. The explanation already calls recall_idx 4 weaker. The slice holds about 5% of activation mass, and on the dev split 65% of its covered actives fall in the lowest activation quartile.",
+      "A smaller false-positive pocket: recall_idx 2 with to_go=1 (only L=4) has test precision 0.51. This matches the stated weakness for L=4 and small to_go.",
+      "Factual claims check out. Firing is copy-phase only (the original and delimiter phases have zero actives). in_tok is f 100% of the time. recall_idx 2/3/4 hold 0.59/0.36/0.05 of the mass; recall_idx 1 holds 0.002 and recall_idx >=5 about 0. to_go=0 has 58 actives out of 36.5k. recall_idx 2 covers about 94% of the top activation quartile.",
+      "Missed activations (795 on test, 0.2% of mass) are scattered tiny activations (0.00-0.07 relative), mostly f at recall_idx 1. There is no systematic class.",
+      "Alternative predicates did not beat the original in a meaningful way. recall 2-3 only: F1 0.864. Allowing recall_idx 4 only when to_go>=2: F1 0.925 vs 0.921, which is not significant."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

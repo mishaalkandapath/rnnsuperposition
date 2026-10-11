@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input f (fed-back token f, not the first original token)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"f\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, at steps where the input is the token f, i.e. the model has just emitted f and gets it fed back as input. It never fires during the original phase, at <DEL>, or on any other input token. When f is the first original token (fed back at recall_idx 1) it is almost silent (219 weak activations). The largest activations come when f is fed back early in the copy (original positions 1-2, recall_idx 2-3). Activations are weaker for a second consecutive f and for f fed back near the end of the sequence. Most false positives are f inputs at late steps of short or near-finished sequences, where activation is zero or tiny. Output token, next output, and first token have flat lift.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 58,
+    "predicate": "(phase == 2) & (in_tok == tok(\"f\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.9099219530638148,
+    "recall": 0.9964805914972273,
+    "f1": 0.9512362104133876,
+    "mass_recall": 0.9993415394125816,
+    "correlation": 0.8487736249196435,
+    "n_active": 67625,
+    "n_predicted": 74058,
+    "coverage_by_activation_quartile": [
+      0.9860412846749866,
+      0.999881698805158,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 58,
+    "predicate": "(phase == 2) & (in_tok == tok(\"f\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.9122359796067007,
+    "recall": 0.9967724820939075,
+    "f1": 0.95263246852024,
+    "mass_recall": 0.9993885071739883,
+    "correlation": 0.8503513633995516,
+    "n_active": 67854,
+    "n_predicted": 74142,
+    "coverage_by_activation_quartile": [
+      0.9873261023343551,
+      0.9997642065550578,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 58,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Factual claims hold on dev. Activation is 0 in the original and delimiter phases. All of the activation mass is on in_tok==f. recall_idx 1 has only 219 actives (0.1% of mass). By recall_idx, the share of mass peaks at 2-3 and the top examples are f at original positions 1-2. A second consecutive f gives weaker activations (0.3-0.67 relative vs 0.9+). Output, next-output and first-token lift is flat at about 2.1x / 1.7x / 1.1x, the same for every token.",
+      "Misses on test: 238 missed actives holding 0.1% of the mass, all f as the first token fed back at recall_idx 1, all weak (<=0.16 relative). That matches the explanation.",
+      "False positives (6671 on test, precision 0.91) are spread out and lean toward late or final copy steps rather than forming a separate class. Precision of f inputs is 0.75 at to_go==0, 0.72 at recall_idx==7 and 0.22 for L==3 (only 429 steps), against 0.97 at recall_idx==2 and 0.99 at recall_idx==2 with L>=8. This fits the explanation's own note that activation shrinks near the end of the sequence. Excluding last steps for long L raises precision to 0.94 but drops recall to 0.91, so F1 falls (0.926). There is no clean cut.",
+      "Small tweak: adding t>=6 (which drops L=3) gives test F1 0.953 against 0.951. That is not a meaningful gain.",
+      "Small wording note: the label could say the activation tapers toward the end of the copy phase, but the explanation already says this."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok('f')) & (recall_idx >= 2) & (t >= 6)",
+    "better_predicate_test_f1": 0.953
+  }
+}

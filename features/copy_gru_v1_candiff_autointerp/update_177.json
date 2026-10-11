@@ -1,0 +1,62 @@
+{
+  "label": "first copy-phase step (input = 1st copied token, right after <DEL>) in short sequences L<=6",
+  "predicate": "(recall_idx == 1) & (L <= 6)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, at step t = L+1: the step right after <DEL>, where the input is the model echoing original token 0 and the output is original token 1. It fires there in nearly every sequence with L = 3..6 and almost never when L >= 7 (61 activations at L=7, none at L=8-9). Magnitude falls as L grows: L=3 accounts for the top activations (~9.4) and L=6 has the weakest. Mass shares are 14% at L=3, 51% at L=4, 28% at L=5 and 6% at L=6. Dev precision is 0.99, recall 1.00 and mass recall 1.00. Token identity barely matters: rates are flat across in_tok, out_tok, first_tok and next_out. Activation is a little lower when the sequence has repeated tokens or many digits. It never fires during the original phase or on the <DEL> step, and only negligibly at later copy steps (tiny activations at recall_idx 2).",
+  "test_scores": {
+    "gate": "update",
+    "feature": 177,
+    "predicate": "(recall_idx == 1) & (L <= 6)",
+    "split": "test",
+    "precision": 0.9885135835546093,
+    "recall": 0.9967637150139502,
+    "f1": 0.992621506926095,
+    "mass_recall": 0.9997921880573525,
+    "correlation": 0.7935769630183643,
+    "n_active": 248742,
+    "n_predicted": 250818,
+    "coverage_by_activation_quartile": [
+      0.9871836104589458,
+      0.9998713536808929,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 177,
+    "predicate": "(recall_idx == 1) & (L <= 6)",
+    "split": "dev",
+    "precision": 0.9885343868727501,
+    "recall": 0.9966478426013384,
+    "f1": 0.9925745348576552,
+    "mass_recall": 0.9997629257960203,
+    "correlation": 0.7930539570677108,
+    "n_active": 248795,
+    "n_predicted": 250837,
+    "coverage_by_activation_quartile": [
+      0.9867843534461969,
+      0.9998070708532292,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 177,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Main claims check out. The feature is active only in the copy phase: 0 activations in the original phase and 0 on the <DEL> step. 248,022 of its 248,795 dev activations fall at recall_idx==1 (prev_tok==<DEL>). It fires 773 times at recall_idx 2 (test: precision 0.0015, mass 0.0002), 0 times at L=8-9, and 62 times at t=8 / 61 at L=7 in dev. On test, (recall_idx==1)&(L==7) scores precision 0.0007.",
+      "The claim that magnitude falls with L holds. (recall_idx==1)&(L==3) has precision 1.0 and covers only the top activation quartile (mass recall 0.14). (recall_idx==1)&(L==6) covers 99% of the bottom quartile and none of the top half (mass 0.06). Dev mass shares are 14/51/28/6% for L=3/4/5/6, matching the explanation.",
+      "Original predicate on test: precision 0.989, recall 0.997, F1 0.993, mass recall 0.9998. The 805 missed activations carry 0.0% of mass. They are tiny residual firings at recall_idx 2 in short L=3 sequences, plus a few at L=7.",
+      "One small systematic false-positive class contradicts 'token identity barely matters': at L=6 with first_tok=='w', precision is only 0.42 (about 1,560 of the roughly 2,880 test false positives). By contrast, first_tok 'j' at L=6 gives 0.97 and first_tok 'w' at L=5 gives 1.0. This is a weak-activation edge effect at the length boundary and accounts for about 0.6% of predicted steps. Excluding it lifts precision from 0.989 to 0.995 and test F1 only from 0.9926 to 0.9934. The remaining false positives are scattered L=6 near-threshold cases.",
+      "Not checked: the minor claim that activation is lower with repeated tokens or more digits. It is not load-bearing for the label."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(recall_idx == 1) & (L <= 6) & ~((L == 6) & (first_tok == tok('w')))",
+    "better_predicate_test_f1": 0.9934
+  }
+}

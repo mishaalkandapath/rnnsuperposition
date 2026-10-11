@@ -1,0 +1,61 @@
+{
+  "label": "input token q during the original (pre-delimiter) phase",
+  "predicate": "(in_tok == tok(\"q\")) & (phase == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token detector for the letter q being read as an original input token (t < L). It fires on about 97% of such steps, at any position and for any L, with precision 1.0. Nearly all activation mass (99.5%) comes from these steps. It does not fire on the delimiter. It is essentially silent on q when q is fed back in the copy phase: the only copy-phase hits are weak (about 0.15 of max) at recall_idx 1 just after the model emits a q that was original token 0. It does not fire on other tokens apart from a handful of weak k/2/3 hits. Magnitude is fairly uniform (median 0.57, max 0.72). The top examples are all q as the last original token of length-8/9 sequences. The weakest examples are q in short sequences or q directly following another q, but I did not check these magnitude trends systematically.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 123,
+    "predicate": "(in_tok == tok(\"q\")) & (phase == 0)",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.9732779151159526,
+    "f1": 0.9864580226234999,
+    "mass_recall": 0.9944278988975256,
+    "correlation": 0.9947494523962024,
+    "n_active": 110433,
+    "n_predicted": 107482,
+    "coverage_by_activation_quartile": [
+      0.8931145640914194,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 123,
+    "predicate": "(in_tok == tok(\"q\")) & (phase == 0)",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.9741131611760666,
+    "f1": 0.9868868516085919,
+    "mass_recall": 0.9946099822883179,
+    "correlation": 0.9947570132497727,
+    "n_active": 110674,
+    "n_predicted": 107809,
+    "coverage_by_activation_quartile": [
+      0.8964545158842026,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "reset",
+  "feature": 123,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The explanation gets one number backwards. It says the feature 'fires on about 97% of such steps', but predicate precision is 1.0 with 0 false positives on test, so it fires on 100% of original-phase q steps. The 0.973 figure is recall: the share of all active steps that are original-phase q.",
+      "The missed activations are almost all one known class: copy phase, recall_idx 1, orig(0)=q, about 0.15 of max (2951 test misses, 0.6% of mass). Scoring '(phase==2)&(recall_idx==1)&(orig(0)==tok(\"q\"))' gives precision 0.149 and recall 0.022, so the feature fires on only about 15% of those steps, and weakly. The explanation already describes this, so it does not refute the label.",
+      "Hits on other tokens in the original phase are negligible: '(in_tok!=q)&(phase==0)' has recall 0.004 and mass 0.0009. Most of these are weak k/3/2 hits, a few at the last original position. This is scattered noise.",
+      "Magnitude was not checked rigorously. The top examples (about 1.0 of max) are all q as the final original token (to_go==0), and the low-quartile examples are q in the middle of the sequence, so activation may rise when q is the last token before <DEL>. The explanation admits it did not check this, so it is not an overclaim. The binary predicate is unaffected (coverage in the lowest activation quartile is 0.89, and 1.0 in the others)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

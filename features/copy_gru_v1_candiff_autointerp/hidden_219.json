@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input u fed back at recall step 1-2 with >=3 outputs left",
+  "predicate": "(phase == 2) & (in_tok == tok(\"u\")) & isin(recall_idx, [1,2]) & (to_go >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, only when the input is the letter u. That u is the model own output fed back in, i.e. original token 0 or 1 was u. Only fires at recall steps 1-2, so right after DEL (u at position 0) or two steps after (u at position 1). It is strongest when u is the first original token and many outputs remain (long sequences, large to_go). It is weak or silent when L is short (to_go <= 2). It never fires in the original phase or on the delimiter, on u fed back later in the copy (recall_idx >= 3), or on any other token. Dev F1 0.92, mass recall 0.97.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 219,
+    "predicate": "(phase == 2) & (in_tok == tok(\"u\")) & isin(recall_idx, [1,2]) & (to_go >= 3)",
+    "split": "test",
+    "precision": 0.9158953722334005,
+    "recall": 0.9170763155774035,
+    "f1": 0.9164854634774906,
+    "mass_recall": 0.9715691533637928,
+    "correlation": 0.8288683927146765,
+    "n_active": 24818,
+    "n_predicted": 24850,
+    "coverage_by_activation_quartile": [
+      0.7418211120064464,
+      0.9368251410153102,
+      0.9898452611218569,
+      0.999838813668601
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 219,
+    "predicate": "(phase == 2) & (in_tok == tok(\"u\")) & isin(recall_idx, [1,2]) & (to_go >= 3)",
+    "split": "dev",
+    "precision": 0.9144165863066538,
+    "recall": 0.919069542040223,
+    "f1": 0.9167371601208459,
+    "mass_recall": 0.9711019749197952,
+    "correlation": 0.8280774770683378,
+    "n_active": 24762,
+    "n_predicted": 24888,
+    "coverage_by_activation_quartile": [
+      0.751413341947989,
+      0.935228557583589,
+      0.9898222940226171,
+      0.9998384491114701
+    ]
+  },
+  "gate": "hidden",
+  "feature": 219,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Every factual claim checks out. In dev, 100% of the activation mass is in the copy phase. All of it is on in_tok=u. recall_idx 1 holds 0.607 of the mass, recall_idx 2 holds 0.392, and recall_idx 3 has 114 steps and 0.001 of the mass. Nothing fires on the original phase or the delimiter. Mass rises with to_go (to_go 6 holds 0.306), and the t=8-10 peak is real.",
+      "Test scores reproduce: P 0.916, R 0.917, F1 0.916, mass recall 0.972. Without the to_go term, test F1 is 0.850.",
+      "The to_go>=3 cut approximates a graded effect that depends on sequence length, so it is not a sharp boundary. Test false positives (2090) are short sequences (L=5-6) at to_go 3-4 where the feature stays silent. Restricted to L<=6, the predicate's precision is only 0.78. Test misses (2058) are weak activations at to_go=2, about 0.03-0.23 of max, in L=4-5 sequences. Together the misses hold only 2.8% of the mass.",
+      "The cut shifts by one step between the two cases. Allowing to_go>=2 at recall_idx 1 but requiring to_go>=3 at recall_idx 2 gives a slightly better test F1 of 0.921 with mass recall 0.991.",
+      "Small edge case: when orig(0)=orig(1)=u, the second u (recall_idx 2) fires only 60% of the time. Top examples show it does fire, but more weakly. It covers about 1.4% of activations, so it is negligible."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok('u')) & (((recall_idx == 1) & (to_go >= 2)) | ((recall_idx == 2) & (to_go >= 3)))",
+    "better_predicate_test_f1": 0.921
+  }
+}

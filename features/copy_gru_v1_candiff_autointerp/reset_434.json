@@ -1,0 +1,61 @@
+{
+  "label": "copy phase (every step after <DEL>)",
+  "predicate": "phase == 2",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires on every copy-phase step (t > L, i.e. the steps where the model outputs original tokens 1..L-1 with its own outputs fed back), and essentially never in the original phase or on the <DEL> step itself (110 + 4 stray activations out of 2.7M). Token-independent: rate and mass are flat across input token, output token, first token, digit count. Magnitude peaks at the first copy step (recall_idx 1, right after <DEL>, ~1.0 of max), decays over the next 2-3 steps to ~0.65-0.7 and then plateaus or rises slightly; sequences with longer L reach higher peaks. Does not fire on the delimiter step or any original-phase input.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 434,
+    "predicate": "phase == 2",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.9999535140283315,
+    "f1": 0.9999767564739168,
+    "mass_recall": 0.9999975243076581,
+    "correlation": 0.9867120122998786,
+    "n_active": 2732007,
+    "n_predicted": 2731880,
+    "coverage_by_activation_quartile": [
+      0.9998140561813874,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 434,
+    "predicate": "phase == 2",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.9999582704797687,
+    "f1": 0.999979134804537,
+    "mass_recall": 0.9999978884317222,
+    "correlation": 0.9867337835689525,
+    "n_active": 2731879,
+    "n_predicted": 2731765,
+    "coverage_by_activation_quartile": [
+      0.9998330819801748,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "reset",
+  "feature": 434,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "On test, phase == 2 scores precision 1.0, recall 0.99995, F1 0.99998, mass recall 0.999998 and correlation 0.987, so the reported scores are confirmed.",
+      "Test misses (127 steps, 0.0% of activation mass) all appear to be the last original token (step 8, orig_idx 8) of L=9 sequences, with tiny activations of 0.03-0.04 of max. This is a weak spill-over just before <DEL>, not a meaningful counterexample class. Inside phase 2 there are no false positives.",
+      "On dev the feature is active on 100% of steps at every recall_idx (1-8), with no in_tok dependence. The magnitude decay seen in the miss renderings (about 0.93-0.96 at recall_idx 1, falling to about 0.65-0.75) matches the explanation. As the explanation admits, the decay is qualitative and was not measured systematically.",
+      "Minor wording issue: the explanation's 't > L' describes the copy-phase steps correctly (recall_idx >= 1). The <DEL> step at t = L is correctly excluded (4 activations on dev)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

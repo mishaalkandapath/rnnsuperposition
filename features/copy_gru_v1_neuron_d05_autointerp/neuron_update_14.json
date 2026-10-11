@@ -1,0 +1,62 @@
+{
+  "label": "First input step for a fixed subset of tokens, plus copy-phase steps of length-3 sequences",
+  "predicate": "((t == 0) & isin(in_tok, [0,1,3,6,7,8,11,13,15,16,20,24,26,27,28])) | ((L == 3) & (recall_idx >= 1))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Two parts. (1) About 79% of activation mass: step t=0, and it is fully deterministic by the input token. It fires every time the first token is in {a,b,d,g,h,i,l,n,p,q,u,y,0,1,2} and never on the others (c,e,f,j,k,m,o,r,s,t,v,w,x,z,3). How strongly it fires is set by that token: y is highest (~0.36 of max), then q, 2, 1, b, l, i (~0.17-0.23), and n, d are barely above threshold. (2) The largest activations come from copy-phase steps of L=3 sequences, mainly recall_idx 1 (step 4, outputting the 2nd token, up to the max of ~0.25), and also recall_idx 2. In longer sequences it fires weakly and only sometimes at recall_idx 1-3 (L=4 adds most of the missed mass). It is essentially silent at the delimiter, at original-phase steps t>=1, and in copy steps of sequences with L>=5 beyond recall_idx 3. Dev precision 0.99, recall 0.88, mass recall 0.94.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 14,
+    "predicate": "((t == 0) & isin(in_tok, [0,1,3,6,7,8,11,13,15,16,20,24,26,27,28])) | ((L == 3) & (recall_idx >= 1))",
+    "split": "test",
+    "precision": 0.9867892642328869,
+    "recall": 0.8747140878193357,
+    "f1": 0.9273778316668516,
+    "mass_recall": 0.941340612247794,
+    "correlation": 0.7876465733569974,
+    "n_active": 62082,
+    "n_predicted": 55031,
+    "coverage_by_activation_quartile": [
+      0.7009857612267251,
+      0.8491076605888795,
+      0.9695231958762887,
+      0.9792525773195876
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 14,
+    "predicate": "((t == 0) & isin(in_tok, [0,1,3,6,7,8,11,13,15,16,20,24,26,27,28])) | ((L == 3) & (recall_idx >= 1))",
+    "split": "dev",
+    "precision": 0.9867467047570831,
+    "recall": 0.8766203517789736,
+    "f1": 0.9284292543508956,
+    "mass_recall": 0.9419305401090209,
+    "correlation": 0.7869096432978062,
+    "n_active": 62255,
+    "n_predicted": 55307,
+    "coverage_by_activation_quartile": [
+      0.7038679002827036,
+      0.8544718581341557,
+      0.9694808532510922,
+      0.9786673520529461
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 14,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims hold up on the test split. At t=0 the 15-token set has precision 1.000 and the complementary set has precision 0.000, so the t=0 response is fully determined by the input token. The t=0 term carries 0.785 of activation mass. L=3 copy steps fire at recall_idx 1 (P 0.997) and recall_idx 2 (P 0.724). L=4 recall_idx 1 fires partially (P 0.257). Original-phase steps t>=1 are almost silent (P 0.005).",
+      "Minor false-positive class: L=3 recall_idx 2 (L=3, step 5) is inactive about 28% of the time, giving roughly 730 false positives. The explanation's wording ('mainly recall_idx 1, and also recall_idx 2') roughly allows for this. Dropping recall_idx 2 lowers F1 to 0.916.",
+      "The misses are the ones the explanation names. L=4 recall_idx 1 accounts for about 3.7k missed steps, t=1 for about 2k (P 0.02, with no clean token rule), and L=4 recall_idx 3 for about 1.1k. Together they hold only 5.9% of activation mass. Making L=4 recall_idx 1 conditional on the first token does not help (F1 0.920).",
+      "Small wording inconsistency: 'up to the max of ~0.25' uses the raw magnitude scale, while 'y ~0.36 of max' uses the relative scale. Relative activations in the L=3 copy steps reach about 0.47, so the scale should be stated consistently. This does not change the conclusion."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "First input step for a fixed subset of tokens, plus copy-phase steps (recall 1-2) of length-3 sequences",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "First input step for a fixed subset of tokens, plus copy-phase steps (recall 1-2) of length-3 sequences"
+}

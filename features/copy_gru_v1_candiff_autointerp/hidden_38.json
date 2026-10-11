@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input n (from the 3rd copied output on)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"n\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token detector for the letter n being fed back as input during the copy phase. Fires only in the copy phase (never on original tokens or <DEL>) and only when in_tok is n; activations are weak at recall_idx 1 (n fed back as the first copied token, about 0.8% of mass), and the feature is strongest from recall_idx 2 onward. It does not fire on any other input token. About 16% of qualifying copy-phase n inputs stay inactive, and these false positives skew early in the copy (larger to_go). Activation rate goes up with t and toward the end of the copy (to_go 0-2 holds about 70% of mass). The top-activating examples nearly all involve adjacent repeated n (n n) in the original, with the peak on the fed-back n just before another n is output, so repeated n looks like it raises magnitude. Restricting to out_tok == n is perfectly precise but covers only 9% of mass.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 38,
+    "predicate": "(phase == 2) & (in_tok == tok(\"n\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.8450497910255205,
+    "recall": 0.974295010845987,
+    "f1": 0.9050816474872438,
+    "mass_recall": 0.9914441953436915,
+    "correlation": 0.7812821778262347,
+    "n_active": 64540,
+    "n_predicted": 74411,
+    "coverage_by_activation_quartile": [
+      0.9186860861481252,
+      0.9813449023861172,
+      0.9972730089866749,
+      0.9998760458630307
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 38,
+    "predicate": "(phase == 2) & (in_tok == tok(\"n\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.8429227444624527,
+    "recall": 0.9754305898533963,
+    "f1": 0.9043485821100984,
+    "mass_recall": 0.9918954847780026,
+    "correlation": 0.7799758719734441,
+    "n_active": 63982,
+    "n_predicted": 74040,
+    "coverage_by_activation_quartile": [
+      0.9212303075768942,
+      0.9829957489372343,
+      0.9976242575804939,
+      0.9998749609252892
+    ]
+  },
+  "gate": "hidden",
+  "feature": 38,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I could not refute any of the factual claims. Every firing is a copy-phase step with input n (copy phase holds 100% of the activation mass; no other in_tok ever fires). recall_idx 1 holds 0.8% of the mass. to_go 0-2 holds 0.71. The rate rises with t. Test scores reproduce exactly: P 0.845, R 0.974, F1 0.905, mass recall 0.991.",
+      "The false positives (11.5k on test) are graded rather than a clean excluded class. Precision depends on position: 0.73-0.78 at to_go 4-6 versus 0.88-0.91 at to_go 0-2, which matches the stated lean toward larger to_go. It also depends on context. By out_tok: m 0.42, 3 0.46, t 0.51, b 0.66, d 0.69, r 0.69. By prev_tok: g 0.57, x 0.59. So the token being output, and the one before the n, adjust the firing threshold.",
+      "Excluding the weak out_tok values does not help (dev F1 0.903, 0.875 and 0.890 for three variants, versus 0.904 for the base), so these context effects are a magnitude adjustment and do not form a separable rule.",
+      "The magnitude claim fits the data. out_tok == n gives precision 1.0 and 9% of the mass from about 4% of firings, and prev_tok == n gives precision 0.97, so a repeated n does raise activation.",
+      "The misses (0.9% of the mass) are scattered low activations at recall_idx 1, where the first original token is n. The label's 'from the 3rd copied output on' is a slight simplification, and the explanation states it accurately."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

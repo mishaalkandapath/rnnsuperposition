@@ -1,0 +1,64 @@
+{
+  "label": "1-2 steps after an h input, early in the original phase",
+  "predicate": "(phase == 0) & (t >= 2) & (t <= 5) & ((prev_tok == tok(\"h\")) | (prev2_tok == tok(\"h\")))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires during the original-input phase on the one or two steps right after the letter h was input. It is strongest on the step immediately after h (prev_tok=h gives 13x lift and 65% of activation mass) and weaker two steps after (prev2_tok=h). It is limited to early positions: inputs at t=2..5 carry about 97% of the mass, rates peak at t=4, and it is almost silent after an h that appears late (t>=6). It never fires at t=0/1 or in the copy phase, and only weakly at the delimiter. Magnitude grows when several h tokens appear close together: steps after h h or h h h hold most of the near-max examples and fall heavily in the top quartile, while a single h gives roughly 0.3-0.6 of max. The token currently being input barely matters. On dev, precision is 0.87 and mass recall 0.86. The remaining roughly 40% of active steps are weak activations spread over contexts with no h, plus some steps 3 after an h.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 778,
+    "predicate": "(phase == 0) & (t >= 2) & (t <= 5) & ((prev_tok == tok(\"h\")) | (prev2_tok == tok(\"h\")))",
+    "split": "test",
+    "precision": 0.8717384221140044,
+    "recall": 0.5764330468404257,
+    "f1": 0.693976984741788,
+    "mass_recall": 0.8650579154035815,
+    "correlation": 0.7882133950671258,
+    "n_active": 171732,
+    "n_predicted": 113557,
+    "coverage_by_activation_quartile": [
+      0.12465935294528684,
+      0.3489157524514942,
+      0.8486013090163743,
+      0.9835557729485478
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 778,
+    "predicate": "(phase == 0) & (t >= 2) & (t <= 5) & ((prev_tok == tok(\"h\")) | (prev2_tok == tok(\"h\")))",
+    "split": "dev",
+    "precision": 0.8703633826794317,
+    "recall": 0.5744435628196292,
+    "f1": 0.6920988912071119,
+    "mass_recall": 0.8648999602349035,
+    "correlation": 0.7871706591652998,
+    "n_active": 172661,
+    "n_predicted": 113957,
+    "coverage_by_activation_quartile": [
+      0.1225964879766483,
+      0.3470867601065678,
+      0.844063477354338,
+      0.9840379937449323
+    ]
+  },
+  "gate": "update",
+  "feature": 778,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I reproduced the test scores: precision 0.872, recall 0.576, F1 0.694, mass recall 0.865. On the test split, coverage by activation quartile is 0.12 / 0.35 / 0.85 / 0.98, so the predicate captures the strong activations.",
+      "Small overstatement about late positions. When h is at t=5, the next step (t=6) is active in 50.7% of cases (dev). The explanation calls this 'almost silent after an h at t>=6', but the predicate's t<=5 cutoff simply drops this case. Real silence only starts for h at t>=6 (t=7 rate 0.001). The t=6 step holds about 3% of the mass, so this is minor.",
+      "The rule depends on where the h sits, not just how far back it is. One step after h, precision is about 0.95-1.0 when h is at positions 1-4. Two steps after h, precision is 0.83-0.91 for h at positions 1-3, but only 0.53 for h at position 0 (fires at t=2) and 0.40 for h at position 4. Most of the predicate's false positives are 'h at t=0, predicted at t=2' (h v *c* ..., h a *3* ...).",
+      "Three steps after h is a real secondary pattern: precision 0.46 for h at positions 1-2. Adding it for t=4..5 raises test mass recall to 0.907 and F1 to 0.713, but precision drops to 0.78.",
+      "The activations with no h are diffuse and weak. In the original phase, steps with no h seen so far fire at a 1.6% rate. They account for 27% of active steps but only 5.7% of activation mass, and they show no lift for any particular token or position. This explains the low recall by count, and it counts as scattered noise, not a systematic missed class.",
+      "These claims checked out: no copy-phase activations (0 of 2.7M steps); no activations at t=0 or t=1; the delimiter carries only 1.9% of mass, all of it at steps right after an h (0.15 precision there); the input token is irrelevant (in_tok lifts are all about 1.1-1.4x); the rate peaks at t=4; and the top examples all come from h h / h h h contexts."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "1-2 steps after an h input in the original phase, for h at positions 1-5 (h at position 0 only fires 2 steps later)",
+    "better_predicate": "(phase==0) & (((prev_tok==tok('h')) & (t>=2) & (t<=6)) | ((prev2_tok==tok('h')) & (t>=2) & (t<=5)))",
+    "better_predicate_test_f1": 0.703
+  },
+  "final_label": "1-2 steps after an h input in the original phase, for h at positions 1-5 (h at position 0 only fires 2 steps later)"
+}

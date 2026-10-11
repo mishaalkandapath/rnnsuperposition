@@ -1,0 +1,63 @@
+{
+  "label": "late original-phase positions (t>=7), plus digit 0 input from t>=5",
+  "predicate": "(phase == 0) & ((t >= 7) | ((t >= 5) & (in_tok == tok(\"0\"))))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only while the original sequence is being read, at late absolute positions: 80% of steps at t=7 and 96% at t=8 (so only in sequences with L>=8), which is why it is concentrated on the final 1-2 original tokens. Inputting digit 0 at t>=5 triggers it almost every time (precision ~1.0), and those 0 inputs carry the largest activations: the top examples are all a 0 as the last original token at t=8, and t>=5 0-inputs hold ~27% of the activation mass. Other digits do not do this (widening the clause to all digits drops precision to 0.72). Weak residual firing at t=5-6 on other tokens and at the delimiter step for L=9 (~1% of mass). Never fires at t<=3 or during the copy phase. Dev F1 0.87, mass recall 0.96.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 129,
+    "predicate": "(phase == 0) & ((t >= 7) | ((t >= 5) & (in_tok == tok(\"0\"))))",
+    "split": "test",
+    "precision": 0.8649651989401749,
+    "recall": 0.8758160343458744,
+    "f1": 0.8703567983128548,
+    "mass_recall": 0.9600085885426232,
+    "correlation": 0.712650414375572,
+    "n_active": 265767,
+    "n_predicted": 269101,
+    "coverage_by_activation_quartile": [
+      0.6453147105746365,
+      0.8818819421450288,
+      0.9770024984196743,
+      0.9990668412576572
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 129,
+    "predicate": "(phase == 0) & ((t >= 7) | ((t >= 5) & (in_tok == tok(\"0\"))))",
+    "split": "dev",
+    "precision": 0.8647322094584514,
+    "recall": 0.8748801932002566,
+    "f1": 0.8697766023296383,
+    "mass_recall": 0.9597589925656653,
+    "correlation": 0.7133334963251792,
+    "n_active": 265010,
+    "n_predicted": 268120,
+    "coverage_by_activation_quartile": [
+      0.6409822951413521,
+      0.881529892985978,
+      0.9778874600012075,
+      0.9991245547304233
+    ]
+  },
+  "gate": "hidden",
+  "feature": 129,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The explanation's claims hold up. Test scores reproduce exactly (P 0.865, R 0.876, F1 0.870, mass recall 0.960). There is zero activation at t<=3 and in the copy phase. Original-phase firing rate is 0.80 at orig_idx 7 and 0.96 at orig_idx 8. The clause phase0 & t>=5 & in_tok==0 has precision 0.9997 and mass recall 0.27.",
+      "Minor inaccuracy: delimiter-step firing is not limited to L=9. On the dev split, the to_go breakdown shows 6424 delimiter-step activations for L=9 and 2522 for L=8. On test, delimiter firing has precision 0.077 for L=9 and 0.030 for L=8, and about 1% of mass in total.",
+      "Under-described token modulation: 0 is not the only token that affects activation. At t>=7, precision varies by input token: m 0.998, b 0.994, z 0.989, 1 0.988 versus t 0.45, n 0.58, g 0.71, k 0.74, s 0.75. At t=6 the same ordering appears (m 0.59, b 0.36, z 0.39, 1 0.27, a 0.22, versus t 0.001, n 0.005). So the 0 effect is the strongest end of a graded per-token preference. The claim that other digits 'do not behave this way' is only partly true, since 1 is also boosted. Most false positives at t>=7 come from low-preference tokens such as t and n.",
+      "There is no history dependence that would explain the false positives. Whether a 0 was seen earlier, the digit count and in_first all leave precision at t>=7 near 0.85. Neither adding t=6 & {m,b,z} nor removing t/n from the t>=7 clause improves F1 meaningfully (test F1 0.872 and 0.866), so this is a refinement rather than a systematic counterexample class.",
+      "The missed activations hold about 4% of mass and are mostly weak, scattered firing at t=5-6 and at the delimiter step."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "late original-phase positions (t>=7, i.e. last 1-2 original tokens of L>=8 sequences), strongest on digit 0 from t>=5, with a graded token preference (m/b/z/1 high, t/n low)",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "late original-phase positions (t>=7, i.e. last 1-2 original tokens of L>=8 sequences), strongest on digit 0 from t>=5, with a graded token preference (m/b/z/1 high, t/n low)"
+}

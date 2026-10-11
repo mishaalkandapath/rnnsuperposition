@@ -1,0 +1,63 @@
+{
+  "label": "token x fed back as input during the copy phase (from the 3rd copied output onward)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"x\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, on steps where the input token is x (the model is reading back its own x output; this is never the first occurrence of x). It is silent during the original phase and at the delimiter, and never fires on other input tokens (fewer than 100 stray activations in total). It does not depend on which token is being output next or on earlier context. Magnitude depends on position. x echoed at copy position 1 (recall_idx 2) is weak or absent, and these cases make up most of the lowest quartile. x at copy position 2 is mixed: it is silent in many longer sequences (most false positives), while in short sequences it is active but at lower values. From recall_idx >= 4 on, the predicate has precision 1.0 and the strongest activations; consecutive x x gives the highest values. Dev split: P 0.95, R 0.95, F1 0.95, mass recall 0.97.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 762,
+    "predicate": "(phase == 2) & (in_tok == tok(\"x\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9529892959707598,
+    "recall": 0.9451588959279142,
+    "f1": 0.9490579446379978,
+    "mass_recall": 0.9725822045777363,
+    "correlation": 0.8928069821524293,
+    "n_active": 57931,
+    "n_predicted": 57455,
+    "coverage_by_activation_quartile": [
+      0.8160602085203342,
+      0.9736242491196575,
+      0.9925429814265,
+      0.9984118215716061
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 762,
+    "predicate": "(phase == 2) & (in_tok == tok(\"x\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9545083036257717,
+    "recall": 0.9454329365967928,
+    "f1": 0.9499489451549817,
+    "mass_recall": 0.9732587831062602,
+    "correlation": 0.8926979228184916,
+    "n_active": 58057,
+    "n_predicted": 57505,
+    "coverage_by_activation_quartile": [
+      0.8177058215638994,
+      0.9728537963345735,
+      0.991869918699187,
+      0.9993110100592532
+    ]
+  },
+  "gate": "update",
+  "feature": 762,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most of the misses come from one systematic group, not scattered noise. When x is echoed at recall_idx==2, whether it fires depends cleanly on sequence length L. On dev, precision is 1.00 at L=3 (424 steps) and 0.997 at L=4 (2492 steps). It is 0.066 at L=5 and 0.00 at L=6..9. The explanation calls the recall_idx-2 cases 'weak or absent', which is wrong for short sequences: they fire reliably, with activations up to about 0.57 of max. These cases make up most of the 3177 missed steps on test.",
+      "Equivalently, the label's 'from the 3rd copied output onward' cutoff is wrong for L<=4: the feature already fires from the 2nd echoed token there.",
+      "The false positives sit almost entirely at recall_idx==3 with L>=7. Precision there is 0.71 at L=7, 0.60 at L=8 and 0.77 at L=9, against 1.0 for L=4,5 and 0.97 for L=6. I found no context variable that separates them. Splitting by orig(0), orig(1), out_tok or next_out being a digit or vowel leaves precision at 0.66-0.76, so these look like threshold-level noise at a weak position. Excluding them raises precision to 0.998 but drops recall to 0.898 (F1 0.945), so they are better left in.",
+      "Claims that check out: the feature never fires in the original phase or at the delimiter (100% of activation mass is in the copy phase). It almost never fires on input tokens other than x (test precision for copy-phase non-x inputs is about 3e-5). Fire rates at recall_idx>=4 are about 0.033, roughly the base rate of x, which fits near-complete coverage there. The reported test scores for the original predicate reproduce exactly (P 0.953, R 0.945, F1 0.949).",
+      "Not verified: the claim that consecutive 'x x' gives the highest values (the tools report no magnitudes split by condition)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "token x fed back as input during the copy phase (from the 3rd copied output onward, or the 2nd in sequences of length 3-4)",
+    "better_predicate": "(phase == 2) & (in_tok == tok('x')) & ((recall_idx >= 3) | ((recall_idx == 2) & (L <= 4)))",
+    "better_predicate_test_f1": 0.975
+  },
+  "final_label": "token x fed back as input during the copy phase (from the 3rd copied output onward, or the 2nd in sequences of length 3-4)"
+}

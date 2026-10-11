@@ -1,0 +1,64 @@
+{
+  "label": "final copy step of length-3 sequences (outputting 3rd token)",
+  "predicate": "(recall_idx == 2) & (L == 3)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Copy-phase-only unit. Fires almost exclusively at the last step (t=5) of L=3 sequences, where the input is the fed-back 2nd original token and the model outputs the 3rd original token: about 81% of these steps are active, and they carry ~83% of activation mass and essentially all the top activations. Weaker spillover: the previous step of L=3 sequences (t=4, recall_idx 1, ~5% mass), the recall_idx-2 step of L=4 sequences (t=6, ~8% mass, low magnitude), and rare low-magnitude firing in long sequences (L=9). Never fires in the original phase or on the delimiter. Magnitude varies somewhat by input token (r, f, 3 strongest) and is higher when the input token is unique in the sequence; we found no clean token rule. Small and low-magnitude overall (max 0.02).",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 7,
+    "predicate": "(recall_idx == 2) & (L == 3)",
+    "split": "test",
+    "precision": 0.8052995391705069,
+    "recall": 0.6255966587112172,
+    "f1": 0.7041638683680322,
+    "mass_recall": 0.8283066284430541,
+    "correlation": 0.7339455679134559,
+    "n_active": 3352,
+    "n_predicted": 2604,
+    "coverage_by_activation_quartile": [
+      0.28997613365155134,
+      0.47613365155131265,
+      0.7637231503579952,
+      0.9725536992840096
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 7,
+    "predicate": "(recall_idx == 2) & (L == 3)",
+    "split": "dev",
+    "precision": 0.8134357005758157,
+    "recall": 0.6306547619047619,
+    "f1": 0.7104777870913663,
+    "mass_recall": 0.8333439815534917,
+    "correlation": 0.7389975420526262,
+    "n_active": 3360,
+    "n_predicted": 2605,
+    "coverage_by_activation_quartile": [
+      0.2869047619047619,
+      0.4845238095238095,
+      0.7714285714285715,
+      0.9797619047619047
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 7,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Store mismatch: the user asked to run the baseline on features/copy_transcoder_v2_1of5 (the new 1/5 subsample), but this check used features/copy_gru_v1_neuron_baseline_store, as the computed task said. The orchestrator should confirm which data the baseline is supposed to use.",
+      "Borderline call. Test recall is only 0.626, so 37% of active steps (1255 on test) fall outside the predicate, and test precision (0.805) only just counts as 'high'. The verdict holds only because test mass recall is 0.83 and the top activation quartile is 97% covered.",
+      "Every factual claim checked out on dev and test. Profile shares: t=5 holds 0.833 of mass, t=4 0.049, L=4 0.083, L=9 0.025. The unit never fires in the original or delimiter phase.",
+      "Every miss falls in one of the three low-magnitude spillover classes the explanation already names: L=3 at recall_idx=1 (precision 0.08), L=4 at recall_idx=2 (precision 0.11), and scattered L=9 firing (for example L=9 at recall_idx=3, precision 0.007). None of these can be added without lowering F1.",
+      "False positives look like token-dependent magnitude, not a separate condition. Restricting to the strong input tokens (r, f, 3, h, x, d) raises precision to 0.97, but recall drops to 0.15. Conditioning on in_count==1, out_count==1 or in_tok!=out_tok did not improve F1 either (0.68-0.70).",
+      "The label 'final copy step of length-3 sequences' matches the predicate exactly and does not overclaim."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "final copy step of length-3 sequences (outputting 3rd token)",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "final copy step of length-3 sequences (outputting 3rd token)"
+}

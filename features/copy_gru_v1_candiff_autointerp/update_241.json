@@ -1,0 +1,64 @@
+{
+  "label": "early token right after a 0 (esp. i; 0 0 i strongest)",
+  "predicate": "(prev_tok == tok(\"0\")) & (((t == 1) & (in_tok == tok(\"i\"))) | ((t == 2) & (isin(first_tok, [tok(\"0\"),tok(\"g\"),tok(\"y\"),tok(\"q\"),tok(\"e\"),tok(\"t\"),tok(\"2\")]) | (in_tok == tok(\"i\")))))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires only in the original phase at positions 1-3, almost always on the input right after a digit 0 (prev_tok=0 holds 96% of mass). At t=1 it fires only on 0 i (on every such step). At t=2 it fires on 0 followed by any token when the first token is 0, g, y, q, e, t or 2, and on 0 i for any first token. Strongest on i: 0 0 i reaches the max activation. 0 0 x for other x and g/y/q 0 x are weaker (around 0.3x max). Small t=3 tail (x 0 0 i). Never fires at t=0, at t>=4, on the delimiter, or in the copy phase. Mostly does not fire after 0 when the first token is outside that set, unless the current token is i.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 241,
+    "predicate": "(prev_tok == tok(\"0\")) & (((t == 1) & (in_tok == tok(\"i\"))) | ((t == 2) & (isin(first_tok, [tok(\"0\"),tok(\"g\"),tok(\"y\"),tok(\"q\"),tok(\"e\"),tok(\"t\"),tok(\"2\")]) | (in_tok == tok(\"i\")))))",
+    "split": "test",
+    "precision": 0.8016367887763055,
+    "recall": 0.8677494199535963,
+    "f1": 0.8333839765015699,
+    "mass_recall": 0.9521376069873685,
+    "correlation": 0.7082818602912461,
+    "n_active": 4741,
+    "n_predicted": 5132,
+    "coverage_by_activation_quartile": [
+      0.6770657672849916,
+      0.8675105485232067,
+      0.9493670886075949,
+      0.9772151898734177
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 241,
+    "predicate": "(prev_tok == tok(\"0\")) & (((t == 1) & (in_tok == tok(\"i\"))) | ((t == 2) & (isin(first_tok, [tok(\"0\"),tok(\"g\"),tok(\"y\"),tok(\"q\"),tok(\"e\"),tok(\"t\"),tok(\"2\")]) | (in_tok == tok(\"i\")))))",
+    "split": "dev",
+    "precision": 0.8167006109979633,
+    "recall": 0.8632938643702907,
+    "f1": 0.8393511250654109,
+    "mass_recall": 0.9496142648385485,
+    "correlation": 0.7141008002117176,
+    "n_active": 4645,
+    "n_predicted": 4910,
+    "coverage_by_activation_quartile": [
+      0.6712564543889845,
+      0.8587424633936261,
+      0.9457364341085271,
+      0.9776055124892334
+    ]
+  },
+  "gate": "update",
+  "feature": 241,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims about where it fires hold up. 100% of activation mass is in the original phase. There are 0 activations at t=0, at t>=4, on the delimiter, or in the copy phase. Activations sit at t=1 (25% of mass), t=2 (73%) and t=3 (1.5%). prev_tok=0 carries 96.3% of the mass.",
+      "The t=1 claim holds. (t==1)&(prev_tok==0)&(in_tok==i) scores precision 1.0, and nothing fires at t=1 outside it. (t==1)&(prev_tok==0) on its own has only 3.5% precision, so at t=1 it does not fire after a 0 in general.",
+      "The label overclaims a little. 'Early token right after a 0' leaves out the first-token gating at t=2 and the restriction to i at t=1. For 0 x at t=2, firing depends strongly on first_tok. With first_tok in {0,g,y,q} precision is 0.985. With first_tok in {e,t,2} precision is only 0.37-0.54, and it varies by in_tok (for first_tok=e, a subset of in_toks fires with precision 1.0).",
+      "Most of the remaining misses are a weak t=2 tail where prev_tok is not 0 and in_tok is i (e.g. 'g g i', '0 y i', 'q g i'). This is about 11% of active steps but only 3.5% of mass, at around 0.1-0.3 of the max. Adding it gives low precision (0.11), so treat it as a weak tail rather than a fixable class.",
+      "Dropping '2' from the first_tok set gives a small gain: test precision 0.864, recall 0.834, F1 0.848 (vs 0.833 for the recorded predicate), mass recall 0.952. This is a minor refinement, not a refutation.",
+      "The magnitude ordering is plausible from mass per step. 0 0 i: 19 steps, 1.65% of mass, about 8.7e-4 per step. t=1 0 i: about 4.4e-4 per step. t=2 0 x with first_tok in the set: about 2.3e-4 per step. That is consistent with '0 0 i' being strongest and the others being about 0.3-0.5x."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "t=1 '0 i', or t=2 input right after a 0 when the first token is 0/g/y/q (also i after a 0); 0 0 i strongest",
+    "better_predicate": "(prev_tok == tok(\"0\")) & (((t == 1) & (in_tok == tok(\"i\"))) | ((t == 2) & (isin(first_tok, [tok(\"0\"),tok(\"g\"),tok(\"y\"),tok(\"q\"),tok(\"e\"),tok(\"t\")]) | (in_tok == tok(\"i\")))))",
+    "better_predicate_test_f1": 0.848
+  },
+  "final_label": "t=1 '0 i', or t=2 input right after a 0 when the first token is 0/g/y/q (also i after a 0); 0 0 i strongest"
+}

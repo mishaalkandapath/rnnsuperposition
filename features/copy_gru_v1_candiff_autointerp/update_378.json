@@ -1,0 +1,61 @@
+{
+  "label": "Copy phase, step outputting original token 2 (two steps after <DEL>) in long sequences",
+  "predicate": "(recall_idx == 2) & (L >= 7)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Positional feature that fires only in the copy phase, almost entirely at the step that outputs the third original token (recall_idx == 2, i.e. the input two steps back is <DEL>). It does not depend on token identity (flat lift across in_tok, out_tok, next_out, first_tok). It is strongly gated by sequence length: essentially silent for L <= 5, weak for L = 6, and growing with L. L = 9 holds about 67% of activation mass and L = 8 about 26%, and the top activations (~2.4-2.5) are all L = 9 at recall_idx 2. There is weak spillover at recall_idx 1 and 3 (about 2% of mass). It never fires in the original phase or at the delimiter. In-phase precision at L >= 7 is about 0.73, and tightening to L >= 8 raises precision to 0.91 at the cost of recall.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 378,
+    "predicate": "(recall_idx == 2) & (L >= 7)",
+    "split": "test",
+    "precision": 0.7354544068191121,
+    "recall": 0.8850201138739853,
+    "f1": 0.8033349917699172,
+    "mass_recall": 0.97205427766372,
+    "correlation": 0.7026180755429684,
+    "n_active": 207071,
+    "n_predicted": 249182,
+    "coverage_by_activation_quartile": [
+      0.6497643331787977,
+      0.8968281563900479,
+      0.9935288208932159,
+      0.9999613653485812
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 378,
+    "predicate": "(recall_idx == 2) & (L >= 7)",
+    "split": "dev",
+    "precision": 0.7336602946665436,
+    "recall": 0.8847078979590849,
+    "f1": 0.8021352125778326,
+    "mass_recall": 0.9721631158335512,
+    "correlation": 0.7015594200523627,
+    "n_active": 206623,
+    "n_predicted": 249163,
+    "coverage_by_activation_quartile": [
+      0.6504762273501626,
+      0.8942233235248568,
+      0.9941342728821434,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 378,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Every factual claim held up when checked. Activation is 100% in the copy phase, with 0 active steps in the original phase or at the delimiter. recall_idx==2 holds 97.6% of activation mass, recall_idx 1 holds 1.8% and recall_idx 3 holds 0.6%. By length, L=9 holds 67.3%, L=8 26.0%, L=7 6.3%, L=6 0.4% and L<=5 about 0. Test scores reproduce: P 0.735, R 0.885, F1 0.803, mass recall 0.972. L>=8 on test gives P 0.910, R 0.732, F1 0.812, mass recall 0.909.",
+      "Almost all of the false positives come from one class, L=7. On test, (recall_idx==2)&(L==7) has precision 0.38 and holds only 6.3% of mass. The L=8 slice has precision 0.83 and the L=9 slice 0.99. This reads as a graded length effect, strongest at L=9, with L=7 sitting near the firing threshold. It is not a hidden extra condition: correct==0 never occurs there, and n_digits, out_count, in_count and digit tokens all leave precision at about 0.37-0.45.",
+      "Small caveat on 'token identity does not matter'. Lift is flat overall, but inside the L=7 slice token identity does move which steps cross the threshold: precision ranges from 0.15 to 0.78 depending on first_tok, and 0.29 to 0.72 depending on in_tok (single-token slices of about 2.8k steps). This only affects weak activations at the margin, and no clean rule came out of it.",
+      "Misses on the test split are scattered recall_idx 1 and 3 spillover, about 2.8% of mass, with no token or history pattern. I found no systematic counterexample class that a better predicate fixes. L>=8 is marginally better on F1 (0.812 vs 0.803) but loses mass recall, so either length cutoff is defensible."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

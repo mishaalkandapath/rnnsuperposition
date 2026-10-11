@@ -1,0 +1,61 @@
+{
+  "label": "copy-phase input m (and weakly o), late in the copy",
+  "predicate": "(phase == 2) & (((in_tok == tok(\"m\")) & (recall_idx >= 3)) | ((in_tok == tok(\"o\")) & (recall_idx >= 5)))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the fed-back input token is m, i.e. the model just output m. It is a token detector. About 93% of activation mass is on m inputs and 5% on o inputs; x/v/z/h get trace activations. It never fires in the original phase, at the delimiter, or on the first occurrence of a token. Magnitude grows with position in the copy: it is near zero for recall_idx <= 2 and strongest at recall_idx >= 5, so a copy-phase m late in a long sequence gives the top activations (~5.7). The o activations are weaker and appear mostly late (recall_idx >= 5). Early copy-phase m (recall_idx 2-3) is the main source of false positives. Simpler alternative: copy-phase m with recall_idx >= 3 has dev P 0.99, R 0.70, mass recall 0.93.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 61,
+    "predicate": "(phase == 2) & (((in_tok == tok(\"m\")) & (recall_idx >= 3)) | ((in_tok == tok(\"o\")) & (recall_idx >= 5)))",
+    "split": "test",
+    "precision": 0.8288345987237412,
+    "recall": 0.8829250139552193,
+    "f1": 0.8550251965571714,
+    "mass_recall": 0.9790899264643415,
+    "correlation": 0.7733136057341694,
+    "n_active": 80615,
+    "n_predicted": 85876,
+    "coverage_by_activation_quartile": [
+      0.6010717475439119,
+      0.9307333531805101,
+      0.9999007641163045,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 61,
+    "predicate": "(phase == 2) & (((in_tok == tok(\"m\")) & (recall_idx >= 3)) | ((in_tok == tok(\"o\")) & (recall_idx >= 5)))",
+    "split": "dev",
+    "precision": 0.831546348215752,
+    "recall": 0.879620782508345,
+    "f1": 0.8549082510718614,
+    "mass_recall": 0.9783098490344542,
+    "correlation": 0.7743716868339944,
+    "n_active": 80587,
+    "n_predicted": 85246,
+    "coverage_by_activation_quartile": [
+      0.5924951605698119,
+      0.9262421204149501,
+      0.9997518240929171,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 61,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The o clause is a coin flip: (phase==2)&(in_tok==o)&(recall_idx>=5) has precision 0.51. It accounts for most of the ~14.7k test false positives. I found no clean condition that separates firing from non-firing o: L, in_count, in_orig(m), correct, prev_tok class, next_out class and to_go all leave precision between 0.40 and 0.61. The label already calls o 'weak', and adding the clause still raises F1 (0.855 vs 0.82 for m-only), so this is a weakness of the label, not a refutation.",
+      "The claim that it never fires on the first occurrence of a token is trivially true. Copy-phase inputs always repeat an earlier original token, so this adds no information.",
+      "The other claims hold. Phase share is 100% copy, 0% original and 0% delimiter. m holds 93.2% of activation mass, o 5.4%, and x/v/z under 0.3% each. Copy-phase m with recall_idx<=2 has precision 0.07 and mass 0.7%, while copy-phase m with recall_idx>=3 has precision 0.985 and mass recall 0.925. Activation share peaks at t=13-15 and recall_idx 5-6.",
+      "The test misses are scattered low-activation steps: 9438 steps holding only 2.1% of activation mass (early m, x, i, l). I saw no systematic class among them."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

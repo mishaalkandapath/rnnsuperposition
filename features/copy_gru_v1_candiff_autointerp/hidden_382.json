@@ -1,0 +1,61 @@
+{
+  "label": "input token a at original position >= 4",
+  "predicate": "(phase == 0) & (in_tok == tok(\"a\")) & (t >= 4)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires when the input token is the letter a during the original (pre-<DEL>) phase at position t >= 4, and fires on every such step (no false positives on dev). It never fires on a at positions 0-3, at the delimiter, or in the copy phase, including when a is fed back as an output. Magnitude rises steadily with position: about 0.2 of max at t=4, about 0.5 at t=5, about 0.75 at t=6, and near max at t=8. It does not depend on the previous tokens, the first token, or the sequence length beyond that. The only misses are tiny activations (<=0.04 of max) on other tokens at t=8, which carry about 0% of the mass.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 382,
+    "predicate": "(phase == 0) & (in_tok == tok(\"a\")) & (t >= 4)",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.9983405882494408,
+    "f1": 0.9991696051412272,
+    "mass_recall": 0.9999470762073629,
+    "correlation": 0.8926234544371154,
+    "n_active": 41581,
+    "n_predicted": 41512,
+    "coverage_by_activation_quartile": [
+      0.9933628318584071,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 382,
+    "predicate": "(phase == 0) & (in_tok == tok(\"a\")) & (t >= 4)",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.9984132021580451,
+    "f1": 0.9992059710973479,
+    "mass_recall": 0.9999433084469431,
+    "correlation": 0.8930146066208094,
+    "n_active": 40963,
+    "n_predicted": 40898,
+    "coverage_by_activation_quartile": [
+      0.9936529635777757,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 382,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Test split: precision 1.0, recall 0.998, F1 0.999, mass recall 0.99995, with 0 false positives. The 69 misses are all tiny activations (about 0.01-0.02 of max) on non-a tokens at t=8, the last original step of L=9 sequences. They hold 0.0% of the activation mass, so this is scattered noise.",
+      "Profile confirms the phase claim: delimiter and copy-phase activity is 0 of 3.2M steps, and every orig_idx 0-3 bucket is zero. History does not matter: the firing rate is flat across prev_tok, n_digits and in_count (the in_count>=2 subset scores precision 1.0), and orig(0)==a has precision 1.0.",
+      "Magnitude claim roughly holds. Mean activation per firing step, relative to t=8, is about 0.22 at t=4, 0.60 at t=5, 0.88 at t=6, 1.0 at t=7 and 1.0 at t=8. The plateau starts at t=7, a bit earlier than the explanation says, and the explanation understates t=5-6 slightly. This is minor wording, not a gap.",
+      "Tool quirk, not a feature issue: seen(['a']) and n_seen(['a'])>=1 combined with the predicate return n_predicted=0, even though repeated a's exist (in_first=0 has 6735 active steps). The seen/n_seen helpers look broken for this query, so I used in_count instead."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

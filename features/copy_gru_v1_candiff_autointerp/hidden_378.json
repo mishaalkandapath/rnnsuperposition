@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input h (fed-back h)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"h\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the input token is h, i.e. the model is reading back its own output h (original token recall_idx-1 was h). It never fires in the original phase, on the delimiter, or on any other input token (1 stray activation on u). It is very weak at recall_idx 1, where the fed-back h is original token 0, and the strongest activations come early in the copy (recall_idx 2-4, especially right after the first copied token). A second h in a row (orig h h) is weaker than the first, and h fed back late or at the final step is often weak or absent, which accounts for most false positives. Simple version (phase==2 & in_tok==h): dev F1 0.86 with recall 1.0. Adding recall_idx>=2: dev P 0.90, R 0.97, F1 0.93, mass recall 0.99.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 378,
+    "predicate": "(phase == 2) & (in_tok == tok(\"h\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.894820770519263,
+    "recall": 0.9654594086604497,
+    "f1": 0.9287989429028444,
+    "mass_recall": 0.993914621080053,
+    "correlation": 0.8053570527765485,
+    "n_active": 69165,
+    "n_predicted": 74625,
+    "coverage_by_activation_quartile": [
+      0.8672796668979875,
+      0.994563645827309,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 378,
+    "predicate": "(phase == 2) & (in_tok == tok(\"h\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.8957236798050009,
+    "recall": 0.9656093440942495,
+    "f1": 0.929354547349406,
+    "mass_recall": 0.9939912472085068,
+    "correlation": 0.8060174006400473,
+    "n_active": 69263,
+    "n_predicted": 74667,
+    "coverage_by_activation_quartile": [
+      0.8676368676368676,
+      0.9948024948024948,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 378,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims hold up. On dev, the feature fires 0 times in the original phase and 0 times on the delimiter. Of 69263 active steps, 69262 have input h and 1 has input u, so the single stray activation is real.",
+      "At recall_idx 1, precision is only 0.14 and mass share is 0.006, which matches 'very weak at recall_idx 1'. Mass share by recall_idx is 0.40, 0.33 and 0.15 for recall_idx 2, 3 and 4, which matches 'strongest at 2-4'.",
+      "The false positives are graded, not one separable class. With input h in the copy phase, precision is about 1.0 at recall_idx 2-4 and falls to 0.80, 0.65, 0.69 and 0.78 at recall_idx 5-8. At to_go==0 it is 0.80 (0.70 when also recall_idx>=5). When h repeats (prev_tok==h) it is 0.75, and when h appears twice in the original (in_count>=2) it is 0.72. The explanation already describes this falloff.",
+      "I found no clean variable that separates late h's that fire from late h's that don't. I checked h count, L, digits, previous token, output token and correctness: all leave late-copy precision around 0.64-0.83. These cases hold little activation mass (missed activations total 0.6% of mass on test).",
+      "Restricting further makes the score worse. Excluding late final steps gives test F1 0.888, and capping at recall_idx<=6 gives test F1 0.898, both below the original 0.929.",
+      "I reproduced the reported test scores exactly: precision 0.895, recall 0.965, F1 0.929, mass recall 0.994."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "label": "Re-input of first token p at copy step L+1 (long sequences)",
+  "predicate": "(recall_idx == 1) & (in_tok == tok(\"p\")) & (L >= 6)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase at the step right after the first output (recall_idx == 1, step L+1), when the fed-back input is the first original token and that token is p. 99.7% of activation mass has in_tok = p (equivalently first_tok = p). It requires L >= 6: almost nothing at L=5 and nothing at L <= 4. Magnitude increases with L (mass shares 7% at L=6, 22% at L=7, 32% at L=8, 39% at L=9), and the smallest activations come from L=6 sequences. Many false positives at L=6 are inactive. It does not fire in the original or delimiter phases, at any other recall position, or on p at later copy steps. Missed activations are very weak (<0.06 of max), at recall_idx 1 with other first tokens such as 3, 2 and t.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 268,
+    "predicate": "(recall_idx == 1) & (in_tok == tok(\"p\")) & (L >= 6)",
+    "split": "test",
+    "precision": 0.9782316581564096,
+    "recall": 0.9736959429335711,
+    "f1": 0.9759585306997944,
+    "mass_recall": 0.9977980258223291,
+    "correlation": 0.8883939852671201,
+    "n_active": 11215,
+    "n_predicted": 11163,
+    "coverage_by_activation_quartile": [
+      0.894793152639087,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 268,
+    "predicate": "(recall_idx == 1) & (in_tok == tok(\"p\")) & (L >= 6)",
+    "split": "dev",
+    "precision": 0.9777879341864717,
+    "recall": 0.9697216934094823,
+    "f1": 0.9737381093259296,
+    "mass_recall": 0.9973848116979132,
+    "correlation": 0.8902035711608572,
+    "n_active": 11031,
+    "n_predicted": 10940,
+    "coverage_by_activation_quartile": [
+      0.8788977519941987,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 268,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "All factual claims hold on the dev profile. Phase: 100% of activation mass is in the copy phase and 0 activations occur in the original or delimiter phases. recall_idx: 100% of mass is at recall_idx==1 and 0 activations occur at any other recall_idx. in_tok=p: 99.7% of mass. Mass share by L: 0.070, 0.224, 0.320 and 0.387 for L=6..9. Activation counts: 11 at L=5 and 0 at L<=4.",
+      "Mean magnitude does rise with L: L=6 has 2463 activations but only 7% of the mass, while L=9 has 3069 activations and 39% of the mass.",
+      "On the test split the false positives are almost all at L=6: 242 of the 243 come from L==6. With L==6 alone the predicate's precision is 0.913, while with L>=7 it is 0.9999. This is a weak boundary effect at the shortest length and the explanation already mentions it.",
+      "Minor systematic sub-pattern inside the L=6 false positives: when p appears again at position 2 (orig(2)==p), precision is only 0.376 on about 93 predicted steps, against 0.932 otherwise. Excluding that case lifts test F1 only slightly, from 0.976 to 0.977, so it is not a meaningful gap.",
+      "The test-split misses (295 steps, 0.2% of the mass) are all very weak (<=0.09 of max) and occur at recall_idx 1 with other first tokens (3, g, t, k). This is scattered noise.",
+      "The label does not overclaim relative to the predicate. One note: the predicate uses in_tok and the explanation says this is equivalent to first_tok, which is true only when the model copies correctly. That is fine here."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(recall_idx == 1) & (in_tok == tok(\"p\")) & ((L >= 7) | ((L == 6) & (orig(2) != tok(\"p\"))))",
+    "better_predicate_test_f1": 0.977
+  }
+}

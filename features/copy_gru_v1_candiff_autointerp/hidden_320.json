@@ -1,0 +1,62 @@
+{
+  "label": "early copy-phase steps (outputting orig token 1, or 2 in long sequences) plus copy-phase input s",
+  "predicate": "(phase == 2) & ((recall_idx == 1) | ((recall_idx == 2) & (L >= 7)) | (in_tok == tok(\"s\")))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires only in the copy phase (essentially zero in the original and delimiter phases). The main trigger is the first copy step after the delimiter (recall_idx 1, input = orig(0), prev_tok = <DEL>): 82% firing rate, 71% of activation mass. It also fires on recall_idx 2, and more often for longer sequences (L >= 7). Separately, whenever the copy-phase input token is s it fires at any position; s is 4.2x enriched. The largest activations (up to 8.2) all come from sequences starting with s, at the first copy step where s is fed back in. Activation at recall_idx >= 3 is weak and rare (about 4% rate) unless the input is s. Rarely fires on first occurrences of a token, and does not depend on output token identity, digit count, or correctness. Dev F1 0.84, mass recall 0.97.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 320,
+    "predicate": "(phase == 2) & ((recall_idx == 1) | ((recall_idx == 2) & (L >= 7)) | (in_tok == tok(\"s\")))",
+    "split": "test",
+    "precision": 0.7832460964135569,
+    "recall": 0.9029245355041381,
+    "f1": 0.8388381393943771,
+    "mass_recall": 0.9704821342593268,
+    "correlation": 0.7007334604863864,
+    "n_active": 707326,
+    "n_predicted": 815404,
+    "coverage_by_activation_quartile": [
+      0.7131967064784654,
+      0.9119842562432139,
+      0.986880128484259,
+      0.9996380725099105
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 320,
+    "predicate": "(phase == 2) & ((recall_idx == 1) | ((recall_idx == 2) & (L >= 7)) | (in_tok == tok(\"s\")))",
+    "split": "dev",
+    "precision": 0.7836788263866742,
+    "recall": 0.9027188863911563,
+    "f1": 0.8389974346903145,
+    "mass_recall": 0.9702749186029033,
+    "correlation": 0.701295501317226,
+    "n_active": 707753,
+    "n_predicted": 815260,
+    "coverage_by_activation_quartile": [
+      0.7130875612499223,
+      0.9119069956707999,
+      0.9863341961591066,
+      0.9995478642236264
+    ]
+  },
+  "gate": "hidden",
+  "feature": 320,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The recall_idx==1 trigger depends strongly on length, and the explanation leaves this out. Test precision by L: L=3 0.19, L=4 0.45, L=5 0.74, L=6 0.89, L=7 0.95, L=8 0.97, L=9 0.99. The 82% figure is an average over lengths. The label says only longer sequences matter for recall_idx 2, but the same gradient applies at recall_idx 1.",
+      "Copy-phase input s is understated as '4.2x enriched'. It is close to deterministic: precision 0.997 at recall_idx>=3, 0.999 at recall_idx 1 and 0.988 at recall_idx 2. The overall 4.2x lift is low only because s in the original phase never fires.",
+      "There is a weak secondary input-token enrichment the explanation does not mention: in_tok d at recall_idx>=3 fires 19% of the time and f 10%, against 1.8% for non-s tokens. This is small in mass (<1%).",
+      "The recall_idx 2 rate rises smoothly with length (L=4 0.05, 5 0.17, 6 0.35, 7 0.53, 8 0.67, 9 0.76). The L>=7 cutoff is arbitrary, since L=7 is only 53% precise. Tested alternatives (L>=4/5 on recall_idx 1, L>=8 on recall_idx 2) give test F1 between 0.832 and 0.843 with no real gain, so the gap is a smooth gradient rather than a systematic miss class.",
+      "Misses with the original predicate on test hold only 3.0% of activation mass. They are scattered weak activations at recall_idx 2 for short L and at recall_idx 3. The false positives are concentrated in recall_idx 1 at short L and recall_idx 2 at L=7, both explained by the length gradient above. The other factual claims check out: firing is copy phase only, top activations are s-initial sequences at the first copy step, and there is no dependence on digits or correctness."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (((recall_idx == 1)&(L>=4)) | ((recall_idx == 2) & (L >= 7)) | (in_tok == tok('s')))",
+    "better_predicate_test_f1": 0.843
+  }
+}

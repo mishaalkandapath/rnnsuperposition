@@ -1,0 +1,74 @@
+{
+  "label": "sequence began with l: original steps t>=3 and <DEL>",
+  "predicate": "(first_tok == tok(\"l\")) & (t >= 3) & (phase <= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires in sequences whose first original token is l, at original-phase steps from t=3 on and at the <DEL> step. It holds the memory of l in slot 0 through the encoding phase. Magnitude peaks around t=4-5 and fades with later t; it is near zero by t=8-9, so long sequences show low <DEL> activations. Top activations are on l l x ... sequences (l at positions 0 and 1). The current input token barely matters. It is silent at t=0-1, almost silent at t=2, and essentially never fires in the copy phase (58 steps). Missed activations are weak (9% of mass) and come mostly from sequences with l at position 1 rather than 0, which fire faintly at t=4-6.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 757,
+    "predicate": "(first_tok == tok(\"l\")) & (t >= 3) & (phase <= 1)",
+    "split": "test",
+    "precision": 0.9251772048043686,
+    "recall": 0.6793410630691133,
+    "f1": 0.7834262512599443,
+    "mass_recall": 0.9074670151774974,
+    "correlation": 0.8778559166775947,
+    "n_active": 101254,
+    "n_predicted": 74349,
+    "coverage_by_activation_quartile": [
+      0.16149166469147508,
+      0.5571620447183376,
+      0.9987358274404456,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 757,
+    "predicate": "(first_tok == tok(\"l\")) & (t >= 3) & (phase <= 1)",
+    "split": "dev",
+    "precision": 0.9250851455757432,
+    "recall": 0.6805428276171349,
+    "f1": 0.7841916947981554,
+    "mass_recall": 0.9072262218272142,
+    "correlation": 0.8777915978803199,
+    "n_active": 102574,
+    "n_predicted": 75459,
+    "coverage_by_activation_quartile": [
+      0.16651068476056777,
+      0.5571673685852441,
+      0.9985181141052138,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 757,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most of the factual claims hold. Firing peaks at t=4: rate 0.058, 33% of mass. It is zero at t=0-1, tiny at t=2 (0.2% of mass) and zero from t>=10. The copy phase has only 58 active steps. first_tok==l carries 90.9% of the mass with 20.7x lift. Test scores reproduce exactly: P 0.925, R 0.679, F1 0.783, mass recall 0.907.",
+      "There is a systematic miss class, not scattered noise. The predicate misses 32% of active steps (32,468 on test), and the bottom two activation quartiles have only 16% and 56% coverage. Most of the misses are sequences with l at position 1 but not position 0 (orig(1)==l & first_tok!=l & t>=3 & phase<=1). That class holds 23.8% of all active test steps, at precision 0.33. Active steps with l at neither position 0 nor 1 make up only 6.4% of active steps, and l at position 2 contributes almost nothing (0.15%). So the feature is specifically 'l in slot 0 (strong) or slot 1 (weak)', and the label 'sequence began with l' leaves out a quarter of its firing events.",
+      "There is also a systematic false-positive class. The t>=3 clause has no upper bound, but firing dies out by t=9 (180 active steps on dev; zero from t=10). The test false positives shown are all <DEL> steps at t=8-9 in L=8/9 sequences. Capping at t<=8 raises precision from 0.925 to 0.959 with no recall loss, and t<=7 raises it to 0.990. The explanation mentions the fade but the predicate and label do not encode it.",
+      "The agent's reason for dropping the second clause ('cut precision to 0.80') is not a good trade-off: a properly bounded two-clause predicate reaches test F1 0.863 vs 0.783, with mass recall 0.986 and precision 0.85."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "l in an early slot: strongly when the sequence starts with l (original steps t=3-8 and <DEL>, peak t=4), weakly when l is the second token (t=4-6)",
+    "better_predicate": "((first_tok == tok('l')) & (t >= 3) & (t<=8) & (phase <= 1)) | ((orig(1)==tok('l')) & (t>=4) & (t<=6) & (phase==0))",
+    "better_predicate_test_f1": 0.863
+  },
+  "final_label": "l in an early slot: strongly when the sequence starts with l (original steps t=3-8 and <DEL>, peak t=4), weakly when l is the second token (t=4-6)",
+  "scorecard": {
+    "format": "top40",
+    "summary": "Weighted combination of 40 cues. Raise it: orig0=l (+11.37), recall_idx=3 & in_tok=l (+10.46), orig1=l (+7.27), t=3 & prev_tok=u (+6.88), t=3 & prev_tok=t (+6.64), t=3 & prev_tok=e (+6.31). Lower it: phase=2 (-12.36), prev2_tok=- (-8.00), orig0=e (-6.78), orig0=u (-6.74).",
+    "test_f1": 0.9116348473079595,
+    "test_precision": 0.9445538683101425,
+    "test_recall": 0.8809330989393012,
+    "full_test_f1": 0.9404444444444445,
+    "full_n_cues": 448,
+    "top40_test_f1": 0.9116348473079595,
+    "slot2_test_f1": 0.8612391340990633,
+    "file": "scorecards/update_757.json"
+  }
+}

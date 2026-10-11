@@ -1,0 +1,63 @@
+{
+  "label": "token s at the start of the sequence (step 0, or step 1 after certain tokens)",
+  "predicate": "(in_tok == tok(\"s\")) & ((t == 0) | ((t == 1) & isin(prev_tok, [tok(\"b\"),tok(\"l\"),tok(\"s\"),tok(\"v\"),tok(\"q\"),tok(\"a\"),tok(\"w\"),tok(\"k\"),tok(\"y\"),tok(\"d\"),tok(\"3\")])))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only when the input is the letter s in the first three original positions; never on any other token, and never in the delimiter or copy phases. At step 0, s always fires with a fixed activation of about 0.28 of max. At step 1, whether s fires depends deterministically on the preceding token: it fires after b (max activation, 1.0), d (~0.54), s (~0.62), 3 (~0.27), y (~0.07) and also after l, v, q, a, w, k, and it is silent after h, i, g and other tokens. A small tail of weak activations (~3% of active steps) occurs for s at step 2 (e.g. after d b, l q, l v). The simpler s-at-t<=1 predicate gives F1 0.80; the prev-token list brings precision to 1.0.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 85,
+    "predicate": "(in_tok == tok(\"s\")) & ((t == 0) | ((t == 1) & isin(prev_tok, [tok(\"b\"),tok(\"l\"),tok(\"s\"),tok(\"v\"),tok(\"q\"),tok(\"a\"),tok(\"w\"),tok(\"k\"),tok(\"y\"),tok(\"d\"),tok(\"3\")])))",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.9668804320310522,
+    "f1": 0.9831613719728007,
+    "mass_recall": 0.9762217319315714,
+    "correlation": 0.8878077191664732,
+    "n_active": 23702,
+    "n_predicted": 22917,
+    "coverage_by_activation_quartile": [
+      0.9090448869389133,
+      1.0,
+      1.0,
+      0.9584810126582278
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 85,
+    "predicate": "(in_tok == tok(\"s\")) & ((t == 0) | ((t == 1) & isin(prev_tok, [tok(\"b\"),tok(\"l\"),tok(\"s\"),tok(\"v\"),tok(\"q\"),tok(\"a\"),tok(\"w\"),tok(\"k\"),tok(\"y\"),tok(\"d\"),tok(\"3\")])))",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.9656199472385328,
+    "f1": 0.9825093081652091,
+    "mass_recall": 0.9756906283858356,
+    "correlation": 0.88473644347107,
+    "n_active": 23502,
+    "n_predicted": 22694,
+    "coverage_by_activation_quartile": [
+      0.90571817562968,
+      1.0,
+      1.0,
+      0.9567659574468085
+    ]
+  },
+  "gate": "hidden",
+  "feature": 85,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Phase claims hold. On the dev split all activations fall in the original phase (23502 steps), with 0 in the delimiter or copy phase. Every one has in_tok = s. By position: t=0 has 16552, t=1 has 6142, t=2 has 808 and t>=3 has 0.",
+      "Step 0: s at t==0 has precision 1.0 on dev, so it always fires. The implied magnitude is about 0.33 absolute against a max of 1.179, which is about 0.28 relative, as claimed.",
+      "Step 1: s at t==1 with prev_tok outside the 11-token set has precision 0.0 on dev (10592 predicted) and on test (10559 predicted). The lookup is exact in both directions, and the claim that it stays silent after other tokens holds.",
+      "The predicate has 0 false positives on test. All 785 test misses are at step 2, holding 2.4% of activation mass. This matches the tail the explanation already discloses.",
+      "The step-2 tail cannot be captured cleanly. s at t==2 with prev_tok after b reaches only precision 0.42. Requiring both prev_tok and prev2_tok in the set gives precision 0.31. Adding that clause to the full predicate lowers test F1 to 0.966 (precision 0.939, recall 0.996), versus 0.983 for the original. Some step-2 activations are strong (0.64 to 0.68, after 'b b' or 'l b'), so calling the tail weak is a slight understatement, but it is still a small share of mass.",
+      "Minor: the label says 'first three original positions' only in the explanation. The label itself says step 0 or 1, which matches the predicate. There is no meaningful overclaim."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

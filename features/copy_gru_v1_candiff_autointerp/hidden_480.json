@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input token i fed back (from 3rd output onward)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"i\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token detector for the letter i, but only in the copy phase: it fires when the fed-back input is i (that is, the model just output an original i) and the step is far enough into the copy (recall_idx >= 3). It never fires during the original phase, on the delimiter, or on any input other than i. On copied i at recall_idx 1-2 it is mostly silent or very weak (lowest quartile), and the firing rate rises with position. Magnitude also grows with position: the top examples are i at recall_idx 6-7 in L=9 sequences, often the first of a repeated i i pair near the end, where the second i is weaker. Only first-occurrence inputs are affected trivially (copy-phase inputs are never first occurrences). The FPs are mostly early copied i at recall_idx 3 in short sequences.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 480,
+    "predicate": "(phase == 2) & (in_tok == tok(\"i\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9409999306085629,
+    "recall": 0.9192793953157306,
+    "f1": 0.9300128589798541,
+    "mass_recall": 0.9785608317900827,
+    "correlation": 0.8554233529364131,
+    "n_active": 59006,
+    "n_predicted": 57644,
+    "coverage_by_activation_quartile": [
+      0.7146827548806941,
+      0.9645471800433839,
+      0.997898447562877,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 480,
+    "predicate": "(phase == 2) & (in_tok == tok(\"i\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9428156297026621,
+    "recall": 0.9180899444163719,
+    "f1": 0.9302885230792863,
+    "mass_recall": 0.9786421795023852,
+    "correlation": 0.8574131108059656,
+    "n_active": 59370,
+    "n_predicted": 57813,
+    "coverage_by_activation_quartile": [
+      0.7086842282557434,
+      0.9654382537222933,
+      0.9983155908907155,
+      0.9999326236356286
+    ]
+  },
+  "gate": "hidden",
+  "feature": 480,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Main claims hold. Test scores reproduce: P 0.941, R 0.919, F1 0.930, mass recall 0.979. On dev, all activation is in the copy phase and on in_tok == i (rate 0.297, lift 32x). Original phase, delimiter and every other token are at exactly 0.",
+      "The recall_idx gradient is real. Firing rate is 0.0003 at recall_idx 1, 0.009 at 2, 0.026 at 3 and 0.033-0.034 at 4-8. The recall_idx==2 slice has precision 0.28 and holds only 2.1% of activation mass. Missed activations are weak (around 0.01-0.2 of max) copied i at recall_idx 1-2. That matches the claim that early copied i is mostly silent or in the lowest quartile.",
+      "Almost all false positives are at recall_idx==3, where precision is 0.80. At recall_idx>=4 precision is 0.996. Splitting recall_idx==3 by L, to_go, in_count, prev_tok or correct turns up no systematic pattern, so the residual looks like threshold noise at the onset.",
+      "Minor overclaim: the explanation says false positives come 'mostly in short sequences'. At recall_idx==3, precision is 0.84 for L<=5 and 0.78 for L>=7, so the false positives are not concentrated in short sequences.",
+      "The 'second i of an i i pair is weaker' claim is weakly supported. Precision is 0.86 when prev_tok==i, versus 0.94 overall. This slice is tiny (2.8% recall) and does not matter to the predicate.",
+      "Adding correct==1 or changing the handling of recall_idx 3 makes no measurable difference: F1 goes from 0.9300 to 0.9303. No better predicate was found."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

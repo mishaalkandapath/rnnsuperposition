@@ -1,0 +1,64 @@
+{
+  "label": "<DEL> step of longer sequences (plus the last original steps of length-9 sequences)",
+  "predicate": "((phase == 1) & (L >= 6)) | ((phase == 0) & (t >= 8))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires mostly on the <DEL> input (87% of activation mass; rate 0.65 at the delimiter). The rate and mass at the delimiter go up with sequence length L, and the strongest activations (near max) are <DEL> steps of L=8-9 sequences. A weaker ramp shows up in the last few original-phase steps of long sequences (t>=7, rate 0.65 at orig_idx 8), climbing toward the <DEL>. Sequences whose first token is p, t or k fire more often and more strongly, so short sequences that start with them still fire at <DEL>, while many long sequences that start with digits or x/b/m stay silent. Almost never fires in the copy phase (1140 of 2.7M steps) or at t<3. Input token identity outside <DEL> has no effect.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 155,
+    "predicate": "((phase == 1) & (L >= 6)) | ((phase == 0) & (t >= 8))",
+    "split": "test",
+    "precision": 0.8119125806816895,
+    "recall": 0.7591472068410879,
+    "f1": 0.7846438088718606,
+    "mass_recall": 0.8917522224201121,
+    "correlation": 0.730881044448861,
+    "n_active": 443906,
+    "n_predicted": 415057,
+    "coverage_by_activation_quartile": [
+      0.4747740522811033,
+      0.6933508745055281,
+      0.8865250144175317,
+      0.9819420415224913
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 155,
+    "predicate": "((phase == 1) & (L >= 6)) | ((phase == 0) & (t >= 8))",
+    "split": "dev",
+    "precision": 0.8111928690786337,
+    "recall": 0.7597950443491733,
+    "f1": 0.7846531684543822,
+    "mass_recall": 0.8921679561484239,
+    "correlation": 0.7306352568111039,
+    "n_active": 443413,
+    "n_predicted": 415318,
+    "coverage_by_activation_quartile": [
+      0.4760856622223826,
+      0.6934589050363995,
+      0.8868501529051988,
+      0.9827880165624746
+    ]
+  },
+  "gate": "hidden",
+  "feature": 155,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold. Phase shares on dev are delimiter 0.868, original 0.132 and copy 0.000 (1140 steps). There are zero activations at t<3. Delimiter rate rises with L: L=5 0.33, L=6 0.56, L=9 0.997. The original predicate reproduces on test: P 0.812, R 0.759, F1 0.785, mass recall 0.892.",
+      "The first-token effect is a systematic gap that the original predicate ignores. At <DEL>, sequences whose first token is p, t or k fire far above the base rate for their length: L=4 precision 0.75, while all L<6 <DEL> steps together score 0.25; L=6 0.97 vs 0.52 for other first tokens. Test misses are dominated by short p/t/k sequences firing at <DEL> and by original-phase ramps at t=4-7 (e.g. 'p z t s w m z d' fires from t=5 on).",
+      "The explanation's claim that long sequences starting with digits or x/b/m stay silent is overstated. <DEL> at L=7 with a digit first token fires at a rate of 0.92, and with an x/b/m first token at 0.85.",
+      "The original-phase ramp follows absolute position t, not 'climbing toward the <DEL>' / 'last original steps'. At t=7, L=8 (the last original step) and L=9 (two steps before <DEL>) fire at the same rate, 0.271 each. The rate depends on t, not on distance to the delimiter. Calling it 'last original steps of length-9 sequences' is only true because t>=8 forces L=9.",
+      "There is also a smaller history effect: if the sequence contains an x, the L=6 <DEL> rate drops from 0.61 to 0.37. Many false positives are L=6-7 <DEL> steps of sequences that contain x.",
+      "F1 is 0.785, below 0.8. Adding the first_tok term pushes test F1 above 0.8 (0.811), so leaving it out leaves a known systematic class unexplained."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Position/length ramp peaking at <DEL>: fires at the delimiter of longer sequences (L>=6, plus shorter sequences starting with p/t/k) and in original-phase steps at absolute t>=7-8; boosted when the first token is p/t/k; silent in the copy phase",
+    "better_predicate": "((phase==1) & ((L>=6) | ((L>=4) & isin(first_tok,[tok('p'),tok('t'),tok('k')])))) | ((phase==0) & ((t>=8) | ((t>=7) & isin(first_tok,[tok('p'),tok('t'),tok('k')]))))",
+    "better_predicate_test_f1": 0.811
+  },
+  "final_label": "Position/length ramp peaking at <DEL>: fires at the delimiter of longer sequences (L>=6, plus shorter sequences starting with p/t/k) and in original-phase steps at absolute t>=7-8; boosted when the first token is p/t/k; silent in the copy phase"
+}

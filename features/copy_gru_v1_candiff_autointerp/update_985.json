@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input b, from the 3rd output onward",
+  "predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires when the fed-back input token is the letter b during the copy phase, i.e. the model has just emitted b and is now outputting the original token after it. Almost all activation mass is in the copy phase (it essentially never fires on b in the original phase or on any other token). Magnitude grows with how far into the copy the b occurs: weak or absent when b is the 2nd original token (recall_idx 2, rate ~0.6%), moderate at recall_idx 3 (the lowest-quartile examples are mostly here), strongest at recall_idx >= 4 (precision 1.0 with that tighter condition). Top activations are b at original positions 5-6 of long sequences. It does not depend on the next output token, the first token, or digit count.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 985,
+    "predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9240780535144877,
+    "recall": 0.9452589034053642,
+    "f1": 0.9345484817946808,
+    "mass_recall": 0.9736919561890611,
+    "correlation": 0.8867825674689834,
+    "n_active": 56411,
+    "n_predicted": 57704,
+    "coverage_by_activation_quartile": [
+      0.8124512515067716,
+      0.9761752818549245,
+      0.9940438204637311,
+      0.9983690256701178
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 985,
+    "predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9258052213708698,
+    "recall": 0.9425198101053598,
+    "f1": 0.9340877489090417,
+    "mass_recall": 0.9721028357800411,
+    "correlation": 0.8869198619435341,
+    "n_active": 56663,
+    "n_predicted": 57686,
+    "coverage_by_activation_quartile": [
+      0.8065085415784272,
+      0.9728928420160948,
+      0.992870252717775,
+      0.9978115072361454
+    ]
+  },
+  "gate": "update",
+  "feature": 985,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Systematic miss: b as the 2nd original token (recall_idx == 2) fires almost every time when the sequence is short. Precision of copy & b & recall_idx==2 is 1.00 at to_go 0 (451 steps) and 0.99 at to_go 1 (2483 steps), but 0.06 at to_go 2 and 0.0 at to_go >= 3. The explanation's 'about 0.6% at recall_idx 2' is a per-step rate over all tokens. It hides the fact that b fires about 100% of the time here in short sequences (L = 3-4) and never in long ones.",
+      "The claim 'activations are moderate at recall_idx 3' hides a dependence on length. Precision at recall_idx 3 is 1.0 at to_go 0-1, 0.93 at to_go 2, 0.61 at to_go 3, 0.42 at to_go 4 and 0.51 at to_go 5. The false positives in the original predicate (precision 0.926) are mostly b at recall_idx 3 in long sequences.",
+      "So the gate is not a fixed 'from the 3rd output onward'. Whether b fires early in the copy depends on how close the step is to the end of the sequence (to_go small). The profile shows this directly: no activation at all when to_go >= 6. The label overclaims a pure recall-position threshold.",
+      "The core claims hold: 100% of activation mass is in the copy phase, 99.8% of the mass is on input b, and copy & b & recall_idx >= 4 has precision 1.0 on dev. Activation does not depend on the output token or the previous token.",
+      "Original predicate scores on test: P 0.924, R 0.945, F1 0.935. The better predicate covers the short-sequence recall_idx 2 cases: test P 0.921, R 0.995, F1 0.956, mass recall 0.9997. A variant that also drops long-sequence recall_idx 3 gets test P 0.988, R 0.920, F1 0.952. Misses left on test hold 0.0% of the activation mass."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input b, except early in the copy of long sequences (fires from recall_idx >= 3, or recall_idx 2 when only 0-1 steps remain)",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"b\")) & ((recall_idx >= 3) | (to_go <= 1))",
+    "better_predicate_test_f1": 0.956
+  },
+  "final_label": "copy-phase input b, except early in the copy of long sequences (fires from recall_idx >= 3, or recall_idx 2 when only 0-1 steps remain)"
+}

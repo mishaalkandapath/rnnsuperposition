@@ -1,0 +1,63 @@
+{
+  "label": "1-2 steps after an early u in the original phase",
+  "predicate": "(phase == 0) & (t<=5) & ((prev_tok == tok(\"u\")) | (prev2_tok == tok(\"u\")))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires during the original-input phase on the one or two steps right after the letter u was input, as long as it is early in the sequence (t<=5). 99% of activation mass is in the original phase and almost nothing is in the copy phase. Magnitude is largest after repeated leading u (for example u u X, where X gets the max activation), strong one step after u, weaker two steps after, and fades by three or more steps after. It falls off with position: activation is rare at t>=6 even right after a u. It does not depend on the identity of the current input token. A weak low-magnitude tail (lowest quartile) fires at t=2-5 without any recent u and is not captured. It does not fire at t=0, in the copy phase, or on the u itself.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 823,
+    "predicate": "(phase == 0) & (t<=5) & ((prev_tok == tok(\"u\")) | (prev2_tok == tok(\"u\")))",
+    "split": "test",
+    "precision": 0.937875828258455,
+    "recall": 0.6661352890929766,
+    "f1": 0.7789873514366427,
+    "mass_recall": 0.946947001978814,
+    "correlation": 0.8636990063993862,
+    "n_active": 183799,
+    "n_predicted": 130545,
+    "coverage_by_activation_quartile": [
+      0.07460282916213275,
+      0.6057453754080522,
+      0.9860935799782372,
+      0.9981065964438834
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 823,
+    "predicate": "(phase == 0) & (t<=5) & ((prev_tok == tok(\"u\")) | (prev2_tok == tok(\"u\")))",
+    "split": "dev",
+    "precision": 0.9381550560766253,
+    "recall": 0.6660583446035858,
+    "f1": 0.7790310233874477,
+    "mass_recall": 0.9468804845823665,
+    "correlation": 0.8638529066694529,
+    "n_active": 184113,
+    "n_predicted": 130714,
+    "coverage_by_activation_quartile": [
+      0.07332333963370918,
+      0.6070000869036238,
+      0.9856391761536456,
+      0.998283653428348
+    ]
+  },
+  "gate": "update",
+  "feature": 823,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Test scores reproduce exactly: precision 0.938, recall 0.666, F1 0.779, mass recall 0.947. Coverage by activation quartile is 0.07, 0.61, 0.99, 1.00, so nearly all of the misses are in the weakest activations.",
+      "Each claim checks out. t==0 never fires. Copy phase has 1 active step out of 2.7M. The delimiter step holds about 1% of activation mass (precision 0.15 even when prev_tok is u). t>=6 right after a u gives precision 0.06. The u input step itself, without a u before it, gives precision 0.03. Firing one step after a u has precision about 1.0 at t=1-4. Firing two steps after a u has precision about 0.96. u u X has precision 1.0, and the top activations are all u u u X at t=3.",
+      "Minor nuance: the fade over t is gradual, not a hard cutoff. At t=5 precision drops to about 0.72 for both the one-step-after and two-steps-after cases, then falls to about 0.06 at t=6. This is consistent with the t<=5 bound.",
+      "Three steps after a u (and not one or two) gives precision 0.38 and covers only 8% of active steps and 2% of mass. Adding it raises recall to 0.75 but lowers F1 to 0.777, so it is not worth including.",
+      "The weak tail with no u seen (21.7% of active steps, 1.8% of mass) has small lifts for prev_tok p and v, but adding p lowers F1 to 0.685. It looks like scattered low-magnitude noise, not a systematic class.",
+      "No systematic false-positive class was found. The false positives cluster at t=5, which matches the documented fade."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

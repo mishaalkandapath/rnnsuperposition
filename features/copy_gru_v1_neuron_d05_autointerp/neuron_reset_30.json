@@ -1,0 +1,64 @@
+{
+  "label": "<DEL> delimiter in short sequences (L<=6), plus early 1/c/j inputs",
+  "predicate": "((phase == 1) & (L <= 6)) | ((phase == 0) & isin(in_tok, [tok(\"1\"), tok(\"c\"), tok(\"j\")]) & (t >= 2) & (t <= 3))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Mainly a delimiter-step unit: about 85% of activation mass is on the <DEL> input. It fires there in 48% of sequences overall, nearly always when L<=5 (98% precision) and often at L=6, but rarely for L>=7. Activation is largest for the shortest sequences: all top examples are L=3-4. The secondary component (about 11% of mass, lower magnitude) is the original-phase inputs 1, c, j (and more weakly t) at positions 2-3. It is essentially silent in the copy phase (0.4% of mass), at t=0-1, and on other tokens in the original phase. Most misses are weak activations on <DEL> in long sequences.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 30,
+    "predicate": "((phase == 1) & (L <= 6)) | ((phase == 0) & isin(in_tok, [tok(\"1\"), tok(\"c\"), tok(\"j\")]) & (t >= 2) & (t <= 3))",
+    "split": "test",
+    "precision": 0.8201061227992391,
+    "recall": 0.8839098532494759,
+    "f1": 0.8508134816122738,
+    "mass_recall": 0.962920299566396,
+    "correlation": 0.7616359839525283,
+    "n_active": 64872,
+    "n_predicted": 69919,
+    "coverage_by_activation_quartile": [
+      0.6592674805771365,
+      0.8929584412381305,
+      0.9839684301393513,
+      0.9994450610432852
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 30,
+    "predicate": "((phase == 1) & (L <= 6)) | ((phase == 0) & isin(in_tok, [tok(\"1\"), tok(\"c\"), tok(\"j\")]) & (t >= 2) & (t <= 3))",
+    "split": "dev",
+    "precision": 0.8156721019948658,
+    "recall": 0.8832088451325373,
+    "f1": 0.8480980570508329,
+    "mass_recall": 0.9628676309402935,
+    "correlation": 0.7599986049959244,
+    "n_active": 64397,
+    "n_predicted": 69729,
+    "coverage_by_activation_quartile": [
+      0.6550310559006212,
+      0.8936579911795763,
+      0.9844089695012113,
+      0.999751537362569
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 30,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I checked the claims against the dev split and they hold. <DEL> carries 85.4% of activation mass and the unit fires at <DEL> in 48.4% of sequences. The <DEL> & L<=5 clause alone has precision 0.983. At L=6 the unit fires on <DEL> 67% of the time, at L>=7 only 8%. The copy phase holds 0.4% of mass, and the unit is never active at t=0 and almost never at t=1.",
+      "The original-phase clause holds about 13% of mass, a little above the stated 11%. Its two positions behave very differently. At t==2 it is reliable: inputs 1/c/j have precision 0.92. At t==3 most predicted steps do not fire (precision 0.37). Restricting t=3 to steps where no 1/c/j/t was seen earlier raises this only to 0.45. So '1/c/j at positions 2-3' overstates position 3, which is a weak and inconsistent part.",
+      "Input t at t=2 fires 49% of the time and is left out of the predicate. The explanation does mention it ('t more weakly'), so this is a small omission, not a mistake.",
+      "At L=6, about 33% of <DEL> steps do not fire. Whether the sequence contains 1/c/j makes no difference (0.65 vs 0.70), so these misses look like a graded fall-off with length rather than a missing content rule.",
+      "The test-split misses show no systematic class. Missed activations hold 3.7% of mass and are mostly weak <DEL> firing at L>=7 plus some t/c inputs. False positives are mostly L=6 <DEL> steps and 1/c/j at t=3.",
+      "Small alternatives barely change the score. Dropping the t=3 part gives test F1 0.856 (P 0.889, R 0.825). Keeping t=3 only when no 1/c/j/t came before gives test F1 0.859. The original predicate scores 0.851, so it is near the best simple description."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "<DEL> delimiter in short sequences (L<=6, strongest for L<=4), plus 1/c/j inputs at position 2 (weaker at 3)",
+    "better_predicate": "((phase == 1) & (L <= 6)) | ((phase == 0) & isin(in_tok, [tok(\"1\"), tok(\"c\"), tok(\"j\")]) & (t == 2)) | ((phase == 0) & isin(in_tok, [tok(\"1\"), tok(\"c\"), tok(\"j\")]) & (t == 3) & ~seen([tok(\"1\"), tok(\"c\"), tok(\"j\"), tok(\"t\")]))",
+    "better_predicate_test_f1": 0.859
+  },
+  "final_label": "<DEL> delimiter in short sequences (L<=6, strongest for L<=4), plus 1/c/j inputs at position 2 (weaker at 3)"
+}

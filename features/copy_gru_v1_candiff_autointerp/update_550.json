@@ -1,0 +1,60 @@
+{
+  "label": "copy-phase input j (fed-back j at original position >= 2)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"j\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token detector for the letter j as a copy-phase input, i.e. when the model has just re-emitted a j and that j is fed back. All activation mass is in the copy phase and essentially all of it is on in_tok == j; it never fires on j in the original phase or at the delimiter. It is weak or silent when the fed-back j is one of the first two original tokens (recall_idx <= 2; e.g. at recall_idx 2 it fires weakly, around 0.1-0.3 of max), and from recall_idx >= 3 on it fires about 3.3% of copy steps. The strongest activations are when the j is near the end of the sequence (to_go 0-1, e.g. a f j k <DEL> a f [j]). The remaining false positives are mostly j at original position 2 in long sequences (L = 7-9), where it sometimes stays silent. Output token, previous tokens, and first token have essentially no effect.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 550,
+    "predicate": "(phase == 2) & (in_tok == tok(\"j\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9260151888199188,
+    "recall": 0.9453570290650335,
+    "f1": 0.9355861537383505,
+    "mass_recall": 0.9725198471293979,
+    "correlation": 0.8952375708121322,
+    "n_active": 56494,
+    "n_predicted": 57674,
+    "coverage_by_activation_quartile": [
+      0.813792126876239,
+      0.9839280657037667,
+      0.9869716065991645,
+      0.9967429016497911
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 550,
+    "predicate": "(phase == 2) & (in_tok == tok(\"j\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9254084115397984,
+    "recall": 0.9465637999075621,
+    "f1": 0.9358665658997838,
+    "mass_recall": 0.9734945719619785,
+    "correlation": 0.8953039351566754,
+    "n_active": 56254,
+    "n_predicted": 57540,
+    "coverage_by_activation_quartile": [
+      0.8147042093287827,
+      0.9852104664391353,
+      0.9889781696650786,
+      0.99736898243618
+    ]
+  },
+  "gate": "update",
+  "feature": 550,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the explanation says activations at recall_idx<=2 reach only about 0.1-0.3 of max. On the test split the missed activations include 0.58 ('1 j d <DEL> 1 [j]', L=3) and 0.41 ('r j j <DEL> r [j]'). Short sequences (L=3-4) can fire moderately at recall_idx=2. These misses hold only 2.7% of activation mass.",
+      "The false positives are systematic but the explanation already discloses them: j at recall_idx==3 with L>=7 is active only 49% of the time (8300 predicted steps, 1.1% of mass). By contrast, recall_idx==3 with L<=6 has precision 0.99 and recall_idx>=4 has precision 1.00. The feature looks like a graded function of position and outputs remaining, not a hard cutoff at recall_idx 3. No alternative predicate improved test F1 by more than 0.002 (best was to_go<=4 & (recall_idx>=3 | L==3): F1 0.937).",
+      "Verified claims: 100% of activation mass is in the copy phase. in_tok j carries all the mass (fewer than 50 active steps on any other token). Nothing fires in the original or delimiter phases. to_go 0-1 carries 67% of the mass, and the top examples are j at to_go 0. out_tok, prev_tok and first_tok show flat lift. The reported test scores reproduce exactly (P 0.926, R 0.945, F1 0.936, mass recall 0.973)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

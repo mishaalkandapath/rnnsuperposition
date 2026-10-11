@@ -1,0 +1,63 @@
+{
+  "label": "<DEL> step of long sequences (L>=8) whose first token is in a specific set (a,c,d,f,n,q,s,u,v,w,y,0,1)",
+  "predicate": "(phase == 1) & (L >= 8) & isin(first_tok, [0,2,3,5,13,16,18,20,21,22,24,26,27])",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only at the delimiter step (100% of mass), i.e. when the model is about to emit original token 0. It needs a long sequence: L=9 holds 72% of mass, L=8 27%, L=7 <1% (weak), and it never fires for L<=6. Within those steps, which token is first (the token about to be recalled) picks out a set: a, c, d, f, n, q, s, u, v, w, y, 0 have about 85-99% firing rate, 1 about 70%, e/i/l/x about 30-45%, and the others almost never fire. Magnitude is higher for L=9 than L=8, and highest when the first token is q, c, n or d. It never fires in the original-input or copy phases. Dev: P=0.91, R=0.81, F1=0.86, mass recall 0.93. Most misses are weak activations on e/i/l/x-first or L=7 sequences.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 123,
+    "predicate": "(phase == 1) & (L >= 8) & isin(first_tok, [0,2,3,5,13,16,18,20,21,22,24,26,27])",
+    "split": "test",
+    "precision": 0.913111313616657,
+    "recall": 0.8112587249598253,
+    "f1": 0.8591769787911266,
+    "mass_recall": 0.9323848601887819,
+    "correlation": 0.8196874369351148,
+    "n_active": 81519,
+    "n_predicted": 72426,
+    "coverage_by_activation_quartile": [
+      0.49151128557409224,
+      0.7964180569185476,
+      0.9589303238469087,
+      0.9981844055154816
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 123,
+    "predicate": "(phase == 1) & (L >= 8) & isin(first_tok, [0,2,3,5,13,16,18,20,21,22,24,26,27])",
+    "split": "dev",
+    "precision": 0.9140605384293485,
+    "recall": 0.8075046210720888,
+    "f1": 0.857484951583355,
+    "mass_recall": 0.930642354717642,
+    "correlation": 0.8186961272280273,
+    "n_active": 81150,
+    "n_predicted": 71690,
+    "coverage_by_activation_quartile": [
+      0.48348777602523657,
+      0.7930303627760252,
+      0.9554394439789028,
+      0.9980775866318332
+    ]
+  },
+  "gate": "update",
+  "feature": 123,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Confirmed: 100% of the mass is at the delimiter step (phase 1). The feature never fires in the original or copy phases and never fires for L<=6. L=9 holds 72% of mass, L=8 holds 27%, L=7 holds 0.7% (and fires on only 3.1% of L=7 delimiter steps).",
+      "The per-first-token firing rates in the explanation average L=8 and L=9 together, which hides a systematic length-by-token interaction. Dev rates for L=9 / L=8: e 0.75/0.13, i 0.77/0.07, l 0.56/0.02, x 0.73/0.07, '1' 0.96/0.43, '2' 0.35/0.00. So e, i, l and x are not 'about 30-45%' everywhere: they fire about 56-77% of the time at L=9 and almost never at L=8. '1' is not 'about 70%': it is 96% at L=9 and 43% at L=8.",
+      "Within the core set, L=8 rates are clearly below 85-99% for s (0.69), v (0.70), y (0.73), f (0.77) and '0' (0.88), while at L=9 every core token is about 99-100%. So the claimed rate of about 85-99% for the core set only holds at L=9.",
+      "Systematic miss class: L=9 delimiter steps whose first token is e, i, l or x. These are about 70% active and the predicate excludes them. Including them, plus '1' only at L=9, raises test F1 from 0.859 to 0.897 and mass recall from 0.932 to 0.974.",
+      "The misses that remain after the fix are mostly weak (about 0.0-0.2 of max) activations on L=7 steps or on borderline tokens. The false positives are scattered over L=8 sequences with borderline tokens. This looks like graded noise."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "<DEL> step of long sequences, with a first-token set that grows with length: at L=9 the first token is any of a,c,d,e,f,i,l,n,q,s,u,v,w,x,y,0,1; at L=8 it is the smaller set a,c,d,f,n,q,s,u,v,w,y,0",
+    "better_predicate": "(phase == 1) & (((L == 9) & isin(first_tok, [0,2,3,4,5,8,11,13,16,18,20,21,22,23,24,26,27])) | ((L == 8) & isin(first_tok, [0,2,3,5,13,16,18,20,21,22,24,26])))",
+    "better_predicate_test_f1": 0.897
+  },
+  "final_label": "<DEL> step of long sequences, with a first-token set that grows with length: at L=9 the first token is any of a,c,d,e,f,i,l,n,q,s,u,v,w,x,y,0,1; at L=8 it is the smaller set a,c,d,f,n,q,s,u,v,w,y,0"
+}

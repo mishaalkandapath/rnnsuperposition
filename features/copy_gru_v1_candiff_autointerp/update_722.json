@@ -1,0 +1,63 @@
+{
+  "label": "copy phase: input b while outputting b (copying a bb pair), late positions",
+  "predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (out_tok == tok(\"b\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, only when the input token is b (the model just emitted b), and almost entirely when the current output is also b, i.e. while copying a doubled b (bb) from the original. It never fires in the original phase or at the delimiter. Strongest at the first b of a bb run (input b, output b); within bbb runs the second b->b step is weaker (about 0.4-0.6 of the first). It is weak or absent when the bb pair is near the start of the sequence (recall_idx <= 2). Residual low-magnitude activity (about 7% of mass) appears on input b with a different output, mostly s. Dev: P 0.95, R 0.74, F1 0.83, mass recall 0.89.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 722,
+    "predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (out_tok == tok(\"b\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9371873262923847,
+    "recall": 0.7042606516290727,
+    "f1": 0.8041974719771047,
+    "mass_recall": 0.8777791778606111,
+    "correlation": 0.8217333417962988,
+    "n_active": 2394,
+    "n_predicted": 1799,
+    "coverage_by_activation_quartile": [
+      0.29549248747913187,
+      0.654424040066778,
+      0.8913043478260869,
+      0.9765886287625418
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 722,
+    "predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (out_tok == tok(\"b\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9510056730273336,
+    "recall": 0.7423510466988728,
+    "f1": 0.8338231969251639,
+    "mass_recall": 0.8936764362585722,
+    "correlation": 0.8283843534786586,
+    "n_active": 2484,
+    "n_predicted": 1939,
+    "coverage_by_activation_quartile": [
+      0.355877616747182,
+      0.7246376811594203,
+      0.9146537842190016,
+      0.9742351046698873
+    ]
+  },
+  "gate": "update",
+  "feature": 722,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: recall is about 0.70. About 24% of active test steps are input b with an output other than b (precision 0.0065 for that class, 8.8% of activation mass). The largest piece is output s (precision 0.08-0.12, about 4% of mass). Sub-predicates on next_out==b, to_go==0, in_count==1 and recall_idx>=5 each have precision below 0.08, so this looks like scattered weak noise, not a systematic class. The explanation already discloses it.",
+      "Checked: the feature never fires in the original or delimiter phase, and 100% of activation mass is on input b (profile).",
+      "Checked: bb pairs at recall_idx==2 have precision 0.24 and 3.4% of mass on the test split. Dropping the recall_idx>=3 clause lowers dev F1 from 0.83 to 0.71. The 'weak or absent near the start' claim holds.",
+      "Checked: the second b->b step in bbb runs (prev_tok==b) has precision 0.79 but only 2.6% of mass, which matches 'weaker'. Activation there varies (one example is 0.19, below the stated 0.4-0.6 range).",
+      "Checked: false positives at the last step (to_go==0) are few; that slice has precision 0.92.",
+      "Reproduced the test scores: P 0.937, R 0.704, F1 0.804, mass recall 0.878 (prev_tok!=b variant: F1 0.79). Adding output s drops F1 to 0.63, so no better predicate was found."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

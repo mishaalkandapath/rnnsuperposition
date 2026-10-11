@@ -1,0 +1,63 @@
+{
+  "label": "third input token, right after an a in position 2 (\"_ a [x]\")",
+  "predicate": "(phase == 0) & (prev_tok == tok(\"a\")) & (t == 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the original phase, almost entirely (98.6% of mass) at step t=2 when the previous input (original token 1) was \"a\"; every activation has prev_tok == a. A small weak tail (1.4% of mass) fires at t=3 when original token 2 was a. Never fires at the delimiter or in the copy phase, nor after any token other than a. Magnitude depends on the first token: largest (up to max) for sequences beginning \"u a\", and also high after w, d, 0, b. With first tokens like y, t, h, e, 3, r it is often silent, which accounts for most false positives (dev precision 0.71). The current input token and L have little effect.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 33,
+    "predicate": "(phase == 0) & (prev_tok == tok(\"a\")) & (t == 2)",
+    "split": "test",
+    "precision": 0.7098246456882056,
+    "recall": 0.9523809523809523,
+    "f1": 0.8134053607679868,
+    "mass_recall": 0.9861519472334026,
+    "correlation": 0.7099161616173157,
+    "n_active": 12411,
+    "n_predicted": 16652,
+    "coverage_by_activation_quartile": [
+      0.8546567837576539,
+      0.955526909442475,
+      0.9993554624556881,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 33,
+    "predicate": "(phase == 0) & (prev_tok == tok(\"a\")) & (t == 2)",
+    "split": "dev",
+    "precision": 0.7071919874502233,
+    "recall": 0.949453219927096,
+    "f1": 0.810608942217919,
+    "mass_recall": 0.9859099207992407,
+    "correlation": 0.7062122647818092,
+    "n_active": 12345,
+    "n_predicted": 16574,
+    "coverage_by_activation_quartile": [
+      0.8445092322643343,
+      0.9562540505508749,
+      0.9970836033700583,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 33,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The basic facts hold. On the test split the feature never fires outside the original phase (phase != 0 scores precision 0). Every activation has prev_tok == a. About 98.6% of the activation mass is at t=2, and a weak tail (1.4%) sits at t=3 after an 'a' at position 2.",
+      "The false positives follow one systematic rule: whether the feature fires depends on which token comes first. Firing rate at t=2 after 'a', by first token: t 0.00, x 0.00, y 0.00, 3 0.00, 1 0.04, e 0.06, z 0.07, r 0.17, h 0.55, j 0.46. Almost every other first token fires 0.96 to 1.0 of the time (c 0.97, k 0.96, the rest 1.0).",
+      "The explanation lists y, t, h, e, 3 and r as first tokens that are often silent, but leaves out x, z and 1, which are just as silent. It also calls them 'often' silent when t, x, y and 3 are silent essentially every time. The predicate itself ignores the first token, which is why precision is only 0.71.",
+      "The label '_ a [x]' implies any first token works, so it overclaims: for about 8 of the 30 possible first tokens the feature stays silent.",
+      "The t=3 tail is scattered and weak (predicate F1 0.04, mass 1.4%), so it is acceptable to leave it out."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "third input token after \"a\" in position 2 (\"X a [x]\"), unless the first token X is e, r, t, x, y, z, 1 or 3",
+    "better_predicate": "(t == 2) & (prev_tok == tok('a')) & ~isin(orig(0), [tok(c) for c in 'ertxyz13'])",
+    "better_predicate_test_f1": 0.944
+  },
+  "final_label": "third input token after \"a\" in position 2 (\"X a [x]\"), unless the first token X is e, r, t, x, y, z, 1 or 3"
+}

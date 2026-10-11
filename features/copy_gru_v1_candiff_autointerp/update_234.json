@@ -1,0 +1,61 @@
+{
+  "label": "copy-phase input x (fed-back copy of original token 1-3), not at the final step",
+  "predicate": "(phase == 2) & (in_tok == tok(\"x\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase when the fed-back input token is x, and only when that x is the echo of original position 1, 2 or 3 (recall_idx 2-4). 100% of activation mass is in the copy phase and on in_tok x. Magnitude is largest when the x is original token 1 (recall_idx 2, 54% of mass; top activations all look like \"y x ... <DEL> y [x]\" in long sequences), smaller at position 2 (38%), and weak at position 3 (8%). It is not active on x in the original phase, on x echoed from position 0 or from position >= 4, or on any other token. It also stays silent when the x is the last input of the sequence (to_go == 0); adding that condition took dev precision from 0.84 to 0.95. Dev: P 0.953, R 0.983, F1 0.968, mass recall 0.999.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 234,
+    "predicate": "(phase == 2) & (in_tok == tok(\"x\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+    "split": "test",
+    "precision": 0.9517431506013808,
+    "recall": 0.9814088050314466,
+    "f1": 0.9663483570517346,
+    "mass_recall": 0.9983929626355412,
+    "correlation": 0.8560748084095373,
+    "n_active": 39750,
+    "n_predicted": 40989,
+    "coverage_by_activation_quartile": [
+      0.9261420809015899,
+      0.9994968806600926,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 234,
+    "predicate": "(phase == 2) & (in_tok == tok(\"x\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+    "split": "dev",
+    "precision": 0.953127274491727,
+    "recall": 0.9828379865906134,
+    "f1": 0.9677546495873877,
+    "mass_recall": 0.9985573940317714,
+    "correlation": 0.856644142191646,
+    "n_active": 39972,
+    "n_predicted": 41218,
+    "coverage_by_activation_quartile": [
+      0.931452016411488,
+      0.9998999299509657,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 234,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The label holds up. My one caveat is that almost all false positives (about 1,883 of 1,978 on test) are in the weak recall_idx==4 tail, where the x is the echo of original token 3. That cell has precision 0.83 overall and 0.64 when to_go==1, i.e. L=6. Positions 1 and 2 are near-perfect: precision is 0.997 at recall_idx 2 and 1.000 at recall_idx 3. This looks like a low-magnitude threshold effect that the explanation already describes ('weak at position 3', 8% of mass), not a separate pattern the predicate misses.",
+      "Tighter variants do worse on test. Dropping recall_idx==4 when L<=6 gives F1 0.956 (P 0.976, R 0.937). Requiring to_go>=2 gives F1 0.882. The original predicate's 0.966 is the best of the three.",
+      "Every factual claim I checked holds on the dev profile: (1) all activation mass is in the copy phase and on input x (100%, with only stray hits on other tokens); (2) mass by recall_idx is 2: 0.539, 3: 0.382, 4: 0.078, matching the stated 54/38/8%; (3) the feature is nearly silent on the echo of position 0 (recall_idx 1, 325 activations) and on positions 4 and later (recall_idx >= 5, about 210 activations); (4) at to_go==0 there are only 98 activations, and none at L=3, where recall_idx 2 is the last step; (5) the top examples are all '? x ... <DEL> ? [x]' in long sequences.",
+      "The 739 missed activations on test are scattered noise holding 0.2% of activation mass: x at recall_idx 1 with tiny values, and isolated very small activations on other tokens. Test scores reproduce exactly: P 0.952, R 0.981, F1 0.966, mass recall 0.998."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

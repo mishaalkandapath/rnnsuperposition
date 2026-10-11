@@ -1,0 +1,64 @@
+{
+  "label": "Final copy step of length-3 sequences (L=3, recall_idx=2)",
+  "predicate": "(recall_idx == 2) & (L == 3)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Active only in the copy phase, almost all at step L+2 (recall_idx 2, prev2_tok = <DEL>, input = orig(1), outputting orig(2)). For L=3 this is the last step, and it fires on about 86% of L=3 sequences there. That step holds 87% of activation mass and every top example. Weaker leftovers: the first copy step of L=3 (recall_idx 1, input orig(0), about 0.1-0.3 of max) and step 6 of L=4 sequences (recall_idx 2, mostly low quartile). Inside the core, magnitude depends on the input token: p and u give the strongest activations, and some inputs such as c, d, y, j, n, r often stay below threshold. Never active in the original phase, at <DEL>, or on first occurrences of a token. Essentially silent for L >= 5.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 64,
+    "predicate": "(recall_idx == 2) & (L == 3)",
+    "split": "test",
+    "precision": 0.859062980030722,
+    "recall": 0.6679605852493281,
+    "f1": 0.7515538384008063,
+    "mass_recall": 0.8718549674619835,
+    "correlation": 0.8043811621623879,
+    "n_active": 3349,
+    "n_predicted": 2604,
+    "coverage_by_activation_quartile": [
+      0.24701670644391407,
+      0.5292712066905615,
+      0.9008363201911589,
+      0.995221027479092
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 64,
+    "predicate": "(recall_idx == 2) & (L == 3)",
+    "split": "dev",
+    "precision": 0.8606525911708254,
+    "recall": 0.6666666666666666,
+    "f1": 0.7513404825737265,
+    "mass_recall": 0.8726408394491587,
+    "correlation": 0.8026926246965311,
+    "n_active": 3363,
+    "n_predicted": 2605,
+    "coverage_by_activation_quartile": [
+      0.2342449464922711,
+      0.5374554102259215,
+      0.896551724137931,
+      0.9988095238095238
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 64,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I reproduced the test scores exactly: precision 0.859, recall 0.668, F1 0.752, mass recall 0.872, correlation 0.80. Activation quartile coverage is 0.25 / 0.53 / 0.90 / 0.995, so the predicate covers almost every strong activation. Most of what it misses is in the low quartiles.",
+      "The factual claims hold up. On the dev profile the unit is never active in the original phase or at <DEL>. 95% of activation mass falls at recall_idx==2 (prev2_tok==<DEL>). L=3 holds 91% of mass, and the unit is essentially silent for L>=5. p and u have the highest in_tok lift. Excluding the tokens c, d, y, j, n, r gives precision 0.888 and mass recall 0.759, which matches the reported 0.89 / 0.77.",
+      "The misses on the test split fall into exactly the two leftover groups the explanation already names. The first is L=3 recall_idx 1 at step 4 (mass 0.041, precision 0.14 on its own). The second is L=4 recall_idx 2 at step 6 (mass 0.079, precision 0.044 on its own). Both are weak and low-precision, so neither is an undisclosed counterexample class. The false positives are L=3 final steps that stay below threshold. They look like the token-dependent magnitude the explanation describes, not a separate condition.",
+      "I found no better predicate. Adding L=4 recall_idx 2 with in_tok in {p,u} gives the same test F1 (0.752) with higher mass recall (0.926), but precision drops to 0.725. (L==3)&(recall_idx>=1) gives F1 0.61. (recall_idx==2)&(L<=4) gives F1 0.28.",
+      "Minor caveat: the F1 of 0.75 is under the 0.8 bar. 'Explained' rests on mass recall plus high precision, so medium confidence is the right call.",
+      "Provenance caveat (unresolved): every score here comes from features/copy_gru_v1_neuron_baseline_store, which the task specified. The user asked for the baseline to run on the 1-in-5 subsampled data in features/copy_transcoder_v2_1of5. I could not confirm this store was built from that data without reading the store files, which the task did not allow. The dev split has 99,999 sequences, which fits the stated ~200k total. Sequence counts per L are uneven: about 2.6k dev sequences for L=3 versus about 16.6k for L=9."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Final copy step of length-3 sequences (L=3, recall_idx=2; input two steps back is <DEL>)",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "Final copy step of length-3 sequences (L=3, recall_idx=2; input two steps back is <DEL>)"
+}

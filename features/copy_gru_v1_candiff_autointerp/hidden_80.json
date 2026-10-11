@@ -1,0 +1,61 @@
+{
+  "label": "copy-phase input n echoed early (1st-2nd output fed back) in longer sequences",
+  "predicate": "(phase == 2) & (in_tok == tok(\"n\")) & (recall_idx <= 2) & (L >= 5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, only when the fed-back input token is n, and only early in the copy (recall_idx 1-2, i.e. the input is original token 0 or 1 being echoed back). It never fires on n during the original phase or at the delimiter, and never on any other input token. The largest activations come when n is the first original token and is fed back at the first copy step (recall_idx 1) in long sequences (L = 8-9). Activations are roughly half as large when n is original token 1 (recall_idx 2), weak and sparse at recall_idx 3 (about 1.6% of mass), and absent later. Short sequences (L <= 4) mostly do not activate, and activation grows with L / outputs remaining.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 80,
+    "predicate": "(phase == 2) & (in_tok == tok(\"n\")) & (recall_idx <= 2) & (L >= 5)",
+    "split": "test",
+    "precision": 0.9468997719622109,
+    "recall": 0.8917371148077448,
+    "f1": 0.9184909502659621,
+    "mass_recall": 0.9709608670206895,
+    "correlation": 0.8622374220642156,
+    "n_active": 29336,
+    "n_predicted": 27627,
+    "coverage_by_activation_quartile": [
+      0.6171257158440142,
+      0.9505044995909463,
+      0.9993182437960185,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 80,
+    "predicate": "(phase == 2) & (in_tok == tok(\"n\")) & (recall_idx <= 2) & (L >= 5)",
+    "split": "dev",
+    "precision": 0.9475243179989761,
+    "recall": 0.8924057172378165,
+    "f1": 0.9191394264025116,
+    "mass_recall": 0.9722244816310066,
+    "correlation": 0.8630038848719511,
+    "n_active": 29035,
+    "n_predicted": 27346,
+    "coverage_by_activation_quartile": [
+      0.6170271387243422,
+      0.9531615925058547,
+      0.9994489599118336,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 80,
+  "final_verdict": "explained",
+  "skeptic": {
+    "issues": [
+      "The magnitude claim is wrong. The explanation says activations at recall_idx 2 are 'roughly half as large' as at recall_idx 1. Dev profile: recall_idx 1 has 13,921 active steps holding 0.488 of activation mass, and recall_idx 2 has 13,235 active steps holding 0.496, so the mean per active step is the same or slightly higher at recall_idx 2. Test split: recall_idx==1 gives recall 0.485 / mass 0.493, and recall_idx==2 gives recall 0.452 / mass 0.492. For L>=8 alone: recall_idx 1 gives recall 0.189 / mass 0.300, and recall_idx 2 gives recall 0.191 / mass 0.283. The top-12 examples are all recall_idx 1 at about 0.9 of max, so recall_idx 1 owns the extreme tail. The visible halving (0.91 then 0.44) appears only in 'n n ...' sequences, where n is both token 0 and token 1. On average the two positions are about equal.",
+      "The core claims check out. All activation mass is in the copy phase (original and delimiter phases are 0). in_tok is n for 100% of activations. Mass by recall_idx is 0.488 / 0.496 / 0.016 for 1 / 2 / 3 and 0 from 4 on. Mass rises with L and with to_go. Reported test scores reproduce: P 0.947, R 0.892, F1 0.918, mass recall 0.971.",
+      "The remaining misses and false positives are a graded boundary, not a separate class. Misses are weak firings on n at recall_idx 3 in L=7-8 sequences and at recall_idx 1 in L=4 sequences, together 2.9% of mass. False positives are mostly n at recall_idx 2 in L=5 sequences (to_go=2). Changing the boundary did not help on test: L>=6 F1 0.854, to_go>=3 F1 0.885, an L-dependent split F1 0.890, adding recall_idx 3 at L>=8 F1 0.881. All are below the original 0.918, so the original predicate is about as good as this variable set allows."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input n when it echoes original token 0 or 1 (recall_idx 1-2) in sequences of length 5 or more; both positions have similar magnitude, and activation grows with outputs remaining",
+    "better_predicate": null,
+    "better_predicate_test_f1": null,
+    "upheld": false
+  },
+  "final_label": "copy-phase input n when it echoes original token 0 or 1 (recall_idx 1-2) in sequences of length 5 or more; both positions have similar magnitude, and activation grows with outputs remaining"
+}

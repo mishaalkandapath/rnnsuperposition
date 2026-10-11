@@ -1,0 +1,62 @@
+{
+  "label": "fed-back first token p (copy step recall_idx 1)",
+  "predicate": "(recall_idx == 1) & (in_tok == tok(\"p\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, on the step right after <DEL> where the model gets back its own first output, and only when that token is p (orig(0) = p, recall_idx = 1). It never fires during the original phase, on <DEL>, or on p inputs anywhere else. Magnitude drops as L grows: it is strongest for L = 4-6 (top examples are L = 5, about 2.6-2.8), weaker at L = 7-8, and usually zero at L = 9, which accounts for most false positives (adding L <= 8 raises dev F1 to 0.93). There is a faint residual (0.7% of activation mass) at recall_idx 2 when orig(1) = p is fed back. Magnitude does not depend on the output token or on the other sequence tokens.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 34,
+    "predicate": "(recall_idx == 1) & (in_tok == tok(\"p\"))",
+    "split": "test",
+    "precision": 0.8624970016790597,
+    "recall": 0.932991696938246,
+    "f1": 0.8963604636669575,
+    "mass_recall": 0.9929909680104082,
+    "correlation": 0.8219341474190605,
+    "n_active": 15416,
+    "n_predicted": 16676,
+    "coverage_by_activation_quartile": [
+      0.7332641411520499,
+      0.9987026466009341,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 34,
+    "predicate": "(recall_idx == 1) & (in_tok == tok(\"p\"))",
+    "split": "dev",
+    "precision": 0.8649577804583836,
+    "recall": 0.9354859752120026,
+    "f1": 0.8988404888749608,
+    "mass_recall": 0.9931858675872904,
+    "correlation": 0.8246465730407356,
+    "n_active": 15330,
+    "n_predicted": 16580,
+    "coverage_by_activation_quartile": [
+      0.7427602400208714,
+      0.9992173232454996,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 34,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims hold up. On the dev profile, all activation is in the copy phase (share 1.000), with none on original or <DEL> steps. All of it is on in_tok p (share 1.000). recall_idx 1 holds 0.993 of the activation mass and recall_idx 2 holds 0.007.",
+      "The length decay is real and it is where the false positives come from. Restricted to recall_idx 1 with p input, L=9 alone has test precision 0.26. Adding L<=8 raises test precision from 0.862 to 0.984 and F1 from 0.896 to 0.932. The 224 false positives left over are mostly at L=8 near the cutoff, which fits a gradual decay rather than a separate class.",
+      "The misses that remain under the L<=8 predicate are all tiny. They hold 1.2% of the activation mass and sit at 0.01-0.12 of max. They are either L=9 recall_idx 1 cases or the faint residual at recall_idx 2 when orig(1)=p. Adding recall_idx 2 to the predicate drops precision to 0.53 (F1 0.68), so leaving it out is correct.",
+      "Minor overclaim: the label leaves out the length condition, even though the feature is mostly off at L=9. I did not test the claim that magnitude does not depend on the output token or the other tokens."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "fed-back first token p (copy step recall_idx 1), decaying with length; mostly off at L=9",
+    "better_predicate": "(recall_idx == 1) & (in_tok == tok(\"p\")) & (L <= 8)",
+    "better_predicate_test_f1": 0.932
+  },
+  "final_label": "fed-back first token p (copy step recall_idx 1), decaying with length; mostly off at L=9"
+}

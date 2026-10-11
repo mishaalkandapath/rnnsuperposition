@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input l (fed-back l at original position >= 2)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"l\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase when the fed-back input token is l, so the model has just output an l and is now outputting the next original token. It needs recall_idx >= 3, meaning the l was original token 2 or later. It is silent when an l is fed back from original positions 0-1, and silent on l during the original phase, on <DEL>, and on every other token. A handful of stray activations show up on other tokens. Magnitude goes up with later copy position: top examples have the l at original position 5-6 with activation around 4.5, and lowest-quartile examples have it at position 2 with activation under 1. Repeat l occurrences also fire, usually more weakly than the first. Dev F1 0.986.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 313,
+    "predicate": "(phase == 2) & (in_tok == tok(\"l\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9947406664129269,
+    "recall": 0.9767441860465116,
+    "f1": 0.9856602867942642,
+    "mass_recall": 0.9967709482771103,
+    "correlation": 0.9172909839949336,
+    "n_active": 58867,
+    "n_predicted": 57802,
+    "coverage_by_activation_quartile": [
+      0.9071142216484338,
+      0.9998641027383298,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 313,
+    "predicate": "(phase == 2) & (in_tok == tok(\"l\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9946650038107115,
+    "recall": 0.9767149150409062,
+    "f1": 0.985608238575413,
+    "mass_recall": 0.9967622332356674,
+    "correlation": 0.9164683698473878,
+    "n_active": 58793,
+    "n_predicted": 57732,
+    "coverage_by_activation_quartile": [
+      0.9068644125450711,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 313,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core predicate holds up. On test: P 0.995, R 0.977, F1 0.986, mass recall 0.997. Misses (1369 steps, 0.3% of mass) are all tiny activations, typically 0.01-0.08 of max, on l fed back from original position 1. The 304 false positives are scattered l's at original position 2 that stay silent, often after 'a' (e.g. '1 a l 0 3 g'). That is noise, not a systematic class.",
+      "The claim 'repeat l's also fire, usually more weakly' is false on average. Mass recall divided by recall gives each subset's mean magnitude relative to the overall mean. Repeat l's (n_seen([l])>=2): recall 0.186, mass recall 0.197, ratio 1.06. First l (in_count==1): 0.791 / 0.799, ratio 1.01. Back-to-back repeats (prev_tok==l): 0.0330 / 0.0332, ratio 1.0. The weaker second l's in the top examples come from selection bias.",
+      "'Silent on l fed back from original positions 0-1' overclaims for short sequences. With l at original position 1 (recall_idx==2) the feature fires on 70% of steps at L=3 (n=432) and 36% at L=4 (n=2445). It is near-silent at L=5 (2%) and L>=6 (0.07%). These firings are weak (about 0.3% of mass). Extending the predicate to cover them, (recall_idx>=3)|((recall_idx==2)&(L<=4)), gives test F1 0.982, so the original predicate stays the better choice.",
+      "The magnitude claim is roughly right but better described as a jump then a plateau. Relative mean magnitude is about 0.47x at recall_idx 3 (l at original position 2), 1.30x at recall_idx 5, and 1.34x at recall_idx 7. It rises from position 2 to about position 4, then levels off. It does not keep climbing to a peak at positions 5-6. Firing rate is flat at about 0.033 for recall_idx 3-8."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase fed-back l from original position >= 2 (weak at position 2, plateau from about 4; repeats fire equally)",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "copy-phase fed-back l from original position >= 2 (weak at position 2, plateau from about 4; repeats fire equally)"
+}

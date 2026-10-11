@@ -1,0 +1,62 @@
+{
+  "label": "first original token (excluding b,d,g,o,p,r,s,t,u,w,x,z), plus copy step 1 of L=3 sequences",
+  "predicate": "((t == 0) & ~isin(in_tok, [tok(c) for c in \"bwtroupgxszd\"])) | ((L == 3) & (t == 4))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Update-gate unit that is a sequence-start detector gated by token identity. About 96% of activation mass is at t=0. There it fires on essentially every sequence whose first token is NOT one of b,d,g,o,p,r,s,t,u,w,x,z, i.e. the other 14 letters and all 4 digits (dev precision 1.0 for this clause), and it never fires at t=0 on those 12 excluded tokens. Magnitude at t=0 depends on the token and is moderate, roughly 0.1-0.45 of max (y about 0.36, 1 about 0.45, e/i about 0.1). The second component (about 4% of mass) is the second copy step (t=4, recall_idx=1) of L=3 sequences, where the input is the fed-back first token. It fires there for nearly all tokens, including the excluded ones, and these are the strongest activations (up to max). It is silent at the delimiter, at every other original or copy step (apart from a few weak t=1 hits after r/w), and for L>=4 at copy steps. Dev F1 0.989, mass recall 0.998.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 121,
+    "predicate": "((t == 0) & ~isin(in_tok, [tok(c) for c in \"bwtroupgxszd\"])) | ((L == 3) & (t == 4))",
+    "split": "test",
+    "precision": 0.9898896472539389,
+    "recall": 0.988864639255731,
+    "f1": 0.9893768777743244,
+    "mass_recall": 0.9982242237783681,
+    "correlation": 0.8559572629268593,
+    "n_active": 62773,
+    "n_predicted": 62708,
+    "coverage_by_activation_quartile": [
+      0.9554606856123359,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 121,
+    "predicate": "((t == 0) & ~isin(in_tok, [tok(c) for c in \"bwtroupgxszd\"])) | ((L == 3) & (t == 4))",
+    "split": "dev",
+    "precision": 0.9893628932930243,
+    "recall": 0.9891255677093328,
+    "f1": 0.9892442162672231,
+    "mass_recall": 0.9982429580970438,
+    "correlation": 0.8536191799704388,
+    "n_active": 62532,
+    "n_predicted": 62517,
+    "coverage_by_activation_quartile": [
+      0.9565022708373313,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 121,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Overclaim: the explanation says the t=4 (L=3) clause fires 'for almost any token, including the excluded ones'. On dev that clause has precision 0.74. It is 0.87 when the fed-back token is outside the excluded set and only 0.56 when it is one of the 12 excluded letters. Most of the predicate's 634-665 false positives come from this clause, at L=3 t=4 with fed-back tokens such as b, d, w, s, o, u, x. The clause holds only about 3-4% of the mass, so the effect on F1 is small.",
+      "The weak t=1 hits after r/w are real but rare and tiny (precision 0.10, mass 0.2%). Calling them 'a few weak hits' is fair.",
+      "The core claims check out on the test split. The t=0 clause has precision 1.0, recall 0.957 and mass 0.959. t=0 with an excluded first letter has precision exactly 0. Copy steps with L>=4 have precision exactly 0. Coverage of the top activation quartiles is 1.0, which fits the claim that the t=4 activations are the strongest.",
+      "Narrowing the t=4 clause (for example, excluding fed-back b/w/s/d/o) only moves test F1 from 0.9894 to 0.9899. That is not a meaningful improvement, so no systematic missing class remains."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "first original token (excluding b,d,g,o,p,r,s,t,u,w,x,z), plus copy step 1 of L=3 sequences (most fed-back tokens)",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "first original token (excluding b,d,g,o,p,r,s,t,u,w,x,z), plus copy step 1 of L=3 sequences (most fed-back tokens)"
+}

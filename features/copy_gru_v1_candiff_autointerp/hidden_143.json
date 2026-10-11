@@ -1,0 +1,61 @@
+{
+  "label": "fed-back \"1\" at the first two copy steps",
+  "predicate": "(phase == 2) & (in_tok == tok(\"1\")) & isin(recall_idx, [1, 2])",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase when the input token is the digit 1 being fed back as the copy of original token 0 or 1, i.e. at recall_idx 1 (input = orig(0) = 1, right after <DEL>) or recall_idx 2 (input = orig(1) = 1). Magnitude is strongly modulated by position: recall_idx 1 (first token was 1) gives near-max activations (~3-3.9) and carries ~81% of mass; recall_idx 2 gives weak activations (~0.1-1.2). Does not fire on 1 in the original phase, on 1 fed back at later copy steps (recall_idx >= 3), on the delimiter step, or on other tokens (a handful of stray d/i activations). Output token and next_out do not matter.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 143,
+    "predicate": "(phase == 2) & (in_tok == tok(\"1\")) & isin(recall_idx, [1, 2])",
+    "split": "test",
+    "precision": 0.9819913988770756,
+    "recall": 0.9953684083065932,
+    "f1": 0.9886346552812773,
+    "mass_recall": 0.9998135991399155,
+    "correlation": 0.8434199501962032,
+    "n_active": 33034,
+    "n_predicted": 33484,
+    "coverage_by_activation_quartile": [
+      0.9814747548129313,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 143,
+    "predicate": "(phase == 2) & (in_tok == tok(\"1\")) & isin(recall_idx, [1, 2])",
+    "split": "dev",
+    "precision": 0.9818885495721585,
+    "recall": 0.9965323595298738,
+    "f1": 0.9891562595187329,
+    "mass_recall": 0.9998785523851013,
+    "correlation": 0.8439513061082636,
+    "n_active": 32587,
+    "n_predicted": 33073,
+    "coverage_by_activation_quartile": [
+      0.986129863753529,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 143,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claims check out. Activity is copy-phase only: 0 activations in the original and delimiter phases. 81.4% of activation mass is at recall_idx 1 and 18.6% at recall_idx 2, with 1 stray activation at recall_idx 3. in_tok=='1' carries 100% of the mass, and the d/i/3/c/r strays are tiny (<=0.04 of max). Implied mean magnitudes are about 3.36 at recall_idx 1 and about 0.81 at recall_idx 2, which fits the stated ranges.",
+      "Test misses: 153 missed steps hold 0.0% of the mass. They are faint d/r/c activations at the first copy step and are noise.",
+      "Small but systematic false-positive class: the false positives at recall_idx 2 cluster at short sequences. For recall_idx 2 with L==3, precision is 0.28 (434 predicted steps). With L==4 it is 0.88, and with L>=5 it is 1.0. So the second-copy-step '1' response mostly disappears when L=3. The explanation does not mention this, but it is about 1.3% of predicted steps and does not change the label in a meaningful way.",
+      "Excluding L==3 at recall_idx 2 raises test F1 only slightly, from 0.989 to 0.991 (precision 0.982 to 0.991)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"1\")) & ((recall_idx == 1) | ((recall_idx == 2) & (L >= 4)))",
+    "better_predicate_test_f1": 0.9914
+  }
+}

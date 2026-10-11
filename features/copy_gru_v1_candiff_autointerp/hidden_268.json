@@ -1,0 +1,60 @@
+{
+  "label": "copy-phase input p at recall positions 1-2 (p fed back as orig token 0 or 1)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"p\")) & (recall_idx <= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the fed-back input is the letter p at recall_idx 1 or 2, i.e. the model has just emitted p as original token 0 (step L+1) or original token 1 (step L+2). Magnitude depends on position: when p is the first original token (input p right after <DEL>), activation is strong (~0.85-1.0 of max, 83% of activation mass); when p is the second original token, activation is weak (~0.1-0.4 of max). Never fires during the original phase or the delimiter step, never on p at later copy positions (recall_idx >= 3), and essentially never on any other token. Most false positives are p at recall_idx 2 in short sequences (L = 3-4) where the feature stays silent.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 268,
+    "predicate": "(phase == 2) & (in_tok == tok(\"p\")) & (recall_idx <= 2)",
+    "split": "test",
+    "precision": 0.945697400952783,
+    "recall": 0.9999681183447044,
+    "f1": 0.9720758693361433,
+    "mass_recall": 0.9999993295376223,
+    "correlation": 0.8283022097513659,
+    "n_active": 31366,
+    "n_predicted": 33166,
+    "coverage_by_activation_quartile": [
+      0.9998724815098189,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 268,
+    "predicate": "(phase == 2) & (in_tok == tok(\"p\")) & (recall_idx <= 2)",
+    "split": "dev",
+    "precision": 0.9471819355613609,
+    "recall": 0.9999049037943386,
+    "f1": 0.9728296067848882,
+    "mass_recall": 0.9999980989148046,
+    "correlation": 0.827807429403472,
+    "n_active": 31547,
+    "n_predicted": 33303,
+    "coverage_by_activation_quartile": [
+      0.99961962723469,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 268,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Every factual claim checks out on the profile: activation is 100% in the copy phase and zero in the original and delimiter phases. 99.99% of activation mass sits on in_tok p. recall_idx 1 holds 82.9% of the mass and recall_idx 2 holds 17.1%. There is 1 activation at recall_idx 3 and 2 on c (both tiny). The test split has only 1 missed activation (e at 0.01).",
+      "The false positives form one systematic class, which the explanation already mentions: p at recall_idx 2 in short sequences. At L=3 the feature is essentially silent (precision 0.007). At L=4 it is about 50/50 (precision 0.45). At L>=5 it is reliable (precision 0.998).",
+      "On test, excluding the L=3 case gives a slightly better predicate: F1 0.979 vs 0.972, recall 0.9999. Excluding L<=4 gives F1 0.982 but loses recall (0.965). Both gains are small, and the original predicate and label are fine."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok('p')) & ((recall_idx == 1) | ((recall_idx == 2) & (L >= 4)))",
+    "better_predicate_test_f1": 0.9785
+  }
+}

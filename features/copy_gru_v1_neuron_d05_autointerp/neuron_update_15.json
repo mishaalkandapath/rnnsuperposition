@@ -1,0 +1,62 @@
+{
+  "label": "first token is one of a fixed letter/digit set (c d e f g h n o r t u w x z 0 2), plus <DEL> in length-3 sequences",
+  "predicate": "((t == 0) & isin(in_tok, [2,3,4,5,6,7,13,14,17,19,20,22,23,25,26,28])) | ((phase == 1) & (L == 3))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost entirely at step 0 (77% of activation mass): there it is deterministic in the input token, active on every sequence whose first token is in {c,d,e,f,g,h,n,o,r,t,u,w,x,z,0,2} and never for the other 14 tokens. How strongly it fires depends on the token: e and z are strongest, n and c are near threshold. The second component is the <DEL> step of length-3 sequences. These are the largest activations (the top examples all look like xyz<DEL>), and they are strongest when the originals include l/k/v/h/i. Weaker residual firing (about 15% of mass, missed by the predicate) happens at step 3 or 4 early in longer sequences: the <DEL> step when L=4, and the step-3 original input when L>=5, almost always on a first occurrence of the token. Never fires during the copy phase (t > L) or at steps 1-2 or 5 and later.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 15,
+    "predicate": "((t == 0) & isin(in_tok, [2,3,4,5,6,7,13,14,17,19,20,22,23,25,26,28])) | ((phase == 1) & (L == 3))",
+    "split": "test",
+    "precision": 0.9913393576093764,
+    "recall": 0.8584377953731968,
+    "f1": 0.920114264835329,
+    "mass_recall": 0.8527433493526775,
+    "correlation": 0.6756584465055605,
+    "n_active": 64537,
+    "n_predicted": 55885,
+    "coverage_by_activation_quartile": [
+      0.8726371242640223,
+      0.8661212346597248,
+      0.8576298500061981,
+      0.8373620924755175
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 15,
+    "predicate": "((t == 0) & isin(in_tok, [2,3,4,5,6,7,13,14,17,19,20,22,23,25,26,28])) | ((phase == 1) & (L == 3))",
+    "split": "dev",
+    "precision": 0.9920184272551961,
+    "recall": 0.8582617561638757,
+    "f1": 0.9203054598462762,
+    "mass_recall": 0.8537290327652373,
+    "correlation": 0.6744398715801166,
+    "n_active": 64732,
+    "n_predicted": 56004,
+    "coverage_by_activation_quartile": [
+      0.8719026138540443,
+      0.860347278007786,
+      0.8647963912747946,
+      0.8360007415188778
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 15,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Step-0 claim checks out exactly on test: (t==0)&isin(in_tok,SET) has precision 1.000, recall 0.826 and mass recall 0.773. The complement (t==0 with a token outside the set) never fires (precision 0.0).",
+      "The L=3 <DEL> component holds up less well than the explanation suggests. Its precision is 0.81, so 19% of length-3 <DEL> steps are inactive (484 false positives on test, all at this step). The firing does not depend cleanly on whether first_tok is in the set (0.78 vs 0.85).",
+      "The residual is real and the predicate does not cover it. About 15% of activation mass sits at t=3/4: the L=4 <DEL> step fires at only a 28% rate, and step-3 originals fire at about 5-9% (slightly higher when in_tok is in SET). I could not find a clean rule for it. Conditioning on first_tok, in_first or seen(SET) gives at most about 0.21 precision, or recall under 2%. Adding L=4 <DEL> to the predicate lowers test F1 from 0.920 to 0.881.",
+      "The label leaves out the weaker t=3/4 residual, but the explanation states it openly. The other claims check out: no firing at t=1, at t>=5 or in the copy phase (t=2 has 4 hits), activation nearly always on a first occurrence (in_first=1 carries 99.7% of the mass), and the top-activating examples are all L=3 <DEL> steps."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "first token is one of a fixed set (c d e f g h n o r t u w x z 0 2), plus the <DEL> step of most length-3 sequences (weak scattered firing at t=3/4 not captured)",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "first token is one of a fixed set (c d e f g h n o r t u w x z 0 2), plus the <DEL> step of most length-3 sequences (weak scattered firing at t=3/4 not captured)"
+}

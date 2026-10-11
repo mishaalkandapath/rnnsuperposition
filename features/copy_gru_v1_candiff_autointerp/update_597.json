@@ -1,0 +1,61 @@
+{
+  "label": "first copy-phase step (after <DEL>) when the fed-back first token is q, L>=5",
+  "predicate": "(recall_idx == 1) & (in_tok == tok(\"q\")) & (L >= 5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only at step t = L+1, the first copy step after <DEL>, where the model has just output the first original token and the input is that token fed back. It fires essentially only when that token is q (first_tok q, 32x lift), and only for L >= 5. For L = 3-4 it is silent, and at L = 5 it fires on just some sequences, so most of the false positives are short sequences. Magnitude grows with L: L=5 holds 2.4% of the mass, and L=8-9 hold about 30% each, with top activations in L=9 sequences. It does not depend on the token being output at this step or the next. It never fires in the original or delimiter phases, at any other copy position, or on a q seen elsewhere in the sequence. The 77 missed activations are near zero (rarely more than 0.04 of max) and come from other first tokens such as 2, y and g.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 597,
+    "predicate": "(recall_idx == 1) & (in_tok == tok(\"q\")) & (L >= 5)",
+    "split": "test",
+    "precision": 0.9472686164393552,
+    "recall": 0.9931182137941581,
+    "f1": 0.9696517227220128,
+    "mass_recall": 0.9996448839896737,
+    "correlation": 0.8754632876517087,
+    "n_active": 13078,
+    "n_predicted": 13711,
+    "coverage_by_activation_quartile": [
+      0.9724770642201835,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 597,
+    "predicate": "(recall_idx == 1) & (in_tok == tok(\"q\")) & (L >= 5)",
+    "split": "dev",
+    "precision": 0.945360373504523,
+    "recall": 0.9940932801472845,
+    "f1": 0.9691145677535149,
+    "mass_recall": 0.9996928445545192,
+    "correlation": 0.8707567604251744,
+    "n_active": 13036,
+    "n_predicted": 13708,
+    "coverage_by_activation_quartile": [
+      0.9763731205891377,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 597,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "All 723 test false positives are at L=5, step 6. L==5 alone has precision 0.72. L>=6 has precision 1.0 but recall only 0.85, so the L=5 cases cannot be dropped. Conditioning on correct, in_count, n_digits, next_out (digit/vowel) or orig(1)/orig(4) gives no clean split (precision 0.64-0.83). The partial firing at L=5 looks like the weakest activations falling below threshold, not a separate token or history pattern. The explanation already says this.",
+      "Minor overclaim: 'never fires at any other copy position' is not strictly true. 13 dev activations are at recall_idx 2 (t=11, L=9), but they carry about 0% of the activation mass.",
+      "The 90 test misses are all near zero (0.00-0.05 relative to max). They sit at step 10 of L=9 sequences on first tokens 2, a, u and 3. This is scattered noise and holds 0.0% of the mass.",
+      "Magnitude-by-L claims hold: L=5 holds 0.024 of the mass, L=8 0.282 and L=9 0.316. L=3-4 never fire. The feature is silent in the original and delimiter phases. in_tok q has 32x lift. Test scores are P 0.947 / R 0.993 / F1 0.970 / mass recall 0.9996."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

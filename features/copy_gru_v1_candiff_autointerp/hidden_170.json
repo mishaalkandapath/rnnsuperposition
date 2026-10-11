@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input token a (fed-back a), from the 3rd copied position on",
+  "predicate": "(phase == 2) & (in_tok == tok(\"a\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, at steps where the fed-back input token is a, i.e. the model just output an original a. It is completely silent on a in the original phase and at the delimiter, and almost never fires on any other input token (fewer than 100 steps in the dev split). Magnitude depends on position. It is weak or absent when the a is orig(0) or orig(1) (recall_idx 1-2, low-quartile examples) and strong from recall_idx 3 onward, where the firing rate is about 1/3 of all copy steps with in_tok a. In the top examples, a second a directly after a strongly-firing a gets a smaller activation (about 0.6 of max). With recall_idx >= 2 instead, the predicate reaches mass recall about 1.0 but precision 0.86, because many a inputs at recall_idx 2 do not fire.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 170,
+    "predicate": "(phase == 2) & (in_tok == tok(\"a\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9931370188172968,
+    "recall": 0.8961508613999689,
+    "f1": 0.9421545591018863,
+    "mass_recall": 0.9787447925904101,
+    "correlation": 0.919028963554484,
+    "n_active": 64430,
+    "n_predicted": 58138,
+    "coverage_by_activation_quartile": [
+      0.5904519493419419,
+      0.994164390365036,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 170,
+    "predicate": "(phase == 2) & (in_tok == tok(\"a\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.992516160254416,
+    "recall": 0.89603357882911,
+    "f1": 0.9418103094812458,
+    "mass_recall": 0.9785648549037552,
+    "correlation": 0.9183638390162784,
+    "n_active": 64088,
+    "n_predicted": 57858,
+    "coverage_by_activation_quartile": [
+      0.5897515915616028,
+      0.994382723754837,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 170,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Claims check out. On the test split I got P 0.993, R 0.896, F1 0.942, mass recall 0.979, the same as reported. On dev, phase share of activation mass is original 0, delimiter 0, copy 1.000. On dev, inputs other than a account for 56 active steps in total, about 0% of mass.",
+      "The 6691 test misses are all weak activations (0.04 to 0.15 of max) on a copy-phase a at recall_idx 2, i.e. a = orig(1). Scoring recall_idx == 2 alone gives P 0.396 and 2.1% of mass. Whether it fires there is graded, not a clean subclass: it is somewhat more likely for short L (P 0.40 for L >= 4 vs 0.29 for L >= 6) and barely depends on orig(0) being a digit or vowel. recall_idx 1 essentially never fires (P 0.001).",
+      "The 399 test false positives are all a = orig(2) (recall_idx 3) that stay inactive. That is under 1% of predicted steps, so it is just the edge of a soft ramp-up.",
+      "Small caveat: the explanation's claim that a repeated a is weaker (about 0.6 of max) is based only on top examples. The predicate prev_tok == a still fires with P 0.973, so it is a change in strength, not an exclusion. The real effect is a magnitude ramp with copy position, which the label states correctly as 'from the 3rd copied position on'.",
+      "Widening to recall_idx >= 2 gives test P 0.86, R 0.998, F1 0.924, below the 0.942 of the original predicate. I found no systematic counterexample class."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

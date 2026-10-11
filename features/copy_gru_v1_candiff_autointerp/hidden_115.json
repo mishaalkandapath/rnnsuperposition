@@ -1,0 +1,64 @@
+{
+  "label": "copy-phase input w (fed-back w), from recall position 2 onward",
+  "predicate": "(phase == 2) & (in_tok == tok(\"w\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token feature for the letter w being fed back as input during the copy phase. All activation mass is at copy-phase steps whose input is w; it never fires in the original phase, on the delimiter, or on any other input token. In the copy phase it fires on about 35% of w inputs overall and about 91% of them once recall_idx >= 2. It is weak or absent when w is the first copied token (recall_idx 1, 0.7% of mass) and often silent when w sits late in a long sequence, which accounts for most false positives. Magnitude is largest when w is an early original token (recall_idx 2-4, about 79% of mass); the top activations are a w at original position 2. A second w right after the first fires at roughly half strength. Which token comes next and whether the sequence contains digits have little effect.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 115,
+    "predicate": "(phase == 2) & (in_tok == tok(\"w\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.9097590798543461,
+    "recall": 0.9763789746917586,
+    "f1": 0.9418924934616882,
+    "mass_recall": 0.9932728729281068,
+    "correlation": 0.833393425856781,
+    "n_active": 69345,
+    "n_predicted": 74423,
+    "coverage_by_activation_quartile": [
+      0.9168829670646594,
+      0.9895592985694509,
+      0.9990770650669127,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 115,
+    "predicate": "(phase == 2) & (in_tok == tok(\"w\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.9109190738937575,
+    "recall": 0.9758348424483883,
+    "f1": 0.9422602102553701,
+    "mass_recall": 0.9932169545848707,
+    "correlation": 0.8334303718240057,
+    "n_active": 69025,
+    "n_predicted": 73944,
+    "coverage_by_activation_quartile": [
+      0.9152807556353943,
+      0.9889893370421883,
+      0.999072786277237,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 115,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I reproduced the reported test scores exactly: P 0.910, R 0.976, F1 0.942, mass recall 0.993, correlation 0.83.",
+      "These factual claims check out on dev: 100% of mass is in the copy phase, with none in the original phase or on <DEL>. in_tok w is 100% of mass. The fire rate on copy-phase w inputs is 0.348. recall_idx 1 holds 0.7% of mass. recall_idx 2-4 hold 0.297+0.312+0.180 = 78.9% of mass. All top-12 activations are a w at original position 2 (recall_idx 3). out_tok, prev_tok and n_digits show flat lifts.",
+      "Misattributed claim: 'a second w right after the first fires at roughly half strength' is confounded by position. With recall_idx held fixed, mass per predicted step barely changes when prev_tok == w: r=3 1.80 vs 1.92, r=4 1.41 vs 1.30, r=5 0.64 vs 0.76 (units 1e-5 of total mass). The half-strength look in the top examples is there only because the second w is one recall step later than the peak position. The sentence should be dropped or reworded.",
+      "Minor: in the top-12 list every sequence is 'w w' with the first w at position 2. When the next output is w, magnitude rises about 16% at recall_idx 3 (2.22 vs 1.91 per step), but there is no effect at recall_idx 2. 'Little effect' of the next token is mostly fair.",
+      "The false positives are not a sharp class. Precision falls gradually with recall position (r=2-4: 0.96-0.99; r=5-8: 0.74-0.87), and also gradually with smaller to_go (0.81 at to_go 0 vs 0.98 at to_go 4). No single variable separates them: L, n_digits, in_count, prev_tok == w and digit out_tok were all tried. The explanation already says it is 'often silent when w sits late', so this is acknowledged, graded weakening rather than a missed systematic class.",
+      "The missed activations (0.7% of mass) are weak activations on w at recall_idx 1, which the explanation already discloses.",
+      "The label matches the predicate and does not overclaim."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

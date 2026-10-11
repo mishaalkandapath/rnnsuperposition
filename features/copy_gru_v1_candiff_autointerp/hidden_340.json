@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input c (fed-back output c), from the 2nd copied token on",
+  "predicate": "(phase == 2) & (in_tok == tok(\"c\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only when the input token is c during the copy phase, i.e. the model just output c and it is fed back. Every activation has in_tok == c in the copy phase; it never fires on any other token, in the original phase, or at the delimiter. It is weak or absent when the fed-back c is the first original token (recall_idx 1, where only about 0.6% of steps fire), and fires reliably from recall_idx 2 onward. The strongest activations occur in sequences with an adjacent c c pair, on the first copied c of that pair, with the following c weaker. Low-activation cases are mostly c inputs early in the copy phase.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 340,
+    "predicate": "(phase == 2) & (in_tok == tok(\"c\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.9195960249720211,
+    "recall": 0.9582420052829764,
+    "f1": 0.9385213472322566,
+    "mass_recall": 0.9861468708280968,
+    "correlation": 0.8364673019999551,
+    "n_active": 71172,
+    "n_predicted": 74163,
+    "coverage_by_activation_quartile": [
+      0.8611251615803968,
+      0.9770696341257799,
+      0.9952228404428708,
+      0.9995503849828584
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 340,
+    "predicate": "(phase == 2) & (in_tok == tok(\"c\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.9201959908501509,
+    "recall": 0.9599689353290031,
+    "f1": 0.9396617853366597,
+    "mass_recall": 0.9865486538417486,
+    "correlation": 0.8359811981972051,
+    "n_active": 70820,
+    "n_predicted": 73881,
+    "coverage_by_activation_quartile": [
+      0.8673820954532618,
+      0.9770686246822932,
+      0.9958768709404123,
+      0.9995481502400452
+    ]
+  },
+  "gate": "hidden",
+  "feature": 340,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "One number in the explanation is wrong. It says 'only about 0.6% of those steps fire' for fed-back c at recall_idx 1, but the predicate (phase==2)&(in_tok==c)&(recall_idx==1) has precision 0.171 on dev (2835 of 16540 steps fire, about 17%). The 0.6% is the firing rate over ALL recall_idx-1 steps, not over the c steps. The qualitative point still holds: those activations are weak, with mass recall 0.013 and 13% of the bottom activation quartile, so leaving them out of the predicate is reasonable.",
+      "Every exclusivity claim checks out on dev. Phase 'original' and the delimiter step have 0 activations. in_tok is c for 100% of active steps. 'Copy phase and input c' gives precision 0.783, recall 1.0, F1 0.878, matching the reported figures.",
+      "The 'c c' claim checks out. Restricting to out_tok==c (the first copied c of an adjacent pair) gives precision 1.0 and carries 7.5% of the mass on only 3.4% of the active steps. The top examples show the second c of the pair weaker.",
+      "On test, the predicate scores precision 0.920, recall 0.958, F1 0.939 and mass recall 0.986, matching the report. Missed activations on test (2972, 1.4% of the mass) are almost all c fed back as the first original token (recall_idx 1). They are weak and consistent with the explanation.",
+      "The false positives (5963 on test) are mostly graded, not a separate class. Precision varies with the token being output next: about 0.68-0.80 when out_tok is p, s, m, b or i, and about 0.98-0.99 when it is a, e, j, q, t, u, v, w or y. Excluding the low-precision tokens lowers test F1 (0.912 or 0.857, against 0.939). So this modulation does not support a better predicate; it is a minor magnitude effect the label does not mention.",
+      "The label does not overclaim relative to the predicate."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

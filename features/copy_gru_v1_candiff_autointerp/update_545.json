@@ -1,0 +1,60 @@
+{
+  "label": "copy phase: just emitted 0 and about to emit 0 again (run of repeated 0s, recall position >= 2)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"0\")) & (out_tok == tok(\"0\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, only when the fed-back input is the digit 0 (in_tok 0 holds 100% of the mass) and the token being output is also 0, i.e. while copying a run of consecutive 0s in the original. It is mostly silent at recall_idx 0-1, even when the in/out-0 condition holds, which is why the predicate requires recall_idx >= 2. Magnitude is largest at the first 0-to-0 transition of a run and drops for later steps in the same run (e.g. 1.00 then 0.48 in u t 0 0 0). Weak activations (lowest quartile, about 8% of mass) occur when input is 0 but the next output is a non-zero token, mostly in sequences with several 0s. Never fires in the original or delimiter phases, and never on any input other than 0.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 545,
+    "predicate": "(phase == 2) & (in_tok == tok(\"0\")) & (out_tok == tok(\"0\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.9111476758535582,
+    "recall": 0.7319894249834765,
+    "f1": 0.8118013560564412,
+    "mass_recall": 0.9148197832561439,
+    "correlation": 0.8495893727091332,
+    "n_active": 3026,
+    "n_predicted": 2431,
+    "coverage_by_activation_quartile": [
+      0.24834874504623514,
+      0.7120211360634082,
+      0.9682539682539683,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 545,
+    "predicate": "(phase == 2) & (in_tok == tok(\"0\")) & (out_tok == tok(\"0\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.9035909445745511,
+    "recall": 0.7419871794871795,
+    "f1": 0.8148539246744104,
+    "mass_recall": 0.9203646497240856,
+    "correlation": 0.8414636506607102,
+    "n_active": 3120,
+    "n_predicted": 2562,
+    "coverage_by_activation_quartile": [
+      0.258974358974359,
+      0.7448717948717949,
+      0.9717948717948718,
+      0.9923076923076923
+    ]
+  },
+  "gate": "update",
+  "feature": 545,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the false positives are concentrated at recall_idx == 2. There the predicate's test precision is 0.66 overall: 0.07 for L=3, 0.99-1.0 for L=4-5, 0.83 for L=6, and 0.37-0.48 for L>=7. At recall_idx >= 3 it is 0.988. So the 'recall_idx >= 2' cutoff is really a recall_idx x L interaction. Excluding the bad cells raises precision to 0.98, but F1 stays flat (0.810 vs 0.812) because recall drops to 0.69.",
+      "Misses carry 8.5% of mass on test and are all low-magnitude firings on in_tok 0 where out_tok is not 0. They can't be captured cheaply: in_tok 0 & out_tok != 0 & recall_idx >= 2 has precision 0.011, rising only to 0.042 with in_count >= 2. Treated as a weak tail, not a systematic counterexample class.",
+      "Checked claims: activation is 100% copy phase and 100% in_tok 0 (confirmed by profile). recall_idx < 2 under the same condition gives precision 0.027 and mass 0.1% (confirmed). Removing the recall_idx condition gives test P 0.74, consistent with the explanation. Test score reproduced: P 0.911 / R 0.732 / F1 0.812 / mass 0.915. Top examples support 'largest at the first 0->0 transition, smaller on later steps of the run'. prev_tok == 0 cases are only about 3.5% of mass."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok('0')) & (out_tok == tok('0')) & ((recall_idx >= 3) | ((recall_idx == 2) & (L >= 4) & (L <= 6)))",
+    "better_predicate_test_f1": 0.8105
+  }
+}

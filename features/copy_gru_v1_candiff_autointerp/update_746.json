@@ -1,0 +1,62 @@
+{
+  "label": "sequence started with o: late original steps (t>=3) through <DEL>",
+  "predicate": "(first_tok == tok(\"o\")) & (t >= 3) & (t <= L)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires when the first original token was o, on original-phase steps from t=3 onward and on the <DEL> step (where out_tok = o is the first recall). first_tok=o accounts for 97.6% of activation mass (25x lift). Never fires at t=0-2 and essentially never in the copy phase (36 of 87792 activations). Activation ramps up over the sequence: weak at t=3 (the 1234 false positives are t=3 steps where it is still near zero), strongest mid-to-late original phase, a bit lower at <DEL>. Larger when orig(1) is also o (top examples all begin o o), but o o alone is a poor predicate. Missed activations (2.4% of mass) are small values in sequences with o at a later position (e.g. position 1) instead of position 0. Content of the current input token has little effect. Dev F1 0.91, mass recall 0.98.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 746,
+    "predicate": "(first_tok == tok(\"o\")) & (t >= 3) & (t <= L)",
+    "split": "test",
+    "precision": 0.9830825032481594,
+    "recall": 0.8394157209882821,
+    "f1": 0.9055865155651969,
+    "mass_recall": 0.9757195752761836,
+    "correlation": 0.9196401375522957,
+    "n_active": 86534,
+    "n_predicted": 73888,
+    "coverage_by_activation_quartile": [
+      0.3749191088102062,
+      0.9827586206896551,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 746,
+    "predicate": "(first_tok == tok(\"o\")) & (t >= 3) & (t <= L)",
+    "split": "dev",
+    "precision": 0.9835727312663907,
+    "recall": 0.8415914889739384,
+    "f1": 0.907059682894341,
+    "mass_recall": 0.9757659223075484,
+    "correlation": 0.9200450897507264,
+    "n_active": 87792,
+    "n_predicted": 75119,
+    "coverage_by_activation_quartile": [
+      0.38513759795881175,
+      0.9812283579369419,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 746,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Secondary miss class is systematic but weak. On the test split, sequences where first_tok != o and orig(1) == o, at t in [3, L], hold 11.9% of active steps by count but only 2.1% of activation mass. The class is also unreliable as a predictor: precision is 0.14 (0.24 when restricted to t>=5). This explains the 0.84 count recall versus 0.976 mass recall. The explanation already mentions it, and adding it to the predicate makes F1 worse (0.716).",
+      "Leftover misses with o at neither position 0 nor position 1 hold 0.3% of the mass (e.g. 'f n k s s', with tiny values of 0.00-0.05). This is scattered noise.",
+      "The magnitude description is a bit off. Mean activation per active step peaks at t=4-5 (about 1.32-1.35e-5 mass per active step) and falls steadily through t=9 (1.09e-5). So it is 'early-to-mid peak, then a slow decline', not 'grows over the sequence, peaking mid-to-late'. <DEL> per active step (1.22e-5) is about the same as the original phase average (1.12e-5), not clearly lower. These are minor descriptive errors.",
+      "The 'o o' sequences (first_tok==o & orig(1)==o, t in [3, L]) hold only 4.1% of the mass, so 'top examples start with o o' is about the extreme tail only. That is consistent with the agent saying 'o o' alone is a poor predicate.",
+      "Verified claims: zero activations at t=0-2. Copy phase has 36 activations on dev; on test, t>L has recall 0.0004 and mass 0.00009. The false positives are all t=3 steps with near-zero values, and t>=4 gives precision 0.9998. Test precision is 0.983 and mass recall 0.976 as reported."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

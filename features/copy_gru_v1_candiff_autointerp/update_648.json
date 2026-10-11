@@ -1,0 +1,62 @@
+{
+  "label": "token right after an early w in the original sequence (w-recency)",
+  "predicate": "(phase == 0) & (t <= 5) & ((prev_tok == tok(\"w\")) | (prev2_tok == tok(\"w\")))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires during the original-input phase on the one or two steps after a w is input, when that w is early in the sequence (steps 1-5). It is strongest on the step right after w: about 0.5-0.65 of max, and close to 1.0 of max after a doubled w (\"w w g\" is the top pattern). Two steps after a w it drops to about 0.1-0.4 of max. It is weak or absent after a w at position 5 or later. It does not fire at t=0, essentially never in the copy phase, and only faintly at the delimiter. The identity of the current input token barely matters (lift about 1x). prev_tok==w alone covers 85% of activation mass at 0.80 precision, or 0.96 precision when t<=5. The leftover misses are tiny activations (<0.1 of max) with no w in the history.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 648,
+    "predicate": "(phase == 0) & (t <= 5) & ((prev_tok == tok(\"w\")) | (prev2_tok == tok(\"w\")))",
+    "split": "test",
+    "precision": 0.8231016092166324,
+    "recall": 0.7328911212679792,
+    "f1": 0.7753813362718941,
+    "mass_recall": 0.9611126321547419,
+    "correlation": 0.7742340174384494,
+    "n_active": 145933,
+    "n_predicted": 129939,
+    "coverage_by_activation_quartile": [
+      0.1770090998793992,
+      0.787188553572897,
+      0.9679028588657731,
+      0.9994792094948333
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 648,
+    "predicate": "(phase == 0) & (t <= 5) & ((prev_tok == tok(\"w\")) | (prev2_tok == tok(\"w\")))",
+    "split": "dev",
+    "precision": 0.8236839679173965,
+    "recall": 0.7360009885289454,
+    "f1": 0.7773777801946816,
+    "mass_recall": 0.9621498774872094,
+    "correlation": 0.7747087170160175,
+    "n_active": 145671,
+    "n_predicted": 130164,
+    "coverage_by_activation_quartile": [
+      0.18111922675599978,
+      0.7937009171288923,
+      0.9696304025481904,
+      0.9995606447538238
+    ]
+  },
+  "gate": "update",
+  "feature": 648,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the prev2_tok==w branch on its own (with prev_tok!=w, t<=5) has precision 0.64 and holds 12% of activation mass. It causes most of the false positives in test misses (for example 'k w 3 *n*' is inactive). This is a weaker, noisier sub-case, but it matches the explanation's 'drops to 0.1-0.4 of max' description.",
+      "About 23% of active steps (dev) have no w in the previous two inputs. They hold only about 2% of activation mass, and the test misses show them as scattered tiny values (0.00-0.07 of max) at t=2-4. I found no token or history pattern among them (adding rel_tok(3)==w gives no mass gain and lowers precision to 0.54).",
+      "The delimiter claim checks out: phase==1 & prev_tok==w has precision 0.16 and 1% of mass (with occasional 0.26-of-max values, e.g. 'h q s w <DEL>'). Adding it to the predicate lowers F1 to 0.751.",
+      "The copy phase is confirmed near-silent: 2 active steps out of 2.7M. t=0 has 0 active steps. prev_tok==w at t==6 has precision 0.20 and 0.4% of mass, which supports 'weak after position 5'. in_tok lift is 1.1-1.3x across tokens, confirming the current token barely matters.",
+      "I confirmed (phase==0)&(t<=5)&prev_tok==w at precision 0.96 and mass recall 0.84. prev_tok==w AND prev2_tok==w at t<=5 has precision 0.995, consistent with the doubled-w peak. Reproduced test scores: P 0.823, R 0.733, F1 0.775, mass recall 0.961."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

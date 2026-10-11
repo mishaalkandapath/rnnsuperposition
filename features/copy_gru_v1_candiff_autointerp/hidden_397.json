@@ -1,0 +1,61 @@
+{
+  "label": "Copy phase (every step after the <DEL> step)",
+  "predicate": "phase == 2",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires at almost every copy-phase step (t > L; recall_idx >= 1) and almost never during the original-token phase or on the <DEL> step itself (about 200 stray activations out of roughly 6.5M steps). It does not depend on token identity: rate and mass are flat across in_tok, out_tok, prev_tok, first_tok and n_digits. Magnitude is largest right after the delimiter, at recall_idx 1 (the step whose input is <DEL>, about 25% of the activation mass), and decays over the copy phase; the top examples reach about 1.0x max at the first copy step and drop to about 0.2-0.4x later on.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 397,
+    "predicate": "phase == 2",
+    "split": "test",
+    "precision": 0.9990995212088378,
+    "recall": 0.9999168390638057,
+    "f1": 0.9995080130520274,
+    "mass_recall": 0.9999956280132553,
+    "correlation": 0.9120026895707617,
+    "n_active": 2729647,
+    "n_predicted": 2731880,
+    "coverage_by_activation_quartile": [
+      0.999667356377086,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 397,
+    "predicate": "phase == 2",
+    "split": "dev",
+    "precision": 0.9991236435052063,
+    "recall": 0.9999256294205616,
+    "f1": 0.9995244755910592,
+    "mass_recall": 0.9999964879427563,
+    "correlation": 0.9121711854853882,
+    "n_active": 2729574,
+    "n_predicted": 2731765,
+    "coverage_by_activation_quartile": [
+      0.999702517900216,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 397,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims hold up. On test, phase == 2 scores precision 0.9991, recall 0.9999, F1 0.9995 and mass recall 1.0. On dev, the copy-phase rate is 0.999; the original phase has 64 actives and the <DEL> step has 139 (about 200 stray actives), and together these carry 0.0% of the mass.",
+      "The magnitude claim checks out. Mass share is 0.248 at recall_idx 1, 0.218 at 2, 0.158 at 3, and keeps falling down to 0.028 at 8. Rates by in_tok are flat at about 0.458.",
+      "Missed activations on test: 227 steps carrying 0.0% of the mass. Almost all are tiny activations (0.00-0.06x max) at t = L-1 or on the <DEL> step of long sequences (L = 8-9). This is a small anticipatory leak, not a separate firing class.",
+      "False positives on test: 2460 of about 2.73M predicted steps (0.09%). The rendered examples cluster in one pattern: an L=4 or L=5 copy step whose output is 'f', with 'f' as the last original token, near recall_idx 3. This fits the slightly lower rate at recall_idx 3 (0.996). The class is too small to change F1. An attempted exclusion predicate gave identical scores, so the variable naming probably did not match and the class was not removed. Not worth a revised predicate."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

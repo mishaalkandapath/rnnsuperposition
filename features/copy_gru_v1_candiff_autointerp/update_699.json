@@ -1,0 +1,61 @@
+{
+  "label": "copy step L+1 when the first original token is \"s\" (fed back as input), long sequences",
+  "predicate": "(recall_idx == 1) & (in_tok == tok(\"s\")) & (L >= 6)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase at step t = L+1 (recall_idx 1, i.e. the step right after <DEL>), when the input there is the model fed-back first output \"s\" (first original token = s). Never fires in the original or delimiter phases, at any other copy position, or for other first tokens (in_tok s accounts for ~100% of mass; a handful of tiny activations on v/w/u). Requires L >= 6: zero activity for L = 3..5; at L = 6 it fires weakly and only on about half the eligible sequences (most false positives are L=6), while at L >= 7 it fires on essentially every eligible sequence (precision 1.0 for L>=7). Magnitude grows with sequence length (top activations ~4.1 are all L = 9; L = 6 examples are ~0.05-0.3 of max). Insensitive to the identity of the token being output, digits count, or repeats.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 699,
+    "predicate": "(recall_idx == 1) & (in_tok == tok(\"s\")) & (L >= 6)",
+    "split": "test",
+    "precision": 0.8953561483876763,
+    "recall": 0.9963018490754623,
+    "f1": 0.9431355852020058,
+    "mass_recall": 0.9998543132840576,
+    "correlation": 0.8470852356471319,
+    "n_active": 10005,
+    "n_predicted": 11133,
+    "coverage_by_activation_quartile": [
+      0.9852118305355716,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 699,
+    "predicate": "(recall_idx == 1) & (in_tok == tok(\"s\")) & (L >= 6)",
+    "split": "dev",
+    "precision": 0.891143405538799,
+    "recall": 0.9968305899192311,
+    "f1": 0.9410288582183186,
+    "mass_recall": 0.9998498142640292,
+    "correlation": 0.8420906677236571,
+    "n_active": 9781,
+    "n_predicted": 10941,
+    "coverage_by_activation_quartile": [
+      0.9873262469337695,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 699,
+  "final_verdict": "explained",
+  "skeptic": {
+    "revised_verdict": "explained",
+    "upheld": true,
+    "issues": [
+      "The test scores reproduce: P 0.895, R 0.996, F1 0.943, mass recall 0.9999. On the dev split, all activation mass falls in the copy phase at recall_idx 1, with in_tok s holding 100% of it. Nothing fires for L = 3..5.",
+      "L = 6 on its own scores P 0.57, R 0.16, mass recall 0.023. L >= 7 scores P 1.0, R 0.84. Both match the claims, and L >= 6 gives the better F1.",
+      "Minor overclaim: the explanation says firing does not depend on digits or repeats, but at L = 6 it does somewhat. Precision is 0.37 when in_count >= 2 versus 0.62 when in_count == 1, and 0.73 when n_digits >= 2 versus 0.50 when n_digits == 0. This looks like graded modulation near the firing threshold, not a clean rule, and L = 6 carries only about 2% of the mass.",
+      "The 37 missed activations on the test split are near-zero (0.00-0.02 of max) and carry 0% of the mass. All are at step 10 (L = 9) with first token v, w or u, and most have '2' as the third token. This is negligible."
+    ],
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

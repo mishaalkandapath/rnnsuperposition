@@ -1,0 +1,61 @@
+{
+  "label": "first token was t: original-phase steps t>=3 and <DEL>",
+  "predicate": "(first_tok == tok(\"t\")) & (t >= 3) & (phase <= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires in sequences whose first original token is t, from step 3 of the original phase through the <DEL> step, whatever token is input at that step. It is silent at steps 0-2 and almost never fires in the copy phase (15 steps on dev), so it stops once the model starts outputting the leading t. Magnitude is near zero at step 3, climbs to its peak around steps 4-6 (about 0.8-1.0 of max), and falls off slightly toward <DEL>. Step 3 makes up most of the weak or absent activations; requiring t>=4 gives precision 0.999 but recall 0.64. A second t at position 1 does not make it fire more often. Misses hold 5% of activation mass and are weak activations (<0.2 of max) in sequences with t at position 1 instead of position 0. It does not fire for other first tokens (rate under 1.1%).",
+  "test_scores": {
+    "gate": "update",
+    "feature": 264,
+    "predicate": "(first_tok == tok(\"t\")) & (t >= 3) & (phase <= 1)",
+    "split": "test",
+    "precision": 0.946524563486241,
+    "recall": 0.7791124091438107,
+    "f1": 0.8546977662950851,
+    "mass_recall": 0.9501967284264328,
+    "correlation": 0.8844140298903591,
+    "n_active": 91078,
+    "n_predicted": 74969,
+    "coverage_by_activation_quartile": [
+      0.31343873517786563,
+      0.803030303030303,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 264,
+    "predicate": "(first_tok == tok(\"t\")) & (t >= 3) & (phase <= 1)",
+    "split": "dev",
+    "precision": 0.9457743434561764,
+    "recall": 0.7802121874024874,
+    "f1": 0.8550526392926061,
+    "mass_recall": 0.9503986136907993,
+    "correlation": 0.8839341382094124,
+    "n_active": 89732,
+    "n_predicted": 74024,
+    "coverage_by_activation_quartile": [
+      0.3148932376409754,
+      0.8061338207105604,
+      0.9998216912584139,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 264,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Main claims hold on the test split. Predicate P = (first_tok==t)&(t>=3)&(phase<=1) scores P 0.947 / R 0.779 / F1 0.855 / mass recall 0.950, matching the reported numbers. The copy phase has 15 active steps on dev, and (phase==2) has mass recall 0.00003. Steps 0-2 are silent. The t>=4 variant gives P 0.9995 / R 0.639. Restricting to the <DEL> step only gives P 0.99. All of these confirm the explanation.",
+      "There is a systematic but low-magnitude miss class, and the explanation already discloses it. When orig(1)==t and first_tok!=t (from step 3 through <DEL>), the feature fires at a rate of 22% (36% for t>=5). That covers 17.5% of active steps but only 4.6% of activation mass, and almost all of the 20k missed steps fall in it. The rate within this class depends on the first token: about 0.73 when first_tok is j, 0.67 for j/2/3, and 0.36 for s/m/a. Adding the class to the predicate (t>=5 variant) raises recall to 0.937 but lowers F1 to 0.829. So it is a real secondary, weak-onset pattern, but it is not worth including in the label.",
+      "Minor nuance on 'a second t at position 1 does not make it fire more often'. By firing rate this is true: precision for t t sequences is 0.82, against 0.95 for the rest. But those sequences carry higher magnitude. They are 3.4% of predicted steps but 8.2% of the top-activation quartile, and every top example starts with 't t'. The explanation does not mention this magnitude boost.",
+      "The false positives are mostly step 3 with weak or absent activation, as the explanation claims (4009 FPs on test)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

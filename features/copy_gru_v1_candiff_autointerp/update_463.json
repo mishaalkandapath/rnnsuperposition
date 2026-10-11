@@ -1,0 +1,64 @@
+{
+  "label": "3rd original token after x in position 2, when first token is in {g,p,u,2,t,j,o,r,0,3}",
+  "predicate": "(t==2)&(prev_tok==tok(\"x\"))&isin(first_tok,[tok(c) for c in \"gpu2tjor03\"])",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires only during the original phase, at t=2 (90% of mass) and occasionally t=3, and only when the previous input is x (100% of activations). At t=2 it fires on the bigram pattern <first> x <current>, gated by the first token: near-deterministic for first token g, p, u, 2, t (precision ~1.0) and high for j, o, r, 0, 3 (0.7-0.9); weaker for i, y, q, 1; essentially never for a, c, d, k, l, m, s, v, w. Magnitude is highest for first token g (the top activations are all g x k, at max) and the current token modulates it (k and x highest). There is a weak, low-magnitude secondary at t=3 when the input at t=2 is x (about 10% of mass), mostly when both earlier tokens are in the same set. It never fires at t=0/1, at t>=4, or in the delimiter or copy phases.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 463,
+    "predicate": "(t==2)&(prev_tok==tok(\"x\"))&isin(first_tok,[tok(c) for c in \"gpu2tjor03\"])",
+    "split": "test",
+    "precision": 0.9170890658942795,
+    "recall": 0.721960951973778,
+    "f1": 0.807910055019536,
+    "mass_recall": 0.8483641783076012,
+    "correlation": 0.7450951590487077,
+    "n_active": 7017,
+    "n_predicted": 5524,
+    "coverage_by_activation_quartile": [
+      0.4735042735042735,
+      0.6767388825541619,
+      0.8015963511972634,
+      0.936145952109464
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 463,
+    "predicate": "(t==2)&(prev_tok==tok(\"x\"))&isin(first_tok,[tok(c) for c in \"gpu2tjor03\"])",
+    "split": "dev",
+    "precision": 0.9161502005103901,
+    "recall": 0.7247296322999279,
+    "f1": 0.809274615570405,
+    "mass_recall": 0.8462891195759892,
+    "correlation": 0.7378554731385276,
+    "n_active": 6935,
+    "n_predicted": 5486,
+    "coverage_by_activation_quartile": [
+      0.5063437139561707,
+      0.6487889273356401,
+      0.8143021914648212,
+      0.9296018465089441
+    ]
+  },
+  "gate": "update",
+  "feature": 463,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "I reproduced the reported test scores exactly: P 0.917, R 0.722, F1 0.808, mass recall 0.848. The phase and position claims also hold. In the profile, 100% of activations are in the original phase, with 89.8% of mass at t=2 and 10.2% at t=3. 6934 of 6935 activations have prev_tok==x, and the rest are zero.",
+      "There is a systematic false-positive class the explanation does not mention. When the first token is in {j,o,r,0,3} and the current token is in {p,t,u}, the feature never fires: precision 0.000 on 293 test steps. That is most of the 458 test false positives. The explanation says the current token only changes magnitude, but these current tokens switch the feature off entirely for the weaker first tokens. With first in {g,p,u,2,t}, current p/t/u still fires (precision 0.935).",
+      "Precision broken down by current token within the predicate (test): p 0.375, t 0.463, u 0.454, and roughly 0.8-1.0 for every other token. The original per-first-token precisions of 0.7-0.9 for j/o/r/0/3 come almost entirely from this exclusion.",
+      "The same exclusion applies to the weaker first tokens i/y/q/1. With current p/t/u they score 0/67, 0/77 and 0/66 on dev. Even without p/t/u, first in {i,y} reaches only 0.46 precision, so leaving them out is reasonable.",
+      "The t=3 secondary pattern (orig(2)=x) is sharper than described. It needs orig(1) in {g,p} and first_tok in {g,p,u,2,j}, which gives precision 0.97. The broader 'both earlier tokens in the same set' version reaches only about 0.31. Adding the sharp version raises test recall without lowering precision.",
+      "The label is roughly faithful to the predicate. One wording problem: it says '3rd original token after x in position 2', but the predicate requires x at position 1, the second token (prev_tok at t=2). The current label is misleading."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "The third original token (t=2), when the second token is x and the first token is in {g,p,u,2,t}, or in {j,o,r,0,3} with the current token not p/t/u; also fires weakly at t=3 after g/p x when the first token is in {g,p,u,2,j}",
+    "better_predicate": "((t==2)&(prev_tok==tok(\"x\"))&(isin(first_tok,[tok(c) for c in \"gpu2t\"])|(isin(first_tok,[tok(c) for c in \"jor03\"])&~isin(in_tok,[tok(c) for c in \"ptu\"]))))|((t==3)&(prev_tok==tok(\"x\"))&isin(prev2_tok,[tok(c) for c in \"gp\"])&isin(first_tok,[tok(c) for c in \"gpu2j\"]))",
+    "better_predicate_test_f1": 0.842
+  },
+  "final_label": "The third original token (t=2), when the second token is x and the first token is in {g,p,u,2,t}, or in {j,o,r,0,3} with the current token not p/t/u; also fires weakly at t=3 after g/p x when the first token is in {g,p,u,2,j}"
+}

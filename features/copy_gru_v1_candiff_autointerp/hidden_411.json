@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input p (echoed p), unless next output is a/c/d/e/f/o/q/u/w/0",
+  "predicate": "(phase == 2) & (in_tok == tok(\"p\")) & ~isin(out_tok, [tok(c) for c in \"acdefoquw0\"])",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token-specific copy-phase feature. It fires only when the input in the copy phase is p, meaning the model has just echoed an original p. It essentially never fires in the original or delimiter phases, and never on any other input token. Fed-back p covers 99.99% of activation mass, but only about 61% of those steps are active. Whether it fires depends on the token being output at that step, i.e. the original token after the p. It is very reliable (>90% of steps) when the output is g,h,i,k,l,m,p,s,t,x,z,1,2,3; moderate for j,n,r,v,y; weak or absent for a,c,d,e,f,o,q,u,w,0; b is around 50%. Low-quartile examples are mostly p followed by b/o/e. Firing rate is flat across L, recall position and digit count.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 411,
+    "predicate": "(phase == 2) & (in_tok == tok(\"p\")) & ~isin(out_tok, [tok(c) for c in \"acdefoquw0\"])",
+    "split": "test",
+    "precision": 0.8804782845002224,
+    "recall": 0.9604052888761139,
+    "f1": 0.9187066617403185,
+    "mass_recall": 0.989556625741711,
+    "correlation": 0.8421671901980657,
+    "n_active": 55664,
+    "n_predicted": 60717,
+    "coverage_by_activation_quartile": [
+      0.8502443230813452,
+      0.9915924116125323,
+      0.9997844208105777,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 411,
+    "predicate": "(phase == 2) & (in_tok == tok(\"p\")) & ~isin(out_tok, [tok(c) for c in \"acdefoquw0\"])",
+    "split": "dev",
+    "precision": 0.8790652577607599,
+    "recall": 0.9601694458903987,
+    "f1": 0.9178291381410753,
+    "mass_recall": 0.989705568414193,
+    "correlation": 0.8405420648836992,
+    "n_active": 55711,
+    "n_predicted": 60851,
+    "coverage_by_activation_quartile": [
+      0.851809304997128,
+      0.9892303273980471,
+      0.9996410109132683,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 411,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most factual claims hold. On the test split the predicate scores P 0.880, R 0.960, F1 0.919, mass recall 0.990. The feature is active on only 2 non-copy steps, and in_tok == p carries about 100% of the mass. Fed-back p alone gives P 0.611 and R 0.99995. Dev precision for each output token matches the explanation: a 0.007, c 0, d 0.0003, e 0.014, f 0, o 0.334, q 0.127, u 0.220, w 0.025, 0 0.0003, b 0.516, j 0.81, n 0.78, r 0.83, v 0.86, y 0.74, g 0.97.",
+      "Systematic miss: the explanation says firing depends only on the token output at this step (out_tok). It also depends strongly on the token output at the NEXT step (next_out, the original token two after the p). Inside the predicate, precision by next_out is: c 0.379, d 0.358, f 0.44, 0 0.407, a 0.69, e 0.719, w 0.763. For g, 1 and b it is 0.93-0.99. When next_out is one of acdefoquw0, precision falls to 0.627 over 16,744 predicted steps, which is most of the roughly 7.3k false positives. When next_out is not in that set, precision is 0.975 over 44,107 steps. On the last step (to_go == 0, no next output) precision is 0.966.",
+      "The dependence on the two upcoming tokens is graded and joint, not a clean exclusion list. With out_tok in o/u/q/b and a favourable next_out, precision rises to 0.455, 0.301, 0.173 and 0.701, compared with 0.33, 0.22, 0.13 and 0.52 overall. A fixed out_tok blacklist with b included is therefore an approximation.",
+      "The label wording 'unless next output is ...' is ambiguous. The predicate tests out_tok, the output at the current step. The tool's variable named next_out is the output after that, and it turns out to matter as well.",
+      "The magnitude also differs by output token, which the explainer admits not checking. Fed-back p followed by g puts 10.4% of its hits in the top activation quartile and 2.6% in the bottom one. For y the figures are 0.3% and 6.3%, and for b essentially 0% in the top quartile."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input p (echoed p), gated by the next two original tokens: suppressed when the current output is a/c/d/e/f/o/q/u/w/0, and partly suppressed when the following output is c/d/f/0",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"p\")) & ~isin(out_tok, [tok(c) for c in \"acdefoquw0\"]) & ~isin(next_out, [tok(c) for c in \"cdf0\"])",
+    "better_predicate_test_f1": 0.925
+  },
+  "final_label": "copy-phase input p (echoed p), gated by the next two original tokens: suppressed when the current output is a/c/d/e/f/o/q/u/w/0, and partly suppressed when the following output is c/d/f/0"
+}

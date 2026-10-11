@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input n echoed back as the 1st or 2nd original token",
+  "predicate": "(phase == 2) & (in_tok == tok(\"n\")) & isin(recall_idx, [1, 2])",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the fed-back input is the letter n and it is the first or second original token (recall_idx 1 or 2, i.e. input orig(0) or orig(1)). It never fires on n in the original phase, at the delimiter, or on n later in the copy. Magnitude is strongest when n was the first original token (recall_idx 1, ~0.8-1.0 of max, 80% of mass). It is weaker when n was the second token (recall_idx 2, ~0.2-0.4 of max). Most false positives are recall_idx-2 cases in short sequences (L=3-4) or right after another n.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 506,
+    "predicate": "(phase == 2) & (in_tok == tok(\"n\")) & isin(recall_idx, [1, 2])",
+    "split": "test",
+    "precision": 0.946922524248593,
+    "recall": 0.9999051653284441,
+    "f1": 0.9726928872351549,
+    "mass_recall": 0.9999964997024747,
+    "correlation": 0.8472173072588832,
+    "n_active": 31634,
+    "n_predicted": 33404,
+    "coverage_by_activation_quartile": [
+      0.9996206852952333,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 506,
+    "predicate": "(phase == 2) & (in_tok == tok(\"n\")) & isin(recall_idx, [1, 2])",
+    "split": "dev",
+    "precision": 0.9473860284054622,
+    "recall": 0.9999678993323061,
+    "f1": 0.9729670638576984,
+    "mass_recall": 0.99999921782999,
+    "correlation": 0.8460046110893458,
+    "n_active": 31152,
+    "n_predicted": 32881,
+    "coverage_by_activation_quartile": [
+      0.9998715973292245,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 506,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Main claims hold. Every activation (100% of mass) is in the copy phase with in_tok == n. Recall_idx 1 gives precision 1.0 and 80.4% of mass; recall_idx 2 gives 19.6% of mass. Recall_idx 3 and above essentially never fire (1 step on dev). There are zero activations in the original phase or at the delimiter. Test misses are 3 tiny activations (rel <= 0.03, 0.0% of mass), which is noise.",
+      "Systematic false-positive class: the recall_idx-2 branch depends on sequence length. On test, (phase==2)&(in_tok==n)&(recall_idx==2)&(L==3) gives precision 0.0 on 432 predicted steps, so it never fires. With L==4 precision is 0.45 on 2442 steps, with weak activations (0.25% of mass). With L>=5 precision is 1.0. Of the 1773 test false positives, about 1774 come from L<=4. The label's 'echoed back as the 1st or 2nd original token' therefore overclaims: for L=3, n as the 2nd token never activates the feature.",
+      "The explanation mentions these short-sequence false positives, but they are a deterministic class, not noise. Excluding them is a one-clause fix that raises test precision from 0.947 to 1.0 and F1 from 0.973 to 0.982, with mass recall 0.9975. Calling that 'marginal' understates a clean structural rule. A secondary 'after another n' exclusion (orig(0)==n) is a small effect: 553 steps, precision 0.91.",
+      "Minor: the relayed user request about batch 2/3 timing does not apply to this per-feature task. It was not acted on."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input n echoed back as the 1st original token (strong), or as the 2nd original token in sequences of length >= 5 (weak)",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"n\")) & ((recall_idx == 1) | ((recall_idx == 2) & (L >= 5)))",
+    "better_predicate_test_f1": 0.982
+  },
+  "final_label": "copy-phase input n echoed back as the 1st original token (strong), or as the 2nd original token in sequences of length >= 5 (weak)"
+}

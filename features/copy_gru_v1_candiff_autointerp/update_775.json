@@ -1,0 +1,64 @@
+{
+  "label": "copy-phase re-input of l at original position >= 2",
+  "predicate": "(phase == 2) & (in_tok == tok(\"l\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost only in the copy phase when the fed-back input token is l (in_tok == l carries ~100% of activation mass; essentially zero in the original and delimiter phases, including on the original l inputs). Magnitude rises with how late l sat in the original sequence: firing is weak or missing when l was original token 1 (recall_idx 2, about 1% of mass), partial when l was token 2 (recall_idx 3), and every copy-phase l from original position 3 on (recall_idx >= 4) is active (precision 1.0). Top activations are l at original positions 5-6. It does not depend on the output token, the neighbouring tokens, or the first token. The false positives of the chosen predicate are mostly l at original position 2.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 775,
+    "predicate": "(phase == 2) & (in_tok == tok(\"l\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.85671776063112,
+    "recall": 0.95937384970068,
+    "f1": 0.9051444447490838,
+    "mass_recall": 0.9875098783038064,
+    "correlation": 0.8575627238292365,
+    "n_active": 51617,
+    "n_predicted": 57802,
+    "coverage_by_activation_quartile": [
+      0.854242541650523,
+      0.9840359578425294,
+      0.9992250464972101,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 775,
+    "predicate": "(phase == 2) & (in_tok == tok(\"l\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.8552968890736506,
+    "recall": 0.9587774994660297,
+    "f1": 0.9040857616288118,
+    "mass_recall": 0.9872899571336938,
+    "correlation": 0.8568060657836414,
+    "n_active": 51501,
+    "n_predicted": 57732,
+    "coverage_by_activation_quartile": [
+      0.8518173345759553,
+      0.9844660194174757,
+      0.9988349514563106,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 775,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claim holds up. in_tok == l holds 100% of activation mass, 51,481 of 51,501 active steps are in the copy phase, and the delimiter step never fires. The stricter predicate recall_idx >= 4 gives precision 1.0 and mass recall about 0.80.",
+      "There is a systematic gap the explanation misses: the cut-off depends on how close the step is to the end of the sequence (to_go), not just on recall_idx. For l at original position 2 (recall_idx 3), the firing rate is 0.99 at L=5 (to_go 1), 0.55 at to_go 2, 0.15 at L=7 (to_go 3) and 0.23 at L=9 (to_go 5). So the false positives of the chosen predicate are a structured class: recall_idx 3 in long sequences.",
+      "The claim 'when l was original token 1 (recall_idx 2) firing is weak or missing' is wrong in part. At L=3 (to_go 0) the rate is 1.0 (443 of 443), at L=4 (to_go 1) it is 0.68, and only at L >= 5 is it 0. These are systematic misses of the recall_idx >= 3 predicate.",
+      "The profile's to_go breakdown supports this. Activity falls steadily as to_go rises (40% of mass at to_go 0, 0 at to_go >= 6). For recall_idx >= 4 the feature fires on every l at every to_go, so the end-of-sequence effect only lifts the earlier positions.",
+      "The label 'original position >= 2' overclaims. Position 2 fires reliably only near the end of the sequence (short L), and position 1 also fires when it is near the end.",
+      "Test results: the original predicate gets F1 0.905 (P 0.857). The revised predicate below gets test P 0.953, R 0.973, F1 0.963, mass recall 0.997. Its remaining misses are tiny activations (about 0.01-0.08 of max, 0.3% of mass) on l at original position 2 in long sequences, which is scattered noise."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase re-input of l, if l was original token 3 or later, or the step is within the last 1-2 outputs",
+    "better_predicate": "(phase == 2) & (in_tok == tok('l')) & ((recall_idx >= 4) | (to_go <= 1) | ((recall_idx == 3) & (to_go == 2)))",
+    "better_predicate_test_f1": 0.963
+  },
+  "final_label": "copy-phase re-input of l, if l was original token 3 or later, or the step is within the last 1-2 outputs"
+}

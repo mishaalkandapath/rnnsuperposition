@@ -1,0 +1,62 @@
+{
+  "label": "echoed digit 1 as input at the first or second copy step (short sequences)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"1\")) & (((recall_idx == 1) & (L <= 8)) | ((recall_idx == 2) & (L <= 6)))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, and only when the input is the digit 1, i.e. the model fed back its own just-emitted 1. Almost all of it (93% of mass) is at recall_idx 1, the step right after <DEL> when orig(0) was 1. Here activation is strongest (up to the max, about 3.2) for short sequences (L=4-5). It weakens as L grows and is mostly absent at L=9. A weaker secondary mode (7% of mass, activation around 0.0-0.4 of max) is at recall_idx 2 when orig(1) was 1, and only for short L (6 or less). Never fires in the original or delimiter phases, on any other token, or on a fed-back 1 at later copy positions (recall_idx 3 or more). The magnitude tracks how early in the copy phase the 1 appears and how short the sequence is. It does not depend on the token being output next.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 96,
+    "predicate": "(phase == 2) & (in_tok == tok(\"1\")) & (((recall_idx == 1) & (L <= 8)) | ((recall_idx == 2) & (L <= 6)))",
+    "split": "test",
+    "precision": 0.8349674659060522,
+    "recall": 0.9546496815286625,
+    "f1": 0.890806647172099,
+    "mass_recall": 0.994518580939594,
+    "correlation": 0.7543822332940879,
+    "n_active": 19625,
+    "n_predicted": 22438,
+    "coverage_by_activation_quartile": [
+      0.8324842062359894,
+      0.9861394211169996,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 96,
+    "predicate": "(phase == 2) & (in_tok == tok(\"1\")) & (((recall_idx == 1) & (L <= 8)) | ((recall_idx == 2) & (L <= 6)))",
+    "split": "dev",
+    "precision": 0.8349514563106796,
+    "recall": 0.9584780467575553,
+    "f1": 0.8924606622260837,
+    "mass_recall": 0.9950909507809177,
+    "correlation": 0.757809105760331,
+    "n_active": 19291,
+    "n_predicted": 22145,
+    "coverage_by_activation_quartile": [
+      0.8428364088741447,
+      0.9910843873108024,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 96,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Main claims hold on the test split. The feature only fires in the copy phase and only when the input is 1. The recall_idx 1 mode is nearly perfect: precision 0.998 for L<=7 and 0.982 for L<=8, holding 92% of mass. At L=9 precision is 0.19 with 0.3% of mass, so 'mostly absent' is fair. recall_idx>=3 holds about 0.1% of mass.",
+      "Small systematic false-positive class: at recall_idx 2 with L=3 (the last copy step) the feature never fires, with precision 0.002 over 434 predicted steps. The predicate's L<=6 condition includes this case. Requiring L>=4 lifts test F1 from 0.891 to 0.900.",
+      "The recall_idx 2 mode is noisy: precision 0.50 at L=4, 0.83 at L=5 and 0.53 at L=6. Nothing I checked explains the rest: whether first_tok is a digit, letter or vowel, correct, in_count, or next_out. The explanation's '7% of mass' is right, but this mode is 26% of active steps by count. It is low-magnitude, so it reads as threshold noise rather than a missing variable.",
+      "The test misses list only weak activations (0.5% of mass) scattered across L=9 and recall_idx 3. No systematic missed class."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "echoed digit 1 as input at the first copy step (L<=8), and weakly at the second copy step (L=4-6)",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"1\")) & (((recall_idx == 1) & (L <= 8)) | ((recall_idx == 2) & (L >= 4) & (L <= 6)))",
+    "better_predicate_test_f1": 0.9
+  },
+  "final_label": "echoed digit 1 as input at the first copy step (L<=8), and weakly at the second copy step (L=4-6)"
+}

@@ -1,0 +1,63 @@
+{
+  "label": "early original-phase steps (t=2..4) after a q has appeared",
+  "predicate": "(phase==0) & (t>=2) & (t<=4) & seen([tok(\"q\")])",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires during the original (input) phase at absolute positions t=2..4 (peak at t=3), but only if the letter q was input at some earlier step. 99% of activation mass is in the original phase; it is silent at t=0,1, nearly silent at t>=6, and essentially never fires in the copy phase (a small tail fires at <DEL> for short sequences). Magnitude is highest when q occurred early and repeatedly: the top activations (~7.5) are all sequences beginning q q q, peaking at t=3 right after the q run. prev2_tok==q (lift 15.7x) and first_tok==q (9.8x) are the strongest single correlates. A q immediately before the current step (prev_tok==q with no earlier q) tends to give weak or no activation; the feature turns on about two steps after the q. The current input token identity matters little. Missed activations are mostly weak firings at t=5, and false positives are mostly t=4 steps right after a single late q.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 521,
+    "predicate": "(phase==0) & (t>=2) & (t<=4) & seen([tok(\"q\")])",
+    "split": "test",
+    "precision": 0.7673975070195488,
+    "recall": 0.8878041519643467,
+    "f1": 0.8232213751613611,
+    "mass_recall": 0.9687337171143402,
+    "correlation": 0.7356394321823981,
+    "n_active": 114211,
+    "n_predicted": 132131,
+    "coverage_by_activation_quartile": [
+      0.6305116800336217,
+      0.9547508142752075,
+      0.9747837355094036,
+      0.9911739983188568
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 521,
+    "predicate": "(phase==0) & (t>=2) & (t<=4) & seen([tok(\"q\")])",
+    "split": "dev",
+    "precision": 0.7656633860344542,
+    "recall": 0.888416708201079,
+    "f1": 0.8224851352499989,
+    "mass_recall": 0.9690372675695029,
+    "correlation": 0.7352946162363888,
+    "n_active": 114363,
+    "n_predicted": 132698,
+    "coverage_by_activation_quartile": [
+      0.632576684970795,
+      0.9555104753244028,
+      0.9744674897695079,
+      0.9911157747464149
+    ]
+  },
+  "gate": "update",
+  "feature": 521,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Main finding: the feature depends on how recently q appeared, not on whether q appeared at all. seen(q) lets in long-ago q's and misses this. At t=4 with exactly one q in the prefix (dev precision): q at position 0 gives 0.27, q at position 1 gives 0.85, q at position 2 gives 0.82, q at position 3 (the step just before) gives 0.16. A q four steps back, or a single q one step back at t=4, mostly does not fire. Together these are the false-positive class, and t=4 & seen(q) as a whole has precision only 0.55.",
+      "The claim 'a lone q immediately before the current step gives weak or no activation' is wrong at t=2 and t=3. t=2 with q only at position 1 has precision 0.84. t=3 with a single q at position 2 has precision 0.76. t=3 with a single q at position 0 has 0.93, and with a single q at position 1 has 0.99. The step right after a q fails only at t=4.",
+      "'Turns on about two steps after the q' is imprecise. The feature fires 1 to 3 steps after a q, inside the window t=2..4. One step after only counts when t<=3.",
+      "Claims that check out: zero activity at t=0..1; 99.4% of mass in the original phase; 0.6% at <DEL>; one copy-phase activation; t=3 peak (49% of mass); the top activations are all q q q at t=3; the lifts for prev2_tok==q (15.7x) and first_tok==q (9.8x); and the reported test scores (P 0.767, R 0.888, F1 0.823, mass recall 0.969, all reproduced).",
+      "Remaining misses with the refined predicate are mostly weak (about 0.01 to 0.04 of max), for example steps after a q at t=4 or t=5 and scattered steps with no q. Together they hold about 4.7% of the activation mass, which is acceptable noise."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "original-phase steps t=2..4 that come 1-3 steps after a q (a q one step back counts only at t<=3)",
+    "better_predicate": "(phase==0)&(t>=2)&(t<=4)&((rel_tok(-2)==tok('q'))|(rel_tok(-3)==tok('q'))|((rel_tok(-1)==tok('q'))&(t<=3)))",
+    "better_predicate_test_f1": 0.863
+  },
+  "final_label": "original-phase steps t=2..4 that come 1-3 steps after a q (a q one step back counts only at t<=3)"
+}

@@ -1,0 +1,60 @@
+{
+  "label": "copy-phase input u at the first or second copy step",
+  "predicate": "(phase == 2) & (in_tok == tok(\"u\")) & (recall_idx <= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the fed-back input is the letter u and it is early in the copy: recall_idx 1 (u is original token 0, input right after <DEL>) or recall_idx 2 (u is original token 1). Magnitude is strongly set by position: when orig(0)=u it fires at about 0.85-1.0 of max (81% of the mass); when u comes in at recall_idx 2 it is much weaker, about 0.1-0.4 of max, and it is often silent there in short sequences (most false positives). It does not fire on u in the original phase, on u later in the copy (recall_idx >= 3), or on any other token (other tokens hold less than 0.1% of the mass). It does not depend on the output token or L.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 462,
+    "predicate": "(phase == 2) & (in_tok == tok(\"u\")) & (recall_idx <= 2)",
+    "split": "test",
+    "precision": 0.9448211713874219,
+    "recall": 0.9982247582818197,
+    "f1": 0.9707890802028578,
+    "mass_recall": 0.9999449947765601,
+    "correlation": 0.8430994642863086,
+    "n_active": 31545,
+    "n_predicted": 33328,
+    "coverage_by_activation_quartile": [
+      0.9928997083808799,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 462,
+    "predicate": "(phase == 2) & (in_tok == tok(\"u\")) & (recall_idx <= 2)",
+    "split": "dev",
+    "precision": 0.9413960990471639,
+    "recall": 0.9979418656196568,
+    "f1": 0.9688446227386607,
+    "mass_recall": 0.9999310546679114,
+    "correlation": 0.8419043916279244,
+    "n_active": 31582,
+    "n_predicted": 33479,
+    "coverage_by_activation_quartile": [
+      0.9917679837892603,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 462,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The false positives are not random. They all come from short sequences at recall_idx 2. On the test split, at recall_idx 2 with in_tok=u, precision is 0.0 for L=3 (421 steps predicted), 0.41 for L=4 (2395 steps), and 1.0 for every L>=5. When L=4 does fire there, the activation is tiny (about 0.02-0.08 of max), essentially threshold noise. The explanation does say the feature is 'often silent there in short sequences', so the claim holds, but the predicate does not encode it.",
+      "The other claims check out. Mass is entirely in the copy phase. recall_idx 1 holds 81% of the mass with precision 1.0 (test). recall_idx 2 holds 19% and is weaker (example activation 0.35). recall_idx 3 has only 18 dev activations and other tokens have about 0.1% of activations. Missed activations hold 0.0% of the mass (56 steps, tiny values)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input u at the first copy step (any L) or the second copy step (L>=5 only)",
+    "better_predicate": "(phase == 2) & (in_tok == tok('u')) & ((recall_idx == 1) | ((recall_idx == 2) & (L >= 5)))",
+    "better_predicate_test_f1": 0.983
+  },
+  "final_label": "copy-phase input u at the first copy step (any L) or the second copy step (L>=5 only)"
+}

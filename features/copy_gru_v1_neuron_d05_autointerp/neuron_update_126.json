@@ -1,0 +1,63 @@
+{
+  "label": "First step on a token from a fixed set, plus the first copy step (re-reading token 0) when L=3",
+  "predicate": "(isin(in_tok,[3,4,7,8,10,12,13,15,16,19,20,21,23,27,28]) & (t==0)) | ((recall_idx==1) & (L==3))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires in two position-locked contexts. (1) At t=0 whenever the first token is one of d,e,h,i,k,m,n,p,q,t,u,v,x,1,2. This set is deterministic: precision is 1.0 for each of these tokens and 0 for the other 15. Activation here is small and depends on the token (k,u,v,q highest, about 0.15-0.17 of max; t,p,2 lowest). This is about 80% of active steps but only 68% of activation mass. (2) At the first copy step after <DEL> (recall_idx=1, input = token 0, output = token 1) in short sequences. It is strongest at L=3, where it fires for any token and produces the largest activations (top examples near the max of 0.27). It fires more weakly and only sometimes at L=4. It never fires at the delimiter step, at original positions t>=2, or at copy steps with recall_idx>=3. Weak residual firing at t=1 and recall_idx=2 makes up the misses.",
+  "predicate_note": "",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 126,
+    "predicate": "(isin(in_tok,[3,4,7,8,10,12,13,15,16,19,20,21,23,27,28]) & (t==0)) | ((recall_idx==1) & (L==3))",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.8442027241661453,
+    "f1": 0.9155205261372237,
+    "mass_recall": 0.8822933101205473,
+    "correlation": 0.6807521284812755,
+    "n_active": 62331,
+    "n_predicted": 52620,
+    "coverage_by_activation_quartile": [
+      0.6584098055573381,
+      0.9432715138291728,
+      0.9095809536032856,
+      0.8655499935823386
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 126,
+    "predicate": "(isin(in_tok,[3,4,7,8,10,12,13,15,16,19,20,21,23,27,28]) & (t==0)) | ((recall_idx==1) & (L==3))",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.8435496281097717,
+    "f1": 0.9151363383416806,
+    "mass_recall": 0.881631427086848,
+    "correlation": 0.680475955814267,
+    "n_active": 62384,
+    "n_predicted": 52624,
+    "coverage_by_activation_quartile": [
+      0.6543985637342908,
+      0.9476788920235958,
+      0.9095280841241344,
+      0.8625929725570659
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 126,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The factual claims hold. At t=0 the unit covers 80% of active steps and 68% of activation mass. It is silent on the delimiter step and on original positions t>=2. The recall_idx>=3 steps are essentially silent (13 active steps on dev). On test the predicate has 0 false positives (precision 1.0, F1 0.916).",
+      "A systematic class of misses remains. At recall_idx==1 with L==4 there are about 5.8k active steps on dev, carrying about 8.4% of activation mass. These are not random: when the re-read token 0 is in the same 15-token set as the t=0 context, precision is 0.59 and they hold 7% of mass. When it is outside that set, precision is 0.21. The explanation calls L=4 firing weak and only occasional and leaves it out, but it does not mention that the L=4 firing follows the same token set.",
+      "The label only mentions L=3. It leaves out that the first-copy-step context spreads to L=4, gated by token identity. There is also a smaller miss class at recall_idx==2 with L==3 (about 3.6% of mass).",
+      "Adding (recall_idx==1)&(L==4)&isin(in_tok,SET) raises test F1 from 0.916 to 0.932 and mass recall from 0.88 to 0.95, with precision 0.95."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Reading a token from a fixed 15-token set (d e h i k m n p q t u v x 1 2) at a 'start' position: t=0, or the first copy step re-reading token 0 in short sequences (any token at L=3; mostly the same token set at L=4)",
+    "better_predicate": "(isin(in_tok,[3,4,7,8,10,12,13,15,16,19,20,21,23,27,28])&(t==0))|((recall_idx==1)&(L==3))|((recall_idx==1)&(L==4)&isin(in_tok,[3,4,7,8,10,12,13,15,16,19,20,21,23,27,28]))",
+    "better_predicate_test_f1": 0.932
+  },
+  "final_label": "Reading a token from a fixed 15-token set (d e h i k m n p q t u v x 1 2) at a 'start' position: t=0, or the first copy step re-reading token 0 in short sequences (any token at L=3; mostly the same token set at L=4)"
+}

@@ -1,0 +1,61 @@
+{
+  "label": "copy-phase input token y",
+  "predicate": "(phase == 2) & (in_tok == tok(\"y\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the fed-back input token is y (the model has just output y). Captures ~100% of activation mass; it never fires in the original phase (even on y inputs) or at the delimiter step. About 18% of copy-phase y inputs stay inactive. These are mostly cases where y is the first copied token (recall_idx 1, right after <DEL>) or appears late in the sequence. Activation is weakest at recall_idx 1, rises through recall_idx 2-4, and is strongest when y sits about 3 positions into the sequence after a prefix containing e/u/b. The largest activations (~3.0) occur on prefixes like \"u e b y\" and \"w j e y\". A second y later in the same copy shows about half the activation of the first. Missed activations (54 steps, ~0% of mass) are tiny activations on u/v/q inputs.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 208,
+    "predicate": "(phase == 2) & (in_tok == tok(\"y\"))",
+    "split": "test",
+    "precision": 0.826178265098594,
+    "recall": 0.9992112826682709,
+    "f1": 0.9044936682054975,
+    "mass_recall": 0.9998433394842866,
+    "correlation": 0.7764544999545926,
+    "n_active": 74805,
+    "n_predicted": 90472,
+    "coverage_by_activation_quartile": [
+      0.9970056678430115,
+      0.9998395807710818,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 208,
+    "predicate": "(phase == 2) & (in_tok == tok(\"y\"))",
+    "split": "dev",
+    "precision": 0.8237454501732486,
+    "recall": 0.9992839715710194,
+    "f1": 0.9030634560193647,
+    "mass_recall": 0.9998393785172723,
+    "correlation": 0.7737727093597732,
+    "n_active": 75416,
+    "n_predicted": 91487,
+    "coverage_by_activation_quartile": [
+      0.9972419645698526,
+      0.9998939217142251,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 208,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "No systematic counterexample found. Dev: 0 activations in the original phase or at the delimiter, and in_tok==y holds 100% of the mass. Test misses are 59 tiny activations on u (<=0.08 of max), 0.0% of mass.",
+      "The ~17% false positives (copy-phase y that stays inactive) are spread out rather than a crisp class. Precision by recall_idx: 1 -> 0.57, 2 -> 0.92, 3 -> 0.96, >=5 -> 0.79. Splitting by L, by the e/u/b prefix, by digits, by to_go or by a repeated y only moves precision between 0.41 and 0.90, so no clean subset predicate separates them. This matches the explanation (inactive cases are mostly the first copied token or late in the sequence; activation is graded by context).",
+      "Test reproduces the reported numbers: P 0.826, R 0.999, F1 0.904, mass recall 1.000. Adding recall_idx>=2 gives P 0.882 / F1 0.877 / mass recall 0.937, which confirms the agent's choice to keep the simpler predicate.",
+      "Minor: the label 'copy-phase input token y' says nothing about the graded magnitude (weak at recall_idx 1, strongest after an e/u/b-rich prefix). The explanation covers this, so the label is not an overclaim."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

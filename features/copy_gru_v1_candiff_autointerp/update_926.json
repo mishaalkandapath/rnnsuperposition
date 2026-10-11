@@ -1,0 +1,64 @@
+{
+  "label": "Early original-phase steps shortly after an \"a\" in the first three positions",
+  "predicate": "(phase <= 1) & (t >= 2) & (((orig(0) == tok(\"a\")) & (t <= 4)) | ((orig(1) == tok(\"a\")) & (t <= 4)) | ((orig(2) == tok(\"a\")) & (t >= 3) & (t <= 5)))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires during the original-input phase at steps t=2..5, 1-3 steps after the letter a appeared at one of positions 0-2. The input token at the firing step itself does not matter. prev2_tok=a has 15x lift and first_tok=a has 8.8x lift. The strongest activations come from sequences that start with a run of a (e.g. a a a ...): there the feature peaks at t=3-4 and then fades over the next 2-3 steps. When a is later in the sequence (position >= 3) the activation is weak or absent, and steps after a later a make up most of the low-quartile misses. It never fires at t=0 or t=1, never in the copy phase, and only rarely at the delimiter (1% of mass). Activation goes down as the sequence has more digits. Main false positives are the edges of the window, where the activation has already decayed to zero.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 926,
+    "predicate": "(phase <= 1) & (t >= 2) & (((orig(0) == tok(\"a\")) & (t <= 4)) | ((orig(1) == tok(\"a\")) & (t <= 4)) | ((orig(2) == tok(\"a\")) & (t >= 3) & (t <= 5)))",
+    "split": "test",
+    "precision": 0.7769347496206374,
+    "recall": 0.8359913727634497,
+    "f1": 0.8053818942716773,
+    "mass_recall": 0.9388000738465715,
+    "correlation": 0.7347536327692894,
+    "n_active": 131676,
+    "n_predicted": 141685,
+    "coverage_by_activation_quartile": [
+      0.559737537592272,
+      0.8348977793979161,
+      0.9611166803365837,
+      0.9882134937270269
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 926,
+    "predicate": "(phase <= 1) & (t >= 2) & (((orig(0) == tok(\"a\")) & (t <= 4)) | ((orig(1) == tok(\"a\")) & (t <= 4)) | ((orig(2) == tok(\"a\")) & (t >= 3) & (t <= 5)))",
+    "split": "dev",
+    "precision": 0.7731790525094081,
+    "recall": 0.8374844760721987,
+    "f1": 0.8040480736172984,
+    "mass_recall": 0.939078319962221,
+    "correlation": 0.7316562589334078,
+    "n_active": 131249,
+    "n_predicted": 142165,
+    "coverage_by_activation_quartile": [
+      0.5638923597354707,
+      0.8368889430696087,
+      0.9615384615384616,
+      0.9876264781177618
+    ]
+  },
+  "gate": "update",
+  "feature": 926,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The main factual claims hold. On the dev split the feature never fires at t=0 or t=1 (0 of 1M steps) and never in the copy phase (0 active). The delimiter holds 1.0% of the activation mass. Mass by t is 0.27/0.43/0.23/0.07 for t=2..5, so it peaks at t=3-4. prev2_tok=a has 15.2x lift and first_tok=a has 8.8x lift. Precision falls steadily with n_digits (0.81, 0.76, 0.72, 0.68, 0.60 for 0-4 digits).",
+      "With no a anywhere in the sequence, firing is almost nil: F1 0.004, mass recall 0.002, all of it in the lowest activation quartile. So 'a' really is the trigger.",
+      "Small systematic gap: an a at position 3 does fire at t=4 (precision 0.51, about 5% of active steps). The explanation says activation is 'weak or absent' when a is at position 3 or later, and the label says 'first three positions', so both slightly understate this. An a at position 1 also fires at t=5 (precision 0.51), which the predicate's t<=4 cutoff leaves out.",
+      "Small systematic false-positive class: phase<=1 lets in the delimiter step when L=4 (t=4), where precision is only 0.205. Restricting to phase==0 removes it.",
+      "Over-firing at orig(0)=a, t=4 (precision 0.44) is explained by the repeated-a pattern. With 2 or more a's seen, precision is 0.98; with a single a it is 0.38. This fits the explanation's point that runs of a ('a a a ...') give the strongest activations.",
+      "Refined predicate: test F1 0.832 vs 0.805 reported (P 0.772, R 0.902, mass recall 0.968). It is the same concept with corrected window edges, not a different feature, so the label and explanation stand with a minor positional correction."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Early original-phase steps (t=2..5) shortly after an \"a\" in the first three or four positions, strongest after runs of a",
+    "better_predicate": "(phase==0)&(t>=2)&(((orig(0)==tok(\"a\"))&(t<=4))|((orig(1)==tok(\"a\"))&(t<=5))|((orig(2)==tok(\"a\"))&(t>=3)&(t<=5))|((orig(3)==tok(\"a\"))&(t==4)))",
+    "better_predicate_test_f1": 0.832
+  },
+  "final_label": "Early original-phase steps (t=2..5) shortly after an \"a\" in the first three or four positions, strongest after runs of a"
+}

@@ -1,0 +1,61 @@
+{
+  "label": "Copy phase (all steps after <DEL>)",
+  "predicate": "phase == 2",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Broad copy-phase feature: fires on essentially every copy-phase step (t > L, i.e. recall_idx >= 1, when a fed-back output is the input), active on about 99% of them. It never fires during the original phase or on the <DEL> step itself (one negligible exception in 500k). Magnitude is largest at the first one to three copy steps (recall_idx 1-2, with the peak near recall_idx 1-2) and then decays across the copy phase. Some sequences pick back up later. The largest activations occur when the early original tokens include h/f/digits (e.g. h, 2, n near the start). Token identity barely changes the firing rate. The rare false positives are copy steps where the value happens to drop to zero, often mid-copy around repeated or vowel tokens (e.g. a).",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 163,
+    "predicate": "phase == 2",
+    "split": "test",
+    "precision": 0.9886396913480826,
+    "recall": 1.0,
+    "f1": 0.9942873972085832,
+    "mass_recall": 1.0,
+    "correlation": 0.871642907434756,
+    "n_active": 2700845,
+    "n_predicted": 2731880,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 163,
+    "predicate": "phase == 2",
+    "split": "dev",
+    "precision": 0.9887501304101927,
+    "recall": 0.9999996297714134,
+    "f1": 0.9943430633086187,
+    "mass_recall": 1.0,
+    "correlation": 0.8718949929576777,
+    "n_active": 2701034,
+    "n_predicted": 2731765,
+    "coverage_by_activation_quartile": [
+      0.9999985190867504,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 163,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claims check out. On the test split, phase == 2 scores P 0.989, R 1.000, F1 0.994, mass recall 1.0 and correlation 0.87, with 0 missed activations. On dev the feature is active on 0 of 3.23M original-phase steps, on 1 of 500k <DEL> steps, and on 98.9% of copy steps.",
+      "The false positives are a systematic class, not scattered noise. They concentrate on the token being OUTPUT, not the input. The copy-step firing rate given out_tok is 'a' = 0.773 (88k steps, about 20k of the ~31k dev false positives), 'w' = 0.947 and 'b' = 0.971. Almost every other out_tok is at 0.99 to 1.0. The rate given in_tok is 'a' is 0.928, and given next_out is 'a' it is 0.952, so the effect sits on out_tok. The explanation's 'token identity has almost no effect on the firing rate' is therefore inaccurate, and 'around tokens such as a' misplaces the effect (it is out_tok == a, not the input).",
+      "Excluding this class does not help. (phase==2)&(out_tok!=tok('a')) raises precision to 0.996 but drops F1 to 0.985 on dev, and finer splits by recall_idx, to_go, out_count or L do not isolate the misses. So the single-clause predicate is still the best simple description, and the gap is a modulation inside copy-phase firing rather than a separate trigger.",
+      "The magnitude claim is slightly overstated. Mean activation per active step (mass share divided by active count) peaks at recall_idx 2, then stays roughly flat (recall_idx 3-8 within about 10% of recall_idx 1, and recall_idx 8 is above recall_idx 1). 'Generally falls' overstates the decline; the activation is mostly flat after a recall_idx-2 peak."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

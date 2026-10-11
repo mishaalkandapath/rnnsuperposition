@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input k (fed-back k)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"k\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase when the input token is k (the model feeding its own previously output k back in). Never fires in the original or delimiter phases, nor on any other input token; every dev activation satisfies the predicate (recall 1.0). About 27% of copy-phase k inputs stay silent, mostly early in the copy phase: recall_idx 0 never fires and the firing rate rises with recall_idx and t. Magnitude is largest when the k is fed back late in a long sequence (the top examples are mostly the final copy step, to_go 0, t around 14-17) and smallest when k is recalled at positions 1-2. The output token (what is being recalled now) has almost no effect.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 195,
+    "predicate": "(phase == 2) & (in_tok == tok(\"k\"))",
+    "split": "test",
+    "precision": 0.7361318353374879,
+    "recall": 0.9999701919637535,
+    "f1": 0.8480030333670373,
+    "mass_recall": 0.9999939536193276,
+    "correlation": 0.718436503628083,
+    "n_active": 67096,
+    "n_predicted": 91144,
+    "coverage_by_activation_quartile": [
+      0.9998807678550137,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 195,
+    "predicate": "(phase == 2) & (in_tok == tok(\"k\"))",
+    "split": "dev",
+    "precision": 0.7343074661576603,
+    "recall": 1.0,
+    "f1": 0.8468019431231657,
+    "mass_recall": 1.000000079693086,
+    "correlation": 0.7182112784979076,
+    "n_active": 66938,
+    "n_predicted": 91158,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 195,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "All the factual claims hold on dev. 100% of the activation mass is in the copy phase and every activation is on in_tok=k. There are zero activations in the original or delimiter phases and zero at recall_idx 0. Top examples are mostly to_go 0 (precision there is 0.87).",
+      "Test misses: only 2 missed activations (0.0% of the mass, scattered). There are 24,050 false positives, i.e. copy-phase k inputs where the feature stays silent.",
+      "The silent cases depend on position in a graded way, not as a sharp boundary. Precision by recall_idx is 0.44 at 1, 0.66 at 2, 0.76 at 3 and 0.87 at 4 or more.",
+      "The explanation leaves out a strong dependence on sequence length L. Precision by L is 0.05 at L=3, 0.44 at L=4, 0.63 at L=5, 0.70 at L=6 and 0.84 at L=9. At recall_idx 1, precision is 0.06 for L<=5 but 0.81 for L>=8. So 'silent mostly early in the copy phase' is really 'silent in short sequences and early in the copy phase'. This rises smoothly and looks like a magnitude threshold effect, not a separate class.",
+      "Adding position or length conditions improves the predicate only slightly. '(phase==2)&(in_tok==k)&((L>=6)|(recall_idx>=3))' scores test F1 0.864 and '...&(L>=5)&(t>=7)' scores 0.864, against 0.848 for the original. Because the gain is this small, keeping the simpler predicate is a fair choice.",
+      "Even at L=9, about 16% of late-position k inputs stay silent, and the rendered false positives show no visible token or history pattern. I am treating this as noise in the low-activation tail."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok('k')) & ((L >= 6) | (recall_idx >= 3))",
+    "better_predicate_test_f1": 0.864
+  }
+}

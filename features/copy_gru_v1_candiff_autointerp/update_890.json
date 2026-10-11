@@ -1,0 +1,63 @@
+{
+  "label": "digit 0 fed back as input early in the copy phase (it was original token 1 or 2), L>=5",
+  "predicate": "(phase == 2) & (in_tok == tok(\"0\")) & (recall_idx >= 2) & (recall_idx <= 3) & (L >= 5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, only when the input is the digit 0 (the model echoing back a 0 it just output). It is confined to early copy positions: the 0 was original token 1 or 2 (recall_idx 2-3), and the sequence has L >= 5. At L = 4 the same position is silent. Strongest when the 0 was original token 1 (recall_idx 2): every top example has orig(1)=0, and recall_idx 2 holds about 60% of activation mass. Weak tail activations show up when the 0 was original token 3 (recall_idx 4), plus a small number at later positions. It never fires on 0 during the original or delimiter phases, on any other token, or on the first copy step. Dev P=0.99, R=0.82, mass recall 0.96. Most of the missed recall is weak recall_idx-4 activations.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 890,
+    "predicate": "(phase == 2) & (in_tok == tok(\"0\")) & (recall_idx >= 2) & (recall_idx <= 3) & (L >= 5)",
+    "split": "test",
+    "precision": 0.9956002289311776,
+    "recall": 0.8200648202710666,
+    "f1": 0.8993472922321314,
+    "mass_recall": 0.9630990297086629,
+    "correlation": 0.9349590735337905,
+    "n_active": 33940,
+    "n_predicted": 27956,
+    "coverage_by_activation_quartile": [
+      0.3035945786682381,
+      0.9767825574543312,
+      0.9998821449616971,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 890,
+    "predicate": "(phase == 2) & (in_tok == tok(\"0\")) & (recall_idx >= 2) & (recall_idx <= 3) & (L >= 5)",
+    "split": "dev",
+    "precision": 0.9945699079401611,
+    "recall": 0.8183028581572874,
+    "f1": 0.8978670908677725,
+    "mass_recall": 0.962696612412721,
+    "correlation": 0.9354418006731767,
+    "n_active": 33798,
+    "n_predicted": 27808,
+    "coverage_by_activation_quartile": [
+      0.29680473372781063,
+      0.9764497041420118,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 890,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor overclaim: 'never fires on the first copy step'. The first phase-2 step (recall_idx 1, input = orig(0)) has 541 active steps on dev (0.2% of mass), and on test the predicate in_tok==0 & recall_idx==1 has precision 0.03. So it is close to silent but not silent. recall_idx 0 (the delimiter step) is truly zero.",
+      "Minor: 'L=4 is silent' is really near-silent. L=4 has 317 active dev steps, and in_tok=0 & recall_idx==2 & L==4 has test precision 0.13.",
+      "The weak tail at recall_idx 4 is not systematic in any variable I tried. On test, in_tok=0 & recall_idx==4 has precision 0.37 overall, and 0.52 when to_go>=2 or L>=7. Splitting it by out_tok letter/digit, n_digits, correct, n_seen(0), prev_tok, or whether orig(0..2) are letters leaves precision flat at about 0.50-0.56. It holds about 15% of active steps but only 3.3% of mass. This is a weak, coin-flip tail that the explanation already discloses, not a missed class.",
+      "Test false positives (123) are mostly L=5 with recall_idx 3 and the last steps. That cell (L==5 & rec 3) still has precision 0.96, so this is scattered noise.",
+      "All the core claims check out on test. Only the copy phase is active and only on in_tok 0. Recall_idx 2 holds 0.596 of mass and recall_idx 3 holds 0.368. recall_idx >= 5 is about zero (P=0.007). Widening to 2-4 gives P=0.787 and R=0.969, matching the claim. The reported scores reproduce: P=0.996, R=0.820, F1=0.899, mass recall 0.963.",
+      "A slightly better-F1 alternative adds recall_idx 4 with L>=7: test P=0.887, R=0.948, F1=0.916, mass recall 0.993. It trades precision for recall and does not change the interpretation."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "((phase == 2) & (in_tok == tok(\"0\")) & (recall_idx >= 2) & (recall_idx <= 3) & (L >= 5)) | ((phase == 2) & (in_tok == tok(\"0\")) & (recall_idx == 4) & (L >= 7))",
+    "better_predicate_test_f1": 0.916
+  }
+}

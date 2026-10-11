@@ -1,0 +1,62 @@
+{
+  "label": "fed-back \"d\" early in the copy phase (strongest as first copied token)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"d\")) & (recall_idx <= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase when the input token is \"d\" (the model feeding back an output \"d\"), and only in the first few copy steps. Magnitude depends on position: largest (about 0.75-1.0 of max) at recall_idx 1, i.e. right after <DEL>, when the first original token was d (78% of activation mass). It is weaker (about 0.2-0.4 of max) at recall_idx 2 and very weak (under 0.15) at recall_idx 3. It never fires on later copy steps, on \"d\" in the original phase, at the delimiter, or on any other token. The output token has no visible effect.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 427,
+    "predicate": "(phase == 2) & (in_tok == tok(\"d\")) & (recall_idx <= 2)",
+    "split": "test",
+    "precision": 0.9821715578308232,
+    "recall": 0.8611879534422464,
+    "f1": 0.9177095500305912,
+    "mass_recall": 0.9884703994725211,
+    "correlation": 0.859075828593998,
+    "n_active": 38318,
+    "n_predicted": 33598,
+    "coverage_by_activation_quartile": [
+      0.44478079331941545,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 427,
+    "predicate": "(phase == 2) & (in_tok == tok(\"d\")) & (recall_idx <= 2)",
+    "split": "dev",
+    "precision": 0.9819159482111208,
+    "recall": 0.8599352818920839,
+    "f1": 0.9168863955119215,
+    "mass_recall": 0.9882901622261927,
+    "correlation": 0.8596875372600696,
+    "n_active": 38011,
+    "n_predicted": 33289,
+    "coverage_by_activation_quartile": [
+      0.43975586656845206,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 427,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "This run did not address the relayed user request (estimate a baseline time for batch 2, then launch batch 3 and keep going only if it doesn't slow things past the serial total). This subagent only checked the feature, and the batch task still has to be done by the session that owns it.",
+      "Claims hold on the test split. Phase 0 and 1 activity is 0. in_tok=d carries 100% of activation mass, and only about 30 activations fall on other tokens. recall_idx 1 has precision 1.0 and 77.7% of mass, recall_idx 2 has 21.1% of mass, recall_idx 3 has 1.1%, and recall_idx 4 and up never fire.",
+      "The reported recall of 0.861 is low because of the recall_idx 3 'd' steps. Those fire only about 32% of the time (precision 0.32), at tiny magnitude (about 0.01-0.07 of max), all in the bottom activation quartile (quartile coverage 0.44, 1, 1, 1). Gating them by L only gives a marginal gain (adding recall_idx 3 & L>=7 lifts test F1 from 0.918 to 0.929). This looks like threshold noise, not a missed concept.",
+      "Small false-positive class: at recall_idx 2 with short L (3-4), precision is 0.79 against 1.0 for L>=5. All 599 false positives come from there, but they carry a negligible share of mass.",
+      "Minor overclaim: 'never fires on any other token' is true apart from a few dozen near-zero activations."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"d\")) & ((recall_idx <= 2) | ((recall_idx == 3) & (L >= 7)))",
+    "better_predicate_test_f1": 0.929
+  }
+}

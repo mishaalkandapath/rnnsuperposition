@@ -1,0 +1,63 @@
+{
+  "label": "Copy-phase fed-back digit 3, early in the copy (outputs 2-4)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"3\")) & (recall_idx >= 2) & (recall_idx <= 4)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, only when the input token is the digit 3 (the model has just emitted a 3 and it is fed back), and only early in the copy: recall_idx 2-4, i.e. the 3 was original token 1, 2 or 3. It never fires on 3 in the original phase, on the delimiter, or on any other token. Magnitude is largest when the 3 sits at original position 1 (recall_idx 2; top examples all have the form x 3 ... <DEL> x [3]), and it falls off with later positions: recall_idx 2 carries about 58% of activation mass, 3 about 36%, and 4 only about 6% with weak, often-missing activations (most false positives are there). Fed-back 3s at recall_idx 1 or >= 5 give only trace activations. Dev split: P 0.82, R 0.98, F1 0.89, mass recall 0.999.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 695,
+    "predicate": "(phase == 2) & (in_tok == tok(\"3\")) & (recall_idx >= 2) & (recall_idx <= 4)",
+    "split": "test",
+    "precision": 0.813953488372093,
+    "recall": 0.9827742520398912,
+    "f1": 0.89043266014997,
+    "mass_recall": 0.9985395488315529,
+    "correlation": 0.7996149922947005,
+    "n_active": 38605,
+    "n_predicted": 46612,
+    "coverage_by_activation_quartile": [
+      0.9311023622047244,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 695,
+    "predicate": "(phase == 2) & (in_tok == tok(\"3\")) & (recall_idx >= 2) & (recall_idx <= 4)",
+    "split": "dev",
+    "precision": 0.8164296327743579,
+    "recall": 0.9848919389531906,
+    "f1": 0.8927833615747081,
+    "mass_recall": 0.9986749389731798,
+    "correlation": 0.8015471524462274,
+    "n_active": 39052,
+    "n_predicted": 47110,
+    "coverage_by_activation_quartile": [
+      0.9395677558127624,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 695,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The predicate misses a systematic gap: the feature is silent when the fed-back 3 arrives on the LAST copy step (to_go == 0). Precision of in_tok==3 by (recall_idx, L) on dev: r=3,L=4 (the final step) 0.010, while r=3 at L>=5 is about 1.0. r=4,L=5 (the final step) 0.050. r=2,L=3 (the final step) has 0 activations, and the profile shows L=3 with 0 active steps in total. Every other r=2 and r=3 cell is about 1.0.",
+      "Most of the original predicate's false positives come from these final-step cases, not from 'weak recall_idx 4' as the explanation says. Adding (to_go>=1) raises dev precision from 0.816 to 0.923 while recall only goes from 0.985 to 0.981. Test F1 goes from 0.890 to 0.950.",
+      "At recall_idx 4, activity also falls with how close the step is to the end: precision is 0.05 at L=5 (final step), 0.53 at L=6 (to_go=1), and 0.74-0.81 at L=7-9. The leftover false positives (3 at original position 3) are a graded fall-off, not a sharp cutoff.",
+      "Confirmed claims: the feature never fires in the original or delimiter phase, and fires only on in_tok 3 (100% of activation mass). Activation mass by recall_idx is 2: 58%, 3: 36%, 4: 5.5%, and recall_idx 1 and 5+ give only traces. The reported test scores (P 0.814, R 0.983, F1 0.890) reproduce.",
+      "The label overclaims slightly. It suggests any early-copy fed-back 3 fires, but the feature does not fire when that 3 is the last input of the sequence (e.g. L=4 with the 3 at original position 2)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Copy-phase fed-back digit 3, early in the copy (recall_idx 2-4), except on the final copy step",
+    "better_predicate": "(phase == 2) & (in_tok == tok('3')) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+    "better_predicate_test_f1": 0.95
+  },
+  "final_label": "Copy-phase fed-back digit 3, early in the copy (recall_idx 2-4), except on the final copy step"
+}

@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input b (echo of original token at position >=2)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the fed-back input token is b, i.e. the model is re-reading an original b at original position >= 2 (recall_idx >= 3). It never fires in the original phase or on <DEL>, even on b. It almost never fires on other input tokens (fewer than 25 steps per token). Copy-phase b echoing original position 1 (recall_idx 2) fires only weakly and inconsistently (rate about 0.007, activations around 0.02-0.16 of max); echoing position 0 does not fire at all. These weak cases are about 1% of activation mass. Magnitude is strongest when the input b comes right after another b (bb runs, 0.7-1.0 of max) and is typically 0.3-0.5 of max for an isolated b. Rare false positives are b at original position 2 in some contexts.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 381,
+    "predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9986482739498128,
+    "recall": 0.9388553088189772,
+    "f1": 0.9678291611732992,
+    "mass_recall": 0.9893203751399618,
+    "correlation": 0.9391706524748517,
+    "n_active": 61379,
+    "n_predicted": 57704,
+    "coverage_by_activation_quartile": [
+      0.7558162267839688,
+      0.9996089931573803,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 381,
+    "predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9988905453662934,
+    "recall": 0.9379038690040203,
+    "f1": 0.9674370188796454,
+    "mass_recall": 0.9892361221003891,
+    "correlation": 0.9399839940411941,
+    "n_active": 61437,
+    "n_predicted": 57686,
+    "coverage_by_activation_quartile": [
+      0.7517578125,
+      0.9998697831890097,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 381,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The predicate reproduces on test: P=0.999, R=0.939, F1=0.968, mass recall 0.989. Every activation is in the copy phase (phase 0 and the delimiter step: 0 active). All other input tokens together give precision 5e-5 and 0.02% of mass. The worst single token is z with 22 dev steps, which fits the 'fewer than 25 per token' claim.",
+      "The misses are what the explanation says they are. Of the 3753 missed test steps, the ones shown are all copy-phase b at recall_idx 2 (echoing original position 1), at about 0.01-0.07 of max, together 1.1% of mass. The predicate b & recall_idx==2 has precision 0.22, which fits 'weak and inconsistent'. The 78 false positives look like scattered noise: b at recall_idx 3, mostly in L=7-8 sequences.",
+      "The explanation leaves out the main magnitude effect, which is a ramp with original position. Mean activation per active step (mass recall / recall) is about 0.64 at recall_idx 3, 1.06 at 4, and 1.31 at >=6, roughly a 2x rise. It also rises toward the end of the sequence. This is an omission, not a counterexample.",
+      "The bb claim is somewhat overstated. Holding position fixed (recall_idx>=5), b after b has a relative mean of 1.54 versus 1.29 for an isolated b, only about a 1.2x boost. bb steps hold just 3.9% of mass. The top examples are bb, but an average bb is around 0.6 of max, not consistently 0.7-1.0.",
+      "No systematic false-positive or miss class remains beyond the documented weak recall_idx==2 cases. The label matches the predicate."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

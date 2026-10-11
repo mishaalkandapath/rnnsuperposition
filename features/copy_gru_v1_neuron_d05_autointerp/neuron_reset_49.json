@@ -1,0 +1,62 @@
+{
+  "label": "<DEL> delimiter step (strongest in long sequences)",
+  "predicate": "(phase == 1) & ~isin(L,[5,6])",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only at the <DEL> delimiter step (t == L), and never during the original or copy phases. On dev, phase==1 alone gets 100% recall and mass recall but precision is only 0.65, because whether it fires depends on sequence length L. It fires on nearly every <DEL> when L=3, 8 or 9 (about 100%, 92% and 99.9%), on most when L=4 (75%) or L=7 (55%), and on only about 30% when L=5 or 6. Magnitude also grows with L: the top examples are all L=9, and L=8-9 carry about 68% of activation mass. Leaving out L=5,6 gives dev F1 0.83 and mass recall 0.94. Within a given L, which <DEL> steps fire depends only weakly on token content, spread across tokens (e.g. first token b/f/p gives slightly higher rates). That remaining variation is not captured.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 49,
+    "predicate": "(phase == 1) & ~isin(L,[5,6])",
+    "split": "test",
+    "precision": 0.8141152933096436,
+    "recall": 0.8442280299746083,
+    "f1": 0.8288982632159009,
+    "mass_recall": 0.9356877559213472,
+    "correlation": 0.7502818733199673,
+    "n_active": 64588,
+    "n_predicted": 66977,
+    "coverage_by_activation_quartile": [
+      0.6308911872174398,
+      0.804421874032328,
+      0.944200161020623,
+      0.9973988976280423
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 49,
+    "predicate": "(phase == 1) & ~isin(L,[5,6])",
+    "split": "dev",
+    "precision": 0.8157576481478717,
+    "recall": 0.844701771744844,
+    "f1": 0.8299774417244549,
+    "mass_recall": 0.9354475642648898,
+    "correlation": 0.7502295610992039,
+    "n_active": 64682,
+    "n_predicted": 66977,
+    "coverage_by_activation_quartile": [
+      0.6344691113722095,
+      0.8011254715230969,
+      0.9454545454545454,
+      0.997773654916512
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 49,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core factual claims hold up. On dev and test the unit fires only at phase==1 (the <DEL> step), with zero activations in the original and copy phases. phase==1 alone scores test P 0.646, R 1.0, mass recall 1.0. Per-L firing rates at <DEL>, worked out from the profile: L=3 100%, L=4 75%, L=5 32%, L=6 29%, L=7 55%, L=8 92%, L=9 99.9%. L=8-9 carry about 68% of activation mass. The predicate's reported test scores reproduce (F1 0.829, mass recall 0.936).",
+      "Wrong claim: 'within a given L, which <DEL> steps fire depends only weakly on token content, spread across tokens'. Within L in 4-7, the firing rate depends strongly on the FIRST original token, which is also the token output at the <DEL> step. Rates range from 0.19-0.24 for first_tok w, y, a, 2 up to 0.75-0.84 for p, 3, f, b. For L=7, first_tok in {b,f,p,e,h,z,3} raises precision from 0.55 to 0.83. For L=5 it goes from 0.32 to 0.62. The last original token (prev_tok) has a weaker but real effect: e 0.18 and t 0.25, versus l 0.69 and i 0.66.",
+      "The predicate's errors are entirely systematic, not scattered noise. Every false positive is a <DEL> step in L=4 or L=7 (and some L=8). Every miss is a <DEL> step in L=5 or L=6. Part of this is predictable from the first token, which the explanation says is not.",
+      "Minor: the label's 'strongest in long sequences' is not quite right. L=3 sequences fire at <DEL> 100% of the time, and the firing rate is U-shaped in L. Magnitude does grow with L."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "<DEL> delimiter step only. Fires on every <DEL> for L=3 or 8-9, and grows with L. For mid lengths (L=4-7) whether it fires depends strongly on the first original token (b/f/p/3/e/h/z high; w/y/a/2/c/0 low).",
+    "better_predicate": "(phase == 1) & (isin(L,[3,8,9]) | (isin(L,[4,7]) & ~isin(first_tok,[tok(c) for c in 'awy2c0tinlr'])) | (isin(L,[5,6]) & isin(first_tok,[tok(c) for c in 'bfep3hz'])) | (isin(L,[4,7]) & isin(prev_tok,[tok(c) for c in 'ilr2ph'])))",
+    "better_predicate_test_f1": 0.854
+  },
+  "final_label": "<DEL> delimiter step only. Fires on every <DEL> for L=3 or 8-9, and grows with L. For mid lengths (L=4-7) whether it fires depends strongly on the first original token (b/f/p/3/e/h/z high; w/y/a/2/c/0 low)."
+}

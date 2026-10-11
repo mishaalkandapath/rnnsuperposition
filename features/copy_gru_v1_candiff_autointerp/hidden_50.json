@@ -1,0 +1,64 @@
+{
+  "label": "input token l during the original phase",
+  "predicate": "(phase == 0) & (in_tok == tok(\"l\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only when the input token is l in the original (pre-<DEL>) phase. It never fires on any other token, or on the delimiter or copy phases, including when l is fed back as a copy-phase input. Recall is 1.0. About 24% of original-phase l steps stay inactive, mostly at position 1 (t=1) and on repeated (not first) occurrences of l. Magnitude is modulated by position and context: at t=0 it is a constant weak ~0.11 of max; it is strongest at t=3-5, and the top activations come after earlier 3s or other digits in the prefix (e.g. 3 t 3 a l).",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 50,
+    "predicate": "(phase == 0) & (in_tok == tok(\"l\"))",
+    "split": "test",
+    "precision": 0.7598233464187838,
+    "recall": 1.0,
+    "f1": 0.8635222938313823,
+    "mass_recall": 1.0,
+    "correlation": 0.7031010941927894,
+    "n_active": 82067,
+    "n_predicted": 108008,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 50,
+    "predicate": "(phase == 0) & (in_tok == tok(\"l\"))",
+    "split": "dev",
+    "precision": 0.7613146252522074,
+    "recall": 1.0,
+    "f1": 0.8644845325612313,
+    "mass_recall": 1.0,
+    "correlation": 0.703985904495626,
+    "n_active": 82257,
+    "n_predicted": 108046,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 50,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold. Recall is 1.0 and mass recall is 1.0 on test. There are 0 activations on the delimiter step, 0 in the copy phase and 0 on any token other than 'l'. The value at t=0 is a constant 0.11 of max, with 100% of t=0 'l' steps active. Activation mass peaks at t=3-4 (0.251 and 0.237 of mass).",
+      "The claim that inactive 'l' steps are 'mostly on repeated (not first) occurrences' is false. At t>=2, repeated 'l' (in_first==0) is active 77% of the time and first-occurrence 'l' is active 82%, so repetition barely matters. Repeated occurrences account for only about 2.2k of the roughly 26k false positives.",
+      "The explanation leaves out a systematic falloff at late positions. Precision is 0.87 at t=2-5, 0.61 at t>=6, 0.53 at t=7 and 0.35 at t=8. That makes the late positions the second-largest group of false positives, about 6.4k steps.",
+      "t=1 is the largest group of false positives. 'l' at t=1 is active only 30% of the time, about 11.7k inactive steps. Neither the previous token being a digit nor it being a letter explains this, except prev_tok=='l', which is 100% active but rare.",
+      "The remaining misses at t=2-5 (about 13% of those steps) show no clear token or history pattern among those tested: previous-token vowel, earlier vowels, earlier digits, repetition. Earlier digits slightly LOWER precision (0.77 with a digit seen vs 0.85 without), so a digit 'pattern' does not help predict whether the feature fires.",
+      "Swapping in the explanation's 'first occurrence' refinement is the wrong fix. Excluding t=1 and t=8 does better: test F1 0.893 vs 0.864."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "input token 'l' during the original phase (weak or often absent at t=1 and at late positions t>=7)",
+    "better_predicate": "(phase == 0) & (in_tok == tok(\"l\")) & (t != 1) & (t <= 7)",
+    "better_predicate_test_f1": 0.893
+  },
+  "final_label": "input token 'l' during the original phase (weak or often absent at t=1 and at late positions t>=7)"
+}

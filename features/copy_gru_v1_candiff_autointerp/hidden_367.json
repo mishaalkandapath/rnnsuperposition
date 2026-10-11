@@ -1,0 +1,62 @@
+{
+  "label": "copy phase: fed-back input h (just output an h), later in the copy",
+  "predicate": "(phase == 2) & (in_tok == tok(\"h\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, and only when the input is the letter h, i.e. the model just output h (orig(recall_idx-1) == h). In the copy phase it fires on about 58% of h inputs overall, and on nearly all of them from recall_idx 4 onward. It is weak or silent for h inputs early in the copy (recall_idx 1-2), and the activation rises with recall_idx/t (rate about 0.8% at recall 2, about 3% from recall 4 on; the largest activations come at mid-to-late copy positions). It never fires in the original phase or at <DEL>, and never on any token other than h (a handful of p/u cases aside). When h appears twice in a row in the copy, the second h activates less strongly. It does not depend on which token is output next or on the first token.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 367,
+    "predicate": "(phase == 2) & (in_tok == tok(\"h\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.8387380398241531,
+    "recall": 0.9245196967105638,
+    "f1": 0.8795422497017029,
+    "mass_recall": 0.9721764769620158,
+    "correlation": 0.7862872863640304,
+    "n_active": 52623,
+    "n_predicted": 58005,
+    "coverage_by_activation_quartile": [
+      0.7803283672848891,
+      0.9300699300699301,
+      0.9882943143812709,
+      0.9993918662105663
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 367,
+    "predicate": "(phase == 2) & (in_tok == tok(\"h\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.8411714961255027,
+    "recall": 0.923858445324791,
+    "f1": 0.8805781391147245,
+    "mass_recall": 0.97198161885545,
+    "correlation": 0.7876008569303986,
+    "n_active": 52757,
+    "n_predicted": 57943,
+    "coverage_by_activation_quartile": [
+      0.7780894617134193,
+      0.9303207218136326,
+      0.987262112366366,
+      0.999772537720828
+    ]
+  },
+  "gate": "hidden",
+  "feature": 367,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The explanation gets the early-copy rates wrong. It says the rate at recall_idx 2 is about 0.8%, but that is the rate over all steps at recall_idx 2. Among copy-phase h inputs at recall_idx 2 the feature is active 24% of the time (precision 0.236, n=16724). Calling it 'weak or silent' at recall_idx 1-2 is only right for recall_idx 1, where it fires 23 times in about 16.7k h inputs.",
+      "Activation on copy-phase h inputs rises gradually with recall_idx; there is no clean cutoff. Precision is 0.24 at recall_idx 2, 0.64 at 3, 0.89 at 4 and 0.93 at 5 and above. At recall_idx 3 the feature is active on about two thirds of h inputs, not silent. The recall_idx>=3 cutoff is a reasonable threshold on this gradient, which is why the remaining false positives are concentrated at recall_idx 3-4: about 5.8k at 3, 1.6k at 4 and 1.9k at 5 and above on dev.",
+      "The other claims check out. All active steps are in the copy phase (none in the original phase or at <DEL>). 52713 of 52757 active steps have h as input, with 43 p and 1 u. After a preceding copy-phase h, precision drops to 0.66, and the top examples show the second h weaker. first_tok and next_out have flat profiles.",
+      "No systematic false-positive or missed class was found on the test misses beyond the recall_idx gradient. False-positive precision barely moves when conditioned on a digit or vowel as previous token, digits seen, in_count, to_go==0 or next_out being a digit (0.81-0.87). L has only a mild effect (precision 0.73 for L<=5 vs 0.85 for L>=8). Splitting recall_idx 2-3 by L did not separate active from inactive cases. Misses are mostly weak recall_idx 2 h activations, which hold 2.8% of the activation mass.",
+      "Test scores reproduce: precision 0.839, recall 0.925, F1 0.880, mass recall 0.972."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

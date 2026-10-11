@@ -1,0 +1,62 @@
+{
+  "label": "digit 0 fed back as input at copy steps L+1/L+2 (echo of original token 0 or 1)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"0\")) & (recall_idx <= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase when the fed-back input token is the digit 0 and the step is one of the first two copy steps (recall_idx 1 or 2), i.e. the model is echoing back original token 0 or original token 1 being \"0\". Magnitude is strongly set by position: when 0 was the first original token (input at step L+1, recall_idx 1) activations are high (~3.5-4.3, all top quartiles; 80% of mass); when 0 was the second original token (recall_idx 2) activations are weak (~0.8-1.5). Does not fire on 0 in the original phase, on the delimiter, on 0 inputs later in the copy phase (recall_idx >= 3), or on any other token (other digits included). Output token and sequence length have essentially no effect beyond position.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 70,
+    "predicate": "(phase == 2) & (in_tok == tok(\"0\")) & (recall_idx <= 2)",
+    "split": "test",
+    "precision": 0.9538656676794195,
+    "recall": 0.999598145285935,
+    "f1": 0.9761965857119138,
+    "mass_recall": 0.9999853436469166,
+    "correlation": 0.8469328917783958,
+    "n_active": 32350,
+    "n_predicted": 33901,
+    "coverage_by_activation_quartile": [
+      0.9983926805143423,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 70,
+    "predicate": "(phase == 2) & (in_tok == tok(\"0\")) & (recall_idx <= 2)",
+    "split": "dev",
+    "precision": 0.9536325168365218,
+    "recall": 0.9997813115061389,
+    "f1": 0.9761617887046837,
+    "mass_recall": 0.999993807035208,
+    "correlation": 0.8476301013002175,
+    "n_active": 32009,
+    "n_predicted": 33558,
+    "coverage_by_activation_quartile": [
+      0.9991253280019993,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 70,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The explanation says sequence length 'has essentially no effect'. That is false for the recall_idx==2 clause. Test split, (phase==2)&(in_tok==0)&(recall_idx==2): at L==3 it is predicted on 450 steps with precision 0.0 (never fires); at L==4 precision is 0.546 (2451 predicted); at L==5 precision is 0.9996. All 1564 test false positives of the original predicate come from this class. In misses they show up as short sequences like 'd 0 a 1 <DEL> d *0*', where 0 is the second original token and L=4, or 'n 0 3 <DEL> n *0*' with L=3.",
+      "The core claim holds. All activation is in the copy phase and 100% of mass is on in_tok==0. recall_idx 1 carries 80% of the mass and recall_idx 2 carries 20%. The recall_idx==1 clause alone has test precision 1.0 and mass recall 0.80. Missed activations are 13 tiny scattered steps holding 0.0% of the mass.",
+      "The original predicate's test precision of 0.954 comes from the systematic length gap described above, not from scattered noise.",
+      "Minor: the label says 'copy steps L+1/L+2', but the recall_idx 2 echo only fires reliably when L>=5, partially when L=4, and never when L=3."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "digit 0 fed back as input at the first copy steps: strong when echoing original token 0 (recall_idx 1); weak when echoing original token 1 (recall_idx 2), but only for longer sequences (never at L=3, about half the time at L=4)",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"0\")) & ((recall_idx == 1) | ((recall_idx == 2) & (L >= 4)))",
+    "better_predicate_test_f1": 0.983
+  },
+  "final_label": "digit 0 fed back as input at the first copy steps: strong when echoing original token 0 (recall_idx 1); weak when echoing original token 1 (recall_idx 2), but only for longer sequences (never at L=3, about half the time at L=4)"
+}

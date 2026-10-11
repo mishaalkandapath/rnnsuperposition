@@ -1,0 +1,62 @@
+{
+  "label": "copy phase: fed-back 3 when the next output is v (\"3v\" bigram recall)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"3\")) & (out_tok == tok(\"v\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires only in the copy phase, almost always when the fed-back input is the digit 3 and the token now being output is v, i.e. it is reproducing an original 3,v bigram, and only from recall index 3 onward (not at the first few outputs). Precision is about 0.96 and it covers about 82% of activation mass. The strongest activations (up to 2.9) are on 3 -> v, often where the original has 3 v v. The leftover weak activations (around 18% of mass, mostly low quartile) are on neighbouring cases: input 3 with output 3 or another letter, and input v with output v (second v of a 3 v v run). It never fires in the original or delimiter phases, never on the first occurrence of a token, and almost never on recall_idx 0-2.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 755,
+    "predicate": "(phase == 2) & (in_tok == tok(\"3\")) & (out_tok == tok(\"v\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9509109311740891,
+    "recall": 0.6326599326599327,
+    "f1": 0.7598059037606147,
+    "mass_recall": 0.8272084971867145,
+    "correlation": 0.8181680597260366,
+    "n_active": 2970,
+    "n_predicted": 1976,
+    "coverage_by_activation_quartile": [
+      0.2126514131897712,
+      0.5437415881561238,
+      0.8288409703504043,
+      0.9460916442048517
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 755,
+    "predicate": "(phase == 2) & (in_tok == tok(\"3\")) & (out_tok == tok(\"v\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9570552147239264,
+    "recall": 0.6352222599253479,
+    "f1": 0.7636141138078728,
+    "mass_recall": 0.8242549807108124,
+    "correlation": 0.8204588173830305,
+    "n_active": 2947,
+    "n_predicted": 1956,
+    "coverage_by_activation_quartile": [
+      0.20759837177747625,
+      0.5495251017639078,
+      0.8453188602442334,
+      0.938858695652174
+    ]
+  },
+  "gate": "update",
+  "feature": 755,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor misstatement about the misses: the predicate for the second v of a '3 v v' run (in=v, out=v, prev=3) covers only 0.4% of mass on test, with 87 steps and precision 0.30. In=v/out=v overall gives 4.6% of mass at precision 0.11, and in=3/out=3 gives 7.9% at precision 0.14. So most v-input misses are not '3 v v' cases. They are weak, scattered activations.",
+      "'Strongest often 3 v v' holds only at the very top. Most of the top-12 examples are 3 v v, but the predicate plus next_out==v covers just 6% of the top activation quartile. Plain 3->v with a different next token makes up most of the strong mass.",
+      "Low step recall (0.63) comes from many tiny activations (about 0.03-0.1 of max) on in_tok=3 with other outputs. Taken together, in_tok=3 alone captures 95% of mass but at precision 0.03, so these misses are diffuse noise, not a distinct class.",
+      "Verified claims: activation is 100% in the copy phase; recall_idx 0-1 has zero activations and recall_idx 2 has 25 (0.4% mass); 3->v at recall_idx<3 has precision 0.02, so the recall_idx>=3 condition is real. Test scores reproduce: P 0.951, R 0.633, F1 0.760, mass recall 0.827. False positives are scattered 3->v cases. Neither correct nor to_go nor in_count shows a systematic gap.",
+      "No better predicate found. Widening to in=3 & out in {3,v} & recall>=3 gives F1 0.665 (mass recall 0.907). Using recall>=2 gives F1 0.689."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

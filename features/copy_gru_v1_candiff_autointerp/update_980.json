@@ -1,0 +1,62 @@
+{
+  "label": "fed-back q (original position 1-3) during copy, not on the final step",
+  "predicate": "(phase == 2) & (in_tok == tok(\"q\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the input is q. Since copy-phase inputs are the model own previous outputs, this is q being fed back as original token 1, 2 or 3 (recall_idx 2-4). It never fires in the original or delimiter phases. A q fed back from original position 0 (recall_idx 1) barely activates, q from position 4 or later does not activate at all, and the final copy step (to_go 0) is silent. Magnitude is largest when q was original token 1 (recall_idx 2; top examples like c q b ... <DEL> c [q]) and drops at later positions. Low-quartile activations are q at position 3 or a repeated q. Other tokens essentially never activate it.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 980,
+    "predicate": "(phase == 2) & (in_tok == tok(\"q\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+    "split": "test",
+    "precision": 0.9616452367036821,
+    "recall": 0.9699597170367459,
+    "f1": 0.9657845822735276,
+    "mass_recall": 0.99735563245091,
+    "correlation": 0.8811109885562319,
+    "n_active": 40712,
+    "n_predicted": 41064,
+    "coverage_by_activation_quartile": [
+      0.8798388681469836,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 980,
+    "predicate": "(phase == 2) & (in_tok == tok(\"q\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+    "split": "dev",
+    "precision": 0.961311396080329,
+    "recall": 0.969924077826331,
+    "f1": 0.9655985320744169,
+    "mass_recall": 0.9974028796309999,
+    "correlation": 0.8805150513189722,
+    "n_active": 40963,
+    "n_predicted": 41330,
+    "coverage_by_activation_quartile": [
+      0.8796992481203008,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 980,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the false positives are concentrated at recall_idx 4, where the feature is unreliable. Precision there is 0.69 overall, 0.69 at to_go 1, 0.92 at to_go 2 and 0.91 at to_go >= 3, and recall_idx 4 holds only 7.5% of activation mass. Most of the 1575 test false positives come from this class. The explanation already says activation drops at later positions, so the label is not wrong, but recall_idx 4 is a weak, partial part of the feature rather than a clean one.",
+      "Minor overstatement: 'activation is largest at recall_idx 2' is barely true for 2 versus 3. Mean activation per firing step is almost the same (dev mass share per active step is 0.502/16337 vs 0.421/14087). The big drop comes at recall_idx 4.",
+      "The other claims hold. Copy phase holds 100% of activation mass, with 0 activations in the original or delimiter phases. q holds 100% of mass, and other tokens fire about 60 times out of 41k active steps. recall_idx 1 has precision 0.058 and 0.2% of mass. recall_idx 5 and above has about 40 activations. to_go 0 has precision 0.011. All the to_go 0 false positives that would otherwise appear at recall_idx 3 come from L=4 sequences on their final step, and to_go >= 1 removes them.",
+      "Test misses hold 0.3% of activation mass. They are weak activations on q at recall_idx 1 and on the first of two repeated q's, which matches the explanation.",
+      "Narrowing variants did not beat the predicate on test F1. Requiring rel_tok(1) != q gave 0.952, and requiring to_go >= 2 gave 0.878, both below 0.966. No systematic class of counterexamples is left beyond the noisy recall_idx 4 group."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

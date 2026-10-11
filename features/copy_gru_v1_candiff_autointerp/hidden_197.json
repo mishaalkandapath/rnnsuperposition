@@ -1,0 +1,63 @@
+{
+  "label": "input token w at early original positions (t=2-4)",
+  "predicate": "(phase == 0) & (in_tok == tok(\"w\")) & (t >= 2) & (t <= 4)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token-specific, position-gated feature: fires only when the input is the letter w during the original (pre-<DEL>) phase, and essentially only at positions t=1-5, with nearly all mass at t=2-4. 100% of activations are on input w. Magnitude grows with position from t=1 (weak, fires on only about a third of w-at-t=1 cases, low magnitude) to a peak at t=3 (about 45% of mass), then falls off: weak at t=5, and essentially never at t>=6 or t=0. It is somewhat weaker on repeat occurrences of w. Top activations (around 1.5-1.65) are w at t=3 that often come after earlier r/m tokens, but conditioning on r gives no useful predicate. Does NOT fire on the delimiter, on the copy phase (even when w is output or fed back as input; about 100 tiny exceptions), or on any other token. Including t=1 raises mass recall to 0.99 but lowers precision (F1 0.88 vs 0.89).",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 197,
+    "predicate": "(phase == 0) & (in_tok == tok(\"w\")) & (t >= 2) & (t <= 4)",
+    "split": "test",
+    "precision": 0.9318570817287121,
+    "recall": 0.8504344430342673,
+    "f1": 0.8892858965851667,
+    "mass_recall": 0.9565761879749817,
+    "correlation": 0.8552727139679341,
+    "n_active": 51215,
+    "n_predicted": 46740,
+    "coverage_by_activation_quartile": [
+      0.457669478288035,
+      0.9450952827241487,
+      0.9990627928772259,
+      0.9999218933062564
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 197,
+    "predicate": "(phase == 0) & (in_tok == tok(\"w\")) & (t >= 2) & (t <= 4)",
+    "split": "dev",
+    "precision": 0.9331661952515642,
+    "recall": 0.8544380787945377,
+    "f1": 0.8920684993240199,
+    "mass_recall": 0.9575841773400625,
+    "correlation": 0.8550257219479496,
+    "n_active": 50968,
+    "n_predicted": 46668,
+    "coverage_by_activation_quartile": [
+      0.47873175325694556,
+      0.9406686548422539,
+      0.9984303876942395,
+      0.999921519384712
+    ]
+  },
+  "gate": "hidden",
+  "feature": 197,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Core claims check out on the dev profile. Every activation is on in_tok w (100% of mass). Original phase holds 0.999 of the mass, the delimiter 0, and the copy phase only 103 steps (0.001). By position the mass is t=1 0.037, t=2 0.324, t=3 0.450, t=4 0.184, t=5 0.005, with t=0 and t>=6 at zero apart from the 62 copy-phase steps at t=7. Test scores reproduce: P 0.932, R 0.850, F1 0.889, mass recall 0.957.",
+      "Precision is uneven across the predicate's own positions. It is 0.994 at t=2 and 0.991 at t=3 but only 0.790 at t=4, so about 21% of w's at t=4 are inactive. Prior digits lower it a little (0.84 with no digits vs 0.72 with 2 or more), but I found no crisp class behind it, so I treat it as graded weakening rather than a counterexample class.",
+      "The claim that it is 'a bit weaker on repeated w's' is not supported. At t=2-4, a repeated w (in_first==0) has precision 0.926 against 0.932 overall, and its mass recall to recall ratio is about 1.05, which is no weaker. Mass per active step is also flat across in_count values. This is a minor overclaim.",
+      "There is a small systematic pattern at t=1 that the explanation describes only as 'about a third'. A w at t=1 fires 74% of the time after a digit but only 35% after a letter. Adding (t==1 & previous token is a digit) raises test F1 from 0.889 to 0.903. This is a minor refinement on about 4% of the mass.",
+      "Missed activations are low-magnitude: coverage in the lowest activation quartile is 0.46, against 0.94 or higher in the other quartiles. Most misses are weak t=1 and t=5 w's, and the false positives are mostly t=4 w's, so I see no hidden token or history class."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "input token w at early original positions (t=2-4, peak t=3; weakly at t=1, mostly after a digit)",
+    "better_predicate": "(phase == 0) & (in_tok == tok(\"w\")) & (((t >= 2) & (t <= 4)) | ((t == 1) & isin(prev_tok, DIGITS)))",
+    "better_predicate_test_f1": 0.903
+  },
+  "final_label": "input token w at early original positions (t=2-4, peak t=3; weakly at t=1, mostly after a digit)"
+}

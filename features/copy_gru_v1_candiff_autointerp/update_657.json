@@ -1,0 +1,64 @@
+{
+  "label": "copy phase: just copied z (input z), now outputting z or b, from recall position 3 onward",
+  "predicate": "(phase == 2) & (in_tok == tok(\"z\")) & isin(out_tok, [tok(\"z\"), tok(\"b\")]) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, at steps where the fed-back input is z (the model just emitted z; 99.98% of activations), and almost always when the token being output now is z (55% of mass) or b (39%), i.e. the original sequence has z followed by z or b. Never fires in the original or delimiter phases, never on recall positions 0-1 and rarely on 2, and not when the input is any token other than z. Input z followed by other outputs (s, p, f, ...) gets weak low-quartile activations that make up most of the misses. Largest activations: z-z or z-b pairs at recall index 3-5, often in sequences with repeated z (in_count >= 2 raises the rate). Inside a run of z the second z fires more weakly than the first. Dev F1 0.865, mass recall 0.94.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 657,
+    "predicate": "(phase == 2) & (in_tok == tok(\"z\")) & isin(out_tok, [tok(\"z\"), tok(\"b\")]) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9083204930662557,
+    "recall": 0.8322352941176471,
+    "f1": 0.8686149312377209,
+    "mass_recall": 0.9407951275184782,
+    "correlation": 0.816846586530621,
+    "n_active": 4250,
+    "n_predicted": 3894,
+    "coverage_by_activation_quartile": [
+      0.5239887111947319,
+      0.8447789275634995,
+      0.967984934086629,
+      0.992467043314501
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 657,
+    "predicate": "(phase == 2) & (in_tok == tok(\"z\")) & isin(out_tok, [tok(\"z\"), tok(\"b\")]) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9013157894736842,
+    "recall": 0.8315125030347171,
+    "f1": 0.8650082081070842,
+    "mass_recall": 0.937484340934971,
+    "correlation": 0.8134085433517776,
+    "n_active": 4119,
+    "n_predicted": 3800,
+    "coverage_by_activation_quartile": [
+      0.5320388349514563,
+      0.841747572815534,
+      0.9611650485436893,
+      0.9912536443148688
+    ]
+  },
+  "gate": "update",
+  "feature": 657,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The scores reproduce exactly. Test precision 0.908, recall 0.832, F1 0.869, mass recall 0.941.",
+      "The structural claims hold. The feature never fires in the original phase or at the delimiter (0 active of 3.7M dev steps). In the copy phase, in_tok==z covers 99.95% of test activations (mass recall 0.99998). Recall indices 0 and 1 never fire. At recall_idx==2, z followed by z or b has precision of only 0.067, against 0.91 at recall_idx 3 and 0.98 at recall_idx 4.",
+      "The misses on the test split are what the explanation describes: input z followed by some other output (s, p, f, e, ...), all at low activation (about 0.02-0.36 of max). Together they hold 5.9% of the mass. Adding s to the output set lowers F1 to 0.731, so these misses cannot be picked up cheaply.",
+      "The false positives (357 on test) are spread across positions. Precision for z-to-b is 0.86 and for z-to-z is 0.96. At recall_idx>=6 precision is 0.81 and at to_go==0 it is 0.87. These are mild drops, not a separate class. Excluding late final steps lowers F1 to 0.823.",
+      "The magnitude claim 'in_count>=2 raises firing' checks out: precision 0.944 for in_count>=2 vs 0.859 for in_count==1, and the mean per-hit activation is higher.",
+      "The magnitude claim 'peaks at recall index 3 to 5' checks out: precision 0.949 at recall_idx<=5 vs 0.806 at >=6, and the mean activation is higher.",
+      "The claim 'inside a run of z, the second z fires more weakly than the first' is NOT supported. With prev_tok==z, mass recall divided by recall is 1.14. With prev_tok!=z it is 1.13. Mean activation is about the same, and runs are rare (129 predicted steps). This is a minor overclaim in the explanation; the label and predicate are fine."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

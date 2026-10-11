@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input f (fed-back f), from the 3rd recalled position onward",
+  "predicate": "(phase == 2) & (in_tok == tok(\"f\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token detector for the letter f, but only during the copy phase: fires when the fed-back input is f (i.e. the model just emitted an original f) at copy steps with recall_idx >= 3 (f was original position >= 2). Never fires in the original phase or on the delimiter, and almost never on any other input token (3 of 58.5k activations on digit 1). Weak or absent when the f is the 1st/2nd copy input (recall_idx 1-2): the missed activations are mostly small activations on f at recall_idx 2, and they hold only about 1.2% of the mass. The rate is flat (~3.2%) for recall_idx >= 3, and magnitude does not depend clearly on out_tok, prev_tok or L. Rare false positives are copy-phase f inputs that stay silent, including some at the last step. Within the active set, what sets magnitude is not characterized.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 59,
+    "predicate": "(phase == 2) & (in_tok == tok(\"f\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9712121212121212,
+    "recall": 0.9532657561409207,
+    "f1": 0.9621552609104477,
+    "mass_recall": 0.9878741201703874,
+    "correlation": 0.8898546206981642,
+    "n_active": 58501,
+    "n_predicted": 57420,
+    "coverage_by_activation_quartile": [
+      0.823465062217968,
+      0.9901538461538462,
+      0.9994529914529915,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 59,
+    "predicate": "(phase == 2) & (in_tok == tok(\"f\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9723229224762967,
+    "recall": 0.9531196610401148,
+    "f1": 0.9626255305932291,
+    "mass_recall": 0.9876570942469364,
+    "correlation": 0.8902635868508946,
+    "n_active": 58532,
+    "n_predicted": 57376,
+    "coverage_by_activation_quartile": [
+      0.8222510763343128,
+      0.9909109546914509,
+      0.9993166131346956,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 59,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor, not systematic: at recall_idx==2 (fed-back f from original position 1) the feature fires weakly, and more often as L grows. Precision of that slice is 0.02 at L=3, 0.11 at L=4 and 0.30 at L=9. These activations carry only 1.2% of the activation mass, and adding recall_idx>=2 to the predicate drops F1 to 0.883. The predicate is right to exclude them.",
+      "Minor: false positives are a little more common at short L, where the predicate fires at the last step. For L==4 with recall_idx>=3, precision is 0.845. For recall_idx==3 it is 0.956, and for L>=8 it is 0.981. This is small and does not justify changing the predicate.",
+      "Claims checked: no activations in the original phase or on the delimiter (profile shows 0). 58529 of 58532 activations are on in_tok f, and the other 3 are on the digit 1. The firing rate is flat at about 0.032 for recall_idx 3 to 8. out_tok shows no structure. The correct flag is irrelevant (correct==0 matches only 4 steps).",
+      "Repeated f does not form a gap. Precision is 0.950 with in_count>=2, 0.958 when an earlier copy-phase f exists, and 0.921 with prev_tok==f. These are slightly below baseline but not a separate failure class.",
+      "Test scores reproduce: precision 0.971, recall 0.953, F1 0.962, mass recall 0.988."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

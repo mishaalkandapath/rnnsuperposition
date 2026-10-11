@@ -1,0 +1,62 @@
+{
+  "label": "Late copy phase: outputting original token 4 or later",
+  "predicate": "(phase == 2) & (recall_idx >= 4)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Positional copy-phase feature. Fires on copy-phase steps once the model is recalling original position 4 or beyond (recall_idx >= 4); essentially 0 during original input, at <DEL>, and for recall_idx 0-3. Rate is ~50% at recall_idx 4 (higher for short L=5-6, lower for long sequences, where it often starts one step later) and ~98-100% for recall_idx >= 5. Activation ramps up step by step through the copy phase, peaking at the final output steps (top examples are the last 1-2 outputs of L=8-9 sequences). Not token-specific: in_tok, out_tok, prev_tok, first_tok and next_out all show flat lift. Misses are weak onset activations at recall_idx 3; false positives are mostly recall_idx 4 in longer sequences. Adding (recall_idx>=5 | L<=6) raises dev F1 from 0.90 to 0.93 but the simpler predicate already captures 99.7% of the mass.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 73,
+    "predicate": "(phase == 2) & (recall_idx >= 4)",
+    "split": "test",
+    "precision": 0.8275431332950962,
+    "recall": 0.9893761182591124,
+    "f1": 0.9012523943605292,
+    "mass_recall": 0.9969759175808569,
+    "correlation": 0.8130950895144962,
+    "n_active": 1041239,
+    "n_predicted": 1244862,
+    "coverage_by_activation_quartile": [
+      0.9575045138488725,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 73,
+    "predicate": "(phase == 2) & (recall_idx >= 4)",
+    "split": "dev",
+    "precision": 0.8277588104399798,
+    "recall": 0.9895705185641889,
+    "f1": 0.9014609539615127,
+    "mass_recall": 0.9970249761309975,
+    "correlation": 0.8130107024046049,
+    "n_active": 1041279,
+    "n_predicted": 1244830,
+    "coverage_by_activation_quartile": [
+      0.9582821143208359,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "reset",
+  "feature": 73,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "One claim in the explanation is wrong. It says missed activations are 'weak onset activations at recall_idx 3', but recall_idx==3 has only 25 active steps out of 486,935 on dev (precision 5e-5). The roughly 11k missed steps are almost all tiny (about 0.09 of max) activations in the original phase at t=1 (8,724), t=2 (1,691) and t=5 (320), for example 'a [e:0.09] a u <DEL>'. They hold only 0.3% of the activation mass, so this does not affect the label.",
+      "The recall_idx==4 onset depends strongly on L. Test precision at recall_idx 4 is 0.76 for L=5, 0.79 for L=6, 0.51 for L=7, 0.29 for L=8 and 0.15 for L=9. So '~50%' is only the pooled rate. It matches the stated direction (higher for short sequences), and almost all false positives come from this boundary.",
+      "I found no token or history variable that explains which recall_idx-4 steps fire when L>=7. Rates conditioned on in_count, out_count, n_digits or digit in_tok/out_tok all stay between 0.29 and 0.39, so the boundary is a graded threshold, not a hidden token rule. The flat-lift claim holds.",
+      "Magnitude does not always peak at the final step. Some mid-quartile examples dip at the end (e.g. 'q i z k w i r p n': 0.57 -> 0.45 -> 0.44; 'g z r k d b 3 0 m': 0.65 -> 0.52). The top examples do peak at the last 1-2 outputs of L=8-9 sequences, and to_go==0 holds 41% of the activation mass, so the claim holds in the aggregate.",
+      "The test scores reproduce: P=0.828, R=0.989, F1=0.901, mass recall 0.997. The refined predicate reaches test F1 0.934 (P 0.955, R 0.914), but its mass recall drops to 0.962."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (recall_idx >= 4) & ((recall_idx >= 5) | (L <= 6))",
+    "better_predicate_test_f1": 0.934
+  }
+}

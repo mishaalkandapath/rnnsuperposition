@@ -1,0 +1,62 @@
+{
+  "label": "first token (from set p,t,k,r,y,3,g,b,o,e,a,q) at t=0 and at its echo step in short sequences",
+  "predicate": "((t == 0) | ((recall_idx == 1) & (L <= 5))) & isin(in_tok, [tok(\"p\"),tok(\"t\"),tok(\"k\"),tok(\"r\"),tok(\"y\"),tok(\"3\"),tok(\"g\"),tok(\"b\"),tok(\"o\"),tok(\"e\"),tok(\"a\"),tok(\"q\")])",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires mainly in two places. (1) Step t=0 (about 61% of activation mass): it fires every time the first input is one of 12 tokens {p,t,k,r,y,3,g,b,o,e,a,q} and never for any other first token (precision 1.0 on dev). The token sets a fixed magnitude: t and p are high (about 0.25-0.28 of max), r and y about 0.23, while b and q are low (about 0.02-0.04). (2) Step L+1, the first copy step whose input is the echoed first token (about 29% of mass): this is where the largest activations occur (up to the max, e.g. t or p echoed in L=3-4 sequences). The rate falls steeply with L (precision about 0.73 at L=3, 0.47 at L=4, 0.18 at L=5, about 0 for L>=7), and it is strongest for first tokens in the same 12-token set, though short sequences with other first tokens (2, x, u, c, j) also fire. A weak residual (about 18% of mass) comes from original-phase steps with t>0 (often t/p/k/r/y, around t=3-5) and from later copy steps in short sequences. It is essentially silent at t=1, at the delimiter step, and at copy steps after recall_idx 1 in long sequences.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 4,
+    "predicate": "((t == 0) | ((recall_idx == 1) & (L <= 5))) & isin(in_tok, [tok(\"p\"),tok(\"t\"),tok(\"k\"),tok(\"r\"),tok(\"y\"),tok(\"3\"),tok(\"g\"),tok(\"b\"),tok(\"o\"),tok(\"e\"),tok(\"a\"),tok(\"q\")])",
+    "split": "test",
+    "precision": 0.8891539766267171,
+    "recall": 0.765603684860935,
+    "f1": 0.8227664711969644,
+    "mass_recall": 0.8192657555581604,
+    "correlation": 0.69307736987302,
+    "n_active": 62309,
+    "n_predicted": 53651,
+    "coverage_by_activation_quartile": [
+      0.5588008730260624,
+      0.8729537138088207,
+      0.7546382487000064,
+      0.8760351800731848
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 4,
+    "predicate": "((t == 0) | ((recall_idx == 1) & (L <= 5))) & isin(in_tok, [tok(\"p\"),tok(\"t\"),tok(\"k\"),tok(\"r\"),tok(\"y\"),tok(\"3\"),tok(\"g\"),tok(\"b\"),tok(\"o\"),tok(\"e\"),tok(\"a\"),tok(\"q\")])",
+    "split": "dev",
+    "precision": 0.8904571782039026,
+    "recall": 0.7639547786372481,
+    "f1": 0.8223695599487587,
+    "mass_recall": 0.8164038340061004,
+    "correlation": 0.693241150304846,
+    "n_active": 62183,
+    "n_predicted": 53349,
+    "coverage_by_activation_quartile": [
+      0.558278656889232,
+      0.8708992666923968,
+      0.7577511900167245,
+      0.8688967513669991
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 4,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "All the quantitative claims checked out on dev. t=0 restricted to the 12-token set has precision 1.0, recall 0.644 and mass 0.608. t=0 with any other token never fires (precision 0). Echo-step firing rate is 0.73 at L=3, 0.47 at L=4, 0.18 at L=5, 0.012 at L=6 and 0.001 at L>=7. The echo step holds 0.29 of mass. Mass at t=1, at the delimiter and at copy steps after recall_idx 1 is about 0.",
+      "The label slightly overclaims. Echo-step firing is not limited to the 12-token set. For other tokens at recall_idx==1 with L<=5, precision is 0.21 and mass is about 7.4%, with large activations (e.g. f:0.63, 2:0.69, i:0.34, w:0.43 relative to max). With L=3 alone, precision is 0.62. The explanation mentions this, but the label's 'from set' does not.",
+      "Context for the residual: the 12-token set accounts for 92% of activation mass across all steps. Original-phase steps with t>0 hold about 9.6% of mass and are almost entirely set tokens. Steps with t>0 and a non-set input carry only 0.2% of mass. This residual is concentrated in sequences whose first token is outside the set (8.2% mass), but precision there is low (0.06-0.16), so no clean predicate captures it. It looks like diffuse token-selective firing, not a missed rule.",
+      "Small refinement: (((t==0)|((recall_idx==1)&(L<=4))) & set) | ((recall_idx==1)&(L==3)) gives test F1 0.836 (precision 0.953, recall 0.744) vs 0.823 for the original. That is a marginal gain, and I found no systematic counterexample class."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "input is one of {p,t,k,r,y,3,g,b,o,e,a,q}, mainly at t=0 and at the first copy step (echo of the first token) in short sequences (L<=4); echo-step firing also extends weakly to other tokens when L=3",
+    "better_predicate": "(((t == 0) | ((recall_idx == 1) & (L <= 4))) & isin(in_tok, [tok(\"p\"),tok(\"t\"),tok(\"k\"),tok(\"r\"),tok(\"y\"),tok(\"3\"),tok(\"g\"),tok(\"b\"),tok(\"o\"),tok(\"e\"),tok(\"a\"),tok(\"q\")])) | ((recall_idx==1)&(L==3))",
+    "better_predicate_test_f1": 0.836
+  },
+  "final_label": "input is one of {p,t,k,r,y,3,g,b,o,e,a,q}, mainly at t=0 and at the first copy step (echo of the first token) in short sequences (L<=4); echo-step firing also extends weakly to other tokens when L=3"
+}

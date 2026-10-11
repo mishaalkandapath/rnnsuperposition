@@ -1,0 +1,64 @@
+{
+  "label": "copy-phase input of e (fed-back copy of e), from the 3rd original position on",
+  "predicate": "(phase == 2) & (in_tok == tok(\"e\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, and only when the token fed back as input is the letter e, i.e. the model has just copied an e from original position >= 2 (recall_idx >= 3). It never fires on e during the original phase, at the delimiter, or on any other input token (only a handful of stray activations elsewhere). Magnitude grows with how late the copied e sits in the sequence: e copied from position 2 gives weak activations (about 0.1-0.5 of max), and the strongest activations (0.8-1.0) come from e at positions 5-7 of long sequences. e copied from positions 0-1 gives zero or tiny activations, and that is why the recall_idx >= 3 condition is there. It does not depend on the token being output next, on the previous token, or on the first token.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 494,
+    "predicate": "(phase == 2) & (in_tok == tok(\"e\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9896546927704559,
+    "recall": 0.9840087130903811,
+    "f1": 0.986823627316701,
+    "mass_recall": 0.9978129465248499,
+    "correlation": 0.9103462879101784,
+    "n_active": 57844,
+    "n_predicted": 57514,
+    "coverage_by_activation_quartile": [
+      0.9360348523615241,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 494,
+    "predicate": "(phase == 2) & (in_tok == tok(\"e\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9902450836259231,
+    "recall": 0.9844220155092075,
+    "f1": 0.9873249637856109,
+    "mass_recall": 0.9978322062384354,
+    "correlation": 0.9114498556652817,
+    "n_active": 58159,
+    "n_predicted": 57817,
+    "coverage_by_activation_quartile": [
+      0.9376891334250343,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 494,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "None of the checks found a systematic problem. On the test split the predicate scores precision 0.990, recall 0.984, F1 0.987 and mass recall 0.998, which matches the reported scores.",
+      "The phase claims hold. The feature has 0 activations in the original phase and 0 at the delimiter, so 100% of activation mass is in the copy phase. The input token is e in 58153 of the 58159 active dev steps (the other 6 are scattered single hits on j, z, q, v and t).",
+      "The position claims hold. When the fed-back token is e, the feature never fires at recall_idx 0-1. At recall_idx 2 (e from original position 1) the predicate e & recall_idx==2 has precision 0.055 and only 0.2% of mass. At recall_idx 3 (e from position 2) precision is 0.965 but that bin carries only 11.6% of mass, which fits the claim of weak activations there. At recall_idx >= 4 precision is 1.000 and mass is 88%.",
+      "The misses on the test split are 925 steps holding 0.2% of mass. They are all very weak activations (0.01-0.12 of max) on e copied back from original position 1. This is the expected low-magnitude tail, not a separate pattern.",
+      "The false positives on the test split are 595 steps, all e from original position 2 (recall_idx 3) where the feature stays at zero. This matches the claim that position 2 gives weak or marginal activation.",
+      "The predicate never fires during incorrect copying: e & recall_idx>=3 & correct==0 matches 0 steps, so the model's own mistakes are not a confound. Repeated e (in_count>=2) gives the same precision (0.989), so repetition does not change anything.",
+      "The label matches the predicate and does not overclaim."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "label": "first copied-back token x (step after <DEL>) in sequences of length >= 6",
+  "predicate": "(recall_idx == 1) & (in_tok == tok(\"x\")) & (L >= 6)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, at the step right after <DEL> (recall_idx == 1), when the token fed back in is x. That input is the model echoing original token 0, so in practice the feature means the sequence starts with x. It is silent for L = 3 and 4, weak and rare for L = 5, and its magnitude grows with L: activation mass by t rises steadily from L=6 to L=9, and the top examples are all L=9. It does not fire in the original or delimiter phases or at later copy steps (apart from 75 weak hits at recall_idx 2), and almost never on inputs other than x. What is being output at the step (orig(1)) does not modulate it.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 376,
+    "predicate": "(recall_idx == 1) & (in_tok == tok(\"x\")) & (L >= 6)",
+    "split": "test",
+    "precision": 0.9758992479840536,
+    "recall": 0.9180872826457552,
+    "f1": 0.9461109403135842,
+    "mass_recall": 0.9908281473817471,
+    "correlation": 0.9024371516924746,
+    "n_active": 11732,
+    "n_predicted": 11037,
+    "coverage_by_activation_quartile": [
+      0.6733719740879646,
+      0.9989771564950563,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 376,
+    "predicate": "(recall_idx == 1) & (in_tok == tok(\"x\")) & (L >= 6)",
+    "split": "dev",
+    "precision": 0.9765318235777555,
+    "recall": 0.9197557409477939,
+    "f1": 0.9472938258481707,
+    "mass_recall": 0.9911862315880564,
+    "correlation": 0.9010747889940934,
+    "n_active": 11627,
+    "n_predicted": 10951,
+    "coverage_by_activation_quartile": [
+      0.6793945648434813,
+      0.999656002751978,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 376,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the false positives (266 on test) cluster at L=6, where the predicate's precision is 0.909. For L=7 it is 0.9985 and for L>=8 it is 1.0. So L=6 is a soft boundary, not a clean on-region. I could not explain the L=6 dropouts with orig(1)==x (0.94 vs 0.91 precision, n=84) or with extra x's earlier in the sequence (0.75 at n_seen>=2, n small). They look like threshold noise near the onset length.",
+      "Minor: the 961 missed steps on test hold only 0.9% of the activation mass. They are tiny activations (0.01-0.08 relative): L=5 x-starts, non-x first tokens at L=9, and recall_idx 2 after an 'x x' start. This is scattered low-magnitude noise and explains the 67% coverage in the lowest activation quartile.",
+      "The explanation's claims are confirmed by the profile. Activity is 100% in the copy phase. recall_idx 1 holds 99.9% of activation mass, plus 75 hits at recall_idx 2. There is no activity at L=3 or 4, and L=5 holds 0.5% of mass. Mass rises with L: 0.105 at L=6, 0.222 at L=7, 0.303 at L=8, 0.366 at L=9. Inputs other than x hold 0.4% of mass.",
+      "Test scores reproduce: precision 0.976, recall 0.918, F1 0.946, mass recall 0.991."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

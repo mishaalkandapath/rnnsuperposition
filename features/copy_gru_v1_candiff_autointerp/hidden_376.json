@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input x (fed-back x, not the first original token)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"x\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, only when the input token is x, i.e. the model has just emitted x and it is fed back. It never fires on x during the original phase or on the delimiter. When the fed-back x is original token 0 (recall_idx 1) it fires rarely and weakly (about 0.1 of max), so the predicate excludes that case. Magnitude is largest for a single x copied mid-sequence; a second consecutive x fires much more weakly than the first. Rate rises somewhat with L. About 13% of predicate-true steps are inactive, mostly short sequences or the last few outputs. Does not depend on which token is being output.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 376,
+    "predicate": "(phase == 2) & (in_tok == tok(\"x\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.8696402800070137,
+    "recall": 0.9427831961280323,
+    "f1": 0.9047358450852452,
+    "mass_recall": 0.9722096433362999,
+    "correlation": 0.7906740937957165,
+    "n_active": 68389,
+    "n_predicted": 74141,
+    "coverage_by_activation_quartile": [
+      0.8595742192069248,
+      0.9399894718371644,
+      0.9767210621746505,
+      0.9948528981692695
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 376,
+    "predicate": "(phase == 2) & (in_tok == tok(\"x\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.8704283094184917,
+    "recall": 0.9440259759254654,
+    "f1": 0.9057345130259677,
+    "mass_recall": 0.972274651159932,
+    "correlation": 0.7917602400237488,
+    "n_active": 68371,
+    "n_predicted": 74152,
+    "coverage_by_activation_quartile": [
+      0.8639209032937459,
+      0.9423155677762827,
+      0.9758965658456679,
+      0.993973788907091
+    ]
+  },
+  "gate": "hidden",
+  "feature": 376,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: recall_idx==1 (the fed-back x is original token 0) is not 'rare'. Precision there is 0.24 on test, so it fires about a quarter of the time, though weakly (2.8% of mass). Leaving it out is still the right call.",
+      "Minor: the second of two consecutive x's still fires often (precision 0.74). It is weaker but not usually silent; it carries 1.8% of mass.",
+      "The inactive true-predicate steps are concentrated in short sequences: precision is 0.34 at L=3 and 0.65 at L=4, versus 0.89 at L>=7. Requiring L>=4 only moves test F1 from 0.905 to 0.905, so this is not worth adding.",
+      "Small overclaim: 'magnitude highest mid-sequence'. Several top examples (around 0.96 of max) are x at the final output step (to_go=0).",
+      "Checked and confirmed: zero activations in the original phase or on the delimiter, and zero on any input token other than x. Rates are flat across out_tok and next_out, consistent with 'no dependence on output token'. On the test split the predicate scores P 0.870, R 0.943, F1 0.905 and mass recall 0.972, versus F1 0.860 for plain copy-phase x. Misses are only at recall_idx 1 and are low-magnitude."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

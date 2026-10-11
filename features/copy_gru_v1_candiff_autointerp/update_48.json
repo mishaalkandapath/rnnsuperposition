@@ -1,0 +1,64 @@
+{
+  "label": "token right after an early \"i\" (orig position 1 or 2)",
+  "predicate": "(phase == 0) & (prev_tok == tok(\"i\")) & (t >= 2) & (t <= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires during the original-input phase at steps 2-3, on the token immediately following an \"i\" that was input at position 1 or 2 (99.7% of activation mass has prev_tok == i). Mostly position-specific: the rate falls off sharply at t=4 (i at position 3), where activations are weak, and there is nothing at t>=5, in the delimiter, or in the copy phase. The current token barely matters. The strongest activations come at t=3 with i at position 2 (e.g. q 2 i [l], q n i [m]); the first token q/e shows a mild lift. Weak at the lower end: some steps after i at t=3 stay inactive (around 8% false positives), and there are rare weak firings after the digit 2 or j.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 48,
+    "predicate": "(phase == 0) & (prev_tok == tok(\"i\")) & (t >= 2) & (t <= 3)",
+    "split": "test",
+    "precision": 0.9198540057915058,
+    "recall": 0.9564658281842988,
+    "f1": 0.9378027216114401,
+    "mass_recall": 0.9877423323875744,
+    "correlation": 0.8636164922248528,
+    "n_active": 31883,
+    "n_predicted": 33152,
+    "coverage_by_activation_quartile": [
+      0.842428804416008,
+      0.9880817965123573,
+      0.9968636306611467,
+      0.9984943538268507
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 48,
+    "predicate": "(phase == 0) & (prev_tok == tok(\"i\")) & (t >= 2) & (t <= 3)",
+    "split": "dev",
+    "precision": 0.9206973787759549,
+    "recall": 0.9551891976762443,
+    "f1": 0.9376261886780821,
+    "mass_recall": 0.9869788281216414,
+    "correlation": 0.8643393620386698,
+    "n_active": 31845,
+    "n_predicted": 33038,
+    "coverage_by_activation_quartile": [
+      0.8396131625219794,
+      0.9859314156513,
+      0.9959804044718,
+      0.9992463258384625
+    ]
+  },
+  "gate": "update",
+  "feature": 48,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claims check out on dev and test. 99.7% of activation mass has prev_tok == i. Activations: t=2 61.6% of mass, t=3 37.4%, t=4 1.0% (weak), and zero at t=0, t=1 and t>=5. There are 0 copy-phase activations. Copying from an i in the copy phase gives F1 0.002.",
+      "Small overclaim on 'nothing in the delimiter': there are 43 delimiter activations on dev. They come from L=3 with i at position 2, where step 3 is the <DEL>. Dropping phase==0 from the predicate still gives F1 0.933 vs 0.938, so this is negligible.",
+      "Asymmetry between the two positions: t==2 alone has test precision 1.000. All false positives are at t==3, where precision is 0.838.",
+      "The t==3 false positives are systematic, not scattered. They depend on the two tokens before the i. With first_tok=m precision is 0.44, l 0.59, v 0.54, h/r 0.80, x 0.85, and q/e 1.00. With orig(1)=m it is 0.43, d 0.62, h 0.68, k 0.71, and 2/n 0.96. Calling this a 'mild lift' for q/e understates a roughly 2x modulation by history.",
+      "'Strongest at t=3' holds for peak activations (top examples are q 2 i [l]), but t=2 has more total mass (61% vs 37%).",
+      "I could not find a better simple predicate. Excluding the low-precision orig(0)/orig(1) tokens at t==3 raises test precision to 0.951 but lowers recall to 0.911, so F1 is 0.931, no gain over 0.938. The gap is a graded modulation by history, not a clean rule."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "token right after an early \"i\" (orig position 1 or 2); at position 2 the firing is also modulated by the first two tokens",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "token right after an early \"i\" (orig position 1 or 2); at position 2 the firing is also modulated by the first two tokens"
+}

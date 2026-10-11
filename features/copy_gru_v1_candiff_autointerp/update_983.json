@@ -1,0 +1,62 @@
+{
+  "label": "fed-back b early in the copy phase (strongest when b is the first original token)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (t <= 9) & (recall_idx <= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase when the input token is b (the model re-reading its own output b). It never fires on b in the original phase or at the delimiter. It only fires early in the copy phase: recall_idx 1-3 (b was original token 0-2), and absolute step t <= ~9; b fed back later or in long sequences is essentially silent. Magnitude is largest at recall_idx 1, the step right after <DEL> when the first original token is b: this carries 84% of the activation mass, and the top activations (~4.7) are all b as first token in short sequences (L=4-5). Activations get weaker as recall_idx, t and L grow; b at recall_idx 2-3 gives only ~0.2 of max. Most false positives are b at recall_idx 2-3 near t=8-9, where the feature drops to zero.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 983,
+    "predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (t <= 9) & (recall_idx <= 3)",
+    "split": "test",
+    "precision": 0.7142857142857143,
+    "recall": 0.9839137575272666,
+    "f1": 0.8276949236600658,
+    "mass_recall": 0.9981621839144788,
+    "correlation": 0.6661831119453115,
+    "n_active": 23747,
+    "n_predicted": 32711,
+    "coverage_by_activation_quartile": [
+      0.9385211386221998,
+      0.9971366009769244,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 983,
+    "predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (t <= 9) & (recall_idx <= 3)",
+    "split": "dev",
+    "precision": 0.7154451847365233,
+    "recall": 0.984128306602791,
+    "f1": 0.8285488820692678,
+    "mass_recall": 0.998127775364211,
+    "correlation": 0.6658152125613715,
+    "n_active": 24005,
+    "n_predicted": 33020,
+    "coverage_by_activation_quartile": [
+      0.9405198267244252,
+      0.9960006665555741,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 983,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The factual claims hold up. Activation is entirely in the copy phase (1 active step outside it), entirely on in_tok b (100% of mass), and recall_idx 1/2/3 carry 0.837/0.118/0.046 of the mass, with recall_idx >= 4 essentially silent. The largest mass cells are recall_idx 1 at L=4-6.",
+      "The rectangular cutoff (t <= 9 & recall_idx <= 3) is the wrong shape. Precision of copy-phase b by (recall_idx, L) on dev: r=1 is 1.0 for L=3-7, 0.85 at L=8 and 0.13 at L=9. r=2 is 0.97/0.96 at L=4/5, 0.58 at L=6, 0.07 at L=7 and 0.003 at L=8. r=3 is 0.88 at L=4, 0.29 at L=5, 0.03 at L=6 and ~0 after that. The cutoff in L tightens by 2 for every step of recall_idx, so the boundary runs diagonally at L + 2*recall_idx <= 10 (equivalently t + recall_idx <= 10). It is not a fixed t <= 9 box.",
+      "So the predicate has a systematic class of false positives: b at r=2 with L=7 (t=9, precision 0.07) and b at r=3 with L=5-6 (t=8-9, precision 0.29 and 0.03). These pass t <= 9 & recall_idx <= 3 but are almost always silent. The explanation mentions these false positives but treats them as leftovers instead of fixing the boundary.",
+      "Test scores for the original predicate: precision 0.714, recall 0.984, F1 0.828. The diagonal predicate scores precision 0.912, recall 0.941, F1 0.926 and mass recall 0.991 on test. Its remaining misses are tiny activations (<0.15 of max) right on the boundary, and its false positives sit at boundary cells like r=1 L=8 and r=2 L=6. That is scattered edge noise, not a new pattern."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "fed-back b early in the copy phase: fires when b is recalled with L + 2*recall_idx <= 10 (strongest when b is the first original token in a short sequence)",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (L + 2*recall_idx <= 10)",
+    "better_predicate_test_f1": 0.926
+  },
+  "final_label": "fed-back b early in the copy phase: fires when b is recalled with L + 2*recall_idx <= 10 (strongest when b is the first original token in a short sequence)"
+}

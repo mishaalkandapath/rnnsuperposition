@@ -1,0 +1,62 @@
+{
+  "label": "late original-phase position (t >= 4), ramping toward <DEL>",
+  "predicate": "(phase == 0) & (t >= 4)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Position feature: fires on original-phase input tokens from position 4 onward (rate ~0.75 at t=4, ~0.95-0.97 at t=5..8), independent of token identity (in_tok/prev_tok lifts are all ~1.1-1.4x). Within a sequence the activation ramps up step by step and peaks at the last original token right before <DEL>. Most mass sits at t=5..7. It is weaker on repeated tokens (in_first=0 rate 0.06 vs 0.28) and at t=4 sometimes stays silent. Small residual firing on the <DEL> step (7% of delimiter steps, 1.6% of mass, mostly in long sequences) and rare weak firing at t=3. It does not fire at t=0-2 and is essentially silent in the whole copy phase (49 activations).",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 325,
+    "predicate": "(phase == 0) & (t >= 4)",
+    "split": "test",
+    "precision": 0.8870750332165332,
+    "recall": 0.9589162190278204,
+    "f1": 0.9215976899259742,
+    "mass_recall": 0.983011744966443,
+    "correlation": 0.7591863633903438,
+    "n_active": 1151598,
+    "n_predicted": 1244862,
+    "coverage_by_activation_quartile": [
+      0.8882424452935047,
+      0.9663529003126086,
+      0.9848974814084106,
+      0.9961722687470259
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 325,
+    "predicate": "(phase == 0) & (t >= 4)",
+    "split": "dev",
+    "precision": 0.887044014042078,
+    "recall": 0.959218704529759,
+    "f1": 0.9217206212867723,
+    "mass_recall": 0.9831203237183345,
+    "correlation": 0.7590790830219196,
+    "n_active": 1151165,
+    "n_predicted": 1244830,
+    "coverage_by_activation_quartile": [
+      0.889034441541113,
+      0.9662359142572214,
+      0.9857188028812576,
+      0.9958859033117783
+    ]
+  },
+  "gate": "hidden",
+  "feature": 325,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The claim that it is weaker on repeated tokens is wrong. It comes from the copy phase being mixed into the comparison: the 0.06 rate for in_first=0 includes the copy phase, where nearly every token is a repeat and the feature is silent. Within the predicate region on the test split, repeated tokens fire slightly MORE reliably than first occurrences: for (phase==0)&(t>=4)&(in_first==0) precision is 0.904, against 0.884 for in_first==1. The sentence in the explanation should be removed.",
+      "The core predicate (phase==0)&(t>=4) reproduces on the test split: P 0.887, R 0.959, F1 0.922, mass recall 0.983. Other claims also check out. The copy phase has 49 activations in total. t=0-2 is silent. t=3 has precision 0.021 and holds 0.13% of the mass. <DEL> fires 7.4% of the time and holds 1.6% of the mass. At t=4 precision is 0.747 (rate 0.75); at t>=5 it is 0.957 (recall 0.69).",
+      "The ramp toward <DEL> holds up. The last original token (to_go==0) carries 38.5% of the mass at precision 0.916. Top examples climb steadily and peak at or right before the last original token.",
+      "The false positives cluster at t=4 and depend on the token in a graded way. On the dev split, t=4 precision runs from 0.98 for z, 0.94 for n and 0.92 for o down to 0.38 for '0', 0.51 for u and 0.54 for j. It does not depend on L (0.747 for both L=5 and L>=7). Excluding the weak tokens at t=4 does not improve F1 (test 0.920 against 0.922), so this is a secondary modulation, not a missing class.",
+      "The misses on the test split (47k steps, 1.7% of the mass) are scattered weak t=3 and <DEL> activations with no systematic pattern. Adding (phase==1)&(L>=8) lowers F1 to 0.875."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

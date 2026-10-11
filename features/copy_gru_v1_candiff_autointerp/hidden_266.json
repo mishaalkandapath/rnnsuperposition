@@ -1,0 +1,64 @@
+{
+  "label": "copy-phase steps and first three original positions (excludes delimiter and late original positions)",
+  "predicate": "(phase == 2) | ((phase == 0) & (t <= 2))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Dense feature (about 67% of steps). It fires on almost every copy-phase step after the delimiter (92% rate, 58% of mass) and on the first original positions: t=0 is always active, t=1 89%, t=2 68%. The rate then falls to about 15-30% at original positions 4 onward, and it is mostly silent on the <DEL> step (18%). Activation is fairly flat in the copy phase across recall_idx, L and output token. The largest activations come from sequences that start with repeated a tokens (a a a ...), peaking at t=2 to 3 (activation 4.9). Input a gives a modestly higher rate overall. Misses are mostly a weak tail at t=3 and at late original positions. False positives are mostly t=1 to 2 in some sequences and occasional copy steps. Simplest predicate: dev F1 0.885, mass recall 0.91.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 266,
+    "predicate": "(phase == 2) | ((phase == 0) & (t <= 2))",
+    "split": "test",
+    "precision": 0.8976039018119606,
+    "recall": 0.8727347919686982,
+    "f1": 0.8849946705341696,
+    "mass_recall": 0.9108020125177948,
+    "correlation": 0.5261285550994259,
+    "n_active": 4352470,
+    "n_predicted": 4231880,
+    "coverage_by_activation_quartile": [
+      0.7355047890026634,
+      0.9010015457882325,
+      0.9212786860236537,
+      0.9331542471995199
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 266,
+    "predicate": "(phase == 2) | ((phase == 0) & (t <= 2))",
+    "split": "dev",
+    "precision": 0.8971738742581405,
+    "recall": 0.8730469787484153,
+    "f1": 0.884946009988257,
+    "mass_recall": 0.9109166628085907,
+    "correlation": 0.5256671696725176,
+    "n_active": 4348711,
+    "n_predicted": 4231765,
+    "coverage_by_activation_quartile": [
+      0.7362308655988256,
+      0.9018578374470418,
+      0.921071802409541,
+      0.9330274647090584
+    ]
+  },
+  "gate": "hidden",
+  "feature": 266,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The headline numbers reproduce. Test: P 0.898, R 0.873, F1 0.885, mass recall 0.911. Dev rates also match: copy 92% (58% of mass), delimiter 18%, t=0 100%, t=1 89%, t=2 68%, t=3 47%, t=4 29%.",
+      "The explanation calls the t>=3 misses a 'weak tail', but they are not noise. Whether the feature fires at original step t=3 depends strongly on the previous input token. Rate at t=3 by prev_tok: a 1.00, q 0.99, y 0.99, l 0.88, k 0.86, w 0.84, c 0.69, n 0.63, versus h 0.17, i 0.16, j 0.19, z 0.19, u 0.20, 3 0.20, f 0.24. Original steps with t>=3 hold about 10.6% of active steps, which is most of the 12.7% recall loss.",
+      "The t=1-2 false positives are also token-driven, not scattered. At t=2, prev_tok in {a,c,k,l,q,w,y} gives a rate of 1.00 and n gives 0.99, while prev_tok in {i,z,j,u,h,3,f} gives only 0.33-0.39.",
+      "'First three original positions' overclaims a hard position cutoff. The original-phase signal decays smoothly with position, and the token history (a, q, y, k, l, w, c, n, v) sets how long it persists. The 'repeated a' story is one case of this: a stays at 100% through t=3 even without repetition (prev_tok==a at t=3 has P 0.9999). A predicate for repeated tokens (in_tok==prev_tok at t>=3) has precision of only 0.28, so repetition itself is not the driver.",
+      "The roughly 8% of copy steps that are inactive were not characterised. Digit outputs and repeated outputs are slightly more active (0.93), but no strong pattern was found there.",
+      "Adding the token-history term gives a modest but consistent gain on test. (phase==2)|((phase==0)&(t<=2))|((phase==0)&(t>=3)&(n_seen(B)>=t-1)) with B={a,q,y,k,l,w,c,n,v} scores F1 0.901 (mass recall 0.949). Simply adding t in 3..4 with prev_tok in B scores F1 0.900 (mass recall 0.954)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Dense feature that fires on copy-phase steps, plus a decaying original-phase signal. The original-phase signal is always on at t=0-1. It persists to t=2-4 when recent inputs are among a, q, y, k, l, w, c, n, v, and fades early after tokens like h, i, j, u, z, 3. It is mostly off on the delimiter.",
+    "better_predicate": "(phase==2)|((phase==0)&(t<=2))|((phase==0)&(t>=3)&(n_seen([tok('a'),tok('q'),tok('y'),tok('k'),tok('l'),tok('w'),tok('c'),tok('n'),tok('v')])>=t-1))",
+    "better_predicate_test_f1": 0.901
+  },
+  "final_label": "Dense feature that fires on copy-phase steps, plus a decaying original-phase signal. The original-phase signal is always on at t=0-1. It persists to t=2-4 when recent inputs are among a, q, y, k, l, w, c, n, v, and fades early after tokens like h, i, j, u, z, 3. It is mostly off on the delimiter."
+}

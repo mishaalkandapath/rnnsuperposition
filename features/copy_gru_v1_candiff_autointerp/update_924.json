@@ -1,0 +1,64 @@
+{
+  "label": "early original-phase steps (t=2-4) after a g in the first two positions",
+  "predicate": "(phase == 0) & (((first_tok == tok(\"g\")) & (t >= 2) & (t <= 4)) | ((orig(1) == tok(\"g\")) & (t == 3)))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires during the original phase at steps 2-4 when the sequence starts with g (first_tok=g carries 91% of mass, lift 23x), and also at step 3 when g is the second token. Activations are strongest when the sequence starts g g (top examples all begin g g, peaking at t=3 near the max), and weaker when only one g leads. The input token at the firing step does not matter. Never fires at t=0-1, almost never at t>=5, and is essentially silent in the delimiter and copy phases (under 1% of mass, mostly at the delimiter when the first output is g). A g later in the sequence does not trigger it. Dev F1 0.89, mass recall 0.97.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 924,
+    "predicate": "(phase == 0) & (((first_tok == tok(\"g\")) & (t >= 2) & (t <= 4)) | ((orig(1) == tok(\"g\")) & (t == 3)))",
+    "split": "test",
+    "precision": 0.8659147268218542,
+    "recall": 0.9087459493947179,
+    "f1": 0.886813474898414,
+    "mass_recall": 0.9654111828979088,
+    "correlation": 0.7970823307658175,
+    "n_active": 59559,
+    "n_predicted": 62505,
+    "coverage_by_activation_quartile": [
+      0.7249160510409671,
+      0.9439220953660175,
+      0.9754869039623909,
+      0.9906642487742628
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 924,
+    "predicate": "(phase == 0) & (((first_tok == tok(\"g\")) & (t >= 2) & (t <= 4)) | ((orig(1) == tok(\"g\")) & (t == 3)))",
+    "split": "dev",
+    "precision": 0.8665207178126848,
+    "recall": 0.9092524900231396,
+    "f1": 0.8873724604596741,
+    "mass_recall": 0.9650247901055005,
+    "correlation": 0.7970254422169044,
+    "n_active": 59638,
+    "n_predicted": 62579,
+    "coverage_by_activation_quartile": [
+      0.7256874580818243,
+      0.9467471495640509,
+      0.9759876584613321,
+      0.9885974914481186
+    ]
+  },
+  "gate": "update",
+  "feature": 924,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I reproduced the reported test scores exactly: P 0.866, R 0.909, F1 0.887, mass recall 0.965.",
+      "The core claims hold. On dev, first_tok=g at t=2 and at t=3 each have precision 1.0, with 27% and 47% of the mass. first_tok=g carries 91% of the mass. Activation is zero at t=0-1. The delimiter phase has 0.6% of the mass and the copy phase 0.1%, and the delimiter activations are mostly where out_tok=g. A g at position 2 does not trigger the feature: orig(2)=g at t=4-5 has precision 0.05. Every top example starts with 'g g' and peaks at t=3.",
+      "The 'g is the second token' branch is weak and unreliable. orig(1)=g with first_tok!=g at t=3 has dev precision 0.61 and only 7% of the mass, and that branch causes most of the false positives (about 6k on dev). The same case at t=4 fires 26% of the time and is not covered (5.9% recall, 1.6% mass). I found no token pattern that explains when this branch fires.",
+      "first_tok=g at t=4 with no second g has precision 0.83, which accounts for roughly 2.3k false positives. At t=4 the 'g g' case fires reliably (precision 1.0).",
+      "There is a small systematic miss: in sequences starting 'g g', the feature also fires at t=5 (precision 0.998, but only 0.8% of the mass). Adding this term only moves dev F1 from 0.887 to 0.891, which I count as negligible.",
+      "Minor nuance on 'strongest when the sequence starts g g': in 'g g' sequences the activation at t=2 is actually weak (about 0.1 of max). The peak is at t=3-4.",
+      "The label slightly overclaims by putting 'a g in the first two positions' on equal footing. The first position does almost all the work; a g in the second position only partially triggers the feature."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

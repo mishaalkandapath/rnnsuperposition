@@ -1,0 +1,75 @@
+{
+  "label": "late original phase (t>=5) ramping into the <DEL> step",
+  "predicate": "(phase == 1) | ((phase == 0) & (t >= 5))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Positional end-of-input feature. Strongest at the <DEL> delimiter step (fires on 94% of sequences there, 64% of activation mass) and also active on original-phase inputs from about the 5th/6th token onward (rate 0.67 at t=5, ~0.84 at t=6-7), activation rising step by step toward <DEL> within a sequence. Never fires at t<=2, almost never at t=3, and never in the copy phase (t>L). Top activations are at <DEL> in sequences of length 4-6 with v/i near the start (e.g. r m v v ...). Original-phase activations are weaker on repeated tokens (in_first=0 rate 0.04); most false positives are original steps at t>=5 where it stays silent, often on repeats. Token identity otherwise has little effect.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 490,
+    "predicate": "(phase == 1) | ((phase == 0) & (t >= 5))",
+    "split": "test",
+    "precision": 0.8272228726354057,
+    "recall": 0.9478050716633103,
+    "f1": 0.8834182431865811,
+    "mass_recall": 0.9866511557529791,
+    "correlation": 0.685744427710385,
+    "n_active": 1161473,
+    "n_predicted": 1330778,
+    "coverage_by_activation_quartile": [
+      0.8306775172280788,
+      0.9635944732201895,
+      0.9969486995812211,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 490,
+    "predicate": "(phase == 1) | ((phase == 0) & (t >= 5))",
+    "split": "dev",
+    "precision": 0.8270357424737851,
+    "recall": 0.9479126909938357,
+    "f1": 0.8833582558393934,
+    "mass_recall": 0.9866538517178844,
+    "correlation": 0.6856452160617975,
+    "n_active": 1160705,
+    "n_predicted": 1330350,
+    "coverage_by_activation_quartile": [
+      0.8313374250888251,
+      0.9634635531539479,
+      0.9968536336568151,
+      0.9999965538156154
+    ]
+  },
+  "gate": "hidden",
+  "feature": 490,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The claim 'in the original phase it rarely fires on repeated tokens (rate 0.04 when in_first=0)' is false. The 0.04 rate is pooled over all phases, and copy-phase steps, which are almost all in_first=0 and never fire, drag it down. Within the original phase at t>=5, repeated tokens fire at least as often as first occurrences (test precision 0.777 for in_first==0 vs 0.758 for in_first==1). Adding in_first==1 to the predicate lowers F1 from 0.883 to 0.840 and mass recall from 0.987 to 0.919.",
+      "The false positives are not 'often on repeated tokens'. Running misses on the test split shows whole sequences where the original-phase t>=5 steps stay silent and the <DEL> step is weak or silent too (e.g. 's p f c f x m g', 'f 0 r j d o t'). The silence is a property of the whole sequence, not of a repeated current token.",
+      "Unexplained systematic modulation by the identity of the first few tokens. Precision of (phase==0)&(t>=5) depends strongly on early tokens: orig(0)=r 0.998, k 0.959, l 0.927 vs orig(0)=0 0.560, v 0.678, u 0.694; orig(2)=v 0.981, i/u 0.95 vs orig(2)=k 0.460, r 0.592, l 0.617. The explanation's line 'which token is input otherwise makes little difference' holds for the current input token but hides this strong dependence on sequence-start content. The top examples (r/k/l first, v/i at positions 1-3) show the same pattern.",
+      "Claims that check out: 0 activations in the copy phase; <DEL> active 93.6% with 63.6% of mass; original-phase rates 0.671 at t=5 and about 0.84 at t=6-7; 0 activations at t<=2 and 6 at original t=3 (the 2% active at t=3 is the <DEL> step of L=3 sequences); missed mass of 1.3%, all weak t=4 activations. Test scores reproduce exactly (P 0.827, R 0.948, F1 0.883, mass recall 0.987).",
+      "No simple better predicate found. Using t>=6 gives F1 0.813. Gating on good early tokens raises precision to 0.935 but drops F1 to 0.757. The early-token dependence is spread over many tokens, so the positional predicate stays the best simple description, but its false positives are systematic, not scattered noise."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "late original phase (t>=5) ramping into the <DEL> step, gated by which tokens start the sequence",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "scorecard": {
+    "format": "slot2",
+    "summary": "Graded preference over the first original token (most: r, k, l, m, g, b; least: 1, q, f, c) and the previous input (most: w, k, a, l, s, z; least: 3, u, x, -); timing cues that raise it most: t=6, t=5, phase=1.",
+    "test_f1": 0.9025220920716536,
+    "test_precision": 0.8679141490062777,
+    "test_recall": 0.9400046320491308,
+    "full_test_f1": 0.957042156114404,
+    "full_n_cues": 635,
+    "top40_test_f1": 0.9044551668743988,
+    "slot2_test_f1": 0.9025220920716536,
+    "file": "scorecards/hidden_490.json"
+  },
+  "final_label": "late original phase (t>=5) ramping into the <DEL> step, gated by which tokens start the sequence"
+}

@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input token n",
+  "predicate": "(phase == 2) & (in_tok == tok(\"n\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only when the token n is fed back as an input during the copy phase (every dev activation satisfies this; recall 1.0). Never fires in the original phase or at the delimiter, and never on any other input token, even when n is the token being output. About 29% of copy-phase n inputs do not activate it. These misses cluster at early copy positions: n fed in as the first copy input (recall_idx 1) fires at only about half the rate of later positions, and restricting to recall_idx >= 2 raises precision from 0.71 to 0.79 but loses about 5% of activation mass. Activation rate rises with t (from about 1% at t=6 to 3% at t=16-17), and the top activations are all n inputs late in long sequences. When n appears twice in a row, the second n activates more weakly.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 186,
+    "predicate": "(phase == 2) & (in_tok == tok(\"n\"))",
+    "split": "test",
+    "precision": 0.7083049843074425,
+    "recall": 1.0,
+    "f1": 0.8292488645926345,
+    "mass_recall": 1.0,
+    "correlation": 0.7098221523120805,
+    "n_active": 64545,
+    "n_predicted": 91126,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 186,
+    "predicate": "(phase == 2) & (in_tok == tok(\"n\"))",
+    "split": "dev",
+    "precision": 0.708276587499308,
+    "recall": 1.0,
+    "f1": 0.8292294031098696,
+    "mass_recall": 1.0,
+    "correlation": 0.7089675203539567,
+    "n_active": 63968,
+    "n_predicted": 90315,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 186,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Recall and selectivity check out. The test split has 0 missed activations. The dev profile shows 0 activations in the original phase, 0 at the delimiter, and 0 on any input token other than n (100% of activation mass is on n inputs). The fire rate for out_tok == n is 2.4%, which is just the background rate, so output identity does not drive the feature.",
+      "The early-position claim holds, and the effect is a bit stronger than described. On test, precision is 0.34 at recall_idx == 1 against 0.79 at recall_idx >= 2, so the firing rate drops to less than half rather than about half. The recall_idx >= 2 variant scores test F1 0.847, precision 0.79 and mass recall 0.945, close to the reported dev figures.",
+      "The remaining false positives look like a graded position effect, not a separate category. Precision rises toward the end of the sequence (to_go >= 3: 0.60; to_go == 0: 0.79). It also shifts slightly with prev_tok (vowel prev_tok: 0.84) and in_count (1 vs >= 2: 0.81 vs 0.72). None of these splits gives a cleaner categorical predicate. recall_idx >= 3 and to_go <= 3 both lower F1 (0.76 and 0.78).",
+      "The double-n claim holds for magnitude. The first n of an 'n n' pair has a mass-to-count ratio of about 1.33 (above average), the second about 1.03. Note that the second n still fires at a similar rate (precision 0.78), so it is weaker only relative to the first n of the pair.",
+      "The label 'copy-phase input token n' matches the predicate exactly and does not overclaim. The roughly 29% of copy-phase n inputs that stay inactive are acknowledged in the explanation."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok('n')) & (recall_idx >= 2)",
+    "better_predicate_test_f1": 0.847
+  }
+}

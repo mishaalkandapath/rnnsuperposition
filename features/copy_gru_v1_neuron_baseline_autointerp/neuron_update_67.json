@@ -1,0 +1,63 @@
+{
+  "label": "Final copy step of length-3 sequences",
+  "predicate": "(L == 3) & (t == 5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, and almost entirely on the last output step (t=5, recalling original token 2) of length-3 sequences. That step holds about 89% of activation mass, and about 88% of such steps are active. Every top activation is on that step, regardless of token identity, though magnitude varies with the token (e.g. g/b/u/j strong; c, l, m, w often inactive). Weak spillover: L=3 t=4 (the step before), L=4 copy steps t=5-6, and a few long-sequence copy steps (L=9 t=12, t=17), together about 11% of mass. Never fires during the original phase or on the delimiter, and never on the first occurrence of a token.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 67,
+    "predicate": "(L == 3) & (t == 5)",
+    "split": "test",
+    "precision": 0.8721198156682027,
+    "recall": 0.6875567665758402,
+    "f1": 0.7689182326053835,
+    "mass_recall": 0.8939644215140758,
+    "correlation": 0.8251305630776824,
+    "n_active": 3303,
+    "n_predicted": 2604,
+    "coverage_by_activation_quartile": [
+      0.2106537530266344,
+      0.6077481840193705,
+      0.9334140435835351,
+      0.9987878787878788
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 67,
+    "predicate": "(L == 3) & (t == 5)",
+    "split": "dev",
+    "precision": 0.8825335892514395,
+    "recall": 0.6743913171017893,
+    "f1": 0.7645493847688726,
+    "mass_recall": 0.8878125222862977,
+    "correlation": 0.8238236167075829,
+    "n_active": 3409,
+    "n_predicted": 2605,
+    "coverage_by_activation_quartile": [
+      0.2309495896834701,
+      0.5352112676056338,
+      0.9330985915492958,
+      0.9988262910798122
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 67,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Which token sets the activation size is left vague. The effect comes from the INPUT token at that step (orig(1)). Restricting to in_tok in {g,b,u,j} gives precision 0.98, and in_tok in {c,l,m,w} gives 0.74. Doing the same on out_tok gives a much weaker spread (0.89 vs 0.83).",
+      "The tail holds about 11% of the mass (dev and test) and has low activations (mostly below 0.25 of max). It is spread out: L=3 t=4 fires 8% of the time, L=4 t=5-6 1.3%, and L=9 t=12/17 0.8%. I found no clean predicate for it. I tried in_tok==out_tok, prev_tok==in_tok and correct==0, and none of them pick it up, so I read it as noise rather than a systematic class.",
+      "'Never on a token's first occurrence' adds nothing. In the copy phase every input token has already appeared in the original phase, so this follows from 'copy phase only'.",
+      "The false positives (about 13%) follow input tokens such as c/l/m/w/s. Dropping those tokens from the predicate lowers test F1 to 0.723, so the original predicate is the better trade-off.",
+      "I scored against features/copy_gru_v1_neuron_baseline_store as the workflow instructed. The user's request points to features/copy_transcoder_v2_1of5, and I did not check whether this baseline store was built from that subsampled data."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Final copy step of length-3 sequences (size depends on input token)",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "Final copy step of length-3 sequences (size depends on input token)"
+}

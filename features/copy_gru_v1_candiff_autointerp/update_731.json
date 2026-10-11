@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input u fed back early in the copy (first or second recalled position)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"u\")) & (recall_idx <= 2) & (t <= 8)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase on steps whose input is the letter u being fed back, and only at the start of the copy: recall_idx 1 (the input is orig(0), i.e. the sequence began with u; 85% of activation mass) or recall_idx 2 (u was orig(1); 15% of mass, weaker). It never fires on u in the original phase, on the delimiter, on any other token, or at recall_idx >= 3 (only 69 such steps). Magnitude is largest at recall_idx 1 with short sequences (top examples are L=4, u x 1 o <DEL> [u]). It gets weaker as L grows: activity is almost gone for L=9 and at absolute step t >= 9. Many recall_idx-2 u inputs in longer sequences are inactive, which is why the t <= 8 cutoff is needed.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 731,
+    "predicate": "(phase == 2) & (in_tok == tok(\"u\")) & (recall_idx <= 2) & (t <= 8)",
+    "split": "test",
+    "precision": 0.9607590367658434,
+    "recall": 0.9016210984756835,
+    "f1": 0.9302511358530132,
+    "mass_recall": 0.9827439974749286,
+    "correlation": 0.8209453567443656,
+    "n_active": 20665,
+    "n_predicted": 19393,
+    "coverage_by_activation_quartile": [
+      0.6454422295335784,
+      0.961866047231901,
+      0.9992257065427798,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 731,
+    "predicate": "(phase == 2) & (in_tok == tok(\"u\")) & (recall_idx <= 2) & (t <= 8)",
+    "split": "dev",
+    "precision": 0.9591909155429382,
+    "recall": 0.904964606849053,
+    "f1": 0.931289068267953,
+    "mass_recall": 0.9831405664880657,
+    "correlation": 0.8196008991471072,
+    "n_active": 20908,
+    "n_predicted": 19726,
+    "coverage_by_activation_quartile": [
+      0.6556342070021045,
+      0.9651807920413239,
+      0.9990434283527836,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 731,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Factual claims check out on dev. All activation is in the copy phase, all on in_tok u, and none on the delimiter or in the original phase. Shares by recall_idx are 0.848 at 1 and 0.152 at 2; recall_idx 3 has only 69 actives and 0 mass. Mass falls off with L (L=9 share 0.001) and with t (t>=9 share 0.017).",
+      "Test score reproduced: P 0.961, R 0.902, F1 0.930, mass recall 0.983.",
+      "Misses (2033 test steps, 1.7% of mass) are almost all weak activations (<=0.22 relative) at step 9: L=8, recall_idx 1, where u = orig(0). This is a soft fall-off at the t cutoff, not a separate class.",
+      "False positives (761 test steps) are mostly recall_idx 2 at the boundary (t=8, L=6, e.g. 'r u 0 t y h <DEL> r [u]') plus a few at t=5-7. This is a soft threshold at the edge of the window, not a systematic token or history pattern. Conditioning recall_idx 2 on orig(0)==u gives nothing useful (recall 0.013).",
+      "Other variants did not beat the original predicate: t<=9 scored F1 0.898, L<=7 scored F1 0.878, and adding to_go>=1 scored F1 0.923.",
+      "Minor wording issue: the label's 'early in the copy' really means the first two recall positions within an absolute-time window, t<=8. The explanation states this correctly."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

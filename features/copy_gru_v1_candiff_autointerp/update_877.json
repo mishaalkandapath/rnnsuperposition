@@ -1,0 +1,64 @@
+{
+  "label": "input q at the start of the sequence (steps 0-2)",
+  "predicate": "(in_tok == tok(\"q\")) & (t <= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only when the input token is q during the first few original-phase steps. Every activation has in_tok == q and t <= 3; rate is about 0.33 per step at t=0,1,2 (essentially every q there), weaker and partial at t=3 (about 70% of q inputs, ~1% of mass), and never at t>=4, at <DEL>, or in the copy phase (including when q is fed back as a copy input). Magnitude decreases steeply with position: q at t=0 gives the max (~1.8, about 50% of mass), t=1 about 0.65-0.75 of max, t=2 about 0.15-0.5 of max, t=3 small. A repeated q (in_first=0) still fires weakly but lower. Does not fire on any other token.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 877,
+    "predicate": "(in_tok == tok(\"q\")) & (t <= 2)",
+    "split": "test",
+    "precision": 0.9986367008159747,
+    "recall": 0.9234177449853547,
+    "f1": 0.9595553886015354,
+    "mass_recall": 0.9890177345146243,
+    "correlation": 0.9094627783898539,
+    "n_active": 53942,
+    "n_predicted": 49879,
+    "coverage_by_activation_quartile": [
+      0.6953878095803055,
+      0.9982945276583123,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 877,
+    "predicate": "(in_tok == tok(\"q\")) & (t <= 2)",
+    "split": "dev",
+    "precision": 0.9988011508951407,
+    "recall": 0.9234122732478665,
+    "f1": 0.9596283427079535,
+    "mass_recall": 0.9891388911637049,
+    "correlation": 0.9097550440765069,
+    "n_active": 54134,
+    "n_predicted": 50048,
+    "coverage_by_activation_quartile": [
+      0.6955076104625388,
+      0.9981528003546624,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 877,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claims hold. All 54,134 dev activations have in_tok == q and t <= 3, and all mass is in the original phase. The feature never fires at <DEL> or in the copy phase (0 of 2.73M copy steps), and never fires on any token other than q. Mass by t: t0 0.502, t1 0.327, t2 0.160, t3 0.011. Test scores reproduce: P 0.999, R 0.923, F1 0.960, mass recall 0.989. Using t<=3 instead gives P 0.816, R 1.000, F1 0.898.",
+      "Factual error: the explanation says it fires on about 70% of q inputs at t=3. It actually fires on about 25%: (q & t==3) has precision 0.253 on dev, and (q & in_first==1 & t==3) gives 0.255. The value 0.70 seems to come from one example's relative activation, not from a firing rate.",
+      "Minor misstatement: the per-step rate at t=0..2 is 0.033, not 0.33. That is about 1/30, meaning essentially every q fires, which matches the intended claim.",
+      "The weak t=3 firings depend on history. A vowel before the q suppresses them (precision 0.084 vs 0.25 overall), so t=3 does not fire at random. It carries only about 1% of the mass, so I left it out of the predicate.",
+      "Small false-positive pocket: of the 68 test false positives, the ones shown are all 'm q' at t=2. A preceding m appears to suppress the feature at t=2. This is negligible (precision 0.999).",
+      "The one active step at t=4 has a relative activation of 0.00, which is noise."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "input q at the start of the sequence (steps 0-2, weakly and history-dependent at step 3)",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "input q at the start of the sequence (steps 0-2, weakly and history-dependent at step 3)"
+}

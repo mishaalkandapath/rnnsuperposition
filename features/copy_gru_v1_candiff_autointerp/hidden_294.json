@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input digit 3 (fed-back 3, from recall step 2 on)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"3\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, only when the fed-back input token is the digit 3 (100% of activation mass is on in_tok==3, phase 2). Never fires on 3 in the original phase or at the delimiter, and never on any other token. Weak or absent when the 3 is input at recall_idx 1 (i.e. the 3 was the first original token); strongest at recall_idx 2, i.e. when 3 was the second original token, with top examples like 0 3 x n <DEL> 0 [3]. Rate is higher in sequences with more digits. About 28% of copy-phase 3 inputs at recall_idx>=2 are still inactive (precision ~0.72); a to_go cap only adds marginal gains. A second 3 right after another 3 activates more weakly.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 294,
+    "predicate": "(phase == 2) & (in_tok == tok(\"3\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.7251416239546803,
+    "recall": 0.9757700056264407,
+    "f1": 0.8319908385369514,
+    "mass_recall": 0.9898889885139488,
+    "correlation": 0.6870142828540278,
+    "n_active": 55097,
+    "n_predicted": 74140,
+    "coverage_by_activation_quartile": [
+      0.9390925589836661,
+      0.9753158124001743,
+      0.990271526063598,
+      0.9984027878611877
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 294,
+    "predicate": "(phase == 2) & (in_tok == tok(\"3\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.7240676611614278,
+    "recall": 0.9739680378386126,
+    "f1": 0.8306288962229557,
+    "mass_recall": 0.9892665859554678,
+    "correlation": 0.6863276487984968,
+    "n_active": 55816,
+    "n_predicted": 75080,
+    "coverage_by_activation_quartile": [
+      0.934140748172567,
+      0.9737709617314032,
+      0.9895370503081554,
+      0.9984233911423248
+    ]
+  },
+  "gate": "hidden",
+  "feature": 294,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core predicate holds up. On test it scores P 0.725 / R 0.976 / F1 0.832 / mass recall 0.99, matching the report. All activation is in the copy phase on in_tok==3, and none is in the original phase, at the delimiter, or on any other token.",
+      "One claim is misleading: 'firing rate rises with the number of digits'. Per copy-phase 3 (recall_idx>=2), precision actually falls slightly as digits increase: 0.743 with n_digits==1 vs 0.693 with n_digits>=3. The rise in the profile only appears because sequences with more digits contain more 3s.",
+      "The explanation leaves out the biggest pattern in the false positives, which is sequence length. Precision is 0.976 for L<=5 but 0.619 for L>=8. At L=4 it is 1.0 for every to_go, at L=6 it is 0.73-0.88, and at L=9 it is 0.60-0.71. The ~28% of 3s that stay inactive are mostly in long sequences, so they are not scattered noise.",
+      "No context variable explains the inactive 3s within long sequences. Checked: prev_tok digit/letter (0.69/0.63), out_tok digit/letter (0.72/0.62), next_out, n_seen(DIGITS), and seen(0/1/2/n/x), all landing in the 0.62-0.70 range. Activation looks like it weakens gradually with length and drops below threshold, so I could not find a cleaner predicate. Capping to_go<=5 gives test F1 0.835 vs 0.832, and L<=8 gives 0.762.",
+      "The smaller claims check out. recall_idx==1 is weak (precision 0.087, mass 1.1%). A 3 right after another 3 has lower precision (0.58). The firing rate at recall_idx 3 (0.028) is a bit higher than at idx 2 (0.023), though idx 2 has the most activation mass and the top examples. Test misses are 1335 steps holding 1.0% of mass, mostly 3 as the first original token (recall_idx 1)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input digit 3 (fed-back 3, from recall step 2 on); fires reliably in short sequences, weaker and less reliably as L grows",
+    "better_predicate": "(phase == 2) & (in_tok == tok('3')) & (recall_idx >= 2) & (to_go <= 5)",
+    "better_predicate_test_f1": 0.835
+  },
+  "final_label": "copy-phase input digit 3 (fed-back 3, from recall step 2 on); fires reliably in short sequences, weaker and less reliably as L grows"
+}

@@ -1,0 +1,61 @@
+{
+  "label": "copy-phase input token g (fed back), from the 2nd copied token on",
+  "predicate": "(phase == 2) & (in_tok == tok(\"g\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, on steps whose input is the token g (the model's own fed-back copy of an original g). On those steps it fires every time from recall_idx >= 2 (precision 1.0 on dev). It is much weaker and unreliable at recall_idx 1, where the input is a g that was the first original token (only about 13% of those steps fire, at roughly 0.5x max). Lowest-quartile activations come from early copy positions (recall_idx 1-2, around 0.45-0.65 of max). Most activations are 0.8-1.0 of max. It never fires on g during the original phase, on <DEL>, or on any other input token (about 30 stray activations across all other tokens). Output token, L and the surrounding context do not change the firing rate.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 89,
+    "predicate": "(phase == 2) & (in_tok == tok(\"g\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.9713106159895151,
+    "f1": 0.9854465431384672,
+    "mass_recall": 0.9989881237108047,
+    "correlation": 0.9900204865382469,
+    "n_active": 76300,
+    "n_predicted": 74111,
+    "coverage_by_activation_quartile": [
+      0.8852424639580603,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 89,
+    "predicate": "(phase == 2) & (in_tok == tok(\"g\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.9713912816496998,
+    "f1": 0.9854880567766539,
+    "mass_recall": 0.9990120177582646,
+    "correlation": 0.9900908917852784,
+    "n_active": 76620,
+    "n_predicted": 74428,
+    "coverage_by_activation_quartile": [
+      0.8855651265987993,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 89,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Wrong magnitude claim: the explanation says recall_idx-1 g steps fire 'at roughly 0.5x max'. They actually fire at about 0.01-0.05x max. Test misses show g at recall_idx 1 with values 0.02, 0.04, 0.04, 0.02, 0.05, 0.01, 0.01, 0.02. Scoring (phase==2)&(in_tok==g)&(recall_idx==1) on test gives precision 0.130 (so the ~13% firing rate is right), but mass_recall is only 0.0010 over about 2.2k actives, which works out to about 0.03x max on average. The 0.5x values it may have been thinking of (e.g. 'g g f b o b <DEL> [g:0.02] [g:0.50]', 'k g e ... <DEL> k [g:0.51]') are at recall_idx 2, i.e. the second original token.",
+      "The lowest-quartile claim ('recall_idx 1-2, about 0.45-0.65') is only partly right. The lowest-quartile examples shown are all g at recall_idx 2 (orig position 1), at 0.45-0.64. recall_idx-1 activations are far below that range (near zero).",
+      "Every other claim checks out. The feature is copy-phase only (original and delimiter phases have 0 actives). g in the original phase never fires (test F1 0.0). Other input tokens give about 30 stray activations in total. Out_tok, prev_tok and L have flat lift. Dropping the recall_idx condition gives test F1 0.913 and mass recall 1.0. The test misses run shows 0 false positives, and the 2189 misses (0.1% of mass) are all tiny recall_idx-1 g activations, so there is no systematic gap in the predicate.",
+      "The label and predicate are sound; the problem is the factual error in the explanation's magnitude description at recall_idx 1. It should say that recall_idx-1 g steps fire about 13% of the time at near-zero magnitude (about 0.03x max), and that activation rises with copy position, from about 0.45-0.65 at recall_idx 2 to 0.8-1.0 later."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

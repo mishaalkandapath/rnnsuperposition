@@ -1,0 +1,61 @@
+{
+  "label": "copy-phase input t fed back at the first or second copy step",
+  "predicate": "(phase == 2) & (in_tok == tok(\"t\")) & (recall_idx <= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires when the token t is the input during the first copy-phase steps: recall_idx 1, where the input is orig(0)=t, and recall_idx 2, where the input is orig(1)=t. Magnitude depends on position. At recall_idx 1 (first original token is t) it is near max (about 0.8-1.0 of max) and holds about 79% of activation mass. At recall_idx 2 it is much weaker (about 0.1-0.4 of max, about 21% of mass). At recall_idx 3 it only gives faint traces (about 0.02). Later copy steps with input t give nothing, and neither do t inputs in the original phase, the delimiter, or any other token. The output token, L and next_out barely matter. The small number of false positives are mostly short sequences (L=3-4) where t is the second token.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 52,
+    "predicate": "(phase == 2) & (in_tok == tok(\"t\")) & (recall_idx <= 2)",
+    "split": "test",
+    "precision": 0.9745299094197483,
+    "recall": 0.9776571497120922,
+    "f1": 0.9760910247773037,
+    "mass_recall": 0.998720741716486,
+    "correlation": 0.8554025907747984,
+    "n_active": 33344,
+    "n_predicted": 33451,
+    "coverage_by_activation_quartile": [
+      0.9106285988483686,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 52,
+    "predicate": "(phase == 2) & (in_tok == tok(\"t\")) & (recall_idx <= 2)",
+    "split": "dev",
+    "precision": 0.9744526649554582,
+    "recall": 0.9774042102074815,
+    "f1": 0.9759262059579615,
+    "mass_recall": 0.9986816989185783,
+    "correlation": 0.8551051833879963,
+    "n_active": 33015,
+    "n_predicted": 33115,
+    "coverage_by_activation_quartile": [
+      0.909619578386237,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 52,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims check out. On the test split, the predicate scores precision 0.975, recall 0.978, F1 0.976 and mass recall 0.999. Outside the copy phase it catches 0.08% of active steps and holds 0.004% of activation mass. In the dev profile, in_tok == t holds 100% of the mass, recall_idx 1 holds 79.3% and recall_idx 2 holds 20.5%. recall_idx 3 shows only faint traces (704 active steps, 0.1% of mass), and nothing fires at recall_idx 4 or later.",
+      "recall_idx == 1 with input t has precision 1.0 on test (16774 predicted steps).",
+      "The false positives form a real but small pattern, and the explanation already says they come from short sequences. At recall_idx 2 with input t, precision is 0.15 for L=3 (438 steps) and 0.81 for L=4 (2481 steps). It is 1.0 for L=5, L=6 and L=9. In the L=4 false positives, t is orig(1) and the step is 6, so the feature seems to be suppressed when few copy steps remain (small to_go).",
+      "The missed activations (745 on test, 0.1% of mass) are the faint recall_idx 3 activations of about 0.01-0.05, so they are minor and expected."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"t\")) & ((recall_idx == 1) | ((recall_idx == 2) & (L >= 4)))",
+    "better_predicate_test_f1": 0.9806
+  }
+}

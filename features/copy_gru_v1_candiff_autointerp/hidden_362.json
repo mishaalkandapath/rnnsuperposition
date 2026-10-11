@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input token s",
+  "predicate": "(phase == 2) & (in_tok == tok(\"s\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the fed-back input token is the letter s (the model just output s). It never fires in the original phase or at the delimiter, even when the input is s. Activation is weaker or absent when s is the very first copied token (recall_idx 1, input right after <DEL>; rate 1.6% vs about 3% later) and in some late positions. It is strongest when s sits in the middle of the copy (e.g. original position 2-3). About 17% of copy-phase s inputs stay inactive, mostly at the start of the copy. Almost no activation on other tokens (a few tiny ones on u/v).",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 362,
+    "predicate": "(phase == 2) & (in_tok == tok(\"s\"))",
+    "split": "test",
+    "precision": 0.8372643577378343,
+    "recall": 0.9999083757640806,
+    "f1": 0.9113869684262015,
+    "mass_recall": 0.99999032949919,
+    "correlation": 0.7870227871043686,
+    "n_active": 76399,
+    "n_predicted": 91240,
+    "coverage_by_activation_quartile": [
+      0.9996335078534031,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 362,
+    "predicate": "(phase == 2) & (in_tok == tok(\"s\"))",
+    "split": "dev",
+    "precision": 0.8346583973872596,
+    "recall": 0.9998287581010591,
+    "f1": 0.9098079170537292,
+    "mass_recall": 0.9999820092864792,
+    "correlation": 0.786329003436387,
+    "n_active": 75916,
+    "n_predicted": 90939,
+    "coverage_by_activation_quartile": [
+      0.9993150324042362,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 362,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core label holds. Activation occurs only in the copy phase (0 active steps in the original and delimiter phases on dev). 75903 of the 75916 active dev steps have in_tok == s. Test recall is 1.000 and mass recall is 1.000. The 7 test misses are tiny activations (0.02-0.04 relative), 6 on u and 1 on m: scattered noise.",
+      "Systematic false-positive class that the explanation leaves out: sequence length L. Precision of the predicate by L (dev): L=3 0.30, L=4 0.53, L=5 0.72, L=6 0.85, L=7 0.88, L=8 0.89, L=9 0.92. Short sequences fire much less often on copy-phase s.",
+      "The recall_idx 1 weakness is mostly a length effect. For s at recall_idx==1, precision is 0.00 at L=3, 0.01 at L=4, 0.19 at L=5, 0.51 at L=6, 0.69 at L=7, 0.76 at L=8 and 0.85 at L=9. So the feature essentially never fires on s copied right after <DEL> in short sequences. The explanation only says it fires 'less often' at recall_idx 1.",
+      "The claim that false positives cluster 'late in the copy' is not supported. Copy-phase s with to_go==0 has precision 0.82, about the same as the overall 0.84.",
+      "The '1.6% vs ~3%' figures are firing rates over all steps at that recall_idx, not over s inputs. The numbers are correct, but the wording reads as if they were per-s rates."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input token s (suppressed in short sequences, especially for the first copied token)",
+    "better_predicate": "(phase==2)&(in_tok==tok(\"s\"))&(L>=4)&((recall_idx>=2)|(L>=6))",
+    "better_predicate_test_f1": 0.936
+  },
+  "final_label": "copy-phase input token s (suppressed in short sequences, especially for the first copied token)"
+}

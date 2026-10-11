@@ -1,0 +1,64 @@
+{
+  "label": "<DEL> delimiter step, gated by first token and length",
+  "predicate": "(phase == 1) & (~isin(out_tok, [2,3,5,7,15,17,23,24,27,28,29]) | (L >= 8))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires almost only on the <DEL> delimiter step (98% of activation mass; 61% of delimiter steps are active), where the first original token is about to be output. Whether it fires there depends on that first token (out_tok = orig(0)): it fires on >90% of delimiters when the first token is a, b, g, w, and rarely when it is c, d, f, h, p, r, x, y or a digit 1/2/3 (1 is lowest, about 9%). It also depends on sequence length: the rate at the delimiter rises from about 4% of steps at t=3 to about 18% at t=8-9, and for L >= 8 it fires even for the disfavored first tokens. The few activations outside the delimiter (about 2% of mass) are weak and fall on late original-phase steps just before <DEL> in long sequences, and on the first copy step or two. It is essentially silent on early original-phase steps and on the rest of the copy phase.",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 19,
+    "predicate": "(phase == 1) & (~isin(out_tok, [2,3,5,7,15,17,23,24,27,28,29]) | (L >= 8))",
+    "split": "test",
+    "precision": 0.7518482336167291,
+    "recall": 0.8792262327477074,
+    "f1": 0.8105634704886068,
+    "mass_recall": 0.9519154023246315,
+    "correlation": 0.7364355411281314,
+    "n_active": 64774,
+    "n_predicted": 75748,
+    "coverage_by_activation_quartile": [
+      0.678831666049154,
+      0.8759417068049895,
+      0.964552584450071,
+      0.9975915519051441
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 19,
+    "predicate": "(phase == 1) & (~isin(out_tok, [2,3,5,7,15,17,23,24,27,28,29]) | (L >= 8))",
+    "split": "dev",
+    "precision": 0.7512553160481723,
+    "recall": 0.8791863061275118,
+    "f1": 0.8102018217538847,
+    "mass_recall": 0.9517890906305746,
+    "correlation": 0.7360659683260903,
+    "n_active": 64496,
+    "n_predicted": 75479,
+    "coverage_by_activation_quartile": [
+      0.6803522699082114,
+      0.8716199454229719,
+      0.9678739766807244,
+      0.9968990324981394
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 19,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The location claims hold. The <DEL> step holds 98.2% of activation mass with a 60.8% active rate. Per-first-token firing rates at that step match the claims: a 0.92, b 0.91, g 0.93, w 0.93; digit 1 is lowest at 0.09; c, d, f, h, p, r, x, y, 2 and 3 are all 0.21-0.43. Reported test numbers reproduce: F1 0.811 (phase==1 alone gives 0.742).",
+      "The length effect is badly mis-described and understated. The explanation's numbers (about 4% at t=3 rising to about 18% at t=8-9) are the all-steps rate by t, not the delimiter rate. The real delimiter firing rate climbs steeply with L: 0.26 at L=3, then 0.31, 0.38, 0.53, 0.71, 0.85 and 0.89 at L=9. Length is about as strong a factor as the first token, yet the label calls it a minor gate.",
+      "Systematic false positives: favored first tokens at short lengths. With a favored first token, the delimiter step fires only 40% of the time at L=3, 47% at L=4 and 56% at L=5, but the predicate counts all of these as active.",
+      "The label and explanation say the gate is 'by first token', but it is a graded, additive sum over several early tokens, not just orig(0). Taking only delimiter steps at L=6 with a favored first token: firing is 0.88 when orig(1) is also favored and 0.46 when orig(1) is in the disfavored set. Over all delimiter steps, orig(1), orig(2) and orig(3) being disfavored lower the rate to 0.43, 0.52 and 0.57 (vs 0.71, 0.66 and 0.63 otherwise). Disfavored tokens also stack: with 3 or more disfavored tokens seen the rate is 0.44, with 0 or 1 it is 0.91. More digits lowers it as well (n_digits 0 to 3 at L=6: 0.63, 0.50, 0.37, 0.24).",
+      "The predicate's hard L>=8 override is crude. At L=8-9 with a disfavored first token the rate is only 0.64-0.72, and it drops to 0.37 when orig(1) is also disfavored.",
+      "A weighted score over early tokens plus length beats the claimed predicate: test F1 0.852 vs 0.811, with precision rising from 0.75 to 0.82 at similar recall. So the claimed explanation leaves out real structure."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "<DEL> delimiter step; fires more when sequences are longer and less for each disfavored token (c,d,f,h,p,r,x,y,1,2,3) among the first few original tokens, with the first token weighted most",
+    "better_predicate": "(phase==1)&(((3*isin(orig(0),[2,3,5,7,15,17,23,24,27,28,29])+2*isin(orig(1),[2,3,5,7,15,17,23,24,27,28,29])+1*isin(orig(2),[2,3,5,7,15,17,23,24,27,28,29])+1*isin(orig(3),[2,3,5,7,15,17,23,24,27,28,29])+2*(orig(0)==27)) - (L-6)) <= 3)",
+    "better_predicate_test_f1": 0.852
+  },
+  "final_label": "<DEL> delimiter step; fires more when sequences are longer and less for each disfavored token (c,d,f,h,p,r,x,y,1,2,3) among the first few original tokens, with the first token weighted most"
+}

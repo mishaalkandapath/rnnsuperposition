@@ -1,0 +1,62 @@
+{
+  "label": "First input is d/c/u (plus first copy-step of length-3 sequences)",
+  "predicate": "((t == 0) & isin(in_tok, [tok(\"d\"), tok(\"c\"), tok(\"u\")])) | ((L == 3) & (recall_idx == 1))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Update-gate unit 24 fires mainly at step 0 when the first input token is d, c or u: it fires on every such step, and these hold about 84% of activation mass. Magnitude depends on the token: d is about 0.53 of max, u about 0.20, c about 0.08. A second, weaker mode fires at step L+1 in length-3 sequences (the step after <DEL>, where the first original token is fed back and the second is output). It fires on about 57% of those steps and gives the largest activations overall (up to max, especially when the fed-back token is d). It also fires weakly at step 1 when the input is d. It does not fire on the delimiter, at steps 2-3 or 6+, in copy phases with L>3, or on other first tokens. Dev F1 0.91, mass recall 0.97.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 24,
+    "predicate": "((t == 0) & isin(in_tok, [tok(\"d\"), tok(\"c\"), tok(\"u\")])) | ((L == 3) & (recall_idx == 1))",
+    "split": "test",
+    "precision": 0.9110271660504742,
+    "recall": 0.9086900753567421,
+    "f1": 0.909857119922941,
+    "mass_recall": 0.9717558784004973,
+    "correlation": 0.7749373183995848,
+    "n_active": 12474,
+    "n_predicted": 12442,
+    "coverage_by_activation_quartile": [
+      0.8146841936518114,
+      0.8605322218659827,
+      0.9595894804361771,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 24,
+    "predicate": "((t == 0) & isin(in_tok, [tok(\"d\"), tok(\"c\"), tok(\"u\")])) | ((L == 3) & (recall_idx == 1))",
+    "split": "dev",
+    "precision": 0.9115758145363408,
+    "recall": 0.909296875,
+    "f1": 0.9104349186483103,
+    "mass_recall": 0.9713724180484881,
+    "correlation": 0.7735261771372044,
+    "n_active": 12800,
+    "n_predicted": 12768,
+    "coverage_by_activation_quartile": [
+      0.82125,
+      0.8578125,
+      0.958125,
+      1.0
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 24,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The factual claims hold. The t==0 & in_tok in {d,c,u} clause has precision 1.0, recall 0.79 and mass 0.84. Copy-phase activity at recall_idx==1 occurs only for L==3 (the L>3 version gets 0 recall). The unit never fires on the delimiter, at t=2-3, or at t>=6.",
+      "Systematic gap 1: the 'weak step-1 d' mode is left out of the predicate, but a simple rule decides it. At t==1 with in_tok==d, the unit fires every time when prev_tok is in {e,g,k,o,p,q,t,z,1,3} (precision 1.0 for each of these tokens) and never for any other prev_tok. These are about 1,126 dev actives (8.8% of recall), and they are the whole missed set in --split test misses.",
+      "Systematic gap 2: the claim 'could not find what separates active from inactive' in the L==3 recall_idx==1 mode is refuted. The fed-back token in_tok (= orig(0)) largely decides it. Precision is about 1.0 for in_tok in c, d, f, u and w, about 0.9 for n and q, and about 0.02-0.08 for g, j and z. The predicate's false positives (1,107 on test, all at step 4 with L=3) concentrate on these low-rate fed-back tokens.",
+      "The label understates the structure: both secondary modes are determined by tokens, not left unexplained or 'weak'."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Fires at step 0 when the first token is d, c or u. Also fires at step 1 on d after particular first tokens, and at the first copy step of length-3 sequences depending on the fed-back first token.",
+    "better_predicate": "((t == 0) & isin(in_tok, [tok(\"d\"), tok(\"c\"), tok(\"u\")])) | ((t==1)&(in_tok==tok(\"d\"))&isin(prev_tok,[tok(c) for c in \"egkopqtz13\"])) | ((L==3)&(recall_idx==1)&isin(in_tok,[tok(c) for c in \"acdfiknopqsuvw12\"]))",
+    "better_predicate_test_f1": 0.976
+  },
+  "final_label": "Fires at step 0 when the first token is d, c or u. Also fires at step 1 on d after particular first tokens, and at the first copy step of length-3 sequences depending on the fed-back first token."
+}

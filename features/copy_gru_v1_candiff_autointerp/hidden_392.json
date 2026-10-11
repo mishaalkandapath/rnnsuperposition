@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input b (fed-back b), from the 3rd output on",
+  "predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the fed-back input token is b (i.e. b was the previous output), at recall_idx >= 2. Nearly 100% of activation mass is on input b. It never fires in the original phase or on <DEL>, even when b is input there, and it is almost silent on b at recall_idx 1. Activation is weaker at recall_idx 2 than later. In a run of consecutive bs the first copied b is strongest and later ones decay (about 1.0, 0.5, 0.25 of max). Some predicted b steps stay inactive (precision 0.86 on dev), mostly early in the copy.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 392,
+    "predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.8611500890495979,
+    "recall": 0.9977801053668298,
+    "f1": 0.9244439938297979,
+    "mass_recall": 0.9995719175413438,
+    "correlation": 0.802603001490218,
+    "n_active": 63967,
+    "n_predicted": 74116,
+    "coverage_by_activation_quartile": [
+      0.991495747873937,
+      0.9996248124062032,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 392,
+    "predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.857451926307161,
+    "recall": 0.9977795499679442,
+    "f1": 0.9223086262719704,
+    "mass_recall": 0.9995653865365554,
+    "correlation": 0.7998517157430132,
+    "n_active": 63951,
+    "n_predicted": 74417,
+    "coverage_by_activation_quartile": [
+      0.9912434325744308,
+      0.9998749061796347,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 392,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The false positives follow a pattern but are graded, and the explanation already mentions them. On dev, about 7.8k of the roughly 10.3k false positives are at recall_idx 2, where precision is 0.53 across 16.7k predicted steps. Precision is 0.89 at recall_idx 3, 0.96 at 4 and 0.98 at 5 and above.",
+      "At recall_idx 2, precision rises steadily with L: 0.12 at L=3, 0.45 at L=4, 0.70 at L=9. Precision is very low (0.117) when the previous input was also b (first_tok == b), which fits the reported decay over runs of b. Because the drop is gradual, no clean split can be written as a predicate.",
+      "Refinements tried on the test split barely moved F1: adding t>=7 gave 0.927, L>=4 gave 0.927, recall_idx>=3 gave 0.903, (recall_idx>=3) | (recall_idx==2 & L>=8) gave 0.920, and prev_tok != b gave 0.917. None is a meaningful improvement over 0.924.",
+      "Each factual claim checked out. There are 0 activations in the original phase and 0 on <DEL>. recall_idx 1 has only 82 active steps out of 500k. Input b carries 100% of the activation mass. Activation is weaker at recall_idx 2. When the previous input is also b, precision drops to 0.67, which fits decay in runs.",
+      "The 142 test-split missed activations hold 0.0% of the activation mass and are scattered noise (mostly small activations on the first copied token)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

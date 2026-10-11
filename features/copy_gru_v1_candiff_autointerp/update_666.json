@@ -1,0 +1,63 @@
+{
+  "label": "sequence began with d: original-phase steps 3+ and <DEL>",
+  "predicate": "(first_tok == tok(\"d\")) & (t >= 3) & (phase <= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires when the first original token is d (93% of activation mass; rate 33.5% vs about 1% for other first tokens). It fires from step 3 of the original phase through the <DEL> step, with the strongest activations at t=4-5 and decay toward <DEL>. Top examples all begin d d. Weaker, low-magnitude firing also happens when d is the second original token. It essentially never fires at t<=2 or in the copy phase (0.1% of mass), even though d is output there. Whatever the input token at the current step is has little effect. At the <DEL> step of L=9 sequences it is often inactive. Dev split: P=0.95, R=0.69, F1=0.80, mass recall=0.93; the misses are mostly bottom-quartile activations.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 666,
+    "predicate": "(first_tok == tok(\"d\")) & (t >= 3) & (phase <= 1)",
+    "split": "test",
+    "precision": 0.9550569332492859,
+    "recall": 0.6848300667423208,
+    "f1": 0.7976789904952869,
+    "mass_recall": 0.9280009008280204,
+    "correlation": 0.8998403612326792,
+    "n_active": 103982,
+    "n_predicted": 74561,
+    "coverage_by_activation_quartile": [
+      0.12421141714109864,
+      0.6151715648561317,
+      0.9999615310636661,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 666,
+    "predicate": "(first_tok == tok(\"d\")) & (t >= 3) & (phase <= 1)",
+    "split": "dev",
+    "precision": 0.9540413319564955,
+    "recall": 0.6873363542381233,
+    "f1": 0.799020598872341,
+    "mass_recall": 0.929575186531995,
+    "correlation": 0.8985190648191331,
+    "n_active": 103501,
+    "n_predicted": 74567,
+    "coverage_by_activation_quartile": [
+      0.12675838614932755,
+      0.6228019323671498,
+      0.9998067632850242,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 666,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Test F1 is 0.798, which is below 0.8. The claim that it 'rounds to the bar' is generous. Mass recall (0.928) and precision (0.955) are real, but they hide a systematic gap: 31% of active steps are missed (32,772 on test). Bottom-quartile coverage is 0.12 and second-quartile coverage is 0.62.",
+      "Systematic miss class: sequences where d is the SECOND original token. The test misses list is full of them (3 d c o..., s d s z..., y d n..., 0 d l e...). On dev, (orig(1)==d)&(orig(0)!=d)&t>=3&phase<=1 has precision 0.28 and covers 19.6% of active steps, against 10.5% for sequences with no d in the first two positions.",
+      "The explanation calls the d-second firing 'weak' and treats it as one block (adding it gives P 0.62). That misses the structure: firing depends heavily on the first token. With orig(1)==d, the rate is about 0.47-0.56 when orig(0) is in {a,c,f,s,u,i,w,y,0,v,m,b}, and about 0 when orig(0) is in {e,g,j,n,o,z,1,t}. So the d-second case is not uniform noise.",
+      "Claims that check out: zero firing at t<=1 and almost none at t=2 (0.0% mass). Copy phase is 0.1% of mass. Mass peaks at t=4 (31.6%). For first-d sequences, firing at <DEL> is rare when L=9 (precision 0.25) and nearly certain when L<=6 (0.999). first_tok=d holds 93% of mass with a 33.5% rate. Cutting at t<=7 gives precision 0.997, so the false positives are late steps in long sequences.",
+      "There is some low-magnitude firing in sequences without d in the first two positions, boosted when prev_tok is in {j,g,z,n} (rate 4.4%). It is 0.9% of mass, so this is noise."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "d among the first two original tokens (strongest when first; when second, only after certain first tokens): original-phase steps 3+ and <DEL>, decaying with distance",
+    "better_predicate": "((orig(0)==tok(\"d\")) | ((orig(1)==tok(\"d\")) & isin(orig(0), [tok(c) for c in \"acfsuiwy0vmb\"]) & (phase==0))) & (t>=3) & (phase<=1)",
+    "better_predicate_test_f1": 0.836
+  },
+  "final_label": "d among the first two original tokens (strongest when first; when second, only after certain first tokens): original-phase steps 3+ and <DEL>, decaying with distance"
+}

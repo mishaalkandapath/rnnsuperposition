@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input digit 0 (fed back), late in the copy",
+  "predicate": "(phase == 2) & (in_tok == tok(\"0\")) & ((recall_idx >= 4) | (to_go <= 1))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only when the fed-back input token is the digit 0 during the copy phase (100% of activations have in_tok = 0; essentially none in the original or delimiter phases). It is position-gated: silent when 0 is input at recall_idx <= 1, weak or absent at recall_idx 2-3, and fires reliably once recall_idx >= 4 or near the end of the copy (to_go <= 1). Activation rises with copy position (peak examples are 0 near the end of long sequences). Never fires on letters, digits 1-3, or <DEL>, nor on 0 in the original phase.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 51,
+    "predicate": "(phase == 2) & (in_tok == tok(\"0\")) & ((recall_idx >= 4) | (to_go <= 1))",
+    "split": "test",
+    "precision": 0.9602906050955414,
+    "recall": 0.9450723814374424,
+    "f1": 0.9526207189329541,
+    "mass_recall": 0.9919338799142561,
+    "correlation": 0.9333692788102089,
+    "n_active": 51049,
+    "n_predicted": 50240,
+    "coverage_by_activation_quartile": [
+      0.780302436731176,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 51,
+    "predicate": "(phase == 2) & (in_tok == tok(\"0\")) & ((recall_idx >= 4) | (to_go <= 1))",
+    "split": "dev",
+    "precision": 0.9621080400503628,
+    "recall": 0.9463906581740976,
+    "f1": 0.9541846291065854,
+    "mass_recall": 0.9923089034047513,
+    "correlation": 0.9343316305046647,
+    "n_active": 50868,
+    "n_predicted": 50037,
+    "coverage_by_activation_quartile": [
+      0.7855626326963907,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 51,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claim holds. Every activation has in_tok = 0. In the original phase there are 33 of 50868 activations, at the delimiter step 0, and on letters, digits 1-3 or <DEL> 0. Copy phase with input 0 gives recall 0.999.",
+      "The explanation says the feature fires reliably near the end of the copy (to_go <= 1). That is false for small recall_idx. At recall_idx=1 and to_go=1 (L=3 with orig(0)=0) it fires 0 of 435 times on dev. At recall_idx=2 and to_go=1 (L=4) it fires only 40% of the time (2404 steps). These cells account for most of the predicate's systematic false positives. The test misses output is dominated by them, e.g. '0 3 p <DEL> *0* 3', 'w 0 y f <DEL> w *0* y', 'g 0 a c <DEL> g *0* a'.",
+      "The gating depends mainly on recall_idx, with only a small effect from to_go. Firing rates are: recall_idx >= 4 always 1.0 at every to_go; recall_idx=3 is 1.0 at to_go 0-1, 0.62 at to_go 2, and 0.07-0.19 at to_go 3-5; recall_idx=2 is 0.955 at to_go 0, 0.40 at to_go 1, and 0 at to_go >= 2; recall_idx <= 1 is never.",
+      "Missed activations: the copy-phase 0s at recall_idx 2-3 earlier in long sequences are weak (about 0.01-0.14 of max) and scattered. Splitting by n_seen(DIGITS) does not explain the partial firing at recall_idx 2-3, so that residual looks like threshold noise.",
+      "The reported dev score (F1 0.954) and test score (F1 0.953) reproduce. A corrected position rule raises test F1 to 0.969 (precision 0.978, recall 0.960, mass recall 0.995)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input digit 0 (fed back) once at least 3-4 tokens have been recalled (silent at recall_idx <= 1, even when it is the last step)",
+    "better_predicate": "(phase == 2) & (in_tok == tok('0')) & ((recall_idx >= 4) | ((recall_idx == 3) & (to_go <= 2)) | ((recall_idx == 2) & (to_go == 0)))",
+    "better_predicate_test_f1": 0.969
+  },
+  "final_label": "copy-phase input digit 0 (fed back) once at least 3-4 tokens have been recalled (silent at recall_idx <= 1, even when it is the last step)"
+}

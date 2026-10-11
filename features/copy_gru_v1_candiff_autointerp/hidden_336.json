@@ -1,0 +1,63 @@
+{
+  "label": "original-phase input steps after the first token (t >= 1, before <DEL>)",
+  "predicate": "(phase == 0) & (t >= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Positional feature for the encoding phase. It fires on almost every original-token input step except the first (t=0 never fires): rate is 0.88 at t=1 and about 0.98 for orig_idx 2-5, falling off at late positions (0.70 at orig_idx 7, 0.31 at orig_idx 8). It is token-agnostic, with flat rates over in_tok, prev_tok and first_tok. Magnitude rises from t=1 to a peak around t=2-4 and then decays toward <DEL>; most mass sits at t=2-5. Weaker secondary activity on the <DEL> step (rate 0.33, 4% of mass), mostly in short sequences; adding a (phase==1)&(L<=5) clause lifts dev F1 from 0.93 to 0.94. It is essentially silent during the copy phase (rate 0.001).",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 336,
+    "predicate": "(phase == 0) & (t >= 1)",
+    "split": "test",
+    "precision": 0.9193196626498967,
+    "recall": 0.9379875331931533,
+    "f1": 0.9285597821565833,
+    "mass_recall": 0.9592848805540425,
+    "correlation": 0.7115280553118003,
+    "n_active": 2677510,
+    "n_predicted": 2731880,
+    "coverage_by_activation_quartile": [
+      0.8858865992010493,
+      0.9304219738324235,
+      0.9565357040950018,
+      0.9791059447814908
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 336,
+    "predicate": "(phase == 0) & (t >= 1)",
+    "split": "dev",
+    "precision": 0.9195970370804224,
+    "recall": 0.9380324016075714,
+    "f1": 0.9287232418248075,
+    "mass_recall": 0.9592915310015367,
+    "correlation": 0.7119296343756495,
+    "n_active": 2678077,
+    "n_predicted": 2731765,
+    "coverage_by_activation_quartile": [
+      0.8859541163818855,
+      0.9305157882001855,
+      0.9562641239456984,
+      0.9793956556871426
+    ]
+  },
+  "gate": "hidden",
+  "feature": 336,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The factual claims check out on the dev profile. Rate by orig_idx is 0 at t=0, 0.877 at 1, about 0.98 for 2-5, 0.922 at 6, 0.698 at 7 and 0.309 at 8. The delimiter step has rate 0.326 and 4.0% of the mass. The copy phase has rate 0.001 and about 0 mass. Rates are flat across in_tok, prev_tok and prev2_tok (0.42-0.52).",
+      "The late-position drop depends on absolute position t, not on distance to <DEL>. Test precision at t=7 is 0.696 for L=8 and 0.698 for L=9; at t=6 it is 0.923 for both L=7 and L=9. So 'before <DEL>' adds nothing.",
+      "Systematic false positives: the predicate includes t=8, where the feature fires only 31% of the time. Narrowing to t<=7 raises test F1 from 0.929 to 0.933 (precision 0.919 to 0.938). The label 'after the first token (t >= 1, before <DEL>)' overclaims for the last position.",
+      "Systematic misses: the <DEL> step in short sequences, which the misses output shows as about 4.1% of activation mass. Test precision is 0.80 for (phase==1)&(L<=4) and 0.73 for L<=5. The explanation mentions this but the predicate and label leave it out. Adding the clause raises test F1 to 0.950 (recall 0.938 to 0.974), which is more than the +0.01 dev gain the original agent reported.",
+      "Small point: mass share peaks at t=3 (0.248), which matches 'peaks around t=2-4'. Since all t<=5 have 500k steps each, the mass comparison is fair."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "encoding-phase position feature: original-token input steps t=1..7 (strongest t=2-5, fading by t=7-8 regardless of L), plus the <DEL> step in short sequences (L<=5)",
+    "better_predicate": "((phase == 0) & (t >= 1) & (t <= 7)) | ((phase == 1) & (L <= 5))",
+    "better_predicate_test_f1": 0.9497
+  },
+  "final_label": "encoding-phase position feature: original-token input steps t=1..7 (strongest t=2-5, fading by t=7-8 regardless of L), plus the <DEL> step in short sequences (L<=5)"
+}

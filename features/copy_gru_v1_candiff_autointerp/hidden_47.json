@@ -1,0 +1,62 @@
+{
+  "label": "input token i in the original phase at position >= 3",
+  "predicate": "(phase == 0) & (in_tok == tok(\"i\")) & (t >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token detector for the letter i while the original sequence is being read. Fires only when in_tok is i (100% of activation mass) and almost entirely in the original phase. It is silent at t=0-1, weak and rare at t=2 (0.3% of mass), and fires reliably from t>=3 (about 97% of i inputs there). Magnitude is larger for later positions: top examples are i at t=5-6, and the lowest-quartile examples are i at t=2-3. Repeated i (not the first occurrence) fires less often. It does not fire on any other token, on the delimiter, or on i fed back in the copy phase (only 201 weak copy-phase activations). The remaining false positives are scattered i inputs at t>=3 that stay at zero.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 47,
+    "predicate": "(phase == 0) & (in_tok == tok(\"i\")) & (t >= 3)",
+    "split": "test",
+    "precision": 0.9570360062619586,
+    "recall": 0.9708669337050696,
+    "f1": 0.963901857902436,
+    "mass_recall": 0.9962561199922605,
+    "correlation": 0.8827002411221588,
+    "n_active": 56671,
+    "n_predicted": 57490,
+    "coverage_by_activation_quartile": [
+      0.8834697910784868,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 47,
+    "predicate": "(phase == 0) & (in_tok == tok(\"i\")) & (t >= 3)",
+    "split": "dev",
+    "precision": 0.9592987280852526,
+    "recall": 0.9726056043496445,
+    "f1": 0.9659063376137896,
+    "mass_recall": 0.996569743754187,
+    "correlation": 0.8845269287179373,
+    "n_active": 57384,
+    "n_predicted": 58180,
+    "coverage_by_activation_quartile": [
+      0.890422417398578,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 47,
+  "final_verdict": "explained",
+  "skeptic": {
+    "revised_verdict": "explained",
+    "upheld": false,
+    "issues": [
+      "The core label holds. On the test split the predicate scores P 0.957, R 0.971, F1 0.964 and mass recall 0.996. The profile confirms that 100% of activation mass is on i inputs, there are 0 activations at t=0-1 or on <DEL>, and the copy phase has only 201 activations with 0.000 mass share.",
+      "False claim in the explanation: 'A repeated i (not its first occurrence) fires less often.' Scores show the opposite. With base & (in_first==0), precision is 0.981. With base & (in_first==1), precision is 0.956. Repeated i at t>=3 fires slightly MORE reliably than a first i. The low in_first=0 rate in the profile is pooled over all tokens and does not apply to i.",
+      "The false positives are systematic, not 'scattered'. They depend on the first original token, and mostly at t=3. With base & (t==3) & orig(0)==X, precision is: p 0.13, k 0.44, a 0.49, m 0.51, 1 0.63, j 0.88, s 0.86, y 0.86. For most other first tokens it is 1.0 (c d g i l n o q u v w 2 x e h 0 3). A first token of p still suppresses at t>=4 (precision 0.77). Per-t precision is t=3 0.89, t=4-6 >0.99, t=7 0.97, t=8 0.91. The FPs are concentrated at t=3 and, to a lesser degree, at t=8.",
+      "The top-activating examples are dominated by sequences that start with x or e. So magnitude also depends on the first token, which the explanation does not mention.",
+      "Excluding the first-token class barely changes the score. The predicate base & ~((t==3) & orig(0) in {p,a,k,m,1}) gets test P 0.984, R 0.950, F1 0.967, against 0.964 for the original. The gap is real but carries little mass, so the label is still essentially correct. The explanation needs fixing: drop the repeated-i claim and note that whether the feature fires at t=3 depends on the first token."
+    ],
+    "revised_label": null,
+    "better_predicate": "(phase == 0) & (in_tok == tok(\"i\")) & (t >= 3) & ~((t==3) & isin(orig(0), [tok('p'),tok('a'),tok('k'),tok('m'),tok('1')]))",
+    "better_predicate_test_f1": 0.967
+  }
+}

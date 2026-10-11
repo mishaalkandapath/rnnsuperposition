@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input token a (fed-back a)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"a\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, only when the input at that step is the letter a, i.e. the model is reading back its own earlier output a. Every activation (dev recall 1.0) falls under this predicate. It never fires on a during the original phase, at the delimiter, or on any other token. About 21% of copy-phase a inputs stay inactive; they cluster at recall_idx 1 (a as the first fed-back token, right after <DEL>), where the rate is lower, and at some late steps. Magnitude is larger in runs of repeated a: when the previous input was also a, the feature fires 99.7% of the time, and those steps carry about 1.7x their share of activation mass. The top examples are all aa or aaa runs in the copy phase. Magnitude also grows for later recall positions (recall_idx >= 2) and is somewhat higher when the sequence starts with a. It is not modulated by which token is being output.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 329,
+    "predicate": "(phase == 2) & (in_tok == tok(\"a\"))",
+    "split": "test",
+    "precision": 0.7876638092422898,
+    "recall": 1.0,
+    "f1": 0.8812214077054511,
+    "mass_recall": 1.0,
+    "correlation": 0.7495439749538306,
+    "n_active": 71946,
+    "n_predicted": 91341,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 329,
+    "predicate": "(phase == 2) & (in_tok == tok(\"a\"))",
+    "split": "dev",
+    "precision": 0.787553742212863,
+    "recall": 1.0,
+    "f1": 0.8811525199101741,
+    "mass_recall": 1.0,
+    "correlation": 0.7487185895334528,
+    "n_active": 71806,
+    "n_predicted": 91176,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 329,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Core claims check out on dev. The feature fires 0 times in the original phase or at the delimiter, and only ever on in_tok a. Recall is 1.0 on both dev and test, with 0 missed activations on test. Test scores reproduce exactly: P 0.788, R 1.0, F1 0.881, mass recall 1.0.",
+      "The largest false-positive class is recall_idx 1 (a as the first fed-back token), as the explanation says: precision there is only 0.50. One thing the explanation leaves out is that this precision depends on L. It is 0.23 at L=3, 0.42 at L=6 and 0.76 at L=9. These steps also fire weakly: their share of activation mass divided by their share of active steps is 0.64.",
+      "The remaining false positives at recall_idx >= 2 (precision about 0.85) look like scattered noise. I checked splits by t, to_go, out_tok digit vs vowel, in_count, first_tok and recall_idx, and none falls below about 0.80 precision. The test misses list shows no clean pattern.",
+      "The prev_tok == a claim is confirmed: precision 0.997, and mass share / recall share = 0.061/0.035 = 1.74x. The claim that magnitude grows at later recall positions is also confirmed: recall_idx >= 5 has a higher share of mass than of active steps, and its coverage rises from 0.27 to 0.43 across activation quartiles.",
+      "The claim that magnitude is 'somewhat higher when the first token is a' only holds within recall_idx >= 2, where the mass ratio is 1.24x. Taken unconditionally, sequences whose first token is a fire less strongly (mass 0.116 vs recall 0.150) and have much lower precision (0.56 vs 0.85). That is because the weak recall_idx 1 steps fall in this group.",
+      "A slightly better predicate that adds the L dependence at recall_idx 1 scores test F1 0.890 vs 0.881. The difference is small, so the simpler predicate is still acceptable."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok('a')) & ((recall_idx >= 2) | (L >= 7))",
+    "better_predicate_test_f1": 0.89
+  }
+}

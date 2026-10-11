@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input \"t\" (fed-back t, not the first copied token)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"t\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase when the fed-back input token is t. It never fires on t during the original phase or at the delimiter, and never on any other input token. Every activation is a copy-phase t input (recall 1.0 for the predicate without the position condition). It mostly skips t when t was original token 0, i.e. t fed back at recall_idx 1, and is weaker or absent for t late in long sequences. Magnitude is largest when t was original token 1-2 (recall_idx 2-3, which carries about 65% of the mass) and in repeated t runs it drops for each later t. Top examples are around 0.9-1.0 of max at original position 2.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 296,
+    "predicate": "(phase == 2) & (in_tok == tok(\"t\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.8688289014235832,
+    "recall": 0.9524040868003415,
+    "f1": 0.9086988889357099,
+    "mass_recall": 0.9861634599247756,
+    "correlation": 0.8037880227831086,
+    "n_active": 67926,
+    "n_predicted": 74460,
+    "coverage_by_activation_quartile": [
+      0.8414203274054881,
+      0.9707926039335767,
+      0.9974677580825628,
+      0.9999411106530829
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 296,
+    "predicate": "(phase == 2) & (in_tok == tok(\"t\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.8674984588169075,
+    "recall": 0.9517165331176947,
+    "f1": 0.9076581155833503,
+    "mass_recall": 0.9859002474057179,
+    "correlation": 0.8032606293993317,
+    "n_active": 68015,
+    "n_predicted": 74618,
+    "coverage_by_activation_quartile": [
+      0.8394495412844036,
+      0.9694189602446484,
+      0.9980004704775347,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 296,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The factual claims hold up. On the dev split all activation is in the copy phase (share 1.000) and in_tok is always t. Original and delimiter steps never fire, and the feature only fires when in_first=0. Without the position condition the test scores are precision 0.745 and recall 1.0, as stated. The full predicate reproduces on test: P 0.869, R 0.952, F1 0.909, mass recall 0.986.",
+      "The false positives are graded decay with position, not a clean class. Among copy-phase t steps, the share that fires is 0.193 at recall_idx 1, then 0.995, 0.982 and 0.955 at recall_idx 2, 3 and 4, then 0.767 at 5, 0.593 at 6 and 0.663 at 7+. Within recall_idx >= 5 it also falls with to_go (0.87 at to_go >= 3 down to 0.557 at to_go = 0). I found no token or history variable that splits these cleanly: digit count, vowel count, in_count and first_tok all leave the rate between 0.60 and 0.72.",
+      "Adding a cutoff for late positions does not help. '... & ~((recall_idx>=5) & (to_go==0))' gives P 0.924 but R 0.861, so test F1 drops to 0.891.",
+      "The missed activations are t that was original token 0, fed back at recall_idx 1. These are weak (about 0.01-0.16 of max) and hold 1.4% of the mass, which matches the explanation.",
+      "The run claim is a little overstated. 'Drops for each later t' holds in most top examples, but there are counterexamples, e.g. 'b t t e u j a a <DEL> b [t:0.72] [t:0.80]', where the second t is stronger.",
+      "The mass claim checks out: recall_idx 2-3 hold 0.322 + 0.333, about 65% of the activation mass."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

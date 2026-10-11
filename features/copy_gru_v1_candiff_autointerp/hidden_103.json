@@ -1,0 +1,61 @@
+{
+  "label": "copy-phase input p fed back at recall position >= 3",
+  "predicate": "(phase == 2) & (in_tok == tok(\"p\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase when the fed-back input token is p, i.e. the model just output p, and that p was original token index >= 2 (recall_idx >= 3). Never fires on p during the original phase, at the delimiter, or on any other token (one stray u). It is weak or absent when the fed-back p came from original position 0-1: rate 0 at recall_idx <= 1, small at recall_idx 2, about 3.3% of steps at recall_idx >= 3, which with the p rate is close to always. Magnitude grows with how late in the sequence the p sits: the lowest-quartile examples are p at original index 2, and the top examples are p at original index 4-7. Fires for repeated p too (consecutive p p both fire). Not modulated by the output token, previous tokens or first token.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 103,
+    "predicate": "(phase == 2) & (in_tok == tok(\"p\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9903741655022512,
+    "recall": 0.9770255781896156,
+    "f1": 0.9836545875096376,
+    "mass_recall": 0.9960294688186624,
+    "correlation": 0.9200295637022855,
+    "n_active": 58761,
+    "n_predicted": 57969,
+    "coverage_by_activation_quartile": [
+      0.9081070042883398,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 103,
+    "predicate": "(phase == 2) & (in_tok == tok(\"p\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9917343891088422,
+    "recall": 0.9774263661412607,
+    "f1": 0.9845283962109654,
+    "mass_recall": 0.9960932616098384,
+    "correlation": 0.9204845654262025,
+    "n_active": 58431,
+    "n_predicted": 57588,
+    "coverage_by_activation_quartile": [
+      0.9097070098576122,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 103,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor boundary noise only. In the test split, 558 false positives (about 1% of predicted steps) are mostly at recall_idx 3, i.e. p at original index 2 in longer sequences. Precision at recall_idx==3 is 0.97. Restricting by L>=7 or to_go>=4 did not isolate a clean failing class, so this is a soft onset at the boundary, not a systematic gap.",
+      "The 1350 missed steps are tiny activations (0.01-0.09 of max) at recall_idx 2, i.e. p at original index 1. They hold 0.4% of activation mass. recall_idx==2 alone scores precision 0.08, so 'only weakly at recall_idx 2' is accurate. It would be more precise to say it fires there rarely (about 8% of the time) and faintly.",
+      "Checked claims. In the dev profile, all activation falls in the copy phase (none in the original phase or at the delimiter). in_tok p carries 1.000 of the mass, with one stray u. Mass per active step rises with recall_idx (recall 3: 0.137/15668 vs recall 5: 0.250/11119), which supports 'magnitude grows later'. Repeated p (prev_tok==p, precision 0.98), in_count>=2 (0.99) and out_tok==p (0.998) do not hurt precision, which supports 'output/previous tokens don't matter'.",
+      "Test-split scores are confirmed: P 0.990, R 0.977, F1 0.984, mass recall 0.996. Adding to_go<=5 gives F1 0.985 on dev, a negligible gain."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

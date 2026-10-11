@@ -1,0 +1,64 @@
+{
+  "label": "late original-phase positions (input step 6+)",
+  "predicate": "orig_idx >= 6",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Absolute-position feature for the original (input) phase: fires on original tokens at steps 6, 7 and 8, regardless of token identity or sequence length. Firing rate rises with position: about 53% at step 6, 97% at step 7, nearly 100% at step 8. Magnitude also grows with position; steps 7-8 hold about 85% of activation mass. Weak sub-threshold activity at step 5 (2%). Essentially never fires at the delimiter (660 steps) and never in the copy phase. Token identity barely matters: in_tok t has slightly higher rate (2.1x vs 1.4x lift), and the top activations are all t at step 8, but I did not quantify that. Misses are low-magnitude step-5 activations (0.2% of mass). False positives are step-6 tokens where it stays off; I found no clean rule for which step-6 tokens fire (L>=8 did not help).",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 156,
+    "predicate": "orig_idx >= 6",
+    "split": "test",
+    "precision": 0.7512880139526492,
+    "recall": 0.9789792378504331,
+    "f1": 0.8501523294035447,
+    "mass_recall": 0.9978439291079608,
+    "correlation": 0.720329519759071,
+    "n_active": 382812,
+    "n_predicted": 498830,
+    "coverage_by_activation_quartile": [
+      0.9159169514017325,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 156,
+    "predicate": "orig_idx >= 6",
+    "split": "dev",
+    "precision": 0.7513796183842054,
+    "recall": 0.9783623560409228,
+    "f1": 0.8499782564018715,
+    "mass_recall": 0.9977596530072282,
+    "correlation": 0.7202179880745324,
+    "n_active": 382574,
+    "n_predicted": 498145,
+    "coverage_by_activation_quartile": [
+      0.9134498766258208,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 156,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The explanation says 'token identity barely matters', but at step 6 it decides almost everything. Precision of (orig_idx==6)&(in_tok==X) on dev is about 1.0 for a b d e k m p r s t z 1 2, 0.99 for v, 0.90 for u, 0.61 for i and 0.20 for g. It is about 0.0 for c f h j l n o q w x y 0 3. The 'no clean rule for which step-6 tokens fire' is a token whitelist the agent missed. That whitelist explains the 124k step-6 false positives in the test-split misses (g, 3, j, x, c...).",
+      "The rate at step 6 does not depend on sequence length: precision is 0.523 / 0.527 / 0.527 for L = 7 / 8 / 9. So the step-6 behavior is about the token, not about how many tokens remain before <DEL>.",
+      "Step 7 has a systematic exception: token f never fires there (precision 0.0). Every other token at step 7 fires 99% or more. Step 8 fires for everything, including f (0.98).",
+      "The step-5 misses are not scattered noise. In the test misses all of them are token t, and (orig_idx==5)&(in_tok==t) has precision 0.68. Their mass is small, though.",
+      "The label 'late original-phase positions (input step 6+)' overclaims for step 6, where only about half the tokens (a fixed subset) activate it. Delimiter firing at t=9 (660 steps, when L=9) is negligible, and the claim that it never fires in the copy phase checks out (0 activations).",
+      "A better predicate that adds the token conditions reaches test F1 0.987 (precision 0.979, recall 0.994, mass recall 0.9996). The original predicate scores 0.85."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "late original-phase positions: every token at step 8, every token except f at step 7, and a fixed token subset at step 6 (a b d e k m p r s t u v z 1 2, partly i/g); weakly t at step 5",
+    "better_predicate": "((orig_idx==6)&isin(in_tok,[tok(c) for c in 'abdekmprstuvz12i']))|((orig_idx==7)&(in_tok!=tok('f')))|(orig_idx==8)|((orig_idx==5)&(in_tok==tok('t')))",
+    "better_predicate_test_f1": 0.987
+  },
+  "final_label": "late original-phase positions: every token at step 8, every token except f at step 7, and a fixed token subset at step 6 (a b d e k m p r s t u v z 1 2, partly i/g); weakly t at step 5"
+}

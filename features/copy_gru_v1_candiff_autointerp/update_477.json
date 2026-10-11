@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input c (echoed original token c at position >= 2)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"c\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires when the token c is fed back as input during the copy phase, i.e. the model has just output an original c and is now reading it back. Practically all activation mass (>99.9%) is on in_tok == c in phase 2; it essentially never fires on c during the original phase (308 weak steps), on the delimiter, or on any other token. Magnitude grows with how late c occurs in the original sequence: c echoed at recall_idx 1-2 (original positions 0-1) is weak or silent, rising to a plateau of about 3.3% rate / full strength from recall_idx >= 4; top activations are c at original positions 4-5. Remaining false positives are mostly c at original position 2 in long sequences; misses are weak activations on early c in short sequences.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 477,
+    "predicate": "(phase == 2) & (in_tok == tok(\"c\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9131490409628524,
+    "recall": 0.9464016104680423,
+    "f1": 0.9294780137336935,
+    "mass_recall": 0.9822771174808401,
+    "correlation": 0.8916308753602497,
+    "n_active": 55636,
+    "n_predicted": 57662,
+    "coverage_by_activation_quartile": [
+      0.793299302609821,
+      0.9925947228413258,
+      0.9997124164210224,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 477,
+    "predicate": "(phase == 2) & (in_tok == tok(\"c\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9129099790648988,
+    "recall": 0.9459317775086318,
+    "f1": 0.9291275668285408,
+    "mass_recall": 0.9828951273427531,
+    "correlation": 0.8915188595586955,
+    "n_active": 55319,
+    "n_predicted": 57320,
+    "coverage_by_activation_quartile": [
+      0.7909616775126537,
+      0.993058568329718,
+      0.999710773680405,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 477,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claim holds. Activation mass is 1.000 in the copy phase and 0.000 in the original phase (308 weak steps) and on the delimiter. Essentially all mass is on in_tok == c (32.7x lift). The plain predicate (phase 2 and input c) scores P 0.61, R 0.99 on dev, as reported. The original predicate reproduces on dev: P 0.913, R 0.946, F1 0.929, mass recall 0.983.",
+      "The cutoff the predicate uses (recall_idx >= 3) is fixed, but the real cutoff depends on sequence length. Precision of phase2 & c by cell: at recall_idx==2 it is 1.00 for L=3, 0.94 for L=4, and 0.00 for L>=5. At recall_idx==3 it is 1.00 for L=4-5, 0.98 for L=6, 0.57 for L=7, 0.29 for L=8 and 0.37 for L=9. At recall_idx>=4 it is 1.00 at every length.",
+      "So the 'misses on an early c in short sequences' are a systematic class, not noise: c at original position 1 with L=3-4 fires about 94-100% of the time. The 'false positives on c at position 2 in long sequences' are also systematic: c at position 2 with L>=7 is mostly silent. The test-split misses output shows exactly these two patterns. The explanation mentions both but treats them as leftovers instead of building them into the rule.",
+      "Better description of what matters: c fires once it is read back in the second half of the copy, or from original position 3 onward (2*recall_idx >= L, or recall_idx >= 4). It is not an absolute position >= 2. The claim 'magnitude depends on how late c sits in the original sequence' should be stated relative to L.",
+      "The label 'position >= 2' therefore overclaims. Position-2 c in L=7-9 sequences is mostly silent, and position-1 c in L=3-4 sequences fires."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input c (echoed original c), read back in the second half of the copy or at original position >= 3",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"c\")) & ((recall_idx >= 4) | (2*recall_idx >= L))",
+    "better_predicate_test_f1": 0.964
+  },
+  "final_label": "copy-phase input c (echoed original c), read back in the second half of the copy or at original position >= 3"
+}

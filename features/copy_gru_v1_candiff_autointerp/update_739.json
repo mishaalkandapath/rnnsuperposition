@@ -1,0 +1,62 @@
+{
+  "label": "input b at position 0 or 1 of the original sequence",
+  "predicate": "(in_tok == tok(\"b\")) & (t <= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "A token-and-position feature: fires only when the input token is b at step 0 or 1 of the original phase. Every activation has in_tok = b. Strongest at t=0 (always hits the max value of 3.655, about 64% of activation mass). At t=1 it fires at about 0.5-0.6 of max, with the exact size depending on the token before it (e.g. after d about 0.62, after o/r about 0.53). Rarely fires weakly on b at t=2 (about 600 steps, mostly when the sequence starts with d) and almost never later. Does not fire on b anywhere later in the original phase, at the delimiter, or during the copy phase, and never on any other token.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 739,
+    "predicate": "(in_tok == tok(\"b\")) & (t <= 1)",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.9804644524397134,
+    "f1": 0.9901358756850087,
+    "mass_recall": 0.998012973812626,
+    "correlation": 0.9593947406420335,
+    "n_active": 33631,
+    "n_predicted": 32974,
+    "coverage_by_activation_quartile": [
+      0.92186013320647,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 739,
+    "predicate": "(in_tok == tok(\"b\")) & (t <= 1)",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.9817206203195943,
+    "f1": 0.9907760057129255,
+    "mass_recall": 0.9981552394598674,
+    "correlation": 0.9591881025832136,
+    "n_active": 33918,
+    "n_predicted": 33298,
+    "coverage_by_activation_quartile": [
+      0.9268867924528302,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 739,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Claims hold up. Every activation has in_tok=b (33918/33918 on dev). The feature is silent at the delimiter. Copy-phase firing is near zero: 24 steps out of 90984 copy-phase b steps, mass about 0. Test split with the original predicate gives precision 1.0, recall 0.980, F1 0.990 and 0 false positives.",
+      "Mass split matches: t=0 holds 0.643 of activation mass, t=1 0.356, t=2 0.002. Firing at t>=3 is about 24 steps.",
+      "One small systematic miss class: b at t=2 when orig(0)=d. It fires about 96% of the time there (precision 0.961, 537 predicted). These are weak activations (about 0.04-0.15 of max) and hold only about 0.2% of mass. The explanation already mentions this ('mostly in sequences starting with d'). The one exception is sequences starting 'd j b', which do not fire.",
+      "Adding that clause, (in_tok==b) & ((t<=1) | ((t==2) & (orig(0)==d))), raises test F1 from 0.990 to 0.998. That is too small a gain to call the label wrong.",
+      "Not checked: the claimed t=1 magnitudes depending on the previous token (0.62 after d, 0.53 after o/r). These are minor descriptive details."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(in_tok == tok(\"b\")) & ((t <= 1) | ((t == 2) & (orig(0) == tok(\"d\"))))",
+    "better_predicate_test_f1": 0.998
+  }
+}

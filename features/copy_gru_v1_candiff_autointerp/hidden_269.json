@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input s fed back from original position >= 2",
+  "predicate": "(phase == 2) & (in_tok == tok(\"s\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase on steps whose input is the token s (the model feeding back its own just-emitted s) when that s came from original position >= 2 (recall_idx >= 3). It does not fire on s in the original phase, on the delimiter, on s fed back from original positions 0-1, or on any other input token (only stray activations on other tokens). Magnitude grows with recall_idx / original position of the s: s fed back from position 2 gives weak activations (~0.2-0.3 of max), while s from positions 5-7 gives the strongest (top examples ~0.9-1.0 of max). out_tok, prev tokens, first token and repeat counts do not modulate it.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 269,
+    "predicate": "(phase == 2) & (in_tok == tok(\"s\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9957066685132608,
+    "recall": 0.9717510306143137,
+    "f1": 0.9835830084137082,
+    "mass_recall": 0.9949300609205918,
+    "correlation": 0.9285902522646098,
+    "n_active": 59188,
+    "n_predicted": 57764,
+    "coverage_by_activation_quartile": [
+      0.8870717037237278,
+      0.9999324187335271,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 269,
+    "predicate": "(phase == 2) & (in_tok == tok(\"s\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.995472915546459,
+    "recall": 0.971790443293034,
+    "f1": 0.9834891312729734,
+    "mass_recall": 0.9949262895123618,
+    "correlation": 0.9281155607414734,
+    "n_active": 59058,
+    "n_predicted": 57653,
+    "coverage_by_activation_quartile": [
+      0.8874365052488994,
+      0.9997290890619709,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 269,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reported test scores reproduce: precision 0.996, recall 0.972, F1 0.984, mass recall 0.995. All activation is in the copy phase, with none in the original or delimiter phases. Of the 59058 dev activations, 59034 have in_tok == s; the remaining 24 are scattered across z, 1, t, l and other tokens.",
+      "Missed activations (1672 on test, 0.5% of mass) are almost all s fed back from original position 1 (recall_idx == 2). About 10% of those s steps fire (dev precision of that predicate is 0.098), and the activations are weak (0.01-0.16 of max). So 'does not fire on s fed back from position 1' is slightly too strong; 'rarely and weakly' is accurate. It is not worth adding to the predicate.",
+      "False positives (248 on test) are concentrated at recall_idx == 3 (s from original position 2). There the feature is often silent when the previous input is 'a': precision for recall_idx==3 & prev_tok==a is 0.74 on 529 steps. With prev_tok 'c' it is 0.94, while 'b', 'v' and 'z' give 0.99-1.0. This is a real but small history dependence, and it contradicts the claim that earlier tokens do not matter, at least at the weakest position. Its effect on F1 is negligible.",
+      "Magnitude check (mean activation mass per active step, by recall_idx): about 9e-6 at recall_idx 3, 1.8e-5 at 4, then a plateau of about 2.2e-5 for recall_idx 5-8. 'Grows with position' holds, but the growth saturates from original position 4 onward rather than peaking specifically at positions 5-7.",
+      "Output token and prev2_tok show flat rates. The low activity at to_go >= 6 follows from the recall_idx condition, so it is not a separate effect."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

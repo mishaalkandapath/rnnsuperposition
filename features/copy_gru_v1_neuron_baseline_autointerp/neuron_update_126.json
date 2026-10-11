@@ -1,0 +1,62 @@
+{
+  "label": "first copy step after <DEL> in length-3 sequences",
+  "predicate": "(L == 3) & (recall_idx == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Length-specific position unit. Fires almost only in L=3 sequences, at step t=4: the first copy-phase step, right after <DEL>. Here the input is original token 0 (fed back) and the output is original token 1. This one cell holds 95% of activation mass, and it fires on more than 99% of L=3 sequences there. Weak tails, about 5% of mass: L=3 at t=5 (the last output), and L=4 at t=5 (recall_idx=1). The L=4 tail is very small, mostly under 0.1 of max. Magnitude depends on the token being input, which is the first original token: k and q are highest (top examples are near 1.0 of max), while r, l, s, f and h give low or zero activation. Never fires in the original phase, at the delimiter step, or in sequences with L >= 5. Dev: P=0.997, R=0.776, F1=0.873, mass recall=0.953.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 126,
+    "predicate": "(L == 3) & (recall_idx == 1)",
+    "split": "test",
+    "precision": 0.9950076804915514,
+    "recall": 0.7702140309155767,
+    "f1": 0.8682975871313672,
+    "mass_recall": 0.9521740442386095,
+    "correlation": 0.9323142020783178,
+    "n_active": 3364,
+    "n_predicted": 2604,
+    "coverage_by_activation_quartile": [
+      0.15933412604042807,
+      0.9227110582639715,
+      0.9988109393579072,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 126,
+    "predicate": "(L == 3) & (recall_idx == 1)",
+    "split": "dev",
+    "precision": 0.9973128598848369,
+    "recall": 0.7759856630824373,
+    "f1": 0.8728372249286075,
+    "mass_recall": 0.9529995842578284,
+    "correlation": 0.9314597252243169,
+    "n_active": 3348,
+    "n_predicted": 2605,
+    "coverage_by_activation_quartile": [
+      0.18996415770609318,
+      0.9163679808841099,
+      0.997610513739546,
+      1.0
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 126,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The magnitude claim is partly wrong. 'h' does not give low or zero activation. Inside the L=3, recall_idx=1 cell, mean mass per step for h is about 4.5e-4, roughly 80% of k (5.6e-4) and q (5.3e-4) and above the cell average (about 3.7e-4). The low tokens are r (1.9e-4), s (2.4e-4), l (2.6e-4), f, and g (2.8-2.9e-4). Even these are 'low', not 'zero': the unit still fires on 95-99% of those cells. The only real zeros are scattered cases starting with r, s or g (13 test false positives).",
+      "The missed activations are systematic but small: L=3 at recall_idx=2 (about 10% of L=3 sequences) and L=4 at recall_idx=1 (about 3.4% of L=4 sequences). Together they hold 4.8% of the activation mass and sit mostly in the lowest activation quartile. Adding them destroys precision. (L==3)&(recall_idx>=1) gives F1 0.663, and the full union gives F1 0.291. Picking out the strong L=3 recall_idx=2 cases by token does not help either: F1 is 0.861 vs 0.868 on dev. So the tail is a weak, low-rate spillover, not a missed class that a better predicate could capture.",
+      "Confirmed: the test scores match (P=0.995, R=0.770, F1=0.868, mass recall 0.952). In dev, 2598 of about 2605 L=3 sequences fire at t=4 (>99%). Activation is zero in the original phase, at the delimiter, and for L>=5. k and q give the top examples.",
+      "Store-path caveat: running the tool on features/copy_transcoder_v2_1of5, the path the user named, fails while it tries to build its cache, so it does not appear to be a neuron-baseline store usable with this tool. This verdict therefore applies to features/copy_gru_v1_neuron_baseline_store only, not to the 1/5 subsample the user asked to run."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "first copy step after <DEL> in length-3 sequences",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "first copy step after <DEL> in length-3 sequences"
+}

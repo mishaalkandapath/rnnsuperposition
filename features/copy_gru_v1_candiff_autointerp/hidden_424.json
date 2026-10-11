@@ -1,0 +1,61 @@
+{
+  "label": "copy-phase input c (fed-back c), recall position >= 2",
+  "predicate": "(phase == 2) & (in_tok == tok(\"c\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, and only on steps where the fed-back input is the letter c (in_tok c gives 100% of activation mass; it never fires on any other input, during the original phase, or at the delimiter). Within the copy phase it is weak or absent when c is the first copied token (recall_idx 1, rate 0.8%), and fires reliably from recall_idx >= 2 onward. Strongest activations come from a c fed back late in the copy, often the first of a doubled cc in the original; the second c of a pair is usually weaker. Activations are weakest when c is copied near the start (e.g. c as the first or third original token). Dev: P 0.88, R 0.94, F1 0.91, mass recall 0.97; the plain copy-phase in_tok==c gets recall 1.0 but precision 0.76.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 424,
+    "predicate": "(phase == 2) & (in_tok == tok(\"c\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.8751668621819506,
+    "recall": 0.937865761144426,
+    "f1": 0.9054321745438314,
+    "mass_recall": 0.9731107948964286,
+    "correlation": 0.7992768640366441,
+    "n_active": 69205,
+    "n_predicted": 74163,
+    "coverage_by_activation_quartile": [
+      0.8300196509074096,
+      0.9443384775446506,
+      0.9804635570198255,
+      0.9966475926247038
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 424,
+    "predicate": "(phase == 2) & (in_tok == tok(\"c\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.8762198670835533,
+    "recall": 0.9408755304924132,
+    "f1": 0.90739741388373,
+    "mass_recall": 0.9746673435872193,
+    "correlation": 0.8012605371672857,
+    "n_active": 68804,
+    "n_predicted": 73881,
+    "coverage_by_activation_quartile": [
+      0.8379164002092901,
+      0.9444799720946456,
+      0.9841869658740771,
+      0.99691878379164
+    ]
+  },
+  "gate": "hidden",
+  "feature": 424,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Factual slip: the explanation says c at recall_idx 1 fires at a 'rate 0.8%'. That 0.8% is the rate across all inputs at recall_idx 1. For copy-phase c at recall_idx 1 the feature actually fires about 25% of the time (predicate precision 0.246). These steps carry about 2.5% of the mass. 'Weak or less reliable' is right; 'absent' overstates it.",
+      "False positives are graded, not a separate class. Precision falls smoothly as to_go rises: 0.93 at to_go 0-1, 0.89 at 2, 0.83 at 3, and about 0.79 at 4-6. So a c copied early in a long sequence is less reliable. That matches the stated 'weakest near the start' trend. Every to_go bin stays above roughly 0.79 precision, so tightening the cutoff lowers F1.",
+      "Repeated-c check: when c appears twice in the original, the first copied c fires less often (P 0.73) than the second (P 0.93). On magnitude, the first c of an adjacent cc is the strongest (about 2.05x the mean activation) and the second is weaker (about 1.47x). The magnitude claim holds. On firing rate, though, the first c of a repeated pair fires less reliably, which the explanation does not mention.",
+      "Other claims check out. Activity is zero in the original and delimiter phases. 100% of the mass is on input c. correct==0 cases are negligible. Test scores reproduce: P 0.875, R 0.938, F1 0.905, mass recall 0.973. The test misses show no systematic class beyond recall_idx 1 and the graded early-position false positives."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

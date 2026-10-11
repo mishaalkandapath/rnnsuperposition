@@ -1,0 +1,60 @@
+{
+  "label": "copy-phase input v fed back early in the copy (recall_idx 2-3)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"v\")) & (recall_idx >= 2) & (recall_idx <= 3) & (L >= 5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, only when the fed-back input token is v (about 100% of mass is on in_tok == v). It is restricted to early copy steps: recall_idx 2 (the v was original token 1) carries ~59% of the mass and holds all the top activations (~1.0 of max); recall_idx 3 has ~38% at lower magnitude; recall_idx 4 is weak and partial; recall_idx 1 and >= 5 are essentially silent. It is silent for L = 3, weak for L = 4, and has no activity in the original or delimiter phase (a v in the original sequence never fires it). The output token, previous tokens and digits do not matter. Lowest-quartile activations are v at recall_idx 3-4 or in short sequences. Adding (recall_idx == 4 & L >= 7) raises dev F1 slightly (0.889 -> 0.904); the simpler form was kept.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 144,
+    "predicate": "(phase == 2) & (in_tok == tok(\"v\")) & (recall_idx >= 2) & (recall_idx <= 3) & (L >= 5)",
+    "split": "test",
+    "precision": 0.9942219638055091,
+    "recall": 0.8023873068011849,
+    "f1": 0.8880629716789742,
+    "mass_recall": 0.9596049800509794,
+    "correlation": 0.9400914915621461,
+    "n_active": 34097,
+    "n_predicted": 27518,
+    "coverage_by_activation_quartile": [
+      0.24516129032258063,
+      0.9644533083059597,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 144,
+    "predicate": "(phase == 2) & (in_tok == tok(\"v\")) & (recall_idx >= 2) & (recall_idx <= 3) & (L >= 5)",
+    "split": "dev",
+    "precision": 0.9929753412753014,
+    "recall": 0.8043350736199918,
+    "f1": 0.8887556513425483,
+    "mass_recall": 0.9590636302440472,
+    "correlation": 0.9391785924746194,
+    "n_active": 34094,
+    "n_predicted": 27617,
+    "coverage_by_activation_quartile": [
+      0.253284842796809,
+      0.9642186766776162,
+      0.9998826704212131,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 144,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the misses are not pure noise. They are a weak tail with a consistent structure: v at recall_idx 4 (precision 0.35 overall, 0.51 for L>=7) and v at recall_idx 2 in L=4 sequences (precision 0.61). Together these hold only about 4% of activation mass, all at low magnitude (about 0.01-0.23 of max). Adding (recall_idx==4 & L>=7) gives test F1 0.904 vs 0.888 and mass recall 0.989 vs 0.960, but precision drops to 0.88. The explanation already describes this tail, so this is not a refutation.",
+      "All checked claims hold on dev. 100% of activation mass is in the copy phase and 0 activations occur in the original or delimiter phase. in_tok==v holds 34092 of 34094 activations. recall_idx 2 carries 59.1% of mass and covers 93% of the top quartile. recall_idx 3 carries 37.5%, recall_idx 4 3.2%, and recall_idx 1 0.1% (precision 0.02). L=3 has 0 activations and L=4 holds 0.7% of mass. The out_tok and prev_tok distributions are flat.",
+      "Test scores reproduce: precision 0.994, recall 0.802, F1 0.888, mass recall 0.960. The test false positives (159) are scattered and show no shared token or history pattern."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"v\")) & (((recall_idx >= 2) & (recall_idx <= 3) & (L >= 5)) | ((recall_idx == 4) & (L >= 7)))",
+    "better_predicate_test_f1": 0.904
+  }
+}

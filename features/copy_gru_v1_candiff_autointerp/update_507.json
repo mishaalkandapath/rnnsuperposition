@@ -1,0 +1,63 @@
+{
+  "label": "fed-back w early in a short copy, near the end",
+  "predicate": "(phase == 2) & (in_tok == tok(\"w\")) & (recall_idx <= 4) & (to_go <= 2)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires only in the copy phase, when the input fed back is the letter w (99.9% of activation mass is on in_tok == w). Never fires in the original phase, at the delimiter, or on any other input token. Among copy-phase w inputs it is restricted to w that was one of the first four original tokens (recall_idx 1-4) and to steps where at most 2 outputs remain (to_go <= 2), so in practice it fires on short sequences (L = 3-6; L = 4 alone holds about half the mass). The largest activations are in L = 3 sequences where w is original token 1, fed back at recall_idx 2 (e.g. 2 w 1 <DEL> 2 [w]). It is weak or silent on w in long sequences and on w recalled far from the end. out_tok, next_out and prev tokens have little effect.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 507,
+    "predicate": "(phase == 2) & (in_tok == tok(\"w\")) & (recall_idx <= 4) & (to_go <= 2)",
+    "split": "test",
+    "precision": 0.7631902343109946,
+    "recall": 0.8653104825600297,
+    "f1": 0.8110484731079817,
+    "mass_recall": 0.9680367132937432,
+    "correlation": 0.6919148041832106,
+    "n_active": 21531,
+    "n_predicted": 24412,
+    "coverage_by_activation_quartile": [
+      0.6004086940367824,
+      0.8744194686977522,
+      0.986438788779491,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 507,
+    "predicate": "(phase == 2) & (in_tok == tok(\"w\")) & (recall_idx <= 4) & (to_go <= 2)",
+    "split": "dev",
+    "precision": 0.7621767153463327,
+    "recall": 0.8645197112715158,
+    "f1": 0.8101287776958765,
+    "mass_recall": 0.968545975498158,
+    "correlation": 0.6914758098969879,
+    "n_active": 21612,
+    "n_predicted": 24514,
+    "coverage_by_activation_quartile": [
+      0.5904127336664816,
+      0.8813622061817509,
+      0.9866740699611327,
+      0.9996298352766981
+    ]
+  },
+  "gate": "update",
+  "feature": 507,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold up. All mass is in the copy phase (original phase and delimiter: 0 activations). in_tok == w holds 0.999 of the mass. L=4 holds 0.516 of the mass. The top examples are L=3 sequences with w at original index 1, fed back at recall_idx 2 (e.g. '2 w 1 <DEL> 2 [w]').",
+      "The predicate contradicts its own explanation. The explanation says the feature is limited to L = 3-6, but recall_idx <= 4 & to_go <= 2 also lets in L=7 (recall_idx 4, to_go 2). That cell is a systematic false-positive class: dev precision 0.198 on about 2750 steps, mass 0.007. It accounts for roughly 2200 of the about 5800 test false positives. The 'misses' output shows this directly, e.g. 'r q f w r o x <DEL> r q f *w*' is inactive.",
+      "The edge of the firing region is graded, not sharp. Dev precision by (recall_idx, to_go): (3,2) 0.61, (4,0) 0.69, (4,1) 0.51, (4,2) 0.20, (3,3) 0.21. So 'fires only when both conditions hold' overclaims. Activation fades smoothly as L and recall_idx grow. Missed activations are low-magnitude (3.2% of mass), mostly w at recall_idx >= 5 or to_go >= 3.",
+      "No hidden history factor explains the false positives at the edge. Within the recall_idx == 4 cells, splitting by n_digits or by in_count (whether w repeats) moves precision only from 0.42 to 0.56.",
+      "Adding L <= 6 to the predicate (which drops the L=7 cell) raises test F1 from 0.811 to 0.839 (precision 0.837, recall 0.841, mass recall 0.962)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "fed-back w in the copy phase of short sequences (L<=6), recalled among the first 4 positions near the end; strength fades gradually with L",
+    "better_predicate": "(phase == 2) & (in_tok == tok('w')) & (recall_idx <= 4) & (to_go <= 2) & (L <= 6)",
+    "better_predicate_test_f1": 0.839
+  },
+  "final_label": "fed-back w in the copy phase of short sequences (L<=6), recalled among the first 4 positions near the end; strength fades gradually with L"
+}

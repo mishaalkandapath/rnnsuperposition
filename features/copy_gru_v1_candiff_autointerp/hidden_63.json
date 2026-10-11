@@ -1,0 +1,61 @@
+{
+  "label": "copy-phase input k (fed-back copy of original token k at position >= 2)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"k\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, at steps where the input is the token k (the model's own previous output fed back), and only when that k was original token index >= 2 (recall_idx >= 3). It never fires on k in the original phase, at the delimiter, or on any other input token (about 13 stray activations on 2/p). Activations at recall_idx 2 (k at original position 1) are rare and weak. Magnitude grows with position in the copy phase: the lowest activations come from k at early positions in short sequences (e.g. t=5-7), and the top activations come from k late in length 8-9 sequences. A repeated k at the next step also fires, at slightly lower magnitude. It does not depend on the output token, the earlier tokens, or the first token.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 63,
+    "predicate": "(phase == 2) & (in_tok == tok(\"k\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9902102029126382,
+    "recall": 0.9901586419967369,
+    "f1": 0.990184421783467,
+    "mass_recall": 0.998869336242412,
+    "correlation": 0.9059926300580767,
+    "n_active": 57614,
+    "n_predicted": 57611,
+    "coverage_by_activation_quartile": [
+      0.9606359344626493,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 63,
+    "predicate": "(phase == 2) & (in_tok == tok(\"k\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9906844597503228,
+    "recall": 0.9898492877296814,
+    "f1": 0.9902666976480005,
+    "mass_recall": 0.9988505522388321,
+    "correlation": 0.9056850845190249,
+    "n_active": 58124,
+    "n_predicted": 58075,
+    "coverage_by_activation_quartile": [
+      0.9593971509187255,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 63,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Main claims hold. Every activation is in the copy phase (original and delimiter phases are 0/3.23M and 0/500k). in_tok k carries 1.000 of the activation mass, with only 13 stray activations on 2 and p. On the test split the predicate scores P 0.990, R 0.990, F1 0.990, mass recall 0.999. Adding correct==1 changes nothing, and the feature never fires when correct==0.",
+      "The recall_idx-2 claim is only partly accurate. Overall, recall_idx 2 is rare (test P 0.033 for k at recall_idx 2), but the misses are concentrated in short sequences. When L=3, k at recall_idx 2 fires 49% of the time (444 predicted); at L=4 it fires 13%; at L>=5 it fires 0%. Almost all of the 567 test misses come from this cell, but they hold only 0.1% of the activation mass. Folding in (recall_idx==2)&(L==3) would add about as many false positives as true positives, so F1 would not improve.",
+      "The false positives (564 on test) are almost all at recall_idx==3 (precision 0.965 there, against 1.000 for recall_idx>=4). Precision there dips for L=6-8 (0.93-0.97) and is a little lower when k repeats in the original (in_count>=2: 0.91) or when k is also orig(0) or orig(1) (0.83-0.86). These are mild modulations at the onset boundary, not a separate class of counterexamples.",
+      "The label matches the predicate and does not overclaim. Magnitude growing with position is consistent with the profile: rate is flat at about 3.3% from recall_idx 3 onward, while mass share and t-dependence rise later."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

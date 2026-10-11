@@ -1,0 +1,61 @@
+{
+  "label": "echoed x input in copy phase (not the first copied token)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"x\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, and only when the token fed back as input is the letter x (essentially 100% of activation mass is on in_tok == x). It never fires during the original phase or at <DEL>, so original-phase x inputs do not trigger it. It is almost silent when x is the first copied token (recall_idx 1, i.e. orig(0) == x being fed back). The firing rate on echoed x rises with t and with sequence length: short sequences (L = 3-4) and early copy steps (t <= 7) often stay silent, and these account for most false positives. The strongest activations are on echoed x late in long sequences (L = 7-9), often the last copied input. Magnitude does not depend on the token being output or on digit counts. Dev F1 is 0.86 (precision 0.76, recall 0.995). Adding L >= 5 only raises F1 to 0.865.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 44,
+    "predicate": "(phase == 2) & (in_tok == tok(\"x\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.7547915458383351,
+    "recall": 0.9953399854152215,
+    "f1": 0.8585345647571415,
+    "mass_recall": 0.9985726065391487,
+    "correlation": 0.7316894309960339,
+    "n_active": 56223,
+    "n_predicted": 74141,
+    "coverage_by_activation_quartile": [
+      0.9846328969834945,
+      0.9970119521912351,
+      0.9997154240182129,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 44,
+    "predicate": "(phase == 2) & (in_tok == tok(\"x\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.7568103355270256,
+    "recall": 0.995123594708657,
+    "f1": 0.8597582461354619,
+    "mass_recall": 0.9986776963595879,
+    "correlation": 0.7344583056817,
+    "n_active": 56394,
+    "n_predicted": 74152,
+    "coverage_by_activation_quartile": [
+      0.9827647350875949,
+      0.9980140435491879,
+      0.9997162718116045,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 44,
+  "final_verdict": "explained",
+  "skeptic": {
+    "issues": [
+      "The explanation is wrong to say short sequences (L 3-4) and early copy steps 'account for most false positives'. On dev the predicate has about 18.0k false positives. L<=4 contributes about 3.4k (5419 predicted, precision 0.364) and recall_idx==2 about 5.3k (16647 predicted, precision 0.680). The slice outside both, L>=5 & recall_idx>=3, still has about 10.8k false positives (55002 predicted, precision 0.804), which is roughly 60% of the total.",
+      "'Firing rate rises with t and with sequence length' is only roughly true. Precision by L is 0.04, 0.39, 0.75, 0.83, 0.78, 0.76, 0.81 for L=3..9, so it is not monotone above L=5. Precision by recall_idx peaks at 4 (0.85) and drops at 6-7 (0.70-0.73). The firing rate per t plateaus after t of about 11.",
+      "The remaining ~20% non-firing on echoed x (L>=5) looks like diffuse noise rather than a systematic class. No simple variable separates it: prev_tok digit/letter/vowel/x, in_count, n_digits, next_out, first_tok, n_seen(x) and t parity all give precision between 0.73 and 0.81. to_go==0 (last step) is lower at 0.65, which slightly tempers the 'strongest on the last copied input' remark: top magnitudes are there, but the firing rate is lowest there.",
+      "The core claims hold. 100% of activation mass is in the copy phase, nothing fires in the original phase or at <DEL>, mass on in_tok x is 1.000, recall_idx 1 is nearly silent (272 active steps), there is no out_tok or digit-count dependence, and the predicate's test F1 is 0.859 (L>=5 variant: test F1 0.864). Misses are tiny (0.1% of mass), mostly weak firing on the first copied x at recall_idx 1."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok('x')) & (recall_idx >= 2) & (L >= 5)",
+    "better_predicate_test_f1": 0.864,
+    "upheld": false
+  }
+}

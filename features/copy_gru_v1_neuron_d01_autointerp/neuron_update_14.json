@@ -1,0 +1,64 @@
+{
+  "label": "Length-3 first copy step after <DEL> (outputting token 1), plus weak t=0 firing on g/y/0",
+  "predicate": "((t==0)&isin(in_tok,[tok(\"g\"),tok(\"y\"),tok(\"0\")])) | ((L==3)&(recall_idx==1))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Two-part but simple position-based unit. (1) Strong component (~61% of activation mass, nearly all top activations): in length-3 sequences at step 4, the first copy step after <DEL> where the model outputs original token 1; active on ~46% of such steps, with magnitude up to the max. (2) Weak, near-deterministic component (~35% of mass, ~78% of active steps): step 0 when the first token is y, g, or 0 (fires on essentially all of those). Magnitude here is small: y ~0.10 of max, 0 ~0.04, g near threshold. Residual: weak firing at step 5 (recall_idx 2 for L=3, recall_idx 1 for L=4). It never fires at the delimiter step, at original positions 1+, or at copy steps beyond recall_idx 2. Activation does not depend on which token is being copied or on digit count. Dev: P 0.97, R 0.96, F1 0.97, mass recall 0.96.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 14,
+    "predicate": "((t==0)&isin(in_tok,[tok(\"g\"),tok(\"y\"),tok(\"0\")])) | ((L==3)&(recall_idx==1))",
+    "split": "test",
+    "precision": 0.9711298377028714,
+    "recall": 0.9604136121614322,
+    "f1": 0.9657419980601358,
+    "mass_recall": 0.9609575172555135,
+    "correlation": 0.5384722497485596,
+    "n_active": 12959,
+    "n_predicted": 12816,
+    "coverage_by_activation_quartile": [
+      0.9966049382716049,
+      0.9592592592592593,
+      0.9530864197530864,
+      0.9326952763198518
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 14,
+    "predicate": "((t==0)&isin(in_tok,[tok(\"g\"),tok(\"y\"),tok(\"0\")])) | ((L==3)&(recall_idx==1))",
+    "split": "dev",
+    "precision": 0.9748343325970338,
+    "recall": 0.9583527221963704,
+    "f1": 0.9665232694563941,
+    "mass_recall": 0.959447794517817,
+    "correlation": 0.543025534140146,
+    "n_active": 12894,
+    "n_predicted": 12676,
+    "coverage_by_activation_quartile": [
+      0.9981389578163772,
+      0.9550248138957816,
+      0.9509773502947564,
+      0.9292584548557244
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 14,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Factual error in the explanation: the unit is NOT active on 'about 46%' of the L=3, recall_idx=1 steps. On test, (L==3)&(recall_idx==1) has precision 0.858 (2604 predicted). On dev, 2286 of about 2605 such steps are active, roughly 88%. So the claim understates the rate by about half. The other numbers hold: this component carries 0.61 of the mass and almost all top-quartile activations.",
+      "t=0 component checks out. g, y and 0 each have precision 1.0 at t=0. Together they give recall 0.79 (claimed 78%) and mass 0.354 (claimed 35%). g carries almost no mass (0.005). y carries 0.246 and 0 carries 0.103, which fits the stated ordering of magnitudes.",
+      "Token independence checks out. For L=3 recall1, precision is 0.861 when the output is a digit and 0.857 when it is a letter. The inactive steps (about 12%) show no visible token pattern.",
+      "Residual checks out and is small: misses hold 3.9% of mass, all at step 5. Most are L=3 recall_idx 2 (precision 0.156, mass 0.034). L=4 recall_idx 1 is very rare (precision 0.007, mass 0.005), so calling it part of the residual slightly overstates it.",
+      "Zero firing at the delimiter, at original positions 1 and later, and at t>=6 is confirmed by the profile.",
+      "No systematic false-positive or missed class remains. Test precision 0.971, recall 0.96, F1 0.966 are reproduced. Adding (t==5)&(L<=4) only lowers precision (F1 0.60), so the current predicate is close to optimal."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Length-3 first copy step after <DEL> (outputting token 1; ~86% of such steps active), plus weak t=0 firing on g/y/0",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "Length-3 first copy step after <DEL> (outputting token 1; ~86% of such steps active), plus weak t=0 firing on g/y/0"
+}

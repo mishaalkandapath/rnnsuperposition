@@ -1,0 +1,61 @@
+{
+  "label": "input token 2 (copy phase strongly; first two original positions weakly)",
+  "predicate": "(in_tok == tok(\"2\")) & ((phase == 2) | (t <= 1))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token detector for the digit 2 as the current input. Strongest (about 0.7-0.98) when 2 is fed back during the copy phase, at any recall position; it peaks when 2 is the third copied token after two letters. In the original phase it fires only when 2 is at position 0 (about 0.40) or position 1 (weaker, about 0.2); a 2 at original position 2 or later almost never fires it (t=2 occasionally about 0.13). About 88% of activation mass is in the copy phase. It does not fire on the delimiter or on other digits. A few weak spurious activations occur on letters (n, e, k) just before a copied 2. Dev: P=0.99, R=0.95, F1=0.97, mass recall 0.99.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 200,
+    "predicate": "(in_tok == tok(\"2\")) & ((phase == 2) | (t <= 1))",
+    "split": "test",
+    "precision": 0.9910600666870701,
+    "recall": 0.954942650048891,
+    "f1": 0.9726661923958579,
+    "mass_recall": 0.9912490594074429,
+    "correlation": 0.9372314538037673,
+    "n_active": 128858,
+    "n_predicted": 124162,
+    "coverage_by_activation_quartile": [
+      0.8197733974856434,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 200,
+    "predicate": "(in_tok == tok(\"2\")) & ((phase == 2) | (t <= 1))",
+    "split": "dev",
+    "precision": 0.9912252686712549,
+    "recall": 0.9546831744078745,
+    "f1": 0.9726111106758694,
+    "mass_recall": 0.9912099847227887,
+    "correlation": 0.937521432255453,
+    "n_active": 130040,
+    "n_predicted": 125246,
+    "coverage_by_activation_quartile": [
+      0.818732697631498,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "reset",
+  "feature": 200,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The main claims hold. in_tok==2 & phase==2 has precision 1.00 and gives 70% of recall. 2 at t=0 has precision 1.00 (constant at about 0.40). 2 at t>=3 in the original phase has precision 0.0004. 2 at t=2 has precision 0.055, so it fires only rarely, as the explanation says. Test scores reproduce: P 0.991, R 0.955, F1 0.973, mass recall 0.991.",
+      "One systematic false-positive class was not mentioned. A 2 at t=1 never fires when the token at t=0 was also 2 (prev_tok==2: 546 dev steps, precision 0.0). That is about half of all false positives. When prev_tok != 2, a 2 at t=1 has precision 0.966. The class is small, and excluding it raises test precision only from 0.991 to 0.995 (F1 0.973 to 0.975).",
+      "Wrong detail: the explanation says the weak letter activations come 'just before a copied 2'. Scoring non-2 inputs in the copy phase with next_out==2 gives precision 0.0005 and recall 0.0003, so that is not where they are. The non-2 activations (about 3.8% of active steps, under 1% of mass) gather at recall_idx==1, the first copied token right after <DEL>. They are weak noise and do not change the label."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "input token 2 (copy phase strongly; original position 0, and position 1 unless position 0 was also 2, weakly)",
+    "better_predicate": "(in_tok == tok(\"2\")) & ((phase == 2) | (t == 0) | ((t == 1) & (prev_tok != tok(\"2\"))))",
+    "better_predicate_test_f1": 0.9748
+  },
+  "final_label": "input token 2 (copy phase strongly; original position 0, and position 1 unless position 0 was also 2, weakly)"
+}

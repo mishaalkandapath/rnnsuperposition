@@ -1,0 +1,63 @@
+{
+  "label": "copy phase: fed-back u that was the 2nd-4th original token",
+  "predicate": "(phase == 2) & (in_tok == tok(\"u\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the fed-back input is the letter u (essentially 100% of activation mass is on in_tok u). That is, the model just re-emitted u as original token 1-3 (recall_idx 2-4). Magnitude falls with position: largest (~0.95-1.0 of max) when u was orig(1) (prev2 = <DEL>), around 0.55-0.6 when u was orig(2), and about 0.2-0.4 when u was orig(3). Weak or absent for u as orig(0), negligible beyond orig(3), and it does not fire when u is the last copy input (to_go 0). Never fires on u in the original phase, at the delimiter, or on any other token. Remaining false positives are mostly u at recall_idx 4.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 462,
+    "predicate": "(phase == 2) & (in_tok == tok(\"u\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+    "split": "test",
+    "precision": 0.9048542747684399,
+    "recall": 0.9854238183258516,
+    "f1": 0.9434219840226514,
+    "mass_recall": 0.9986434309172063,
+    "correlation": 0.8412132541535896,
+    "n_active": 37870,
+    "n_predicted": 41242,
+    "coverage_by_activation_quartile": [
+      0.9419095901985636,
+      0.9997887621461766,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 462,
+    "predicate": "(phase == 2) & (in_tok == tok(\"u\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+    "split": "dev",
+    "precision": 0.9010221465076661,
+    "recall": 0.9853618289729327,
+    "f1": 0.9413065863239388,
+    "mass_recall": 0.9984423716007486,
+    "correlation": 0.8380329373867825,
+    "n_active": 37573,
+    "n_predicted": 41090,
+    "coverage_by_activation_quartile": [
+      0.9417713434106877,
+      0.9996806132226126,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 462,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The predicate holds up. I reproduced test P 0.905 / R 0.985 / F1 0.943 / mass recall 0.999. in_tok u carries 100% of the activation mass, and nothing fires in the original phase or at the delimiter. Missed activations are 552 steps holding 0.1% of the mass, all tiny (u as orig(0), or u at recall_idx 5 or later).",
+      "Per recall_idx on dev (u, to_go>=1): r1 P 0.02, r2 P 0.986, r3 P 0.998, r4 P 0.657, r5 P 0.016. With to_go==0, P is 0.002. The claims 'weak/absent for orig(0)', 'does not fire at to_go 0' and 'most FPs are recall_idx 4' all check out.",
+      "The magnitude claim is wrong. The explanation says activation is about 0.95-1.0 of max whenever u was orig(1). In fact magnitude depends strongly on L / to_go, not just on recall position. Coverage by activation quartile for u at r2: L=4 (to_go 1) falls entirely in the bottom two quartiles [0.18, 0.06, 0, 0] with P 0.91. L=5 is mostly in the middle quartiles. Only L>=7 sits mainly in the top quartile. The profile examples agree: 'j u x c i' (L=5) r2 = 0.56, and '1 u j u r t' r2 = 0.67. By to_go, to_go=1 holds 6.4% of the mass versus about 20% at to_go 3-5.",
+      "The recall_idx-4 false positives are also tied to L. r4 precision: L=6 (to_go 1) 0.44, L=7-9 about 0.69-0.77, and L=5 (to_go 0) about 0. They look like the same graded effect falling below threshold, not a separate token or history class. Dropping to_go 1 at r4 barely helps: test F1 0.9453 vs 0.9434.",
+      "The label is fine as a firing condition, but it leaves out that strength grows with sequence length / outputs remaining."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy phase: fed-back u that was original token 1-3 (orig(1) strongest), stronger with more outputs remaining",
+    "better_predicate": "(phase == 2) & (in_tok == tok('u')) & (((recall_idx >= 2) & (recall_idx <= 3) & (to_go >= 1)) | ((recall_idx == 4) & (to_go >= 2)))",
+    "better_predicate_test_f1": 0.945
+  },
+  "final_label": "copy phase: fed-back u that was original token 1-3 (orig(1) strongest), stronger with more outputs remaining"
+}

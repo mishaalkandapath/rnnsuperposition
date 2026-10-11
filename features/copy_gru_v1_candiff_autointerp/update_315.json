@@ -1,0 +1,64 @@
+{
+  "label": "sequence started with j: late original steps and <DEL>",
+  "predicate": "(first_tok == tok(\"j\")) & (t >= 3) & (t <= L)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires when the first original token is j, from step 3 of the original phase through the <DEL> step, whatever token is input at those steps. It is silent at steps 0-2 and almost entirely silent in the copy phase, including at the step that outputs the leading j. On dev, 93% of activation mass comes from j-first sequences, and the predicate has precision 0.99. Activation rises over the first few steps after t=3 (around 0.2 of max at t=3, near max at t=4-6) and then eases off toward <DEL>. The strongest activations are in sequences beginning j j; j d is next. Missed activations (about 6.7% of mass) are weak firings at late original steps when j is the second original token instead of the first. Adding those raises recall but drops precision to 0.65.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 315,
+    "predicate": "(first_tok == tok(\"j\")) & (t >= 3) & (t <= L)",
+    "split": "test",
+    "precision": 0.9901263346864408,
+    "recall": 0.7300006914194842,
+    "f1": 0.8403948056673717,
+    "mass_recall": 0.936370005082861,
+    "correlation": 0.9152950811384191,
+    "n_active": 101241,
+    "n_predicted": 74643,
+    "coverage_by_activation_quartile": [
+      0.16234048437438267,
+      0.7576847096009482,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 315,
+    "predicate": "(first_tok == tok(\"j\")) & (t >= 3) & (t <= L)",
+    "split": "dev",
+    "precision": 0.989764766811132,
+    "recall": 0.7242889057326365,
+    "f1": 0.836468135589316,
+    "mass_recall": 0.9331160311732981,
+    "correlation": 0.9138543851871956,
+    "n_active": 100268,
+    "n_predicted": 73374,
+    "coverage_by_activation_quartile": [
+      0.15889416364144093,
+      0.7385008178082738,
+      0.9997606414808313,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 315,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Core claims check out. Copy phase is silent (t > L: precision 0.00006, mass 0.04%). Steps 0-2 are silent. Activation ramps from t=3 (0.10 of mass) to a peak at t=4-6 and fades by t=9. 93% of mass comes from j-first sequences. Test precision is 0.99 and mass recall 0.936.",
+      "Count recall is only 0.73: 27% of active steps (27,335 on test) are missed. Most are low-quartile firings (quartile coverage 0.16 and 0.76), so they fall outside the label.",
+      "The secondary class is systematic, not noise. When j is the second original token (and not the first), the feature fires weakly at mid-original steps. Rule: (first_tok != j) & (orig(1) == j) & (t <= L), precision 0.30, recall 0.21. Restricted to t=5..6 its precision is 0.58-0.59. It never fires at t=3, so this is a lagged version of the j-first response. The explanation says adding this class drops precision to 0.65; that only holds for the broad version. Restricting it to t in 5..7 and t < L keeps the combined precision at 0.90.",
+      "Systematic false-positive class: j-first sequences with j as the third token (j ? j) are always inactive at t=3. Rule: (first_tok==j)&(t==3)&(orig(2)==j), precision 0.0. This covers most of the 737 false positives on test. The explanation does not mention it.",
+      "The remaining misses with no j in the first two positions are scattered and weak (precision 0.003, 0.4% of mass). That part is acceptable noise.",
+      "Better predicate: test F1 0.887 versus 0.840, with mass recall 0.982 and precision 0.90."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "j as first original token: original steps 3 through <DEL> (silent at t=3 when the third token is also j); weaker, delayed firing at steps 5-7 when j is the second token",
+    "better_predicate": "((first_tok == tok(\"j\")) & (t >= 3) & (t <= L) & ~((t == 3) & (orig(2) == tok(\"j\")))) | ((first_tok != tok(\"j\")) & (orig(1) == tok(\"j\")) & (t >= 5) & (t <= 7) & (t < L))",
+    "better_predicate_test_f1": 0.887
+  },
+  "final_label": "j as first original token: original steps 3 through <DEL> (silent at t=3 when the third token is also j); weaker, delayed firing at steps 5-7 when j is the second token"
+}

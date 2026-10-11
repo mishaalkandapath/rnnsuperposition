@@ -1,0 +1,61 @@
+{
+  "label": "first copy step after DEL in short sequences starting with z (echoed z input)",
+  "predicate": "(recall_idx == 1) & (in_tok == tok(\"z\")) & (L <= 5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, at the step right after <DEL> (recall_idx 1), when the fed-back input is z, i.e. the sequence started with z and the model has just emitted it. Restricted to short sequences: magnitude is largest for L=3 (top examples are all L=3, e.g. z z c <DEL> [z]), lower for L=4, weak for L=5, and essentially zero for L>=6. Does not fire on z in the original phase, on z echoed at later copy steps, on the delimiter step, or for first tokens other than z (fewer than 1% of activations). Dev F1 0.90, mass recall 0.99.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 119,
+    "predicate": "(recall_idx == 1) & (in_tok == tok(\"z\")) & (L <= 5)",
+    "split": "test",
+    "precision": 0.8625762468604234,
+    "recall": 0.943299980380616,
+    "f1": 0.9011339143472965,
+    "mass_recall": 0.991540260548631,
+    "correlation": 0.7640469167046646,
+    "n_active": 5097,
+    "n_predicted": 5574,
+    "coverage_by_activation_quartile": [
+      0.8023529411764706,
+      0.9709576138147566,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 119,
+    "predicate": "(recall_idx == 1) & (in_tok == tok(\"z\")) & (L <= 5)",
+    "split": "dev",
+    "precision": 0.8568627450980392,
+    "recall": 0.939601250977326,
+    "f1": 0.8963266828267761,
+    "mass_recall": 0.9908267479327412,
+    "correlation": 0.7639545187637141,
+    "n_active": 5116,
+    "n_predicted": 5610,
+    "coverage_by_activation_quartile": [
+      0.7920250195465207,
+      0.9663799843627834,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 119,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor factual slip: the explanation says sequences whose first token is not z account for 'under 1% of activations'. On dev, first_tok != z covers 4.3% of activations (recall 0.043) but only 0.66% of activation mass. Those activations are weak echoes of other first tokens (w, k, 1, s, f), mostly at L=3. The figure is true for mass, not for activation count.",
+      "Precision loss is graded by length, not a hidden sub-pattern: at L=3 precision is 1.00, at L=4 it is 0.998, and at L=5 it falls to 0.72 (test). That L=5 band accounts for nearly all of the 766 test false positives. Splitting the L=5 cases by in_count, next_out (digit vs letter, low vs high index, vowel) or n_digits leaves precision at 0.65-0.82 in every subset, so there is no systematic predictor. The model just fires weakly and inconsistently there.",
+      "Misses are scattered and low-magnitude: 289 test steps holding 0.8% of the mass. They are weak non-z echoes at L=3, the L=6 tail (precision 0.03 if L=6 is added) and a few recall_idx-2 cases. No systematic class.",
+      "Checks that held: the feature never fires in the original or delimiter phase; 99.6% of activations are at recall_idx 1; z input carries 99.4% of the mass; per-activation magnitude is highest at L=3; there are 82 activations at L=6 and none for L>=7. Test scores reproduce (P 0.863, R 0.943, F1 0.901, mass recall 0.992). L<=4 gives P 0.998 but F1 0.72, and L<=6 gives F1 0.73, so L<=5 is the best length cutoff."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

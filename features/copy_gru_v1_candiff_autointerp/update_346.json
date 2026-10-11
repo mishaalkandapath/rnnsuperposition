@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input \"1\" (fed-back digit 1), from the 3rd copied token onward",
+  "predicate": "(phase == 2) & (in_tok == tok(\"1\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only when the input token is the digit 1 being fed back during the copy phase (all activation mass is on in_tok == 1, phase == copy; essentially zero for 1 in the original phase, at the delimiter, or on any other token). It is weak or absent when the 1 is one of the first copied tokens (recall_idx <= 2, rate 0.5% vs ~3.3% per step overall, i.e. near-full firing on copy-phase 1s at recall_idx >= 3), and activation grows with copy position; top activations come from 1s at original positions 4-5 being re-fed late in the copy. Remaining false positives are mostly 1s that were original token 2 (recall_idx 3), which often stay inactive. Misses (1.8% of mass) are small activations on early-copied 1s. Not modulated by the output token, first token, or neighbors.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 346,
+    "predicate": "(phase == 2) & (in_tok == tok(\"1\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9346831230065178,
+    "recall": 0.9490618509522301,
+    "f1": 0.9418176101727479,
+    "mass_recall": 0.9814250708394064,
+    "correlation": 0.8956685729028349,
+    "n_active": 56814,
+    "n_predicted": 57688,
+    "coverage_by_activation_quartile": [
+      0.8182906223598986,
+      0.9798648268093495,
+      0.9980989931704569,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 346,
+    "predicate": "(phase == 2) & (in_tok == tok(\"1\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9365856207328968,
+    "recall": 0.949467662482123,
+    "f1": 0.9429826484178409,
+    "mass_recall": 0.9815211591958136,
+    "correlation": 0.8965612425141721,
+    "n_active": 56637,
+    "n_predicted": 57416,
+    "coverage_by_activation_quartile": [
+      0.8192090395480226,
+      0.9798714598488594,
+      0.9987993502365986,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 346,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claim holds. All activation mass is on in_tok == 1 in the copy phase. Original-phase 1s get 0.01% of the mass (test precision 0.001), the delimiter step never fires, and no other token fires.",
+      "The 'recall_idx >= 3' cutoff is really a sequence-length effect, not a fixed copy-position cutoff. At recall_idx 2, test precision is 1.0 for L=3 and 0.95 for L=4, but 0.0 for every L from 5 to 9. So the misses the explanation calls 'small activations on early-copied 1s' come almost entirely from short sequences (L <= 4, to_go <= 1). They are systematic, not scattered.",
+      "The false positives are also systematic by length. At recall_idx 3, test precision is 1.0 for L=4 and L=5 and 0.96 for L=6, but drops to 0.68, 0.47 and 0.53 for L=7, 8 and 9. The explanation says 'Most false positives are 1s that were original token 2', but those 1s fire reliably in short and medium sequences and fail only in long ones (to_go >= 3). With recall_idx >= 4, precision is 1.0.",
+      "The cleaner reading is that the feature fires on a fed-back 1 unless it is very early in the copy and many outputs remain. A 1 re-fed at recall_idx 2 fires only when to_go <= 1. Adding that short-sequence case fixes nearly all misses: test recall rises from 0.949 to 0.997 and mass recall from 0.981 to 1.0.",
+      "The label 'from the 3rd copied token onward' overstates a fixed position threshold. Firing depends on copy position together with sequence length (outputs remaining), not on recall_idx alone."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase fed-back digit \"1\", except very early in the copy of a long sequence (fires at recall_idx >= 3, or at recall_idx 2 when only 0-1 outputs remain; unreliable at recall_idx 3 when L >= 7)",
+    "better_predicate": "(phase == 2) & (in_tok == tok('1')) & ((recall_idx >= 3) | ((recall_idx >= 2) & (to_go <= 1)))",
+    "better_predicate_test_f1": 0.966
+  },
+  "final_label": "copy-phase fed-back digit \"1\", except very early in the copy of a long sequence (fires at recall_idx >= 3, or at recall_idx 2 when only 0-1 outputs remain; unreliable at recall_idx 3 when L >= 7)"
+}

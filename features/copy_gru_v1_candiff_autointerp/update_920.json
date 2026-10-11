@@ -1,0 +1,75 @@
+{
+  "label": "token right after an early r (r at original position 0-2)",
+  "predicate": "(phase == 0) & (prev_tok == tok(\"r\")) & (t <= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires in the original (input) phase on the step immediately after the input r, but only when that r is one of the first three original tokens (t = 1..3). 99% of activation mass has prev_tok = r; it never fires in the delimiter or copy phase, and not after r at later positions (t >= 4). Magnitude is largest when r is at position 1 (t = 2, ~60% of mass, e.g. q r [n] reaches the max), next for r at position 0 (t = 1, ~30%), and weakest and least reliable for r at position 2 (t = 3, ~29% firing rate, depending on the first token: more often when it is q/0/1). The current input token has little effect. Weak low-quartile activations also appear after the digits 2/3 or d/l at t = 2.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 920,
+    "predicate": "(phase == 0) & (prev_tok == tok(\"r\")) & (t <= 3)",
+    "split": "test",
+    "precision": 0.7440194292653309,
+    "recall": 0.931296549627603,
+    "f1": 0.8271904954772513,
+    "mass_recall": 0.9894701921659212,
+    "correlation": 0.7447079280835707,
+    "n_active": 39474,
+    "n_predicted": 49410,
+    "coverage_by_activation_quartile": [
+      0.7280372884790759,
+      0.9972641605025838,
+      0.9998986623429267,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 920,
+    "predicate": "(phase == 0) & (prev_tok == tok(\"r\")) & (t <= 3)",
+    "split": "dev",
+    "precision": 0.7415653157703341,
+    "recall": 0.9307739121614769,
+    "f1": 0.825466075966447,
+    "mass_recall": 0.9896502536928513,
+    "correlation": 0.7428281550069208,
+    "n_active": 39436,
+    "n_predicted": 49498,
+    "coverage_by_activation_quartile": [
+      0.7252256821178619,
+      0.9979713966933766,
+      0.9998985698346688,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 920,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold. Activation is 100% in the original phase, with 2 delimiter steps and 0 copy steps. Mass by t is 0.304 at t=1, 0.599 at t=2, 0.097 at t=3, and almost nothing at t>=4. A predicate requiring prev_tok != r captures only 1.0% of mass.",
+      "There is a systematic false-positive class at t=3. On test, (prev_tok==r)&(t==3) has precision 0.287, so most of the 12,648 false positives in the misses output are 'x y r [_]' at step 3. Whether it fires depends on the first token, and the effect is graded rather than noise: precision is about 0.91-0.97 when orig(0) is q, 0 or 1, about 0.80-0.85 for f and v, 0.74 for n, about 0.5 for e, j and u, and 0.0 for 2, 3, r, l, d, g, k, o, p, t and y. So the label 'r at original position 0-2' overclaims for position 2.",
+      "There is a second exclusion that was not reported. At t=2, the feature never fires on 'r r' (orig(0)==r gives precision 0.0, about 7% of the t=2 predictions). For other first tokens, such as 2, 3, l and a, precision at t=2 is 1.0. The feature seems to fire only after the first r, not after a repeated r.",
+      "The explanation does say that t=3 is unreliable and depends on the first token. However, the headline predicate and label still include all of t=3, and test precision is only 0.744.",
+      "A predicate that adds the 'not r r' exclusion and a first-token gate at t=3 reaches test F1 0.931 (precision 0.955, mass recall 0.981), compared with 0.827. The token list for t=3 was chosen on the dev split."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "step right after the first r in the sequence, when that r is at original position 0 or 1 (it also fires at position 2 only for some first tokens, e.g. q/0/1/f/v/n)",
+    "better_predicate": "(phase==0)&(prev_tok==tok('r'))&((t==1)|((t==2)&(orig(0)!=tok('r')))|((t==3)&((orig(0)==tok('q'))|(orig(0)==tok('0'))|(orig(0)==tok('1'))|(orig(0)==tok('f'))|(orig(0)==tok('v'))|(orig(0)==tok('n'))|(orig(0)==tok('u'))|(orig(0)==tok('j'))|(orig(0)==tok('e')))))",
+    "better_predicate_test_f1": 0.931
+  },
+  "final_label": "step right after the first r in the sequence, when that r is at original position 0 or 1 (it also fires at position 2 only for some first tokens, e.g. q/0/1/f/v/n)",
+  "scorecard": {
+    "format": "slot2",
+    "summary": "Graded preference over the previous input (most: r, 2, d, 3, l, g; least: u, 1, 0, q) and the first original token (most: q, 0, 1, u, f, n; least: g, l, 2, k); timing cues that raise it most: t=2, t=1, t=3.",
+    "test_f1": 0.9355983255054114,
+    "test_precision": 0.942769689798858,
+    "test_recall": 0.9285352383847596,
+    "full_test_f1": 0.9711605978533454,
+    "full_n_cues": 193,
+    "top40_test_f1": 0.9426954692176004,
+    "slot2_test_f1": 0.9355983255054114,
+    "file": "scorecards/update_920.json"
+  }
+}

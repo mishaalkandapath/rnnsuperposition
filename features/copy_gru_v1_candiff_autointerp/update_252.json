@@ -1,0 +1,63 @@
+{
+  "label": "<DEL> step of long sequences starting with y (about to output y)",
+  "predicate": "(phase == 1) & (first_tok == tok(\"y\")) & (L >= 6)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost only at the delimiter step (94% of activation mass), where the first token to be copied out is orig(0). It is strongly selective for orig(0) == y: first_tok y gets 91% of mass and 33x lift for out_tok y. It also needs length: it never fires for L <= 4, barely fires at L = 5, and the predicate is about 94% precise once L >= 6. In longer y-initial sequences magnitude grows toward the end of the original phase and peaks at <DEL> (in the top examples the last 1-3 original steps reach 0.2-0.5 of max). Top activations often start with y y, but magnitude was not quantified by orig(1). Low-mass tail: weak <DEL> activations when the first token is another letter (v, q, s, e, in descending order), and weak pre-<DEL> activations in y-initial sequences. It never fires in the copy phase or before step 5.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 252,
+    "predicate": "(phase == 1) & (first_tok == tok(\"y\")) & (L >= 6)",
+    "split": "test",
+    "precision": 0.9474497681607419,
+    "recall": 0.5414631611763483,
+    "f1": 0.6891056372954206,
+    "mass_recall": 0.8481782022618775,
+    "correlation": 0.8570449826448543,
+    "n_active": 19246,
+    "n_predicted": 10999,
+    "coverage_by_activation_quartile": [
+      0.09559434746467166,
+      0.2664172901080632,
+      0.8056537102473498,
+      0.9983371440448972
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 252,
+    "predicate": "(phase == 1) & (first_tok == tok(\"y\")) & (L >= 6)",
+    "split": "dev",
+    "precision": 0.9446434969544966,
+    "recall": 0.5495284247824501,
+    "f1": 0.6948443419535497,
+    "mass_recall": 0.852332741851215,
+    "correlation": 0.8582781737817715,
+    "n_active": 19191,
+    "n_predicted": 11164,
+    "coverage_by_activation_quartile": [
+      0.09253855773238849,
+      0.275531471446436,
+      0.8320133388912047,
+      0.99812382739212
+    ]
+  },
+  "gate": "update",
+  "feature": 252,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold on the test split. The original predicate scores P 0.947, R 0.541, F1 0.689, mass recall 0.848. Activation mass is 94.2% at <DEL>, there are zero activations in the copy phase, and none before t=5. L<=4 never fires, and the L=5 slice (phase 1, first_tok y) has precision 0.04 and mass 0.001. Restricting to L>=6 costs almost nothing compared with dropping the L condition.",
+      "There is a systematic miss class the explanation does not mention: <DEL> steps where y is the SECOND original token. (phase==1)&(first_tok!=y)&(orig(1)==y) covers 12.7% of all active steps (P 0.15). With L>=8 its precision rises to 0.42 and it covers 11.3% of active steps (~5% of mass). The misses list confirms this: '1 y x m t b 1 d [<DEL>:0.09]' and 'v y u d q g o [<DEL>:0.12]'. The explanation instead attributes the tail to first tokens v/q/s/e. Adding those first tokens collapses precision to 0.24 (F1 0.37), so that description of the tail is not the useful one.",
+      "The pre-<DEL> tail is also structured, not just 'weak activations in y-initial sequences'. It sits at orig_idx 6-8 (the last 1-2 original steps of L>=8 sequences) and only in y-initial sequences: phase 0 with first_tok!=y has essentially zero activations. (phase==0)&(first_tok==y)&(L>=8)&(to_go<=1) has P 0.26 and covers 15% of active steps (6.3% of mass). This fits the claim that magnitude ramps toward <DEL>.",
+      "Remaining <DEL> activations with no y anywhere in the original tokens are scattered and weak: 17% of active steps but only 3.4% of mass at precision 0.008. That is acceptable noise.",
+      "The label does not overclaim relative to the predicate. However, the feature is better described as 'about to output y at <DEL>, also weakly when y comes right after'. Adding (phase==1)&(orig(1)==y)&(L>=8) raises test F1 from 0.689 to 0.711 and mass recall from 0.848 to 0.898."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "<DEL> step of long sequences starting with y (about to output y); weaker at <DEL> when y is the second token (L>=8) and in the last 1-2 original steps of long y-initial sequences",
+    "better_predicate": "((phase == 1) & (first_tok == tok(\"y\")) & (L >= 6)) | ((phase == 1) & (orig(1) == tok(\"y\")) & (L >= 8))",
+    "better_predicate_test_f1": 0.711
+  },
+  "final_label": "<DEL> step of long sequences starting with y (about to output y); weaker at <DEL> when y is the second token (L>=8) and in the last 1-2 original steps of long y-initial sequences"
+}

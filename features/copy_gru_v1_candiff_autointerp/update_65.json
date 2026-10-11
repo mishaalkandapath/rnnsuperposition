@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input i (fed-back original token 2-4), not on the last step",
+  "predicate": "(phase == 2) & (in_tok == tok(\"i\")) & (recall_idx >= 3) & (recall_idx <= 5) & (to_go >= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the fed-back input token is the letter i (99.8% of mass has in_tok == i). This happens when the model has just output i as original token 2-4, so recall_idx is 3-5. It is strongest at recall_idx 3, where the top examples all have i at original position 2, and it gets weaker at later positions. It almost never fires on the final output step (to_go == 0). It never fires in the original phase or on <DEL>, never on the first occurrence of i, and essentially never for other tokens. Dev split: F1 0.87, mass recall 0.97.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 65,
+    "predicate": "(phase == 2) & (in_tok == tok(\"i\")) & (recall_idx >= 3) & (recall_idx <= 5) & (to_go >= 1)",
+    "split": "test",
+    "precision": 0.8463715748268594,
+    "recall": 0.8876117093504279,
+    "f1": 0.8665012253957489,
+    "mass_recall": 0.9746250956955643,
+    "correlation": 0.799346126190916,
+    "n_active": 31667,
+    "n_predicted": 33210,
+    "coverage_by_activation_quartile": [
+      0.6081849185297461,
+      0.9460654288240495,
+      0.9963369963369964,
+      0.9998736735725113
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 65,
+    "predicate": "(phase == 2) & (in_tok == tok(\"i\")) & (recall_idx >= 3) & (recall_idx <= 5) & (to_go >= 1)",
+    "split": "dev",
+    "precision": 0.8442069571009052,
+    "recall": 0.8898142829791308,
+    "f1": 0.8664108499432956,
+    "mass_recall": 0.9742858554083715,
+    "correlation": 0.7975787592327724,
+    "n_active": 31338,
+    "n_predicted": 33031,
+    "coverage_by_activation_quartile": [
+      0.6174856413529036,
+      0.9480536056158264,
+      0.9941281593055911,
+      0.9996170538677559
+    ]
+  },
+  "gate": "update",
+  "feature": 65,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims check out on dev. All activation mass is in the copy phase (none in the original phase or on <DEL>). 99.8% of the mass has in_tok == i. in_first == 0 holds for every activation, though this is trivially true because a copy-phase i always appeared earlier in the original. Mass by recall_idx: 0.59 at 3, 0.36 at 4, 0.04 at 5, and 0.007 at 2.",
+      "Precision of (phase==2 & in_tok==i) by recall_idx and L, i.e. P(active), when to_go >= 1: recall_idx 3 gives 0.95-1.0 for L >= 5, and recall_idx 4 gives 0.92-1.0 for L >= 6. When to_go == 0 it collapses: recall_idx 3 at L=4 gives 0.39 and recall_idx 4 at L=5 gives 0.15. This confirms 'not on the last step'.",
+      "Mild overclaim: the label covers 'original token 2-4', but at recall_idx 5 (i at original position 4) the feature fires only 36-48% of the time, even with to_go >= 2. Those activations are weak (about 1.5% of mass), and splitting by digits seen, a vowel as prev_tok, or in_count >= 2 does not separate them. So they look like a graded falloff, not a separate pattern. The core of the feature is i at original positions 2-3. The explanation's 'weaker at later positions' partly covers this.",
+      "Test misses for the original predicate are scattered weak activations: low-activation i at other positions plus a few non-i tokens, 2.5% of mass in total. The false positives are mostly recall_idx 5 and some recall_idx 4 cases with to_go == 1. I found no systematic token, length or history class that is missed.",
+      "Alternative predicates add almost nothing. Restricting to recall_idx 3-4 with to_go >= 1 gives test precision 0.984, recall 0.776, F1 0.868. Adding recall_idx 5 only when to_go >= 2 gives test F1 0.873, against 0.867 for the original. The original predicate is essentially as good as it gets."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input i fed back as original token 2-3 (weaker at 4), not on the last step",
+    "better_predicate": "(phase == 2) & (in_tok == tok('i')) & (((recall_idx >= 3) & (recall_idx <= 4) & (to_go >= 1)) | ((recall_idx == 5) & (to_go >= 2)))",
+    "better_predicate_test_f1": 0.873
+  },
+  "final_label": "copy-phase input i fed back as original token 2-3 (weaker at 4), not on the last step"
+}

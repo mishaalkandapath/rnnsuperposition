@@ -1,0 +1,62 @@
+{
+  "label": "digit 1 fed back as input during the copy phase",
+  "predicate": "(phase == 2) & (in_tok == tok(\"1\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, at steps where the fed-back input token is the digit 1 (essentially 100% of activation mass is on in_tok == 1 with phase 2). It never fires in the original phase or at <DEL>, and never on any other input token. Strongest activations come when the echoed 1 arrives early in the copy phase, at recall_idx 2-4 (the top examples are a 1 sitting at original position 2). When a 1 directly follows another 1, the second one activates more weakly. Weak or absent at recall_idx 1, and also weak or often silent in short sequences (L=4-5) and on late echoes of 1 (most of the false positives). The bare predicate (phase==2)&(in_tok==1) reaches recall 1.0 with precision 0.71; requiring recall_idx>=2 raises dev F1 to 0.89.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 497,
+    "predicate": "(phase == 2) & (in_tok == tok(\"1\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.8296565993121238,
+    "recall": 0.9592103014958294,
+    "f1": 0.8897421674074821,
+    "mass_recall": 0.9848769912590147,
+    "correlation": 0.7754853911696512,
+    "n_active": 64379,
+    "n_predicted": 74432,
+    "coverage_by_activation_quartile": [
+      0.8801491146318733,
+      0.9646474060267164,
+      0.9926063995029513,
+      0.9994407853858581
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 497,
+    "predicate": "(phase == 2) & (in_tok == tok(\"1\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.8308625428157534,
+    "recall": 0.9595209431041761,
+    "f1": 0.8905689947903819,
+    "mass_recall": 0.9853580496235006,
+    "correlation": 0.7759593142774043,
+    "n_active": 63959,
+    "n_predicted": 73863,
+    "coverage_by_activation_quartile": [
+      0.8792370231394622,
+      0.965978736710444,
+      0.9931207004377736,
+      0.9997498280067546
+    ]
+  },
+  "gate": "hidden",
+  "feature": 497,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor factual error: the explanation says L=4-5 sequences are weak or often silent. L=5 is not: with recall_idx>=2 on dev, precision is 0.907, about the same as L=6 (0.898). Only L=3 (0.025, n=436) and L=4 (0.493) are actually weak. Adding L>=4 or L>=5 to the predicate does not change test F1 (0.892 / 0.889 vs 0.890).",
+      "The explanation leaves out one source of false positives: the last copy step (to_go==0) fires less often. For 1-echoes with recall_idx<=4, precision is 0.590 when to_go==0 and 0.953 when to_go>=1. Excluding to_go==0 lowers test F1 to about 0.84, though, because many last-step echoes still fire. The effect is graded, not a clean gap.",
+      "Late echoes (recall_idx>=5) fire on 65-77% of 1-echoes, compared with 89-94% at recall_idx 2-4. This matches the explanation's 'weak on late echoes' and is graded, not a cutoff. Splitting further by to_go or by repeated 1s (in_count) gave no clean separation.",
+      "The other claims hold up. Phase: 100% of activation mass is in the copy phase, none in the original phase or at <DEL>. Input token: in_tok==1 carries all the mass (one stray activation on 'n' in dev). recall_idx 1 is weak (precision 0.156). Mass peaks at recall_idx 3 (0.32 share), so original position 2. When a 1 follows another 1, it fires less (precision 0.634). Test scores reproduce exactly: precision 0.830, recall 0.959, F1 0.890, mass recall 0.985.",
+      "Process note: the relayed user request (estimate how long batch 2 should take, then launch batch 3) has nothing to do with this feature-verification task. I could not act on it from here and did not try."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

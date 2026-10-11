@@ -1,0 +1,62 @@
+{
+  "label": "copy phase: fed-back input e early in the copy (one of the first ~3 recalled tokens)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"e\")) & (recall_idx <= 3) & (to_go >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, and only when the input fed back is the letter e (in_tok == e accounts for 100% of activations). It is limited to early copy steps: e has to be one of original tokens 0-2 (recall_idx 1-3), with at least 2 outputs still to come. Magnitude is largest when e is the first original token, so it is fed back right after <DEL> (recall_idx 1, about 52% of mass; all top examples, max 3.6). It is weaker when e is the second original token (about 40% of mass) and weak or often absent when e is the third (most false positives are here, and in short sequences). Never fires in the original phase, on the delimiter, on any other token, or when e is fed back late in the copy (recall_idx >= 4 is near zero). Nearly all activity is when the model is copying correctly.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 229,
+    "predicate": "(phase == 2) & (in_tok == tok(\"e\")) & (recall_idx <= 3) & (to_go >= 2)",
+    "split": "test",
+    "precision": 0.8638313340603417,
+    "recall": 0.9816859904712071,
+    "f1": 0.9189955656388574,
+    "mass_recall": 0.99732813474489,
+    "correlation": 0.7785333005305075,
+    "n_active": 36311,
+    "n_predicted": 41265,
+    "coverage_by_activation_quartile": [
+      0.9278475435117868,
+      0.9988984357788059,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 229,
+    "predicate": "(phase == 2) & (in_tok == tok(\"e\")) & (recall_idx <= 3) & (to_go >= 2)",
+    "split": "dev",
+    "precision": 0.8627398132947836,
+    "recall": 0.9824223654473927,
+    "f1": 0.9186996112401179,
+    "mass_recall": 0.9975513371057573,
+    "correlation": 0.779084126039203,
+    "n_active": 35841,
+    "n_predicted": 40813,
+    "coverage_by_activation_quartile": [
+      0.9309228880705278,
+      0.9987723214285714,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 229,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Every factual claim checks out on the dev profile. All activation is in the copy phase (0 in the original phase and 0 on the delimiter). in_tok == e holds 100% of activation mass, with 0 activations on any other token. Mass share by recall_idx is 1: 0.524, 2: 0.403, 3: 0.071, and recall_idx >= 4 is about 0.001. Max is 3.61.",
+      "False positives are concentrated where the explanation says they are. At recall_idx == 3, precision is 0.45 overall and 0.37 when to_go == 2. In L <= 4 sequences (recall_idx 1, to_go 2), precision is 0.53. Elsewhere precision is 0.80-0.90. This is acknowledged weakness, not a hidden counterexample class.",
+      "Misses are tiny: 665 steps on test, 0.3% of mass. They are low-amplitude e inputs at recall_idx >= 4 or to_go < 2. There is no systematic pattern.",
+      "Minor point: the label's 'one of the first ~3 recalled tokens' slightly overstates recall_idx 3, which is active less than half the time and carries 7% of mass. In effect the feature is 'e as recall 1 or 2, sometimes 3 when many outputs remain'.",
+      "A refinement that drops recall_idx 3 when to_go < 3 raises test F1 only marginally (0.919 -> 0.925, precision 0.864 -> 0.899, mass recall 0.997 -> 0.991). That is not enough to reject the original."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"e\")) & ((recall_idx <= 2) | ((recall_idx == 3) & (to_go >= 3))) & (to_go >= 2)",
+    "better_predicate_test_f1": 0.9249
+  }
+}

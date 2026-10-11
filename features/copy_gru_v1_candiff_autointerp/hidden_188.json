@@ -1,0 +1,61 @@
+{
+  "label": "copy-phase input token a",
+  "predicate": "(phase == 2) & (in_tok == tok(\"a\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the fed-back input token is the letter a, i.e. right after the model has emitted an a. It covers every activation on dev (recall 1.0). It never fires during the original phase, on the delimiter, or on any other input token, even in the copy phase. About 25% of copy-phase a inputs leave it silent. These are mostly at recall_idx 1, where a was the first original token and is the first fed-back input, and in short sequences. Requiring recall_idx >= 2 raises precision to 0.83 but drops recall to 0.91. Magnitude is weaker at recall_idx 1 and in short sequences (L = 3-4). The strongest activations in the top examples occur when the original has a doubled a (a a), so the a just copied is followed by another a to output. Lowest-quartile examples are mostly a single a early in the copy.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 188,
+    "predicate": "(phase == 2) & (in_tok == tok(\"a\"))",
+    "split": "test",
+    "precision": 0.7440360845622448,
+    "recall": 1.0,
+    "f1": 0.8532347365381477,
+    "mass_recall": 1.0,
+    "correlation": 0.729338221236282,
+    "n_active": 67961,
+    "n_predicted": 91341,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 188,
+    "predicate": "(phase == 2) & (in_tok == tok(\"a\"))",
+    "split": "dev",
+    "precision": 0.7474774063350005,
+    "recall": 1.0,
+    "f1": 0.8554930708977707,
+    "mass_recall": 1.0,
+    "correlation": 0.7312850074810987,
+    "n_active": 68152,
+    "n_predicted": 91176,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 188,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claims hold. On test the predicate scores P 0.744, R 1.0, F1 0.853, mass recall 1.0, and misses shows 0 missed activations. The feature never fires outside the copy phase or on any input other than 'a' (dev profile: in_tok a takes 100% of the mass, and the original phase and delimiter have 0 activations).",
+      "The ~25% of copy-phase 'a' inputs that stay silent are a graded low-magnitude effect, not a separate class. Test precision is 0.36 at recall_idx 1, 0.31 at L<=4 and 0.66 at to_go==0 (the last copy step), versus about 0.82-0.87 for recall_idx>=2. recall_idx 1 accounts for only about 45% of the 23.4k test false positives (about 10.5k), so 'mostly at recall_idx 1' is borderline. The explanation also leaves out the weak last step (to_go==0, about 5.6k FPs).",
+      "Wording issue: the strongest activations come when the current output is also 'a' (out_tok==a gives precision 0.95), not the next output. Conditioning on next_out==a actually lowers precision to 0.67. The explanation's phrase 'so the next output is also a' is ambiguous or slightly off.",
+      "The remaining false positives (12.8k with recall_idx>=2) show no strong pattern by next_out (precision 0.67-0.84 across tokens) or by first_tok, in_count or n_digits. Refinements only help a little: adding recall_idx>=2 & L>=5 gives test F1 0.872 against 0.853, and adding to_go>=1 lowers F1 to about 0.80."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok('a')) & (recall_idx >= 2) & (L >= 5)",
+    "better_predicate_test_f1": 0.872
+  }
+}

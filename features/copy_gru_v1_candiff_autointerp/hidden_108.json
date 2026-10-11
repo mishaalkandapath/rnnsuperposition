@@ -1,0 +1,60 @@
+{
+  "label": "Copy-phase input h (fed-back h), at least 2 outputs into the copy",
+  "predicate": "(phase == 2) & (in_tok == tok(\"h\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only during the copy phase, and only when the input token is h (the model feeding back an h it just produced). It never fires on h in the original phase, at the delimiter, or on any other input token. Plain copy-phase input h gives F1 0.84 with recall 1.0. Adding recall_idx >= 2 removes most false positives, which are h inputs at recall_idx 1, i.e. an h that was the first original token. Those are weak or inactive. Magnitude grows with position in the copy phase: the active rate is about 0.2% of steps at recall_idx 1 and about 3.3% from recall_idx 5 on, and the top activations (about 0.9 of max) are h inputs late in the copy, often right before or after another h. Low-quartile activations are h at recall_idx 1-2. The remaining false positives are mostly early-copy h inputs (recall_idx 2-3) that stay inactive.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 108,
+    "predicate": "(phase == 2) & (in_tok == tok(\"h\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.8654338358458962,
+    "recall": 0.9846020154589666,
+    "f1": 0.9211798770485958,
+    "mass_recall": 0.9962918105534508,
+    "correlation": 0.7949604548953427,
+    "n_active": 65593,
+    "n_predicted": 74625,
+    "coverage_by_activation_quartile": [
+      0.9434721629367644,
+      0.995121356262959,
+      0.999817050859861,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 108,
+    "predicate": "(phase == 2) & (in_tok == tok(\"h\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.8653488154070741,
+    "recall": 0.9857657217831751,
+    "f1": 0.9216406467303317,
+    "mass_recall": 0.9965420187773631,
+    "correlation": 0.795470581394325,
+    "n_active": 65546,
+    "n_predicted": 74667,
+    "coverage_by_activation_quartile": [
+      0.9484347348507963,
+      0.9948129614938671,
+      0.9998169168802636,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 108,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "All factual claims check out. Activation is 100% copy phase and 100% in_tok==h, with 0 activations on h in the original phase, at <DEL>, or on any other input token (dev profile). Plain copy-h on test: P 0.720 R 1.000 F1 0.837. The stated predicate on test: P 0.865 R 0.985 F1 0.921, mass recall 0.996. With recall_idx>=3 on test: P 0.923 R 0.816 F1 0.866. recall_idx==1 copy-h has precision 0.061, and those steps hold only 0.4% of activation mass, so the misses really are weak.",
+      "The explanation leaves out part of the false-positive structure. They depend on outputs remaining (to_go) and sequence length, not only on recall_idx. Copy-h precision by to_go: 0.98 at 0, 0.95 at 1, 0.78 at 2, 0.65 at 3, 0.54 at 4, 0.43 at 5, 0.30 at 6, 0.09 at 7. At recall_idx==2 precision is 0.90 for L<=5 but 0.51 for L>=7. At recall_idx==3 it is 0.92 for L<=5 and 0.70 for L>=7. So 'magnitude grows with position in the copy' is only half the picture: the feature also strengthens as the copy nears its end. The remaining false positives are early-copy h inputs in long sequences with many outputs still to come.",
+      "This dependence is a graded ramp in magnitude, not a separable counterexample class. Predicates that add it do not beat the original on test F1: recall_idx+3>=to_go gives 0.919, recall_idx+2>=to_go 0.918, (to_go<=4)|(recall_idx>=4) 0.906, against 0.921 for the original. No systematic token or history pattern turned up in misses on the test split. The only misses are the low-magnitude recall_idx 1 h inputs (h as the first original token)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

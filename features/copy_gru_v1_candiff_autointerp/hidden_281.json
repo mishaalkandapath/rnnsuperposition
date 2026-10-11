@@ -1,0 +1,61 @@
+{
+  "label": "input token v in the original phase, early positions (t<=5)",
+  "predicate": "(phase == 0) & (in_tok == tok(\"v\")) & (t <= 5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token detector for v being read during the original (pre-<DEL>) phase. It fires only when the input is v, essentially never on other tokens, at the delimiter, or during copy (129 tiny copy-phase activations, about 0% of mass, when v is fed back). It is restricted to early positions: rate is flat for t=0..4, falls at t=5 (many false positives there), and is zero for t>=6. Magnitude is highest at t=0..2 (top examples are v at t=1, after i) and falls off at later positions; v at t=4-5 activates weakly. Repeated occurrences of v also activate more weakly (in_first=0 holds 5% of mass).",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 281,
+    "predicate": "(phase == 0) & (in_tok == tok(\"v\")) & (t <= 5)",
+    "split": "test",
+    "precision": 0.9504006104540251,
+    "recall": 0.9984768318101651,
+    "f1": 0.9738457328277103,
+    "mass_recall": 0.9998976814649313,
+    "correlation": 0.8956086486318842,
+    "n_active": 87318,
+    "n_predicted": 91735,
+    "coverage_by_activation_quartile": [
+      0.9939074667888227,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 281,
+    "predicate": "(phase == 0) & (in_tok == tok(\"v\")) & (t <= 5)",
+    "split": "dev",
+    "precision": 0.9515948823555186,
+    "recall": 0.9985172754649319,
+    "f1": 0.9744915701033127,
+    "mass_recall": 0.9999019993530927,
+    "correlation": 0.8961189098932905,
+    "n_active": 87002,
+    "n_predicted": 91292,
+    "coverage_by_activation_quartile": [
+      0.9940692381959451,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 281,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Only gap: at t=5 the feature fires on v about 60% of the time (dev precision about 0.60 at every L from 6 to 9, so length doesn't explain it). This produces most of the 4550 test false positives. It looks like a firing-threshold effect from activation fading with position. Firing is somewhat more likely when the v is a repeat (in_first==0 precision 0.81 vs 0.56) and when no digits have appeared yet (n_digits==0 0.67 vs 0.50 when n_digits>=2). Neither gives a clean rule, and t=5 holds only about 0.6% of activation mass.",
+      "Dropping t=5 (predicate t<=4) gives precision 1.0, but dev recall falls to 0.92 and F1 to 0.96, so the original predicate is the better trade-off. Restricting t=5 by length (L<=7) scores worse on test (F1 0.967 vs 0.974).",
+      "Test misses (133 steps, about 0% of mass) are all faint firings when v is fed back in the copy phase. This matches the claim of 129 weak copy-phase firings on dev.",
+      "The other claims check out on the dev profile. The feature fires only on in_tok v, never at <DEL>. Firing rate is flat at about 0.033 for original positions 0 to 4, drops to 0.020 at position 5, and is 0 from position 6 on. Activation mass is concentrated at t=0..2. in_first=0 carries 5.4% of mass, and the top examples are v at t=1 after i."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

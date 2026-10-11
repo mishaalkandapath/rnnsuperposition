@@ -1,0 +1,61 @@
+{
+  "label": "copy-phase input token t (fed-back t, not the first copied token)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"t\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase when the fed-back input token is the letter t, at recall_idx >= 2 (i.e., the t being re-read is original token 1 or later). It never fires on any other input token, never in the original or delimiter phase, and is almost silent when t is the first copied token (recall_idx 1, 0.2% of mass). Roughly 86% of qualifying steps are active. In the top and bottom examples, magnitude is largest when the t comes late in the copy, near the end of the sequence (top examples have t as the last or second-to-last copy input), and smallest when t is copied early (recall_idx 2-3). When two t inputs come in a row, the second one is usually weaker or inactive. Output token, sequence length and digit count barely change the firing rate.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 288,
+    "predicate": "(phase == 2) & (in_tok == tok(\"t\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.8584206285253827,
+    "recall": 0.99415186487075,
+    "f1": 0.9213139801375095,
+    "mass_recall": 0.9984677346957097,
+    "correlation": 0.7886904338618116,
+    "n_active": 64294,
+    "n_predicted": 74460,
+    "coverage_by_activation_quartile": [
+      0.9789722533283564,
+      0.9978847828791838,
+      0.9997511354445343,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 288,
+    "predicate": "(phase == 2) & (in_tok == tok(\"t\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.8605296309201533,
+    "recall": 0.9937475818308442,
+    "f1": 0.9223531777667651,
+    "mass_recall": 0.9983644077932363,
+    "correlation": 0.791326287744864,
+    "n_active": 64615,
+    "n_predicted": 74618,
+    "coverage_by_activation_quartile": [
+      0.9777144979571624,
+      0.9974619289340102,
+      0.9998142874829764,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 288,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I reproduced the test scores exactly: P 0.858, R 0.994, F1 0.921, mass recall 0.998. The feature is completely silent in the original and delimiter phases and on every input token except t (profile: all 64615 dev activations have in_tok=t and are in the copy phase).",
+      "Steps where t is the first copied token (recall_idx 1) carry only 0.2% of the mass (404 active). The predicate misses 376 test steps holding 0.2% of the mass, and most of those are this recall_idx-1 case, at activations of 0.01-0.12 of max. That is negligible.",
+      "The 10542 test false positives (about 14% of predicted steps) are spread out rather than forming one class. Firing rate within the predicate: to_go 0-5 gives 0.83-0.89, to_go>=6 gives 0.77, recall_idx 2 gives 0.74, in_count>=2 gives 0.76, orig(0)==t gives 0.66, L==3 gives 0.29 (only 430 steps), n_digits>=3 gives 0.95, out_tok==t gives 0.99. The only strong suppressor is prev_tok==t (rate 0.41 on 2440 steps). Excluding it gives test F1 0.922, versus 0.921 without the exclusion, so leaving it out is reasonable. The explanation already mentions it.",
+      "The magnitude claim holds up when I derive it from the profile (mass share divided by active count): mean activation per active step rises with recall_idx, from about 1.06e-5 per step at recall_idx 2 to 1.55e-5 at recall_idx 3 and 1.89e-5 at recall_idx 8. Copies late in the sequence are stronger."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

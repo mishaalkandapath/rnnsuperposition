@@ -1,0 +1,63 @@
+{
+  "label": "1-2 steps after an input y, early in the original phase",
+  "predicate": "((prev_tok == tok(\"y\")) | (prev2_tok == tok(\"y\"))) & (phase == 0) & (t <= 5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires during the original-input phase on the step right after the letter y is input (prev_tok == y; 79% of activation mass, firing rate 0.42 vs 0.02 base) and more weakly two steps after it (prev2_tok == y). Position-gated: it never fires at t=0 or in the copy phase, it is strongest at t=2..4, and it fades by t=6. The largest activations (near max) come from a doubled y y early in the sequence (e.g. x y y [k]), where the step after the second y is hit by both the one-step and two-step y signals. The step directly after a y is generally stronger than the step two after it. The input token at the active step does not matter. It is almost silent on the delimiter step (1.4% of mass) and never fires while copying. Missed activations are tiny (0.8% of mass).",
+  "test_scores": {
+    "gate": "update",
+    "feature": 598,
+    "predicate": "((prev_tok == tok(\"y\")) | (prev2_tok == tok(\"y\"))) & (phase == 0) & (t <= 5)",
+    "split": "test",
+    "precision": 0.8878768431389226,
+    "recall": 0.8679647462546675,
+    "f1": 0.8778078882692667,
+    "mass_recall": 0.9736313991941857,
+    "correlation": 0.812970433889273,
+    "n_active": 132298,
+    "n_predicted": 129331,
+    "coverage_by_activation_quartile": [
+      0.5358730158730158,
+      0.9530763416477702,
+      0.9855475600169318,
+      0.9973695349821612
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 598,
+    "predicate": "((prev_tok == tok(\"y\")) | (prev2_tok == tok(\"y\"))) & (phase == 0) & (t <= 5)",
+    "split": "dev",
+    "precision": 0.8878650227125243,
+    "recall": 0.8676290659504625,
+    "f1": 0.8776304122252617,
+    "mass_recall": 0.9733251047128646,
+    "correlation": 0.8132921117441383,
+    "n_active": 134040,
+    "n_predicted": 130985,
+    "coverage_by_activation_quartile": [
+      0.5340196956132498,
+      0.9544911966577141,
+      0.9848105043270665,
+      0.9971948672038198
+    ]
+  },
+  "gate": "update",
+  "feature": 598,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The 'two steps after y' branch has a systematic exception that the explanation leaves out. When the token between them (prev_tok) is f, o, z or p, the feature almost never fires at the prev2==y step. Precision of prev2==y & prev_tok==X & phase 0 & t<=5 (dev) is f 0.019, o 0.007, z 0.042, p 0.18. It is also partly suppressed for n (0.34) and u (0.39). Every other intervening token gives 0.86-0.98. This accounts for most of the predicate's false positives, e.g. 'r c r y o [0]', 'q z b y o [z]', 'y u [a]' and 'd y f [i]' are all inactive at the predicted step.",
+      "The prev_tok==y branch is very clean: precision 0.999 at t<=4 and 1.0 at t=1. At t=5 it drops to 0.795, so the fade-out has already started at t=5, not only 'by t=6'. This is a minor issue.",
+      "The other claims check out on dev. Copy phase is silent (0 of 2.73M steps active). The delimiter holds 1.4% of mass. t=0 never fires. Mass peaks at t=2..4 (0.29/0.31/0.20) and is about 0.5% at t=6. prev_tok==y holds 79% of mass with firing rate 0.42 against a base rate of 0.02. The top activations (about 1.0 of max) are the step after a doubled 'y y' at t=1,2. The input token at the active step does not matter (every in_tok has lift about 1.1x).",
+      "The misses are low-amplitude scattered noise: 2.6% of mass on test, and 54% coverage in the lowest activation quartile. No systematic missed class was found.",
+      "Test scores of the original predicate reproduce: P 0.888, R 0.868, F1 0.878, mass recall 0.974. Excluding the suppressing intervening tokens from the prev2 branch raises test precision to 0.94-0.96 at nearly the same recall, so the gap is real and fixable."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Steps 1-2 after an input y in the early original phase (t<=5), strongest right after y. The two-steps-after firing is suppressed if the token in between is f, o, z or p (and partly n or u).",
+    "better_predicate": "(phase == 0) & (t <= 5) & ((prev_tok == tok(\"y\")) | ((prev2_tok == tok(\"y\")) & ~isin(prev_tok, [tok(c) for c in [\"f\",\"o\",\"z\",\"p\",\"n\",\"u\"]])))",
+    "better_predicate_test_f1": 0.903
+  },
+  "final_label": "Steps 1-2 after an input y in the early original phase (t<=5), strongest right after y. The two-steps-after firing is suppressed if the token in between is f, o, z or p (and partly n or u)."
+}

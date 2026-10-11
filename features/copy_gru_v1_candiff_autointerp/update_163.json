@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input m (short sequences)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"m\")) & (L <= 6)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost exclusively (99.9% of mass) when the fed-back copy-phase input token is m, i.e. the step right after the model has output an m during the copy. Never fires in the original phase or at <DEL>, so it never fires on the original m itself. Magnitude depends strongly on sequence length: largest for L=3-5 (top examples are L=3 sequences beginning with m, re-fed at the first copy step), weak for L=6, and near-zero or absent for L>=7. Within the copy phase it is concentrated in the last ~4 steps of the sequence (to_go <= 3). Copy-phase m alone has recall 0.99 but precision 0.30 because long sequences rarely activate; adding L <= 6 gives dev F1 0.80 and mass recall 0.97. Tiny residual activations on copy-phase h/p/1 inputs.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 163,
+    "predicate": "(phase == 2) & (in_tok == tok(\"m\")) & (L <= 6)",
+    "split": "test",
+    "precision": 0.7335350173952503,
+    "recall": 0.879917259399042,
+    "f1": 0.8000857930078699,
+    "mass_recall": 0.9698315154478925,
+    "correlation": 0.6989337634594663,
+    "n_active": 27556,
+    "n_predicted": 33055,
+    "coverage_by_activation_quartile": [
+      0.6524894759761939,
+      0.8808245028305995,
+      0.9863550587893744,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 163,
+    "predicate": "(phase == 2) & (in_tok == tok(\"m\")) & (L <= 6)",
+    "split": "dev",
+    "precision": 0.7385429086795683,
+    "recall": 0.8785961083833425,
+    "f1": 0.802504816955684,
+    "mass_recall": 0.9702487563583272,
+    "correlation": 0.702982002583826,
+    "n_active": 27495,
+    "n_predicted": 32709,
+    "coverage_by_activation_quartile": [
+      0.6483852196683154,
+      0.8779458830375327,
+      0.9880709921443119,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 163,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Core claims check out. On dev, all 27,495 activations are in the copy phase (original and <DEL> both 0 active). in_tok=m carries 99.9% of the mass, and the leftovers on h (77 steps), 1 (36) and p (34) are tiny. in_first is never 1 when active, which fits 'the fed-back m, not the original m'.",
+      "Reported scores reproduce. Dev: P 0.739, R 0.879, F1 0.803, mass recall 0.970. Test: P 0.734, R 0.880, F1 0.800, mass recall 0.970. The to_go<=3 & L<=6 refinement reaches dev F1 0.835 / test 0.832, as stated.",
+      "Length effect confirmed. Precision of copy-phase m by L: L=3 1.00, L=4 1.00, L=5 0.95, L=6 0.41, L=7 0.10, L>=7 0.05. One correction: L=4 holds most of the mass (50.5%), not L=3 (8%). L=3 is rare in the data, though it does dominate the top examples.",
+      "Small structured gap at L=6. How often it fires depends on which original position is being recalled (recall_idx): 0.05 at 1, 0.36 at 2, 0.78 at 3, 0.50 at 4, 0.36 at 5. So 'weak at L=6' hides a position-dependent pattern. Test false positives are mostly L=6 steps where m is fed back early in the copy (e.g. 'm z 2 c u h <DEL> *m*'). Encoding this lifts test F1 only modestly, from 0.800 to 0.845.",
+      "Test misses (3.0% of mass) are low-magnitude m inputs at L>=7 near the end of the sequence (activation/max about 0.01 to 0.17). This matches the explanation's 'close to zero or absent for L>=7'.",
+      "No hidden dependence on history: at L=6, precision is about the same with or without a repeated m (in_count 0.40 vs 0.47) and with or without digits in the sequence (n_digits). correct==0 never occurs within the predicate. The label 'copy-phase input m (short sequences)' matches the predicate without overclaiming."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"m\")) & ((L <= 5) | ((L == 6) & (recall_idx >= 3) & (recall_idx <= 4)))",
+    "better_predicate_test_f1": 0.845
+  }
+}

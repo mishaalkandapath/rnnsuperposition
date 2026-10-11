@@ -1,0 +1,62 @@
+{
+  "label": "letter c input late in the original sequence (position >= 5)",
+  "predicate": "(phase == 0) & (in_tok == tok(\"c\")) & (t >= 5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only when the input token is the letter c during the original (pre-<DEL>) phase at position 5 or later. Never fires on c at positions 0-4, on any other token, at the delimiter, or anywhere in the copy phase. At position >= 6 it fires on every c (precision 1.0 on dev); at position 5 it fires only weakly and on a minority of cases (these are the lowest-quartile activations, ~0.02-0.1 of max), which accounts for most false positives. Magnitude grows with position: the largest activations (~2.7-2.8) are c at position 8 just before <DEL> in L=9 sequences, mid-range ~1.0-1.7 at positions 6-7. Neighbouring tokens, first token, repeats and digit count have essentially no effect.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 240,
+    "predicate": "(phase == 0) & (in_tok == tok(\"c\")) & (t >= 5)",
+    "split": "test",
+    "precision": 0.8088809310653536,
+    "recall": 1.0,
+    "f1": 0.8943440302496388,
+    "mass_recall": 1.000000070450507,
+    "correlation": 0.759266589956747,
+    "n_active": 22588,
+    "n_predicted": 27925,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 240,
+    "predicate": "(phase == 0) & (in_tok == tok(\"c\")) & (t >= 5)",
+    "split": "dev",
+    "precision": 0.8093720576519157,
+    "recall": 1.0,
+    "f1": 0.8946441437835241,
+    "mass_recall": 1.0,
+    "correlation": 0.7610129079144152,
+    "n_active": 22350,
+    "n_predicted": 27614,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 240,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Every claim I checked holds. The feature never fires outside the original phase: 0 activations at the delimiter step or in the copy phase on dev. It never fires on any token other than c, and never at t <= 4. The test split has 0 missed activations and mass recall 1.0.",
+      "All false positives (5337 on test) are c at t == 5. On dev, precision for c at t == 5 is about 0.51-0.52 whatever L is (6, 7, 8 or 9). Precision is 1.0 at t = 6, 7 and 8.",
+      "I looked for history variables that separate the t == 5 cases that fire from those that don't. Only weak effects showed up: a digit as the previous token raises precision to 0.71, but that covers only 1440 cases. in_first, seen(c), in_count, n_digits, first_tok and prev2_tok all leave precision at 0.48-0.61. So the t == 5 cutoff behaves like a magnitude ramp crossing the activation threshold, not a hidden systematic class. This matches the explanation's 'weak, lowest quartile' wording: the t >= 6 predicate covers quartile 1 at 0.0.",
+      "Magnitude does grow with position. Activation mass per active step rises from t=6 to t=7 to t=8, and t=8 (only in L=9 sequences, at the last token before <DEL>) holds the largest values, with max 2.816.",
+      "The label says position >= 5, which slightly overclaims for position 5, where only about half of the c inputs fire. The explanation states this correctly. The alternative t >= 6 predicate scores test F1 0.852 (precision 1.0, recall 0.742), lower than the 0.894 of the reported t >= 5 predicate."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

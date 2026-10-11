@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input h fed back as the 1st or 2nd copied token",
+  "predicate": "(phase == 2) & (in_tok == tok(\"h\")) & (recall_idx <= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase when the input token is h at recall_idx 1 or 2, i.e. the fed-back h is original token 0 (step right after <DEL>) or original token 1. Magnitude is set by position: strong (~0.8-1.0 of max, ~82% of mass) when h was the first original token and comes in right after <DEL>; weak (~0.05-0.25 of max) when h was the second original token. It never fires in the original or delimiter phase, never on h later in the copy (recall_idx >= 3), and almost never on any other token. False positives are mostly short sequences (L=3) where h is the second original token.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 76,
+    "predicate": "(phase == 2) & (in_tok == tok(\"h\")) & (recall_idx <= 2)",
+    "split": "test",
+    "precision": 0.9808110721624562,
+    "recall": 0.9996612048786497,
+    "f1": 0.9901464307504577,
+    "mass_recall": 0.9999869222803631,
+    "correlation": 0.8351488126344376,
+    "n_active": 32468,
+    "n_predicted": 33092,
+    "coverage_by_activation_quartile": [
+      0.9986448195145989,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 76,
+    "predicate": "(phase == 2) & (in_tok == tok(\"h\")) & (recall_idx <= 2)",
+    "split": "dev",
+    "precision": 0.9809162585115279,
+    "recall": 0.9997260607536373,
+    "f1": 0.9902318429859206,
+    "mass_recall": 0.9999915871068711,
+    "correlation": 0.8350819911607115,
+    "n_active": 32854,
+    "n_predicted": 33484,
+    "coverage_by_activation_quartile": [
+      0.9989043097151206,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 76,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims hold up. On the test split I get precision 0.981, recall 0.9997 and mass recall 1.0. The dev profile shows all activation in the copy phase, at recall_idx 1 (82.4% of mass) and 2 (17.6%), and 32845 of 32854 active steps have in_tok h.",
+      "There is one systematic false-positive class. With L=3, an h at recall_idx 2 almost never fires: the predicate (recall_idx==2)&(L==3) has test precision 0.05 over 436 predicted steps, which is about 414 of the 635 test false positives. With L=4 its precision is 0.91. The explanation does report this ('most false positives are short sequences (seen with L=3)'), but the label leaves it out.",
+      "At recall_idx 2 the activation is small and grows with length: about 0.03 to 0.12 at L=4 or 5 and about 0.20 to 0.24 at L=7 to 9. At recall_idx 1 it is about 0.8 to 0.9. This matches the stated ranges.",
+      "The 11 missed test steps carry about 0% of the mass. They are tiny activations of 0.01 to 0.06 on h at recall_idx 3 when h was also the first original token, or on r, 3 or g at recall_idx 1. This is scattered noise."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input h fed back as the 1st copied token (strong) or 2nd copied token (weak, absent when L=3)",
+    "better_predicate": "(phase == 2) & (in_tok == tok('h')) & ((recall_idx == 1) | ((recall_idx == 2) & (L >= 4)))",
+    "better_predicate_test_f1": 0.996
+  },
+  "final_label": "copy-phase input h fed back as the 1st copied token (strong) or 2nd copied token (weak, absent when L=3)"
+}

@@ -1,0 +1,62 @@
+{
+  "label": "<DEL> step of long sequences (L>=7), ramping up over the final original tokens",
+  "predicate": "((phase == 1) & (L >= 7)) | ((phase == 0) & (t == 8))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost only at the <DEL> step (about 90% of activation mass), and only when the sequence is long: rate at <DEL> is about 0 for L<=5, low for L=6, high for L=7 and about 100% for L=9. In long sequences it starts ramping up weakly one or two original tokens before <DEL> (mostly the last original token at absolute step t=8 when L=9). Magnitude grows with the absolute step / sequence length and peaks at the <DEL> step of L=8-9 sequences. Token identity hardly matters (all lifts are under 2x). It never fires in the copy phase or at steps t<=4. Misses are mostly weak activations at <DEL> for L=6 and weak pre-<DEL> activity at t=6-7. False positives are L=7-8 <DEL> steps and L=9 final original tokens that fall just under threshold.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 55,
+    "predicate": "((phase == 1) & (L >= 7)) | ((phase == 0) & (t == 8))",
+    "split": "test",
+    "precision": 0.841203202118695,
+    "recall": 0.8653447261694684,
+    "f1": 0.8531032062140427,
+    "mass_recall": 0.9524906144783668,
+    "correlation": 0.8048627103524154,
+    "n_active": 64602,
+    "n_predicted": 66456,
+    "coverage_by_activation_quartile": [
+      0.598662621509504,
+      0.8800074298805027,
+      0.983343653250774,
+      0.9993808049535604
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 55,
+    "predicate": "((phase == 1) & (L >= 7)) | ((phase == 0) & (t == 8))",
+    "split": "dev",
+    "precision": 0.8407668231611893,
+    "recall": 0.864013113131688,
+    "f1": 0.8522314755498612,
+    "mass_recall": 0.9520755855631629,
+    "correlation": 0.8044088686875122,
+    "n_active": 64668,
+    "n_predicted": 66456,
+    "coverage_by_activation_quartile": [
+      0.5964619286200284,
+      0.8760437929114864,
+      0.9842271293375394,
+      0.9993196016576977
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 55,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The claim 'token identity hardly matters (all lifts under 2x)' is false where the unit is near threshold. The first original token strongly changes the firing rate. At the <DEL> step of L=6 sequences the dev rate is 0.74 for first_tok 't', 0.59 'g', 0.51 'p', 0.46 'j', 0.42 'o', but 0.012 'd', 0.011 'h' and 0.05 'v'. At t=8 (original phase) it is 0.82 for 't' and 0.79 'p' versus 0.17 'h', 0.20 'd' and 0.27 'v'. At t=7 it is 0.44 't' versus 0.02 'd'/'h'. The pooled profile already shows a 2.7x next_out lift for 't', and the pooled tables hide this because L>=7 <DEL> is saturated.",
+      "The same first-token ordering (t, p, g, j, o, z, r high; d, h, v, l, x low) shows up in every borderline cell. So the unit's drive is roughly absolute step plus sequence length plus a bias from the first token. The listed misses (weak L=6 <DEL> steps) and false positives (t=8 steps under threshold) are largely this one systematic class, not noise.",
+      "Minor: the pre-<DEL> ramp depends on absolute step t, not on position relative to the end of the sequence. Rate at t=7 is 0.137 for L=8 (last token) and 0.142 for L=9 (not last), so 'ramping up over the final original tokens' slightly misdescribes it.",
+      "Confirmed claims: about 90% of activation mass is at <DEL>. <DEL> rate is 0.003 at L=5, 0.23 at L=6, 0.86 at L=7, 0.99 at L=8 and 1.00 at L=9. The unit never fires in the copy phase or at t<=4. Rate at t=8 is 0.52. Test F1 0.853 is reproduced."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Late absolute step / <DEL> of long sequences (L>=7), threshold modulated by first original token",
+    "better_predicate": "((phase==1)&(L>=7))|((phase==1)&(L==6)&isin(first_tok,[tok('t'),tok('g'),tok('p')]))|((phase==0)&(t==8)&~isin(first_tok,[tok('d'),tok('h'),tok('v'),tok('l'),tok('x')]))",
+    "better_predicate_test_f1": 0.866
+  },
+  "final_label": "Late absolute step / <DEL> of long sequences (L>=7), threshold modulated by first original token"
+}

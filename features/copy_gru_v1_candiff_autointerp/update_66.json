@@ -1,0 +1,74 @@
+{
+  "label": "copy phase: fed-back x as the first copied token (step after <DEL>)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"x\")) & (recall_idx == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost only in the copy phase when the input token is x, i.e. the model own echoed output x is fed back. Strongest and most reliable at the step right after the first copy output (recall_idx 1, prev input <DEL>, so the original sequence began with x): 91% of activation mass, 95% precision. Weaker, less reliable tail when x is fed back at recall_idx 2-3 (about 9% of mass); essentially never at recall_idx >= 4. Magnitude is larger for short sequences (L 4-5) and top examples begin x x. Does not fire on x in the original phase, on the delimiter, or on any other copy-phase input token.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 66,
+    "predicate": "(phase == 2) & (in_tok == tok(\"x\")) & (recall_idx == 1)",
+    "split": "test",
+    "precision": 0.9487536302032914,
+    "recall": 0.6919512840879004,
+    "f1": 0.8002551671344731,
+    "mass_recall": 0.9097508291274438,
+    "correlation": 0.8492104288405469,
+    "n_active": 22662,
+    "n_predicted": 16528,
+    "coverage_by_activation_quartile": [
+      0.2762089657606777,
+      0.5287680903635722,
+      0.9629302736098853,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 66,
+    "predicate": "(phase == 2) & (in_tok == tok(\"x\")) & (recall_idx == 1)",
+    "split": "dev",
+    "precision": 0.9451134644478063,
+    "recall": 0.6880782447792757,
+    "f1": 0.7963694770925223,
+    "mass_recall": 0.9087901786387533,
+    "correlation": 0.8512476724035811,
+    "n_active": 22698,
+    "n_predicted": 16525,
+    "coverage_by_activation_quartile": [
+      0.2585022026431718,
+      0.5298678414096917,
+      0.9640465280225591,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 66,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most of the stated facts check out on test: all activation mass is in the copy phase, in_tok x accounts for ~100% of mass, recall_idx 1 holds 91% of mass, and the feature never fires at recall_idx >= 4. The predicate's test scores reproduce exactly (P 0.949, R 0.692, F1 0.800, mass recall 0.910).",
+      "Systematic miss: the 'weaker, less reliable tail' at recall_idx 2 is reliable for short sequences. On test, (in_tok==x)&(recall_idx==2)&(L<=5) has precision 0.76 and covers 19% of all active steps. Over all lengths, recall_idx 2 has precision only 0.36. So the 'widening drops precision to 0.65' result comes from recall_idx 2 at long L, not from recall_idx 2 being unreliable in general. The weak tail depends on length, and the explanation does not say so.",
+      "Systematic false positives: the predicate's inactive cases are concentrated at L=9 (step 10). In test misses, every shown false positive is x at recall_idx 1 with L=9. On its own, recall_idx==1 & L==9 has precision 0.72, versus about 0.95 overall. The feature cuts off by absolute step (nothing beyond t=12), which fits the length dependence.",
+      "The label 'first copied token' overclaims. It ignores that about 31% of active steps (count recall) are x fed back at recall_idx 2-3, which are mostly short sequences."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "copy phase: fed-back x early in the copy (strongest at recall_idx 1; also recall_idx 2 when L <= 5-6; fades at long L)",
+    "better_predicate": "(phase == 2) & (in_tok == tok('x')) & ((recall_idx == 1) | ((recall_idx == 2) & (L <= 6)))",
+    "better_predicate_test_f1": 0.894
+  },
+  "final_label": "copy phase: fed-back x early in the copy (strongest at recall_idx 1; also recall_idx 2 when L <= 5-6; fades at long L)",
+  "scorecard": {
+    "format": "slot2",
+    "summary": "Graded preference over the current input token (most: x, h, l, y, 1, v; least: 3, b, f, o) and the token being output (most: x, h, 1, m, l, y; least: u, p, 2, -); timing cues that raise it most: recall_idx=1, t=7, t=6.",
+    "test_f1": 0.9141151423366477,
+    "test_precision": 0.9093846892877419,
+    "test_recall": 0.9188950666313653,
+    "full_test_f1": 0.9330788086509468,
+    "full_n_cues": 212,
+    "top40_test_f1": 0.9114518216314623,
+    "slot2_test_f1": 0.9141151423366477,
+    "file": "scorecards/update_66.json"
+  }
+}

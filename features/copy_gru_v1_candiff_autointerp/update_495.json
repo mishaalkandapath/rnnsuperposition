@@ -1,0 +1,62 @@
+{
+  "label": "one or two steps after an early \"o\" in the original sequence",
+  "predicate": "(phase == 0) & (t <= 4) & ((prev_tok == tok(\"o\")) | (prev2_tok == tok(\"o\")))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires during the original-input phase, at early positions (t=1..4, nearly nothing from t>=6), on the step right after the letter o was input and more weakly two steps after it. The previous input being o carries about 81% of activation mass, and the top activation quartile is almost all prev_tok == o. The strongest activations come at t=2-4 after o was input at position 1 and/or 2 (e.g. b o o [x]), with the o-o pairs reaching about 0.98 of max. Steps two after an o are weaker (around 0.1-0.5 of max). The feature does not fire at t=0 or in the copy phase, there is only a trace at the delimiter, and the identity of the current input token barely matters. The remaining misses are small, scattered activations (around 1% of mass) at t=3-4.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 495,
+    "predicate": "(phase == 0) & (t <= 4) & ((prev_tok == tok(\"o\")) | (prev2_tok == tok(\"o\")))",
+    "split": "test",
+    "precision": 0.88665105818155,
+    "recall": 0.8945669965032363,
+    "f1": 0.8905914376712835,
+    "mass_recall": 0.982147003275905,
+    "correlation": 0.7919808074078404,
+    "n_active": 107528,
+    "n_predicted": 108488,
+    "coverage_by_activation_quartile": [
+      0.6181459712818986,
+      0.9713190982813779,
+      0.9895097090990254,
+      0.9992932073506435
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 495,
+    "predicate": "(phase == 0) & (t <= 4) & ((prev_tok == tok(\"o\")) | (prev2_tok == tok(\"o\")))",
+    "split": "dev",
+    "precision": 0.8849630011412584,
+    "recall": 0.8944881157263128,
+    "f1": 0.8897000652333829,
+    "mass_recall": 0.9818450674635689,
+    "correlation": 0.7904049753259209,
+    "n_active": 107495,
+    "n_predicted": 108652,
+    "coverage_by_activation_quartile": [
+      0.6204137828384312,
+      0.9696732901689366,
+      0.9884274763712139,
+      0.9994418189260597
+    ]
+  },
+  "gate": "update",
+  "feature": 495,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced the test scores exactly: P 0.887, R 0.895, F1 0.891, mass recall 0.982. Coverage by activation quartile is 0.62/0.97/0.99/1.00, so the misses are almost all low-magnitude activations.",
+      "Phase and position claims check out on the dev profile: zero activations in the copy phase, 0.3% of mass at the delimiter, none at t=0, and about 99% of mass at t=1..4. t=5 holds 0.9% of mass (2796 steps) and t=6 has only 25 steps. One small inaccuracy: the explanation puts the leftover misses at t=3-4, but some are at t=5 (for example 'b z q o [r:0.28]' at step 5). Splitting by t also gives a near-zero firing rate for prev_tok==o at t=5 (precision 0.15), so the cutoff at t<=4 is right.",
+      "The prev_tok==o claim is strong: precision is 1.0 at t=1, 2 and 3 and 0.89 at t=4. prev_tok==o carries 81% of mass and is 21x more likely than baseline to be active; the current input token barely matters (rate ratio 1.1-1.3x for every token).",
+      "The prev2 (two steps after o) branch is weaker and noisier, which the explanation states. Precision is 0.76 at t=2, 0.85 at t=3 and 0.64 at t=4. Most false positives come from here, at t=4 and at t=2 when o was at t=0. Precision is the same at short and long lengths (about 0.64 for both L<=5 and L>=7 at t=4), so this is not a systematic length effect. Firing probably depends on which token sits between the o and the current step, but that is second-order.",
+      "The test misses are scattered small activations (0.00-0.07 of max) carrying 1.8% of mass. I found no systematic class of misses by token, position or length."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

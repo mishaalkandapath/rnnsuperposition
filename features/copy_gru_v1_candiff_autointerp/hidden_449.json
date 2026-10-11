@@ -1,0 +1,63 @@
+{
+  "label": "Second copy-phase step: outputting original token 1 right after <DEL>",
+  "predicate": "(recall_idx == 1) | ((recall_idx == 2) & (L >= 7))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Positional feature for the start of the copy phase. It fires on the step right after <DEL> is input (recall_idx == 1, input = original token 0 fed back, output = original token 1). That is 89% of such steps and 91% of activation mass. It also has a weak tail at recall_idx == 2 (about 0.1-0.3 of max, ~8% of mass), mostly for longer sequences. Magnitude rises with sequence length: near zero for L=3-4, and all top activations (~5.3) come from L=8-9 at recall_idx 1. It does not depend on token identity (in_tok, out_tok and first_tok lifts are all flat). It is essentially silent in the original phase, on the <DEL> step itself, and at recall_idx >= 3.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 449,
+    "predicate": "(recall_idx == 1) | ((recall_idx == 2) & (L >= 7))",
+    "split": "test",
+    "precision": 0.8226078576367292,
+    "recall": 0.9346174377763893,
+    "f1": 0.875042773634119,
+    "mass_recall": 0.9881942835594971,
+    "correlation": 0.7434081545033271,
+    "n_active": 659396,
+    "n_predicted": 749182,
+    "coverage_by_activation_quartile": [
+      0.7833107874479068,
+      0.9551589636576503,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 449,
+    "predicate": "(recall_idx == 1) | ((recall_idx == 2) & (L >= 7))",
+    "split": "dev",
+    "precision": 0.8221241572261311,
+    "recall": 0.9346451746052943,
+    "f1": 0.8747811822019906,
+    "mass_recall": 0.9882714562413303,
+    "correlation": 0.7435461108046971,
+    "n_active": 658972,
+    "n_predicted": 749163,
+    "coverage_by_activation_quartile": [
+      0.7825886380604943,
+      0.955992060360683,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 449,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Length dependence at recall_idx 1 is a hard step, not just 'magnitude rises with length'. On dev, recall_idx==1 has precision 0.0 at L=3 (0 of 13065 steps active), 0.395 at L=4, and 1.0 at every L from 5 to 9. The explanation mentions the L=4 weakness but leaves out that L=3 is completely silent. The label ('outputting original token 1 right after <DEL>') does not say that short sequences are excluded.",
+      "The recall_idx 2 tail is partial even where the predicate includes it. Precision of recall_idx==2 is 0.71 at L=7, 0.75 at L=8 and 0.62 at L=9. It is also 0.43 at L=6, which the predicate leaves out (about 1% of mass, the main class of missed activations in the test misses output). Which recall_idx 2 steps fire is not explained by anything I tested: digit vs letter input, n_digits and correct all leave precision flat (0.66-0.76). This looks like a threshold effect on a weak tail, not a missed variable.",
+      "The same goes for L=4 at recall_idx 1: digit vs letter input and n_digits do not separate active from inactive steps (precision 0.32-0.42 in every case).",
+      "Small off-target activity: about 5% of the last original-token steps fire at L=9 (orig_idx 8, about 0.1% of mass), and recall_idx 8 fires about 0.2% of the time. Both are negligible.",
+      "The other claims check out on dev. Activation mass is 0.999 in the copy phase; recall_idx 1 is active 88.6% of the time with 91.5% of mass; recall_idx 2 holds 8.4% of mass; the <DEL> step and recall_idx >= 3 are essentially silent; in_tok and out_tok lifts are flat. The reported test scores reproduce exactly: P 0.823, R 0.935, F1 0.875, mass recall 0.988."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Second copy-phase step (recall_idx 1, outputting original token 1 after <DEL>) in sequences with L>=5, with a weaker partial tail at recall_idx 2 for L>=6",
+    "better_predicate": "((recall_idx == 1) & (L >= 5)) | ((recall_idx == 2) & (L >= 6))",
+    "better_predicate_test_f1": 0.887
+  },
+  "final_label": "Second copy-phase step (recall_idx 1, outputting original token 1 after <DEL>) in sequences with L>=5, with a weaker partial tail at recall_idx 2 for L>=6"
+}

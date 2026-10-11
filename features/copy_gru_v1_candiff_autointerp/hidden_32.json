@@ -1,0 +1,63 @@
+{
+  "label": "Dense near-constant feature: on at every step except the <DEL> delimiter",
+  "predicate": "phase != 1",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Dense, bias-like feature, active on 81% of all steps. It is strongly suppressed at the delimiter step: it fires on only 16% of <DEL> steps, which hold 1% of activation mass. Elsewhere it is on almost everywhere: 100% at t=0, about 98% at t=1, falling to roughly 40-60% late in the original phase (orig_idx 6-8), then back to about 90% throughout the copy phase. The predicate phase != 1 gets F1 0.92 and mass recall 0.99 on dev; nearly all false positives are late original-phase or end-of-copy steps where the feature is weakly off. Magnitude is largest at original steps 1-3 (about 40% of mass is at t<=3), and the top activations come from sequences beginning with d d w. Copy-phase activations are small, roughly 0.1-0.4 of max. Activation rate depends only weakly on token identity (in_tok rates 0.87-0.96, with w, f, 0 and u slightly higher). It does not depend on out_tok, next_out, first_tok or digit count. It does not fire meaningfully on the delimiter.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 32,
+    "predicate": "phase != 1",
+    "split": "test",
+    "precision": 0.8686890485197258,
+    "recall": 0.9844905276584165,
+    "f1": 0.9229716868691223,
+    "mass_recall": 0.9902521597843613,
+    "correlation": 0.2730796055941742,
+    "n_active": 5262268,
+    "n_predicted": 5963760,
+    "coverage_by_activation_quartile": [
+      0.9681871010750498,
+      0.9870542511327816,
+      0.9892076952371107,
+      0.9935130631887239
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 32,
+    "predicate": "phase != 1",
+    "split": "dev",
+    "precision": 0.8683734298309894,
+    "recall": 0.9844813944407458,
+    "f1": 0.922789496399237,
+    "mass_recall": 0.9902181391156947,
+    "correlation": 0.2727847011826956,
+    "n_active": 5260202,
+    "n_predicted": 5963530,
+    "coverage_by_activation_quartile": [
+      0.9682476192938525,
+      0.987066661292984,
+      0.9892171400326983,
+      0.9933941675221475
+    ]
+  },
+  "gate": "hidden",
+  "feature": 32,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Systematic false-positive class the explanation misses: in the copy phase the feature is off when the input token is 'd'. (phase==2)&(in_tok==d) has precision 0.080 (about 8% active, n=90,853 dev steps). Every other copy-phase input token sits at about 0.90-0.98 (a 0.93, b 0.91, c 0.92, l 0.98, 1 0.98, 0 0.90, ...). This shows up repeatedly as unhighlighted '*d*' steps in the test-split false positives.",
+      "So the claim that it 'depends only weakly on token identity (in_tok rates 0.87-0.96)' is wrong. The aggregate in_tok table hides this because 'd' is active about 93% of the time in the original phase but about 8% in the copy phase. 'd' also shapes the top activations (sequences starting d d w), and in the late original phase the rate is higher when 'd' was seen earlier (0.83 vs 0.63 at orig_idx>=4).",
+      "The second large false-positive class is the late original phase. At orig_idx>=5 precision is only 0.60, and the rate falls steadily from 1.00 at t=0 to 0.375 at orig_idx 8. The explanation notes this but calls it 'weakly off'. This is a clear dependence on position, not scattered noise. It does not depend on in_first or on whether the previous token was a digit (both about 0.60-0.67).",
+      "Claims that check out: phase != 1 scores test F1 0.923 and mass recall 0.99. The delimiter rate is 16%, holding 1% of mass. About 45% of mass is at t<=3. Rates by t, out_tok, next_out, first_tok and n_digits match what was reported. Copy phase holds 38.5% of mass at a 0.907 rate.",
+      "Better predicate: (phase==0) | ((phase==2) & (in_tok!=tok('d'))). Test precision rises from 0.869 to 0.881 and F1 from 0.923 to 0.929. Also restricting the original phase to (orig_idx<=5 or 'd' seen) raises precision to 0.910, but F1 stays at 0.928."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Dense near-constant feature: on almost everywhere except the <DEL> step and copy-phase steps whose input is 'd'; fades in the late original phase",
+    "better_predicate": "(phase==0) | ((phase==2) & (in_tok!=tok('d')))",
+    "better_predicate_test_f1": 0.929
+  },
+  "final_label": "Dense near-constant feature: on almost everywhere except the <DEL> step and copy-phase steps whose input is 'd'; fades in the late original phase"
+}

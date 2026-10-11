@@ -1,0 +1,61 @@
+{
+  "label": "first copy-phase input is fed-back o (first original token o), shorter sequences",
+  "predicate": "(phase == 2) & (in_tok == tok(\"o\")) & (recall_idx == 1) & (L <= 8)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, on the step right after <DEL> (t = L+1, recall_idx 1) when the fed-back input is o, i.e. when the sequence started with o. This one context holds about 98% of activation mass. Strength falls as L grows: strongest for L = 3-6, weak for L = 8, and mostly silent at L = 9, which is where most false positives of the simpler predicate (no L limit, F1 0.87) come from. A small weak tail (about 2% of mass) fires at t = L+2 when the fed-back input is o as the second original token (e.g. m o y r <DEL> m [o]). Never fires in the original or delimiter phases, on any input other than o, or on o later in the copy phase.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 891,
+    "predicate": "(phase == 2) & (in_tok == tok(\"o\")) & (recall_idx == 1) & (L <= 8)",
+    "split": "test",
+    "precision": 0.9821338155515371,
+    "recall": 0.8287859366416407,
+    "f1": 0.8989671610169492,
+    "mass_recall": 0.9717387582456317,
+    "correlation": 0.8944213225547649,
+    "n_active": 16383,
+    "n_predicted": 13825,
+    "coverage_by_activation_quartile": [
+      0.396728515625,
+      0.91845703125,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 891,
+    "predicate": "(phase == 2) & (in_tok == tok(\"o\")) & (recall_idx == 1) & (L <= 8)",
+    "split": "dev",
+    "precision": 0.9824611435904749,
+    "recall": 0.830821174484505,
+    "f1": 0.9003005357376193,
+    "mass_recall": 0.9730713020852771,
+    "correlation": 0.8959017883130058,
+    "n_active": 16586,
+    "n_predicted": 14026,
+    "coverage_by_activation_quartile": [
+      0.39281408246925487,
+      0.9305522064142754,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 891,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The main claims hold on the test split. The predicate scores P 0.982, R 0.829, F1 0.899, mass recall 0.972, matching the reported numbers. The profile shows 100% of activation mass in the copy phase and 100% on in_tok o. recall_idx 1 holds 97.9% of mass, recall_idx 2 holds 2.1%, and nothing fires at recall_idx >= 3, in the original phase or at the delimiter.",
+      "The length trend is confirmed. Restricted to L == 8, the predicate has precision 0.92 but only 5.2% of mass. At L == 9 the o-at-recall_idx-1 context fires only 28% of the time and holds 0.6% of mass, so 'mostly silent at L = 9' is fair. Without the L limit, test F1 is 0.870. Cutting at L <= 7 raises precision to 0.998 but drops F1 to 0.803, so L <= 8 is the right cutoff.",
+      "The tail is described too strongly. When the fed-back o is the second original token (recall_idx 2), the feature fires on only about 12% of those steps overall (precision 0.123). It depends on length: firing rates are 0.40 at L = 5, 0.23 at L = 6, 0.08 at L = 4, and about 0 at L = 3, 8 and 9. Adding this context to the predicate drops precision to about 0.56 and F1 to 0.71. It is a weak, sparse context mostly at L = 5-6, not one that fires reliably on the second o. It is only 2% of mass, so this is a minor wording issue.",
+      "The missed activations in the test-split misses are all weak (0.01-0.13 relative to the max). They are L = 9 o-first cases and weak recall_idx 2 o steps. The false positives are almost all L = 8 at t = 9. These are the known soft edges of the length cutoff, not a new class of counterexample."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

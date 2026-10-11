@@ -1,0 +1,64 @@
+{
+  "label": "Sequence started with a: later original-phase steps and <DEL>",
+  "predicate": "(first_tok == tok(\"a\")) & (t >= 3) & (t <= L)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires when the first original token is a, from step 3 up to and including the <DEL> step (t <= L). It is silent at t = 0-2 and almost never fires in the copy phase (0.1% of mass), so it stays on through the input after an initial a and turns off once the model starts outputting (the first output is a). The token being input at the current step barely matters. Magnitude: in the profile examples the activation is low at t = 3, climbs to a peak around t = 4-6, and drops a little at <DEL>. The largest activations all come from sequences starting a a, but I did not score this separately. Misses (about 26% of active steps, only 6% of mass) are weak activations, mostly in sequences where a is the second token rather than the first. Adding orig(1)==a as an alternative drops precision to 0.64, so it was left out. False positives are mainly sequences of length 3 that start with a, where the feature does not fire at t=3. Dev: P 0.99, R 0.74, F1 0.85, mass recall 0.94.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 312,
+    "predicate": "(first_tok == tok(\"a\")) & (t >= 3) & (t <= L)",
+    "split": "test",
+    "precision": 0.9889001692047378,
+    "recall": 0.7384141102744226,
+    "f1": 0.8454950523696545,
+    "mass_recall": 0.9373083618259431,
+    "correlation": 0.9270701974330375,
+    "n_active": 98935,
+    "n_predicted": 73875,
+    "coverage_by_activation_quartile": [
+      0.10228834802296434,
+      0.8514595293927387,
+      0.9999191396458317,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 312,
+    "predicate": "(first_tok == tok(\"a\")) & (t >= 3) & (t <= L)",
+    "split": "dev",
+    "precision": 0.9883116883116884,
+    "recall": 0.7432763082375923,
+    "f1": 0.8484566358051299,
+    "mass_recall": 0.9390904122690167,
+    "correlation": 0.926191854734679,
+    "n_active": 99313,
+    "n_predicted": 74690,
+    "coverage_by_activation_quartile": [
+      0.1096298682991663,
+      0.8635411632028355,
+      0.9999597228935073,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 312,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core predicate holds up on test: P 0.989, R 0.738, F1 0.845, mass recall 0.937. Phase shares agree with the explanation: copy phase holds 0.1% of mass, <DEL> 17%, and t = 0-2 never fire. The activation mass by t peaks at t = 4-5 (0.27 and 0.24), which matches the magnitude claim.",
+      "One factual claim is wrong. The explanation says false positives are 'mainly sequences of length 3 that start with a', but the L=3 slice scores precision 0.97, so those sequences are not the FP source. The actual systematic FP class is 'a ? a' (a at positions 0 and 2) at exactly t = 3. The predicate (first_tok==a)&(orig(2)==a)&(t==3) has precision 0.0: the feature is fully silent there. Excluding that class raises precision from 0.989 to 0.996 at the same recall.",
+      "Also related: when the previous input is a again (prev_tok==a), precision drops to 0.77. So the feature is partly suppressed when a reappears in the input, not only at t = 3.",
+      "The claim that 'the largest activations all come from sequences starting a a' is unsupported. Sequences starting a a carry only 4.6% of activation mass (precision 0.995, recall 0.025). The magnitude ordering could not be checked with these binary scores, and that part was hedged anyway.",
+      "The misses are one systematic class: sequences with a as the second token but not the first. Restricted to t >= 4, that class has precision 0.37, recall 0.21 and mass 5.8%. The explanation already admits it, it is weak, and adding it lowers F1, so it is not a blocker.",
+      "A secondary miss pattern appeared at t = 3 with no a anywhere, often with h as the third token (prev_tok h shows 2.4x lift). It is tiny: (orig(2)==h)&(t==3) has precision 0.23 and 1.3% of mass."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Sequence started with a: later original-phase steps and <DEL> (silent at t=3 when a recurs at position 2)",
+    "better_predicate": "(first_tok == tok(\"a\")) & (t >= 3) & (t <= L) & ~((orig(2)==tok(\"a\")) & (t==3))",
+    "better_predicate_test_f1": 0.848
+  },
+  "final_label": "Sequence started with a: later original-phase steps and <DEL> (silent at t=3 when a recurs at position 2)"
+}

@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input token d",
+  "predicate": "(phase == 2) & (in_tok == tok(\"d\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the fed-back input token is d (99.6% of activations, 99.9% of mass). It never fires on d during the original phase or at the delimiter, and almost never on any other copy input (a few weak hits on r). Magnitude grows with position in the copy: d echoed at recall_idx 1-2 (the first copy steps, e.g. a sequence starting with d) is weak or silent, which accounts for most false positives. The strongest activations come at late copy steps (recall_idx >= 5), especially in long sequences; restricting to recall_idx >= 3 gives precision 0.95 but loses recall.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 375,
+    "predicate": "(phase == 2) & (in_tok == tok(\"d\"))",
+    "split": "test",
+    "precision": 0.7924803456102455,
+    "recall": 0.994756110988769,
+    "f1": 0.8821716496701392,
+    "mass_recall": 0.9989435747120966,
+    "correlation": 0.7490183717586736,
+    "n_active": 72656,
+    "n_predicted": 91201,
+    "coverage_by_activation_quartile": [
+      0.980510900682669,
+      0.9985685972252808,
+      0.9999449460471261,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 375,
+    "predicate": "(phase == 2) & (in_tok == tok(\"d\"))",
+    "split": "dev",
+    "precision": 0.7927311150980155,
+    "recall": 0.9957692733104745,
+    "f1": 0.8827253172857135,
+    "mass_recall": 0.999124314036406,
+    "correlation": 0.7507520372412106,
+    "n_active": 72328,
+    "n_predicted": 90853,
+    "coverage_by_activation_quartile": [
+      0.9841831655790289,
+      0.9988939276628691,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 375,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core label holds. On dev, 100% of activation mass is in the copy phase and in_tok d carries 99.9% of it. Original-phase and delimiter activity is exactly 0. Non-d hits are 226 on r, 22 on h and under 20 on each other token, all weak (missed mass on test is 0.1%). The reported test scores reproduce: P 0.792, R 0.995, F1 0.882.",
+      "The explanation gives the wrong cause for the false positives. It says copy-phase d is weak or silent at recall_idx 1-2 and blames that. The real driver is absolute step t, i.e. short sequences, not position within the copy. Dev precision of the predicate at recall_idx == 1: 0.012 when L == 4, but 0.76 when L == 8. At recall_idx == 3: 0.68 when L == 4, 0.88 when L == 8. By t: precision 0.05 at t == 5, 0.29 at t == 6, 0.46 at t == 7, 0.63 at t == 8, 0.80 at t == 9.",
+      "This is a systematic false-positive class, not noise: copied d in short sequences or at early absolute steps. The test misses list is dominated by these (e.g. 'x d l i <DEL> x *d* l', 'd s 3 0 <DEL> *d* s 3'), with 18.9k false-positive steps in total. 'Magnitude grows with position in the copy' is partly confounded: activation grows with t (overall elapsed steps) more than with recall_idx alone.",
+      "A gate on absolute step fixes part of this gap. ((t >= 8) | (recall_idx >= 2)) gets test P 0.862, R 0.981, F1 0.918, mass recall 0.996, against 0.882 for the original. That is better than the agent's recall_idx >= 3 variant (F1 0.85). The remaining false positives look like a graded weak-activation ramp rather than a separate token or history pattern."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input token d (weak or silent at early absolute steps / short sequences)",
+    "better_predicate": "(phase == 2) & (in_tok == tok('d')) & ((t >= 8) | (recall_idx >= 2))",
+    "better_predicate_test_f1": 0.918
+  },
+  "final_label": "copy-phase input token d (weak or silent at early absolute steps / short sequences)"
+}

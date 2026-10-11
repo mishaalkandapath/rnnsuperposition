@@ -1,0 +1,61 @@
+{
+  "label": "copy-phase input q (re-fed q)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"q\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, at steps where the input is the letter q. That q is the model reading its own earlier q output back in. It never fires during the original phase (including on q there), at <DEL>, or on any other input token; there is 1 stray dev activation on g. Activation grows with position: it is weak at recall_idx 1 (right after <DEL>, mean around 0.1-0.3 of max) and strongest late in long sequences (top examples near 1.0 when q is re-fed around recall_idx 7). The false positives (about 10% of predicted steps) are copy-phase q inputs at early absolute steps (t <= 7) in short sequences (L = 3-5). Magnitude does not depend much on which token is being output.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 432,
+    "predicate": "(phase == 2) & (in_tok == tok(\"q\"))",
+    "split": "test",
+    "precision": 0.898935818626479,
+    "recall": 1.0,
+    "f1": 0.946778516481604,
+    "mass_recall": 0.9999998913509961,
+    "correlation": 0.8429987327168408,
+    "n_active": 81600,
+    "n_predicted": 90774,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 432,
+    "predicate": "(phase == 2) & (in_tok == tok(\"q\"))",
+    "split": "dev",
+    "precision": 0.8970731975179836,
+    "recall": 0.9999877577004065,
+    "f1": 0.9457389471977955,
+    "mass_recall": 0.999995435742095,
+    "correlation": 0.841788199320391,
+    "n_active": 81684,
+    "n_predicted": 91055,
+    "coverage_by_activation_quartile": [
+      0.9999510308016257,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 432,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Core claims check out. Every one of the 81,684 dev activations is in the copy phase, with 0 in the original phase and 0 at <DEL>. 81,683 of them have q as input, plus 1 stray on g. Test recall is 1.0 and test misses show 0 missed activations.",
+      "The false positives are a known, already-disclosed class rather than an unexplained one: precision is 0.29 when L<=4, 0.53 when t<=7, and 0.98 when t>=8. Test misses show mostly short sequences (L=3-4).",
+      "Small inaccuracy: the weakness is driven by absolute step t and length L, not by recall_idx. With recall_idx==1 and t>=8, precision is 0.95 (it is 0.73 for recall_idx==1 overall). For example, the test false positive 'q r c u 3 x 1 c 1 <DEL> *q*' is recall_idx 1 at t=10, so it is an exception to the stated t<=7 pattern.",
+      "Adding L>=5 to the predicate raises test F1 from 0.947 to 0.964 (precision 0.957, recall 0.970). This is a minor improvement, not evidence of a missing mechanism."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok('q')) & (L >= 5)",
+    "better_predicate_test_f1": 0.964
+  }
+}

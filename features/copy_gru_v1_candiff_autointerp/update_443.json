@@ -1,0 +1,63 @@
+{
+  "label": "Steps 2-4 of the input, in sequences that start with u",
+  "predicate": "(first_tok == tok(\"u\")) & (t >= 2) & (t <= 4)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires early in the original-input phase (t = 2..4, about 99% of mass in phases 0/1) of sequences whose first original token is u (first_tok=u carries 90% of mass, 17.5x lift). Never fires at t = 0 or 1, and almost never in the copy phase. Magnitude is usually largest at t = 3 (47% of mass); the top examples are u u l [X] at t = 3, where X can be any token, and activations fall off at t = 4-5. Also gives weak activations when u is the second token (e.g. v u i [q]) and tiny ones (<0.15 of max) in sequences with no u, which hold about 12% of mass. The input token at the step itself barely matters. Simple predicate: precision 0.96, mass recall 0.88 on dev; recall by count (0.55) is limited by the many weak off-predicate activations.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 443,
+    "predicate": "(first_tok == tok(\"u\")) & (t >= 2) & (t <= 4)",
+    "split": "test",
+    "precision": 0.9637594105398046,
+    "recall": 0.5431321440258172,
+    "f1": 0.6947397287954564,
+    "mass_recall": 0.8804455766158629,
+    "correlation": 0.8925682063147139,
+    "n_active": 88623,
+    "n_predicted": 49944,
+    "coverage_by_activation_quartile": [
+      0.03877053619786965,
+      0.17873262321718722,
+      0.9626286333273154,
+      0.9924170616113744
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 443,
+    "predicate": "(first_tok == tok(\"u\")) & (t >= 2) & (t <= 4)",
+    "split": "dev",
+    "precision": 0.9647772474144789,
+    "recall": 0.546574123108472,
+    "f1": 0.6978155950831109,
+    "mass_recall": 0.882325758232786,
+    "correlation": 0.894031353620038,
+    "n_active": 88751,
+    "n_predicted": 50280,
+    "coverage_by_activation_quartile": [
+      0.03740760771588246,
+      0.19086893816477374,
+      0.9650261402559942,
+      0.9930139270744129
+    ]
+  },
+  "gate": "update",
+  "feature": 443,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The factual claims hold on the dev profile. There are zero activations at t=0 and t=1. The copy phase holds 0.3% of the mass and the delimiter step 1.0%. Mass by t is 0.279, 0.473 and 0.230 for t=2, 3 and 4, so it peaks at t=3, and t=5 holds 0.017. first_tok=u holds 90% of the mass with 17.5x lift. Lift by in_tok tops out at about 1.7x, so the step's own input token barely matters, as claimed.",
+      "Test-split scores reproduce: precision 0.964, recall 0.543, F1 0.695, mass recall 0.880. The predicate covers 96% and 99% of the top two activation quartiles but only 4% and 18% of the bottom two.",
+      "Systematic but weak miss class 1: t=2 in sequences where neither of the first two tokens is u. This covers about 24% of active steps but only 3.8% of the mass, and the feature fires on just 4.6% of those steps. The explanation acknowledges these as tiny activations in sequences with no u. Adding this class gives F1 0.23.",
+      "Systematic but weak miss class 2: u as the second original token, at t=2..5. This covers 15% of active steps and 6% of the mass, with precision 0.21 if added. The explanation mentions it ('v u i [q]'). Adding it (orig(1)==u) lowers test F1 to 0.60.",
+      "Minor false positives: when L=3 or 4, t=4 falls on the delimiter or the first copy step, where the feature is often inactive. Firing rate at t=4 is 0.89, versus 1.00 at t=2 and t=3. Adding phase==0 or t<=L does not improve F1 (0.674 for the t<=L variant).",
+      "Extending the range to t=5 gives a slightly worse F1, because at t=5 the feature fires on only 0.20 of u-first steps. No tested variant beat the original test F1 of 0.695. The low count recall comes from many tiny activations, not from a missed strong pattern."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

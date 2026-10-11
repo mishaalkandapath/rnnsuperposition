@@ -1,0 +1,62 @@
+{
+  "label": "sequence began with f: original-phase steps 3-6 and <DEL>",
+  "predicate": "(first_tok == tok(\"f\")) & (t >= 3) & (t <= 6) & (phase <= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires when the first original token was f (97% of activation mass), on original-phase steps t=3..6 and the <DEL> step when that falls at t<=6. It does not fire at t=0..2 or t>=7, and essentially never in the copy phase (30 activations). The current input token barely matters. Activation peaks at t=4 (the 2nd active step), which is about 0.95 of max in the top examples, and decays over later steps; the <DEL>-step activation is weaker. Top examples begin with f f, but requiring orig(1)==f captures only a sliver, so this is not the main driver. Missed activations are tiny (2.8% of mass), mostly where f is the 2nd token instead of the 1st. Most false positives are at step 6 in short sequences, where activation runs out.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 939,
+    "predicate": "(first_tok == tok(\"f\")) & (t >= 3) & (t <= 6) & (phase <= 1)",
+    "split": "test",
+    "precision": 0.9391830037136195,
+    "recall": 0.8517630841048295,
+    "f1": 0.8933394670259259,
+    "mass_recall": 0.9712287893020771,
+    "correlation": 0.8911288984864736,
+    "n_active": 63837,
+    "n_predicted": 57895,
+    "coverage_by_activation_quartile": [
+      0.43740601503759396,
+      0.969734945798609,
+      0.9999373394322952,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 939,
+    "predicate": "(first_tok == tok(\"f\")) & (t >= 3) & (t <= 6) & (phase <= 1)",
+    "split": "dev",
+    "precision": 0.9369769693616433,
+    "recall": 0.852555732108302,
+    "f1": 0.8927750640450087,
+    "mass_recall": 0.9716230602322824,
+    "correlation": 0.8897806595702494,
+    "n_active": 63563,
+    "n_predicted": 57836,
+    "coverage_by_activation_quartile": [
+      0.44037505506261404,
+      0.9698571518469574,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 939,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor overclaim about <DEL>: the explanation says the feature fires on <DEL> 'when <DEL> falls at t<=6'. The test split shows this holds only for <DEL> at t=3, 4 or 5 (precision 0.98, 1.00, 0.98). <DEL> at t=6 (L=6) fires only 32% of the time and holds 0.3% of mass. Dropping it gives test F1 0.899 vs 0.893, so the gain is small.",
+      "Original-phase step 6 with f first: precision 0.81 and only 4.6% of mass. This fits the 'fades out' description and is where most false positives fall. It is a soft edge, not a separate pattern.",
+      "The misses do form a pattern: 9463 test steps, about 15% of active steps, mostly sequences with f as the 2nd original token. They are very weak (2.9% of mass total; the predicate covers only 44% of lowest-quartile activations). The explanation already says this. Adding orig(1)==f brings mass recall to 0.998 but drops precision to 0.55 (F1 0.70), so it is right to leave it out.",
+      "Other claims check out: no activity at t=0..2 or t>=8; 242 dev activations at t=7; 30 copy-phase activations; mass peaks at t=4 (0.406); top examples reach about 0.95 of max at t=4; first_tok==f holds 97.2% of mass; input token makes little difference (lift 1.0-1.2x). Reported test scores reproduce exactly (P 0.939, R 0.852, F1 0.893, mass recall 0.971)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "sequence began with f: original-phase steps 3-6 (peak t=4, fading by 6) and <DEL> at t<=5",
+    "better_predicate": "((first_tok == tok('f')) & (t >= 3) & (t <= 6) & (phase == 0)) | ((first_tok == tok('f')) & (t >= 3) & (t <= 5) & (phase == 1))",
+    "better_predicate_test_f1": 0.899
+  },
+  "final_label": "sequence began with f: original-phase steps 3-6 (peak t=4, fading by 6) and <DEL> at t<=5"
+}

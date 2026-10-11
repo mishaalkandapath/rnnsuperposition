@@ -1,0 +1,61 @@
+{
+  "label": "copy-phase input token f (fed-back f), from the 2nd copied token on",
+  "predicate": "(phase == 2) & (in_tok == tok(\"f\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the fed-back input token is the letter f (i.e. the model just output f, original token recall_idx-1), for recall_idx >= 2. Never fires in the original or delimiter phases, never on any other input token (1 stray v activation in 500k dev sequences), and is unaffected by which token is output next or by L. When f is the first copied token (input at step L+1, recall_idx 1) it fires only weakly (about 0.01-0.07 of max) or not at all. That case makes up nearly all of the missed steps but only 0.1% of activation mass. Input f during the original phase gives zero activation. Activation is typically 0.75-0.85 of max. The top activations (~0.98-1.0) come at later copy positions, often on the last f of the sequence, while early copy positions (recall_idx 2) include weaker cases around 0.5. Without the recall_idx >= 2 condition, phase==2 & in_tok==f gets dev F1 0.91 with precision 0.83.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 293,
+    "predicate": "(phase == 2) & (in_tok == tok(\"f\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.9817068321005329,
+    "f1": 0.9907689837855194,
+    "mass_recall": 0.9993557447555517,
+    "correlation": 0.9915282754009596,
+    "n_active": 75438,
+    "n_predicted": 74058,
+    "coverage_by_activation_quartile": [
+      0.926829268292683,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 293,
+    "predicate": "(phase == 2) & (in_tok == tok(\"f\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.9821823625259979,
+    "f1": 0.9910111007892854,
+    "mass_recall": 0.9993754501378805,
+    "correlation": 0.9914626538183537,
+    "n_active": 75487,
+    "n_predicted": 74142,
+    "coverage_by_activation_quartile": [
+      0.9287303942348453,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 293,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "No systematic counterexample found. Test split: precision 1.0, recall 0.982, F1 0.991, mass recall 0.999, and 0 false positives.",
+      "All 1380 test misses have the same cause: f as the first copied token (recall_idx 1, input at step L+1), with activations of about 0.01-0.05 of max. They hold only 0.1% of activation mass, and the explanation already describes this case.",
+      "The phase and token claims hold on dev. The feature has 0 activations in the original and delimiter phases. 75486 of 75487 activations are on input f, with 1 stray on v. It is also 0 whenever in_first==1.",
+      "The magnitude claims match the examples. Typical activations sit around 0.75-0.85 of max, the top ones are about 0.97-1.0 at later copy positions, and the low quartile includes recall_idx-2 f at about 0.5. The next output and the current output are flat across tokens (about 2.0-2.1x lift each). There is a mild length trend: the rate rises from 0.006 at L=3 to 0.013 at L=9, but that only reflects how many copy steps are available."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

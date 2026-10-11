@@ -1,0 +1,62 @@
+{
+  "label": "1-3 steps after a digit \"1\" in the input, early in the original phase",
+  "predicate": "(phase == 0) & (t <= 6) & ((rel_tok(-1) == tok(\"1\")) | (rel_tok(-2) == tok(\"1\")) | (rel_tok(-3) == tok(\"1\")))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires during the original-input phase on the 1-3 steps after the digit 1 was input (prev_tok==1 has 15.5x lift and 59% of mass; prev2_tok==1 12x). Activation mass is concentrated at t=2..5 and dies out by t>=7, so the predicate is limited to t<=6. The largest activations (max ~9) come from sequences that start with several 1s in a row (\"1 1 1 X\"): the token right after the run of 1s scores highest, and the activation falls off over the next 1-2 steps. A single isolated 1 gives weaker activations (~0.1-0.4 of max). Weak response to other digits (n_digits raises the rate somewhat). It never fires at t=0, almost never on the delimiter (1.4% of mass), and never in the copy phase, even when 1 is being output or input there. Main gaps: missed activations are faint, digit-free steps (3% of mass), and false positives are steps late in the sequence or 3 steps after the 1.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 733,
+    "predicate": "(phase == 0) & (t <= 6) & ((rel_tok(-1) == tok(\"1\")) | (rel_tok(-2) == tok(\"1\")) | (rel_tok(-3) == tok(\"1\")))",
+    "split": "test",
+    "precision": 0.8024719508719198,
+    "recall": 0.8257116042957544,
+    "f1": 0.8139259235898124,
+    "mass_recall": 0.9667307237184645,
+    "correlation": 0.7479401414835978,
+    "n_active": 187534,
+    "n_predicted": 192965,
+    "coverage_by_activation_quartile": [
+      0.39766231550209025,
+      0.9290589540141626,
+      0.981016573171512,
+      0.9951155002879508
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 733,
+    "predicate": "(phase == 0) & (t <= 6) & ((rel_tok(-1) == tok(\"1\")) | (rel_tok(-2) == tok(\"1\")) | (rel_tok(-3) == tok(\"1\")))",
+    "split": "dev",
+    "precision": 0.8020072373333612,
+    "recall": 0.8241708119362299,
+    "f1": 0.8129379882709123,
+    "mass_recall": 0.9665472108532186,
+    "correlation": 0.7470693167081282,
+    "n_active": 186357,
+    "n_predicted": 191507,
+    "coverage_by_activation_quartile": [
+      0.39306718179866923,
+      0.9281804717851854,
+      0.9804030994440748,
+      0.9950417480521153
+    ]
+  },
+  "gate": "update",
+  "feature": 733,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Factual claims hold up. Copy phase: 0 of 2.73M steps active. t=0: 0 active. Delimiter: 1.4% of mass. prev_tok=1: 15.5x lift, 59% of mass. prev2_tok=1: 12.3x lift. Top examples are all '1 1 1 X' with the token after the run at 1.00, then about 0.5 and about 0.02. Test scores reproduce exactly (P 0.802, R 0.826, F1 0.814, mass recall 0.967).",
+      "The 3-steps-after part of the window is weak. Precision for rel_tok(-3)==1 is only 0.52/0.65/0.57/0.25 at t=3/4/5/6, against about 1.0 for rel_tok(-1)==1 at t<=4 and 0.96-1.0 for rel_tok(-2)==1 at t=2..4. The firing window also depends on absolute t, not only on distance from the 1. Precision for d=1 drops from 0.89 at t=5 to 0.54 at t=6. For d=2 it drops from 0.74 at t=5 to 0.32 at t=6. The explanation already admits these false positives, but the label 'reliably 1-3 steps after' slightly overclaims for 3 steps.",
+      "The 'weak response to other digits' claim is mostly a confound: 1 is itself a digit. With no 1 seen yet (t<=6), having seen another digit gives a firing rate of 1.2%, against 0.8% with no digits seen. That is a small effect holding 0.4% of mass.",
+      "The 1.4% of mass on the delimiter is not covered: when the last original token is 1, precision is 0.18 at the delimiter step. This is minor.",
+      "A repeated (non-first) 1 still triggers the feature (precision 0.92 at t=2..5), so the predicate is right not to require first occurrence. The residual misses are faint activations with no 1 in the past three inputs (3.3% of mass). They look scattered and are not systematic."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 0) & (((t <= 6) & (rel_tok(-1) == tok(\"1\"))) | ((t<=5) & (rel_tok(-2) == tok(\"1\"))) | ((t>=3)&(t<=5)&(rel_tok(-3) == tok(\"1\"))))",
+    "better_predicate_test_f1": 0.828
+  }
+}

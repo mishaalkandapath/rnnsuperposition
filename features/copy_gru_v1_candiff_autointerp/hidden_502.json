@@ -1,0 +1,64 @@
+{
+  "label": "copy-phase input o (fed-back o), from 3rd output on",
+  "predicate": "(phase == 2) & (in_tok == tok(\"o\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token-specific feature: fires when the input token is the letter o during the copy phase, i.e. when an o the model previously emitted is fed back in. Every copy-phase o input at recall_idx >= 2 activates (precision 1.0 on dev). Magnitude grows with copy position: when the fed-back o is original token 1 (recall_idx 2) activations are around 0.5 of max, and around 0.7-1.0 of max further into the sequence (top examples are at recall_idx 5-7). When the fed-back o is original token 0 (the first copy-phase input, recall_idx 1) it gives only tiny activations (~0.05 of max), which make up most of the missed steps but only 0.1% of the mass. Does not fire on o in the original phase (only 134 negligible activations), on the delimiter, or on any other token; the output token, L, and earlier history make little difference.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 502,
+    "predicate": "(phase == 2) & (in_tok == tok(\"o\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.9707743374306312,
+    "f1": 0.9851704672552865,
+    "mass_recall": 0.9986539199209122,
+    "correlation": 0.9858660274403586,
+    "n_active": 77124,
+    "n_predicted": 74870,
+    "coverage_by_activation_quartile": [
+      0.8830973497225247,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 502,
+    "predicate": "(phase == 2) & (in_tok == tok(\"o\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.9699821197843933,
+    "f1": 0.9847623590518212,
+    "mass_recall": 0.9986146642923569,
+    "correlation": 0.9857421081553696,
+    "n_active": 76621,
+    "n_predicted": 74321,
+    "coverage_by_activation_quartile": [
+      0.8799331802046356,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 502,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The relayed user request (estimate a baseline for batch 2, then launch batch 3) has nothing to do with this feature check, and this tool set can't launch or time batches, so I only did the feature review.",
+      "Minor wording problem: recall_idx >= 2 means the fed-back token was original token 1 or later, which is the 2nd output fed back, at the 3rd copy-phase step. So 'from 3rd output on' would read better as 'from the 2nd fed-back output on'.",
+      "The predicate holds up on the test split: precision 1.0, recall 0.971, F1 0.985, mass recall 0.9987. There are zero false positives.",
+      "All 2254 test misses are the same case: o as the first copy input (recall_idx 1, fed-back original token 0), with activation 0.02-0.05 of max and 0.1% of mass. The explanation already names this case. On dev only 12.9% of recall_idx==1 o inputs fire, so adding them would hurt precision.",
+      "Original-phase o: only 134 activations with negligible mass, all at orig_idx 7-8 (precision 0.001 on (phase==0)&(in_tok==o)). This matches the claim.",
+      "Delimiter and every other token: 0 activations. Plain (phase==2)&(in_tok==o) has precision 0.84, recall 0.998, which confirms that recall_idx >= 2 is the needed refinement.",
+      "Rising magnitude: recall_idx 2 has a lower mean activation than later positions (16% of mass from 16.6k steps vs 22% from 16.3k at recall_idx 3). This fits the claim that magnitude rises with copy position."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

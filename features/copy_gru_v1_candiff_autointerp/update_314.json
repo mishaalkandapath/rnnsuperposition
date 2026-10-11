@@ -1,0 +1,61 @@
+{
+  "label": "copy-phase input d echoed back early in the copy (recall_idx 2-4), not the final output",
+  "predicate": "(phase == 2) & (in_tok == tok(\"d\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token-specific feature for the letter d being fed back as input during the copy phase. It fires only when the input is d (essentially 100% of activation mass) and only in the copy phase (t > L), i.e. when d is an echoed original token, never on d in the original phase or at the delimiter. It is restricted to early-middle copy positions: recall_idx 2-4 (the fed-back d is original token 1-3), and it is silent on the last step (to_go = 0) and almost silent at recall_idx 1 and >= 5. Magnitude is largest at recall_idx 2 (d was the 2nd original token, two steps after <DEL>; top examples are all of the form x d ... <DEL> x [d]) and smaller at recall_idx 3-4. Lowest-quartile activations are mostly d in later positions or short sequences. It does not depend on the output token, the previous token, or how many digits are in the sequence.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 314,
+    "predicate": "(phase == 2) & (in_tok == tok(\"d\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+    "split": "test",
+    "precision": 0.9373350444320686,
+    "recall": 0.9669289371799675,
+    "f1": 0.9519020335898887,
+    "mass_recall": 0.9969099318768685,
+    "correlation": 0.8609605884260098,
+    "n_active": 40035,
+    "n_predicted": 41299,
+    "coverage_by_activation_quartile": [
+      0.8677190528524328,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 314,
+    "predicate": "(phase == 2) & (in_tok == tok(\"d\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+    "split": "dev",
+    "precision": 0.9382226224959229,
+    "recall": 0.967082319291467,
+    "f1": 0.9524339016555473,
+    "mass_recall": 0.9968949710357091,
+    "correlation": 0.8602949619770713,
+    "n_active": 39857,
+    "n_predicted": 41083,
+    "coverage_by_activation_quartile": [
+      0.8684395383843452,
+      0.9998996386993175,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 314,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Small caveat: recall_idx 4 is the weak edge. Precision there is 0.77, against 1.0 at recall_idx 2 and 3. At L=6 (recall_idx 4 with to_go=1) precision falls to 0.54. Excluding that case shifts precision and recall but lowers test F1 slightly (0.947 vs 0.952), so it does not improve the predicate.",
+      "The leftover false positives at recall_idx 4 for L>=7 (about 15%) show no visible token or history pattern in misses. They look like near-threshold noise; mass_recall is 0.997.",
+      "The missed activations (1324 on test, 0.3% of mass) are tiny activations (0.00-0.05 relative) on d at recall_idx 1 or 5. That is scattered noise, consistent with the explanation calling those positions 'almost silent'.",
+      "The factual claims check out. All activation mass is in the copy phase and none is in the original phase or at the delimiter. Input d carries 1.000 of the mass. Mass by recall_idx is 2: 0.569, 3: 0.367, 4: 0.061. to_go=0 has only 57 activations. out_tok and prev_tok are flat at about 2.2x lift each. A second d in the copy is not suppressed: precision is 0.92 for in_count>=2 vs 0.94 for in_count==1."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

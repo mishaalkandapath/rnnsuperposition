@@ -1,0 +1,75 @@
+{
+  "label": "Third input (t=2) of sequences starting with 0/y/t/c/e/a/q/w",
+  "predicate": "(t == 2) & isin(first_tok, [tok(\"0\"),tok(\"y\"),tok(\"t\"),tok(\"c\"),tok(\"e\"),tok(\"a\"),tok(\"q\"),tok(\"w\")])",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost only at step t=2 (the third original token); essentially never at other steps, the delimiter, or during copy. Within t=2 it is gated by the first token of the sequence: about 99% of steps fire when the first token is 0, y, t, c, e or a, about 70-75% when it is q or w, and only weak sporadic activity for other first tokens (these hold under 5% of mass). Magnitude depends on the first token: c, e and 0 carry the most mass, with top activations for c g i. The token at step 2 itself barely matters.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 243,
+    "predicate": "(t == 2) & isin(first_tok, [tok(\"0\"),tok(\"y\"),tok(\"t\"),tok(\"c\"),tok(\"e\"),tok(\"a\"),tok(\"q\"),tok(\"w\")])",
+    "split": "test",
+    "precision": 0.9245379069750032,
+    "recall": 0.7764860480615671,
+    "f1": 0.8440689897923266,
+    "mass_recall": 0.9540695303237926,
+    "correlation": 0.8229233355509138,
+    "n_active": 159046,
+    "n_predicted": 133577,
+    "coverage_by_activation_quartile": [
+      0.356697349227906,
+      0.7522760424525929,
+      0.9970071175272252,
+      0.9999748497271196
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 243,
+    "predicate": "(t == 2) & isin(first_tok, [tok(\"0\"),tok(\"y\"),tok(\"t\"),tok(\"c\"),tok(\"e\"),tok(\"a\"),tok(\"q\"),tok(\"w\")])",
+    "split": "dev",
+    "precision": 0.9230919090650243,
+    "recall": 0.7760398621706237,
+    "f1": 0.8432025461576633,
+    "mass_recall": 0.9536617900777259,
+    "correlation": 0.8217362531608089,
+    "n_active": 158747,
+    "n_predicted": 133458,
+    "coverage_by_activation_quartile": [
+      0.3601683170811601,
+      0.7472724065815003,
+      0.9967747625166932,
+      0.9999496043944968
+    ]
+  },
+  "gate": "update",
+  "feature": 243,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Claims that hold up (dev profile): the feature fires only at t=2 (158699 of 158747 active steps, 100% of mass). It never fires at the delimiter, and only 31 copy-phase steps and 17 steps at t=3 are active. First tokens 0/y/t/c/e/a give about 99-100% precision at t=2, with c, e and 0 carrying the most mass (0.22, 0.20, 0.19). The token at t=2 has little effect, as the explanation says. Reported test scores reproduce: P 0.925, R 0.776, F1 0.844, mass recall 0.954.",
+      "Systematic gap 1, a missed variable: the second token (t=1) matters, and the explanation never mentions it. The feature behaves like a lookup on the (first token, second token) pair, not on the first token alone. For first token q, dev precision by second token ranges from 0.0 (qu, q1) to 0.16 (qa), 0.21 (qn) and 0.24 (qv), while qc/qd/qg/qk/ql/qm/qo/qr/qt/qx/qz/q3 are all 1.0. For w: wa 0.0, ws 0.0, wi 0.15, ww 0.19 versus wc/we/wg/wo/wq/wt/wx/wz 1.0. So the '70-75% for q/w' figure averages two very different groups, and the 10080 test false positives are concentrated in specific q/w + second-token pairs. They are not scattered noise.",
+      "Systematic gap 2, misses that are not sporadic: about 29% of t=2 steps with other first tokens are active (35549 test misses, 4.6% of mass). They cluster on specific pairs that fire at about 90-100% (dev precision): oc 0.97, ox 1.0, ol 1.0, zc 0.96, zg 1.0, zt 1.0, dc 0.9, dg/dt/dz 1.0, dx 0.97, gt 0.91, gx 1.0, gl 0.98, xg 1.0, xt 1.0. Other pairs fire at 0.0 (fc, fx, fl). The explanation's 'weakly and sporadically' is wrong about frequency: these activations are weak, but they are deterministic by pair.",
+      "Adding pair structure improves test scores. Removing the low-precision q/w pairs alone gives test P 0.975, F1 0.855. Also adding just 18 high-precision pairs with other first tokens gives test P 0.974, R 0.822, F1 0.892, mass recall 0.975. A full pair table would likely score higher still.",
+      "The label 'sequences starting with 0/y/t/c/e/a/q/w' overclaims for q and w, which fire only with some second tokens. It also hides that the real condition is the identity of the first two tokens."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "Third input (t=2), gated by the first-two-token pair: fires strongly for first token 0/y/t/c/e/a, and for q/w only with certain second tokens; fires weakly but reliably for specific other pairs (e.g. o-c, d-t, x-g, z-t)",
+    "better_predicate": "(t == 2) & (isin(first_tok, [tok('0'),tok('y'),tok('t'),tok('c'),tok('e'),tok('a')]) | ((first_tok == tok('q')) & ~isin(prev_tok, [tok('a'),tok('n'),tok('u'),tok('v'),tok('1'),tok('j'),tok('s'),tok('b')])) | ((first_tok == tok('w')) & ~isin(prev_tok, [tok('a'),tok('s'),tok('i'),tok('w'),tok('v'),tok('1'),tok('k'),tok('n'),tok('b')])) | ((first_tok == tok('o')) & isin(prev_tok, [tok('c'),tok('g'),tok('x'),tok('l')])) | ((first_tok == tok('z')) & isin(prev_tok, [tok('c'),tok('g'),tok('t')])) | ((first_tok == tok('d')) & isin(prev_tok, [tok('c'),tok('g'),tok('t'),tok('z'),tok('x')])) | ((first_tok == tok('g')) & isin(prev_tok, [tok('t'),tok('x'),tok('l')])) | ((first_tok == tok('x')) & isin(prev_tok, [tok('g'),tok('t'),tok('l')])))",
+    "better_predicate_test_f1": 0.892
+  },
+  "final_label": "Third input (t=2), gated by the first-two-token pair: fires strongly for first token 0/y/t/c/e/a, and for q/w only with certain second tokens; fires weakly but reliably for specific other pairs (e.g. o-c, d-t, x-g, z-t)",
+  "scorecard": {
+    "format": "slot2",
+    "summary": "Graded preference over the input two steps back (most: c, e, 0, y, t, a; least: n, l, 1, r) and the previous input (most: t, g, x, l, z, c; least: u, v, s, 1); timing cues that raise it most: t=2, L=3 & t=5, L=3.",
+    "test_f1": 0.9025139175164258,
+    "test_precision": 0.8689359374272545,
+    "test_recall": 0.9387912930850194,
+    "full_test_f1": 0.9173984649327243,
+    "full_n_cues": 250,
+    "top40_test_f1": 0.8612404532743915,
+    "slot2_test_f1": 0.9025139175164258,
+    "file": "scorecards/update_243.json"
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "label": "First input token from a fixed token set (t=0), plus first copy step of short sequences",
+  "predicate": "((t == 0) & isin(in_tok, [0,2,4,5,6,7,8,9,11,12,13,14,17,23,24,25,26])) | ((recall_idx == 1) & (L == 3))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Two contexts. (1) Step 0 (about 74% of activation mass): fires on every sequence whose first token is in {a,c,e,f,g,h,i,j,l,m,n,o,r,x,y,z,0}, with precision 1.0 per token, and never when the first token is in {b,d,k,p,q,s,t,u,v,w,1,2,3}. Magnitude at t=0 depends only on the token: r, o, e, 0 and x are strongest (about 0.16-0.21 of max), and i, m, h are weakest (about 0.01-0.02). (2) The step after <DEL> (recall_idx 1, where the first original token is fed back in and the second is being output), about 26% of mass. It holds almost all of the largest activations (up to max), mostly when L=3 (precision about 0.91). It is weaker and less reliable at L=4 (precision about 0.34, about 13% of mass) and nearly absent for L>=5. At L=3 it fires even for first tokens outside the step-0 set (e.g. t). The step-0 token set does not cleanly decide when it fires at L=4. Essentially silent at all other original-phase steps (rare weak firing at t=1), at <DEL>, and at later copy steps. Dev: P 0.996, R 0.913, F1 0.953, mass recall 0.867. Adding L=4 to the copy clause raises mass recall to 0.995 but drops F1 to 0.925.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 10,
+    "predicate": "((t == 0) & isin(in_tok, [0,2,4,5,6,7,8,9,11,12,13,14,17,23,24,25,26])) | ((recall_idx == 1) & (L == 3))",
+    "split": "test",
+    "precision": 0.9957355717367853,
+    "recall": 0.9137947036257889,
+    "f1": 0.9530070336194101,
+    "mass_recall": 0.8678465546142546,
+    "correlation": 0.6541076887548177,
+    "n_active": 64648,
+    "n_predicted": 59328,
+    "coverage_by_activation_quartile": [
+      0.9099121395866848,
+      0.9732706348224229,
+      0.9159138720455389,
+      0.8560821680485089
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 10,
+    "predicate": "((t == 0) & isin(in_tok, [0,2,4,5,6,7,8,9,11,12,13,14,17,23,24,25,26])) | ((recall_idx == 1) & (L == 3))",
+    "split": "dev",
+    "precision": 0.9960334205418179,
+    "recall": 0.9131565101668162,
+    "f1": 0.9527961442514954,
+    "mass_recall": 0.8674598176713966,
+    "correlation": 0.6534869547822839,
+    "n_active": 64622,
+    "n_predicted": 59245,
+    "coverage_by_activation_quartile": [
+      0.9092597177519188,
+      0.9663282990839317,
+      0.9181058495821727,
+      0.8589291241101826
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 10,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "All the factual claims check out on the dev split. At t=0 with the 17-token set: precision 1.0 and 100% of t=0 activity (56640/56640), about 74% of activation mass. Every other t=0 token is silent. L=3 recall_idx=1: precision about 0.91 (0.94 when the first token is in the set, 0.87 when it is not). L=4 recall_idx=1: precision 0.34, 12.7% of mass. recall_idx=1 at L>=5: precision 0.004. t=1: 0.3% of steps, negligible. Zero activity at <DEL> and at recall_idx>=2. Test scores reproduce exactly (P 0.996, R 0.914, F1 0.953, mass recall 0.868).",
+      "One systematic miss class remains: L=4, recall_idx=1. Test misses are dominated by step-5 examples from this context, and it holds about 13% of activation mass, about the same as the L=3 clause. The explanation mentions it but leaves it out of the predicate.",
+      "The explanation's claim that the step-0 token set does not cleanly decide L=4 firing is only half right. Firing at L=4 is graded by the first token. Tokens c, e, f, o, r, x fire 62-82% of the time, while k, w, 2 and similar tokens fire about 4%. Firing also rises when the later original tokens fall outside the step-0 set: with orig(1..3) all outside it, precision is 0.94. So there is clear structure here that the label leaves out.",
+      "Adding the high-precision L=4 subset improves the predicate. Test F1 goes from 0.953 to 0.964 and mass recall from 0.868 to 0.937, at a precision cost of 0.996 to 0.983. The improvement is modest but systematic."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "First input token from a fixed token set (t=0); also the step after <DEL> in short sequences: always at L=3, and at L=4 when the first token is c/e/f/o/r/x",
+    "better_predicate": "((t == 0) & isin(in_tok, [0,2,4,5,6,7,8,9,11,12,13,14,17,23,24,25,26])) | ((recall_idx == 1) & (L == 3)) | ((recall_idx==1)&(L==4)&isin(in_tok,[2,4,5,14,17,23]))",
+    "better_predicate_test_f1": 0.964
+  },
+  "final_label": "First input token from a fixed token set (t=0); also the step after <DEL> in short sequences: always at L=3, and at L=4 when the first token is c/e/f/o/r/x"
+}

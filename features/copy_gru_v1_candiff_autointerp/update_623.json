@@ -1,0 +1,63 @@
+{
+  "label": "copied-back \"a\" fed in early in the copy phase",
+  "predicate": "(phase == 2) & (in_tok == tok(\"a\")) & (recall_idx <= 2) & (t <= 9)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, only when the input token is the letter a (the model feeding back its own copied a). That means the original sequence had a at position 0 or 1. It is restricted to the first few copy steps (recall_idx 1-2, rarely 3) and to absolute step t <= 9, so it is strongest in short sequences (L 3-6). Magnitude is highest at recall_idx 1, where the input is orig(0) = a right after <DEL> (85% of mass; top activations ~4.3 are all a x y z <DEL> [a]). A fed-back a at recall_idx 2 gives weaker activations. It never fires in the original or delimiter phases, never on an a seen for the first time, never on any other token, and almost never on a fed-back a later in the copy phase or in long sequences (L 8-9).",
+  "test_scores": {
+    "gate": "update",
+    "feature": 623,
+    "predicate": "(phase == 2) & (in_tok == tok(\"a\")) & (recall_idx <= 2) & (t <= 9)",
+    "split": "test",
+    "precision": 0.8066877324907004,
+    "recall": 0.9659466449542603,
+    "f1": 0.8791630340017437,
+    "mass_recall": 0.9960212494133198,
+    "correlation": 0.7239644959216522,
+    "n_active": 20879,
+    "n_predicted": 25001,
+    "coverage_by_activation_quartile": [
+      0.8693486590038314,
+      0.9944444444444445,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 623,
+    "predicate": "(phase == 2) & (in_tok == tok(\"a\")) & (recall_idx <= 2) & (t <= 9)",
+    "split": "dev",
+    "precision": 0.8051156637132663,
+    "recall": 0.9655271888071542,
+    "f1": 0.8780551790477023,
+    "mass_recall": 0.9961196921396995,
+    "correlation": 0.7251847472968954,
+    "n_active": 20799,
+    "n_predicted": 24943,
+    "coverage_by_activation_quartile": [
+      0.8665384615384616,
+      0.995576923076923,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 623,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold up. Every activation is in the copy phase (share 1.000), every one is on in_tok == a (share 1.000), and none occur in the original or delimiter phases. recall_idx 1 holds 85.1% of the mass, recall_idx 2 holds 14.7% and recall_idx 3 holds 0.2%. Max activation is 4.30. The reported test scores reproduce exactly: P 0.807, R 0.966, F1 0.879.",
+      "The t <= 9 cutoff leaves a systematic class of false positives. On the test split, precision of fed-back a broken out by (recall_idx, L) is: r=1 for L=3..7 is about 1.0, r=1 L=8 (t=9) is 0.59, r=1 L=9 is 0.11. For r=2: L=4 and L=5 are about 0.99, L=6 (t=8) is 0.67, L=7 (t=9) is 0.05, L=3 (the last step, to_go=0) is 0.65. So r=2 at L=7, t=9 (about 2,700 predicted steps, about 95% inactive) is the largest false-positive class. The predicate includes it on purpose.",
+      "The explanation gets its own false positives wrong. It says the remaining false positives are 'recall_idx 2 in sequences of length 7-8, at step 8-9'. With recall_idx=2 and t<=9, L can be at most 7, so L=8 cannot occur. It also leaves out the substantial false-positive class at recall_idx 1, L=8, t=9: 41% of those steps are inactive, about 1,100 steps. Test misses show it directly, e.g. 'a k g x o f g p <DEL> *a*' is inactive.",
+      "The real boundary depends on recall_idx and L, not on a single t cutoff. recall_idx 1 stays reliable up to L=7 and is partial at L=8. recall_idx 2 is reliable only for L=4-5 and partial at L=6. Even the simple (recall_idx<=2) & (t<=8) beats the stated predicate on test: F1 0.911 vs 0.879.",
+      "The label itself ('copied-back a fed in early in the copy phase') is broadly fair, but the predicate's bounds are wrong. The leftover false positives inside the refined predicate (r=1 L=8, r=2 L=6) did not show an obvious token or history pattern in the misses output."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copied-back \"a\" at the first copy step (recall_idx 1, L<=8) or the second copy step in short sequences (recall_idx 2, L<=6)",
+    "better_predicate": "(phase==2)&(in_tok==tok('a'))&(((recall_idx==1)&(L<=8))|((recall_idx==2)&(L<=6)))",
+    "better_predicate_test_f1": 0.928
+  },
+  "final_label": "copied-back \"a\" at the first copy step (recall_idx 1, L<=8) or the second copy step in short sequences (recall_idx 2, L<=6)"
+}

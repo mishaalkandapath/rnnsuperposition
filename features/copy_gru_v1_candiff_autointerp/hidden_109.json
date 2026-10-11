@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input b (fed-back b), from the 2nd copy output onward",
+  "predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the fed-back input token is b (i.e. the model just output b, an original b at position >= 1). It never fires during the original phase or at <DEL>, and essentially never on other input tokens. Magnitude grows with position in the copy: b copied at recall_idx 1 (original position 0) is weak/rare (rate ~0.3%), and activation rises with recall_idx, saturating around recall_idx >= 4 (~3.3% step rate overall; top activations are b at original positions 6-8). Repeated b at a later position also activates. Not modulated by out_tok, next_out or prev_tok. False positives are mainly b at early original positions (1-2) in the copy phase.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 109,
+    "predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.8377543310486265,
+    "recall": 0.9782269626455343,
+    "f1": 0.9025576172513792,
+    "mass_recall": 0.9938004932858318,
+    "correlation": 0.7806320401566895,
+    "n_active": 63473,
+    "n_predicted": 74116,
+    "coverage_by_activation_quartile": [
+      0.9260192828785683,
+      0.9884043357701033,
+      0.9985505419712629,
+      0.9999369800857071
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 109,
+    "predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.8334789093889837,
+    "recall": 0.9780192056008452,
+    "f1": 0.8999825880031341,
+    "mass_recall": 0.9935662480765496,
+    "correlation": 0.7774204282445313,
+    "n_active": 63419,
+    "n_predicted": 74417,
+    "coverage_by_activation_quartile": [
+      0.9275307473982971,
+      0.9858088930936613,
+      0.9988016398612425,
+      0.9999369244354737
+    ]
+  },
+  "gate": "hidden",
+  "feature": 109,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I reproduced the test scores exactly: P 0.838, R 0.978, F1 0.903, mass recall 0.994. The profile backs the main claims. Activation is zero in the original phase and at <DEL>. 63315 of 63419 active steps have in_tok b, with only about 100 scattered on q, k and others. in_first is never 1 when active, so the feature only fires on b's that are repeats or fed back.",
+      "The false positives follow a clear pattern, and the explanation already describes it. On dev, precision by recall_idx is: 1 -> 0.08, 2 -> 0.52, 3 -> 0.77, 4 -> 0.97, 5-8 -> about 0.99. So the false positives are fed-back b's from original positions 1-2. This looks like a ramp in strength (weak near-threshold activations early in the copy), not a missing condition. Of the test misses, 1382 steps hold only 0.6% of the activation mass, and most are r=1 (b at original position 0) with weak activations.",
+      "One claim overreaches: 'prev_tok does not change it' only holds overall. At recall_idx 2, precision varies with prev_tok from 0.33 (prev 3) and 0.36 (prev b) to 0.93 (prev c). In the weak early-copy region, the token before b moves the activation across the firing threshold. The pattern is spread across many tokens, so no compact predicate fixes it.",
+      "The phrase 'from the 2nd copy output onward' is slightly ambiguous. The predicate recall_idx >= 2 means the fed-back b is original position 1 or later, i.e. the second fed-back token. Read that way, it matches the predicate.",
+      "I found no better simple predicate. recall_idx >= 3 trades recall for precision (dev F1 0.88, as the other agent reported), and splitting further by L gives no clean cut. For example, precision at recall_idx 2 ranges from 0.27 to 0.64 across L with no monotone trend."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

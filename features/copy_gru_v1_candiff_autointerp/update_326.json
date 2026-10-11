@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input g (fed-back g) early in short sequences",
+  "predicate": "(phase == 2) & (in_tok == tok(\"g\")) & (L <= 6) & (t <= 9)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost exclusively (99.9% of mass) when the token g is fed back as input during the copy phase, i.e. right after the model has output g. Never fires in the original phase or on <DEL>, and essentially never on other tokens. Activation is strongest when g is the first original token, so it is fed back at the first copy step (recall_idx 1, prev_tok <DEL>; top examples are all g ... <DEL> [g]), and it weakens for later copy positions and longer sequences: L >= 7 or t >= 10 are mostly silent (7.2+ give under 2% of mass). A repeated g in the copy phase usually fires more weakly than the first one. Bare (phase==2 & in_tok==g) has recall 0.99 but precision 0.30; adding L<=6 & t<=9 gives dev F1 0.86.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 326,
+    "predicate": "(phase == 2) & (in_tok == tok(\"g\")) & (L <= 6) & (t <= 9)",
+    "split": "test",
+    "precision": 0.8597083151937309,
+    "recall": 0.8591472699586687,
+    "f1": 0.8594277010118595,
+    "mass_recall": 0.971345427172516,
+    "correlation": 0.75007723660067,
+    "n_active": 27582,
+    "n_predicted": 27564,
+    "coverage_by_activation_quartile": [
+      0.5588747099767981,
+      0.8860208816705336,
+      0.9917331399564903,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 326,
+    "predicate": "(phase == 2) & (in_tok == tok(\"g\")) & (L <= 6) & (t <= 9)",
+    "split": "dev",
+    "precision": 0.8575746540422433,
+    "recall": 0.858856996972902,
+    "f1": 0.8582153464895497,
+    "mass_recall": 0.9712928667043507,
+    "correlation": 0.7507629670760682,
+    "n_active": 27419,
+    "n_predicted": 27460,
+    "coverage_by_activation_quartile": [
+      0.562654996353027,
+      0.8793581327498177,
+      0.9934354485776805,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 326,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The label and predicate hold up. The profile shows 0 activations in the original phase and 0 on <DEL>. Copy phase has 100% of the mass. in_tok==g has 27230 of 27419 active steps (99.9% of mass); the next token, n, has only 60.",
+      "The bare predicate phase==2 & in_tok==g gives P 0.30, R 0.99 and mass recall 0.999 on dev, matching the claim. The full predicate on test gives P 0.860, R 0.859, F1 0.859 and mass recall 0.971, reproducing the reported scores.",
+      "The strength claims hold. All top examples have the form g ... <DEL> [g], peaking at about 5.4. Mass by recall_idx is 1: 0.44, 2: 0.36, 3: 0.16, then near zero from 5 on. Mass by L falls sharply after 6 (L=7: 0.013, L=8 and L=9: 0.003 each). A repeated g fires more weakly, e.g. 'g g d <DEL> [g:0.98] [g:0.69]'.",
+      "The leftover errors are a graded falloff, not a separate class of cases. Test misses (3885 steps, 2.9% of mass) are tiny activations (0.01 to 0.07 of max) on fed-back g at t=10-11 or L=7. False positives are fed-back g at t=8-9 with L=6 that land just below threshold. Both sit at the threshold edge.",
+      "No better predicate turned up. Alternative cutoffs (t+L<=14 or 15, recall_idx<=3, L<=6 alone, mixed per-L cutoffs) all score test F1 0.83 to 0.85, at or below the original 0.859. Restricting to the first fed-back g lowers F1 to 0.80, so later g's are rightly included.",
+      "Minor caveat: the L<=6 & t<=9 cutoff is a hard line drawn across a smooth decline with L and t, so the predicate simplifies how the feature behaves. The explanation already says this."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

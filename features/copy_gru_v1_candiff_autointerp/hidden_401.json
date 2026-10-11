@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input h (being fed back as a copied token)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"h\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase when the fed-back input token is h (99.5% of activation mass; in_tok=h rate 39% overall, ~85% precision within copy phase). Never fires in the original phase or on the <DEL> step, even on h inputs. Magnitude is largest when h is the first original token, i.e. the step right after <DEL> (recall_idx 1; top examples all have this form, ~0.9-1.0 of max), and larger in longer sequences; later-position h gives weaker activations (~0.1-0.3 of max). False positives are mostly short sequences (L=3-4: L=3 never fires, L=4 rarely), adding L>=5 raises F1 from 0.91 to 0.94. Tiny residual activity on copy-phase r/f/x inputs at the first copy step.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 401,
+    "predicate": "(phase == 2) & (in_tok == tok(\"h\"))",
+    "split": "test",
+    "precision": 0.8503902433669605,
+    "recall": 0.9827721817674372,
+    "f1": 0.9118012276148608,
+    "mass_recall": 0.995491440651574,
+    "correlation": 0.7743220290257116,
+    "n_active": 78826,
+    "n_predicted": 91097,
+    "coverage_by_activation_quartile": [
+      0.9397168518800426,
+      0.9923884913989953,
+      0.9990358266517811,
+      0.9999492540343042
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 401,
+    "predicate": "(phase == 2) & (in_tok == tok(\"h\"))",
+    "split": "dev",
+    "precision": 0.848600522821486,
+    "recall": 0.982760367846376,
+    "f1": 0.9107663773015678,
+    "mass_recall": 0.9954442923443121,
+    "correlation": 0.774529732974098,
+    "n_active": 78946,
+    "n_predicted": 91427,
+    "coverage_by_activation_quartile": [
+      0.9397071490094746,
+      0.9922480620155039,
+      0.9990879610863397,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 401,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I checked the factual claims and they hold. The feature has zero activations in the original phase and on the <DEL> step: 0 of 3.23M and 0 of 500k steps on dev. Copy-phase h holds 99.5% of activation mass, and the leftovers are r (0.3%), f (0.1%) and x. L=3 never fires. At L=4 the predicate has test precision of only 0.24 on 7288 predicted steps. Activation share rises with L. recall_idx=1 carries 26% of mass from 19% of active steps, and all of the top 12 examples are 'h first, fed back right after <DEL>' at 0.90-1.00 of max.",
+      "The one systematic false-positive pattern is short sequences, and the original explanation already says so. Within copy-h, precision is 0.24 at L=4, 0.81 at L=5, 0.93 at L=6 and 0.95 at L=9. Adding L>=5 gives test F1 0.936 against 0.912 for the base predicate (precision 0.913, recall 0.961, mass recall 0.989).",
+      "The remaining false positives look like scattered noise rather than a clean class. Repeated h (n_seen>=2, precision 0.83) and late copy positions (recall_idx>=L-2, precision 0.77) are only slightly below the base rate of 0.85.",
+      "Misses under the L>=5 predicate are tiny short-sequence h activations (about 0.02-0.08 of max) plus first-copy-step r, x and 1. Together they hold 1.1% of mass.",
+      "The label does not overclaim relative to the predicate. It describes a broad 'copy-phase h' detector, and the explanation spells out the length and position modulation."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok('h')) & (L >= 5)",
+    "better_predicate_test_f1": 0.936
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "label": "late original-phase position (8th/9th original token)",
+  "predicate": "orig_idx >= 7",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Position counter for the late original phase. Fires only on original-phase input steps at orig_idx >= 6. It is active on 96% of orig_idx 7 steps and 100% of orig_idx 8 steps; orig_idx 6 fires on about 31% of steps, weakly; orig_idx 5 fires on about 1%. Magnitude rises with position: orig_idx 8 steps hold 42% of the mass on half as many steps as orig_idx 7, and the top examples are all at step 8. The input token identity barely matters (lift at most 1.9x per token). Firing at orig_idx 6 is somewhat more likely when the token is a first occurrence or when the sequence has more digits. It never fires at orig_idx <= 4, on the delimiter, or anywhere in the copy phase. So it is effectively silent for L <= 6. Predicate orig_idx >= 7 on dev: P 0.97, R 0.75, F1 0.84, mass recall 0.90. The misses are the weak orig_idx 6 activations.",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 74,
+    "predicate": "orig_idx >= 7",
+    "split": "test",
+    "precision": 0.9696763066062332,
+    "recall": 0.7495426782004775,
+    "f1": 0.8455162283156128,
+    "mass_recall": 0.9039927982437304,
+    "correlation": 0.8874542806834083,
+    "n_active": 64506,
+    "n_predicted": 49862,
+    "coverage_by_activation_quartile": [
+      0.28808829912568984,
+      0.7465120605196255,
+      0.9640952499069825,
+      0.9995039067344661
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 74,
+    "predicate": "orig_idx >= 7",
+    "split": "dev",
+    "precision": 0.9709604315825362,
+    "recall": 0.7475603730467544,
+    "f1": 0.8447398954871017,
+    "mass_recall": 0.9047474239594203,
+    "correlation": 0.8889077840214904,
+    "n_active": 64764,
+    "n_predicted": 49863,
+    "coverage_by_activation_quartile": [
+      0.27774689642393924,
+      0.7488110678772157,
+      0.9643629176703107,
+      0.9993206102155519
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 74,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The positional claims hold up. The unit is active at orig_idx 7 on 95.7% of steps and at orig_idx 8 on 100%. At orig_idx 6 it is active on 31%, at orig_idx 5 on 1.1%, and at orig_idx 4 on only 6 steps. It is silent on the delimiter and throughout the copy phase. The test scores reproduce: P 0.970, R 0.750, F1 0.846, mass recall 0.904.",
+      "The claim that token identity barely matters is false. The marginal in_tok lift (at most 1.9x) hides strong token gating once you condition on position. At orig_idx 6 the firing rate depends heavily on the input token: j 98%, r 95%, a 72%, k 67%, h 65%, 3 62%, l 58%, p 57%, but w 0%, u 0.3%, q 1.9%, 0 1.9%, t 2.3% and e 6.5%. So the 'weak orig_idx 6 misses' are mostly a token-dependent class, not noise.",
+      "The predicate has a systematic false-positive class: orig_idx 7 with in_tok == 'w' fires on only 31% of 1119 steps, against 98% for other tokens. This class accounts for most of the predicate's false positives. u (79%), t (90%) and q (91%) at orig_idx 7 are also low.",
+      "The claim that orig_idx 6 firing is more likely on first occurrences is not supported. The rate is 31.0% when in_first=1 and 32.3% when in_first=0. The n_digits effect is negligible (33% vs 31%).",
+      "Length of the sequence (L) does not change the orig_idx 6 rate (31% for L=7, 8 and 9). So the unit counts absolute position, not distance to the delimiter. This part of the label is fine."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "late original-phase position (orig_idx 7-8), extending to orig_idx 6 for certain input tokens (j, r, a, h, k, 3, l, p) and suppressed for 'w'",
+    "better_predicate": "(orig_idx>=8) | ((orig_idx==7)&(in_tok!=tok('w'))) | ((orig_idx==6)&isin(in_tok,[tok('j'),tok('r'),tok('a'),tok('h'),tok('k'),tok('3'),tok('l'),tok('p')]))",
+    "better_predicate_test_f1": 0.907
+  },
+  "final_label": "late original-phase position (orig_idx 7-8), extending to orig_idx 6 for certain input tokens (j, r, a, h, k, 3, l, p) and suppressed for 'w'"
+}

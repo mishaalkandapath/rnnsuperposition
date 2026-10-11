@@ -1,0 +1,61 @@
+{
+  "label": "Third original token after a sequence opening \"n v\" or \"v v\"",
+  "predicate": "(t == 2) & (prev_tok == tok(\"v\")) & isin(prev2_tok, [tok(\"n\"), tok(\"v\")])",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the original phase, almost entirely at step t=2, when the first two original tokens are n,v or v,v (so the second token is v). It does not depend on L or on what token is at t=2, except that input c gives much higher activation: n v c reaches the max of 1.457. Openings with n v are stronger than v v (v v p is about 0.28 of max, n v plus another token is about 0.35-0.39). It never fires in the delimiter or copy phases. A small amount of weak activation (about 3% of mass) falls on near-miss contexts: other first tokens followed by v then c (k v c, w v c at 0.01-0.08), n n c, and t=3 after n n v / u v v followed by c. On dev the predicate has no false positives.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 539,
+    "predicate": "(t == 2) & (prev_tok == tok(\"v\")) & isin(prev2_tok, [tok(\"n\"), tok(\"v\")])",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.8803353658536586,
+    "f1": 0.9363599513579246,
+    "mass_recall": 0.9666808712370523,
+    "correlation": 0.9482606725691414,
+    "n_active": 1312,
+    "n_predicted": 1155,
+    "coverage_by_activation_quartile": [
+      0.524390243902439,
+      1.0,
+      0.9969512195121951,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 539,
+    "predicate": "(t == 2) & (prev_tok == tok(\"v\")) & isin(prev2_tok, [tok(\"n\"), tok(\"v\")])",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.8917609046849758,
+    "f1": 0.9427839453458582,
+    "mass_recall": 0.9697051588465786,
+    "correlation": 0.9505390753575942,
+    "n_active": 1238,
+    "n_predicted": 1104,
+    "coverage_by_activation_quartile": [
+      0.567741935483871,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 539,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The factual claims hold on dev. The feature fires only in the original phase (0 activations at the delimiter or in the copy phase). 99.5% of activation mass is at t=2 and 0.5% at t=3. prev_tok=v carries 98.9% of mass, and prev2_tok in {n, v} carries 98.6%. Top examples are all 'n v [c:1.00]'. v v p is about 0.28 of max and n v plus a non-c token is about 0.34-0.39, as claimed.",
+      "Test misses (157 steps, 3.3% of mass) are systematic, not scattered: they are almost all a weak tail of input c at t=2 after v or n with some other first token. Coverage of the lowest activation quartile is only 0.52. The explanation describes this tail, but its list is incomplete. It leaves out 'v n c' (0.14) and 'a v c' (0.20, stronger than the k v c / w v c range of 0.01-0.08 it quotes).",
+      "Patching the tail gains little. Adding 'a v c' gives test P=1.0, R=0.893, F1=0.944. A broader c-tail clause gives F1=0.952 but drops precision to 0.97. On its own, c after v/n at t=2 has precision of only 0.15-0.23, so c is a magnitude modulator, not a separate trigger. The main predicate stays the right description.",
+      "The label ('third original token after a sequence opening n v or v v') matches the predicate and does not overclaim."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "((t == 2) & (prev_tok == tok(\"v\")) & isin(prev2_tok, [tok(\"n\"), tok(\"v\")])) | ((t==2) & (in_tok==tok(\"c\")) & isin(prev_tok,[tok(\"v\"),tok(\"n\")]) & isin(prev2_tok,[tok(\"a\"),tok(\"n\"),tok(\"v\"),tok(\"w\")]))",
+    "better_predicate_test_f1": 0.952
+  }
+}

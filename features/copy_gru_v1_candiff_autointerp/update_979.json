@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input r (fed-back r) in short sequences",
+  "predicate": "(phase == 2) & (in_tok == tok(\"r\")) & (L <= 6)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase (never in the original or delimiter phases), on steps whose input is the fed-back token r, i.e. the step right after the model has output r. 99.7% of activation mass is on in_tok == r. It is length-dependent: firing rate falls off sharply for L >= 7 (L 7-9 hold under 5% of mass). The largest activations (about 6) are in L=3 sequences where r is the first original token and is fed back at the first copy step, e.g. r p q <DEL> [r] p. Activations get weaker with longer sequences. It does not fire on r during the original phase (in_first == 1 never fires) or on other input tokens, apart from a small residue of low activations (0.3% of mass) on other inputs at the first copy step of short sequences.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 979,
+    "predicate": "(phase == 2) & (in_tok == tok(\"r\")) & (L <= 6)",
+    "split": "test",
+    "precision": 0.8263261893904849,
+    "recall": 0.8246715815660932,
+    "f1": 0.8254980563654033,
+    "mass_recall": 0.9535643073305304,
+    "correlation": 0.7276089559653106,
+    "n_active": 32961,
+    "n_predicted": 32895,
+    "coverage_by_activation_quartile": [
+      0.5306394854993326,
+      0.8015776699029126,
+      0.966747572815534,
+      0.999757281553398
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 979,
+    "predicate": "(phase == 2) & (in_tok == tok(\"r\")) & (L <= 6)",
+    "split": "dev",
+    "precision": 0.8261213319142466,
+    "recall": 0.8267750083690922,
+    "f1": 0.8264480408858603,
+    "mass_recall": 0.9546996263734785,
+    "correlation": 0.7289478490023947,
+    "n_active": 32859,
+    "n_predicted": 32885,
+    "coverage_by_activation_quartile": [
+      0.5317102860620816,
+      0.8086427267194157,
+      0.9676202069385271,
+      0.9991477964450938
+    ]
+  },
+  "gate": "update",
+  "feature": 979,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The remaining errors come from the gradual drop with length, not from a hidden variable. At L=6, r inputs in the copy phase fire with precision 0.61. At L=7 it is 0.18, and at L<=5 it is 0.98. Splitting L=6 by digit count, in_count or recall_idx (precision 0.56-0.68) does not separate firing from non-firing steps, so the cutoff at L<=6 is a magnitude threshold on a graded signal.",
+      "None of the other cutoffs beat L<=6. t<=9 gave F1 0.74, t<=10 gave 0.70, 2L+recall_idx<=15 gave 0.79, L<=5 gave 0.72 (precision 0.98, recall 0.57) and to_go/recall_idx combinations gave 0.59-0.77.",
+      "The secondary claims check out. The feature never fires in the original or delimiter phases. Copy-phase inputs other than r hold 0.26% of the mass, almost all at L=3 on the first copy step. The top activations (about 6.2) are L=3 sequences that start with r, with r fed back at the first copy step. An r at L=3 on the first copy step fires every time (precision 1.0).",
+      "Test misses are steps with r at L=7-8 and small activations. Test false positives are r inputs late in L=6 sequences and second r's in a repeat. Both fit the length falloff, and missed activations hold only 4.6% of the mass.",
+      "The label is a little loose: 'short sequences' really means a strength that falls off steadily with L, with L=6 already around 60% precision. That is acceptable, but the explanation should say the feature weakens gradually rather than stopping at a cutoff.",
+      "Reproduced test scores: precision 0.826, recall 0.825, F1 0.825, mass recall 0.954."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

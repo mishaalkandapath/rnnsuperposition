@@ -1,0 +1,64 @@
+{
+  "label": "copy-phase input k fed back early in recall (first/second copied token), sequence step <= 9",
+  "predicate": "(phase == 2) & (in_tok == tok(\"k\")) & (recall_idx <= 2) & (t <= 9)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost only in the copy phase when the token fed back as input is k (99.9% of activation mass on in_tok=k). It is strongest right after <DEL> when k was the first original token (recall_idx=1, i.e. the input k is orig(0); 92% of mass, top activations ~3.8). Weaker at recall_idx=2 (k as orig(1), 7% of mass) and almost nothing later. Activation drops with absolute step and sequence length: most mass is at t=5-8, t=10 is tiny, and nothing fires at t>=11, so k at recall_idx 1-2 in L=8-9 sequences is mostly silent. Does not fire on k in the original phase, on the delimiter, or on other tokens; a few weak activations show up on other tokens (2, g, m) or on k late in the copy. Dev: P 0.76, R 0.94, F1 0.84, mass recall 0.99.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 636,
+    "predicate": "(phase == 2) & (in_tok == tok(\"k\")) & (recall_idx <= 2) & (t <= 9)",
+    "split": "test",
+    "precision": 0.7596797323135756,
+    "recall": 0.943501706822342,
+    "f1": 0.8416708961316945,
+    "mass_recall": 0.9948640063543404,
+    "correlation": 0.6985840915431515,
+    "n_active": 20213,
+    "n_predicted": 25104,
+    "coverage_by_activation_quartile": [
+      0.7882865057380293,
+      0.9857510389867405,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 636,
+    "predicate": "(phase == 2) & (in_tok == tok(\"k\")) & (recall_idx <= 2) & (t <= 9)",
+    "split": "dev",
+    "precision": 0.7614464623686223,
+    "recall": 0.9429041587713174,
+    "f1": 0.842515650411032,
+    "mass_recall": 0.9947648425534603,
+    "correlation": 0.7017130670924946,
+    "n_active": 20054,
+    "n_predicted": 24833,
+    "coverage_by_activation_quartile": [
+      0.7842042281611488,
+      0.9874351814918229,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 636,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold. On dev, 99.9% of activation mass is on in_tok=k, 100% is in the copy phase, recall_idx=1 holds 92.4% and recall_idx=2 holds 7.3%. Original-phase firing is negligible (91 steps), the delimiter never fires, and nothing fires at t>=11. Reported scores reproduce: dev P 0.761 / R 0.943 / F1 0.843, test P 0.760 / R 0.944 / F1 0.842.",
+      "The 't <= 9' cutoff stands in for the real variable, which is L for each recall_idx. Precision by cell for k at recall_idx=1: L=3-7 is about 1.00, L=8 is 0.81, L=9 is 0.11. For k at recall_idx=2: L=3 is 0.03, L=4 0.70, L=5 0.86, L=6 0.50, L=7 0.07, L=8-9 about 0.",
+      "The explanation says activation 'falls as the step index grows', but the recall_idx=2, L=3 case is at t=5 (the peak region) and is almost silent (14 of 423 steps active). This happens when k is the last output (to_go=0). The t<=9 predicate counts these as positives.",
+      "Systematic false positives of the reported predicate: recall_idx=2 at L=3 (about 410 steps) and at L=7 (t=9, precision 0.07, about 2480 steps). These cells account for most of the gap between the reported precision (0.76) and the fitted predicate's (0.86).",
+      "Overall, recall_idx=2 is weak and inconsistent: precision 0.34, 7% of mass. Saying the feature fires 'early in recall (first/second copied token)' overstates the second-token part; it is mainly the first copied token (k = orig(0) right after <DEL>) in sequences with L<=8.",
+      "Remaining misses are scattered noise: weak activations on 2, g, m and late k, together 0.5% of mass."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "k fed back as the first copied token (orig(0) right after <DEL>) in sequences with L<=8; weaker when k is the second copied token in mid-length (L=4-6) sequences",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"k\")) & (((recall_idx == 1) & (L<=8)) | ((recall_idx == 2) & (L>=4) & (L<=6)))",
+    "better_predicate_test_f1": 0.896
+  },
+  "final_label": "k fed back as the first copied token (orig(0) right after <DEL>) in sequences with L<=8; weaker when k is the second copied token in mid-length (L=4-6) sequences"
+}

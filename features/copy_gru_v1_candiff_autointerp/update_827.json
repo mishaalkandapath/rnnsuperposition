@@ -1,0 +1,63 @@
+{
+  "label": "early-position steps (t=2..4) shortly after a t at the start of the sequence",
+  "predicate": "(phase == 0) & (t <= 4) & (((orig(0) == tok(\"t\")) & (t >= 2)) | ((orig(1) == tok(\"t\")) & (t >= 3)))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires during the original-input phase at steps 2-5 (peak at t=3, nearly all mass at t=2..4) when the token t appeared at position 0 (first_tok=t: 21x lift, 84% of mass) or, more weakly, at position 1. Which token is currently being input does not matter. Magnitude is largest when the sequence starts with repeated t (t t t ...), peaks at step 3 or 4, and drops off by step 5-6. Activations are weaker when t is at position 1 instead of position 0, and many of those steps are false positives. Almost silent at t=0,1, at t>=6, in the copy phase, and when t first appears later in the sequence; it fires weakly at the delimiter for short sequences that start with t.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 827,
+    "predicate": "(phase == 0) & (t <= 4) & (((orig(0) == tok(\"t\")) & (t >= 2)) | ((orig(1) == tok(\"t\")) & (t >= 3)))",
+    "split": "test",
+    "precision": 0.8735713816005787,
+    "recall": 0.8893858039982325,
+    "f1": 0.8814076619912685,
+    "mass_recall": 0.9557027368565971,
+    "correlation": 0.8052681775437999,
+    "n_active": 74683,
+    "n_predicted": 76035,
+    "coverage_by_activation_quartile": [
+      0.6548122757217074,
+      0.9574205987895668,
+      0.9708103475978791,
+      0.974504552758436
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 827,
+    "predicate": "(phase == 0) & (t <= 4) & (((orig(0) == tok(\"t\")) & (t >= 2)) | ((orig(1) == tok(\"t\")) & (t >= 3)))",
+    "split": "dev",
+    "precision": 0.8712226005533092,
+    "recall": 0.8871162154475398,
+    "f1": 0.8790975768515847,
+    "mass_recall": 0.9548826071280044,
+    "correlation": 0.8034908253845048,
+    "n_active": 73837,
+    "n_predicted": 75184,
+    "coverage_by_activation_quartile": [
+      0.6482665222101842,
+      0.9557939216642288,
+      0.9698791917221952,
+      0.9745381656644455
+    ]
+  },
+  "gate": "update",
+  "feature": 827,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The orig(1)==t branch has a systematic precision gap, not scattered noise. On dev, (phase==0)&(t in 3..4)&(orig(1)==t)&(orig(0)!=t) has precision 0.69 and carries only 15.5% of activation mass. Split by first token, precision is close to zero when orig(0) is in {b,d,f,h,l,n,0}: b 0.010, d 0.082, f 0.018, h 0.000, l 0.000, n 0.043, 0 0.015. It is middling for a 0.64, i 0.55, 1 0.65, q 0.80 and r 0.69, and 0.92-1.00 for nearly every other first token. Test false positives are mostly of the form 'n t ...', '0 t ...', 'd t ...', 'f t ...'. The explanation only says 'many of those steps are false positives' and does not name this token dependence.",
+      "The orig(0)==t branch alone (t=2..4, phase 0) has precision 0.984 and 80% of mass, so it supports the main claim. Recall is only 0.62 by count, though, so the position-1 branch is not minor by step count.",
+      "The step 5 tail is real but weak: (phase==0)&(t==5)&(orig(0)==t) has precision 0.33 and 2.3% of mass. Calling t=5 part of the firing range (as the explanation does with 'steps 2-5') slightly overclaims; leaving it out of the predicate is correct.",
+      "Checked and confirmed: silent at t=0 and t=1 (0 active steps); about 0 at t>=7; copy phase holds 0.1% of mass; the delimiter step holds 1.5% of mass (most of it on output t); in_tok lift is flat at about 1.1x for all tokens, so the current input token really does not matter.",
+      "Adding the first-token exclusion to the orig(1) branch raises test precision from 0.874 to 0.958 and leaves recall unchanged (0.887 vs 0.889). That confirms the gap is systematic."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "original-phase steps 2-4 of sequences starting with t (or with t at position 1, unless the first token is one of b/d/f/h/l/n/0)",
+    "better_predicate": "(phase == 0) & (t <= 4) & (((orig(0) == tok('t')) & (t >= 2)) | ((orig(1) == tok('t')) & (t >= 3) & ~isin(orig(0), [tok('b'),tok('d'),tok('f'),tok('h'),tok('l'),tok('n'),tok('0')])))",
+    "better_predicate_test_f1": 0.921
+  },
+  "final_label": "original-phase steps 2-4 of sequences starting with t (or with t at position 1, unless the first token is one of b/d/f/h/l/n/0)"
+}

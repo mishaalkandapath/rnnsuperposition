@@ -1,0 +1,62 @@
+{
+  "label": "early \"i a\" bigram / sequence starting \"i i\" (positions 1-3)",
+  "predicate": "(phase==0) & (t>=1) & (t<=3) & (((prev_tok==tok(\"i\")) & (in_tok==tok(\"a\"))) | ((t==2) & (orig(0)==tok(\"i\")) & ((prev_tok==tok(\"i\")) | (in_tok==tok(\"a\")))))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the original phase at steps 1-3, on input a immediately after i (the bigram \"i a\" near the start of the sequence), plus at step 2 of sequences beginning with i when either the second token is also i or the third token is a. Strongest (max) on \"i i a\" at step 2; \"x i a\" at step 2 is about 0.5x max, \"i x a\" about 0.3x, and \"i i x\" (x not a) about 0.2x. \"i a\" at step 3 fires weakly and not always (most of the false positives). Never fires at step 0, at step 4 or later, on the delimiter, or anywhere in the copy phase, even when \"i a\" is copied back as input.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 215,
+    "predicate": "(phase==0) & (t>=1) & (t<=3) & (((prev_tok==tok(\"i\")) & (in_tok==tok(\"a\"))) | ((t==2) & (orig(0)==tok(\"i\")) & ((prev_tok==tok(\"i\")) | (in_tok==tok(\"a\")))))",
+    "split": "test",
+    "precision": 0.8726719878373242,
+    "recall": 0.999129677980853,
+    "f1": 0.9316291336985191,
+    "mass_recall": 0.9999543386814153,
+    "correlation": 0.8039497601426181,
+    "n_active": 2298,
+    "n_predicted": 2631,
+    "coverage_by_activation_quartile": [
+      0.9965217391304347,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 215,
+    "predicate": "(phase==0) & (t>=1) & (t<=3) & (((prev_tok==tok(\"i\")) & (in_tok==tok(\"a\"))) | ((t==2) & (orig(0)==tok(\"i\")) & ((prev_tok==tok(\"i\")) | (in_tok==tok(\"a\")))))",
+    "split": "dev",
+    "precision": 0.8616236162361623,
+    "recall": 0.9995719178082192,
+    "f1": 0.9254855330955212,
+    "mass_recall": 0.9997887871896974,
+    "correlation": 0.8009471315877738,
+    "n_active": 2336,
+    "n_predicted": 2710,
+    "coverage_by_activation_quartile": [
+      0.9982876712328768,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 215,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Main claims hold up. Every activation is in the original phase (delimiter and copy phase are 0 of 3.2M steps). Activation mass by step: t=1 0.42, t=2 0.56, t=3 0.02, t=4 1 step, t=0 none. \"i a\" re-entering as copied input in the copy phase fires 0 of 2497 times.",
+      "On the test split I reproduced P 0.873, R 0.999, F1 0.932 and mass recall 1.00. The predicate misses only 2 activations, both tiny (0.21 and 0.04 of max).",
+      "Every false positive comes from two weak clauses. \"i a\" at t=3 is active only 45% of the time (precision 0.45, 460 predicted). \"i x a\" at t=2 with x not i is active 78% of the time. The other three clauses are always active (precision 1.0): \"i a\" at t=1, \"x i a\" at t=2, and \"i i x\" at t=2.",
+      "I looked for structure in the t=3 false positives and found none: splitting on whether orig(0) or orig(1) is a digit, or whether orig(0)==orig(1), leaves precision at 0.37-0.61 with no clean separator. The false positives look like activations near the firing threshold, not a missing condition.",
+      "Small overclaim: the explanation says the feature 'never fires at step 4 or later', but it fires once at t=4 on dev, at 0.04 of max. This is negligible."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

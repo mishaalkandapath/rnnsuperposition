@@ -1,0 +1,61 @@
+{
+  "label": "early steps (t=2-4) after an x among the first two tokens",
+  "predicate": "(phase <= 1) & (t >= 2) & (t <= 4) & ((orig(0) == tok(\"x\")) | ((orig(1) == tok(\"x\")) & (t >= 3)))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires during the early original phase (steps 2-4, ~97% of mass at t=2..4) of sequences whose first token is x (68% of mass, 16x lift) or whose second token is x (then only from t=3). It starts two steps after the x and turns off by t=5, regardless of what token is currently input (in_tok is flat). Strongest in sequences beginning with repeated x (x x x ...), peaking at t=3-4. Weak, low-quartile tail at t=5 and at the delimiter for short x-initial sequences; also faint activations when x is at position 2. Does not fire at t=0-1, in the copy phase, or for sequences with no early x. Dev: P 0.875, R 0.821, F1 0.847, mass recall 0.95.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 863,
+    "predicate": "(phase <= 1) & (t >= 2) & (t <= 4) & ((orig(0) == tok(\"x\")) | ((orig(1) == tok(\"x\")) & (t >= 3)))",
+    "split": "test",
+    "precision": 0.8717455146714049,
+    "recall": 0.8200199642500638,
+    "f1": 0.8450919878465992,
+    "mass_recall": 0.9490368611881859,
+    "correlation": 0.8299957606966061,
+    "n_active": 86154,
+    "n_predicted": 81042,
+    "coverage_by_activation_quartile": [
+      0.39718649890895585,
+      0.9126236129811041,
+      0.9809174482310336,
+      0.9893676293063423
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 863,
+    "predicate": "(phase <= 1) & (t >= 2) & (t <= 4) & ((orig(0) == tok(\"x\")) | ((orig(1) == tok(\"x\")) & (t >= 3)))",
+    "split": "dev",
+    "precision": 0.874748124065123,
+    "recall": 0.8211123617670608,
+    "f1": 0.8470820614113843,
+    "mass_recall": 0.9497922333435747,
+    "correlation": 0.8309578992206532,
+    "n_active": 86177,
+    "n_predicted": 80893,
+    "coverage_by_activation_quartile": [
+      0.4011139475516361,
+      0.9117619754920163,
+      0.9818046787968808,
+      0.9897883401411066
+    ]
+  },
+  "gate": "update",
+  "feature": 863,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the predicate uses phase<=1, so it includes the delimiter step when L=3 or 4. On test, those steps have precision 0.37 (5653 predicted, 1.1% of mass). Limiting the predicate to phase==0 gives test P 0.909, R 0.795, F1 0.848, a little better than the reported 0.845. The explanation calls the delimiter step part of the 'weak tail', which is consistent with this, but it is a small mismatch between predicate and explanation.",
+      "The 'x at position 2' tail is real but weak, as the explanation says. With orig(2)==x, no x in the first two positions, and t==4, precision is 0.37, it covers 6.5% of active steps, and it holds 2.0% of mass. Adding it to the predicate lowers test F1 to 0.838, so leaving it out is reasonable. x at position 3 does not fire (precision 0.003).",
+      "The claims hold up. t=0-1 has 0 active steps. The copy phase has 20 of 2.73M steps (precision 7e-6). Steps 2-4 hold 97.4% of mass and t=5 holds 2.5%. Sequences whose first token is x hold 68% of mass at 16x lift. With orig(1)=x and orig(0)!=x, t=3 has precision 0.89, and t=2 does not fire. Steps with orig(0)=orig(1)=x have precision 1.0 and about 2.5x the mass per step. Rates by in_tok are flat (1.1-1.2x).",
+      "Remaining misses are mostly low-activation: the bottom quartile is only 40% covered, and misses hold 5% of mass in total. They come from t=5 after an early x, x at position 2, and short delimiter steps, all of which the explanation describes. False positives are spread out: at t=4 with orig(0)=x precision is 0.73-0.91 depending on the token class of orig(1), which is not a systematic pattern."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 0) & (t >= 2) & (t <= 4) & ((orig(0) == tok(\"x\")) | ((orig(1) == tok(\"x\")) & (t >= 3)))",
+    "better_predicate_test_f1": 0.848
+  }
+}

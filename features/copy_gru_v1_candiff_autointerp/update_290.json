@@ -1,0 +1,62 @@
+{
+  "label": "Early original-phase step just after a g (1-2 steps back)",
+  "predicate": "(phase == 0) & (t <= 5) & ((prev_tok == tok(\"g\")) | (prev2_tok == tok(\"g\")))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires during the original-input phase at early positions (t=1..5, peaking at t=3-4) when the letter g was input one or two steps earlier. Any current input token works. It is strongest the step right after g: prev_tok=g alone gives precision 0.94 and holds about 59% of the mass, and the largest activations come in sequences that start with g g g. At t=1 right after a leading g the activation is weak. It does not fire in the copy phase, at t=0, or at t>=6, even if g came just before; it rarely fires at the delimiter. The missed activations are low-magnitude, scattered and have no g nearby (about 8% of the mass). Adding g three steps back raises recall a little but lowers precision.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 290,
+    "predicate": "(phase == 0) & (t <= 5) & ((prev_tok == tok(\"g\")) | (prev2_tok == tok(\"g\")))",
+    "split": "test",
+    "precision": 0.9032622912979918,
+    "recall": 0.6833670950917389,
+    "f1": 0.778076762481691,
+    "mass_recall": 0.9151756481080885,
+    "correlation": 0.7774761928922813,
+    "n_active": 171792,
+    "n_predicted": 129970,
+    "coverage_by_activation_quartile": [
+      0.2792912359131974,
+      0.5543215050759057,
+      0.9036509267020583,
+      0.996204712675794
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 290,
+    "predicate": "(phase == 0) & (t <= 5) & ((prev_tok == tok(\"g\")) | (prev2_tok == tok(\"g\")))",
+    "split": "dev",
+    "precision": 0.902151033264193,
+    "recall": 0.6816245269438833,
+    "f1": 0.7765346135280076,
+    "mass_recall": 0.9144841042215694,
+    "correlation": 0.7754074045202585,
+    "n_active": 172284,
+    "n_predicted": 130170,
+    "coverage_by_activation_quartile": [
+      0.2777739081980915,
+      0.5515079752037334,
+      0.9016507626941561,
+      0.9955654616795524
+    ]
+  },
+  "gate": "update",
+  "feature": 290,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "One claim is partly wrong. The explanation says the missed activations have 'no g nearby', but about 3.9% of the 8.5% missed mass comes from steps where g was input exactly 3 steps back. That class fires with precision 0.41, so it is a decaying tail of the same g signal, not noise. The other misses, with no g seen before the step, fire at only about 2% and carry 2.4% of the mass. Those are scattered and low-magnitude.",
+      "Count recall is only 0.68 on test. Bottom-quartile coverage is 0.28, so the predicate captures the strong activations well but not the weak ones. Mass recall is 0.915.",
+      "How strong the feature is depends on where the g sits, which the label does not say. The step after a g at position 1, 2 or 3 is very reliable (precision 0.99-1.0). The step after a g at position 4 (t=5) gives 0.70, and the step after a g at position 0 (t=1) gives 0.94 precision but only 1.7% of the mass. Two steps after a g at position 4 (t=6) gives just 0.09, which matches the claimed t<=5 cutoff.",
+      "The other claims check out. Copy phase: 0 activations. t=0: 0 activations. t>=6: 0.4% of mass. Delimiter: 1.8% of mass (precision 0.14 even with g just before). Peak at t=3-4: 38% and 28% of mass. prev_tok=g alone: precision 0.94 and 60.5% of mass. Adding g 3 back on test: precision 0.79, F1 0.784. Test scores reproduce (P 0.903, R 0.683, F1 0.778, mass recall 0.915). The current input token does not matter: rates are flat across tokens."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Early original-phase step 1-2 (weakly 3) steps after a g input",
+    "better_predicate": "(phase == 0) & (t >= 1) & (t <= 5) & ((prev_tok == tok('g')) | (prev2_tok == tok('g')) | (rel_tok(-3) == tok('g')))",
+    "better_predicate_test_f1": 0.784
+  },
+  "final_label": "Early original-phase step 1-2 (weakly 3) steps after a g input"
+}

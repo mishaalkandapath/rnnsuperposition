@@ -1,0 +1,63 @@
+{
+  "label": "first input is one of a fixed token set {a,b,d,i,j,k,m,p,q,s,v,w,1,3} (plus its re-input at step L+1 when L=3)",
+  "predicate": "isin(in_tok, [tok(\"a\"),tok(\"b\"),tok(\"d\"),tok(\"i\"),tok(\"j\"),tok(\"k\"),tok(\"m\"),tok(\"p\"),tok(\"q\"),tok(\"s\"),tok(\"v\"),tok(\"w\"),tok(\"1\"),tok(\"3\")]) & ((t == 0) | ((phase == 2) & (recall_idx == 1) & (L == 3)))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token-identity unit gated by sequence start. At t=0 it fires deterministically (precision 1.0) when the first input is in {a,b,d,i,j,k,m,p,q,s,v,w,1,3}, and never for any other first token (c,e,f,g,h,l,n,o,r,t,u,x,y,z,0,2). Magnitude at t=0 depends on the token: q and m are strongest (~0.3 of max), then a/i/d/b/p, then v/w/3, with k/s/1 weakest. t=0 holds about 74% of activation mass. The largest activations of all (up to the max) occur in L=3 sequences at step L+1, where orig(0) is fed back as input and is again in the set. This is much weaker and rarer for L=4, and absent for longer sequences. Remaining misses (about 25% of active steps, about 20% of mass) are weak, history-dependent firings on the same tokens at original positions 1-4, mostly when no set token has appeared earlier. These are not reliably predictable. The unit essentially never fires on the delimiter, on copy steps beyond recall_idx 2, or on original positions 5 and later.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 63,
+    "predicate": "isin(in_tok, [tok(\"a\"),tok(\"b\"),tok(\"d\"),tok(\"i\"),tok(\"j\"),tok(\"k\"),tok(\"m\"),tok(\"p\"),tok(\"q\"),tok(\"s\"),tok(\"v\"),tok(\"w\"),tok(\"1\"),tok(\"3\")]) & ((t == 0) | ((phase == 2) & (recall_idx == 1) & (L == 3)))",
+    "split": "test",
+    "precision": 0.9987682415081734,
+    "recall": 0.7384083472247948,
+    "f1": 0.8490775333445739,
+    "mass_recall": 0.7892238522756589,
+    "correlation": 0.7195096657728518,
+    "n_active": 64788,
+    "n_predicted": 47899,
+    "coverage_by_activation_quartile": [
+      0.6361054516268445,
+      0.7542137432857937,
+      0.7029079459159103,
+      0.8604062480706304
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 63,
+    "predicate": "isin(in_tok, [tok(\"a\"),tok(\"b\"),tok(\"d\"),tok(\"i\"),tok(\"j\"),tok(\"k\"),tok(\"m\"),tok(\"p\"),tok(\"q\"),tok(\"s\"),tok(\"v\"),tok(\"w\"),tok(\"1\"),tok(\"3\")]) & ((t == 0) | ((phase == 2) & (recall_idx == 1) & (L == 3)))",
+    "split": "dev",
+    "precision": 0.9985119047619048,
+    "recall": 0.7398130318653332,
+    "f1": 0.8499125842937167,
+    "mass_recall": 0.7904626086782323,
+    "correlation": 0.7210301704314793,
+    "n_active": 64396,
+    "n_predicted": 47712,
+    "coverage_by_activation_quartile": [
+      0.6368097397353872,
+      0.7558233430647866,
+      0.7058202372818188,
+      0.8607988073793403
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 63,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The L=3 recall clause is wrongly tied to the token set. At L=3 with recall_idx==1, inputs outside the set still fire 54% of the time (1401 such steps on dev, e.g. 'u y s <DEL> [u]' and 'h w c <DEL> [h]'). That contradicts the claim that the token 'is again in the set'. Dropping the set restriction for that clause raises test F1 from 0.849 to 0.852 and mass recall from 0.789 to 0.807.",
+      "The claim that the remaining misses are 'not reliably predictable' is overstated. One narrow clause, an original-phase step with t in 1-3 where in_tok is q or m and no set token has been seen before, raises test F1 to 0.868 and mass recall to 0.871. The agent's broader clause scored 0.73, which only shows that its particular clause was too wide. These misses form a systematic class: the first strong set token after a non-set first token.",
+      "Small factual slip: mid-sequence firing happens at original positions 1-3, not 1-4. Position 4 has only 14 active steps on dev.",
+      "L=3 sequences also fire at recall_idx 2 (e.g. 'f q z <DEL> f [q:0.32]'). The explanation does not mention this.",
+      "Recall is 0.74, so about 25% of active steps are unexplained, which is a lot for an 'explained' verdict. The t=0 part holds up: precision is 1.0 on the set, and t=0 never fires on any other token."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "Fires on the first input when it is in {a,b,d,i,j,k,m,p,q,s,v,w,1,3}. It also fires on the first strong set token (mainly q or m) at positions 1-3 when no set token came earlier, and at the first copy steps of L=3 sequences whatever the input token.",
+    "better_predicate": "(isin(in_tok, [tok(\"a\"),tok(\"b\"),tok(\"d\"),tok(\"i\"),tok(\"j\"),tok(\"k\"),tok(\"m\"),tok(\"p\"),tok(\"q\"),tok(\"s\"),tok(\"v\"),tok(\"w\"),tok(\"1\"),tok(\"3\")]) & (t == 0)) | ((phase == 2) & (recall_idx == 1) & (L == 3)) | ((phase==0) & (t>0) & (t<4) & isin(in_tok,[tok(\"q\"),tok(\"m\")]) & ~seen([tok(\"a\"),tok(\"b\"),tok(\"d\"),tok(\"i\"),tok(\"j\"),tok(\"k\"),tok(\"m\"),tok(\"p\"),tok(\"q\"),tok(\"s\"),tok(\"v\"),tok(\"w\"),tok(\"1\"),tok(\"3\")]))",
+    "better_predicate_test_f1": 0.868
+  },
+  "final_label": "Fires on the first input when it is in {a,b,d,i,j,k,m,p,q,s,v,w,1,3}. It also fires on the first strong set token (mainly q or m) at positions 1-3 when no set token came earlier, and at the first copy steps of L=3 sequences whatever the input token."
+}

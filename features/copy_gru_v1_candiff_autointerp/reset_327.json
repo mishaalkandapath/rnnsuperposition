@@ -1,0 +1,62 @@
+{
+  "label": "First copied token fed back (step L+1, outputting orig token 1) in long sequences (L>=7)",
+  "predicate": "(recall_idx == 1) & (L >= 7)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost exclusively at step t = L+1: the step right after <DEL>, where the input is the model echoing original token 0 and the output is original token 1. It only fires for long sequences (L = 7, 8, 9; essentially never for L <= 6). Magnitude grows with L (L=9 carries ~half the mass, L=7 the least), i.e. with more outputs remaining. It is independent of token identity (in/out/first token tables are flat). A small spillover of weak activation (~0.1-0.2 of max) appears at the following step (recall_idx 2). Silent during the original phase, at the delimiter, and at all later copy steps. Misses are mostly low-magnitude L=7 cases where it fails to fire.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 327,
+    "predicate": "(recall_idx == 1) & (L >= 7)",
+    "split": "test",
+    "precision": 0.9562448330938832,
+    "recall": 0.9795843696684413,
+    "f1": 0.9677739035430633,
+    "mass_recall": 0.9931270904626568,
+    "correlation": 0.902372321521405,
+    "n_active": 243245,
+    "n_predicted": 249182,
+    "coverage_by_activation_quartile": [
+      0.9185522594224824,
+      0.9997862228873066,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 327,
+    "predicate": "(recall_idx == 1) & (L >= 7)",
+    "split": "dev",
+    "precision": 0.9548207398369742,
+    "recall": 0.979262710748156,
+    "f1": 0.9668872826438153,
+    "mass_recall": 0.9930168133430582,
+    "correlation": 0.9012776969216134,
+    "n_active": 242944,
+    "n_predicted": 249163,
+    "coverage_by_activation_quartile": [
+      0.9172319546891464,
+      0.9998188883034773,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "reset",
+  "feature": 327,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims hold up. On test the predicate scores P 0.956, R 0.980, F1 0.968 and mass recall 0.993, matching what was reported. On dev, 99.4% of the activation mass sits at recall_idx 1. It never fires in the original phase, fires on only 4 delimiter steps, and has zero activation at recall_idx >= 3.",
+      "Length claims check out. L<=5 is silent and L=6 has a 0.1% share. Mass by length is L7 0.155, L8 0.347, L9 0.497, while the three groups have about the same number of sequences, so magnitude per activation really does grow with L.",
+      "False positives are concentrated at L=7, the edge of the length threshold. The L=7, recall_idx 1 slice has precision 0.865; L>=8 is near 1.0. Inside L=7 there is mild graded modulation: precision is 0.83 with no digits, 0.90-0.93 with 2 or more digits, about 0.90 when the first or output token is a digit, and 0.916 when out_tok equals first_tok. None of these splits gives a clean subclass, so I treat it as the feature fading out at the threshold, not a missed rule.",
+      "Misses are the recall_idx 2 spillover (0.1-0.2 of max) and a few weak L=6 activations at step 7, as stated. Together they hold only 0.7% of the mass.",
+      "The label matches the predicate: it names the same position (recall_idx 1, input = echo of orig token 0) and the same length restriction (L>=7). No overclaim found."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

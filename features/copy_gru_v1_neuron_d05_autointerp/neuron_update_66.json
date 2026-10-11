@@ -1,0 +1,63 @@
+{
+  "label": "<DEL> step in long sequences (L >= 7)",
+  "predicate": "(phase == 1) & (L >= 7)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Update-gate unit that fires at the delimiter step (<DEL> input, first copy output) of sequences with 7 or more original tokens. Here it is active on essentially every such sequence, near max magnitude (precision 1.0, about 95% of activation mass). It almost never fires on L <= 6 (a few L=6 delimiter steps) and never during the original phase. Weak spillover (the low-magnitude bottom quartile) happens on the next step (recall_idx 1, input = first original token), mostly in L >= 8 sequences, and a trace at recall_idx 2. Activation does not depend on token identity (out_tok, first_tok, prev tokens are all flat), so it reads as a length-gated signal for the start of copying.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 66,
+    "predicate": "(phase == 1) & (L >= 7)",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.7715077485176413,
+    "f1": 0.8710182037456194,
+    "mass_recall": 0.9463448388541187,
+    "correlation": 0.9785686621043742,
+    "n_active": 64593,
+    "n_predicted": 49834,
+    "coverage_by_activation_quartile": [
+      0.08625921109666233,
+      0.9998142184790686,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 66,
+    "predicate": "(phase == 1) & (L >= 7)",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.770517657245346,
+    "f1": 0.8703868657759147,
+    "mass_recall": 0.9460443427287115,
+    "correlation": 0.9784531678965419,
+    "n_active": 64676,
+    "n_predicted": 49834,
+    "coverage_by_activation_quartile": [
+      0.08225616921269095,
+      0.9998144597686932,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 66,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Each factual claim checks out on test: precision 1.0, F1 0.871, mass recall 0.946, 0 false positives. There are only 5 original-phase activations, and the L=6 delimiter firing is only a trace (376 dev steps).",
+      "The misses are a systematic class, not noise. 14,759 test misses (5.4% of mass), and the sampled ones are almost all the step after <DEL> (recall_idx 1).",
+      "The explanation says these misses are 'mostly in sequences with L >= 8'. In fact they are concentrated in L = 9. (recall_idx==1)&(L==9) has precision 0.65, while L=8 has 0.18 and L=7 has about 0. The agent only tested the broader L>=8 extension, which pulls precision down to 0.77, and so wrongly decided the misses should be left out.",
+      "Adding (recall_idx==1)&(L==9) to the predicate raises test F1 from 0.871 to 0.926 (precision 0.913, recall 0.939, mass recall 0.992).",
+      "Minor: by t, t=10 (L=9, recall_idx 1) has a 16.6% active rate, so 'never fires after the delimiter' would be wrong. The label is acceptable because these firings are weak."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Mainly the <DEL> step in long sequences (L >= 7), plus weak firing on the first copy step after <DEL> when L = 9",
+    "better_predicate": "((phase == 1) & (L >= 7)) | ((recall_idx == 1) & (L == 9))",
+    "better_predicate_test_f1": 0.926
+  },
+  "final_label": "Mainly the <DEL> step in long sequences (L >= 7), plus weak firing on the first copy step after <DEL> when L = 9"
+}

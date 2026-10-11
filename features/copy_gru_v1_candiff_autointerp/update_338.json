@@ -1,0 +1,64 @@
+{
+  "label": "sequence began with h: steps 3+ of the original phase and the <DEL> step",
+  "predicate": "(first_tok == tok(\"h\")) & (t >= 3) & (phase <= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires when the first original token is h (96% of activation mass), from step 3 through the end of the original phase and on the <DEL> step. It never fires at t<3 and essentially never in the copy phase. Magnitude is largest around t=4-5, often with a second h at position 1 (h h ...), and it decays over long sequences, so late steps (t=8-9) and the <DEL> step of long sequences are weak or inactive. The inputs at those steps do not matter. Weak, sparse activations also occur when h is the second original token (e.g. 0 h q a ...). It does not fire for any other first token.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 338,
+    "predicate": "(first_tok == tok(\"h\")) & (t >= 3) & (phase <= 1)",
+    "split": "test",
+    "precision": 0.9316519270662736,
+    "recall": 0.778691610106656,
+    "f1": 0.8483319559827759,
+    "mass_recall": 0.9628754554134608,
+    "correlation": 0.8775035535424319,
+    "n_active": 87665,
+    "n_predicted": 73272,
+    "coverage_by_activation_quartile": [
+      0.21964684947757449,
+      0.8952819857638256,
+      0.9998631137068809,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 338,
+    "predicate": "(first_tok == tok(\"h\")) & (t >= 3) & (phase <= 1)",
+    "split": "dev",
+    "precision": 0.9320280208277417,
+    "recall": 0.7821851313759277,
+    "f1": 0.8505575388685115,
+    "mass_recall": 0.9632073131170693,
+    "correlation": 0.8771352274417088,
+    "n_active": 88791,
+    "n_predicted": 74516,
+    "coverage_by_activation_quartile": [
+      0.22803856203261555,
+      0.9008018740427065,
+      0.9999099017929544,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 338,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold. The feature is silent at t<3 (0 activations at t=0-2). It fires on 1 copy-phase step out of 2.73M. Mass peaks at t=4 (0.326) and t=5 (0.274). The test mass recall of 0.963 matches the reported value, and the predicate covers 100% of the top activation quartile and 99.99% of the third.",
+      "The label overclaims by saying 'steps 3+ ... and the <DEL> step'. Within the predicate, t=9 is a systematic false-positive class: dev precision is 0.049 there (t=9 is the <DEL> step of L=9 sequences, or the last original step). Precision at t=8 is 0.71. The <DEL> step fires reliably only for short sequences: precision is 0.995 for <DEL> with L<=6, but 0.30 for <DEL> with L>=8. The explanation mentions this decay, but the predicate and label do not include it.",
+      "The false positives are not random. In the misses output (test split), almost all of them are step 8-9 or the <DEL> step of long h-initial sequences.",
+      "There is a second, smaller systematic false-positive class not mentioned in the explanation. In 'h ? h ...' sequences (orig(2)==h), the feature never fires at t=3 (dev precision 0.0 over 565 steps). It resumes at t=4 (precision 1.0). An h on the previous input step seems to delay onset by one step.",
+      "The missed activations are a weak, low-magnitude class: the lowest activation quartile has only 22% coverage. About half of them are sequences with h as the second original token (orig(1)==h with a different first token): that predicate has precision 0.14 and recall 0.117. This matches the explanation's claim and is not worth adding to the predicate.",
+      "Capping at t<=8 and excluding (t==3 & prev_tok==h) raises test F1 from 0.848 to 0.864 (precision 0.974, recall 0.777, mass recall 0.963). The gain is modest, but the excluded steps are systematic, not noise."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "sequence began with h: steps 3-8 of the original phase and the <DEL> step of short sequences (silent at t=9; onset delayed one step if the third token is also h)",
+    "better_predicate": "(first_tok == tok(\"h\")) & (t >= 3) & (t <= 8) & (phase <= 1) & ~((t==3) & (prev_tok==tok(\"h\")))",
+    "better_predicate_test_f1": 0.864
+  },
+  "final_label": "sequence began with h: steps 3-8 of the original phase and the <DEL> step of short sequences (silent at t=9; onset delayed one step if the third token is also h)"
+}

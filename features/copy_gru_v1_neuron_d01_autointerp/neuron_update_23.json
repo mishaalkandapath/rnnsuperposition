@@ -1,0 +1,61 @@
+{
+  "label": "first input token is g, r, or j",
+  "predicate": "isin(in_tok,[tok(\"g\"),tok(\"r\"),tok(\"j\")]) & (t==0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires deterministically at step 0 whenever the first original token is g, r or j (dev precision 1.0, recall 0.83, F1 0.90, about 87% of activation mass). Magnitude depends on which token it is: g is strongest, r is in the middle (about 0.18 of max), and j is weakest (about 0.07 of max). The same letters later in the sequence give at most weak activations, mostly at t=1 after q or w. Adding that clause raises dev F1 to 0.93. A separate, rarer mode accounts for the highest single activations: the <DEL> step of short sequences (L=3, around 6% of mass), sometimes followed by a weak echo at the first copy step. It does not fire on other tokens, on later original positions (t>=3), or during the copy phase beyond recall_idx 1.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 23,
+    "predicate": "isin(in_tok,[tok(\"g\"),tok(\"r\"),tok(\"j\")]) & (t==0)",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.8268370087069737,
+    "f1": 0.9052115812917595,
+    "mass_recall": 0.8700779032077192,
+    "correlation": 0.7969849644549122,
+    "n_active": 12289,
+    "n_predicted": 10161,
+    "coverage_by_activation_quartile": [
+      0.7624471200780996,
+      0.7552083333333334,
+      0.8414713541666666,
+      0.9482421875
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 23,
+    "predicate": "isin(in_tok,[tok(\"g\"),tok(\"r\"),tok(\"j\")]) & (t==0)",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.8253191842148897,
+    "f1": 0.9043012217831675,
+    "mass_recall": 0.869486446220803,
+    "correlation": 0.7980588501661152,
+    "n_active": 12062,
+    "n_predicted": 9955,
+    "coverage_by_activation_quartile": [
+      0.7559681697612732,
+      0.7562997347480106,
+      0.8454394693200663,
+      0.9436152570480929
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 23,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The <DEL>-step mode (mostly L=3, about 6% of activation mass) is the source of the top activations. It is real, but I could only partly pin down what drives it: (phase==1)&(L==3) has precision 0.23, and splitting by the first or third original token gets no higher than 0.5. The explanation's word 'sometimes' is fair, but this mode is not explained.",
+      "The predicate leaves out the secondary modes on purpose: weak g/r/j activations at t=1-2, and the <DEL> mode. All test misses (2128 steps, 13% of mass) belong to these described classes, and there are zero false positives.",
+      "Magnitude claims hold up. At t=0, g reaches about 0.36 of max, r 0.18 and j 0.07; the max itself is set by the <DEL> mode. Firing is essentially zero at t>=3 in the original phase and beyond recall_idx 1, as claimed. Adding the 'after q or w at t=1' clause raises F1 as reported (test 0.926)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "first input token is g, r, or j (strongest for g); weakly fires on g/r/j at t=1 after q/w; rare strong spike at <DEL> of length-3 sequences",
+    "better_predicate": "isin(in_tok,[tok('g'),tok('r'),tok('j')]) & ((t==0) | ((t==1)&isin(prev_tok,[tok('q'),tok('w')])))",
+    "better_predicate_test_f1": 0.926
+  },
+  "final_label": "first input token is g, r, or j (strongest for g); weakly fires on g/r/j at t=1 after q/w; rare strong spike at <DEL> of length-3 sequences"
+}

@@ -1,0 +1,64 @@
+{
+  "label": "sequence starts with s: late original-phase steps and <DEL>",
+  "predicate": "(first_tok == tok(\"s\")) & (t >= 3) & (phase <= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires when the first original token is s (32% of such steps active, 22x lift; 94% of activation mass), at original-phase steps t>=3 and on the <DEL> step, and never at t<3 or during the copy phase (2 copy-phase activations out of 94k). The input token at the current step does not matter. Activation ramps up after t=3 (step 3 is weak, often near 0), peaks around steps 4-6, and drops somewhat at <DEL>. The strongest examples start with s s. Weak leftover activations show up when s is the second original token (e.g. b s ...), mostly at later steps. Predicate on dev: P 0.93, R 0.73, F1 0.82, mass recall 0.94; most misses and false positives are near-zero activations.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 436,
+    "predicate": "(first_tok == tok(\"s\")) & (t >= 3) & (phase <= 1)",
+    "split": "test",
+    "precision": 0.932392970047688,
+    "recall": 0.7290161084228828,
+    "f1": 0.8182566272850172,
+    "mass_recall": 0.9378228754906622,
+    "correlation": 0.8706668168299617,
+    "n_active": 95478,
+    "n_predicted": 74652,
+    "coverage_by_activation_quartile": [
+      0.24164222873900293,
+      0.6746962714704651,
+      0.9997486279274372,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 436,
+    "predicate": "(first_tok == tok(\"s\")) & (t >= 3) & (phase <= 1)",
+    "split": "dev",
+    "precision": 0.9315599700659909,
+    "recall": 0.7279096717947627,
+    "f1": 0.8172388273491216,
+    "mass_recall": 0.9384056718576392,
+    "correlation": 0.8699660958360079,
+    "n_active": 94057,
+    "n_predicted": 73495,
+    "coverage_by_activation_quartile": [
+      0.23891133319157984,
+      0.6729607893170027,
+      0.9997873607212724,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 436,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Test scores reproduce exactly: P 0.932, R 0.729, F1 0.818, mass recall 0.938.",
+      "Copy-phase claim holds: 2 of 94,057 dev activations are in the copy phase (recall_idx 3); none at t<3 or t>=10.",
+      "Step 3 is the main source of false positives: first_tok==s & t==3 has precision 0.71 and only 5% of the mass. The explanation already says step 3 is weak, often near 0. Dropping it (t>=4) raises precision to 0.996 but lowers F1 to 0.753, so including it is reasonable.",
+      "The <DEL> step holds 19% of the mass (first_tok==s & phase==1: precision 0.97). For L=3 the <DEL> step is mostly inactive (precision 0.43), but that is only 0.07% of the mass, which is noise.",
+      "The misses are weak, lower-quartile activations, mostly in sequences where s is the second token. That clause alone has precision 0.23 and 5% of the mass. Adding it (even restricted to t>=6) lowers F1 to 0.79, which matches the other agent's report. Activations with no s in the first two tokens carry under 1% of the mass.",
+      "The 'input token does not matter' claim holds: in_tok lift is flat at about 1x for all original tokens. The out_tok=s lift is just the <DEL> step outputting orig(0)=s.",
+      "The label does not overclaim relative to the predicate."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "label": "first input step (t=0) for 18 of 30 first tokens",
+  "predicate": "(t == 0) & ~isin(in_tok,[tok(\"3\"),tok(\"a\"),tok(\"i\"),tok(\"j\"),tok(\"k\"),tok(\"p\"),tok(\"w\"),tok(\"f\"),tok(\"r\"),tok(\"s\"),tok(\"u\"),tok(\"v\")])",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Update-gate unit that is a step-0 token detector. It fires on the very first input step whenever the first original token is one of b,c,d,e,g,h,l,m,n,o,q,t,x,y,z,0,1,2, and never fires at t=0 for a,f,i,j,k,p,r,s,u,v,w,3. On dev the predicate has precision 1.0 and F1 0.97. At t=0 the hidden state is fixed, so magnitude depends only on the token: q is strongest (about 0.44 of max), then e (0.34), o (0.23), x, m/n/l/2 (about 0.13-0.15), b (0.10), and c/d barely clear the threshold (0.01). It is silent at t=1-3, at the delimiter, and on almost all copy steps. The remaining 6% of activations (6.7% of mass, and where the max activations sit) fall on the second copy step (recall_idx=1) of short sequences (L=3 or 4, t=4 or 5). That is the step that outputs orig(1) right after the first token has been re-fed as input. Adding that clause raises recall to 1.0 but drops precision to 0.82, so it was left out.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 75,
+    "predicate": "(t == 0) & ~isin(in_tok,[tok(\"3\"),tok(\"a\"),tok(\"i\"),tok(\"j\"),tok(\"k\"),tok(\"p\"),tok(\"w\"),tok(\"f\"),tok(\"r\"),tok(\"s\"),tok(\"u\"),tok(\"v\")])",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.9455952437125466,
+    "f1": 0.9720369606868284,
+    "mass_recall": 0.9352734204547928,
+    "correlation": 0.7882694448227253,
+    "n_active": 63579,
+    "n_predicted": 60120,
+    "coverage_by_activation_quartile": [
+      0.9160742371815036,
+      0.9859075180874489,
+      0.9577225542623466,
+      0.9226752233547251
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 75,
+    "predicate": "(t == 0) & ~isin(in_tok,[tok(\"3\"),tok(\"a\"),tok(\"i\"),tok(\"j\"),tok(\"k\"),tok(\"p\"),tok(\"w\"),tok(\"f\"),tok(\"r\"),tok(\"s\"),tok(\"u\"),tok(\"v\")])",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.9443555220789003,
+    "f1": 0.9713815311607186,
+    "mass_recall": 0.933307322129248,
+    "correlation": 0.7845412616799422,
+    "n_active": 63726,
+    "n_predicted": 60180,
+    "coverage_by_activation_quartile": [
+      0.913444639718805,
+      0.9875094150138087,
+      0.9563115937480384,
+      0.9201556713326219
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 75,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The main claims hold on test. Precision is 1.0 and recall 0.946. The unit never fires at t=0 for the 12 excluded tokens (that clause scores precision 0). It is silent at t=1-3 and at the delimiter. 18 of 30 tokens is correct.",
+      "The secondary clause was ruled out on a bad comparison. The 0.82 precision came from L<=4, but the L=4 part is only about 10% precise while (recall_idx==1)&(L==3) alone is 75% precise. Adding just the L=3 clause raises test F1 from 0.972 to 0.983 and mass recall from 0.935 to 0.985, at precision 0.99.",
+      "One systematic missed class remains: the second copy step (input = orig(0)) of L=3 sequences. It holds about 3% of activations and 5% of the activation mass, and the label leaves it out. The token restriction does not apply there: excluded tokens such as j, k and p fire on those copy steps.",
+      "There is a smaller leftover miss class at the L=4 second copy step (step 5). It is too diffuse to add as a clause (about 10% precision)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "First input step (t=0) for 18 of 30 first tokens; also the second copy step of length-3 sequences (re-input of the first token)",
+    "better_predicate": "((t==0)&~isin(in_tok,[tok(\"3\"),tok(\"a\"),tok(\"i\"),tok(\"j\"),tok(\"k\"),tok(\"p\"),tok(\"w\"),tok(\"f\"),tok(\"r\"),tok(\"s\"),tok(\"u\"),tok(\"v\")]))|((recall_idx==1)&(L==3))",
+    "better_predicate_test_f1": 0.983
+  },
+  "final_label": "First input step (t=0) for 18 of 30 first tokens; also the second copy step of length-3 sequences (re-input of the first token)"
+}

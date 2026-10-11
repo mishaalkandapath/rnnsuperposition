@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input token g (fed-back g), from 2nd copy step on",
+  "predicate": "(phase == 2) & (in_tok == tok(\"g\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase when the token fed back as input is g, i.e. right after the model has output an original g. It never fires in the original or delimiter phase, and never on any other input token. Every activation is a copy-phase g input (recall 1.0 for phase==2 & in_tok==g). Most false positives come from the first copy-phase input (recall_idx 1, where the sequence starts with g), which is almost always silent, so requiring recall_idx>=2 raises dev F1 from 0.86 to 0.93. Magnitude: the top examples all have g as an early original token (input at recall_idx 2, i.e. orig(1)=g). When g repeats (g g), the second fed-back g is clearly weaker (about 0.2-0.5 of the max). Low-quartile activations are g inputs late in the copy phase.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 385,
+    "predicate": "(phase == 2) & (in_tok == tok(\"g\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.8937404703755178,
+    "recall": 0.9643163917480746,
+    "f1": 0.9276880628580233,
+    "mass_recall": 0.9885011333421054,
+    "correlation": 0.8119165041659394,
+    "n_active": 68687,
+    "n_predicted": 74111,
+    "coverage_by_activation_quartile": [
+      0.8845213137665968,
+      0.9769392033542977,
+      0.9961565338923829,
+      0.999650573641605
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 385,
+    "predicate": "(phase == 2) & (in_tok == tok(\"g\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.8900010748642984,
+    "recall": 0.964038304808476,
+    "f1": 0.9255414279726142,
+    "mass_recall": 0.9882550779288788,
+    "correlation": 0.8106584326026341,
+    "n_active": 68712,
+    "n_predicted": 74428,
+    "coverage_by_activation_quartile": [
+      0.884503434625684,
+      0.9754336942601002,
+      0.9965071603213412,
+      0.9997089300267784
+    ]
+  },
+  "gate": "hidden",
+  "feature": 385,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The test scores reproduce: P 0.894, R 0.964, F1 0.928, mass recall 0.989. On dev the feature never fires in the original or delimiter phase, never fires on any input other than g, and puts 100% of its mass on copy-phase g inputs.",
+      "The recall_idx 1 claim holds. There are 2,471 dev activations at recall_idx 1 (1.2% of mass), and the test misses are almost all g-initial sequences with tiny activations (0.03-0.13 of max).",
+      "Precision falls steadily with copy position: about 0.98 at recall_idx 2, 0.92 at 3, 0.77 at recall_idx >= 6, and 0.73 on the last step (to_go == 0). This is a smooth decline, not a sharp class, and it matches the explanation's note that late copy-phase g inputs are weak. Dropping the late steps lowers F1 (0.854 when to_go == 0 is excluded), so no better simple predicate came out of this.",
+      "The repeated-g claim is partly supported. A g fed back right after another fed-back g (prev_tok == g) has precision 0.77, so it is weaker or sometimes silent. Magnitude ratios like 0.2-0.5 cannot be scored with this tool. Precision on steps that output g is 0.99, so the effect is specific to the input g.",
+      "Looking through the test false positives at late positions, I found no clear token, length or history pattern; they look like a positional threshold effect. The magnitude claims (peak at orig(1) = g, i.e. recall_idx 2) are consistent with recall_idx 2 having the highest precision, but they were not scored directly."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

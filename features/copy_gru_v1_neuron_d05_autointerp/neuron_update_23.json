@@ -1,0 +1,63 @@
+{
+  "label": "first early occurrence of a token from {g,r,j,y,u,t,3,s,i,e,p,v} in the original phase (t<=2)",
+  "predicate": "(phase==0) & (t<=2) & isin(in_tok,[tok(\"g\"),tok(\"r\"),tok(\"j\"),tok(\"y\"),tok(\"u\"),tok(\"t\"),tok(\"3\"),tok(\"s\"),tok(\"i\"),tok(\"e\"),tok(\"p\"),tok(\"v\")]) & ~seen([tok(\"g\"),tok(\"r\"),tok(\"j\"),tok(\"y\"),tok(\"u\"),tok(\"t\"),tok(\"3\"),tok(\"s\"),tok(\"i\"),tok(\"e\"),tok(\"p\"),tok(\"v\")]) & ((t==0) | isin(in_tok,[tok(\"g\"),tok(\"r\"),tok(\"j\"),tok(\"y\"),tok(\"u\"),tok(\"t\"),tok(\"3\")]))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Update-gate unit that fires at the start of the original sequence on the first input from a specific token set. At t=0 it fires with precision 1.0 exactly when the input is one of g,r,j,y,u,t,3,s,i,e,p,v; this holds about 75% of activation mass. At t=1-2 it fires only for the stronger subset g,r,j,y,u,t,3, and only if no token from the 12-token set has appeared yet. An earlier set token suppresses it (e.g. y then r: r is inactive). Magnitude depends on the token (g > r > j > y,u,t > 3 > s,i,e,p; v sits right at threshold) and drops sharply with position (t=0 >> t=1 > t=2, with a small tail at t=3-4). It never fires at t>=5 or on repeated tokens (in_first=0), and almost never in the copy phase (1% of mass, at steps L+1/L+2 re-inputting an early set token). Exception, not covered by the predicate: the single largest activations are on <DEL> in L=3 sequences, mostly ones containing no set token (e.g. k 2 f <DEL>). The delimiter holds about 3.5% of mass. Dev: P 0.88, R 0.90, F1 0.89, mass recall 0.94.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 23,
+    "predicate": "(phase==0) & (t<=2) & isin(in_tok,[tok(\"g\"),tok(\"r\"),tok(\"j\"),tok(\"y\"),tok(\"u\"),tok(\"t\"),tok(\"3\"),tok(\"s\"),tok(\"i\"),tok(\"e\"),tok(\"p\"),tok(\"v\")]) & ~seen([tok(\"g\"),tok(\"r\"),tok(\"j\"),tok(\"y\"),tok(\"u\"),tok(\"t\"),tok(\"3\"),tok(\"s\"),tok(\"i\"),tok(\"e\"),tok(\"p\"),tok(\"v\")]) & ((t==0) | isin(in_tok,[tok(\"g\"),tok(\"r\"),tok(\"j\"),tok(\"y\"),tok(\"u\"),tok(\"t\"),tok(\"3\")]))",
+    "split": "test",
+    "precision": 0.8842619276336856,
+    "recall": 0.8976271737363888,
+    "f1": 0.8908944269699169,
+    "mass_recall": 0.9357558294168642,
+    "correlation": 0.7607347330140506,
+    "n_active": 61530,
+    "n_predicted": 62460,
+    "coverage_by_activation_quartile": [
+      0.7926932327894429,
+      0.9060001300136514,
+      0.9379144454557274,
+      0.953907164217917
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 23,
+    "predicate": "(phase==0) & (t<=2) & isin(in_tok,[tok(\"g\"),tok(\"r\"),tok(\"j\"),tok(\"y\"),tok(\"u\"),tok(\"t\"),tok(\"3\"),tok(\"s\"),tok(\"i\"),tok(\"e\"),tok(\"p\"),tok(\"v\")]) & ~seen([tok(\"g\"),tok(\"r\"),tok(\"j\"),tok(\"y\"),tok(\"u\"),tok(\"t\"),tok(\"3\"),tok(\"s\"),tok(\"i\"),tok(\"e\"),tok(\"p\"),tok(\"v\")]) & ((t==0) | isin(in_tok,[tok(\"g\"),tok(\"r\"),tok(\"j\"),tok(\"y\"),tok(\"u\"),tok(\"t\"),tok(\"3\")]))",
+    "split": "dev",
+    "precision": 0.8836154583200255,
+    "recall": 0.8989618365258079,
+    "f1": 0.8912225882049755,
+    "mass_recall": 0.9354668579308916,
+    "correlation": 0.760629950351265,
+    "n_active": 61551,
+    "n_predicted": 62620,
+    "coverage_by_activation_quartile": [
+      0.7949701065765532,
+      0.9107096438783467,
+      0.9369638679490512,
+      0.9532072528758042
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 23,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core story holds up. At t=0 the predicate (phase==0)&(t==0)&in_tok in the 12-token set has precision 1.000 and mass recall 0.755. An earlier set token does suppress the unit: at t=1-2 with seen(set), precision is 0.077.",
+      "Systematic false positives at t=2. The predicate at t=2 has precision only 0.524. Per-token precision at t=2 with no earlier set token falls steadily: g 0.875, r 0.722, j 0.557, y 0.472, u 0.412, t 0.376, 3 0.257. So 'fires for the stronger subset g,r,j,y,u,t,3 at t=1-2' overclaims at t=2 for u, t and 3, which are mostly inactive there. At t=1, token 3 is also only 0.48.",
+      "Systematic misses at the delimiter. In L=3 sequences, (phase==1)&(L==3) is active 68% of the time (97% when no set token has appeared). The explanation mentions this exception, but the predicate leaves it out, and it is a clean, predictable class.",
+      "Small factual error. 'A small tail at t=3-4' is really the <DEL> step of L=3/L=4 sequences. In the original phase at t=3-4 the unit is essentially silent (precision 0.002, mass 0.2%).",
+      "The remaining gaps are graded, not a different mechanism. Activation falls with t and with token rank, so the hard t<=2 cutoff with a fixed token set is a coarse fit."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "First occurrence of a token from {g,r,j,y,u,t,3,s,i,e,p,v} at the very start of the original sequence. At t=0 any set token fires it; at t=1 only g,r,j,y,u,t,3; at t=2 only g,r,j. It also fires on <DEL> in L=3 sequences.",
+    "better_predicate": "((phase==0)&~seen([tok(\"g\"),tok(\"r\"),tok(\"j\"),tok(\"y\"),tok(\"u\"),tok(\"t\"),tok(\"3\"),tok(\"s\"),tok(\"i\"),tok(\"e\"),tok(\"p\"),tok(\"v\")])&(((t==0)&isin(in_tok,[tok(\"g\"),tok(\"r\"),tok(\"j\"),tok(\"y\"),tok(\"u\"),tok(\"t\"),tok(\"3\"),tok(\"s\"),tok(\"i\"),tok(\"e\"),tok(\"p\"),tok(\"v\")]))|((t==1)&isin(in_tok,[tok(\"g\"),tok(\"r\"),tok(\"j\"),tok(\"y\"),tok(\"u\"),tok(\"t\"),tok(\"3\")]))|((t==2)&isin(in_tok,[tok('g'),tok('r'),tok('j')])))) | ((phase==1)&(L==3))",
+    "better_predicate_test_f1": 0.9058
+  },
+  "final_label": "First occurrence of a token from {g,r,j,y,u,t,3,s,i,e,p,v} at the very start of the original sequence. At t=0 any set token fires it; at t=1 only g,r,j,y,u,t,3; at t=2 only g,r,j. It also fires on <DEL> in L=3 sequences."
+}

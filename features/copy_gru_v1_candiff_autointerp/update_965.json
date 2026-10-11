@@ -1,0 +1,62 @@
+{
+  "label": "1-2 steps after an early original-phase x",
+  "predicate": "(phase == 0) & ((prev_tok == tok(\"x\")) | (prev2_tok == tok(\"x\"))) & (t <= 4)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires during the original (input) phase on the one or two tokens right after the letter x, but only early in the sequence (steps 1-4). It does not care which token is currently being input. The step right after x carries most of the mass (prev_tok=x has 17x lift and 76% of mass). The step two after x gets a smaller tail. Magnitude is largest when x sits at position 1 and the next step is also x (w x x q peaks at the q, about 4.0). A single x at position 1 gives about 0.64 of max on the next step, and x at position 0 gives about 0.42. It is almost silent at the delimiter (0.4% of mass), never fires in the copy phase, and does not fire after x at later positions (t >= 5). Missed activations are tiny (about 2.6% of mass) and scattered across early steps with no x.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 965,
+    "predicate": "(phase == 0) & ((prev_tok == tok(\"x\")) | (prev2_tok == tok(\"x\"))) & (t <= 4)",
+    "split": "test",
+    "precision": 0.920264088745671,
+    "recall": 0.7535637378302145,
+    "f1": 0.8286128782130916,
+    "mass_recall": 0.9737373308595904,
+    "correlation": 0.8567926132506211,
+    "n_active": 131884,
+    "n_predicted": 107994,
+    "coverage_by_activation_quartile": [
+      0.1134330168936338,
+      0.9088896302811562,
+      0.9928421946559097,
+      0.999090109490158
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 965,
+    "predicate": "(phase == 0) & ((prev_tok == tok(\"x\")) | (prev2_tok == tok(\"x\"))) & (t <= 4)",
+    "split": "dev",
+    "precision": 0.9196332951733815,
+    "recall": 0.7550005684617426,
+    "f1": 0.8292244361105677,
+    "mass_recall": 0.9734627316419221,
+    "correlation": 0.8564831315695388,
+    "n_active": 131935,
+    "n_predicted": 108316,
+    "coverage_by_activation_quartile": [
+      0.11760247392675237,
+      0.9115025466893039,
+      0.992026437060393,
+      0.998878209986963
+    ]
+  },
+  "gate": "update",
+  "feature": 965,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: counted by steps, recall is only 0.754 on test. About 32.5k active steps are missed, but they carry 2.6% of the activation mass and are almost all very weak (coverage of the lowest activation quartile is 0.11). They are spread across early steps that have no x seen (~seen x & t<=4 gives P=0.012). Previous tokens o/1/e explain only 0.6% of the mass, so this is diffuse noise, not a second pattern.",
+      "Minor: the prev2==x part is less exact than the prev==x part. prev==x & t<=4 gives P=0.978. prev2==x without prev==x gives P=0.838, falling to P=0.758 at t==4. Most false positives are step 4 after an x at position 2 or 3, where the feature often stays silent. This fits the label's 'smaller tail' wording.",
+      "The claims check out. Copy phase has 0 active steps. Delimiter has 0.4% of mass (phase==1 P=0.002). For t>=5 after an x, prev==x gives P=0.053 and MR=0.004. t==1 after an x at position 0 gives P=1.0. The x,x at positions 1-2 case fires every time (P=1.0), and its mean mass per step is about 1.47x that of a single x at position 1, which matches the claimed ~0.64 of max.",
+      "Every top example starts with 'w x x', but the first-token w is not what drives it. The mean mass per step for x x at t=3 is the same with or without w at position 0, so the 'w x x q' example in the explanation is just an instance. Even so, describing the peak as being about w would be misleading.",
+      "Extending the time limit to t<=5 lowers F1 to 0.780, so t<=4 is the right cutoff. Adding an x three steps back (rel_tok(-3)) gives P=0.029, so it adds no signal."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

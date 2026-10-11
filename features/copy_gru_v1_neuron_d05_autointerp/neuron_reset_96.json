@@ -1,0 +1,63 @@
+{
+  "label": "first copy-phase step (echoing orig token 0) in long sequences",
+  "predicate": "(recall_idx == 1) & (L >= 7)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires essentially only in the copy phase, at the step right after <DEL> where the input is the fed-back first original token and the model outputs original token 1 (recall_idx == 1; 93% of activation mass). Rate and magnitude rise strongly with sequence length: rare for L<=5, partial for L=6-7, near-always for L>=8 (L>=8 precision 0.99). Magnitude is further modulated by the identity of the first token (n, y, j, 2, w give the largest activations). Weaker, lower-magnitude spillover at recall_idx == 2 (about 7% of mass) and a tiny tail at the last copy steps of L=8-9 sequences. Never fires in the original phase or at the <DEL> step itself.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 96,
+    "predicate": "(recall_idx == 1) & (L >= 7)",
+    "split": "test",
+    "precision": 0.916603122366256,
+    "recall": 0.7075717206766219,
+    "f1": 0.7986362444269605,
+    "mass_recall": 0.881537726560797,
+    "correlation": 0.8154171011261047,
+    "n_active": 64556,
+    "n_predicted": 49834,
+    "coverage_by_activation_quartile": [
+      0.3264762376851106,
+      0.6142883697874714,
+      0.8952227523390545,
+      0.994299522894851
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 96,
+    "predicate": "(recall_idx == 1) & (L >= 7)",
+    "split": "dev",
+    "precision": 0.9184492515150299,
+    "recall": 0.7072658157431159,
+    "f1": 0.7991409714704754,
+    "mass_recall": 0.8817892739253101,
+    "correlation": 0.8162781378811641,
+    "n_active": 64714,
+    "n_predicted": 49834,
+    "coverage_by_activation_quartile": [
+      0.32919216268001733,
+      0.6050435750046357,
+      0.900543948572135,
+      0.9943132649276796
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 96,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "All factual claims check out on the dev split. Every activation is in the copy phase, with only 5 on the <DEL> step. recall_idx==1 holds 92.7% of mass and recall_idx==2 holds 7.2%. The firing rate at recall_idx==1 by L is: L=5 10%, L=6 32%, L=7 77%, L=8 98%, L=9 100%. The largest first-token effects are n, 2, j, y and w. The tail at recall_idx 7-8 is tiny.",
+      "There are two systematic but minor gaps, and both are already disclosed. (a) recall_idx==2 fires on 41% of L=9 steps and 18% of L=8 steps, about 7% of mass. These steps go up when the fed-back previous token is one of the strong first tokens. (b) At L=6, recall_idx==1 fires for strong first tokens (n/y/j/2/w), and the base predicate misses these.",
+      "Most false positives on test are recall_idx==1 at L=7 with a weak first token (for example h, t, i, e, f, o). That matches the token dependence described in the explanation.",
+      "The phrase 'first copy-phase step' is consistent with phase==2 starting at t>L. Note that the model's first output (orig 0, recall_idx 0) is on the <DEL> step, where the unit is silent.",
+      "Adding the first-token condition for L=6 and the recall_idx==2, L=9 spillover lifts test F1 from 0.799 to 0.822, which clears the explained bar."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "step right after <DEL> (input = orig token 0) in long sequences (L>=7, or L=6 with a strong first token), with weak spillover to the next step at L=9",
+    "better_predicate": "((recall_idx == 1) & ((L >= 7) | ((L == 6) & isin(in_tok,[tok('n'),tok('y'),tok('j'),tok('2'),tok('w')])))) | ((recall_idx == 2) & (L == 9) & isin(prev_tok,[tok('n'),tok('y'),tok('j'),tok('2'),tok('w')]))",
+    "better_predicate_test_f1": 0.822
+  },
+  "final_label": "step right after <DEL> (input = orig token 0) in long sequences (L>=7, or L=6 with a strong first token), with weak spillover to the next step at L=9"
+}

@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input token f (from 3rd copy step on)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"f\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token detector for the letter f being fed back as input during the copy phase. Fires essentially only when in_tok == f and phase == copy (recall 99.96%, mass recall 99.99% for that broad predicate); never fires in the original phase or on the delimiter, and never on any other input token (a few negligible r activations). Within copy-phase f inputs it is mostly silent at the first copy-phase input step (recall_idx 1), so restricting to recall_idx >= 2 gives the best F1. Magnitude is largest when f is the 3rd original token (input at recall_idx 2, right after the first post-DEL copy), and for a repeated f the second f is weaker; when f sits early (orig 0) or is the last input it is weak or silent. Does not depend on output token or other history.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 84,
+    "predicate": "(phase == 2) & (in_tok == tok(\"f\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.9267060952226633,
+    "recall": 0.9343516854544465,
+    "f1": 0.9305131855467427,
+    "mass_recall": 0.9804506363564802,
+    "correlation": 0.8452570063197233,
+    "n_active": 73452,
+    "n_predicted": 74058,
+    "coverage_by_activation_quartile": [
+      0.7737842400479225,
+      0.9660730817404564,
+      0.9976038773620868,
+      0.9999455426673202
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 84,
+    "predicate": "(phase == 2) & (in_tok == tok(\"f\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.9253054948612123,
+    "recall": 0.9356664529943672,
+    "f1": 0.9304571316194571,
+    "mass_recall": 0.9813227207998925,
+    "correlation": 0.8452373050116688,
+    "n_active": 73321,
+    "n_predicted": 74142,
+    "coverage_by_activation_quartile": [
+      0.7758987507500955,
+      0.969558101472995,
+      0.9973267866884888,
+      0.9998908892525914
+    ]
+  },
+  "gate": "hidden",
+  "feature": 84,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The test scores reproduce: P 0.927, R 0.934, F1 0.931, mass recall 0.980. On dev the broad predicate (phase 2, input f) scores P 0.807, R 0.9996, F1 0.893, mass recall 0.9999. All activation is in the copy phase: the original phase and the delimiter have 0 active steps, and the only activation on another input token is 31 steps on r.",
+      "The recall_idx == 1 cutoff is soft, not a clean boundary. When f is fed back at recall_idx 1, the feature still fires 28% of the time (precision 0.28, 16650 steps), but weakly: 22% of the lowest-quartile activations and 1.9% of mass. Most misses on test are this case (rendered as 'f ... <DEL> [f:0.04-0.18]').",
+      "The label and explanation leave out a decay with position. Precision of 'input f in copy phase' by recall_idx is 0.99 at 2, 1.00 at 3, 0.95 at 4, 0.84 at 5, 0.80 at 6, 0.84 at 7 and 0.89 at 8. By to_go it goes from 0.88 at 0 to 1.00 at 5. Late f inputs often fall below threshold, so the false positives are a graded fade, not a separate class.",
+      "The claim that other history has 'little effect' is somewhat overstated. For f at recall_idx >= 4, precision depends on prev_tok: z 0.46, e 0.60, f 0.66, u 0.73, against 1.0 for a, i, l and y. It also depends on out_tok: v 0.60, w 0.63, q 0.76. The effect is spread over many tokens. Excluding prev_tok in {z, e, f} at recall_idx >= 4 raises test precision to 0.947 but lowers F1 to 0.923, so no simple fix beats the predicate.",
+      "Other refinements also failed to beat the predicate. Adding 'not the first f' lowered dev F1 to 0.920, requiring to_go >= 1 lowered it to 0.825, and adding back recall_idx 1 when L <= 4 lowered test F1 to 0.916. The magnitude claims hold: top activations are f at recall_idx 2, and the second of two adjacent f's is weaker (0.27-0.49 of max)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

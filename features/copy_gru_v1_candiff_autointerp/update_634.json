@@ -1,0 +1,61 @@
+{
+  "label": "copy-phase echoed s as 2nd/3rd original token (L>=5)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"s\")) & (recall_idx >= 2) & (recall_idx <= 3) & (L >= 5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, only when the fed-back input is the letter s, i.e. the model just output s and is now recalling the next token. It is concentrated where s was original token 1 or 2 (recall_idx 2-3), in sequences of length 5 or more. Strongest (near max) when s is original token 1 (step L+2, prev2 = <DEL>); about half that when s is token 2; weak tail when s is token 3 or later or near the end of the copy. Never fires in the original or delimiter phases, on any other input token, or on s in short sequences (L<=4). Output token, first token and digit count barely affect it.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 634,
+    "predicate": "(phase == 2) & (in_tok == tok(\"s\")) & (recall_idx >= 2) & (recall_idx <= 3) & (L >= 5)",
+    "split": "test",
+    "precision": 0.9915999855172164,
+    "recall": 0.857558867735471,
+    "f1": 0.9197212660565864,
+    "mass_recall": 0.9718134677558937,
+    "correlation": 0.929270207021414,
+    "n_active": 31936,
+    "n_predicted": 27619,
+    "coverage_by_activation_quartile": [
+      0.44263527054108215,
+      0.9876002004008017,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 634,
+    "predicate": "(phase == 2) & (in_tok == tok(\"s\")) & (recall_idx >= 2) & (recall_idx <= 3) & (L >= 5)",
+    "split": "dev",
+    "precision": 0.9922024475650698,
+    "recall": 0.8585306428437559,
+    "f1": 0.9205392279996651,
+    "mass_recall": 0.9719207699968139,
+    "correlation": 0.9297879484548757,
+    "n_active": 32014,
+    "n_predicted": 27701,
+    "coverage_by_activation_quartile": [
+      0.44490254872563717,
+      0.9896301849075462,
+      0.9996251405722854,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 634,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor overclaim: the explanation says it 'never fires on s in short sequences (L<=4)'. In fact L=4 has 336 dev activations, firing on about 14% of s-at-recall_idx-2 steps (predicate s & L==4 & recall_idx==2 has precision 0.139). These hold only 0.1% of the activation mass, so 'barely fires' would be accurate. L=3 really is zero.",
+      "The test misses are mostly the recall_idx-4 tail: 4549 missed steps holding 2.8% of mass, all low magnitude (about 0.00-0.27 of max). Firing at s & recall_idx==4 depends on L: 1.6% at L=5, 22% at L=6, 43% at L=7, 41% at L=8, 28% at L=9. The rendered examples show no token or history pattern that separates the firing cases from the silent ones. Adding (recall_idx==4)&(L in 7..8) lowers test F1 to 0.911, so this is a graded weak tail, not a missing class.",
+      "The test false positives (232 steps) are almost all L=5 with s at recall_idx 3 (to_go=1, the second-to-last copy step). Firing rate there is 92% versus about 100% for L>=6. This matches the explanation's 'weak near the end of the copy' and is too small to change the predicate.",
+      "Checked and confirmed: every activation is in the copy phase (original and delimiter phases: 0). Every activation has in_tok==s (all other input tokens: 0). recall_idx 2 has precision 1.0 at L>=5 and carries 61% of mass; recall_idx 3 carries 36% at a similar count, so per-step magnitude is about 0.6x, close to the claimed 'about half'. out_tok, first_tok and digit count are flat. Test scores reproduce: P 0.992, R 0.858, F1 0.920, mass recall 0.972."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

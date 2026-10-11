@@ -1,0 +1,61 @@
+{
+  "label": "1-2 steps after an input s, early in the original phase",
+  "predicate": "(phase==0) & (t<=5) & ((prev_tok==tok(\"s\")) | (prev2_tok==tok(\"s\")))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires during the original-token phase on the one or two steps right after the letter s was input (prev_tok==s: 18x lift, about 74% of activation mass; prev2_tok==s covers most of the rest). It is limited to early positions: it peaks at t=3-4, is weak at t=6-7, and never fires at t=0 or t>=8. It is essentially silent on the delimiter step (1% of mass) and never fires in the copy phase. It is also not active on the s step itself, and it decays by three steps after s. On magnitude, the top examples (about 1.0 of max) all come right after a doubled s s (prev_tok and prev2_tok both s). A single preceding s gives about 0.45 of max, and s two steps back usually gives about 0.1-0.4. Firing is weaker or absent after a second, later occurrence of s and at positions t>=6. Missed activations are mostly tiny (bottom quartile) with no s nearby.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 140,
+    "predicate": "(phase==0) & (t<=5) & ((prev_tok==tok(\"s\")) | (prev2_tok==tok(\"s\")))",
+    "split": "test",
+    "precision": 0.8924206878574604,
+    "recall": 0.7820980562106522,
+    "f1": 0.8336251687453227,
+    "mass_recall": 0.9529306779062116,
+    "correlation": 0.7888173001692288,
+    "n_active": 148833,
+    "n_predicted": 130434,
+    "coverage_by_activation_quartile": [
+      0.28154478755139883,
+      0.8867985379488282,
+      0.9634218447645667,
+      0.9966405074177597
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 140,
+    "predicate": "(phase==0) & (t<=5) & ((prev_tok==tok(\"s\")) | (prev2_tok==tok(\"s\")))",
+    "split": "dev",
+    "precision": 0.8924088096244763,
+    "recall": 0.7797854547164361,
+    "f1": 0.8323045046207672,
+    "mass_recall": 0.9523604440490486,
+    "correlation": 0.7889456031613274,
+    "n_active": 148873,
+    "n_predicted": 130085,
+    "coverage_by_activation_quartile": [
+      0.2769553185201107,
+      0.8830404642914719,
+      0.962652479982804,
+      0.9965070664732119
+    ]
+  },
+  "gate": "update",
+  "feature": 140,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the claim that it 'peaks at t=3-4' holds for firing rate (8.1-8.2%). By activation mass, t=3 is highest (0.35) and t=2 (0.25) is about equal to t=4 (0.25). This is a matter of wording, not an error.",
+      "Minor: prev2_tok==s without prev_tok==s is a weaker part of the predicate. Its test precision is 0.78 against 0.976 for prev_tok==s alone, so most of the false positives are steps where s was two back and the feature stayed quiet. That fits the explanation's 'usually 0.1-0.4' and 'decays' wording. Restricting the prev2 branch to t<=4 did not help (F1 0.804).",
+      "All other claims check out on the dev split. Nothing fires in the copy phase (0 steps). The delimiter step holds 1.2% of mass. Nothing fires at t=0 or t>=8. On the s step itself without a preceding s, precision is 0.022. Three steps after s, with no s at 1 or 2 back, precision is 0.095, so firing has decayed. Steps right after a doubled s s have precision 0.893, and the top examples are all s s followed by the next token at about 1.0. With t>=6 and an s nearby, precision is 0.084.",
+      "Test-split misses (32k steps, 4.7% of mass) are concentrated in the lowest activation quartile (28% coverage there, against 89-99.7% in the upper quartiles). They show no systematic token, position or history pattern. With t in 1..5 and no s seen yet, precision is 0.011, which is diffuse low-level noise. Adding s three back lowers F1 to 0.756."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

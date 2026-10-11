@@ -1,0 +1,61 @@
+{
+  "label": "copy-phase input \"e\" fed back as 1st or 2nd original token",
+  "predicate": "(phase == 2) & (in_tok == tok(\"e\")) & (recall_idx <= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the fed-back input is the letter e, at the first or second copy-input step (recall_idx 1 or 2, i.e. input e is original token 0 or 1). Magnitude depends strongly on position: when e is the first original token, fed back right after <DEL> (recall_idx 1), activation is strong (~0.8-1.0 of max, ~81% of activation mass, precision 1.0). When e is the second original token (recall_idx 2), activation is weak (~0.15-0.3 of max). Never fires during the original phase, on the delimiter, on e at later copy steps (recall_idx >= 3, only a handful of cases), or on other tokens (almost never).",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 306,
+    "predicate": "(phase == 2) & (in_tok == tok(\"e\")) & (recall_idx <= 2)",
+    "split": "test",
+    "precision": 0.9692656581028257,
+    "recall": 0.996319357114376,
+    "f1": 0.9826063282715228,
+    "mass_recall": 0.9998422245409724,
+    "correlation": 0.8460684370721657,
+    "n_active": 32603,
+    "n_predicted": 33513,
+    "coverage_by_activation_quartile": [
+      0.9852778800147222,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 306,
+    "predicate": "(phase == 2) & (in_tok == tok(\"e\")) & (recall_idx <= 2)",
+    "split": "dev",
+    "precision": 0.970321218519077,
+    "recall": 0.995882862803368,
+    "f1": 0.9829358835301486,
+    "mass_recall": 0.9998340014819042,
+    "correlation": 0.8473088693732195,
+    "n_active": 32304,
+    "n_predicted": 33155,
+    "coverage_by_activation_quartile": [
+      0.983531451213472,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 306,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims hold up. Activity is zero in the original and delimiter phases. 100% of activation mass is on in_tok e. recall_idx 1 carries 0.809 of the mass and recall_idx 2 carries 0.191. recall_idx 3 has only 75 dev activations. On test, the recall_idx==1 predicate has precision 1.0 and F1 0.68. Full predicate on test: P 0.969, R 0.996, F1 0.983.",
+      "One small but systematic false-positive class depends on length. At recall_idx 2 the weak branch is length-gated. Precision is 0.158 at L=3 (457 predicted), 0.734 at L=4 (2425 predicted) and 1.0 at L>=5 (13841 predicted). Most of the ~1000 test false positives look like 'x e y <DEL> x *e*' with L=3 or 4. The explanation does not mention this.",
+      "The test misses (120 steps, 0.0% of mass) are scattered tiny activations (<0.05 of max), for example e at recall_idx 3. They are noise."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input \"e\" fed back as 1st original token (strong) or 2nd original token (weak, mostly when L >= 4)",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"e\")) & ((recall_idx == 1) | ((recall_idx == 2) & (L >= 4)))",
+    "better_predicate_test_f1": 0.987
+  },
+  "final_label": "copy-phase input \"e\" fed back as 1st original token (strong) or 2nd original token (weak, mostly when L >= 4)"
+}

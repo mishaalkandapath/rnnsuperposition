@@ -1,0 +1,63 @@
+{
+  "label": "Copy phase: input u while outputting the second u of a repeated \"u u\" (late in the sequence)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"u\")) & (out_tok == tok(\"u\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, on steps where the input is u (the u just copied back) and the token being output is also u, i.e. the second u of an adjacent \"u u\" pair in the original (or the later steps of a run like u u u). All activations have in_tok = u, and 98% of the mass has out_tok = u. It almost never fires before recall_idx 3: \"u u\" pairs copied early (recall_idx 0-2) mostly do not activate it, so requiring recall_idx >= 3 lifts dev precision from 0.51 to 0.79. Activation is larger for steps near the end of the sequence (rate rises with recall_idx and with to_go <= 2), and the strongest activations are on the first u-after-u step of a late pair. The longer runs (u u u) give a weaker second activation. Remaining misses are weak activations where input u is followed by a non-u output. It does not fire in the original or delimiter phases, or on any other input token.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 937,
+    "predicate": "(phase == 2) & (in_tok == tok(\"u\")) & (out_tok == tok(\"u\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.7795698924731183,
+    "recall": 0.9259259259259259,
+    "f1": 0.8464681844716871,
+    "mass_recall": 0.977812992870496,
+    "correlation": 0.7520620390081528,
+    "n_active": 1566,
+    "n_predicted": 1860,
+    "coverage_by_activation_quartile": [
+      0.7653061224489796,
+      0.9489795918367347,
+      0.989769820971867,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 937,
+    "predicate": "(phase == 2) & (in_tok == tok(\"u\")) & (out_tok == tok(\"u\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.7857889237199582,
+    "recall": 0.9266789895255699,
+    "f1": 0.8504382244840261,
+    "mass_recall": 0.9777384606639381,
+    "correlation": 0.7580248902126142,
+    "n_active": 1623,
+    "n_predicted": 1914,
+    "coverage_by_activation_quartile": [
+      0.7561576354679803,
+      0.9605911330049262,
+      0.9901477832512315,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 937,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The factual claims hold up. On dev the feature is 100% copy phase and 100% in_tok = u, and out_tok = u carries 98.2% of the activation mass. It is silent at recall_idx 0-1, and recall_idx 2 has 23 activations (0.5% of mass). Firing rate rises with recall_idx and is highest at to_go 0-1. Test scores reproduce exactly: P 0.780, R 0.926, F1 0.846, mass recall 0.978.",
+      "The 'run of three u's' claim checks out. prev_tok == u inside the predicate gives only 61 predicted steps at 0.51 precision, so run continuations are weaker or sparse.",
+      "Systematic false-positive class: the cutoff recall_idx >= 3 is too coarse because 'late' depends on both recall_idx and to_go. Grid of precision for the u->u steps: recall_idx = 3 is about 0.96 at to_go 0-1, 0.58 at to_go 2 and about 0.29 at to_go 3-5 (roughly 300 of the 410 test false positives). recall_idx = 4 is about 0.97 at to_go <= 1 and 0.64-0.76 at to_go 2-4. recall_idx >= 5 is about 0.9-1.0 everywhere. So a u u pair copied at recall_idx 3 in a long sequence (L >= 6) mostly stays silent.",
+      "Small extra miss class: recall_idx = 2 with to_go = 1 (L = 4, second-to-last output) fires about 24% of the time, and the predicate excludes it.",
+      "Precision is highest when the next output is also u (1.0, n = 44) or the step is the last output (0.95), which is consistent with the 'late' framing.",
+      "None of this contradicts the label. 'Late in the sequence' already covers it, and the refined predicate gains only about 0.03 test F1, so this is a threshold refinement, not a missing concept."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"u\")) & (out_tok == tok(\"u\")) & ((recall_idx >= 4) | ((recall_idx == 3) & (to_go <= 2)))",
+    "better_predicate_test_f1": 0.876
+  }
+}

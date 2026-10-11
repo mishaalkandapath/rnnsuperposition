@@ -1,0 +1,62 @@
+{
+  "label": "First two copy-phase inputs (recall_idx 1-2) in longer sequences",
+  "predicate": "(phase == 2) & (recall_idx <= 2) & (L >= 6)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires only in the copy phase, almost entirely on the first two copied tokens fed back in (input = orig(0) at recall_idx 1, orig(1) at recall_idx 2). recall_idx 1 holds 64% of the activation mass and recall_idx 2 holds 33%. Rate goes up with sequence length: rare for L=3-4, about 0.12 of steps for L>=7. It never fires in the original phase, on the delimiter, or on the first occurrence of a token. Magnitude: the largest activations are at recall_idx 1 when the input/first token is b (b is 3x lift and the top examples are all b at recall_idx 1). recall_idx 1 is usually stronger than recall_idx 2. There is a weak tail on later copy steps (recall_idx >= 3, about 3% of mass). Most misses are low-magnitude firings in short sequences (L 4-5).",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 307,
+    "predicate": "(phase == 2) & (recall_idx <= 2) & (L >= 6)",
+    "split": "test",
+    "precision": 0.8034149927097015,
+    "recall": 0.8111440607083656,
+    "f1": 0.8072610267687552,
+    "mass_recall": 0.8937311371154648,
+    "correlation": 0.6934078282704275,
+    "n_active": 657570,
+    "n_predicted": 663896,
+    "coverage_by_activation_quartile": [
+      0.6205677857329691,
+      0.7854714008504011,
+      0.8898243223514526,
+      0.9487140493454669
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 307,
+    "predicate": "(phase == 2) & (recall_idx <= 2) & (L >= 6)",
+    "split": "dev",
+    "precision": 0.8015833596724914,
+    "recall": 0.8116791080034017,
+    "f1": 0.8065996443922105,
+    "mass_recall": 0.8939508222294661,
+    "correlation": 0.6925258409024675,
+    "n_active": 656146,
+    "n_predicted": 664410,
+    "coverage_by_activation_quartile": [
+      0.6212622761937856,
+      0.7862189627949792,
+      0.8906764368797093,
+      0.9485600721792777
+    ]
+  },
+  "gate": "hidden",
+  "feature": 307,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims check out. On dev, all activation is in the copy phase (original and delimiter steps have rate 0). recall_idx 1 holds 63.5% of activation mass and recall_idx 2 holds 33.1%. Firing happens only when in_first==0. The top examples are all 'b' at recall_idx 1. On test, the original predicate scores P 0.803, R 0.811, F1 0.807, MR 0.894, matching the report.",
+      "Missed systematic class: a copy-phase input of 'b' fires at ANY position, not only at recall_idx 1. (recall_idx>=3)&(in_tok==b) has precision 0.499, against 0.010 for other tokens at recall_idx>=3. Other high-lift tokens do not show this (v: 0.07, u: 0.04). The 'b' steps make up about 4.4% of active steps and are most of the 'weak tail on later copy steps'. The explanation calls that tail generic noise and ties 'b' only to recall_idx 1.",
+      "The L>=6 cutoff stands in for a graded effect that depends on how many outputs remain (to_go), not a hard length threshold. Firing rates by recall_idx/L are: r1: L3 0.14, L4 0.26, L5 0.51, L6 0.75, L7 0.91, L8 0.97, L9 0.99. r2: L5 0.17, L6 0.41, L7 0.65, L8 0.82, L9 0.92. As a result, recall_idx 1 at L=5 (precision 0.505, 6.3% of active steps) is a systematic miss, and recall_idx 2 at L=6 (precision 0.41) is a systematic false-positive block. The test misses output shows exactly these. This is a fuzzy boundary rather than a wrong concept.",
+      "Small overclaim: 'rare for L=3-4' fits recall_idx 2, but recall_idx 1 still fires 26% of the time at L=4 and 14% at L=3."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Early copy-phase inputs (recall_idx 1-2) when many outputs remain; strongest and also active at later copy positions when the fed-back token is 'b'",
+    "better_predicate": "(phase==2)&((((recall_idx==1)&(to_go>=3))|((recall_idx==2)&(to_go>=4)))|(in_tok==tok('b')))",
+    "better_predicate_test_f1": 0.835
+  },
+  "final_label": "Early copy-phase inputs (recall_idx 1-2) when many outputs remain; strongest and also active at later copy positions when the fed-back token is 'b'"
+}

@@ -1,0 +1,63 @@
+{
+  "label": "copy phase (all steps after the first copy output)",
+  "predicate": "phase == 2",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires on nearly every copy-phase step (t > L; 94% of them are active) and essentially nowhere else: about 0 on the original-token phase and 0.3% on the <DEL> step. It does not fire at t = L (recall_idx 0), the step that outputs the first original token. It is token-agnostic: rates by in_tok, out_tok, prev_tok, first_tok, n_digits and L are all flat. Magnitude is largest on the first copy step (recall_idx 1, the input right after <DEL>), which holds about 26% of activation mass on about 18% of active steps, and generally drops over the next few copy steps. The top examples often have h among the first few original tokens, but I did not test this. The few misses are tiny activations at the last original token or at <DEL>, together 0.0% of mass. False positives are scattered copy steps with zero activation, mostly mid- to late-copy.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 81,
+    "predicate": "phase == 2",
+    "split": "test",
+    "precision": 0.9388739622531004,
+    "recall": 0.9990149644390088,
+    "f1": 0.9680112467684411,
+    "mass_recall": 0.9997374742116436,
+    "correlation": 0.7604813002053449,
+    "n_active": 2567420,
+    "n_predicted": 2731880,
+    "coverage_by_activation_quartile": [
+      0.9964166361561412,
+      0.9997102149239314,
+      0.9999376806288025,
+      0.9999953260471602
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 81,
+    "predicate": "phase == 2",
+    "split": "dev",
+    "precision": 0.9386206353767619,
+    "recall": 0.9990372334664037,
+    "f1": 0.9678870330200458,
+    "mass_recall": 0.9997370114810324,
+    "correlation": 0.7603148755862053,
+    "n_active": 2566562,
+    "n_predicted": 2731765,
+    "coverage_by_activation_quartile": [
+      0.9965276533139248,
+      0.999682065204686,
+      0.9999407767595536,
+      0.9999984414936725
+    ]
+  },
+  "gate": "hidden",
+  "feature": 81,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Main claims check out. On the test split, phase == 2 gives P 0.939, R 0.999, F1 0.968, mass recall 1.0. On dev, the original phase has 943 active steps out of 3.23M with 0.000 of the mass, and the <DEL> step (t = L, recall_idx 0) fires 0.3% of the time with 0.000 of the mass.",
+      "Misses on the test split are tiny activations (about 0.02-0.13 of max) at <DEL> or at the last original token of long sequences (orig_idx 7-8, L = 8-9). Together they hold 0.0% of the mass, so they are noise.",
+      "The claim that rates are token-agnostic holds. Copy-phase precision for each in_tok value (all 30 tokens) ranges from 0.906 to 0.975. Precision is also flat for repeated vs. unique tokens (in_count > 1: 0.932, in_count == 1: 0.940).",
+      "Minor gap: the claim that rates are flat across L is slightly off. For L = 3 the copy-phase precision is only about 0.76 at recall_idx 1 and 2 (about 26k steps, about 1% of copy steps), compared with about 0.95 for L = 4. Mid-copy steps far from the end (recall_idx >= 3 and L - recall_idx >= 4) have precision 0.897. These are small rate differences, not a separate class of counterexamples.",
+      "The magnitude claim is confirmed: recall_idx 1 holds 25.7% of the mass on 18.3% of active steps, and the top examples decay over the following copy steps. The top examples often have 'h' at original positions 1-2. The explanation admits it did not test this; it is a magnitude detail and does not affect the binary predicate.",
+      "The label matches the predicate: 'all steps after the first copy output' is t > L, i.e. phase == 2."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

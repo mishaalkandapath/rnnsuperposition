@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input token i",
+  "predicate": "(phase == 2) & (in_tok == tok(\"i\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase (t > L) when the fed-back input token is i, i.e. the model just output an i and is now recalling the next original token. Recall is 100% on dev; never fires on i during the original phase or on the delimiter step, and never on any other input token. About 20% of copy-phase i inputs stay inactive, mostly early in short sequences (t < 6, small L). Magnitude increases with recall position (lowest when i is the first original token, recall_idx 1). The largest activations come at late recall positions, often in runs of repeated i (the next token to output is also i).",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 194,
+    "predicate": "(phase == 2) & (in_tok == tok(\"i\"))",
+    "split": "test",
+    "precision": 0.7998374180224319,
+    "recall": 1.0,
+    "f1": 0.8887885205778774,
+    "mass_recall": 1.0,
+    "correlation": 0.7616738876519497,
+    "n_active": 72810,
+    "n_predicted": 91031,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 194,
+    "predicate": "(phase == 2) & (in_tok == tok(\"i\"))",
+    "split": "dev",
+    "precision": 0.803314121037464,
+    "recall": 1.0,
+    "f1": 0.8909308829404715,
+    "mass_recall": 1.0,
+    "correlation": 0.7635436891090952,
+    "n_active": 73590,
+    "n_predicted": 91608,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 194,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core label and predicate hold up. On test, (phase==2)&(in_tok==i) has recall 1.0, mass recall 1.0, precision 0.80 and F1 0.889. Misses on test are 0 steps. The profile shows zero activation in the original and delimiter phases and on every in_tok other than i. 'Never fires on i during the original phase' is confirmed: orig_idx 0..8 all have 0 actives.",
+      "The explanation's account of the false positives is wrong. It says the inactive copy-phase i inputs are 'mostly early steps in short sequences (t < 6, small L)'. On test, the predicate restricted to t<6 has only 3302 predicted steps at precision 0.098, which is about 2,980 false positives. Restricted to t>=6 it has 87729 predicted steps at precision 0.826, which is about 15,240 false positives. So roughly 84% of the 18,221 test false positives are at t>=6. Misses output shows many of them at steps 9-14 with L=5..9, e.g. 's r l i y f 0 <DEL> s r l *i*' at step 11 and 'w f k x p i c <DEL> ... *i*' at step 13.",
+      "The false positives follow a graded pattern by out_tok, the token being output at that step. Dev precision of the predicate within each out_tok ranges from 0.46-0.53 for q, z and e, through about 0.67-0.72 for c, k, t and w, up to 0.95-0.97 for r and i. This looks like a soft magnitude modulation near the activation threshold rather than a separate class. Excluding the low-precision out_toks does not improve test F1 (0.862).",
+      "recall_idx==1 (the first fed-back token) has lower precision (0.67, dev), which fits the claim that magnitude is lowest there. Top activations are at late recall positions (6-8), and most are followed by or part of i-runs, which fits 'largest activations at late recall positions, often within runs of repeated i'.",
+      "The label does not overclaim relative to the predicate. The predicate is equivalent to 'fed-back i in the copy phase' (in_first==0 gives the same scores)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input token i",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"i\")) & (t >= 6)",
+    "better_predicate_test_f1": 0.903
+  },
+  "final_label": "copy-phase input token i"
+}

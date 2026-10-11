@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input h (fed back h), from the 3rd copied token onward",
+  "predicate": "(phase == 2) & (in_tok == tok(\"h\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, at steps where the input is the token h, meaning the model just output h and it is fed back. Essentially all activation mass (>99.9%) is on copy-phase h inputs. It never fires during the original phase, at <DEL>, or on h in the original sequence. Position gates it: h fed back as the first copied token (recall_idx 1) never fires, as the second (recall_idx 2) fires weakly or not at all, and from recall_idx 3 onward it fires reliably (rate about 0.033 per step, flat for recall_idx 4-8). Near the end of the copy it fires harder: to_go <= 2 holds most of the mass, and it never fires when to_go >= 6, so h copied early in L=8-9 sequences is a common false positive. The top activations are all h near the end of the copy. Magnitude does not depend on out_tok, prev_tok, first_tok or which other tokens are present.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 173,
+    "predicate": "(phase == 2) & (in_tok == tok(\"h\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.926144297905353,
+    "recall": 0.9468257605132363,
+    "f1": 0.936370846151835,
+    "mass_recall": 0.9718672181054618,
+    "correlation": 0.8791100270135256,
+    "n_active": 56738,
+    "n_predicted": 58005,
+    "coverage_by_activation_quartile": [
+      0.8274233345082834,
+      0.9816707789918928,
+      0.9844190637337845,
+      0.9937958262831359
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 173,
+    "predicate": "(phase == 2) & (in_tok == tok(\"h\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9265312462247381,
+    "recall": 0.9452259802454355,
+    "f1": 0.9357852536168729,
+    "mass_recall": 0.970623303012739,
+    "correlation": 0.8780298314547393,
+    "n_active": 56797,
+    "n_predicted": 57943,
+    "coverage_by_activation_quartile": [
+      0.8233098591549296,
+      0.9798577364603142,
+      0.9859145010211987,
+      0.9918304105922953
+    ]
+  },
+  "gate": "update",
+  "feature": 173,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The 'recall_idx >= 3' gate is a fixed cutoff standing in for a boundary that actually depends on sequence length L. Firing rate on copy-phase h inputs, by L and recall_idx r (dev): L=3 r2=1.00; L=4 r2=0.99; L=5 r2=0.03; L>=6 r2=0.00. So in short sequences h fed back as the 2nd copied token fires almost every time, not 'weakly or not at all'. Overall rate at r=2 is 0.178, but that number is an average of two separate groups: L<=4 at 0.996 (2912 steps) and L>=6 at 0.000 (11065 steps). This is a systematic miss class: 3017 test steps, 2.8% of mass, all h at r=2 with L=3 or 4 (e.g. 'r h v <DEL> r [h:0.45]').",
+      "The remaining false positives (~4.3k test steps) are also systematic. They are h at r=3 in L>=6 sequences, which fire only about half the time (L=6 0.90, L=7 0.57, L=8 0.43, L=9 0.57). At r>=4 the rate is 1.00 for every L. I tested n_digits, in_count, a digit in orig(0), orig(1) or orig(3), and n_seen(DIGITS) as explanations for this r=3 split, and none of them separates it (all stay at 0.46-0.57). The explanation's account of these false positives ('h copied early in L=8-9 sequences') is roughly right but understates the effect: it also covers L=6-7.",
+      "'Rate about 0.033, flat across recall_idx 4-8' is the rate over all steps at that position, not the conditional firing rate. Given a copy-phase h input at r>=4, the feature fires 100% of the time (dev: 13855/13855 at r=4, 27854/27854 at r>=5). The real behavior is deterministic, which the quoted rate hides.",
+      "Claims that check out: zero activation in the original phase and at <DEL>; 100% of mass on copy-phase in_tok h, with off-token activations tiny (max about 0.04 relative to the feature's max); r=1 never fires; to_go>=6 never fires (0/8244); no dependence on out_tok, prev_tok or first_tok. Reported test scores reproduce (P 0.926, R 0.947, F1 0.936, mass recall 0.972).",
+      "The label 'from the 3rd copied token onward' overclaims a fixed position threshold. For L<=4 the feature fires from the 2nd copied token onward."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase fed-back h, except on the first copied token (and also the 2nd when L>=5; partial on the 3rd when L>=6)",
+    "better_predicate": "(phase == 2) & (in_tok == tok('h')) & ((recall_idx >= 3) | ((recall_idx == 2) & (L <= 4)))",
+    "better_predicate_test_f1": 0.961
+  },
+  "final_label": "copy-phase fed-back h, except on the first copied token (and also the 2nd when L>=5; partial on the 3rd when L>=6)"
+}

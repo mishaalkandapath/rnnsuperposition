@@ -1,0 +1,64 @@
+{
+  "label": "steps 2-4 of a sequence that starts with digit 1",
+  "predicate": "(first_tok == tok(\"1\")) & (t >= 2) & (t <= 4)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires early in the original phase (t=2..4, peak at t=3-4) of sequences whose first original token is the digit 1; first_tok==1 has 24x lift and carries ~94% of activation mass. Independent of the current input token. Strongest (top activations ~5) when the sequence begins 1 1 (a second 1 at position 1), with the max typically at t=4; sequences starting 1 x give mid-range activations. Weaker tail at t=5 and on the <DEL> step for short sequences (L=3-5), outputting 1. Low-level misses are sequences with a 1 at position 1 instead of 0 (weak activations). Essentially silent at t=0-1, t>=6, and throughout the copy phase.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 821,
+    "predicate": "(first_tok == tok(\"1\")) & (t >= 2) & (t <= 4)",
+    "split": "test",
+    "precision": 0.9095778574273198,
+    "recall": 0.7336106382295313,
+    "f1": 0.812172181427022,
+    "mass_recall": 0.9099751316862632,
+    "correlation": 0.7914145043458712,
+    "n_active": 62266,
+    "n_predicted": 50220,
+    "coverage_by_activation_quartile": [
+      0.4616817627031541,
+      0.5469904284704824,
+      0.9369137864576641,
+      0.9888860336631119
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 821,
+    "predicate": "(first_tok == tok(\"1\")) & (t >= 2) & (t <= 4)",
+    "split": "dev",
+    "precision": 0.9056898833152893,
+    "recall": 0.73668074558471,
+    "f1": 0.8124893209471309,
+    "mass_recall": 0.9108839216121722,
+    "correlation": 0.7904710496358204,
+    "n_active": 61321,
+    "n_predicted": 49878,
+    "coverage_by_activation_quartile": [
+      0.46337486139195094,
+      0.5568166992824527,
+      0.938160469667319,
+      0.9883887801696021
+    ]
+  },
+  "gate": "update",
+  "feature": 821,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The reported test scores reproduce exactly (P 0.910, R 0.734, F1 0.812, mass recall 0.910). The main claims also hold. 94% of activation mass is in first_tok==1 sequences. There is no firing at t=0-1 or t>=8. The copy phase gets 0.2% of mass. in_tok lift is flat (1.1-1.3x). The top examples are '1 1 ...' sequences peaking at t=4 with activation around 5.2-5.3.",
+      "One class of misses is systematic, not scattered: a 1 at position 1 (orig(1)==1, first_tok!=1) at t=3-4. This covers about 18% of active steps (about 6% of mass) and makes up most of the 26.6% of active steps the predicate misses. The explanation mentions it only in passing, as 'weak misses'.",
+      "Whether that class fires depends sharply on which token is at position 0. For orig(1)==1 at t=3-4, precision by first token is about 0.88 for c/h, 0.80 for x/n, 0.78 for 2, and 0.74-0.77 for y/m/j. It is 0.4-0.66 for f/p/q/z/t/v/0, and 0.0 for a/b/d/e/g/i/l/o/r/s/w. So 'the 1 is at position 1' is a structured, token-gated sub-feature that a better predicate can capture.",
+      "Missing from the explanation: in '1 1' sequences the feature never fires at t=2 (first_tok==1 & orig(1)==1 & t==2 gives precision 0.0, recall 0.0). The t=2 activations all come from '1 x' sequences (precision 0.79). The predicate counts these as false positives. The explanation says '1 1' is the strongest pattern but not that it is completely silent at t=2.",
+      "The label 'steps 2-4 of a sequence that starts with digit 1' overclaims at t=2 because '1 1' sequences are silent there. It also undercovers the position-1 case.",
+      "The smaller claims check out but matter little. t=5 with first_tok==1 has precision 0.11 and 2.7% of mass. The <DEL> step with output 1 has 0.6% of mass."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "t=3-4 (and t=2 unless the second token is also 1) when a digit 1 opens the sequence. A weaker version fires at t=3-4 when the 1 is at position 1, after certain first tokens (c,h,x,n,y,m,j,2,z,...).",
+    "better_predicate": "((first_tok==tok('1'))&(t>=2)&(t<=4)&~((t==2)&(orig(1)==tok('1')))) | ((orig(1)==tok('1'))&isin(first_tok,[tok(c) for c in 'cfhjmnpqxyz2'])&(t>=3)&(t<=4))",
+    "better_predicate_test_f1": 0.884
+  },
+  "final_label": "t=3-4 (and t=2 unless the second token is also 1) when a digit 1 opens the sequence. A weaker version fires at t=3-4 when the 1 is at position 1, after certain first tokens (c,h,x,n,y,m,j,2,z,...)."
+}

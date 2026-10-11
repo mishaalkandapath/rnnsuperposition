@@ -1,0 +1,61 @@
+{
+  "label": "x echoed back as the 1st or 2nd copy-phase input",
+  "predicate": "(phase == 2) & (in_tok == tok(\"x\")) & (recall_idx <= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the input token is x at recall_idx 1 or 2. That means the model just fed back original token 0 = x (step L+1) or original token 1 = x (step L+2). Magnitude depends strongly on position. Echoing the first token x right after <DEL> gives activations of about 0.8-1.0 of max, holds about 81% of the mass, and has 100% precision. Echoing x as the second token gives weak activations (about 0.1-0.4 of max), and these are weakest in short sequences (L=3-4, where some predicted cases are inactive). It does not fire on x in the original phase, on x echoed at recall_idx >= 3, or on any other token (88 stray steps out of 32k, carrying ~0% of mass). Dev F1 0.98, mass recall 1.00.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 309,
+    "predicate": "(phase == 2) & (in_tok == tok(\"x\")) & (recall_idx <= 2)",
+    "split": "test",
+    "precision": 0.9664599265370025,
+    "recall": 0.9979171200298442,
+    "f1": 0.9819366482617276,
+    "mass_recall": 0.9999110663978704,
+    "correlation": 0.8436906412058088,
+    "n_active": 32167,
+    "n_predicted": 33214,
+    "coverage_by_activation_quartile": [
+      0.991668739119622,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 309,
+    "predicate": "(phase == 2) & (in_tok == tok(\"x\")) & (recall_idx <= 2)",
+    "split": "dev",
+    "precision": 0.9680453394429036,
+    "recall": 0.9972670807453416,
+    "f1": 0.9824389646943645,
+    "mass_recall": 0.9998901661401504,
+    "correlation": 0.8436958505577281,
+    "n_active": 32200,
+    "n_predicted": 33172,
+    "coverage_by_activation_quartile": [
+      0.9890683229813665,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 309,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The false positives are not random. Nearly all of the 1114 test FPs are x at recall_idx 2 in short sequences. At L==3 the predicate fires 441 times but only 5% of those are active (precision 0.05). At L==4 precision is 0.72. At L>=5 precision is 0.9999. The explanation says 'some short-sequence cases in this group are inactive', which undersells L=3: there the second-position echo is almost never active. This is a small effect overall (F1 0.982 -> 0.988 once fixed).",
+      "Missed activations: 67 test steps holding 0.0% of mass. They are scattered and tiny (0.01-0.05 of max): x as the 3rd echo, or other tokens at recall_idx 1. This is noise.",
+      "The other claims check out. All mass is in the copy phase. recall_idx 1 alone gives precision 1.0 and mass 0.807. recall_idx 2 gives mass 0.193 with a similar active count, so its mean is about 0.24x that of recall_idx 1, consistent with the stated 0.1-0.4 vs 0.8-1.0. There is no activation in the original phase, and recall_idx >= 3 has only 49 dev actives."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "x echoed back as the 1st copy-phase input (strong), or weakly as the 2nd (only when L >= 4)",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"x\")) & ((recall_idx == 1) | ((recall_idx == 2) & (L >= 4)))",
+    "better_predicate_test_f1": 0.988
+  },
+  "final_label": "x echoed back as the 1st copy-phase input (strong), or weakly as the 2nd (only when L >= 4)"
+}

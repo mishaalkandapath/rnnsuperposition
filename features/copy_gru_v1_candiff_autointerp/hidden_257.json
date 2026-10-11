@@ -1,0 +1,61 @@
+{
+  "label": "digit 1 input at original position >= 4",
+  "predicate": "(phase == 0) & (in_tok == tok(\"1\")) & (t >= 4)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the original (input) phase, essentially only when the input token is the digit 1 (in_tok==1 accounts for ~100% of activation mass; other tokens fire on a handful of steps at near-zero magnitude). It never fires at t=0-2, never on <DEL>, and never in the copy phase, even when 1 is fed back as input. Magnitude grows with position: a 1 at t=3 gives only weak, inconsistent activation (~0.02 of max, about 1% of the 1s there, 0.5% of mass), a 1 at t=4 gives about 0.3 of max, t=5 about 0.57, t=6 about 0.75, and t=8 about 1.0. Every 1 at t>=4 activates it (dev precision 1.0). Neighbouring/earlier tokens and sequence identity have little effect beyond position; the higher rate when n_digits is larger comes from more 1s being present.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 257,
+    "predicate": "(phase == 0) & (in_tok == tok(\"1\")) & (t >= 4)",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.8898904928895678,
+    "f1": 0.9417376257911754,
+    "mass_recall": 0.9954622892962712,
+    "correlation": 0.9320406047460421,
+    "n_active": 46481,
+    "n_predicted": 41363,
+    "coverage_by_activation_quartile": [
+      0.5595903966956373,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 257,
+    "predicate": "(phase == 0) & (in_tok == tok(\"1\")) & (t >= 4)",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.8895581898861712,
+    "f1": 0.9415515168016699,
+    "mass_recall": 0.995454801475706,
+    "correlation": 0.9314786334975287,
+    "n_active": 46649,
+    "n_predicted": 41497,
+    "coverage_by_activation_quartile": [
+      0.5582611677955929,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 257,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Factual error in the explanation: a 1 at t=3 fires on about 31% of cases, not 'roughly 1%'. The predicate (in_tok==1)&(t==3) has dev precision 0.31. The other parts of that claim hold: the activation is tiny (about 0.01-0.03 of max) and carries 0.45% of mass. These t=3 firings are the whole of the 11% recall gap (5118 test misses, all at step 3, 0.5% of mass).",
+      "The t=3 firing shows no systematic pattern. Precision stays at about 0.27-0.36 whatever the split: L (4, >=5, >=7), whether a digit appeared earlier, whether prev_tok is a vowel, a digit, or in the first or second half of the alphabet, prev2_tok, or in_count. It looks like noise near the firing threshold, not a hidden condition.",
+      "Other claims check out. The feature never fires on <DEL> or in the copy phase: (in_tok==1)&(phase==2) has 0 hits. It never fires at t<=2. 100% of mass is on in_tok==1 (non-1 tokens: about 21 steps out of 46.6k). Every 1 at t>=4 in the original phase fires (test precision 1.0, 0 false positives). Mass rises with position, and the firing rate per original position is flat at about 0.033 for orig_idx 4-8.",
+      "Test scores reproduced: P=1.0, R=0.890, F1=0.942, mass recall 0.995. The t>=3 version scores dev F1 0.892. Adding t==3 & ~seen(DIGITS) gives F1 0.907, which is worse, so no better predicate exists."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

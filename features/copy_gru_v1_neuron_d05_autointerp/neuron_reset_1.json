@@ -1,0 +1,62 @@
+{
+  "label": "Delimiter / first copy step in long sequences (L>=7)",
+  "predicate": "(phase>=1)&(recall_idx<=1)&(to_go>=6)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Reset-gate unit 1 is active only at the start of the copy phase of long sequences: at the <DEL> step (recall_idx 0) when L>=7, and at the first copy step (recall_idx 1, input = first original token) when L>=8. In other words it fires when 6 or more outputs remain at the delimiter or the first copy step. Magnitude depends on length and position. The delimiter step carries 78% of the activation mass and is strongest for L=9 (top activations are all <DEL> at L=9, about 1.0 of max). The following first-copy step reaches about 0.3-0.6 of max. Rates rise with L (L=9 accounts for 65% of mass). Token identity matters little, with a slight rise when there are more digits. It never fires during the original-input phase, and almost never from recall_idx 2 onward or in short sequences (L<=6).",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 1,
+    "predicate": "(phase>=1)&(recall_idx<=1)&(to_go>=6)",
+    "split": "test",
+    "precision": 0.7299997592507884,
+    "recall": 0.9399547413125019,
+    "f1": 0.8217789582091171,
+    "mass_recall": 0.9852433106809745,
+    "correlation": 0.6960570144978774,
+    "n_active": 64518,
+    "n_predicted": 83074,
+    "coverage_by_activation_quartile": [
+      0.8088654680719157,
+      0.9543707377557347,
+      0.9965899931799863,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 1,
+    "predicate": "(phase>=1)&(recall_idx<=1)&(to_go>=6)",
+    "split": "dev",
+    "precision": 0.7327475173036413,
+    "recall": 0.940094514455152,
+    "f1": 0.8235707955921449,
+    "mass_recall": 0.9851750585262153,
+    "correlation": 0.6974055739361377,
+    "n_active": 64752,
+    "n_predicted": 83075,
+    "coverage_by_activation_quartile": [
+      0.807573511242896,
+      0.9560785767234989,
+      0.996725969854213,
+      1.0
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 1,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The explanation says token identity 'barely matters', which is false at the first copy step. At recall_idx 1 with L=8 (dev split), the firing rate depends on in_tok (= orig(0)). It ranges from 0.4% for 'k', 1% for 's', 7% for 'a' and 8% for 'b' up to 88% for 'c', 93% for '0' and 95% for '1'. At L=9 it ranges from 15% for 'k' and 21% for 's' to 100% for 'c', '0' and '1'. The digit effect is just one piece of this per-token dependence.",
+      "The claim 'at the <DEL> step when L>=7' overstates L=7: only 52% of L=7 delimiter steps fire, against 93% at L=8 and ~100% at L=9. At L=7 the last original token (prev_tok) only moves the rate between about 30% and 79%, and no simple variable fully accounts for the remaining variation.",
+      "The claim 'at the first copy step when L>=8' overstates L=8: only 39% of recall_idx 1 steps at L=8 fire, and those cases are almost entirely set by the first original token. This cell is the main source of the predicate's 22k test false positives (precision 0.73).",
+      "The core structure holds: no activity in the original phase, delimiter carries 78% of the mass, a recall_idx 1 component is present, mass grows with L (L=9 holds 65%), and the unit is almost silent at recall_idx>=2 and L<=6. Test F1 0.822 and mass recall 0.985 reproduce."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Delimiter in long sequences (L>=8 reliably, L=7 about half the time), plus the first copy step at L>=8 gated by which token came first",
+    "better_predicate": "(phase==1)&(L>=7)|(recall_idx==1)&(L==9)&~isin(in_tok,[0,1,10,15,18])|(recall_idx==1)&(L==8)&isin(in_tok,[2,5,7,12,13,14,17,22,25,26,27,28])",
+    "better_predicate_test_f1": 0.856
+  },
+  "final_label": "Delimiter in long sequences (L>=8 reliably, L=7 about half the time), plus the first copy step at L>=8 gated by which token came first"
+}

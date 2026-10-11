@@ -1,0 +1,61 @@
+{
+  "label": "copy-phase input 3 (recall position >= 3)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"3\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost exclusively in the copy phase when the fed-back input token is the digit 3, i.e. the model just emitted a 3 and is now outputting the original token after it. Never fires in the original or delimiter phases, or on other tokens (the few non-3 hits are tiny). It is almost silent when the 3 comes in at recall_idx 2 (the 3 was original token 1) and fires at about the same rate from recall_idx 3 on. Magnitude is larger later in the copy (low-quartile examples are at recall_idx 2-3, top examples at 5-6), and when two 3s come in a row the second is weaker than the first. The output token does not modulate it. False positives are mostly early-position 3s that stay silent.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 222,
+    "predicate": "(phase == 2) & (in_tok == tok(\"3\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9841234036646308,
+    "recall": 0.9540927900952124,
+    "f1": 0.9688754505543313,
+    "mass_recall": 0.9914136566198707,
+    "correlation": 0.8961209015586264,
+    "n_active": 59446,
+    "n_predicted": 57632,
+    "coverage_by_activation_quartile": [
+      0.8173193379087605,
+      0.9990580002691428,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 222,
+    "predicate": "(phase == 2) & (in_tok == tok(\"3\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9845078146421716,
+    "recall": 0.9559212606286503,
+    "f1": 0.9700039679524521,
+    "mass_recall": 0.9920425376210859,
+    "correlation": 0.8956623270492775,
+    "n_active": 60097,
+    "n_predicted": 58352,
+    "coverage_by_activation_quartile": [
+      0.8248252911813644,
+      0.9988684771033014,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 222,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claims hold up. The feature never fires in the original or delimiter phases (0 active). In_tok=3 carries 100% of the activation mass; all other tokens together fire on fewer than 200 steps. The test score matches the report: P 0.984, R 0.954, F1 0.969, mass recall 0.991.",
+      "Firing rate on copy-phase 3s by recall_idx: precision is 0.945 at recall_idx 3 and about 0.9999-1.0 at recall_idx 4-8. So the false positives the predicate still has are concentrated at recall_idx 3, mostly in sequences of length L=6-9, where precision is 0.89-0.95.",
+      "'Nearly silent at recall_idx 2' needs a length qualifier. At recall_idx 2 the feature fires on 65% of copy-phase 3s when L=4 and 46% when L=3, against only 1-4% when L>=6. These firings are weak: all misses together hold 0.9% of the activation mass.",
+      "Claims I checked: 3s at recall_idx>=3 that follow another 3 are still active (precision 0.974). The 'correct==0' case is negligible (1 step). In the profile, the output token makes no difference (rates are flat across out_tok, about 0.019-0.022)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"3\")) & ((recall_idx >= 3) | ((recall_idx == 2) & (L == 4)))",
+    "better_predicate_test_f1": 0.9756
+  }
+}

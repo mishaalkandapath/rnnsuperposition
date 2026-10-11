@@ -1,0 +1,63 @@
+{
+  "label": "early original-phase input from token set {b,c,d,e,f,h,i,j,o,u,v,0} (t=0, or t=2-3 for strongest members)",
+  "predicate": "((t == 0) & isin(in_tok, [tok(\"b\"),tok(\"c\"),tok(\"d\"),tok(\"e\"),tok(\"f\"),tok(\"h\"),tok(\"i\"),tok(\"j\"),tok(\"o\"),tok(\"u\"),tok(\"v\"),tok(\"0\")])) | ((phase == 0) & (t >= 2) & (t <= 3) & isin(in_tok, [tok(\"u\"),tok(\"0\"),tok(\"d\"),tok(\"f\"),tok(\"h\")]) & ~seen([tok(\"b\"),tok(\"c\"),tok(\"d\"),tok(\"e\"),tok(\"f\"),tok(\"h\"),tok(\"i\"),tok(\"j\"),tok(\"o\"),tok(\"u\"),tok(\"v\"),tok(\"0\")]))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Original-phase only, and only at the first few steps. At t=0 it fires deterministically (precision 1.0 per token on dev) when the first token is one of b,c,d,e,f,h,i,j,o,u,v,0, and never for the other 18 tokens; that step holds about 69% of the activation mass. A second component at t=2-3 (mostly t=3, about 23% of mass) fires when the input is one of the strongest set members (u,0,d,f,h) and no set token has appeared yet in the prefix. The largest activations are of this kind, e.g. k 1 t [u]. Magnitude depends on token identity: u, 0, d, f and h are strongest; v, e and j are weakest. Almost silent at t=1 and t>=4, very weak on the delimiter, and never fires in the copy phase. Misses are mostly weak t=2-4 activations on lower-ranked set tokens.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 69,
+    "predicate": "((t == 0) & isin(in_tok, [tok(\"b\"),tok(\"c\"),tok(\"d\"),tok(\"e\"),tok(\"f\"),tok(\"h\"),tok(\"i\"),tok(\"j\"),tok(\"o\"),tok(\"u\"),tok(\"v\"),tok(\"0\")])) | ((phase == 0) & (t >= 2) & (t <= 3) & isin(in_tok, [tok(\"u\"),tok(\"0\"),tok(\"d\"),tok(\"f\"),tok(\"h\")]) & ~seen([tok(\"b\"),tok(\"c\"),tok(\"d\"),tok(\"e\"),tok(\"f\"),tok(\"h\"),tok(\"i\"),tok(\"j\"),tok(\"o\"),tok(\"u\"),tok(\"v\"),tok(\"0\")]))",
+    "split": "test",
+    "precision": 0.9568662148846749,
+    "recall": 0.7360475188714268,
+    "f1": 0.8320553957526425,
+    "mass_recall": 0.8197836680599758,
+    "correlation": 0.7471351455119,
+    "n_active": 64648,
+    "n_predicted": 49729,
+    "coverage_by_activation_quartile": [
+      0.5426927360475189,
+      0.7557233015715876,
+      0.7256527657468135,
+      0.9201212721197871
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 69,
+    "predicate": "((t == 0) & isin(in_tok, [tok(\"b\"),tok(\"c\"),tok(\"d\"),tok(\"e\"),tok(\"f\"),tok(\"h\"),tok(\"i\"),tok(\"j\"),tok(\"o\"),tok(\"u\"),tok(\"v\"),tok(\"0\")])) | ((phase == 0) & (t >= 2) & (t <= 3) & isin(in_tok, [tok(\"u\"),tok(\"0\"),tok(\"d\"),tok(\"f\"),tok(\"h\")]) & ~seen([tok(\"b\"),tok(\"c\"),tok(\"d\"),tok(\"e\"),tok(\"f\"),tok(\"h\"),tok(\"i\"),tok(\"j\"),tok(\"o\"),tok(\"u\"),tok(\"v\"),tok(\"0\")]))",
+    "split": "dev",
+    "precision": 0.9563074571020499,
+    "recall": 0.7356700711853915,
+    "f1": 0.8316029773202369,
+    "mass_recall": 0.8192039189462276,
+    "correlation": 0.7465025729701115,
+    "n_active": 64620,
+    "n_predicted": 49711,
+    "coverage_by_activation_quartile": [
+      0.5424945837202104,
+      0.7514082327452801,
+      0.7281337047353761,
+      0.9206437635406994
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 69,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The t=0 component holds up: precision 1.0 on dev and about 69% of activation mass.",
+      "The ~seen(full 12-token set) gate on the t=2-3 component is wrong. At t=3 the strong tokens (u,0,d,f,h) still fire about 47% of the time after a set token has appeared (12.8k steps, 8.4% of mass, more than the 7.8% the claimed ~seen branch covers). What actually suppresses firing is earlier occurrences of the STRONG tokens. With ~seen(strong set) the gate covers 13.9% of mass at 0.77 precision. With a strong token already seen, precision drops to 0.30. Weak set tokens earlier in the prefix (b,c,e,i,j,o,v) suppress only partly (0.67 precision).",
+      "'Very weak on the delimiter' overclaims. On L=3 sequences the delimiter falls at t=3 and fires 92% of the time when no set token was seen (up to 0.38 of max). That is a systematic part of the t=3 component the predicate misses entirely, about 2% of mass.",
+      "At t=3 the unit also fires on i, o and b (precision 0.64 when nothing from the set was seen), plus weak t=3 firing on digits 2 and 3. So the t=3 component is a graded token-strength score, not a 5-token set.",
+      "Misses on the test split are systematic, not scattered: t=3 strong tokens after weak set tokens, t=3 <DEL> for L=3, and t=3 i/o/b. Together they explain most of the gap between mass recall 0.82 and 0.915."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "First input token from set {b,c,d,e,f,h,i,j,o,u,v,0} (t=0). Also position-3 input (including <DEL> when L=3) that is a strong token (u,0,d,f,h; weaker for i,o,b) and comes after a prefix without strong tokens. Suppression is graded by earlier set tokens.",
+    "better_predicate": "((t==0)&isin(in_tok,[tok(\"b\"),tok(\"c\"),tok(\"d\"),tok(\"e\"),tok(\"f\"),tok(\"h\"),tok(\"i\"),tok(\"j\"),tok(\"o\"),tok(\"u\"),tok(\"v\"),tok(\"0\")])) | ((t==3)&isin(in_tok,[tok(\"u\"),tok(\"0\"),tok(\"d\"),tok(\"f\"),tok(\"h\"),30])&~seen([tok(\"u\"),tok(\"0\"),tok(\"d\"),tok(\"f\"),tok(\"h\")])) | ((t==3)&isin(in_tok,[tok(\"i\"),tok(\"o\"),tok(\"b\")])&~seen([tok(\"b\"),tok(\"c\"),tok(\"d\"),tok(\"e\"),tok(\"f\"),tok(\"h\"),tok(\"i\"),tok(\"j\"),tok(\"o\"),tok(\"u\"),tok(\"v\"),tok(\"0\")])) | ((t==2)&(phase==0)&isin(in_tok,[tok(\"u\"),tok(\"0\"),tok(\"d\"),tok(\"f\"),tok(\"h\")])&~seen([tok(\"b\"),tok(\"c\"),tok(\"d\"),tok(\"e\"),tok(\"f\"),tok(\"h\"),tok(\"i\"),tok(\"j\"),tok(\"o\"),tok(\"u\"),tok(\"v\"),tok(\"0\")]))",
+    "better_predicate_test_f1": 0.8713
+  },
+  "final_label": "First input token from set {b,c,d,e,f,h,i,j,o,u,v,0} (t=0). Also position-3 input (including <DEL> when L=3) that is a strong token (u,0,d,f,h; weaker for i,o,b) and comes after a prefix without strong tokens. Suppression is graded by earlier set tokens."
+}

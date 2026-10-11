@@ -1,0 +1,63 @@
+{
+  "label": "early input e (first 3 positions), or h at position 0",
+  "predicate": "((in_tok == tok(\"e\")) & (t <= 2)) | ((in_tok == tok(\"h\")) & (t == 0))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost entirely during the original-input phase at positions t=0..2, when the input token is e (92% of activation mass), plus weakly when h is the very first token (about 5% of mass, activations ~0.02 of max). Magnitude: e at t=0 is a constant ~0.31 of max; the strongest activations are the copy-phase echo of e for L=3 sequences (e fed back at t=4, up to 1.0) and e at t=2 after certain prefixes such as k c (~0.56). e at t=1 is usually weak. Never fires at the delimiter, essentially never in the copy phase except that L=3 echo, never at t>=3 of the original phase, and almost never on other tokens. Main false positives are e at t=1-2 that stay under threshold, especially after an earlier h.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 11,
+    "predicate": "((in_tok == tok(\"e\")) & (t <= 2)) | ((in_tok == tok(\"h\")) & (t == 0))",
+    "split": "test",
+    "precision": 0.7688506177461625,
+    "recall": 0.8885427483558325,
+    "f1": 0.8243747741961384,
+    "mass_recall": 0.9365474253095649,
+    "correlation": 0.6538587117904965,
+    "n_active": 11556,
+    "n_predicted": 13355,
+    "coverage_by_activation_quartile": [
+      0.9418483904465212,
+      0.6964347525095189,
+      0.9338871581862236,
+      0.9820006922810661
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 11,
+    "predicate": "((in_tok == tok(\"e\")) & (t <= 2)) | ((in_tok == tok(\"h\")) & (t == 0))",
+    "split": "dev",
+    "precision": 0.7653521974714028,
+    "recall": 0.8856570582600366,
+    "f1": 0.821121472689839,
+    "mass_recall": 0.9414698575577223,
+    "correlation": 0.6573371351008945,
+    "n_active": 11483,
+    "n_predicted": 13288,
+    "coverage_by_activation_quartile": [
+      0.9425287356321839,
+      0.6750261233019854,
+      0.9366074538488331,
+      0.9885017421602788
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 11,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The false positives are not scattered noise. Whether e at t=1 fires depends entirely on the token before it (dev, about 100 steps per prefix). It fires every time when prev_tok is outside {b,e,g,h,i,m,o,x,z} and never when prev_tok is in that set. So 'e at t=1 is usually weak' and 'false positives especially after an earlier h' both understate a deterministic, systematic class of false positives.",
+      "e at t=2 is worse: precision is only 0.36 (3323 predicted steps). The predicate's term (in_tok==e)&(t<=2) therefore overclaims for t=2. Most of the leftover false positives after filtering on prev_tok are e at t=2 with particular two-token prefixes.",
+      "h at t=0 is described as a minor weak case (~5% of mass). It has precision 1.0 and covers 29% of all active steps (dev recall 0.288), though only 3.1% of activation mass. By step count it is about as large a mode as e at t=0 (29.3%).",
+      "The magnitude claims check out: e at t=0 has precision 1.0 and 60% of mass. The L=3 copy-phase echo of e at t=4 has precision 0.88 but only 1.2% of mass. There are no activations at the delimiter or at t>=3 of the original phase.",
+      "Remaining misses form small systematic classes in the original phase at t=1-2: p, h, s and v after particular first tokens (e.g. 'c p', 'c h', 'k 2 h'). There are also copy-phase echoes of other first tokens in L=3 sequences (e.g. v at t=4). Together they hold about 6-7% of mass."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "First token e or h (always active). Also active on e at t=1 or t=2 unless the preceding token(s) fall in {b,e,g,h,i,m,o,x,z}.",
+    "better_predicate": "((in_tok == tok('e')) & (t == 0)) | ((in_tok == tok('h')) & (t == 0)) | ((in_tok == tok('e')) & (t == 1) & ~isin(prev_tok, [tok(c) for c in 'beghimoxz'])) | ((in_tok == tok('e')) & (t == 2) & ~isin(prev_tok, [tok(c) for c in 'beghimoxz']) & ~isin(prev2_tok, [tok(c) for c in 'beghimoxz']))",
+    "better_predicate_test_f1": 0.903
+  },
+  "final_label": "First token e or h (always active). Also active on e at t=1 or t=2 unless the preceding token(s) fall in {b,e,g,h,i,m,o,x,z}."
+}

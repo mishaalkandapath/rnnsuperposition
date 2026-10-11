@@ -1,0 +1,61 @@
+{
+  "label": "y fed back as one of the first two copy outputs",
+  "predicate": "(phase == 2) & (in_tok == tok(\"y\")) & isin(recall_idx, [1,2])",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, at the step where the input token is y and that y is the model own echoed output of original token 0 or 1 (recall_idx 1 or 2, so orig(0)==y or orig(1)==y). Magnitude depends on position: when y is the first echoed token (recall_idx 1, input right after <DEL>, first_tok y), activation is strong (about 0.85-1.0 of max) and carries about 78% of mass; when y is the second echoed token (recall_idx 2) it is weak (about 0.15-0.4 of max). Almost never fires for y echoed at recall_idx 3 or later (a few weak cases at recall_idx 3), and never for y in the original phase, at the delimiter, or for any other input token. The output token and L have little effect.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 210,
+    "predicate": "(phase == 2) & (in_tok == tok(\"y\")) & isin(recall_idx, [1,2])",
+    "split": "test",
+    "precision": 0.9880555387133936,
+    "recall": 0.9832564032944158,
+    "f1": 0.9856501292849258,
+    "mass_recall": 0.9991057520869131,
+    "correlation": 0.8645402535935802,
+    "n_active": 33147,
+    "n_predicted": 32986,
+    "coverage_by_activation_quartile": [
+      0.9330276336430554,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 210,
+    "predicate": "(phase == 2) & (in_tok == tok(\"y\")) & isin(recall_idx, [1,2])",
+    "split": "dev",
+    "precision": 0.9876128802281369,
+    "recall": 0.9843962811630248,
+    "f1": 0.9860019573534209,
+    "mass_recall": 0.9991726919021049,
+    "correlation": 0.8638219676700133,
+    "n_active": 33774,
+    "n_predicted": 33664,
+    "coverage_by_activation_quartile": [
+      0.937588820464235,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 210,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Factual claims check out on test. Activations occur only in the copy phase and only on in_tok y. The recall_idx shares are 1: 0.783, 2: 0.216, 3: 0.001. The recall_idx==1 predicate covers the top two activation quartiles fully. The recall_idx==2 predicate covers almost only the bottom two (0.93, 1.0, 0.001, 0), which confirms the strong-at-1, weak-at-2 magnitude claim.",
+      "Minor systematic false-positive class: at recall_idx 2 in short sequences, y often does not fire. Precision for recall_idx 2 & L==3 is only 0.40 (410 predicted), and for L<=4 it is 0.86. For L>=5 it is 1.0. Most of the test false positives are of the form 'c y z <DEL> c *y*'. The explanation does not mention this length dependence ('L has little effect' is slightly wrong for the recall_idx-2 case). Excluding (recall_idx==2 & L==3) raises test precision to 0.995, but F1 only goes from 0.986 to 0.987, so the effect is negligible.",
+      "Missed activations (555 test steps, 0.1% of mass) are very weak (0.02-0.05 of max) y inputs at recall_idx 3 in longer sequences. This matches the explanation's 'a few weak cases at recall_idx 3'.",
+      "Label and predicate agree. No overclaim."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"y\")) & isin(recall_idx,[1,2]) & ~((recall_idx==2)&(L==3))",
+    "better_predicate_test_f1": 0.9868
+  }
+}

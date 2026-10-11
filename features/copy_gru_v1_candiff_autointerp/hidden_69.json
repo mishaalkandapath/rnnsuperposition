@@ -1,0 +1,76 @@
+{
+  "label": "Input phase from the 3rd token through <DEL> (positional, encoding phase)",
+  "predicate": "(t >= 2) & (phase <= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Positional/phase feature: active on input steps t >= 2 of the original phase and on the <DEL> step, essentially silent at t = 0-1 and throughout the copy phase (0.4% rate, 0.1% of mass). The firing rate per original position rises from 0.65 at t=2 to about 0.9 at orig_idx 7-8, and <DEL> fires 74% of the time (17% of mass). Activation mass is concentrated at t = 3-6. Magnitude depends on sequence content: the strongest examples start with a/w/t (first_tok a carries the most mass) and keep their peak around steps 3-5. Repeated tokens (in_first = 0) fire less often (rate 0.08 vs 0.56), but adding that condition lowers recall more than it raises precision. About 23% of predicted steps are inactive, mostly in sequences that are weak overall.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 69,
+    "predicate": "(t >= 2) & (phase <= 1)",
+    "split": "test",
+    "precision": 0.7716283292091892,
+    "recall": 0.9768353348146535,
+    "f1": 0.8621898559571686,
+    "mass_recall": 0.9933691894099086,
+    "correlation": 0.6389393408391043,
+    "n_active": 2157985,
+    "n_predicted": 2731880,
+    "coverage_by_activation_quartile": [
+      0.9376437681766534,
+      0.9699478772780521,
+      0.9997497664486854,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 69,
+    "predicate": "(t >= 2) & (phase <= 1)",
+    "split": "dev",
+    "precision": 0.7721194905125441,
+    "recall": 0.9771058105222197,
+    "f1": 0.8626017930920256,
+    "mass_recall": 0.9934071345199883,
+    "correlation": 0.6392839619794062,
+    "n_active": 2158670,
+    "n_predicted": 2731765,
+    "coverage_by_activation_quartile": [
+      0.9389235604112158,
+      0.9697350963925969,
+      0.9997646696944598,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 69,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The positional claims hold. Test scores for (t>=2)&(phase<=1) reproduce exactly: P 0.772, R 0.977, F1 0.862. Copy-phase rate is 0.4% with 0.1% of mass, <DEL> fires 74%, and t=0 never fires.",
+      "The false positives follow a pattern. Precision of the predicate depends strongly on the FIRST original token. With orig(0)=h it is 0.09; with e 0.34, f 0.30 and '1' 0.31. With j, x, z, u and n it is about 0.5-0.64. For most other first tokens (a, d, g, i, k-t, w) it is 0.95-1.0. So sequences that begin with h/e/f/1 largely suppress the feature for the whole encoding phase. The explanation calls the 23% inactive predicted steps 'sequences that are weak overall' but never names this cause.",
+      "Related h/1 effect: any step where h or 1 has already been seen has precision 0.58 (vs 0.84 when not seen). With h/1 at orig(0), precision is 0.20.",
+      "The misses also follow a pattern. At t=1 the feature fires whenever in_tok is h or 1: (t==1)&isin(in_tok,[h,1]) has precision 1.0 and accounts for most of the t=1 activity. Within t>=2, h/1 inputs fire with precision 0.94. These tokens fire the feature themselves but suppress it later on.",
+      "The repeated-token claim is misleading. The quoted 'rate 0.08 vs 0.56' mixes in copy-phase steps. Within the encoding phase (t>=2, phase 0), repeated tokens (in_first=0) fire MORE often (precision 0.84) than first occurrences (0.77).",
+      "Minor point: the label 'from the 3rd token' is fine, but the explanation's statement that magnitude is driven by a/w/t first tokens only gives the high end. The more informative content effect is the strong suppression by a few first tokens."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "Encoding-phase feature (t>=2 through <DEL>), suppressed in sequences that start with h/e/f/1; fires on h/1 inputs from t=1",
+    "better_predicate": "((t>=2)&(phase<=1)&~isin(orig(0),[tok('h'),tok('e'),tok('f'),tok('1')])) | ((t==1)&isin(in_tok,[tok('h'),tok('1')]))",
+    "better_predicate_test_f1": 0.898
+  },
+  "final_label": "Encoding-phase feature (t>=2 through <DEL>), suppressed in sequences that start with h/e/f/1; fires on h/1 inputs from t=1",
+  "scorecard": {
+    "format": "slot2",
+    "summary": "Graded preference over the first original token (most: w, a, t, s, d, k; least: e, f, 1, h) and the current input token, by step (t=1: 1, h, z; t=2: h, 1, z, f; t=11: a, l, t, w); timing cues that raise it most: t=5, t=4, t=6.",
+    "test_f1": 0.9251907571336442,
+    "test_precision": 0.8934286603336876,
+    "test_recall": 0.9592944343913419,
+    "full_test_f1": 0.97712187472228,
+    "full_n_cues": 749,
+    "top40_test_f1": 0.922644063923875,
+    "slot2_test_f1": 0.9251907571336442,
+    "file": "scorecards/hidden_69.json"
+  }
+}

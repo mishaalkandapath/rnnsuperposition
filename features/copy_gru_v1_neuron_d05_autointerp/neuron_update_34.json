@@ -1,0 +1,62 @@
+{
+  "label": "Delimiter step of long sequences (absolute step t >= 7, i.e. L >= 7), plus the last original token at t = 8",
+  "predicate": "((phase == 1) & (L >= 7)) | ((phase == 0) & (t == 8))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Update-gate unit that keys on absolute position late in the sequence, around the end of the input. About 89% of activation mass falls on the <DEL> step, but only when the delimiter arrives at t >= 7 (L >= 7). Firing rate at the delimiter is about 0.98 for L >= 7, about 0.11 for L = 6 and 0 for L <= 5. Magnitude increases with L: the delimiter steps at t = 8 and t = 9 (L = 8, 9) hold the largest activations, and the top examples sit at max on <DEL> with L = 8 or 9. Weaker secondary firing (about 10% of mass) comes on the last original tokens of long sequences: t = 8 (the final token when L = 9) fires 61% of the time, and t = 7 fires 11% of the time, which is too noisy to include. It essentially never fires at t <= 5, during the copy phase (beyond a few recall_idx = 1 steps), or on any particular token identity. Token identity, first token and digit count have only small effects. Dev: P 0.89, R 0.91, F1 0.90, mass recall 0.975.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 34,
+    "predicate": "((phase == 1) & (L >= 7)) | ((phase == 0) & (t == 8))",
+    "split": "test",
+    "precision": 0.8878506079210304,
+    "recall": 0.9130058027079304,
+    "f1": 0.9002525156201128,
+    "mass_recall": 0.9759154323598909,
+    "correlation": 0.8502265142890576,
+    "n_active": 64625,
+    "n_predicted": 66456,
+    "coverage_by_activation_quartile": [
+      0.6920839264714984,
+      0.9608195097796485,
+      0.9991334488734835,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 34,
+    "predicate": "((phase == 1) & (L >= 7)) | ((phase == 0) & (t == 8))",
+    "split": "dev",
+    "precision": 0.88581918863609,
+    "recall": 0.910663180854849,
+    "f1": 0.8980693979359111,
+    "mass_recall": 0.9751060606026438,
+    "correlation": 0.8495323581496863,
+    "n_active": 64643,
+    "n_predicted": 66456,
+    "coverage_by_activation_quartile": [
+      0.684611100798218,
+      0.9585421694202092,
+      0.9995049811274055,
+      1.0
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 34,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The explanation says the unit 'does not depend on which token is input'. That is false for the original-phase component, which carries about 10% of the activation mass. At t=8 (the last original token when L=9), the firing rate by input token runs from 0.06 for 'x', 0.13 for 'p', 0.19 for '1'/'2' and 0.21 for 'h' up to 0.96-0.99 for 'a', 'k', 'w', 'y' and '0'. At t=7 it is 0 for 'h', 'p', 'x' and '1', but 0.47 for 'a', 0.49 for 'k', 0.62 for 'w', 0.31 for 'y' and 0.39 for '0'.",
+      "The predicate's false positives and misses are systematic, not noise. The t=8 false positives (39% of t=8 steps) cluster on low-firing tokens such as x, p, h, 1 and 2. The test misses at t=7 are on high-firing tokens such as y and u. The '11% at t=7, too noisy to include' remark hides a token-specific pattern.",
+      "Minor: the explanation gives the delimiter firing rate as about 0.98 for L>=7. Per length it is 0.93 for L=7 and about 1.00 for L=8 and L=9. The L=6 delimiter rate (0.11), the zero rate at t<=5, the 89% delimiter mass share, the magnitude growing with L, and t=8 firing at 0.61 overall are all confirmed.",
+      "The main delimiter claim holds. The predicate's test scores (P 0.888, R 0.913, F1 0.90) reproduce."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Fires on the <DEL> step of long sequences (L >= 7, strength growing with L). It also fires more weakly on the last original tokens at t=8 and t=7, but only for some input tokens: strongly for a/k/w/y/0, rarely for x/p/h/1/2.",
+    "better_predicate": "((phase == 1) & (L >= 7)) | ((phase == 0) & (t == 8) & ~isin(in_tok, [7,15,23,27,28])) | ((phase == 0) & (t == 7) & isin(in_tok, [0,10,22]))",
+    "better_predicate_test_f1": 0.917
+  },
+  "final_label": "Fires on the <DEL> step of long sequences (L >= 7, strength growing with L). It also fires more weakly on the last original tokens at t=8 and t=7, but only for some input tokens: strongly for a/k/w/y/0, rarely for x/p/h/1/2."
+}

@@ -1,0 +1,60 @@
+{
+  "label": "copy-phase input w (fed-back w, from 2nd copy output on)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"w\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires when the token w is fed back as input during the copy phase, i.e. the model just output w, at steps where recall_idx >= 2. On the dev split this has precision 1.00, recall 0.97 and mass recall 0.999. It never fires in the original or delimiter phase, so w as an original input does not trigger it. Nearly every miss is a w fed back right after <DEL> (recall_idx 1, when w is the first original token), and those activations are tiny (~0.01-0.04 of max). In the examples, activations look weaker when the fed-back w comes early in the copy (about 0.5 of max at recall_idx 2) and strongest when it comes later in the sequence. The second w in a run of repeated w is a bit weaker than the first (about 0.8 vs 0.95). These magnitude trends are read off the examples and were not tested with a predicate. It does not depend on which token is output next or on the other tokens in the sequence.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 126,
+    "predicate": "(phase == 2) & (in_tok == tok(\"w\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.9704647402461923,
+    "f1": 0.9850110183904547,
+    "mass_recall": 0.9986560912224897,
+    "correlation": 0.9889747270873018,
+    "n_active": 76688,
+    "n_predicted": 74423,
+    "coverage_by_activation_quartile": [
+      0.8818589609847695,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 126,
+    "predicate": "(phase == 2) & (in_tok == tok(\"w\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.9712349278902986,
+    "f1": 0.9854075880542117,
+    "mass_recall": 0.9986969881654417,
+    "correlation": 0.9890640500702433,
+    "n_active": 76134,
+    "n_predicted": 73944,
+    "coverage_by_activation_quartile": [
+      0.8849427340548492,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 126,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the misses are all one systematic class. The feature does fire, weakly (0.01-0.08 of max), when w is fed back at recall_idx 1, i.e. sequences whose first original token is w. That is about 3% of active steps but only 0.1% of activation mass (test: recall 0.970, mass recall 0.9987). The recall_idx >= 2 condition describes this correctly, so it is not a counterexample.",
+      "Off-predicate activations on other input tokens (x, y, u, i, ...) are scattered: 2 to 7 steps each out of about 200k. Test false positives: 0.",
+      "Claims checked against the profile: it never fires in the original phase or at <DEL> (0 of 3.7M steps). It never fires on the first occurrence of an input token (in_first=1: 0 active), which fits the fed-back reading. Firing rate is flat across out_tok and next_out, so it does not depend on the next output. The magnitude trends (weaker early in the copy, second w in a repeat about 0.8) match the examples but were not tested with a predicate, as the explanation itself says."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

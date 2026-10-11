@@ -1,0 +1,63 @@
+{
+  "label": "Late original-phase steps (t>=3) through <DEL>, ramping up to the delimiter",
+  "predicate": "(t >= 3) & (phase <= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Positional feature. It fires on original-phase inputs from step 3 onward and on the <DEL> step, and is almost never active during the copy phase (0.2% rate, 0.1% of mass) or at t<=2. <DEL> is its strongest context: 94% active, 42% of mass, and every top example peaks at <DEL>. Within the original phase the activation climbs steadily toward the delimiter. Token identity barely matters: per-token rates are flat (about 0.26 for every token). Two things suppress it: a repeated token (in_first=0 gives 7.5% rate versus 51% for first occurrences), and step 3 (68% active, weak). The top examples tend to start with o, which looks like a magnitude boost, but I did not test this. Most false positives are weak or silent t=3 steps and repeated tokens. Adding in_first raises precision but costs recall, so it is left out.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 395,
+    "predicate": "(t >= 3) & (phase <= 1)",
+    "split": "test",
+    "precision": 0.877609459289926,
+    "recall": 0.9964800232799732,
+    "f1": 0.9332748543305829,
+    "mass_recall": 0.9992462680200966,
+    "correlation": 0.6667456000929136,
+    "n_active": 1965638,
+    "n_predicted": 2231880,
+    "coverage_by_activation_quartile": [
+      0.9880100120062677,
+      0.9981074866201339,
+      0.9998066783473644,
+      0.9999959300704708
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 395,
+    "predicate": "(t >= 3) & (phase <= 1)",
+    "split": "dev",
+    "precision": 0.877479035651155,
+    "recall": 0.9965082238909336,
+    "f1": 0.9332134686251029,
+    "mass_recall": 0.9992566560166067,
+    "correlation": 0.6663750204240211,
+    "n_active": 1965189,
+    "n_predicted": 2231765,
+    "coverage_by_activation_quartile": [
+      0.988119227027181,
+      0.9980805907628176,
+      0.9998351302776122,
+      0.9999979645713285
+    ]
+  },
+  "gate": "hidden",
+  "feature": 395,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The predicate and label hold up. On the test split (t>=3)&(phase<=1) scores P 0.878, R 0.996, F1 0.933, mass recall 0.999. Missed activations are 6.9k steps holding 0.1% of mass, and they are scattered weak copy-phase blips.",
+      "The explanation's claim that a repeated input token suppresses the feature is FALSE. The quoted rates (7.5% for repeats vs 51% for first occurrences) come from the whole-sequence in_first breakdown, and almost every in_first==0 step is in the copy phase, where the feature is silent anyway. Within the original phase at t>=3 (test split): (in_first==0) has precision 0.880 and (in_first==1) has precision 0.857. Repeats fire at least as often as first occurrences.",
+      "The claim that adding in_first raises precision is also false. ((in_first==1)|(phase==1)) & (t>=3) & (phase<=1) gives P 0.877, the same as the base predicate's 0.878, while recall drops from 0.996 to 0.884. The stated rationale for leaving in_first out is therefore wrong, even though leaving it out is the right call.",
+      "The false positives at t=3 are not random; they depend on early tokens. The feature switches on at t=3 when the sequence starts with 'o' (precision 0.978) or the second token is 'a' (0.916), but only 0.64 to 0.73 of the time in other cases (first token a digit or vowel, L=4). That makes onset at step 3 partly token-dependent. It holds only about 6% of mass, so it does not overturn the predicate, but the 'o' magnitude claim was left untested and in fact extends to whether the feature fires at all at t=3.",
+      "These claims check out: <DEL> is active 94% of the time and holds 42% of mass; the copy phase is 0.2% rate and 0.1% of mass; t<=2 is silent; mean activation per step rises with orig_idx, about 0.10 relative at idx 3, 0.43 at idx 5 and about 0.55 at idx 7-8, then jumps at <DEL>; per-token rates are flat."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Original-phase steps from t>=3 through <DEL>, ramping up to the delimiter (token identity and repeats irrelevant; onset at t=3 is weaker and depends on early tokens)",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "Original-phase steps from t>=3 through <DEL>, ramping up to the delimiter (token identity and repeats irrelevant; onset at t=3 is weaker and depends on early tokens)"
+}

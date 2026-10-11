@@ -1,0 +1,63 @@
+{
+  "label": "<DEL> delimiter step (start of recall)",
+  "predicate": "phase == 1",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires at the <DEL> delimiter step (t == L, which outputs original token 0) in about 88% of sequences. 99.5% of the activation mass is on that step. Outside it there is only a weak tail: small activations on the last few original tokens just before <DEL> in longer sequences, and almost nothing in the copy phase. Activation is a little stronger in longer sequences. The top examples mostly have first token i/a and contain letters such as p, k, o, t, but these token effects are modest (about 1.1-1.6x lift). The delimiter steps where it stays silent (12%) skew toward short sequences (L=3,4). It does not fire on the first three steps or on copy steps after recall index 0.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 6,
+    "predicate": "phase == 1",
+    "split": "test",
+    "precision": 0.874724,
+    "recall": 0.9748074844260194,
+    "f1": 0.9220578391739971,
+    "mass_recall": 0.9951234644013118,
+    "correlation": 0.7991282353368515,
+    "n_active": 448665,
+    "n_predicted": 500000,
+    "coverage_by_activation_quartile": [
+      0.9032068255369227,
+      0.996175311591748,
+      0.9998484389208852,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 6,
+    "predicate": "phase == 1",
+    "split": "dev",
+    "precision": 0.875754,
+    "recall": 0.9746714568085902,
+    "f1": 0.9225688328543618,
+    "mass_recall": 0.9951118780599397,
+    "correlation": 0.7997729033517207,
+    "n_active": 449256,
+    "n_predicted": 500000,
+    "coverage_by_activation_quartile": [
+      0.9028616201007889,
+      0.9959399540573749,
+      0.9998842530761971,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 6,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Core claims hold. phase==1 on test gives P 0.875, R 0.975, F1 0.922, mass recall 0.995. There is no activation at t=0..2. Copy phase gets 66 of about 2.7M steps, all at recall_idx 1. The original-phase tail holds 0.5% of the mass on orig_idx 4-8 (to_go<=3).",
+      "The claim that token effects are modest (1.1-1.6x lift) is wrong for the 12% of delimiter steps where the feature stays silent. Those silences come systematically from first token x length, not just length. Firing rate on the delimiter by first token: L=3: p 0.88, g 0.72, o 0.67, a 0.60, versus c 0.02, e 0.02, d 0.04, v 0.06. L=4: i 0.99, g 0.99, p 0.99, a 0.98, versus c 0.15, e 0.19, d 0.35, t 0.44, z 0.44. Even at L>=5: first_tok e 0.59, c 0.69, t 0.75, z 0.76, versus a/g/i/r 1.00 and p 0.999.",
+      "The length effect is real but steep, not a mild skew. Delimiter firing rate by L: L=3 0.26, L=4 0.66, L=5 0.89, L=6-9 0.92-0.95.",
+      "A first-token x length predicate closes part of the gap: phase==1 & ~((L<=4) & first_tok in {c,d,e,t,v,y,z}) & ~((L==3) & first_tok not in {a,g,o,p,r}). Test: P 0.909, R 0.957, F1 0.933 (vs 0.922). The gain is small because the silent steps are a small share of active steps, but it confirms the silences follow a systematic pattern rather than scattered noise.",
+      "The label itself does not overclaim. 'Delimiter step' is the right description of what the feature fires on, and only the explanation's description of when it stays silent is inaccurate."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "<DEL> delimiter step (start of recall); silent mainly in short sequences (L=3,4) whose first token is c/e/d/t/v/y/z",
+    "better_predicate": "(phase == 1) & ~((L <= 4) & isin(first_tok, [tok(c) for c in 'cdetvyz'])) & ~((L == 3) & ~isin(first_tok, [tok(c) for c in 'agopr']))",
+    "better_predicate_test_f1": 0.933
+  },
+  "final_label": "<DEL> delimiter step (start of recall); silent mainly in short sequences (L=3,4) whose first token is c/e/d/t/v/y/z"
+}

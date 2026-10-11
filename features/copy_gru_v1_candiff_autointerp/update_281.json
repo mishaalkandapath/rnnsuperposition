@@ -1,0 +1,62 @@
+{
+  "label": "1-3 steps after a \"d\" input, early in the original phase",
+  "predicate": "(phase==0) & (t<=5) & ((prev_tok==tok(\"d\"))|(prev2_tok==tok(\"d\"))|(rel_tok(-3)==tok(\"d\")))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires during the original (input) phase on the 1-3 steps after the letter d was input, regardless of the current token. It is restricted to early positions (t<=5; almost nothing at t>=6) and never fires in the copy phase. It is strongest two steps after d (prev2_tok=d), and strongest of all when d occurs repeatedly at the start of the sequence (e.g. d d X, where X reaches about 1.0 of max). It is weaker one step after d (~0.2-0.5) and fades by the third step. Activation is weak or absent when the d comes late (t>=5). There is no input-token selectivity apart from d in the history. Remaining misses are tiny activations, plus a few delimiter steps that follow a d.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 281,
+    "predicate": "(phase==0) & (t<=5) & ((prev_tok==tok(\"d\"))|(prev2_tok==tok(\"d\"))|(rel_tok(-3)==tok(\"d\")))",
+    "split": "test",
+    "precision": 0.8056202077007597,
+    "recall": 0.8798005277112941,
+    "f1": 0.8410779207563578,
+    "mass_recall": 0.986253343726988,
+    "correlation": 0.7688320708395193,
+    "n_active": 155009,
+    "n_predicted": 169282,
+    "coverage_by_activation_quartile": [
+      0.5496090625241917,
+      0.979201073492981,
+      0.9928519818331957,
+      0.9975485136251032
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 281,
+    "predicate": "(phase==0) & (t<=5) & ((prev_tok==tok(\"d\"))|(prev2_tok==tok(\"d\"))|(rel_tok(-3)==tok(\"d\")))",
+    "split": "dev",
+    "precision": 0.8065177107832656,
+    "recall": 0.8796095374430791,
+    "f1": 0.8414793975578848,
+    "mass_recall": 0.9859469581611447,
+    "correlation": 0.7679523895298435,
+    "n_active": 154381,
+    "n_predicted": 168372,
+    "coverage_by_activation_quartile": [
+      0.549927453622137,
+      0.9788832750356263,
+      0.9919937815779246,
+      0.9976421816297448
+    ]
+  },
+  "gate": "update",
+  "feature": 281,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The magnitude claim is wrong. The explanation says the feature is 'strongest two steps after d' and 'weaker one step after d (about 0.2-0.5 of max)'. Mass per step on dev says otherwise. One step after d: t=2 is 0.204 of total mass over 16688 steps and t=3 is 0.189 over 16237. Two steps after d: t=2 is 0.145 over 16601 and t=3 is 0.146 over 16253. So one step after d is about 1.3x stronger per step at the same t. Overall, prev_tok=d carries 0.594 of activation mass and prev2_tok=d carries 0.386. The only case where one step after d is weaker is d at position 0 (t=1 prev_tok=d: 0.109 over 16601). That is an early-position effect, not a lag effect.",
+      "The t<=5 cutoff is too generous. At t=5 the d conditions mostly fail: prev_tok=d has precision 0.29 and prev2_tok=d has precision 0.42. The third step after d alone (rel_tok(-3)=d with no d at lag 1 or 2) has precision 0.41 and holds only 0.054 of mass. These two classes account for most of the predicate's false positives (test precision 0.806). The misses output confirms this: the false positives are at step 5 after a d, or at the third step after a d.",
+      "The claims that do check out: zero activation in the copy phase (0 of 2.73M copy steps). The delimiter step holds only 0.009 of mass. Nothing fires at t=0 or at t>=7. There is no current-token preference (in_tok lift is about 1.1-1.2x everywhere). 'd d X' at t=2 has precision 1.0 and roughly double the per-step mass, consistent with the peak claim. At t=1..3 every step right after a d is active (precision 1.0). The missed activations are tiny: 1.4% of mass on test.",
+      "Better predicate: restricting to t in 1..4 removes the low-precision t=5 class. Test precision is 0.917, recall 0.812, F1 0.861, mass recall 0.966, against the original's 0.841 test F1."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "1-3 original-phase steps right after an input 'd' at t<=4; strongest on the step right after d (except when d is at position 0) and when d repeats",
+    "better_predicate": "(phase==0)&(t>=1)&(t<=4)&((prev_tok==tok(\"d\"))|(prev2_tok==tok(\"d\"))|(rel_tok(-3)==tok(\"d\")))",
+    "better_predicate_test_f1": 0.861
+  },
+  "final_label": "1-3 original-phase steps right after an input 'd' at t<=4; strongest on the step right after d (except when d is at position 0) and when d repeats"
+}

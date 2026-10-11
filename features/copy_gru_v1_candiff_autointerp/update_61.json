@@ -1,0 +1,61 @@
+{
+  "label": "copy phase: input v (fed back) while outputting m, i.e. the original bigram v->m, at recall position >= 3",
+  "predicate": "(phase == 2) & (in_tok == tok(\"v\")) & (out_tok == tok(\"m\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, at steps where the fed-back input is v and the token being output is m, so the original sequence contained the bigram v m. It needs recall_idx >= 3: it is silent when the v m pair sits at original positions 0-1 and almost silent at recall_idx 2 (19 activations). The strongest activations (about 2.1-2.6) are v m pairs late in long sequences. It never fires in the original phase or on the delimiter, and never on a first occurrence of the input token. Weak residual activations (about 15% of activation mass) occur on copy-phase v inputs followed by other outputs, and on copy-phase m inputs whose output is also m (the original m m). Dev: precision 0.91, recall 0.64, mass recall 0.85; the missed activations are mostly in the lowest quartile.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 61,
+    "predicate": "(phase == 2) & (in_tok == tok(\"v\")) & (out_tok == tok(\"m\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9102040816326531,
+    "recall": 0.6541987532086542,
+    "f1": 0.7612545338169404,
+    "mass_recall": 0.8596974023500134,
+    "correlation": 0.8080882596577893,
+    "n_active": 2727,
+    "n_predicted": 1960,
+    "coverage_by_activation_quartile": [
+      0.23313782991202345,
+      0.5395894428152492,
+      0.8665689149560117,
+      0.9779735682819384
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 61,
+    "predicate": "(phase == 2) & (in_tok == tok(\"v\")) & (out_tok == tok(\"m\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9111909650924025,
+    "recall": 0.641257225433526,
+    "f1": 0.7527565733672605,
+    "mass_recall": 0.8483896825085768,
+    "correlation": 0.806878535337345,
+    "n_active": 2768,
+    "n_predicted": 1948,
+    "coverage_by_activation_quartile": [
+      0.21242774566473988,
+      0.5289017341040463,
+      0.8583815028901735,
+      0.9653179190751445
+    ]
+  },
+  "gate": "update",
+  "feature": 61,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the claim 'never fires on a first occurrence of the input token' is trivially true. In the copy phase every input has already appeared in the original phase, so in_first is always 0 there.",
+      "Missed activations: 943 test steps holding 14% of activation mass. They are mostly weak and spread out: copy-phase v followed by an output other than m (22% of active steps, 8.7% of mass, precision only about 1%), and m->m (12% of active steps, 5% of mass, precision 10%). I found no token, position or history subclass that can be added without losing a lot of precision. Adding v with next_out==m reaches only 16% precision, and v->v reaches 7%.",
+      "False positives: 176 of 1960 predicted steps. They are slightly more common when v repeats in the original sequence (precision 0.82 with in_count>=2, against 0.93 with in_count==1). That difference is small and not a clean class.",
+      "F1 is 0.76, below 0.8. The verdict relies on mass recall (0.86) and precision (0.91). Activation-quartile coverage of 0.23 / 0.54 / 0.87 / 0.98 supports the claim that the misses are low-magnitude."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase echo of l at original position 2-3",
+  "predicate": "(phase == 2) & (in_tok == tok(\"l\")) & (recall_idx >= 3) & (recall_idx <= 4)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires only in the copy phase, at steps where the fed-back input is the letter l. In-copy l holds 99.5% of the activation mass, and the feature never fires in the original or delimiter phases. Position strongly gates it. It is strongest when the echoed l was original token 2 or 3 (recall_idx 3-4: precision about 0.8, 86% of mass, and top activations around 3.0 such as \"a 2 l 0 p t <DEL> a 2 [l]\"). It is weak or absent when l was original token 0-1 or 4+ (recall_idx 2: 20% fire rate; recall_idx 5: 35%; recall_idx 6+: under 5%). It also tends to be off on the final output step. It does not respond to l in the original phase, other letters, the output token, or digit count. Only about 36% of all copy-phase l inputs fire.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 1022,
+    "predicate": "(phase == 2) & (in_tok == tok(\"l\")) & (recall_idx >= 3) & (recall_idx <= 4)",
+    "split": "test",
+    "precision": 0.8109814870209725,
+    "recall": 0.7281625831866065,
+    "f1": 0.7673438581042832,
+    "mass_recall": 0.8625697455535482,
+    "correlation": 0.7405731305175071,
+    "n_active": 33509,
+    "n_predicted": 30087,
+    "coverage_by_activation_quartile": [
+      0.4431845309142994,
+      0.6669452071147188,
+      0.8395607019219291,
+      0.9629939119016354
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 1022,
+    "predicate": "(phase == 2) & (in_tok == tok(\"l\")) & (recall_idx >= 3) & (recall_idx <= 4)",
+    "split": "dev",
+    "precision": 0.8080693564521507,
+    "recall": 0.7282288599074463,
+    "f1": 0.7660744768287285,
+    "mass_recall": 0.8628145543992497,
+    "correlation": 0.7405127685294953,
+    "n_active": 33278,
+    "n_predicted": 29990,
+    "coverage_by_activation_quartile": [
+      0.4403846153846154,
+      0.6618990384615384,
+      0.8482990744079817,
+      0.9623752854910446
+    ]
+  },
+  "gate": "update",
+  "feature": 1022,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Checked and confirmed: on dev, the feature never fires in the original or delimiter phases (0 of 3.73M steps; copy phase has 100% of the mass). in_tok = l carries 99.5% of the mass, and the 12 top activations (about 3.0) are all l at recall_idx 3-4. Test scores match the reported ones: P 0.811, R 0.728, F1 0.767, mass recall 0.863. The plain l-in-copy predicate gets F1 0.523 and mass recall 0.994 on test.",
+      "'Off on the final output step' overstates it. Within the recall_idx 3-4 window, the fire rate at to_go = 0 is about 0.47-0.51, versus 0.82-0.94 at to_go >= 1 (dev). The feature is weaker there, not off. Adding to_go > 0 raises precision to 0.877 but lowers test F1 to 0.749.",
+      "The recall_idx 2 miss is not uniform, so 'fire rate 20% at recall_idx 2' hides structure. The rate is 0.56 at to_go = 1 and 0.37 at to_go = 2 (short sequences), and falls to 0.02-0.05 at to_go >= 4. recall_idx 5 fires at 0.28-0.40 at every to_go. This is a small systematic miss class: an l echoed from position 1 near the end of a short sequence.",
+      "'Does not respond to digit count' is slightly off. Within the window, precision is 0.83 with n_digits = 0 versus 0.93 with n_digits >= 2, and 0.925 when the previous input is a digit versus 0.864 when it is a letter. Repeated l (in_count > 1) gives 0.81 versus 0.89. These are modest modulations, not a counterexample class.",
+      "The test misses list shows no systematic token or history class outside of l. The missed activations are low-magnitude l echoes at recall_idx 1-2 or 5+, and the false positives are mostly last-step or short-sequence l. Adding the recall_idx 2 / to_go 1 case gives test F1 0.780 (P 0.792, R 0.769, mass recall 0.892), only a small gain. The residual looks like graded position tuning, not a missing concept."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase echo of l, tuned to original position 2-3 (weaker on the final step)",
+    "better_predicate": "(phase == 2) & (in_tok == tok('l')) & (((recall_idx >= 3) & (recall_idx <= 4)) | ((recall_idx == 2) & (to_go == 1)))",
+    "better_predicate_test_f1": 0.78
+  },
+  "final_label": "copy-phase echo of l, tuned to original position 2-3 (weaker on the final step)"
+}

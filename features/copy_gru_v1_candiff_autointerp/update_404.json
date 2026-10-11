@@ -1,0 +1,63 @@
+{
+  "label": "token right after an n at the very start of the sequence (step 1, or step 2 after a letter)",
+  "predicate": "(phase == 0) & (prev_tok == tok(\"n\")) & ((t == 1) | ((t == 2) & isin(prev2_tok, LETTERS)))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the original phase, and only at the step right after an n was input at position 0 or 1. At t=1 (the first token was n) it fires every time and near its maximum (~0.9-1.0 of max). This accounts for 82% of activation mass and the input token does not matter. At t=2 (the second token was n) it fires more weakly (often 0.01-0.7 of max) and only some of the time: never when the first token was a digit, and only for some first letters (e.g. z, l, r, a, h). Those cases are the remaining false positives. It never fires at t=0, at t>=3, on the delimiter, or anywhere in the copy phase, and never unless the previous input was n.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 404,
+    "predicate": "(phase == 0) & (prev_tok == tok(\"n\")) & ((t == 1) | ((t == 2) & isin(prev2_tok, LETTERS)))",
+    "split": "test",
+    "precision": 0.8435987046715188,
+    "recall": 1.0,
+    "f1": 0.9151652173913043,
+    "mass_recall": 1.0,
+    "correlation": 0.8410187104807442,
+    "n_active": 26311,
+    "n_predicted": 31189,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 404,
+    "predicate": "(phase == 0) & (prev_tok == tok(\"n\")) & ((t == 1) | ((t == 2) & isin(prev2_tok, LETTERS)))",
+    "split": "dev",
+    "precision": 0.8401342806857441,
+    "recall": 1.0,
+    "f1": 0.9131227970739829,
+    "mass_recall": 1.0,
+    "correlation": 0.8369560789382919,
+    "n_active": 25777,
+    "n_predicted": 30682,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 404,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold. On dev, activity is limited to the original phase at t=1 and t=2 (t=1 carries 82.2% of the mass, t=2 17.8%). It never fires on the delimiter, in the copy phase, at t=0 or at t>=3. The original predicate misses nothing on test (0 missed steps). At t=1 the rule (prev_tok == n) & (t == 1) is perfect (test precision 1.0), so the input token at that step indeed does not matter.",
+      "The 4878 test false positives are not scattered noise. They depend entirely on which letter came first. For sequences starting '<first> n', precision at t=2 by first letter is 1.0 for a, b, d, f, g, h, k, l, m, n, p, r, s, w, y, z. It is 0.92 for e and 0.29 for j (j cases fire only weakly, about 0.01-0.03). It is exactly 0.0 for c, i, o, q, t, u, v, x.",
+      "The explanation calls these 'the remaining false positives' and says it fires 'only for some first letters (e.g. z, l, r, a, h)'. That admits the gap but leaves it out of the predicate, and the claimed precision (0.84) understates how cleanly the feature can be described.",
+      "The label 'step 2 after a letter' overclaims: 8 letters (c, i, o, q, t, u, v, x) never trigger it and j barely does.",
+      "With the first-letter set added, the predicate reaches test P 0.998, R 0.994, F1 0.996, mass recall 0.9999 (dev F1 0.996). The 153 remaining test misses are weak activations from j-initial sequences (about 0.0% of mass). The 45 remaining false positives are e-initial sequences."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "token right after an n at the start of the sequence: always at step 1 (first token n); at step 2 (second token n) only when the first token is one of a, b, d, e, f, g, h, k, l, m, n, p, r, s, w, y, z (never c, i, o, q, t, u, v, x or a digit; only weakly after j)",
+    "better_predicate": "(phase == 0) & (prev_tok == tok(\"n\")) & ((t == 1) | ((t == 2) & isin(prev2_tok, [tok(c) for c in \"abdefghklmnprswyz\"])))",
+    "better_predicate_test_f1": 0.996
+  },
+  "final_label": "token right after an n at the start of the sequence: always at step 1 (first token n); at step 2 (second token n) only when the first token is one of a, b, d, e, f, g, h, k, l, m, n, p, r, s, w, y, z (never c, i, o, q, t, u, v, x or a digit; only weakly after j)"
+}

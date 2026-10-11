@@ -1,0 +1,63 @@
+{
+  "label": "copy step 1, fed-back d (first token d), L>=6",
+  "predicate": "(recall_idx == 1) & (in_tok == tok(\"d\")) & (L >= 6)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, at the step right after <DEL> echoes the first token (recall_idx == 1, so the input is the fed-back orig(0)), and only when that token is d. Mass grows with sequence length: almost none at L=5, none at L<=4, and the share of mass rises from L=6 to L=9. The strongest activations come from sequences starting d d, where the output at this step is also d. It does not fire in the original or delimiter phases, at any other recall position, or for other first tokens, apart from rare weak activations (<0.1 of max) at L=9 when orig(1) is d. Dev F1 0.98.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 668,
+    "predicate": "(recall_idx == 1) & (in_tok == tok(\"d\")) & (L >= 6)",
+    "split": "test",
+    "precision": 0.9976685796269728,
+    "recall": 0.9600483216843558,
+    "f1": 0.9784969878193571,
+    "mass_recall": 0.996988694539662,
+    "correlation": 0.9168619962137935,
+    "n_active": 11589,
+    "n_predicted": 11152,
+    "coverage_by_activation_quartile": [
+      0.8402346445824707,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 668,
+    "predicate": "(recall_idx == 1) & (in_tok == tok(\"d\")) & (L >= 6)",
+    "split": "dev",
+    "precision": 0.9965710160620826,
+    "recall": 0.9634476140626363,
+    "f1": 0.9797294300288313,
+    "mass_recall": 0.9974018785352269,
+    "correlation": 0.9193812767864771,
+    "n_active": 11463,
+    "n_predicted": 11082,
+    "coverage_by_activation_quartile": [
+      0.8538032100488485,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 668,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The test scores reproduce exactly: P 0.998, R 0.960, F1 0.978, mass recall 0.997. All misses fall in the lowest activation quartile (top quartiles have 1.0 coverage), and they hold only 0.3% of the activation mass.",
+      "Phase, position and token claims hold. On dev, all activation is in the copy phase and recall_idx==1 carries 1.000 of the mass, with only 2 activations at recall_idx 2. in_tok d carries 0.998 of the mass.",
+      "The length claims hold. L<=4 has 0 activations. At L==5 the d-input case fires in only 5.9% of cases, carries 0.1% of the mass and stays weak (max about 0.12). Widening the predicate to L>=5 drops test precision to 0.81 (F1 0.887), so the L>=6 term is justified.",
+      "The L=9 exception holds. Activations at recall_idx 1 with a non-d input and orig(1)==d make up about 2% of active steps but only 0.16% of the mass, and the examples are under 0.1 of max. This is a weak and small miss class.",
+      "The false positives (26 on test) cluster at L=6 with sequences starting 'd g'. That is a minor systematic pocket, and excluding it does not improve F1 (0.975 vs 0.978).",
+      "Minor wording point: the share of activation mass growing from L=6 to L=9 partly reflects more length-9 sequences in the data. Per-step lift by L is flat to slightly lower (1.5x to 1.2x). This does not affect the label."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

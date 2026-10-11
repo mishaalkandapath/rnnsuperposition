@@ -1,0 +1,64 @@
+{
+  "label": "digit 3 fed back as input during copy phase (later positions)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"3\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, only when the input token is the digit 3 (the model own previous output being 3). It never fires on 3 in the original phase, at the delimiter, or on any other input token. Rate is near zero for recall_idx 1, low (~0.7%) at recall_idx 2 and ~3% (about 75-90% of qualifying 3-inputs) for recall_idx >= 3; restricting to recall_idx >= 3 gives dev F1 0.87 with 97% mass recall. Magnitude is largest when the 3 sits late in the copy and is the first of a run of repeated 3s (e.g. ...3 3 -> first 3 at ~1.0, second at ~0.3-0.6); early-position 3s (recall_idx 1-2) give weak activations. Remaining false positives are qualifying 3-inputs with no activation, with no clear pattern.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 19,
+    "predicate": "(phase == 2) & (in_tok == tok(\"3\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.8198396724042198,
+    "recall": 0.9354200075231138,
+    "f1": 0.8738244731512904,
+    "mass_recall": 0.9676983730932669,
+    "correlation": 0.7532278317298434,
+    "n_active": 50511,
+    "n_predicted": 57632,
+    "coverage_by_activation_quartile": [
+      0.8482736775419703,
+      0.9338770985112449,
+      0.9686411149825784,
+      0.9908925318761385
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 19,
+    "predicate": "(phase == 2) & (in_tok == tok(\"3\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.8202460926789141,
+    "recall": 0.9333476336264893,
+    "f1": 0.8731495079036422,
+    "mass_recall": 0.9660906320674403,
+    "correlation": 0.7524705043001828,
+    "n_active": 51281,
+    "n_predicted": 58352,
+    "coverage_by_activation_quartile": [
+      0.8447079010997582,
+      0.9329953198127925,
+      0.9673946957878315,
+      0.9882995319812793
+    ]
+  },
+  "gate": "hidden",
+  "feature": 19,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most claims hold. All activation mass is in the copy phase and in_tok==3 accounts for 100% of it. The feature never fires in the original or delimiter phases or on any other input token. Firing rate by recall_idx is 1:0.000, 2:0.007, >=3:~0.03 of all steps. Top examples show the first 3 of a run at ~0.9-1.0 of max and the following 3 at 0.26-0.68. Low-quartile examples are early-position 3s.",
+      "Test scores reproduce: P 0.820, R 0.935, F1 0.874, mass recall 0.968. Alternatives score lower: recall_idx>=2 gives F1 0.81, recall_idx>=4 gives 0.78, and the unrestricted in_tok==3 in copy phase gives 0.72.",
+      "The claim that the remaining false positives have 'no clear pattern' is wrong. Within the predicate, precision depends strongly on out_tok, the token after the 3 in the original sequence (the one about to be output). Precision by out_tok: v 0.999, c 0.99, 3 0.999, q 0.97, x 0.97, e 0.96, u 0.95, 1 0.95. Versus: 0 0.31, r 0.60, w 0.63, s 0.65, i 0.67, n 0.67, a 0.76. About 6 of the 27 next-token values account for roughly 40-45% of the ~10.4k test false positives.",
+      "Precision also rises steadily with position (recall_idx 3: 0.69, 4: 0.85, >=5: 0.88), so the recall_idx>=3 cutoff approximates a graded position effect rather than a sharp threshold. L<=5 gives precision 0.74 vs 0.84 for L>=8.",
+      "The next-token effect is graded, not an on/off gate. Excluding the low-precision next tokens lowers test F1 to 0.837, and adding recall_idx==2 for high-precision next tokens gives 0.835. So the original predicate is still the best binary rule; the problem is that the explanation misses this effect, not that the predicate is wrong.",
+      "The label 'later positions' is consistent with the predicate. It does not mention that the token after the 3 in the original sequence affects firing."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "digit 3 fed back as input during copy phase (later positions); strength grows with position and depends on the token that follows the 3 in the original sequence (weak or absent when next is 0, r, w, s, i or n)",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "digit 3 fed back as input during copy phase (later positions); strength grows with position and depends on the token that follows the 3 in the original sequence (weak or absent when next is 0, r, w, s, i or n)"
+}

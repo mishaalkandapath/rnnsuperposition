@@ -1,0 +1,64 @@
+{
+  "label": "Second copy step (input orig[1], outputting orig[2]) in length-5/6 sequences",
+  "predicate": "(recall_idx == 2) & isin(L,[5,6])",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, at the step two after <DEL>: the input is the echoed second original token and the model is outputting the third original token (recall_idx == 2, so prev2_tok is <DEL>). It fires on about 32% of recall_idx==2 steps over all lengths, but its firing depends heavily on sequence length: L=5 fires on nearly every such step (precision ~0.99) and carries 67% of the mass, L=6 carries 30%, L=4 fires weakly and only sometimes (~2% of mass), and L>=7 or L=3 almost never fires. Within this slot, token identity matters little. The highest activations come when the first token is t or y. It never fires in the original or delimiter phase, or at any other recall position (recall_idx 1 or 3 together hold under 0.5% of mass). Missed activations are mostly weak L=4 cases.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 88,
+    "predicate": "(recall_idx == 2) & isin(L,[5,6])",
+    "split": "test",
+    "precision": 0.8819298735006246,
+    "recall": 0.8935255157837825,
+    "f1": 0.8876898286049124,
+    "mass_recall": 0.9679604485739267,
+    "correlation": 0.8160018876071077,
+    "n_active": 162762,
+    "n_predicted": 164902,
+    "coverage_by_activation_quartile": [
+      0.658720601607235,
+      0.9245287655746971,
+      0.9912017694765298,
+      0.9996559351191939
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 88,
+    "predicate": "(recall_idx == 2) & isin(L,[5,6])",
+    "split": "dev",
+    "precision": 0.8819359170563221,
+    "recall": 0.8941597110212993,
+    "f1": 0.8880057495416812,
+    "mass_recall": 0.968130542137782,
+    "correlation": 0.8160015461067117,
+    "n_active": 163057,
+    "n_predicted": 165317,
+    "coverage_by_activation_quartile": [
+      0.6618667974978536,
+      0.9239279756648022,
+      0.9912668040427829,
+      0.9995829653615935
+    ]
+  },
+  "gate": "update",
+  "feature": 88,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I reproduced the test scores exactly for (recall_idx==2)&isin(L,[5,6]): P 0.882, R 0.894, F1 0.888, mass recall 0.968.",
+      "The profile supports the factual claims. On the original and delimiter phases the feature has 0 activations. In the copy phase, recall_idx==2 holds 99.6% of the mass, recall_idx 1 holds 0.1% and recall_idx 3 holds 0.3%. By length, L=5 holds 67.1%, L=6 30.1%, L=4 2.2% and L=7 0.6%. L=3, 8 and 9 hold about 0.",
+      "The predicate splits unevenly by length. Precision is 0.987 at L=5 but only 0.778 at L=6 (dev and test similar). So about 22% of L=6 slot steps stay inactive, and these make up nearly all of the roughly 19k test false positives.",
+      "The explanation does not separate the L=5 and L=6 precisions; it only gives about 0.99 for L=5.",
+      "Inside the L=6 slot, how often the feature fires depends weakly and diffusely on the tokens. By first_tok, precision runs from 0.81 to 0.97. Sequences with repeated tokens score 0.71 and sequences with 2 or more digits score 0.83. There is no clean token class to carve out, so I treat this as graded modulation, not a systematic counterexample.",
+      "Misses on the test split are mostly weak L=4 activations at step 6 (relative magnitude about 0.03 to 0.24), plus rare L=7 cases. Together they hold 3.2% of the mass, which matches the explanation. Adding L=4 to the predicate would hurt precision, because only about 14% of L=4 slot steps fire.",
+      "The claim that the top activations start with t or y holds: prev_tok, which is orig(0) at this step, shows the highest lift for y and t."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

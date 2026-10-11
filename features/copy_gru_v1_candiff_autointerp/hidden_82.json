@@ -1,0 +1,61 @@
+{
+  "label": "copy-phase input g (fed back g, from the 2nd copy input onward)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"g\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token detector for the letter g as an input during the copy phase. Every activation is on an input of g at t > L, i.e. the model feeding back a g it just output. It never fires in the original phase (including on original g inputs), on <DEL>, or on any other token. It is essentially silent at recall_idx 1 (the fed-back first original token): 153 weak activations there, 0.1% of mass. About 77% of copy-phase g inputs at recall_idx >= 2 activate. The remaining false positives have no clear structure; requiring to_go >= 1 or L >= 5 trades away recall without raising F1. The strongest activations come when g is fed back early in the copy (recall_idx 2-4), especially as the first g of a doubled g g; the second g of the pair is weaker. Low-quartile examples are often g near the end of the copy or at recall_idx 1.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 82,
+    "predicate": "(phase == 2) & (in_tok == tok(\"g\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.7654464249571589,
+    "recall": 0.9973627764689335,
+    "f1": 0.8661490659521028,
+    "mass_recall": 0.9992241295983727,
+    "correlation": 0.7357544239247813,
+    "n_active": 56878,
+    "n_predicted": 74111,
+    "coverage_by_activation_quartile": [
+      0.9913502109704642,
+      0.9981012658227848,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 82,
+    "predicate": "(phase == 2) & (in_tok == tok(\"g\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.7681114634277423,
+    "recall": 0.9973308677296675,
+    "f1": 0.8678406072106263,
+    "mass_recall": 0.9992411665610713,
+    "correlation": 0.7363941733254671,
+    "n_active": 57322,
+    "n_predicted": 74428,
+    "coverage_by_activation_quartile": [
+      0.9908589770427744,
+      0.9985346451747958,
+      0.999930216329379,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 82,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Precision is about 0.77 (test 0.765) because the 23% of predicate-true steps that stay inactive are spread across every slice. Precision by to_go runs from 0.64 (to_go 0) to 0.85 (to_go 4), by L from 0.65 (L=4) to 0.80 (L=9), by recall_idx from 0.72 to 0.86, and in_count, prev_tok and n_digits make little difference. No slice is close to silent, so this is not a systematic false-positive class.",
+      "The token about to be output (out_tok) changes precision the most: 0.44 for d, 0.50 for a, 0.56-0.59 for c, k, u, v and 1, against 0.93-0.98 for e, l, x, z and g. This is a graded effect, not a clean exclusion. Dropping out_tok in {a,d} gives test F1 0.862 and dropping {a,c,d,k,u} gives 0.845, both below the original 0.866.",
+      "Minor overclaim: 'strongest activations at recall_idx 2-4'. Within the predicate, recall_idx 2-4 makes up a nearly flat share of each activation quartile, from 0.62 in the lowest to 0.66 in the highest. Those steps are more frequent, not much stronger. The doubled g g claim does hold: when out_tok is g the step lands mostly in the top quartile (0.115 vs 0.007 in the lowest), and when prev_tok is g it leans toward the lowest (0.041 vs 0.015).",
+      "These factual claims checked out: zero activations in the original phase and on <DEL>, and every activation is on an input of g. At recall_idx 1 there are 153 activations (0.1% of mass). Misses on the test split total 150 steps (0.1% of mass), almost all on the first fed-back g at recall_idx 1."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

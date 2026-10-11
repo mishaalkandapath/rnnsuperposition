@@ -1,0 +1,61 @@
+{
+  "label": "Input-phase step t>=2 through <DEL> (encoding phase, off during copy)",
+  "predicate": "(t >= 2) & (phase <= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires on almost every original-input step from t=2 onward and on the <DEL> step, and is essentially silent at t=0,1 and throughout the copy phase (333 copy-phase activations out of 2.5M, about 0% of mass). Token identity, L, digits and first token barely matter. Magnitude: the <DEL> step is the strongest (93% firing rate, about 28% of mass, higher mean per active step than original steps), and the top examples ramp up within the sequence toward <DEL>. Repeated tokens (in_first=0) fire much less often (rate 0.09 vs 0.66). Firing rate falls off at late original positions in long sequences (t=8,9). The false positives are mostly those repeated-token steps and weak late steps.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 16,
+    "predicate": "(t >= 2) & (phase <= 1)",
+    "split": "test",
+    "precision": 0.9279089857534006,
+    "recall": 0.9998887669620522,
+    "f1": 0.9625550920070217,
+    "mass_recall": 0.9999781679300711,
+    "correlation": 0.7183220873782091,
+    "n_active": 2535218,
+    "n_predicted": 2731880,
+    "coverage_by_activation_quartile": [
+      0.9995771570120148,
+      0.999979488959538,
+      0.9999984222251674,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 16,
+    "predicate": "(t >= 2) & (phase <= 1)",
+    "split": "dev",
+    "precision": 0.9278605590158744,
+    "recall": 0.9998686406078034,
+    "f1": 0.9625197107538835,
+    "mass_recall": 0.9999746537298936,
+    "correlation": 0.7183386776394932,
+    "n_active": 2535030,
+    "n_predicted": 2731765,
+    "coverage_by_activation_quartile": [
+      0.9994998090753884,
+      0.9999763316597187,
+      0.9999984221081581,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 16,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The predicate and label hold up. Test split: P 0.928, R 1.000, F1 0.963, mass recall 1.000. The test misses are 282 steps holding 0.0% of the mass, and they are scattered weak copy-phase steps. The false positives look scattered: firing rate is about 0.87-0.97 across orig_idx 2-8 and flat across in_tok, first_tok, n_digits and L. No systematic class turned up.",
+      "The in_first claim in the explanation is false; it is a confound with the copy phase. The 0.09 vs 0.66 rate comes from in_first=0 being mostly copy-phase steps. Within the input phase, repeated tokens fire just as often as first occurrences. Dev split precision: (t>=2)&(phase==0)&(in_first==0) = 0.934 and (t>=2)&(phase==0)&(in_first==1) = 0.925. So 'repeated-token steps fire much less often' and 'most false positives are these repeated-token steps' are both wrong.",
+      "The claim that the rate drops at late original positions (t=8,9) is also a confound. The by-t rates (0.35 at t=8, 0.17 at t=9) mix in copy-phase steps from shorter sequences. By orig_idx the rate is 0.93 at index 7 and 0.85 at index 8, and (phase==0)&(orig_idx>=7) has precision 0.903. That is at most a mild drop, not a strong one.",
+      "These claims check out: silent at t=0,1 (0 active); copy phase has 333 active steps and ~0% of mass; <DEL> fires 93.4% of the time with 28% of the mass on ~18% of active steps, so it has the highest mean; little dependence on token, L, digit count or first token."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

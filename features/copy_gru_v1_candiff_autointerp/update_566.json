@@ -1,0 +1,63 @@
+{
+  "label": "input token x in the first three original positions",
+  "predicate": "(in_tok == tok(\"x\")) & (t <= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only when the input token is the letter x during the original phase, almost entirely at positions t=0..2 (weak residual at t=3, nothing later, nothing at the delimiter or in the copy phase). About 27% of all x inputs activate it, and none of the other tokens do. Magnitude falls with position: x at t=0 gives the largest values (~1.0 of max, 42% of mass), t=1 is lower (~0.8, 37%), t=2 lower again (~0.45-0.7, 20%). An x that repeats an earlier x is strongly suppressed (e.g. x at t=1 right after x at t=0 is near 0). Activation does not depend on surrounding tokens or L, apart from the position effect.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 566,
+    "predicate": "(in_tok == tok(\"x\")) & (t <= 2)",
+    "split": "test",
+    "precision": 0.9991559655151625,
+    "recall": 0.9455157462345961,
+    "f1": 0.9715960721090429,
+    "mass_recall": 0.9923125525865624,
+    "correlation": 0.9482145877001134,
+    "n_active": 52584,
+    "n_predicted": 49761,
+    "coverage_by_activation_quartile": [
+      0.7820629849383843,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 566,
+    "predicate": "(in_tok == tok(\"x\")) & (t <= 2)",
+    "split": "dev",
+    "precision": 0.9992180607907611,
+    "recall": 0.9457274607662676,
+    "f1": 0.971737201797744,
+    "mass_recall": 0.992486712610805,
+    "correlation": 0.9480790557124922,
+    "n_active": 52697,
+    "n_predicted": 49876,
+    "coverage_by_activation_quartile": [
+      0.78292220113852,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 566,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The explanation's claim that a repeated x is strongly suppressed (x at t=1 right after x at t=0 is near 0) is false. On the test split, (in_tok==x)&(t==1)&(orig(0)==x) has precision 1.0, so every such step fires. Dev misses show 'x x l w ...' with the second x at 0.62, while a fresh x at t=1 is about 0.77-0.86. More generally, x at t in {1,2} with an earlier x has test precision 1.0, recall 0.032 and mass recall 0.018. That is about 0.57x the average magnitude: reduced, not suppressed.",
+      "Everything else checks out. Activation is 100% in the original phase (1 copy-phase step out of 52.7k, 0 at the delimiter). Every active step has in_tok x. Mass shares by t are 0.424 / 0.369 / 0.200 / 0.008 for t=0/1/2/3, with nothing at t>=4.",
+      "The 2865 test misses are all weak x at t=3 (0.01-0.31). They hold only 0.8% of the mass, and adding t=3 drops precision to 0.80 (F1 0.887), so leaving t=3 out of the predicate is justified.",
+      "The 42 test false positives cluster on a few prefixes like '3 h x' and '3 o x' (x at t=2 after a leading 3). This is a tiny, specific pocket and is not worth encoding.",
+      "The predicate reproduces on test: precision 0.999, recall 0.946, F1 0.972, mass recall 0.992."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "input token x in the first three original positions (magnitude decays with position; a repeated x still fires at reduced strength)",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "input token x in the first three original positions (magnitude decays with position; a repeated x still fires at reduced strength)"
+}

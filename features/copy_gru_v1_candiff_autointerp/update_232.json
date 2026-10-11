@@ -1,0 +1,62 @@
+{
+  "label": "k fed back early in the copy phase (not on the final step)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"k\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the token fed back as input is the letter k (in_tok == k accounts for 100% of activation mass; it never fires on other tokens, in the original phase, or at the delimiter). The copied k has to be one of original tokens 1-3, meaning the step is recall_idx 2-4. Magnitude is highest when k was original token 1 (recall_idx 2, which holds 54% of the mass and includes all top examples, e.g. a k b ... <DEL> a [k]). It is somewhat lower at recall_idx 3, weak at recall_idx 4 and near zero for later positions. It is essentially silent when k is copied at recall_idx 1 (k was the first token), and on the last copy step (to_go == 0). Short sequences (L=3-4) give weaker activations. The output token, previous token and digit count have no effect.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 232,
+    "predicate": "(phase == 2) & (in_tok == tok(\"k\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+    "split": "test",
+    "precision": 0.9340174174611261,
+    "recall": 0.9754015301210923,
+    "f1": 0.9542610010285388,
+    "mass_recall": 0.9980155731097319,
+    "correlation": 0.8667429246015504,
+    "n_active": 39474,
+    "n_predicted": 41223,
+    "coverage_by_activation_quartile": [
+      0.9016111054818118,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 232,
+    "predicate": "(phase == 2) & (in_tok == tok(\"k\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+    "split": "dev",
+    "precision": 0.9315304808416551,
+    "recall": 0.9753237172148872,
+    "f1": 0.9529242164392414,
+    "mass_recall": 0.9979304046074898,
+    "correlation": 0.8635793716916,
+    "n_active": 39309,
+    "n_predicted": 41157,
+    "coverage_by_activation_quartile": [
+      0.9013024013024014,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 232,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Main claims hold on dev. 100% of activation mass is in the copy phase, and in_tok==k carries 1.000 of the mass (only 3 stray activations on other tokens). recall_idx 2 holds 54.1% of the mass, recall_idx 3 holds 39.5%, recall_idx 4 holds 6.2% and recall_idx 1 holds 0.2%. to_go==0 has 76 activations and essentially zero mass.",
+      "recall_idx 4 is the weak, noisy edge of the feature, which is where most of the 2720 test false positives come from. On k at recall_idx 4, precision is 0.60 overall, 0.52 when L=6 (to_go=1) and 0.82 when L>=7. Excluding the recall_idx 4 & to_go==1 cell trades recall for precision with no net gain (F1 0.950 vs 0.954 on dev). There is no clear history pattern: conditioning on whether k was already seen barely changes precision. This looks like threshold noise on weak activations rather than a systematic class.",
+      "By contrast, recall_idx 2-3 with to_go>=1 is almost exact: precision 0.9998 at to_go==1 and 0.974 for recall_idx 2 overall.",
+      "Missed activations (971 on test) are mostly k at recall_idx 1, i.e. sequences that start with k. They are tiny (rel act about 0.0-0.12) and hold 0.2% of the mass, which fits the claim that the feature is essentially silent there.",
+      "Minor: the label's 'early in the copy phase' really means k was original token 1-3. The predicate states this correctly."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

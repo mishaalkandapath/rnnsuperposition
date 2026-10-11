@@ -1,0 +1,63 @@
+{
+  "label": "input token n at original position >= 3",
+  "predicate": "(in_tok == tok(\"n\")) & (phase == 0) & (t >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token detector for the letter n during the original (input) phase, gated by position: it never fires at positions 0-2, fires weakly and often not at all at position 3 (most false positives are n at t=3), and fires reliably (~3.3% of original steps, i.e. on essentially every n) from position 4 on. Activation magnitude rises with position: low-quartile examples are n at t=3, the top activations are n at position 7-8 (rel ~1.0). Does not fire on any other token, on the delimiter, or in the copy phase (only a handful of weak activations on n fed back late in the copy phase). Repeated vs first occurrence and the surrounding tokens have little effect.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 416,
+    "predicate": "(in_tok == tok(\"n\")) & (phase == 0) & (t >= 3)",
+    "split": "test",
+    "precision": 0.8766408732900373,
+    "recall": 0.9989568366563663,
+    "f1": 0.9338104744119298,
+    "mass_recall": 0.999937661121379,
+    "correlation": 0.793863689660253,
+    "n_active": 50807,
+    "n_predicted": 57896,
+    "coverage_by_activation_quartile": [
+      0.9958274287513778,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 416,
+    "predicate": "(in_tok == tok(\"n\")) & (phase == 0) & (t >= 3)",
+    "split": "dev",
+    "precision": 0.874609997919989,
+    "recall": 0.9989705008909127,
+    "f1": 0.9326629821999594,
+    "mass_recall": 0.9999341215996308,
+    "correlation": 0.7935495646524757,
+    "n_active": 50510,
+    "n_predicted": 57692,
+    "coverage_by_activation_quartile": [
+      0.995882166613874,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 416,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I upheld the claims after checking. The dev profile shows 0 activations at t=0-2, none on the delimiter, and 38 weak copy-phase activations (at recall_idx 5-8 and t>=14, so late in the copy). Essentially all activation mass is on in_tok n (n: 50496 active, every other token at most 2).",
+      "Magnitude rising with position also checks out. t=3 has 9116 activations but holds only 1.2% of the mass. t=8 has 2708 activations and holds 10.4%, so the average activation is much larger late in the sequence.",
+      "From orig_idx 4 onward, about 3.3% of steps are active at every position, which matches n's base rate. (in_tok==n)&(phase==0)&(t>=4) scores precision 1.0 and recall 0.818, as the explanation says.",
+      "All the false positives sit at t=3. On test, the predicate gives 7142 false positives at t=3; the t==3 predicate alone has precision 0.56. I looked for a clean rule behind which t=3 n's fire and found none. L>=7 vs L<=5 gives 0.55-0.56, vowels have no effect, and in_first gives 0.53. Some history shifts the odds: an earlier n gives 0.85, n as first token 0.89, two or more digits seen 0.78. These are small, graded subsets, so this looks like a threshold effect, not a separate class of counterexamples.",
+      "There are 53 test misses, holding 0.0% of the activation mass: tiny copy-phase blips and a few late copy-phase n's. This is scattered noise.",
+      "The label says 'position >= 3', which slightly overstates t=3, where the feature fires on only about half of n's. The explanation discloses this, so it is acceptable."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

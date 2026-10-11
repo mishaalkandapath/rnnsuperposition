@@ -1,0 +1,62 @@
+{
+  "label": "Copy-phase outputs (after DEL) and first ~3 original inputs",
+  "predicate": "(phase == 2) | (t <= 2)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Dense positional feature (56% of steps). Fires on every copy-phase step after <DEL> (rate ~0.78, 58% of mass) and on the opening steps of the original sequence (t=0 always active, t=1 75%, t=2 48%), decaying through the middle of the original phase. Largely suppressed on the <DEL> step itself (16%) and mid/late original tokens (orig_idx 3-7, rate 10-30%), with a slight rebound on the last original tokens of long sequences. Largest activations occur at early copy steps (recall_idx 1-3), reproducing the first few original tokens; token identity has only weak influence (lift <=1.2x). Not token-specific.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 79,
+    "predicate": "(phase == 2) | (t <= 2)",
+    "split": "test",
+    "precision": 0.7644574042742233,
+    "recall": 0.8894498847047289,
+    "f1": 0.8222305501938414,
+    "mass_recall": 0.9301153362248001,
+    "correlation": 0.46652669077246467,
+    "n_active": 3637183,
+    "n_predicted": 4231880,
+    "coverage_by_activation_quartile": [
+      0.7788783850363358,
+      0.8889690485826398,
+      0.9311852246133272,
+      0.9587669568181943
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 79,
+    "predicate": "(phase == 2) | (t <= 2)",
+    "split": "dev",
+    "precision": 0.7650729660082731,
+    "recall": 0.8893210897284469,
+    "f1": 0.8225313932831616,
+    "mass_recall": 0.9300275772869742,
+    "correlation": 0.4667816452581202,
+    "n_active": 3640540,
+    "n_predicted": 4231765,
+    "coverage_by_activation_quartile": [
+      0.7783669455630209,
+      0.888986798661737,
+      0.9312124025556648,
+      0.9587182121333648
+    ]
+  },
+  "gate": "hidden",
+  "feature": 79,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "All the factual claims check out on dev. Copy-phase rate is 0.778 with 58.1% of the activation mass; the rate is 1.00 at t=0, 0.745 at t=1 and 0.479 at t=2; the <DEL> step fires 16.1% of the time; orig_idx 3-7 fire 10-30%, with a rise to 0.27 at orig_idx 8. The top activations peak at recall_idx 1-3. Test scores are precision 0.764, recall 0.889, F1 0.822, mass recall 0.930, matching the report.",
+      "Token dependence at t=1 is stronger than the overall 'lift at most 1.2x' suggests. The t=1 rate is 1.0 for in_tok g, i, 0 and 2 (and 0.93 for u) against about 0.63-0.67 for most other tokens. Adding a token-gated t=2 term ((t==2)&isin(prev_tok,[g,i,0,2])) to the t<=1 version only reaches test F1 0.824 against 0.822, so this does not change the verdict.",
+      "About 22% of copy-phase steps are inactive, and I found no systematic predictor for them. Rates by out_tok range from 0.59 (out_tok '0') to about 0.80. out_count, in_count, repeated adjacent tokens and recall_idx barely matter. L<=5 gives 0.81 against 0.76 for L>=8, and the last copy step (to_go==0) gives 0.71. These are mild modulations, not a counterexample class.",
+      "Activations missed in the middle of the original phase hold only 7% of the mass and look scattered. The in_first==0 subset at t>2 is 0.7% of the mass.",
+      "Minor overclaim: the label says 'first ~3 original inputs', but t=2 fires only 48% of the time. The explanation states this rate, so it is acceptable."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

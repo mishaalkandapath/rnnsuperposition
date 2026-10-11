@@ -1,0 +1,65 @@
+{
+  "label": "q fed back as input late in the copy phase",
+  "predicate": "(phase == 2) & (in_tok == tok(\"q\")) & (t >= 13)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost only (>99.8% of mass) on copy-phase steps whose input is the token q, i.e. the model has just emitted q and it is fed back. It almost never fires on q in the original sequence or on any other input token. Position gates it strongly: the firing rate on copy-phase q inputs climbs with absolute step t (about 0 before t=8, 0.2% at t=10, 1.8% at t=13, about 3% at t>=14), so most mass sits in long sequences (L=8-9) at recall_idx >= 5. The largest activations are q inputs at t=16-17 (q at original position 7). Early copy-phase q inputs (t<13) give weak, partial activations, and these make up most of the misses. Some late q inputs stay silent, mainly at t=12-13 where q was at original position 3, so precision is incomplete. Output token, previous tokens and digit count have little effect.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 729,
+    "predicate": "(phase == 2) & (in_tok == tok(\"q\")) & (t >= 13)",
+    "split": "test",
+    "precision": 0.7715674362089915,
+    "recall": 0.8233921161825726,
+    "f1": 0.7966378120687493,
+    "mass_recall": 0.935273186292731,
+    "correlation": 0.7282209568398187,
+    "n_active": 23136,
+    "n_predicted": 24690,
+    "coverage_by_activation_quartile": [
+      0.5558437067773168,
+      0.7966804979253111,
+      0.9477869986168741,
+      0.9932572614107884
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 729,
+    "predicate": "(phase == 2) & (in_tok == tok(\"q\")) & (t >= 13)",
+    "split": "dev",
+    "precision": 0.769394731550372,
+    "recall": 0.8266787658802178,
+    "f1": 0.79700876955444,
+    "mass_recall": 0.9363635243936329,
+    "correlation": 0.727606613681429,
+    "n_active": 23142,
+    "n_predicted": 24865,
+    "coverage_by_activation_quartile": [
+      0.5687867265814034,
+      0.7960594538541307,
+      0.9477960242005186,
+      0.9941227312013828
+    ]
+  },
+  "gate": "update",
+  "feature": 729,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core identification holds. Of the activation mass, 99.9% is in the copy phase, and in_tok==q carries 100% of it. Precision for q inputs in the original phase is 0.0006. Copy-phase q alone scores P 0.254 / R 0.996 on test, as claimed.",
+      "One stated fact is wrong. The explanation says the firing rate on copy-phase q inputs is about 0.2% at t=10, 1.8% at t=13 and about 3% at t>=14. Those are firing rates over all steps (the profile's by-t table), not rates conditional on a q input. The conditional rates are much higher. By (L, recall_idx) cell: t=13 is about 0.53-0.55; t=14 is 0.73 (L8) and 0.83 (L9); t=15 is 0.90-0.97; t=16-17 is about 0.94. Below t=12 the rate is 0.0-0.17.",
+      "Position is not purely absolute t. At t=12 the rate is 0.28 (L7, r5) and 0.32 (L8, r4) but only 0.04 (L9, r3). At t=11 it is 0.17 (L7) vs 0.003 (L9, r2). So a low recall_idx also suppresses firing. Even so, adding recall_idx terms did not raise F1: t>=13 | (t==12 & r>=4) gives 0.779 and t+recall_idx>=17 gives 0.786.",
+      "The claim that silent late q inputs come 'mainly at t=12-13 where q was at original position 3' is not specific. At t=13 the rate is about 0.53-0.55 whether q was at original position 3, 4 or 5. The silence comes from the ramp's midpoint, not from a particular position.",
+      "The claim that the output token has little effect is too strong. When the output is also q (a repeated q), the rate rises from 0.059 to 0.32 for t<=12 and from 0.77 to 0.985 for t>=13. Digit-heavy sequences also fire a bit more (0.85 with n_digits>=3 vs 0.72 with n_digits==0 at t>=13). These are small subsets.",
+      "The misses on the test split form one class: weak activations (about 0.01-0.25 of max) on copy-phase q inputs at t=9-12. That is 4086 steps holding 6.5% of the mass. The false positives are copy-phase q inputs at t=13-14 that stay silent, about 45% of the t=13 cell. Both come from thresholding a graded ramp in t, not from a missing token or history factor. I found no hidden determinant within the t=13 cell: in_count, correct, prev_tok class and to_go all sit at about 0.53-0.57.",
+      "Test F1 is 0.797, below the 0.8 bar, and the predicate is close to the ceiling for a binary rule on this ramp. The best variant I found, adding the repeated-q case, reaches only 0.801. The label itself is accurate, but the false conditional-rate figures and the overstated 'no output-token effect' mean the explanation as written does not fully check out."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "q fed back as input in the copy phase, rising steeply with position (about 50% firing at t=13, over 90% at t>=15)",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"q\")) & ((t >= 13) | ((t >= 11) & (out_tok == tok(\"q\"))))",
+    "better_predicate_test_f1": 0.801
+  },
+  "final_label": "q fed back as input in the copy phase, rising steeply with position (about 50% firing at t=13, over 90% at t>=15)"
+}

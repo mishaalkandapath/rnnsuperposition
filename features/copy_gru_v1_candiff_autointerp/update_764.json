@@ -1,0 +1,64 @@
+{
+  "label": "2-4 steps after a leading y (y as first or second original token)",
+  "predicate": "(phase == 0) & (((orig(0) == tok(\"y\")) & (t >= 2) & (t <= 4)) | ((orig(1) == tok(\"y\")) & (t >= 3) & (t <= 4)))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Original-phase feature that fires a few steps after a y at the very start of the sequence. If the first token is y it fires at t=2..4; if the second token is y it fires at t=3..4. The current input token barely matters. 99% of activation mass is in the original phase, and 80% of it is at t=2-3 (t=3 peaks). The largest activations, up to the max, come from sequences starting with y y, with the peak at t=3. Weak activations (low quartile) show up when y is at position 2, or at t=5. It never fires at t=0-1 or t>=6, and almost never in the copy phase (a small delimiter-step activation when output is y). A y later in the sequence does not trigger it. Dev F1 0.86, mass recall 0.96.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 764,
+    "predicate": "(phase == 0) & (((orig(0) == tok(\"y\")) & (t >= 2) & (t <= 4)) | ((orig(1) == tok(\"y\")) & (t >= 3) & (t <= 4)))",
+    "split": "test",
+    "precision": 0.8852931752643384,
+    "recall": 0.828993261741946,
+    "f1": 0.8562187288162948,
+    "mass_recall": 0.9616389423137749,
+    "correlation": 0.8294530223635107,
+    "n_active": 79991,
+    "n_predicted": 74904,
+    "coverage_by_activation_quartile": [
+      0.41714171417141716,
+      0.9174417441744175,
+      0.9851985198519851,
+      0.9961994299144872
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 764,
+    "predicate": "(phase == 0) & (((orig(0) == tok(\"y\")) & (t >= 2) & (t <= 4)) | ((orig(1) == tok(\"y\")) & (t >= 3) & (t <= 4)))",
+    "split": "dev",
+    "precision": 0.886203872183896,
+    "recall": 0.8331036180162441,
+    "f1": 0.858833753036771,
+    "mass_recall": 0.9611717891886273,
+    "correlation": 0.8287441237378788,
+    "n_active": 81260,
+    "n_predicted": 76391,
+    "coverage_by_activation_quartile": [
+      0.4362293871523505,
+      0.9166133398966281,
+      0.9842480925424563,
+      0.9953236524735417
+    ]
+  },
+  "gate": "update",
+  "feature": 764,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The test scores reproduce exactly: P 0.885, R 0.829, F1 0.856, mass recall 0.962. Most misses are weak activations: the predicate covers only 42% of lowest-quartile active steps, against 92%, 99% and 99.6% for the higher quartiles.",
+      "Small systematic miss: when two of the first three original tokens are y (y y, y _ y, _ y y), firing extends to t=5 with high precision (0.84-0.94), and to the delimiter step. The top examples (y y ...) fire from t=2 to t=6. The explanation describes t=5 only as 'weak', which understates this case, but it covers only about 1% of active steps.",
+      "The t=4 clause is the weakest part, with precision about 0.73-0.76 for both orig(0)=y and orig(1)=y. The inactive cases look like a decaying tail with token-dependent noise (slightly higher precision when the intervening tokens are digits), not a clean class that could be excluded. Precision does not depend on L.",
+      "y at position 2 alone is a weak trigger (precision 0.31 at t=4, 0.075 at t=5). This matches the stated low-quartile behaviour.",
+      "Activity at t=2-4 without a y in position 0 or 1 is 11% of active steps but only 1.7% of mass, at the 0.7% background rate. This is scattered noise.",
+      "The claims about the copy phase and the delimiter check out: 922 delimiter activations (738 with out_tok=y), 124 in the copy phase, 0.7% of mass in total. 'Never fires at t>=6' is nearly true (124 steps at t=6-7). The input token barely matters (lift 1.1-1.4x). The peak at t=3 and the 'y y' top activations are confirmed.",
+      "Improved predicate (adds t=5 when two of orig(0..2) are y): test P 0.885, R 0.841, F1 0.863, mass recall 0.971. The gain is marginal, so the original label stands."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "((phase == 0) & (((orig(0) == tok(\"y\")) & (t >= 2) & (t <= 4)) | ((orig(1) == tok(\"y\")) & (t >= 3) & (t <= 4)))) | ((phase==0)&(t==5)&(((orig(0)==tok(\"y\"))*1+(orig(1)==tok(\"y\"))*1+(orig(2)==tok(\"y\"))*1)>=2))",
+    "better_predicate_test_f1": 0.863
+  }
+}

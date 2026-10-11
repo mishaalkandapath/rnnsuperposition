@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input token k",
+  "predicate": "(phase == 2) & (in_tok == tok(\"k\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only when the token k is fed back as an input during the copy phase (t > L), i.e. right after the model has just emitted k. It never fires during the original phase, the delimiter step, or on any other input token. Every activation falls inside this predicate (dev recall 1.0). Most false positives are copy-phase k inputs at recall_idx 1, where k was the first original token: these are silent or very weak (rate 1.3% vs about 2.9% for recall_idx >= 2). Magnitude is low when k is the first copied token, larger at later copy positions, and largest for k inputs late in long sequences (top examples are around recall_idx 5-6 in L=8-9). Requiring recall_idx >= 2 raises dev F1 only slightly, from 0.87 to 0.88.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 203,
+    "predicate": "(phase == 2) & (in_tok == tok(\"k\"))",
+    "split": "test",
+    "precision": 0.7739949969279382,
+    "recall": 1.0,
+    "f1": 0.8726011045896752,
+    "mass_recall": 1.0,
+    "correlation": 0.7441713489080325,
+    "n_active": 70545,
+    "n_predicted": 91144,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 203,
+    "predicate": "(phase == 2) & (in_tok == tok(\"k\"))",
+    "split": "dev",
+    "precision": 0.7728120406327476,
+    "recall": 1.0,
+    "f1": 0.8718488174944,
+    "mass_recall": 1.0,
+    "correlation": 0.7427837391054214,
+    "n_active": 70448,
+    "n_predicted": 91158,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 203,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Core claims hold on dev: all 70,448 activations are copy-phase k inputs. There are 0 activations in the original phase, at the delimiter, or on any other in_tok. Recall and mass recall are both 1.0, and test misses show 0 missed activations.",
+      "The explanation misreports the recall_idx-1 numbers. The quoted 1.3% vs 2.9% is the active rate over ALL copy steps at that recall_idx, not over k inputs. Among copy-phase k inputs, the active rate is about 39% at recall_idx 1 (6,490 of 16,669) against about 86% at recall_idx >= 2. So 'silent or very weak' overstates how quiet the k-was-first-token case is: it is mostly silent and low-magnitude (mass share 4.5%) but fires 39% of the time.",
+      "The only systematic false-positive class is recall_idx == 1, and the explanation discloses it. About 10.2k of the roughly 20.7k dev FPs come from it. Adding recall_idx >= 2 gives test F1 0.884 (P 0.861, R 0.909, mass recall 0.955), up from 0.873. That is a marginal gain, so keeping the simpler predicate is defensible.",
+      "The remaining ~10.5k FPs at recall_idx >= 2 look scattered. Precision stays flat at 0.84-0.90 across n_digits, L <= 4 vs L >= 8, a repeated k (prev_tok == k), a digit prev_tok, a digit first token, and recall_idx == 2. Restricting to to_go >= 1 makes F1 worse (0.79). The to_go == 0 and in_count >= 2 subsets have precision similar to baseline (0.81 and 0.77), so neither is a gap.",
+      "The magnitude claims are consistent with the profile. Top examples are k at recall_idx 5-7 in L = 8-9 sequences, and the recall_idx-1 cases make up the lowest-coverage quartile."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok('k')) & (recall_idx >= 2)",
+    "better_predicate_test_f1": 0.884
+  }
+}

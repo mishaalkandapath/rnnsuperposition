@@ -1,0 +1,64 @@
+{
+  "label": "copy-phase input token g",
+  "predicate": "(phase == 2) & (in_tok == tok(\"g\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase (t > L), on steps whose input (the token just copied back) is g. Never fires on g in the original phase, on the delimiter, or on any other input token. Recall is 100%; ~20% of copy-phase g inputs stay inactive, mostly when g is the first copied token (recall_idx 1, rate 1.5% vs ~3% later) or in short sequences. Magnitude is lowest when g is copied early (first copy step) and highest late in long sequences (top examples are g copied right before the end of an L=9 sequence); a second consecutive g gets a smaller activation than the first.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 326,
+    "predicate": "(phase == 2) & (in_tok == tok(\"g\"))",
+    "split": "test",
+    "precision": 0.7955821789591914,
+    "recall": 1.0,
+    "f1": 0.8861551292743953,
+    "mass_recall": 0.999999927392295,
+    "correlation": 0.7633248884879106,
+    "n_active": 72250,
+    "n_predicted": 90814,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 326,
+    "predicate": "(phase == 2) & (in_tok == tok(\"g\"))",
+    "split": "dev",
+    "precision": 0.7976890019294861,
+    "recall": 1.0,
+    "f1": 0.8874605129956459,
+    "mass_recall": 1.0000000722200673,
+    "correlation": 0.7638817231060099,
+    "n_active": 72762,
+    "n_predicted": 91216,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 326,
+  "final_verdict": "explained",
+  "skeptic": {
+    "issues": [
+      "Core claims hold. The feature fires only in the copy phase (original 0, delimiter 0), only when in_tok is g (lift 32x on g, 0 on every other token), and recall on test is 1.0 with 0 missed activations. Magnitude rising with t and L is consistent with the profile, and mass share grows with L.",
+      "The explanation misstates the recall_idx-1 numbers. The quoted '1.5% vs about 3%' are overall per-step firing rates over all tokens at each recall_idx, not rates for g inputs. Conditioned on input g, recall_idx==1 fires 46% of the time (dev precision 0.458, n=16788), against about 87% for recall_idx>=2. So the first copied g is a much bigger false-positive source than the explanation implies.",
+      "There is a systematic false-positive class the predicate ignores: the first copied g in short sequences. Firing rate depends strongly on L at recall_idx==1: 0.073 at L=4, 0.381 at L=6, 0.829 at L=9. Over (recall_idx==1)&(L<=5) the rate is 0.139. By absolute step t, g fires 0.092 of the time at t=5, 0.52 at t=6, 0.62 at t=7, and 0.84-0.87 at t>=9. L==3 fires only 0.10, and (recall_idx==3)&(L==4) is 0.53. The feature effectively needs some time after <DEL> (late absolute t) before it turns on for g. The explanation's 'plus short sequences' hints at this but the predicate does not capture it.",
+      "The alternative the other agent tried (recall_idx>=2) was the wrong cut. It drops first-copied g in long sequences, which do fire (0.83 at L=9). An L-dependent exclusion does better: ~((recall_idx==1)&(L<=6)) gives test P 0.856, R 0.975, F1 0.911, mass recall 0.991, against the original's F1 0.886. Even the simple t>=6 cut gives test F1 0.901.",
+      "The leftover false positives under the refined predicate (about 14%) look scattered across positions and lengths, i.e. noise. The leftover misses are small activations (0.9% of mass) on the first copied g at L=5-6.",
+      "The label 'copy-phase input token g' is fine as a label. The predicate and explanation should note that it is suppressed on early copy steps (first copied g when L<=6, or t<=5)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input token g (suppressed on the first copied g in short sequences)",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"g\")) & ~((recall_idx==1) & (L<=6))",
+    "better_predicate_test_f1": 0.911,
+    "upheld": false
+  },
+  "final_label": "copy-phase input token g (suppressed on the first copied g in short sequences)"
+}

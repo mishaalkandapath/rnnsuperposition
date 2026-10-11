@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input j, early in the copy (recall_idx 2-4)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"j\")) & (recall_idx >= 2) & (recall_idx <= 4)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the fed-back input token is the letter j (99.96% of active steps have in_tok j). Never fires during the original phase or at <DEL>, so it does not respond to j when it first appears. Position strongly sets both rate and magnitude: it fires on nearly every copy-phase j at recall_idx 2 (j was original token 1), the strongest examples (rel. 0.9-1.0) are all there; about 89% of j inputs at recall_idx 3; about half at recall_idx 4 with smaller share of mass (4%); and almost never at recall_idx 1 or >= 5 (those are tiny, ~0.01-0.07 of max). Output token, next token, and L have little effect. Remaining false positives are mostly j inputs at recall_idx 3-4 where it stays silent.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 278,
+    "predicate": "(phase == 2) & (in_tok == tok(\"j\")) & (recall_idx >= 2) & (recall_idx <= 4)",
+    "split": "test",
+    "precision": 0.7935983523909639,
+    "recall": 0.9794016415144294,
+    "f1": 0.8767642771648317,
+    "mass_recall": 0.9976943122961024,
+    "correlation": 0.7840976446104939,
+    "n_active": 37770,
+    "n_predicted": 46613,
+    "coverage_by_activation_quartile": [
+      0.9178227258286561,
+      0.9997882029016203,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 278,
+    "predicate": "(phase == 2) & (in_tok == tok(\"j\")) & (recall_idx >= 2) & (recall_idx <= 4)",
+    "split": "dev",
+    "precision": 0.7972448957730788,
+    "recall": 0.9782597266035752,
+    "f1": 0.8785249713752847,
+    "mass_recall": 0.9978273285521129,
+    "correlation": 0.7854990123367976,
+    "n_active": 38040,
+    "n_predicted": 46677,
+    "coverage_by_activation_quartile": [
+      0.91335436382755,
+      0.9996845425867508,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 278,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most of the false positives fall in one predictable class: the feature is silent when the j input arrives on the last copy step (to_go == 0). At recall_idx 3 it fires with precision 1.00 for L >= 5 but 0.002 for L = 4, where that step is the last one. At recall_idx 4, precision is 0.0096 for L = 5 (the last step), 0.45 for L = 6 (to_go 1) and 0.64-0.76 for L 7-9. These are not scattered misses.",
+      "The explanation says recall_idx 3 'fires on about 89% of j inputs'. In fact it fires on ~100% of them except when that step is the final one. The 89% is just the average including L = 4. Likewise the 'half' firing rate at recall_idx 4 comes mostly from to_go being 0 or 1.",
+      "The explanation says L 'has little effect'. That is wrong: L decides whether recall_idx 3-4 is the last step, and at the last step the feature does not fire.",
+      "The claims that do hold: the feature never fires in the original phase or at <DEL>, 99.96% of its activations have in_tok = j, recall_idx 2 holds 57% of the mass, and firings outside recall_idx 2-4 are tiny (0.2% of mass).",
+      "Adding (to_go >= 1) raises test precision from 0.794 to 0.903 and F1 from 0.877 to 0.939, with mass recall unchanged at 0.998. Also requiring to_go >= 2 at recall_idx 4 gives F1 0.941."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input j at recall_idx 2-4 (j was original token 1-3), except on the final copy step",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"j\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+    "better_predicate_test_f1": 0.939
+  },
+  "final_label": "copy-phase input j at recall_idx 2-4 (j was original token 1-3), except on the final copy step"
+}

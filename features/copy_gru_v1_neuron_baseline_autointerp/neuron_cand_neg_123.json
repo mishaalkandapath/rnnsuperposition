@@ -1,0 +1,76 @@
+{
+  "label": "Opening-bigram detector: first token o, or a specific first-two-token pair (first in {i,a,x,f,n,d,m}, second in {o,a,n,l,i,f,p,m})",
+  "predicate": "((t == 0) & (in_tok == tok(\"o\"))) | ((t == 1) & isin(prev_tok, [tok(\"i\"),tok(\"a\"),tok(\"x\"),tok(\"f\"),tok(\"n\"),tok(\"d\"),tok(\"m\")]) & isin(in_tok, [tok(\"o\"),tok(\"a\"),tok(\"n\"),tok(\"l\"),tok(\"i\"),tok(\"f\"),tok(\"p\"),tok(\"m\")]))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires only in the first three steps of the original phase (t=0..2); never at the delimiter or during copy. At t=0 it fires on every sequence starting with o, weakly (~0.14 of max). Most mass (~81%) is at t=1, where it depends on the pair (first token, second token): first token from {i,a,x,f,n,d,m} and second from {o,a,n,l,i,f,p,m}. The strongest pair is i followed by o (activation = max); o as the second token is strongest overall. If the sequence starts with o, the t=1 step does NOT fire. Residual misses are weaker t=2 activations with similar token combinations (e.g. i x i, r m o, f d a) and weak t=1 hits after r or s. It does not fire on b, and only rarely on d, s or r as the current token.",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 123,
+    "predicate": "((t == 0) & (in_tok == tok(\"o\"))) | ((t == 1) & isin(prev_tok, [tok(\"i\"),tok(\"a\"),tok(\"x\"),tok(\"f\"),tok(\"n\"),tok(\"d\"),tok(\"m\")]) & isin(in_tok, [tok(\"o\"),tok(\"a\"),tok(\"n\"),tok(\"l\"),tok(\"i\"),tok(\"f\"),tok(\"p\"),tok(\"m\")]))",
+    "split": "test",
+    "precision": 0.9776776357157828,
+    "recall": 0.732375569163134,
+    "f1": 0.8374326750448833,
+    "mass_recall": 0.8519537230490891,
+    "correlation": 0.7733127389197958,
+    "n_active": 12738,
+    "n_predicted": 9542,
+    "coverage_by_activation_quartile": [
+      0.46028257456828886,
+      0.8499215070643642,
+      0.667713567839196,
+      0.9516331658291457
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 123,
+    "predicate": "((t == 0) & (in_tok == tok(\"o\"))) | ((t == 1) & isin(prev_tok, [tok(\"i\"),tok(\"a\"),tok(\"x\"),tok(\"f\"),tok(\"n\"),tok(\"d\"),tok(\"m\")]) & isin(in_tok, [tok(\"o\"),tok(\"a\"),tok(\"n\"),tok(\"l\"),tok(\"i\"),tok(\"f\"),tok(\"p\"),tok(\"m\")]))",
+    "split": "dev",
+    "precision": 0.9752657614987896,
+    "recall": 0.7296062992125985,
+    "f1": 0.8347371740011712,
+    "mass_recall": 0.8544298980594224,
+    "correlation": 0.7761145198528892,
+    "n_active": 12700,
+    "n_predicted": 9501,
+    "coverage_by_activation_quartile": [
+      0.44031496062992126,
+      0.8406299212598425,
+      0.6828346456692913,
+      0.9546456692913385
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 123,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Scope mismatch with the user's request: the user asked for the baseline to be run on the subsampled data in features/copy_transcoder_v2_1of5. All of this checking, including the original agent's, used features/copy_gru_v1_neuron_baseline_store. Nothing shows that store was built from the 1/5 subsample, so these results may not be the run the user asked for.",
+      "The reported test scores reproduce exactly (P 0.978, R 0.732, F1 0.837, mass recall 0.852). The basic claims also hold: the unit fires only at t=0..2, never at the delimiter or in the copy phase; t=0 & o has precision 1.0; about 81% of activation mass is at t=1; there is no activation on b; and t=1 after an initial o is nearly silent (precision 0.033).",
+      "Systematic miss class 1, t=1 after a first token of r or s: (t==1) & prev_tok in {r,s} & in_tok in B has precision 0.62 and covers 8.5% of actives. The explanation calls these 'weak t=1 hits after r or s' and treats them as noise, but the label and predicate then define the first-token set as excluding r and s. So the set is not a clean boundary.",
+      "Systematic miss class 2, t=2 when all three opening tokens fit the pattern: (t==2) & prev2_tok in A & prev_tok in A & in_tok in B has precision 0.66. These t=2 hits can be strong (for example i,i,r at 0.88 and n,f,l at 0.53). They are not just 'weaker t=2 activations'.",
+      "Weaker class: t=1 with the first token in A and r or s as the second token has precision 0.36.",
+      "The label overclaims sharpness. Calling it an 'opening-bigram detector' with fixed sets reads like a crisp lookup table. The data look more graded: an evidence score that builds up over the first 1-3 tokens, with the A/B sets as approximations and r/s at the edge. Also, t=1 & in_tok==o alone has precision of only 0.39, so 'o as second token is the strongest' holds only when the first token is in A."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "Opening-token-pattern unit, fires only at t=0..2. It fires on an initial o, and mostly at t=1 when the first token is in {i,a,x,f,n,d,m} (more weakly r or s) and the second is in {o,a,n,l,i,f,p,m}. It continues at t=2 when the first two tokens are both from the first-token set and the third is in the second-token set.",
+    "better_predicate": "((t == 0) & (in_tok == tok('o'))) | ((t == 1) & isin(prev_tok, [tok(\"i\"),tok(\"a\"),tok(\"x\"),tok(\"f\"),tok(\"n\"),tok(\"d\"),tok(\"m\"),tok(\"r\"),tok(\"s\")]) & isin(in_tok, [tok(\"o\"),tok(\"a\"),tok(\"n\"),tok(\"l\"),tok(\"i\"),tok(\"f\"),tok(\"p\"),tok(\"m\")])) | ((t==2) & isin(in_tok,[tok(\"o\"),tok(\"a\"),tok(\"n\"),tok(\"l\"),tok(\"i\"),tok(\"f\"),tok(\"p\"),tok(\"m\")]) & isin(prev2_tok,[tok(\"i\"),tok(\"a\"),tok(\"x\"),tok(\"f\"),tok(\"n\"),tok(\"d\"),tok(\"m\")]) & isin(prev_tok,[tok(\"i\"),tok(\"a\"),tok(\"x\"),tok(\"f\"),tok(\"n\"),tok(\"d\"),tok(\"m\")]))",
+    "better_predicate_test_f1": 0.892
+  },
+  "final_label": "Opening-token-pattern unit, fires only at t=0..2. It fires on an initial o, and mostly at t=1 when the first token is in {i,a,x,f,n,d,m} (more weakly r or s) and the second is in {o,a,n,l,i,f,p,m}. It continues at t=2 when the first two tokens are both from the first-token set and the third is in the second-token set.",
+  "scorecard": {
+    "format": "slot2",
+    "summary": "Graded preference over the current input token, by step (t=0: o; t=1: o, l, n, a; t=2: o, a, n, i) and the previous input (most: i, a, x, f, d, n; least: j, 3, q, y); timing cues that raise it most: t=1, t=0, t=2.",
+    "test_f1": 0.9032207260414206,
+    "test_precision": 0.906003159557662,
+    "test_recall": 0.900455330507144,
+    "full_test_f1": 0.9798657718120805,
+    "full_n_cues": 110,
+    "top40_test_f1": 0.865286676523739,
+    "slot2_test_f1": 0.9032207260414206,
+    "file": "scorecards/neuron_cand_neg_123.json"
+  }
+}

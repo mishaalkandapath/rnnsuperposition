@@ -1,0 +1,61 @@
+{
+  "label": "copy-phase input c (fed-back c from original position >= 2)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"c\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, only when the input token is c (the model fed back its own copied c). Never fires in the original phase or at <DEL>, and never on any other input token. It is nearly silent when the fed-back c was original token 0 or 1 (recall_idx <= 2; ~0.4% of mass) and fires on most c inputs from original position 2 onward. Largest activations come when c was original token 3 (recall_idx 4), especially in long sequences. For a run of consecutive cs, the second c is much weaker (~0.3-0.4 of the first). Remaining false positives (~11%) are mostly late repeated cs, e.g. a c already copied earlier in the copy phase, or the final step of the sequence. Dev P=0.89 R=0.99 F1=0.94, mass recall 0.996.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 287,
+    "predicate": "(phase == 2) & (in_tok == tok(\"c\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.8872220873365475,
+    "recall": 0.9869015008295073,
+    "f1": 0.9344109589041095,
+    "mass_recall": 0.9961446695501567,
+    "correlation": 0.8171377255984414,
+    "n_active": 51838,
+    "n_predicted": 57662,
+    "coverage_by_activation_quartile": [
+      0.9543209876543209,
+      0.9936728395061728,
+      0.999614167759858,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 287,
+    "predicate": "(phase == 2) & (in_tok == tok(\"c\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.8923237962316818,
+    "recall": 0.9884053489989951,
+    "f1": 0.9379102944951773,
+    "mass_recall": 0.9964259910099248,
+    "correlation": 0.8194770015484212,
+    "n_active": 51748,
+    "n_predicted": 57320,
+    "coverage_by_activation_quartile": [
+      0.959650614516503,
+      0.9947437582128777,
+      0.9992270232665996,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 287,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Core claims hold. The test scores reproduce exactly (P=0.887, R=0.987, F1=0.934, mass recall 0.996). All activation is in the copy phase (share 1.000, with 0 activations in the original and delimiter phases), and in_tok is c for 100% of active steps. The c inputs at recall_idx 2 have a 3.6% firing rate and hold 0.36% of the mass. recall_idx 0-1 never fire. The top activations are all at recall_idx 4, and the second c in a run is about 0.25-0.45 of the first.",
+      "One explanation claim is wrong: the false positives are NOT mostly repeated cs. Precision is the same whether c was already seen before (n_seen(c)>=2: P=0.894) or not (n_seen(c)==1: P=0.892). For a back-to-back cc run the second c has P=0.878, about the same as everywhere else.",
+      "The false positives do lean somewhat toward late steps. At the final step (to_go==0) P=0.81, versus 0.93 on non-final steps. With recall_idx>=7, P=0.73, and the final step combined with recall_idx>=7 gives P=0.70 on test. Excluding those cases does not raise F1 (0.910 vs 0.934), so this is a magnitude falloff, not a separate class worth carving out.",
+      "The remaining false positives look like scattered noise. Precision stays at 0.90-0.94 across previous token (digit or letter) and digit count. The misses (679 on test, 0.4% of mass) are all weak c inputs at recall_idx 2."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

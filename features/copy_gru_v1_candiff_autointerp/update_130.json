@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input s fed back as one of the first two copied tokens (early steps)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"s\")) & (recall_idx <= 2) & (t <= 9)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, almost only when the fed-back input token is s (22570 of 22571 dev activations). That means s was original token 0 or 1, read in at recall_idx 1 or 2. About 84% of activation mass is at recall_idx 1 (input s right after <DEL>, so first_tok = s); about 16% is at recall_idx 2, and recall_idx 3 is negligible. It is also limited to early absolute steps (t <= 9): for long sequences (L >= 7) a copied s at recall_idx 1-2 mostly does not fire, and those cases account for most false positives. Magnitude is largest for an s at recall_idx 1 in short sequences (L of about 4-5, t = 5-7); top examples are all s-first sequences at L = 5. It is weak at recall_idx 2 or larger t. It never fires on s during the original phase or at <DEL>, never on other tokens, and not at later copy positions.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 130,
+    "predicate": "(phase == 2) & (in_tok == tok(\"s\")) & (recall_idx <= 2) & (t <= 9)",
+    "split": "test",
+    "precision": 0.8577678784504017,
+    "recall": 0.9515111405250386,
+    "f1": 0.9022109732884305,
+    "mass_recall": 0.9934522941192457,
+    "correlation": 0.760670394754312,
+    "n_active": 22665,
+    "n_predicted": 25142,
+    "coverage_by_activation_quartile": [
+      0.8171872242809246,
+      0.9888810448288033,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 130,
+    "predicate": "(phase == 2) & (in_tok == tok(\"s\")) & (recall_idx <= 2) & (t <= 9)",
+    "split": "dev",
+    "precision": 0.8581896380072478,
+    "recall": 0.9547649638917195,
+    "f1": 0.9039050375403717,
+    "mass_recall": 0.9942692353357295,
+    "correlation": 0.7607408102069773,
+    "n_active": 22571,
+    "n_predicted": 25111,
+    "coverage_by_activation_quartile": [
+      0.8273967747651958,
+      0.9916710969342548,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 130,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core label holds. On dev, 22570 of 22571 activations have in_tok = s, 99.98% are in the copy phase, and the mass shares are recall_idx 1 = 0.836, recall_idx 2 = 0.159, recall_idx 3 = 0.005. It never fires at <DEL> and has 4 trivial original-phase hits.",
+      "The explanation's claim that 'in long sequences (L >= 7) a copied s at recall_idx 1-2 mostly does not fire' is wrong for recall_idx 1. On the test split, firing rate for an s at recall_idx 1 is: L=7 1.000 (12.3% of mass), L=8 0.825, L=9 0.073. For recall_idx 2 it is: L=3 0.689, L=4 0.998, L=5 0.998, L=6 0.826, L=7 0.124, L=8 0.001, L=9 0.0. For recall_idx 3 it is: L=4 0.305, L=5 0.043, then about 0 for L >= 6.",
+      "The cutoff 't <= 9' is a proxy. The real boundary depends on recall_idx and L together and fits 2*recall_idx + L <= 10 (recall_idx 1 survives to L=8, recall_idx 2 to L=6, recall_idx 3 to L=4). With t <= 9, the predicate wrongly includes recall_idx=2 at L=7 (t=9, only 12% fire). That is a systematic false-positive class, not noise.",
+      "Swapping the t <= 9 condition for the joint L / recall_idx boundary raises test F1 from 0.902 to 0.943 (precision 0.95, recall 0.936, mass recall 0.992). The remaining misses and false positives are borderline cells (recall_idx=1 at L=8, recall_idx=2 at L=3 and L=6, recall_idx=3 at L=4) and look like boundary noise."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input s fed back as one of the first two copied tokens, firing only while 2*recall_idx + L <= 10 (recall_idx 1 up to L=8, recall_idx 2 up to L=6)",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"s\")) & (recall_idx >= 1) & (recall_idx <= 2) & (2*recall_idx + L <= 10)",
+    "better_predicate_test_f1": 0.943
+  },
+  "final_label": "copy-phase input s fed back as one of the first two copied tokens, firing only while 2*recall_idx + L <= 10 (recall_idx 1 up to L=8, recall_idx 2 up to L=6)"
+}

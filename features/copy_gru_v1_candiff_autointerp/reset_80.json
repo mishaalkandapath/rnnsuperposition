@@ -1,0 +1,62 @@
+{
+  "label": "input token h during the copy phase",
+  "predicate": "(phase == 2) & (in_tok == tok(\"h\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires whenever the fed-back input token is h during the copy phase (t > L). It fires on every such step (precision 1.0) with typical activation around 0.7-0.8 of max. The strongest activations come on repeated h, e.g. an h right after another h or a second h in the sequence (top examples hh in the copy, ~0.85-1.0). It also fires weakly (~0.12-0.15) on h in the original phase at early positions (t=1-3). Those h steps make up most of the misses, along with tiny activations on the first copied token at some steps, and together they hold about 1% of activation mass. It does not fire at the delimiter or on other tokens; magnitude is roughly flat across L and recall position.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 80,
+    "predicate": "(phase == 2) & (in_tok == tok(\"h\"))",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.9293146716177341,
+    "f1": 0.9633624678119531,
+    "mass_recall": 0.9864829887917035,
+    "correlation": 0.9944407415645875,
+    "n_active": 98026,
+    "n_predicted": 91097,
+    "coverage_by_activation_quartile": [
+      0.7172644550536581,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 80,
+    "predicate": "(phase == 2) & (in_tok == tok(\"h\"))",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.9305831221309556,
+    "f1": 0.9640435694929195,
+    "mass_recall": 0.9867913339505994,
+    "correlation": 0.9945133139408132,
+    "n_active": 98247,
+    "n_predicted": 91427,
+    "coverage_by_activation_quartile": [
+      0.7223353147137855,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "reset",
+  "feature": 80,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claim holds on the test split. (phase==2)&(in_tok==h) has precision 1.0 (0 false positives on test), F1 0.963 and mass recall 0.986. Firing on any non-h copy-phase token has precision 0.0015, so it is not a real pattern.",
+      "The explanation gets the makeup of the misses backwards. Original-phase h accounts for only 2.99% of active steps (recall 0.030, mass 0.6%). Weak firing on non-h copy-phase tokens is larger, at 4.08% of active steps (~4000 test steps, mass 0.7%). So the misses are not 'mostly' original-phase h, and 'a few tiny activations' undersells the other group.",
+      "Most of those non-h copy misses come at recall_idx==1, the first copy step (recall 0.028), with activation around 0.10-0.13. Some come one step before an h is fed in. Neither group is predictable: precision is 0.006 for the first-step group and 0.018 for the 'next input is h' group, and adding rel_tok(1)==h drops F1 to 0.71. So they are low-magnitude noise rather than a class the predicate should cover.",
+      "'Fires weakly on h in the original phase at early positions' overstates it. h at t<=3 is active only 4.2% of the time (precision 0.042). These are rare, sporadic activations, not reliable firing.",
+      "The repeated-hh claim is only weakly supported. hh in the copy phase has mass recall 0.0285 against recall 0.0258, so its mean activation is about 10% above the h-in-copy average. That fits 'slightly stronger' but is not strong evidence for 0.85-1.0."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

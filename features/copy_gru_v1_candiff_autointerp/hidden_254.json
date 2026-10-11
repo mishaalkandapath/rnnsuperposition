@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input of digit 2 (fed-back 2), from recall_idx 2 on",
+  "predicate": "(phase == 2) & (in_tok == tok(\"2\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, only when the input token is the digit 2 (the model feeding back a 2 it just output, i.e. orig(recall_idx-1) == 2). It never fires on any other input token, never in the original or delimiter phases, and never at recall_idx 0-1. Rate and magnitude grow with copy position: rate is ~1.7x lift at recall_idx 2 and ~3.3x from recall_idx 3 on; the misses are mostly early copy steps (recall_idx 2) in short sequences, and requiring recall_idx >= 3 trades recall (0.87) for precision (0.92). Firing rate also rises with the number of digits in the sequence (n_digits). Out_tok, prev_tok and first_tok have no effect. Dev: P 0.82, R 1.00, F1 0.90.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 254,
+    "predicate": "(phase == 2) & (in_tok == tok(\"2\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.8182564461430801,
+    "recall": 1.0,
+    "f1": 0.9000451480634442,
+    "mass_recall": 1.0,
+    "correlation": 0.7712820710197595,
+    "n_active": 60803,
+    "n_predicted": 74308,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 254,
+    "predicate": "(phase == 2) & (in_tok == tok(\"2\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.8226347513465111,
+    "recall": 1.0,
+    "f1": 0.9026874427131072,
+    "mass_recall": 1.0,
+    "correlation": 0.774317282652251,
+    "n_active": 61552,
+    "n_predicted": 74823,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 254,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claims hold. On dev, phase gives original 0, delimiter 0 and copy 100% of activation mass. in_tok '2' holds 100% of mass and every other token is 0. recall_idx 0 and 1 have 0 activations. The predicate's recall is 1.0 on both dev and test, with 0 missed activations on test. Test P 0.818 / R 1.0 / F1 0.900 reproduces.",
+      "The false positives are graded and depend on recall_idx, as claimed. Precision of copy-phase in_tok=2 is 0.49 at recall_idx 2, 0.84 at recall_idx 3 and 0.95 at recall_idx 4 and above. At recall_idx 2 it also depends on L: 0.81 at L=4 against 0.45 at L=9. The explanation leaves out this L effect.",
+      "The claim that prev_tok has no notable effect is inaccurate. Conditioned on the predicate, precision varies with prev_tok: 't' 0.55, 'e' 0.65, 'w' 0.68, 'u' 0.71, against 'l' 0.97, 'h' 0.97, 'r' 0.94. The effect is graded, not a clean cut, and excluding prev_tok t or e lowers test F1 (0.889).",
+      "The n_digits effect is real but weak: precision 0.80 at 1 digit, 0.83 at 2, 0.86 at 3 and 0.86 at 4.",
+      "No systematic class of missed activations exists. The false positives come from graded modulation (early recall_idx, long L, some prev_tok letters), not from a missing token or history condition. The best refinement found, which keeps recall_idx 2 only when L <= 5, scores only marginally higher on test (F1 0.911 vs 0.900)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"2\")) & ((recall_idx >= 3) | ((recall_idx == 2) & (L <= 5)))",
+    "better_predicate_test_f1": 0.911
+  }
+}

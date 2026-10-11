@@ -1,0 +1,64 @@
+{
+  "label": "3-5 steps after a sequence-initial w",
+  "predicate": "(first_tok == tok(\"w\")) & (((t >= 3) & (t <= 4) & (phase <= 1)) | (orig_idx == 5))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires in sequences whose first original token is w, at steps 3-5 (3 to 5 steps after that w), whatever the current input token is. first_tok==w covers 95% of activation mass (23.6x lift). The strongest activations are at t=4 (around 1.0 of max), then t=3 and t=5 (about 0.5-0.7). At t=5 it fires on an original token but not when t=5 is the <DEL> step (L=5); at t=3/4 it also fires on the <DEL> step. Activations are nearly zero at t<=2, at t>=6, and in the copy phase. Weak low-quartile activations happen when w is the second token (and similar lag), or with other first tokens. The current input token barely modulates it.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 3,
+    "predicate": "(first_tok == tok(\"w\")) & (((t >= 3) & (t <= 4) & (phase <= 1)) | (orig_idx == 5))",
+    "split": "test",
+    "precision": 0.8884915996241032,
+    "recall": 0.752479860234883,
+    "f1": 0.8148490708820314,
+    "mass_recall": 0.9463546140724248,
+    "correlation": 0.8448780786006127,
+    "n_active": 51515,
+    "n_predicted": 43629,
+    "coverage_by_activation_quartile": [
+      0.272148458731268,
+      0.7381784300023294,
+      0.9996117711002407,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 3,
+    "predicate": "(first_tok == tok(\"w\")) & (((t >= 3) & (t <= 4) & (phase <= 1)) | (orig_idx == 5))",
+    "split": "dev",
+    "precision": 0.8877120079495924,
+    "recall": 0.7568936301317107,
+    "f1": 0.8170999158100425,
+    "mass_recall": 0.9478121923091616,
+    "correlation": 0.8444471147689425,
+    "n_active": 51932,
+    "n_predicted": 44279,
+    "coverage_by_activation_quartile": [
+      0.27921127628437187,
+      0.7487483632442424,
+      0.9996148809982285,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 3,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The magnitude claim is wrong. The explanation says activations peak at t=4 (about 1.0 of max) and are weaker at t=3. On dev, t=3 and t=4 have almost the same number of active steps (21,841 vs 21,826), but t=3 carries more of the activation mass (0.518 vs 0.426). So t=3 is the stronger step on average. The t=4 values near 1.0 come almost entirely from sequences that start 'w w' (every top-12 example begins 'w w'). In ordinary w-first sequences, t=3 and t=4 are similar at about 0.3-0.6 (e.g. 'w 2 e [1:0.45] [p:0.43]', 'w i s [t:0.45] [h:0.39]', 'w x 3 [e:0.53] [k:0.33]').",
+      "The t=5 part of the predicate is weak. On test, first_tok==w & orig_idx==5 has precision 0.585 and mass recall 0.050, and it accounts for most of the 4,865 false positives (every one shown is at step 5). It is a fading tail, not a reliable firing step. By contrast, t=3 has precision 0.999 and t=4 has precision 0.956.",
+      "The <DEL> claims hold: first_tok==w at t=5 on the <DEL> step has precision 0.049, and at t=3 on the <DEL> step it has precision 0.97.",
+      "Recall is 0.75. The missed activations (21% of active steps, about 4.8% of the mass) are low-magnitude and spread over many first tokens and steps 2-5. The only consistent part is w as the second token at t=4, and it has precision 0.37. Adding it lowers F1 from 0.815 to 0.804, so it is not worth including. I found no systematic class of high-magnitude misses.",
+      "The copy-phase, t<=2 and t>=6 claims check out: 36 active steps in the copy phase, none at t<=1, and 69 at t=6 on dev.",
+      "The core label and predicate hold up, and none of the alternatives I tried scored better (test F1 0.815). The rejection is only because the explanation's t=4 peak claim is false."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "3-5 steps after a sequence-initial w (strongest and most reliable at t=3-4, weaker tail at t=5; peaks near max when the sequence starts 'w w')",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "3-5 steps after a sequence-initial w (strongest and most reliable at t=3-4, weaker tail at t=5; peaks near max when the sequence starts 'w w')"
+}

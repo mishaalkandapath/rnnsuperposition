@@ -1,0 +1,63 @@
+{
+  "label": "digit 1 at position 1-2 right after one of {h,3,b,z,2,u} at sequence start",
+  "predicate": "(in_tok == tok(\"1\")) & isin(t,[1,2]) & isin(prev_tok,[tok(\"h\"),tok(\"3\"),tok(\"b\"),tok(\"z\"),tok(\"2\"),tok(\"u\")]) & isin(first_tok,[tok(\"h\"),tok(\"3\"),tok(\"b\"),tok(\"z\"),tok(\"2\"),tok(\"u\")])",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the original phase, only when the input token is the digit 1, and only at t=1 (85% of mass) or t=2. At t=1 it fires exactly when the first token is one of h, 3, b, z, 2, u (precision 1.0 for that clause). Magnitude depends on that first token: b is highest (about 1.0 of max), then z and 3 (about 0.8), h (about 0.74), and u and 2 are lowest (about 0.26). At t=2 it fires more weakly, mostly when both earlier tokens are in the set (e.g. h 3 1), and sometimes when only the immediately preceding token is (g h 1, g b 1). Never fires on 1 after other tokens, at later positions, or in the delimiter/copy phases.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 439,
+    "predicate": "(in_tok == tok(\"1\")) & isin(t,[1,2]) & isin(prev_tok,[tok(\"h\"),tok(\"3\"),tok(\"b\"),tok(\"z\"),tok(\"2\"),tok(\"u\")]) & isin(first_tok,[tok(\"h\"),tok(\"3\"),tok(\"b\"),tok(\"z\"),tok(\"2\"),tok(\"u\")])",
+    "split": "test",
+    "precision": 0.9389927310488058,
+    "recall": 0.9191867852604828,
+    "f1": 0.9289842044433029,
+    "mass_recall": 0.9355811220388971,
+    "correlation": 0.8611806826908784,
+    "n_active": 3935,
+    "n_predicted": 3852,
+    "coverage_by_activation_quartile": [
+      0.9827235772357723,
+      0.7134146341463414,
+      0.9806910569105691,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 439,
+    "predicate": "(in_tok == tok(\"1\")) & isin(t,[1,2]) & isin(prev_tok,[tok(\"h\"),tok(\"3\"),tok(\"b\"),tok(\"z\"),tok(\"2\"),tok(\"u\")]) & isin(first_tok,[tok(\"h\"),tok(\"3\"),tok(\"b\"),tok(\"z\"),tok(\"2\"),tok(\"u\")])",
+    "split": "dev",
+    "precision": 0.9347826086956522,
+    "recall": 0.9264487369985142,
+    "f1": 0.9305970149253732,
+    "mass_recall": 0.9416435350096057,
+    "correlation": 0.8605471690455034,
+    "n_active": 4038,
+    "n_predicted": 4002,
+    "coverage_by_activation_quartile": [
+      0.9831683168316832,
+      0.7366336633663366,
+      0.9861248761149654,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 439,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The t=1 part checks out. in_tok=1, t=1 and prev_tok in {h,3,b,z,2,u} has precision 1.0 and recall 0.81 on its own. Firing is limited to the original phase at t=1 and t=2 (85% and 15% of activation mass). There is no activation in the delimiter or copy phases and none on other input tokens.",
+      "The t=2 rule is wrong in a systematic way. The original predicate requires the first token to be in {h,3,b,z,2,u}, but the test misses (318 steps, 6.4% of mass) include many t=2 hits with first tokens e, f and j: e z 1, f b 1, j z 1, j 3 1, j h 1, j b 1. The explanation calls these 'sometimes when only the token just before is', but they form a whole class.",
+      "There are systematic false positives at t=2 (235 on test), mostly where the earlier tokens are 2 or u (2 3 1, b 2 1, 2 u 1, 3 u 1, u u 1). The real t=2 rule is that prev_tok is in {h,3,b,z} (not 2 or u) and first_tok is in {b,e,f,g,h,j,u,z,3}. Splitting dev by first token gives precision of exactly 1.0 or 0.0 for each value. prev_tok=u at t=2 has precision 0.0 and prev_tok=2 has 0.44.",
+      "Because of these errors, coverage in the second activation quartile is only 0.71: the weaker t=2 activations are badly captured.",
+      "The label overclaims. It says the feature needs the first token to be in the set at t=2, which is false. It also treats 2 and u as valid previous tokens at t=2, but those almost never fire there."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "digit 1 at t=1 right after one of {h,3,b,z,2,u}; or digit 1 at t=2 right after one of {h,3,b,z} when the first token is one of {b,e,f,g,h,j,u,z,3}",
+    "better_predicate": "((in_tok == tok(\"1\")) & (t==1) & isin(prev_tok,[tok(\"h\"),tok(\"3\"),tok(\"b\"),tok(\"z\"),tok(\"2\"),tok(\"u\")])) | ((in_tok == tok(\"1\")) & (t==2) & isin(prev_tok,[tok(\"h\"),tok(\"3\"),tok(\"b\"),tok(\"z\")]) & isin(first_tok,[tok(\"b\"),tok(\"e\"),tok(\"f\"),tok(\"g\"),tok(\"h\"),tok(\"j\"),tok(\"u\"),tok(\"z\"),tok(\"3\")]))",
+    "better_predicate_test_f1": 0.991
+  },
+  "final_label": "digit 1 at t=1 right after one of {h,3,b,z,2,u}; or digit 1 at t=2 right after one of {h,3,b,z} when the first token is one of {b,e,f,g,h,j,u,z,3}"
+}

@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input \"a\" at early recall positions (2-4), not last step",
+  "predicate": "(phase == 2) & (in_tok == tok(\"a\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token detector for the letter a being fed back as input during the copy phase, restricted to early positions. Every activation is in the copy phase with in_tok = a (38435 of 38436 dev activations), and it never fires on a in the original phase or at the delimiter. It is sharply position-gated: recall_idx 2 (a was original token 1, right after DEL + first token) carries 56% of mass and the top examples, recall_idx 3 carries 38%, recall_idx 4 is weaker (6%), recall_idx 1 and >= 5 are nearly silent, and it is mostly off on the final copy step (to_go = 0). Magnitude is highest at recall_idx 2 (near max ~3.0) and decreases with later recall positions; lowest-quartile activations are a at recall_idx 3-4. Does not depend on which token is being output or on other sequence contents. Dev: P 0.92, R 0.98, F1 0.95, mass recall 0.998.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 679,
+    "predicate": "(phase == 2) & (in_tok == tok(\"a\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+    "split": "test",
+    "precision": 0.9165190380275196,
+    "recall": 0.9807317769871978,
+    "f1": 0.9475387626072558,
+    "mass_recall": 0.9977979264135102,
+    "correlation": 0.8398990611204021,
+    "n_active": 38509,
+    "n_predicted": 41207,
+    "coverage_by_activation_quartile": [
+      0.9242833402575821,
+      0.9986496312454555,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 679,
+    "predicate": "(phase == 2) & (in_tok == tok(\"a\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+    "split": "dev",
+    "precision": 0.9173555728457499,
+    "recall": 0.9816057862420647,
+    "f1": 0.9483937459152382,
+    "mass_recall": 0.9979542341309521,
+    "correlation": 0.8424337006223771,
+    "n_active": 38436,
+    "n_predicted": 41128,
+    "coverage_by_activation_quartile": [
+      0.9274638359870955,
+      0.9989593089811635,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 679,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Factual claims hold on dev: all 38436 activations are in the copy phase, 38435 have in_tok=a (1 is g), and the original and delimiter phases are 0 active. Mass share by recall_idx is 0.562/0.381/0.056 for 2/3/4. recall_idx 1 has 522 actives (mass 0.002), recall_idx >= 5 is about 160 actives, to_go=0 has 108 actives. out_tok rates are flat (about 0.012-0.014).",
+      "The one systematic false-positive class is recall_idx 4. On dev, precision for in_tok=a at recall_idx 4 with to_go >= 1 is 0.70. Broken down by to_go it is 0.46 at to_go=1 (L=6), 0.77 at 2, 0.82 at 3 and 0.76 at 4. recall_idx 2 and 3 are nearly perfect (precision 0.99 to 1.0, except 0.96 at recall_idx 2 with to_go=1). So the label's '2-4' band is accurate only in a graded sense: recall_idx 4 fires on only about 57% of 'a' inputs.",
+      "I found no clean history variable that explains which recall_idx 4 cases fire. Precision stays between 0.68 and 0.86 across prev_tok digit/vowel, prev2_tok, in_count, n_digits, first_tok=a, orig(0)==orig(1) and out_tok digit. This looks like a graded falloff, not a missed rule.",
+      "Note: the predicate parser applies & before comparisons (A & x==0 parses as (A & x)==0), so comparisons combined with & must be wrapped in parentheses.",
+      "Refinement: (phase==2)&(in_tok==a)&(((recall_idx 2-3)&(to_go>=1)) | ((recall_idx==4)&(to_go>=2))) reaches test P 0.951, R 0.948, F1 0.949. The original scores F1 0.948, so the gain is negligible. Dropping recall_idx 4 entirely lowers test F1 to 0.872."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input \"a\" at recall positions 2-3 (strong), with weaker, partial firing at recall position 4; off on the final copy step",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"a\")) & ((((recall_idx >= 2) & (recall_idx <= 3)) & (to_go >= 1)) | ((recall_idx == 4) & (to_go >= 2)))",
+    "better_predicate_test_f1": 0.949
+  },
+  "final_label": "copy-phase input \"a\" at recall positions 2-3 (strong), with weaker, partial firing at recall position 4; off on the final copy step"
+}

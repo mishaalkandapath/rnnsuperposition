@@ -1,0 +1,64 @@
+{
+  "label": "late absolute position (t>=7) before copying starts, in long sequences (L>=8)",
+  "predicate": "(t >= 7) & (phase <= 1) & (L >= 8)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "A position/time unit tied to absolute step number. It fires only at steps t=6..10, almost all at t=7..9, and only during the original or delimiter phase of long sequences (L=8 or 9; L<=6 never fires, L=7 contributes ~2% of mass). Concretely: the last one or two original tokens of L=9 sequences (orig_idx 7 rises to 39%, orig_idx 8 to 83%) and the <DEL> step of L=8/9 sequences (59% of activation mass sits on <DEL>). Magnitude ramps with t: the strongest activations are at t=8 (often the final original token of L=9 or <DEL> of L=8), with t=7 weaker. Token identity barely matters (lifts ~1x across in_tok/out_tok/prev_tok), with a mild preference for first occurrences. It is essentially silent during the copy phase (0.5% of mass, only recall_idx 1) and at all steps t<=5. False positives are mostly t=7 steps of L=8 sequences where it stays just below threshold; simpler variant (phase<=1)&(t>=8) gives precision 0.92 but mass recall 0.82.",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 35,
+    "predicate": "(t >= 7) & (phase <= 1) & (L >= 8)",
+    "split": "test",
+    "precision": 0.7092007412577315,
+    "recall": 0.9140340265822982,
+    "f1": 0.7986935987694892,
+    "mass_recall": 0.9740155655264225,
+    "correlation": 0.7372342204771466,
+    "n_active": 64479,
+    "n_predicted": 83102,
+    "coverage_by_activation_quartile": [
+      0.7092431761786601,
+      0.9498759305210918,
+      0.9971464019851116,
+      0.9998759228239965
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 35,
+    "predicate": "(t >= 7) & (phase <= 1) & (L >= 8)",
+    "split": "dev",
+    "precision": 0.7109164420485176,
+    "recall": 0.9118550415952833,
+    "f1": 0.79894519760641,
+    "mass_recall": 0.9722653340339659,
+    "correlation": 0.7371590889462805,
+    "n_active": 64791,
+    "n_predicted": 83104,
+    "coverage_by_activation_quartile": [
+      0.7090998888751697,
+      0.942832448450426,
+      0.9955550067909619,
+      0.9999382601716367
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 35,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The claim that 'which token is present barely matters' is false. Pooled lifts of about 1x hide a strong dependence on the current input token at t=7 in the original phase. Firing rates there are b 0.98, k 0.99, r 1.00, j 0.96, g 0.94, p 0.94, n 0.90, s 0.88, z 0.88 and e 0.80, but c 0.00, i 0.00, q 0.00, v 0.00, d 0.00, o 0.01, x 0.03, l 0.03 and digits 0.05. At t=8 c, i, q and v are also suppressed (0.12-0.37), while most other tokens are at 0.97-1.0.",
+      "Systematic false positives: the predicate's FPs (24k on the test split) are mostly t=7 original-phase steps (orig_idx 7 in L=8 and L=9). Overall these fire at only about 39%, and whether they fire is decided by the token class above. This is a token-identity effect, not 'staying just under threshold'.",
+      "Minor: the 59% of activation mass at <DEL> includes L=7 <DEL> (about 2% of mass, 23% firing rate), so L=8/9 <DEL> alone holds about 57%.",
+      "'Magnitude rises with t' overstates the pattern. t=8 is the peak (47% of mass) and t=9 is lower (35%).",
+      "The 'mild preference for first occurrence' is not supported. At t=7, in_first=1 and in_first=0 have about the same rate (0.39 vs 0.40).",
+      "Precision on test is 0.71 and F1 is 0.799, below the bar. A token-aware predicate reaches 0.90 test F1."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Late-step position detector in long sequences (L>=8): fires at <DEL> of L=8/9 and the last original tokens of L=9 (t=8), plus t=7 original tokens only for a specific letter set (b,e,g,j,k,n,p,r,s,z); suppressed for c,d,i,q,v,o,l,x and digits",
+    "better_predicate": "((phase==1)&(L>=8)) | ((phase==0)&(L==9)&(t==8)&~isin(in_tok,[tok(c) for c in 'cqv'])) | ((phase==0)&(t==7)&(L>=8)&isin(in_tok,[tok(c) for c in 'bejgknprszy']))",
+    "better_predicate_test_f1": 0.904
+  },
+  "final_label": "Late-step position detector in long sequences (L>=8): fires at <DEL> of L=8/9 and the last original tokens of L=9 (t=8), plus t=7 original tokens only for a specific letter set (b,e,g,j,k,n,p,r,s,z); suppressed for c,d,i,q,v,o,l,x and digits"
+}

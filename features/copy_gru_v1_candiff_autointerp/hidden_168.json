@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input f (fed-back f), from the 4th output onward",
+  "predicate": "(phase == 2) & (in_tok == tok(\"f\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase (t > L) when the fed-back input token is the letter f, i.e. the model just output f and is now producing the next original token. Never fires in the original phase or at <DEL>, and almost never on any other input token. Activation is weak or absent early in the copy (recall_idx 1-2, rate about 1%) and becomes reliable from recall_idx >= 3 (about 98% precision); magnitude grows with how far into the copy phase the step is, with the top activations around recall_idx 5-6. When f appears twice in a row, the second copy-phase f is usually somewhat weaker than the first. The output token, previous tokens and sequence length have no visible effect beyond this position dependence.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 168,
+    "predicate": "(phase == 2) & (in_tok == tok(\"f\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9858585858585859,
+    "recall": 0.9358241031575467,
+    "f1": 0.9601899754049698,
+    "mass_recall": 0.9867260535712817,
+    "correlation": 0.9026936658750059,
+    "n_active": 60490,
+    "n_predicted": 57420,
+    "coverage_by_activation_quartile": [
+      0.7475368643787609,
+      0.9957680354427032,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 168,
+    "predicate": "(phase == 2) & (in_tok == tok(\"f\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.986074316787507,
+    "recall": 0.9347089824712121,
+    "f1": 0.9597048471226836,
+    "mass_recall": 0.9865129784232318,
+    "correlation": 0.9020761526105188,
+    "n_active": 60529,
+    "n_predicted": 57376,
+    "coverage_by_activation_quartile": [
+      0.7426154761118087,
+      0.996233148295004,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 168,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The claim 'at recall_idx 1-2 the rate is about 1%' is wrong. On dev, with in_tok==f in the copy phase, precision is 0.000 at recall_idx==1 (n=16650) and 0.235 at recall_idx==2 (n=16766), not about 1%.",
+      "The recall_idx==2 behaviour depends strongly on L. Precision at recall_idx==2 for L=3..9 is 0.35, 0.72, 0.36, 0.13, 0.08, 0.07, 0.11. At L=4 it fires 72% of the time. This is the main systematic class of misses: in the test misses, every listed missed activation is a fed-back f at recall_idx 2 (f was original token 1), mostly with L=4 or 5.",
+      "The recall_idx>=3 onset also shows a small L effect. Precision at recall_idx==3 is 0.97/0.99/0.96 for L=4/5/6 and 0.93/0.92/0.94 for L=7/8/9. The test false positives are f as original token 2 replayed at recall_idx 3 with L=6-8, and at recall_idx>=4 precision is 0.997 or higher.",
+      "The other claims check out. The feature has zero activations in the original phase and at <DEL>. Of all activations, 60518 of 60529 are on in_tok f. Repeated f (prev_tok==f) still fires, at precision 0.974. Mean magnitude per active step rises from recall_idx 3 to 5 and then levels off from 5 to 8, so it is not a peak at 5-6. The test scores reproduce: P 0.986, R 0.936, F1 0.960, mass recall 0.987.",
+      "Adding the L=4, recall_idx==2 case gives test P 0.976, R 0.965, F1 0.970, mass recall 0.994. That is a small but real gain."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input f (fed-back f): absent at recall_idx 1, partial at recall_idx 2 (strongest when L=4), reliable from recall_idx 3",
+    "better_predicate": "(phase == 2) & (in_tok == tok('f')) & ((recall_idx >= 3) | ((recall_idx == 2) & (L == 4)))",
+    "better_predicate_test_f1": 0.97
+  },
+  "final_label": "copy-phase input f (fed-back f): absent at recall_idx 1, partial at recall_idx 2 (strongest when L=4), reliable from recall_idx 3"
+}

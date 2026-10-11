@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase fed-back digit 2, early in recall (recall_idx 2-4)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"2\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, and only when the input token is the digit 2 (the model feeding back its own output 2). Within that, it is confined to early copy positions: recall_idx 2-4 (the 2 being original token 1-3). It is strongest when the 2 is original token 1, i.e. the step right after the first copied token (recall_idx 2, prev2_tok = <DEL>; 58% of mass, top examples are all of this form) and gets weaker at later positions. It is near-silent on the last output step (to_go 0) and on recall_idx 1 or 5 and later. It never fires on 2 during the original phase, on the delimiter, or on any other token, including the other digits. Missed activations are mostly weak, lowest-quartile ones.",
+  "label_short": "",
+  "test_scores": {
+    "gate": "update",
+    "feature": 254,
+    "predicate": "(phase == 2) & (in_tok == tok(\"2\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+    "split": "test",
+    "precision": 0.9046545454545455,
+    "recall": 0.966836800787626,
+    "f1": 0.934712637920022,
+    "mass_recall": 0.9974656910555375,
+    "correlation": 0.8561303233856794,
+    "n_active": 38597,
+    "n_predicted": 41250,
+    "coverage_by_activation_quartile": [
+      0.8673575129533678,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 254,
+    "predicate": "(phase == 2) & (in_tok == tok(\"2\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+    "split": "dev",
+    "precision": 0.9064640976946561,
+    "recall": 0.966698284923219,
+    "f1": 0.9356127335434088,
+    "mass_recall": 0.99741560730779,
+    "correlation": 0.8555908003504218,
+    "n_active": 39007,
+    "n_predicted": 41599,
+    "coverage_by_activation_quartile": [
+      0.8667965545529123,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 254,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: recall_idx 4 is a weak, unreliable tail, not a full member of the class. Precision there is only 0.53 on dev (0.44 at to_go 1, about 0.7 at to_go 2-4), and it holds just 4.7% of activation mass. Probing n_digits, digit identity of orig(0..2), prev_tok and in_count turned up no condition that separates the active cases from the inactive ones, so this looks like graded decay near threshold rather than a systematic class. It accounts for most of the 3933 test false positives.",
+      "recall_idx 2 and 3 with to_go >= 1 are nearly deterministic, with precision of about 1.0 in every to_go bucket. The explanation could state this more sharply.",
+      "Confirmed claims: activation is 100% copy phase, with zero activation on the original phase, the delimiter, or any input other than '2'. recall_idx 2 holds 57.8% of mass (prev2_tok = <DEL>). recall_idx 1: 6.5% rate, 0.2% mass. recall_idx >= 5: 0.4% precision, under 0.1% mass. to_go 0: 0.7% precision. All top examples are of the form 'x 2 ... <DEL> x [2]'.",
+      "The test misses (1280 steps, 0.3% of mass) are tiny activations, mostly at recall_idx 1 when the sequence starts with 2. This is scattered noise, not a systematic class.",
+      "Alternatives tried on test: dropping recall_idx 4 gave F1 0.876 (precision 1.0, recall 0.78). Requiring to_go >= 2 only at recall_idx 4 gave F1 0.936, essentially equal to the original 0.935. Neither is a meaningful improvement."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

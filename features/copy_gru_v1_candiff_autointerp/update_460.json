@@ -1,0 +1,64 @@
+{
+  "label": "step 2 (third original token) when the first token is s/a/i/l/d (weaker: r/v/y)",
+  "predicate": "(t == 2) & isin(first_tok, [tok(\"s\"),tok(\"a\"),tok(\"i\"),tok(\"l\"),tok(\"d\"),tok(\"r\"),tok(\"v\"),tok(\"y\")])",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only at t=2 (input of the third original token), never in delimiter/copy phases. Gated by the first original token: always active (rate ~1.0) when orig(0) is s, a, i, l or d (86% of mass), active on ~80%/~70% of sequences starting with r, v or y with lower magnitude; essentially silent for other first tokens (rare weak activations e.g. x, b). The current input token and L barely matter. Magnitude depends mainly on first token identity (l, s, i largest per occurrence; r, y smallest). Does not fire at any step other than 2.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 460,
+    "predicate": "(t == 2) & isin(first_tok, [tok(\"s\"),tok(\"a\"),tok(\"i\"),tok(\"l\"),tok(\"d\"),tok(\"r\"),tok(\"v\"),tok(\"y\")])",
+    "split": "test",
+    "precision": 0.9135839493769587,
+    "recall": 0.956024384694446,
+    "f1": 0.9343224643931988,
+    "mass_recall": 0.9922752113985216,
+    "correlation": 0.8408139465555817,
+    "n_active": 127457,
+    "n_predicted": 133378,
+    "coverage_by_activation_quartile": [
+      0.8289345677075161,
+      0.9951669595782073,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 460,
+    "predicate": "(t == 2) & isin(first_tok, [tok(\"s\"),tok(\"a\"),tok(\"i\"),tok(\"l\"),tok(\"d\"),tok(\"r\"),tok(\"v\"),tok(\"y\")])",
+    "split": "dev",
+    "precision": 0.9132412927518042,
+    "recall": 0.9556573608624612,
+    "f1": 0.9339679944378015,
+    "mass_recall": 0.9921473148528257,
+    "correlation": 0.8408601076228883,
+    "n_active": 127913,
+    "n_predicted": 133854,
+    "coverage_by_activation_quartile": [
+      0.8280121329622565,
+      0.9946213021452248,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 460,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold. On the dev split the feature is active only at t=2 (127,913 of 500k sequences, 100% of activation mass) and has zero activations in the delimiter and copy phases. The s/a/i/l/d subset alone scores precision 1.0, recall 0.653 and mass recall 0.864.",
+      "The r/v/y part of the explanation is wrong in kind. Firing there is not a probabilistic 'about 70-80% of sequences'; it is almost fully decided by the second original token orig(1). Precision by (orig0, orig1) pair is close to 0 or 1. For r it is 0 when orig(1) is f, i or j, 0.03 for s, 0.29 for c, and 1.0 for most others. For v it is 0 for c, f, n, u and v, and 0.09 for j. For y it is 0 for b, c, e, f, h, j and v, 0.06 for i, 0.02 for 0, and about 0.6 for u and y.",
+      "The original predicate's 11.5k test false positives are systematic, not noise. They are exactly these excluded (r/v/y, orig1) pairs, for example 'y j e', 'r c a', 'r f b', 'v u y', 'y b e' and 'y h o'.",
+      "Its missed activations are also systematic. First token x fires reliably when orig(1) is a, k, l, p, r or y (precision 0.96-1.0), and 0.54 when orig(1) is g. The explanation dismisses x as 'rare weak activations'.",
+      "The current input token (in_tok at t=2) does not matter, which matches the explanation. The feature effectively encodes the (orig0, orig1) pair carried in the hidden state.",
+      "With the pair-level exceptions added, test F1 rises from 0.934 to 0.987 (precision 0.995, recall 0.979, mass recall 0.999). What remains is weak scattered activation, mostly with first token b, at about 0.1% of activation mass."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "step 2 (third original token input), gated by the first two original tokens: fires whenever orig(0) is s/a/i/l/d. When orig(0) is r/v/y it fires unless orig(1) is in a pair-specific exclusion set (mostly c/f/j, plus a few others). When orig(0) is x it fires only for orig(1) in a/k/l/p/r/y. The current input does not matter.",
+    "better_predicate": "(t == 2) & (isin(first_tok, [tok('s'),tok('a'),tok('i'),tok('l'),tok('d')]) | ((first_tok == tok('r')) & ~isin(orig(1), [tok('c'),tok('f'),tok('i'),tok('j'),tok('s')])) | ((first_tok == tok('v')) & ~isin(orig(1), [tok('c'),tok('f'),tok('j'),tok('n'),tok('u'),tok('v')])) | ((first_tok == tok('y')) & ~isin(orig(1), [tok('b'),tok('c'),tok('e'),tok('f'),tok('h'),tok('i'),tok('j'),tok('v'),tok('0')])) | ((first_tok == tok('x')) & isin(orig(1), [tok('a'),tok('k'),tok('l'),tok('p'),tok('r'),tok('y')])))",
+    "better_predicate_test_f1": 0.987
+  },
+  "final_label": "step 2 (third original token input), gated by the first two original tokens: fires whenever orig(0) is s/a/i/l/d. When orig(0) is r/v/y it fires unless orig(1) is in a pair-specific exclusion set (mostly c/f/j, plus a few others). When orig(0) is x it fires only for orig(1) in a/k/l/p/r/y. The current input does not matter."
+}

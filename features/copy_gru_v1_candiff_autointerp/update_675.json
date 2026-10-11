@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input z (fed-back z) at early-middle recall positions 2-4",
+  "predicate": "(phase == 2) & (in_tok == tok(\"z\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase when the fed-back input token is z, i.e. the model just output z (orig(recall_idx-1) == z). It never fires on z during the original phase or at the delimiter, nor on any other input token. Strongest when z is the 2nd original token (recall_idx 2, ~56% of mass, top activations all like a z ... <DEL> a [z]), still strong at recall_idx 3, weaker at 4, and near-zero at recall_idx 1 and >= 5 or on the final copy step (to_go 0). Magnitude also falls with recall position; z at original position 0 echoed at recall_idx 1 barely fires. False positives are mostly z echoes at recall_idx 3-4 that happen to stay inactive.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 675,
+    "predicate": "(phase == 2) & (in_tok == tok(\"z\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+    "split": "test",
+    "precision": 0.8896533410583237,
+    "recall": 0.9655976523607399,
+    "f1": 0.9260711144616157,
+    "mass_recall": 0.9960031925566472,
+    "correlation": 0.8242673209423302,
+    "n_active": 38166,
+    "n_predicted": 41424,
+    "coverage_by_activation_quartile": [
+      0.8650178159714944,
+      0.9973800041919932,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 675,
+    "predicate": "(phase == 2) & (in_tok == tok(\"z\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+    "split": "dev",
+    "precision": 0.8896247778129489,
+    "recall": 0.9652330127866428,
+    "f1": 0.9258879132296854,
+    "mass_recall": 0.9959206370354002,
+    "correlation": 0.8243121584316866,
+    "n_active": 37852,
+    "n_predicted": 41069,
+    "coverage_by_activation_quartile": [
+      0.8633625700095108,
+      0.9975694811370601,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 675,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Main claims check out on dev: 100% of activation mass is in the copy phase, there is zero activation in the original phase or at the delimiter, in_tok is z for 100% of active steps, and mass by recall_idx is 2=56.4%, 3=37.5%, 4=5.7%, with 1 and >=5 each about 0.1%. Test scores reproduce: P 0.890, R 0.966, F1 0.926, mass recall 0.996.",
+      "The false-positive description is somewhat wrong. Within the predicate, recall_idx 3 fires almost every time when L>=5 (precision 0.97 to 1.0). The false positives come from two places. First, recall_idx 4: about 40% precision at L=6, where to_go=1, and about 75-80% at L>=7. Second, recall_idx 2 at L=4, where to_go=1: 63% precision. So most false positives sit at recall_idx 4 and at to_go=1 in short sequences, not spread over recall_idx 3-4.",
+      "At recall_idx 4 with L>=7, the feature stays off about 25% of the time. I found no simple variable that explains it: in_count, a digit next_out, n_digits, first_tok and correct (always 1) all leave precision at 0.73-0.84. This looks like graded dependence on hidden state rather than a clean subclass.",
+      "Small residual: at L=9 the feature also fires weakly at recall_idx 1 (about 11%) and recall_idx 5 (about 14%). This is negligible in mass.",
+      "Alternative predicates gain little. Requiring to_go>=2 only at recall_idx 4 gives test F1 0.932 (P 0.926, R 0.937). Requiring to_go>=2 everywhere gives 0.881. An L-gated window gives 0.921. The original predicate is essentially as good as these."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok('z')) & (((recall_idx >= 2) & (recall_idx <= 3) & (to_go >= 1)) | ((recall_idx == 4) & (to_go >= 2)))",
+    "better_predicate_test_f1": 0.9315
+  }
+}

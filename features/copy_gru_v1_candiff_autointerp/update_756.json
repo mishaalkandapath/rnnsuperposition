@@ -1,0 +1,63 @@
+{
+  "label": "token right after an early j (original positions 2-3)",
+  "predicate": "(phase == 0) & (prev_tok == tok(\"j\")) & (t >= 2) & (t <= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires in the original-input phase on the step right after a j was input, but only early in the sequence: almost all mass is at t=2 and t=3 (prev_tok=j covers 97.5% of mass; t=4 holds about 5%, t=5 a little, and t=0/1 and t>=6 never). It never fires in the copy phase and essentially never at the delimiter. Which token is the current input matters little. Magnitude: the largest activations come at t=3 when j appears twice in a row (e.g. w j j m), with first tokens w/q/s over-represented in the top examples; a single j at t=1 or t=2 gives weaker activations (about 0.1-0.3 of max). Misses are mostly weak firings at t=4 after j, or occasional weak firings with no preceding j. False positives are steps at t=2/3 after a j where the feature stays silent.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 756,
+    "predicate": "(phase == 0) & (prev_tok == tok(\"j\")) & (t >= 2) & (t <= 3)",
+    "split": "test",
+    "precision": 0.8849041631058479,
+    "recall": 0.8487660645803449,
+    "f1": 0.8664584671936405,
+    "mass_recall": 0.9284561490594493,
+    "correlation": 0.7976829122683722,
+    "n_active": 34159,
+    "n_predicted": 32764,
+    "coverage_by_activation_quartile": [
+      0.6133489461358314,
+      0.8689695550351288,
+      0.9413348946135831,
+      0.9714252254362338
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 756,
+    "predicate": "(phase == 0) & (prev_tok == tok(\"j\")) & (t >= 2) & (t <= 3)",
+    "split": "dev",
+    "precision": 0.8824765501279084,
+    "recall": 0.8479253233452332,
+    "f1": 0.8648559916430384,
+    "mass_recall": 0.9278098788955172,
+    "correlation": 0.7965240740435472,
+    "n_active": 34174,
+    "n_predicted": 32836,
+    "coverage_by_activation_quartile": [
+      0.612125468164794,
+      0.8648174157303371,
+      0.9425260447149714,
+      0.9722579889968396
+    ]
+  },
+  "gate": "update",
+  "feature": 756,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The main claims hold. All activation mass is in the original phase (8 delimiter firings, 0 in the copy phase). Mass by t is t=2 0.450, t=3 0.497, t=4 0.053, t=5 trace, and nothing at t=0/1 or t>=6. prev_tok=j holds 0.975 of the mass. The current input token matters little: per-token lift is flat at 1.1-1.4x.",
+      "There is a systematic false-positive class the explanation does not mention: the token two steps back (the one before the j) suppresses the feature. For 'x j _' the predicate's precision is 0.000 at t=2 (n=562) and 0.113 at t=3 (n=523). Other tokens also weaken it, mostly at t=3: o (t=2 0.52, t=3 0.53), h (0.65 / 0.48), l (0.89 / 0.62) and e (0.85 / 0.69). For most other preceding tokens precision is 0.95-1.0. So the claim that 'false positives are t=2/3 steps after a j where the feature stays silent' leaves out that they cluster on specific j-contexts. The test misses output shows this directly, for example 'x j *1*', 'x j *h*', '3 x j *c*', '1 x j *e*'.",
+      "Excluding prev2_tok==x raises test precision from 0.885 to 0.915 with almost no loss of recall (0.849 to 0.847). Test F1 goes from 0.866 to 0.880, and mass recall stays at 0.928. Also excluding o and h raises precision further (0.94), but recall drops, so F1 ends up lower (0.871-0.875).",
+      "The misses are as described and not systematic. t=4 after a j has precision 0.177 and holds 4.6% of the mass. A j two steps back at t=3 with no j at t=2 has precision 0.067. Neither is worth adding to the predicate.",
+      "The magnitude claim checks out: 'j j _' at t=3 has precision 0.998, and its matches fall mostly in the top quartile of activations."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "token right after an early j (original positions 2-3), suppressed when the j follows x (and weakened after o/h/l/e)",
+    "better_predicate": "(phase == 0) & (prev_tok == tok('j')) & (t >= 2) & (t <= 3) & (prev2_tok != tok('x'))",
+    "better_predicate_test_f1": 0.88
+  },
+  "final_label": "token right after an early j (original positions 2-3), suppressed when the j follows x (and weakened after o/h/l/e)"
+}

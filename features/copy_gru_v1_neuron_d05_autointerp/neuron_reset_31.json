@@ -1,0 +1,60 @@
+{
+  "label": "2nd-3rd copy outputs in long sequences (L>=8)",
+  "predicate": "(phase==2) & isin(recall_idx,[1,2]) & (L>=8)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, on the steps that output the 2nd and 3rd original tokens (recall_idx 1 and 2, i.e. the first two steps after the step right after <DEL>), and almost only when the sequence is long (L=8 or 9; L=7 gives weak, sparse firing, L<=6 essentially never). It is position/length driven and not token-specific: rates are flat across in_tok, out_tok and next_out. Magnitude: L=9 activations are on average about 1.8x larger than L=8 ones (L=9 holds 69% of the mass), and t=10 is the peak step. It does not fire in the original phase, at the delimiter step, on recall_idx 0, or on later copy steps (recall_idx >= 4 is near zero, recall_idx 3 is weak). Misses are mostly weak activations at recall_idx 3 or in L=7 sequences; false positives are L=8/9 steps in the right slot where it stays below threshold.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 31,
+    "predicate": "(phase==2) & isin(recall_idx,[1,2]) & (L>=8)",
+    "split": "test",
+    "precision": 0.8347322503008423,
+    "recall": 0.8575380145877117,
+    "f1": 0.8459814622842857,
+    "mass_recall": 0.9443656341488166,
+    "correlation": 0.7786365881283184,
+    "n_active": 64712,
+    "n_predicted": 66480,
+    "coverage_by_activation_quartile": [
+      0.6217084930152058,
+      0.8450364692792681,
+      0.9661886512547905,
+      0.9972184448015824
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 31,
+    "predicate": "(phase==2) & isin(recall_idx,[1,2]) & (L>=8)",
+    "split": "dev",
+    "precision": 0.8343010138082488,
+    "recall": 0.8591654016543263,
+    "f1": 0.8465506715506715,
+    "mass_recall": 0.9460060548813206,
+    "correlation": 0.7787697763538931,
+    "n_active": 64558,
+    "n_predicted": 66482,
+    "coverage_by_activation_quartile": [
+      0.6228004956629491,
+      0.8491945477075589,
+      0.9670363715223992,
+      0.9976454551087428
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 31,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Upheld. The claims match the data. On test, the predicate scores precision 0.835, recall 0.858, F1 0.846 and mass recall 0.944. The unit never fires in the original or delimiter phases or at recall_idx 0, and recall_idx >= 4 is near zero. L=9 holds 69% of the activation mass versus 27% for L=8, which works out to about 1.8x higher mean activation. t=10 is the peak step (51% of mass). The L>=7 variant gives recall 0.94 but F1 0.74, as stated.",
+      "The two lengths behave differently. At L=9 the unit fires almost every time the predicate is true (precision 0.97). At L=8 it fires only about 70% of the time (precision 0.70; 0.76 at recall_idx 1, 0.65 at recall_idx 2). Almost all false positives are L=8 steps in the right slot where the unit stays below threshold. Within those L=8 steps, splitting by token type (digits vs letters, vowels, n_digits, in_count) moves precision only between about 0.65 and 0.77, so the token effect is small and there is no clean subclass to cut out.",
+      "The missed activations are the classes the explanation already names: weak firing in L=7 sequences (recall_idx 1-2; precision there only 0.17) and at recall_idx 3 with L>=8 (precision 0.10). Each holds only 2-3% of the activation mass, so adding either one lowers F1. Small tweaks such as dropping L=8 recall_idx 2 also lower F1 (0.78 or below). I found no better predicate."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "label": "token t as the first input (t=0)",
+  "predicate": "(in_tok == tok(\"t\")) & (t == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires at saturating, constant magnitude (1.851) whenever the very first original token is the letter t; 98% of activation mass. A weak tail (~0.04-0.19, about 21% of active steps but 1.6% of mass) fires when t is the second input (t=1) and was not the first token, on roughly 1 in 4 such cases. Does not fire on t later in the original sequence, on the delimiter, or in the copy phase (including when t is re-input/output), nor on any other token.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 25,
+    "predicate": "(in_tok == tok(\"t\")) & (t == 0)",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.785115843669553,
+    "f1": 0.8796245313196465,
+    "mass_recall": 0.9838511060019208,
+    "correlation": 0.9994163959947937,
+    "n_active": 21365,
+    "n_predicted": 16774,
+    "coverage_by_activation_quartile": [
+      0.14058405091725945,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 25,
+    "predicate": "(in_tok == tok(\"t\")) & (t == 0)",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.7907098868573066,
+    "f1": 0.8831245001332978,
+    "mass_recall": 0.9844789240198768,
+    "correlation": 0.9994413365827259,
+    "n_active": 20947,
+    "n_predicted": 16563,
+    "coverage_by_activation_quartile": [
+      0.16287951117051747,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 25,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claim holds on the test split: precision 1.0, recall 0.785, F1 0.880, mass recall 0.984, correlation 0.999. There are no false positives. The median and max activation are both 1.851, so the 'saturated maximum' claim is right.",
+      "The claims about where it does not fire hold. On the test split, 't' at t>=2 fires on 1 of 165,789 steps, and 't' in the copy phase fires on 1 of 91,234. The delimiter never fires (dev profile), and no input token other than 't' ever fires.",
+      "The tail description is slightly wrong. The explanation says the t=1 tail happens when 'the first token was something else'. But when the first token is also 't' (sequence 't t ...'), the feature fires at t=1 every time: precision 1.0 on 570 predicted steps. That case is only 0.1% of mass.",
+      "The 'about a quarter' tail rate depends heavily on the first token. For 't' at t=1, the feature fires 75% of the time when the first token is a digit, 100% when it is 't', and only 20% when it is another letter. The overall rate is 0.275. This is a systematic pattern, but it carries only about 1.6% of activation mass at magnitudes around 0.03-0.10 of the max. It does not undermine the label.",
+      "Adding the systematic tail cases (t=1 when the first token is a digit or 't') gives test F1 0.929 (precision 0.971, recall 0.891, mass recall 0.992). That improves F1, but the gain is in low-magnitude activations only."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(in_tok == tok(\"t\")) & ((t == 0) | ((t==1) & (isin(first_tok, DIGITS) | (first_tok==tok(\"t\")))))",
+    "better_predicate_test_f1": 0.929
+  }
+}

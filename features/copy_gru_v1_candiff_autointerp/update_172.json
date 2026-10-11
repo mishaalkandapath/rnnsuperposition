@@ -1,0 +1,62 @@
+{
+  "label": "one or two steps after an f in the early original phase",
+  "predicate": "(phase == 0) & (t <= 4) & ((prev_tok == tok(\"f\")) | (prev2_tok == tok(\"f\")))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires during the original (input) phase at steps 1-4 when the letter f was input one step back (strongest; prev_tok=f alone covers ~79% of activation mass) or two steps back (weaker, decaying trace). Largest activations (near max) come at the step right after a second consecutive f (e.g. g f f [x]). The current input token barely matters. Rate falls off sharply after t=4 and is zero from t=6 on. Never fires in the copy phase and only rarely, weakly, at the delimiter. Missed activations are tiny (about 2% of mass); false positives are mostly two-steps-after-f positions at later t.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 172,
+    "predicate": "(phase == 0) & (t <= 4) & ((prev_tok == tok(\"f\")) | (prev2_tok == tok(\"f\")))",
+    "split": "test",
+    "precision": 0.8971764879797476,
+    "recall": 0.8184155077960388,
+    "f1": 0.8559880820154793,
+    "mass_recall": 0.9672462673428291,
+    "correlation": 0.8156391927961351,
+    "n_active": 118650,
+    "n_predicted": 108234,
+    "coverage_by_activation_quartile": [
+      0.35454943869467015,
+      0.943700906853656,
+      0.9781875800687748,
+      0.9972355201941878
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 172,
+    "predicate": "(phase == 0) & (t <= 4) & ((prev_tok == tok(\"f\")) | (prev2_tok == tok(\"f\")))",
+    "split": "dev",
+    "precision": 0.8967453850757262,
+    "recall": 0.8163470564570202,
+    "f1": 0.854659605926459,
+    "mass_recall": 0.9678067498784453,
+    "correlation": 0.8164672203465472,
+    "n_active": 119312,
+    "n_predicted": 108615,
+    "coverage_by_activation_quartile": [
+      0.3446426176746681,
+      0.9424366367171785,
+      0.9802869786777525,
+      0.9980219927584819
+    ]
+  },
+  "gate": "update",
+  "feature": 172,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The false positives follow a clean token rule, not noise. The two-steps-back branch (prev2_tok==f, prev_tok!=f, t<=4) has precision of only about 0.77. Split by the intervening token prev_tok, precision is about 0.94-0.99 for nearly every token, but it collapses for k (0.008), w (0.006), 2 (0.024), m (0.030), t (0.048) and y (0.18), and is partial for v (0.42). Each of these tokens has about 1.5k predicted steps on dev. So when one of these tokens follows the f, the trace from that f is cut off. This accounts for almost all of the roughly 11k test false positives (rendered examples include g q f [k] *b*, g d f [t] *j*, c f [m] *w*, m n f [w] *w*). The explanation dismisses these as 'positions two steps after an f where the feature stays off'. It never names the blocking-token class.",
+      "Claims that check out: prev_tok=f alone (t<=4) gives precision 0.99 and 78.5% of activation mass (the claimed ~79% is correct). There are zero copy-phase activations. At the delimiter, the rate is 0.3% and the mass share is 0.7%. The rate at t=5 is 1%, at t=6 there are 94 activations, and from t=7 on there are none. Note the claim 'zero from t=6 on' is slightly off: 94 activations occur at t=6. f f [x] with t<=4 has precision 1.0, which matches the top examples. Missed activations are about 3.3% of mass on test, small and scattered.",
+      "Reported test scores reproduce: P 0.897, R 0.818, F1 0.856, mass recall 0.967.",
+      "Adding the blocking-token exception raises test precision from 0.897 to 0.987, with no loss of mass recall."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "one step after an f in the early original phase (t<=4); a weaker trace two steps after, unless the intervening token is k/m/t/w/y/2/v",
+    "better_predicate": "(phase==0)&(t<=4)&((prev_tok==tok('f'))|((prev2_tok==tok('f'))&~isin(prev_tok,[tok(c) for c in ['k','m','t','w','2','y','v']])))",
+    "better_predicate_test_f1": 0.889
+  },
+  "final_label": "one step after an f in the early original phase (t<=4); a weaker trace two steps after, unless the intervening token is k/m/t/w/y/2/v"
+}

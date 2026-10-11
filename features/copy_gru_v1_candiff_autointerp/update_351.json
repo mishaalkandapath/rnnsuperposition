@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input g (fed-back g), from the 4th output onward",
+  "predicate": "(phase == 2) & (in_tok == tok(\"g\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase on steps whose input is the token g, i.e. the model just emitted g and it is fed back in. 56902 of 56903 dev activations have in_tok = g. It never fires on g in the original phase or at the delimiter, and never on any other token. Strength rises with position in the copy: almost nothing at recall_idx 1-2 (g fed back as the 1st/2nd copied token, lowest-quartile activations around 0.1 of max), about 3.4% firing rate per step from recall_idx 3 onward, and top activations come late in the copy, often on the last or second-to-last output. Inside that window the feature still stays off on some early copy steps of long sequences (recall_idx 3 with many outputs left), so it is somewhat gated by how close the copy is to finishing (to_go small). Adding to_go <= 4 does not improve F1. Plain in_tok==g in the copy phase gets mass recall 1.0 at precision 0.62.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 351,
+    "predicate": "(phase == 2) & (in_tok == tok(\"g\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9213219170930353,
+    "recall": 0.9339837341001711,
+    "f1": 0.927609619343817,
+    "mass_recall": 0.9766445639913265,
+    "correlation": 0.8880144125668095,
+    "n_active": 56683,
+    "n_predicted": 57462,
+    "coverage_by_activation_quartile": [
+      0.7572507233081646,
+      0.97974737139228,
+      0.9990120668971844,
+      0.9999294283697954
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 351,
+    "predicate": "(phase == 2) & (in_tok == tok(\"g\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9195724366957244,
+    "recall": 0.9343268368978789,
+    "f1": 0.9268909247814224,
+    "mass_recall": 0.9759676743361311,
+    "correlation": 0.8881569897780247,
+    "n_active": 56903,
+    "n_predicted": 57816,
+    "coverage_by_activation_quartile": [
+      0.7596654013777591,
+      0.9785603823984255,
+      0.9990861802333755,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 351,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The token part of the claim holds. The feature fires only in the copy phase (100% of activation mass), and 56902 of the 56903 dev activations have in_tok = g (the remaining one is on 'a'). It never fires in the original phase or at <DEL>. With no position condition, the test scores are P 0.624 / R 1.0 / F1 0.769, as reported. The original predicate reproduces on test: P 0.921, R 0.934, F1 0.928, mass recall 0.977.",
+      "The position condition 'recall_idx >= 3' has the wrong shape. The real gate depends jointly on recall_idx and to_go. Firing rates (precision) on dev, within copy-phase g:\n- recall_idx 4: 1.0 at every to_go.\n- recall_idx 3: 1.0 / 1.0 / 0.95 at to_go 0 / 1 / 2, then only 0.56 / 0.33 / 0.48 at to_go 3 / 4 / 5.\n- recall_idx 2: 1.0 / 0.98 at to_go 0 / 1, then 0.06 at to_go 2 and 0 after.\n- recall_idx 1: 0.72 at to_go 1, 0.20 at to_go 2, about 0 after.",
+      "Systematic misses: in short sequences (L = 3-4), g fed back at recall_idx 2 fires almost every time (464/464 and 2362/2362 dev steps at to_go 0 and 1). This contradicts the explanation's claim that it is 'near zero at recall_idx 1-2 (about 0.1 of max)'. It is true only when to_go >= 2. The misses on test hold 2.3% of activation mass.",
+      "Systematic false positives: the 4521 test false positives are concentrated at recall_idx 3 with to_go >= 3, i.e. g at original position 2 in sequences with L >= 7. Examples: 'j z g c h b n <DEL> j z *g*', 'w i g s l n o k i <DEL> w i *g*'. There the feature fires only about 33-56% of the time. The explanation's remark that it 'partly depends on being close to the end' points at this, but the predicate does not capture it.",
+      "Adding to_go <= 4 did not help because the boundary is not a single to_go cut. A cut depending on both recall_idx and to_go, roughly recall_idx > to_go, or recall_idx >= 4, fixes both error classes. The rule (recall_idx >= 4) | (recall_idx > to_go) has test P 0.996, R 0.914, F1 0.953, mass recall 0.988. Also counting the recall_idx 3, to_go 3 cell gives test F1 0.959, mass recall 0.993."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase fed-back g, late in the copy: from the 5th output onward, or in the later half of the copy (recall_idx > to_go)",
+    "better_predicate": "(phase == 2) & (in_tok == tok('g')) & ((recall_idx >= 4) | (recall_idx > to_go) | ((recall_idx == 3) & (to_go <= 3)))",
+    "better_predicate_test_f1": 0.9588
+  },
+  "final_label": "copy-phase fed-back g, late in the copy: from the 5th output onward, or in the later half of the copy (recall_idx > to_go)"
+}

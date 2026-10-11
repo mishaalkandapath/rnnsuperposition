@@ -1,0 +1,62 @@
+{
+  "label": "One of 12 specific tokens (c,3,x,q,y,v,l,t,e,g,o,a) arriving at the start of the sequence",
+  "predicate": "isin(in_tok,[tok(\"c\"),tok(\"3\"),tok(\"x\"),tok(\"q\"),tok(\"y\"),tok(\"v\"),tok(\"l\"),tok(\"t\"),tok(\"e\"),tok(\"g\"),tok(\"o\"),tok(\"a\")]) & ((t==0) | ((t==1) & ~isin(prev_tok,[tok(\"c\"),tok(\"3\"),tok(\"x\"),tok(\"q\"),tok(\"y\"),tok(\"v\"),tok(\"l\"),tok(\"t\"),tok(\"e\"),tok(\"g\"),tok(\"o\"),tok(\"a\")])))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires on a fixed set of 12 input tokens (c,3,x,q,y,v,l,t,e,g,o,a) when they come at the very start of the sequence. At t=0 the rule is exact on dev: precision 1.0, and every t=0 step with one of these tokens fires (62% of activations, 72% of activation mass). Magnitude depends on the token: c, 3, x and q are strongest; a and o are weakest. Weaker firing at t=1 when the token is in the set and the previous token was not. Residual (about 14% of mass): weak firing at t=2, and in the copy phase of short sequences (mostly L=3-4) when an early in-set token is fed back in. The largest single activations of all are on the copy-phase re-input of the first token at t=L+1 when L=3. Never fires at the delimiter, and almost never on original tokens after position 2.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 120,
+    "predicate": "isin(in_tok,[tok(\"c\"),tok(\"3\"),tok(\"x\"),tok(\"q\"),tok(\"y\"),tok(\"v\"),tok(\"l\"),tok(\"t\"),tok(\"e\"),tok(\"g\"),tok(\"o\"),tok(\"a\")]) & ((t==0) | ((t==1) & ~isin(prev_tok,[tok(\"c\"),tok(\"3\"),tok(\"x\"),tok(\"q\"),tok(\"y\"),tok(\"v\"),tok(\"l\"),tok(\"t\"),tok(\"e\"),tok(\"g\"),tok(\"o\"),tok(\"a\")])))",
+    "split": "test",
+    "precision": 0.8380352172145248,
+    "recall": 0.8300007744133818,
+    "f1": 0.8339986460303009,
+    "mass_recall": 0.864005474720871,
+    "correlation": 0.725040966664185,
+    "n_active": 64565,
+    "n_predicted": 63946,
+    "coverage_by_activation_quartile": [
+      0.6939041011027134,
+      0.8169877950560684,
+      0.922681370423146,
+      0.8864382628089957
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 120,
+    "predicate": "isin(in_tok,[tok(\"c\"),tok(\"3\"),tok(\"x\"),tok(\"q\"),tok(\"y\"),tok(\"v\"),tok(\"l\"),tok(\"t\"),tok(\"e\"),tok(\"g\"),tok(\"o\"),tok(\"a\")]) & ((t==0) | ((t==1) & ~isin(prev_tok,[tok(\"c\"),tok(\"3\"),tok(\"x\"),tok(\"q\"),tok(\"y\"),tok(\"v\"),tok(\"l\"),tok(\"t\"),tok(\"e\"),tok(\"g\"),tok(\"o\"),tok(\"a\")])))",
+    "split": "dev",
+    "precision": 0.8371533097776805,
+    "recall": 0.8292705590831656,
+    "f1": 0.8331932903868298,
+    "mass_recall": 0.8622562774164628,
+    "correlation": 0.7249913721916399,
+    "n_active": 64570,
+    "n_predicted": 63962,
+    "coverage_by_activation_quartile": [
+      0.7076132069627702,
+      0.8041256272068389,
+      0.911659026142981,
+      0.8936934704497584
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 120,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The t=0 core claim holds on test: an in-set token at t=0 gives precision 1.0, recall 0.62 and mass recall 0.72.",
+      "The t=1 rule ('previous token not in the set') is wrong. That clause has only 0.565 precision on test, so about 44% of its t=1 predictions are false positives, and they are systematic. Firing at t=1 depends on the specific previous token, not on whether it is in the set. Measured on dev: precision is 1.0 after k or u, 0.92 after w, 0.84 after b, 0.82 after p and 0.74 after s or z. It is about 0.4-0.5 after d, h, m, n, r, 2 or j, 0.33 after f, 0.16 after 0 or 1, and 0.0 after i. After an in-set token it is about 0, except after t (0.40) and e (0.17).",
+      "The copy-phase residual is mischaracterized. The explanation says it fires 'when an early in-set token is fed back in'. In fact, at L=3, recall_idx=1 (t=4) it also fires 53% of the time when the re-input token is NOT in the set (e.g. j, z), and 97.5% when it is. So that position fires largely regardless of which token comes in.",
+      "Correct claims: it never fires at the delimiter, and is essentially silent on original tokens at t>=3 (0 of 346k steps). Token ordering by magnitude (c, 3, x, q strongest; a, o weakest by mass share) matches the profile."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "First token of the sequence is one of c,3,x,q,y,v,l,t,e,g,o,a (exact at t=0). Weaker at t=1 when such a token follows a specific first token (k,u,w,b,p,s,z strongly; d,h,m,n,r,2 partly; never i,0,1 or most in-set tokens). Also fires on the first copy-phase re-input when L=3.",
+    "better_predicate": "(isin(in_tok,[tok(\"c\"),tok(\"3\"),tok(\"x\"),tok(\"q\"),tok(\"y\"),tok(\"v\"),tok(\"l\"),tok(\"t\"),tok(\"e\"),tok(\"g\"),tok(\"o\"),tok(\"a\")]) & ((t==0) | ((t==1) & isin(prev_tok,[tok('b'),tok('k'),tok('p'),tok('s'),tok('u'),tok('w'),tok('z'),tok('d'),tok('h'),tok('m'),tok('n'),tok('r'),tok('2')])))) | ((phase==2)&(recall_idx==1)&(L==3))",
+    "better_predicate_test_f1": 0.868
+  },
+  "final_label": "First token of the sequence is one of c,3,x,q,y,v,l,t,e,g,o,a (exact at t=0). Weaker at t=1 when such a token follows a specific first token (k,u,w,b,p,s,z strongly; d,h,m,n,r,2 partly; never i,0,1 or most in-set tokens). Also fires on the first copy-phase re-input when L=3."
+}

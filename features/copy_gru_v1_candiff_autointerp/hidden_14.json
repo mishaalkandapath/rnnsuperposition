@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input token u",
+  "predicate": "(phase == 2) & (in_tok == tok(\"u\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase on steps whose input is the letter u (i.e. the model has just emitted u and it is fed back). Never fires in the original phase or on <DEL>, and never on any other input token. Recall is 100%; false positives are copy-phase u inputs at recall_idx 1 (u as the very first original token, fed back at step L+1), where it is usually silent. Magnitude is largest on the first u of a run of repeated u tokens (e.g. ...u u...), and decays on the second and third consecutive u; isolated u inputs give moderate activations.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 14,
+    "predicate": "(phase == 2) & (in_tok == tok(\"u\"))",
+    "split": "test",
+    "precision": 0.8040604343720491,
+    "recall": 1.0,
+    "f1": 0.8913896885632033,
+    "mass_recall": 1.0,
+    "correlation": 0.7674348544010435,
+    "n_active": 73229,
+    "n_predicted": 91074,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 14,
+    "predicate": "(phase == 2) & (in_tok == tok(\"u\"))",
+    "split": "dev",
+    "precision": 0.8058767648311331,
+    "recall": 1.0,
+    "f1": 0.8925047162966188,
+    "mass_recall": 1.0,
+    "correlation": 0.7687190511082024,
+    "n_active": 73803,
+    "n_predicted": 91581,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 14,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The factual claims hold up. Phase profile: 0 activations in the original phase and 0 on <DEL>; all activation mass is in the copy phase. by in_tok: all 73,803 active steps have input u, and every other token has 0. Recall is 1.0 on dev and test, and test P/R/F1 is 0.804/1.0/0.891, which matches the report.",
+      "The false positives are systematic, but the explanation already says so. The u fed back at recall_idx 1 (the first original token) fires only 38% of the time (6,443 of 16,760). That accounts for about 10.3k of the ~17.8k dev false positives. Test misses show the same pattern: most of the listed FPs are a u at orig position 0 being re-input at step L+1.",
+      "The remaining false positives at recall_idx >= 2 (~7.5k) look like scattered noise. Precision by to_go: 0.78 at to_go=0 (the last step), 0.91 at 1, 0.93 at 2, 0.95 at 3 or more. So the feature is somewhat weaker on the final copy step, but no single token, length or history class explains the rest. Trying to exclude late, final-step cases (to_go >= 1 or recall_idx <= 3) lowered test F1 to 0.838.",
+      "Magnitude claims check out, using mass share divided by count share as a proxy for relative mean. First u of a run (prev not u, next input u) has precision 0.98 and about 1.9x the average magnitude. A u right after another u has precision 0.79 and about 0.82x. A triple u is lower still (0.58x), though n is tiny. Isolated u is about 0.97x, i.e. moderate. Separately, recall_idx 2 is the strongest position: precision 0.98, about 1.33x magnitude.",
+      "No activations at all when correct == 0. This is not a counterexample: copy-phase u inputs with correct == 0 never occur in the data, so the label is untested off-distribution there rather than wrong.",
+      "The label 'copy-phase input token u' does not overclaim relative to the predicate. A slightly tighter version adds recall_idx >= 2 (excludes re-input of the first original token): test F1 0.906 vs 0.891, with mass recall 0.963."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok('u')) & (recall_idx >= 2)",
+    "better_predicate_test_f1": 0.9056
+  }
+}

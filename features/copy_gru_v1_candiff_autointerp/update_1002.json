@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input s (fed-back s) at recall_idx >= 3",
+  "predicate": "(phase == 2) & (in_tok == tok(\"s\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token detector for the letter s being fed back as input during the copy phase (i.e. the model just output an s that was original token >= 2), restricted to later copy steps. 98.6% of activation mass is on in_tok = s in the copy phase; it is silent in the original phase and at <DEL> (s in the original phase does not fire it). Magnitude grows with how late the step is: s inputs at recall_idx 2 are weak or inactive (precision of s-input at recall_idx>=2 drops to 0.76), and the strongest activations (~0.95-1.0 of max) are s inputs at the last few copy steps (to_go 0-2). Missed activations are mostly very weak (lowest quartile, 3.7% of mass) firings on other tokens late in the copy phase. It does not depend on output token, first token, or digit count.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 1002,
+    "predicate": "(phase == 2) & (in_tok == tok(\"s\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9354442213143134,
+    "recall": 0.7553011559804867,
+    "f1": 0.8357758787363211,
+    "mass_recall": 0.9630808380697252,
+    "correlation": 0.893415742851124,
+    "n_active": 71541,
+    "n_predicted": 57764,
+    "coverage_by_activation_quartile": [
+      0.1974169741697417,
+      0.8269499580654179,
+      0.9970366228683254,
+      0.999832261671792
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 1002,
+    "predicate": "(phase == 2) & (in_tok == tok(\"s\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9343832931503998,
+    "recall": 0.7562293816242016,
+    "f1": 0.8359195580659177,
+    "mass_recall": 0.9634160187891826,
+    "correlation": 0.8925577323160035,
+    "n_active": 71235,
+    "n_predicted": 57653,
+    "coverage_by_activation_quartile": [
+      0.19776517491156156,
+      0.8304228199225111,
+      0.9970239766410242,
+      0.9997192273135669
+    ]
+  },
+  "gate": "update",
+  "feature": 1002,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The recall_idx >= 3 cutoff misses a real class of firings. Copy-phase s inputs at recall_idx 2 with to_go <= 1 (the end of L=3/4 sequences) fire with precision 0.976 on test, which is 4.0% of active steps and 2.2% of mass. Among s at recall_idx 2, the inactive ones are at to_go >= 2: to_go 2 has precision 0.065 and to_go >= 3 has precision 0.0. So the claim 'At recall_idx 2, s inputs are weak or don't fire at all' is wrong for short sequences. What gates the feature is how late the step is, judged from both ends (recall_idx and to_go), not recall_idx alone.",
+      "There is also a to_go ceiling: no copy-phase activations at all at to_go >= 6, and s at to_go == 5 has precision only 0.19 (dev). Most remaining false positives (test misses output) are s at recall_idx 3 early in the copy phase of L=8/9 sequences (for example 'm y s j b m d 1 g <DEL> m y *s*'). The 'later the step, the stronger' description is right, but the predicate only half-encodes it.",
+      "Checked claims that hold: 98.6% of mass is on s inputs; the original phase is nearly silent (14 activations); <DEL> is silent; s with recall_idx >= 2 has precision about 0.76-0.84, depending on whether to_go is also capped; the strongest activations are at to_go 0-2. Reported test scores reproduce (P 0.935, R 0.755, F1 0.836, mass recall 0.963).",
+      "Residual misses with the improved predicate are diffuse weak non-s activations late in the copy phase (in_tok != s & to_go <= 4: precision 0.007, 1.5% of mass), so they count as scattered noise. They cap count recall at about 0.80."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase fed-back s input on late copy steps (recall_idx >= 3, or the last two steps of a short sequence)",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"s\")) & ((recall_idx >= 3) | (to_go <= 1))",
+    "better_predicate_test_f1": 0.8575
+  },
+  "final_label": "copy-phase fed-back s input on late copy steps (recall_idx >= 3, or the last two steps of a short sequence)"
+}

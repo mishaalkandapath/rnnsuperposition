@@ -1,0 +1,63 @@
+{
+  "label": "final copy step of length-3 sequences",
+  "predicate": "(L == 3) & (t == 5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost exclusively at the last output step (t=5, outputting orig(2)) of L=3 sequences, i.e. input is the second original token fed back, two steps after <DEL>. Active on ~95% of such steps and carries ~93% of activation mass; all top activations are here. Never fires in the original or delimiter phases, nor on first occurrences of a token. Remaining weak activations (~7% of mass, low quartile) occur at late/final copy steps of longer sequences (e.g. t=11 for L=6, t=17 for L=9, t=6 for L=4). Magnitude varies with token identity (in_tok m, b, i, v, j give the highest values) but this was not further modeled.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 85,
+    "predicate": "(L == 3) & (t == 5)",
+    "split": "test",
+    "precision": 0.9443164362519201,
+    "recall": 0.7388822115384616,
+    "f1": 0.8290627107215104,
+    "mass_recall": 0.9315004682403849,
+    "correlation": 0.8706880523319315,
+    "n_active": 3328,
+    "n_predicted": 2604,
+    "coverage_by_activation_quartile": [
+      0.23197115384615385,
+      0.7379807692307693,
+      0.9855769230769231,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 85,
+    "predicate": "(L == 3) & (t == 5)",
+    "split": "dev",
+    "precision": 0.94510556621881,
+    "recall": 0.7275413711583925,
+    "f1": 0.8221739856403407,
+    "mass_recall": 0.9268135541425553,
+    "correlation": 0.8711034122491532,
+    "n_active": 3384,
+    "n_predicted": 2605,
+    "coverage_by_activation_quartile": [
+      0.2115839243498818,
+      0.710401891252955,
+      0.9893617021276596,
+      0.9988179669030733
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 85,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Store mismatch: the user asked to run the baseline on features/copy_transcoder_v2_1of5 (the 1/5 subsample), but this verification ran, as the task instructed, on features/copy_gru_v1_neuron_baseline_store (dev has ~100k sequences). The verdict holds only for that store.",
+      "Recall by count is only 0.74 on test. 869 active steps are missed. They carry just 6.8% of the mass, but about 26% of them fall in the second activation quartile, not only the lowest one as the explanation says.",
+      "The misses are spread out: late or final copy steps of longer sequences, often with input 'i'. Adding (L!=3)&copy&(to_go<=1)&(in_tok=='i') drops test F1 to 0.42, and adding the L=9,t=17 or L=4,t=6 / L=6,t=11 cells drops precision to 0.14 or lower. No predicate captured these misses better.",
+      "The 145 false positives (inactive steps where L==3, t==5) show no clear token pattern. Excluding 'y' or restricting to digits does not help.",
+      "'Never first occurrence' is trivially true: the unit fires only in the copy phase, where every input token has already appeared."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "final copy step of length-3 sequences",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "final copy step of length-3 sequences"
+}

@@ -1,0 +1,65 @@
+{
+  "label": "<DEL> delimiter step in longer sequences (L >= 6)",
+  "predicate": "(phase == 1) & (L >= 6)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Low end of candidate unit 4 is a delimiter detector: 99.4% of activation mass falls on the <DEL> step (t == L, the step that outputs original token 0). Firing depends on sequence length. It almost never fires at the delimiter for L = 3-4, about 33% of the time for L = 5, and 63-80%+ for L >= 6; the delimiter rate rises from 0.13 at t=6 to 0.18 at t=8-9, and the strongest activations are at L = 8-9. Output token, first token and digit count have little effect (lift spread of only about 1.2x). It does not fire during the copy phase (82 activations in total), and it fires only weakly, rarely, late in the original phase (orig_idx 6-8, mostly on a/m/v/n inputs) right before <DEL>. Misses are mostly weak delimiter activations at L = 4-5. False positives are L >= 6 delimiter steps where it stays below threshold, and adding conditions on token content did not separate them.",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 4,
+    "predicate": "(phase == 1) & (L >= 6)",
+    "split": "test",
+    "precision": 0.8619869304664679,
+    "recall": 0.8857531872756529,
+    "f1": 0.8737084687819544,
+    "mass_recall": 0.9466000946108234,
+    "correlation": 0.8126736074754568,
+    "n_active": 64632,
+    "n_predicted": 66414,
+    "coverage_by_activation_quartile": [
+      0.6984775343483104,
+      0.8877336303998019,
+      0.9623096917935388,
+      0.9944918925609605
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 4,
+    "predicate": "(phase == 1) & (L >= 6)",
+    "split": "dev",
+    "precision": 0.8633290672287887,
+    "recall": 0.8870633373557351,
+    "f1": 0.8750352910654469,
+    "mass_recall": 0.9454482181213619,
+    "correlation": 0.8127728572566032,
+    "n_active": 64638,
+    "n_predicted": 66415,
+    "coverage_by_activation_quartile": [
+      0.7084158415841584,
+      0.8853341584158416,
+      0.961816944117829,
+      0.9926975679188068
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 4,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The central predicate holds up. (phase==1)&(L>=6) reproduces the reported scores on dev (P 0.863, R 0.887, F1 0.875) and on test (P 0.862, R 0.886, F1 0.874, mass recall 0.947). 99.4% of activation mass is on the <DEL> step.",
+      "Factual error: the claim that the firing rate 'rises from 0.13 at t=6 to 0.18 at t=8-9' misreads the by-t table, where those are rates over all steps at that t. The real firing rates at the delimiter are 0.755 for L=6, 0.888 for L=7, 0.903 for L=8 and 0.907 for L=9. So the unit fires on most delimiters for L>=6, which is much more often than the explanation says.",
+      "The L=5 figure is right: 33% of delimiter steps fire. The L=4 rate is 3.5%, which is low, but 'almost never' slightly overstates it.",
+      "The claim that token identity 'has little effect' overstates things. Among delimiter steps with L>=6, precision depends on which tokens are in the sequence. Precision when the token is present ranges from about 0.78 (g, r, k, 2, j) to about 0.94 (x, m, 1). With none of g/j/k/r/2 present, precision is 0.965. With two or more present, it falls sharply. This explains most of the roughly 14% false positives at L>=6. The effect is graded and additive rather than a clean rule, so it does not give a better standalone predicate, but it is a systematic modulation and not noise.",
+      "The L=6 delimiter rate (0.76) is clearly below the rate for L>=7 (about 0.89-0.91), so even the threshold at L>=6 is a soft cutoff.",
+      "Adding the L=5 delimiters whose sequences contain at least 2 of m/x/1/q/z/0 gives a small improvement: test F1 0.889 against 0.874, and mass recall 0.976 against 0.947. The token set was chosen on dev.",
+      "Misses on test (5.3% of mass) are almost all weak delimiter activations at L=4-5, plus a small set of weak late-original-phase activations on a/m/v/n. This matches the explanation."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "The <DEL> delimiter step. It fires on about 76-91% of delimiters for L>=6, about 33% for L=5 and rarely for shorter sequences. Strength grows with L and is moderately boosted or suppressed by which tokens were in the original sequence.",
+    "better_predicate": "(phase == 1) & ((L >= 6) | ((L == 5) & (n_seen([tok('m'),tok('x'),tok('1'),tok('q'),tok('z'),tok('0')]) >= 2)))",
+    "better_predicate_test_f1": 0.889
+  },
+  "final_label": "The <DEL> delimiter step. It fires on about 76-91% of delimiters for L>=6, about 33% for L=5 and rarely for shorter sequences. Strength grows with L and is moderately boosted or suppressed by which tokens were in the original sequence."
+}

@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input z (fed back from original position >= 2)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"z\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the fed-back input token is z and recall_idx >= 3 (i.e. the z being re-read was original token 2 or later). Never fires in the original or delimiter phase, including on z in the original sequence, and essentially never on any input other than z (o is a tiny exception). At recall_idx 2 it fires weakly and only sometimes, which accounts for most of the lowest-quartile misses. Magnitude is larger later in the copy phase (mass per activation rises with t) and is highest on runs of consecutive z (top examples are zz near the end of the sequence). It does not depend on out_tok, prev_tok, first_tok, or L beyond these positional effects.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 332,
+    "predicate": "(phase == 2) & (in_tok == tok(\"z\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9972626323491435,
+    "recall": 0.9567113151766397,
+    "f1": 0.9765661878751096,
+    "mass_recall": 0.9918918526263503,
+    "correlation": 0.9282143099993756,
+    "n_active": 60547,
+    "n_predicted": 58085,
+    "coverage_by_activation_quartile": [
+      0.8276408799630045,
+      0.999207240536434,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 332,
+    "predicate": "(phase == 2) & (in_tok == tok(\"z\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9971354166666667,
+    "recall": 0.9542599853791454,
+    "f1": 0.9752266784392298,
+    "mass_recall": 0.9912448487080477,
+    "correlation": 0.9283284436854676,
+    "n_active": 60188,
+    "n_predicted": 57600,
+    "coverage_by_activation_quartile": [
+      0.8181697348308633,
+      0.9988702066857181,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 332,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: recall_idx is the index of the token being output, so the fed-back z at recall_idx r is original token r-1. That means recall_idx>=3 corresponds to z from original position >=2, which matches the label and explanation. The wording is correct but easy to misread.",
+      "Misses (2621 test steps, 0.8% of mass) are almost all weak activations (~0.04-0.11 of max) on z fed back from original position 1 (recall_idx==2). That predicate has precision 0.14 and mass recall 0.008, which matches the claim that recall_idx 2 fires weakly and only sometimes. Widening to recall_idx>=2 drops F1 to 0.89.",
+      "False positives (159 test steps) are concentrated on z from original position 2 (recall_idx==3) in longer sequences: precision 0.983 for L>=7 against 1.000 for L<=5. This is a small effect, not a meaningful systematic gap.",
+      "The o exception is confirmed as negligible: copy-phase in_tok==o has precision 0.002.",
+      "The claim that magnitude rises with t checks out: activation mass per active step goes from about 1.2e-5 at t=9 to about 2.2e-5 at t=17, and it rises the same way with recall_idx. Phase claims are confirmed: there is zero activation in the original and delimiter phases."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

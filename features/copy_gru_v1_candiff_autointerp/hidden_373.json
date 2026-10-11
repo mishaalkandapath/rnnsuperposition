@@ -1,0 +1,64 @@
+{
+  "label": "copy-phase input n (fed-back n), from 2nd copy input on",
+  "predicate": "(phase == 2) & (in_tok == tok(\"n\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, only when the input token is n, i.e. the n the model just emitted is fed back as input. All activation mass is on in_tok == n. It never fires during the original phase (including on n there) or at the delimiter, and is essentially silent on the first copy input (recall_idx 1). Magnitude grows the further into the copy phase the n appears: the top activations are n inputs near the end of long sequences (recall_idx 6-8), and the lowest-quartile examples are n at recall_idx 1-3. About 20% of copy-phase n inputs stay inactive; these are mostly early-position n, and repeated or consecutive n also tend to be weak.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 373,
+    "predicate": "(phase == 2) & (in_tok == tok(\"n\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.7966564083267259,
+    "recall": 0.9997133075872304,
+    "f1": 0.8867083495377988,
+    "mass_recall": 0.9999462509885979,
+    "correlation": 0.7614134955045702,
+    "n_active": 59297,
+    "n_predicted": 74411,
+    "coverage_by_activation_quartile": [
+      0.9988532883642496,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 373,
+    "predicate": "(phase == 2) & (in_tok == tok(\"n\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.7989735278227985,
+    "recall": 0.9996113486202876,
+    "f1": 0.8881015470766183,
+    "mass_recall": 0.999926093701376,
+    "correlation": 0.7621543672512349,
+    "n_active": 59179,
+    "n_predicted": 74040,
+    "coverage_by_activation_quartile": [
+      0.9984454207502534,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 373,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Mostly correct: on dev, all activation mass is on phase 2 with in_tok == n. Phase 0 and the delimiter step have 0 activations, and recall_idx 1 has only 23 activations out of about 59k. Test recall is 0.9997 and mass recall is 0.99995.",
+      "There is a systematic false-positive class at recall_idx == 2, i.e. the 2nd copy input, which only fires reliably in short sequences. Test precision at recall_idx==2 is 0.473, against 0.89 for recall_idx>=3. On dev, the recall_idx==2 slice has precision 0.79 for L<=5 but only 0.28 for L>=7. This slice holds about 58% of the 15,131 test false positives. So the label 'from 2nd copy input on' overclaims: the 2nd copy input is mostly silent in long sequences. The cutoff behaves like a to_go threshold (to_go <= 3) at recall_idx 2.",
+      "The explanation says the 20% of inactive cases are 'mostly early-position n'. That is directionally right, but it misses that the dependence is on sequence length / to_go and not just on position. In the recall_idx==2 slice the main factor is L, not first_tok or next_out (precision 0.47-0.55 across those splits).",
+      "The claim that repeated or back-to-back n is weak is only marginal. For recall_idx>=3, precision is 0.854 when prev_tok==n vs 0.89 overall, and in_count>=2 vs ==1 gives 0.883 vs 0.892. Excluding prev_tok==n lowers F1 (0.875), which matches what the agent found.",
+      "'Stronger later' holds for magnitude: the top examples are at recall_idx 6-8. The firing rate, though, is flat from recall_idx 3 to 8 (0.028-0.032 per step on dev), so lateness drives magnitude, not whether the feature fires at all.",
+      "The remaining false positives at recall_idx>=3 (about 11%) showed no clear token, length, to_go or repeat pattern in the slices I checked. They look like scattered noise or a magnitude threshold."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input n (fed-back n), from the 3rd copy input on (the 2nd copy input fires only when <=3 outputs remain); stronger later in the copy",
+    "better_predicate": "(phase == 2) & (in_tok == tok('n')) & ((recall_idx >= 3) | ((recall_idx == 2) & (to_go <= 3)))",
+    "better_predicate_test_f1": 0.91
+  },
+  "final_label": "copy-phase input n (fed-back n), from the 3rd copy input on (the 2nd copy input fires only when <=3 outputs remain); stronger later in the copy"
+}

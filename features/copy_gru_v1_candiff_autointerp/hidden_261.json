@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input k (fed-back k), from the 3rd output on",
+  "predicate": "(phase == 2) & (in_tok == tok(\"k\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token detector for the letter k, active only in the copy phase: it fires when the fed-back input is k, meaning the model just output k. Essentially 100% of activation mass is on copy-phase steps whose input is k. It never fires on k during the original phase, at the delimiter, or on any other token. It is weak or absent at recall_idx 1, when k is the first copied token. Within a run of repeated ks, magnitude falls steeply (k k k gives about 1.0, 0.65, 0.2 of max), so the first k in the copy stream is strongest. The largest activations come when k is the 2nd or 3rd output (e.g. a k ... -> a [k]). Some fed-back ks stay inactive (~15% false positives), more often near the end of the sequence; requiring to_go >= 1 raises precision but costs recall.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 261,
+    "predicate": "(phase == 2) & (in_tok == tok(\"k\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.8486658434446472,
+    "recall": 0.9733378488631641,
+    "f1": 0.9067364571756354,
+    "mass_recall": 0.9925177916256391,
+    "correlation": 0.7837281800055894,
+    "n_active": 64961,
+    "n_predicted": 74504,
+    "coverage_by_activation_quartile": [
+      0.9091188966196663,
+      0.9846674876847291,
+      0.9995689655172414,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 261,
+    "predicate": "(phase == 2) & (in_tok == tok(\"k\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.847816456121038,
+    "recall": 0.9751250694830461,
+    "f1": 0.9070253423624626,
+    "mass_recall": 0.9930378625382563,
+    "correlation": 0.7831849827863252,
+    "n_active": 64764,
+    "n_predicted": 74489,
+    "coverage_by_activation_quartile": [
+      0.9130381075906367,
+      0.988141560125996,
+      0.9993206102155519,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 261,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I reproduced the core scores. Dev: P 0.848, R 0.975, F1 0.907, mass recall 0.993. Test: P 0.849, R 0.973, F1 0.907, mass recall 0.993. The feature is active on 0 original-phase steps and 0 delimiter steps. Of 64,764 active steps, 64,763 have in_tok == k; the one exception has input a. So 'fed-back k detector' holds.",
+      "'Weak at recall_idx 1' holds. A k fed back at recall_idx 1 fires with precision 0.097 and carries 0.7% of activation mass. The claim that the largest activations are on the 2nd or 3rd output also holds: recall_idx 2 and 3 have the highest mass share (0.25 and 0.27) and the highest precision (0.93 and 0.90).",
+      "'More often inactive near the end' holds. Precision is 0.73 at to_go==0 versus 0.92 at to_go>=3, and it falls steadily with recall_idx (0.85 at 4, 0.76 at 6, 0.73 at 8).",
+      "The explanation misses a source of false positives. The token before the k strongly changes whether it fires. When the previous token is u, z, m or e, precision is only 0.50 to 0.60, and w gives 0.72. When it is a, l, r, y, g or i, precision is 0.99 or higher. These four tokens account for roughly 40% of the 11k false positives. This matters more than the end-of-sequence position the explanation blames. It is not a refutation, though: excluding those previous tokens costs as much recall as it gains precision. Test F1 is 0.890 when excluding them, and 0.906 when excluding them only at to_go<3, versus 0.907 for the original predicate.",
+      "The magnitude claim for runs of k ('k k k gives about 1.0, 0.65, 0.2 of max') is only partly right. Mass divided by recall is a proxy for mean magnitude. It is 1.73x average for the first k of a run (the next input is also k), 0.95x for a second k and 0.97x for a third k. So magnitude drops after the first k but then levels off; it does not fall steeply to 0.2. The third-k case is small (n=83). Repeated ks still fire reliably: precision is 0.94 when the previous token is k.",
+      "Missed activations on test cover 1,732 steps, only 0.7% of mass. Almost all are weak firings (0.02 to 0.26) at recall_idx 1, when k is the first copied token, which the label already acknowledges."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

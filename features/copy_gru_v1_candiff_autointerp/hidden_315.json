@@ -1,0 +1,61 @@
+{
+  "label": "Early-to-mid input positions (step 2 up to the delimiter, capped near step 7)",
+  "predicate": "(t >= 2) & (t <= L) & (t <= 7)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Position or counter feature for the input phase. It fires at almost every original-phase step from t=2 onward (rate about 0.98-0.99 at orig_idx 2-6) and at the <DEL> step when the sequence is short. It goes quiet as t grows past about 7: rate is 0.78 at orig_idx 7 and 0.38 at orig_idx 8, and the delimiter step of long sequences is mostly inactive. It never fires at t=0, rarely at t=1 (6%), and essentially never in the copy phase (0.1%). Token identity barely matters (lift about 1.0-1.2 for every in_tok and prev_tok). Activation mass is largest at t=3-5. The very top activations come at the <DEL> step of L=4 sequences, and the top examples begin with a repeated first token (j j); I saw this in the examples but did not test it. Dev F1 is 0.95 and mass recall 0.99.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 315,
+    "predicate": "(t >= 2) & (t <= L) & (t <= 7)",
+    "split": "test",
+    "precision": 0.9431507610892133,
+    "recall": 0.9659069904841749,
+    "f1": 0.9543932471039449,
+    "mass_recall": 0.9911421182981485,
+    "correlation": 0.7876648770590412,
+    "n_active": 2423752,
+    "n_predicted": 2482232,
+    "coverage_by_activation_quartile": [
+      0.882370803613571,
+      0.9870003201647694,
+      0.9951463681102687,
+      0.9991104700480907
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 315,
+    "predicate": "(t >= 2) & (t <= L) & (t <= 7)",
+    "split": "dev",
+    "precision": 0.942864922145834,
+    "recall": 0.9659174699374342,
+    "f1": 0.954251992127692,
+    "mass_recall": 0.9911353173912518,
+    "correlation": 0.7872126483582528,
+    "n_active": 2423529,
+    "n_predicted": 2482783,
+    "coverage_by_activation_quartile": [
+      0.8824228440144384,
+      0.9870354293410268,
+      0.9952003855536227,
+      0.9990113586473934
+    ]
+  },
+  "gate": "hidden",
+  "feature": 315,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the 6% firing at t=1 is not token-agnostic. It comes almost entirely from in_tok g (rate 0.80), h (0.67), w (0.30) and 1 (0.10); every other token is at 0.00. So 'which token is input barely matters' is wrong at t=1. It holds from t=2 on, apart from a small dip for in_tok j at t=2 (rate 0.76 vs 0.98 for other tokens). These steps carry under 0.1% of the activation mass.",
+      "Minor: the cutoff at the <DEL> step comes about one step earlier than the cap suggests. <DEL> precision by L is 0.98 (L=3), 0.96 (4), 0.93 (5), 0.79 (6), 0.45 (7), 0.15 (8), 0.07 (9). Original-phase t=7 fires at 0.78, but <DEL> at t=7 (L=7) fires at only 0.45. With a t<=6 cap at <DEL>, test F1 is 0.9555 vs 0.9544 (precision 0.960).",
+      "Every other claim checked out on dev. The feature never fires at t=0. Copy-phase rate is 0.001. orig_idx 2-6 rates are 0.96-0.99, orig_idx 7 is 0.78 and orig_idx 8 is 0.38. Activation mass peaks at t=3-5. Test scores reproduce: precision 0.943, recall 0.966, F1 0.954.",
+      "Test misses are scattered. Missed activations (0.9% of mass) are weak tails at t=8-9 in long sequences. False positives are mostly weak <DEL> steps of L=6/7 sequences and low-amplitude sequences that switch off early. There is no token or history class."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "((t>=2)&(((t<L)&(t<=7))|((t==L)&(t<=6))))|((t==1)&isin(in_tok,[tok('g'),tok('h')]))",
+    "better_predicate_test_f1": 0.959
+  }
+}

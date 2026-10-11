@@ -1,0 +1,76 @@
+{
+  "label": "copy-phase input token 1 (recall position >= 2)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"1\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase when the input fed back is the digit 1 (100% of activation mass has in_tok == 1; never in the original phase or on <DEL>). Essentially silent at recall_idx 0-1 (i.e. when 1 is the first original token being echoed back), so active from recall_idx >= 2. Fires on about 75% of qualifying steps; the inactive ones show no clear pattern in next_out, to_go or earlier digits (adding those conditions did not raise F1). Firing rate goes up with the number of digits in the sequence (lift 1.1x with one digit, 5x with five). The strongest examples are mostly the first 1 of a repeated \"1 1\" pair, with the second 1 weaker; this is from looking at the examples, not a measured trend. Does not fire on other digits or letters.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 265,
+    "predicate": "(phase == 2) & (in_tok == tok(\"1\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.7545410576096303,
+    "recall": 0.9968759984379992,
+    "f1": 0.8589431826871606,
+    "mass_recall": 0.9990316274719281,
+    "correlation": 0.7242053872328117,
+    "n_active": 56338,
+    "n_predicted": 74432,
+    "coverage_by_activation_quartile": [
+      0.989847355342563,
+      0.9981540646077387,
+      0.9995739846634479,
+      0.999928997443908
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 265,
+    "predicate": "(phase == 2) & (in_tok == tok(\"1\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.7540717273871897,
+    "recall": 0.9960656675846775,
+    "f1": 0.8583382775598893,
+    "mass_recall": 0.9987283177030916,
+    "correlation": 0.7231532991860161,
+    "n_active": 55918,
+    "n_predicted": 73863,
+    "coverage_by_activation_quartile": [
+      0.9874105865522175,
+      0.9973533619456366,
+      0.99949924887331,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 265,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The explanation says the silent qualifying steps have 'no clear pattern'. That is false. Within the predicate, the firing rate depends strongly on out_tok, the token output at that step (the original token right after the 1). Dev precision is 0.99+ for out_tok in {u, 1, n, q}, 0.97 for v and 0.93 for 2, but only 0.28 for r and 0.45-0.53 for b, l, i, o. That is a systematic token-identity effect, not noise.",
+      "prev_tok also modulates the rate within the predicate. Dev precision is 0.97 for prev 3, 0.95 for a and 0.94 for g, but 0.37 for h and about 0.53 for m, u, x, 0 and 1. So whether the feature fires on a copy-phase 1 depends on the tokens around that 1 in the original sequence.",
+      "The claim that the 'firing rate rises with the number of digits' is confounded. The 1.1x-to-5x lift is measured over all steps and only reflects that sequences with more digits contain more 1s. Within the predicate, precision does not change: 0.759 with n_digits == 1 versus 0.739 with n_digits >= 3. Precision is also flat across recall_idx (0.67-0.80), to_go, L and in_count.",
+      "Confirmed: all activation mass is in the copy phase with in_tok == 1, and there is none in the original phase or on <DEL>. recall_idx == 1 is almost silent (precision 0.013). Test scores reproduce: P 0.755, R 0.997, F1 0.859, mass recall 0.999. Test misses are only 176 steps holding 0.1% of mass, mostly a 1 at orig position 0 (recall_idx 1), so that part is noise.",
+      "The 'first 1 of a 1 1 pair is strong' observation holds up. With out_tok == 1 (the next original token is also 1), precision is 0.995, and examples such as 'z 1 i r 1 1 a s' show the first 1 firing while the second is silent.",
+      "Binary refinements barely improve on the predicate because the out_tok and prev_tok effects are graded. Excluding the low-rate (prev_tok, out_tok) combinations gives test F1 0.870 against 0.859. Excluding only the low-rate out_tok values gives 0.856, with precision 0.82 but recall 0.90."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "copy-phase input digit 1 (recall position >= 2), with firing strongly modulated by its neighbouring original tokens (most reliable when the next token is u/n/q/v/1/2, unreliable when it is r/b/l/i/o)",
+    "better_predicate": "(phase == 2) & (in_tok == tok('1')) & (recall_idx >= 2) & ~(isin(out_tok, [tok(c) for c in 'rlbio']) & isin(prev_tok, [tok(c) for c in 'hmux01']))",
+    "better_predicate_test_f1": 0.8705
+  },
+  "final_label": "copy-phase input digit 1 (recall position >= 2), with firing strongly modulated by its neighbouring original tokens (most reliable when the next token is u/n/q/v/1/2, unreliable when it is r/b/l/i/o)",
+  "scorecard": {
+    "format": "slot2",
+    "summary": "Graded preference over the current input token (most: 1, -, j, e, 2, 3; least: q, f, z, <DEL>) and the token being output (most: 1, u, q, v, n, 2; least: o, b, r, -); timing cues that raise it most: recall_idx=3, L=4 & t=6, recall_idx=4.",
+    "test_f1": 0.8681344999361349,
+    "test_precision": 0.7888605170762847,
+    "test_recall": 0.9651212325606163,
+    "full_test_f1": 0.9185818144230439,
+    "full_n_cues": 286,
+    "top40_test_f1": 0.878345109825111,
+    "slot2_test_f1": 0.8681344999361349,
+    "file": "scorecards/hidden_265.json"
+  }
+}

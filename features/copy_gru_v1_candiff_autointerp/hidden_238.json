@@ -1,0 +1,61 @@
+{
+  "label": "copy-phase input n (fed-back n, not first two copy steps)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"n\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase on steps where the fed-back input token is n (i.e. the model just output an original n) and recall_idx >= 2 (n was original token >= 1; never when n is the first copied token). Zero activation in the original phase, on <DEL>, or on any other input token; every activation is covered by this predicate (recall 1.0). About 21% of qualifying steps stay silent, so precision is ~0.79. Strongest activations come when the original had a repeated nn pair: the first fed-back n of the pair fires near max and the second at roughly half. Single n inputs give weaker activations, mostly 0.05-0.3 of max. Rate is lowest at recall_idx 2 and highest at recall_idx 3-4.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 238,
+    "predicate": "(phase == 2) & (in_tok == tok(\"n\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.7881227237908374,
+    "recall": 1.0,
+    "f1": 0.8815085377585377,
+    "mass_recall": 1.0,
+    "correlation": 0.7573344110802881,
+    "n_active": 58645,
+    "n_predicted": 74411,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 238,
+    "predicate": "(phase == 2) & (in_tok == tok(\"n\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.7886952998379254,
+    "recall": 1.0,
+    "f1": 0.8818665760561786,
+    "mass_recall": 1.0000000879018642,
+    "correlation": 0.7568000436796317,
+    "n_active": 58395,
+    "n_predicted": 74040,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 238,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claims hold. Activation is 100% in the copy phase and 100% on in_tok n. It is zero at recall_idx 0 and 1, and zero in the original phase and on <DEL>. Test misses show 0 missed activations.",
+      "The roughly 21% of qualifying steps that stay silent are not uniform. They cluster where n was original token 1, i.e. recall_idx 2 (precision 0.51 there, vs 0.92 at recall_idx 3 and 0.96 at 4). The effect is worst for short and long sequences: L=3 gives 0.24, and L=6-9 give 0.35-0.49. Precision is also lower when to_go >= 5 (0.58) and at recall_idx 6-8 (about 0.71). The explanation only says 'rate lowest at recall_idx 2', which undersells how strongly this depends on L.",
+      "Excluding the weak class does not help much. The best variant I tried, excluding recall_idx==2 unless L is 4 or 5, reaches test F1 0.887 against 0.882 for the original. So the silent cases look like graded weak activation dropping below threshold, not a separate rule the predicate misses.",
+      "The 'nn' pair claim is only partly supported. Top activations are the first n of an nn pair near max, with the second n at about 0.3-0.58. But when the previous input was also n, only 61% of qualifying steps fire, so the second n of a pair often stays silent rather than reliably firing at half."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok('n')) & (recall_idx >= 2) & ~((recall_idx==2)&(L!=4)&(L!=5))",
+    "better_predicate_test_f1": 0.887
+  }
+}

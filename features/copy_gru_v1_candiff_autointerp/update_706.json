@@ -1,0 +1,76 @@
+{
+  "label": "token right after a 3 early in the original sequence (positions 2-4)",
+  "predicate": "(phase==0) & (prev_tok==tok(\"3\")) & (t>=2) & (t<=4)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires during the original-input phase on the step immediately after the digit 3 was input, when that step is t=2..4 (so the 3 was at position 1-3). Steps with prev_tok=3 at t=2 and t=3 are almost always active (precision 1.0 and 0.97 on dev). At t=4 it is less reliable (precision ~0.6), and at t>=5 it is mostly silent. The strongest activations come from sequences that start n 3 3 ...: about 0.4 of max on the second 3 and near max on the token after it. Sequences that start with n or w raise the firing rate. The token being input at the current step has little effect. It never fires at t=0/1, in the copy phase, or (with negligible exceptions) on the delimiter. About 17% of activation mass is weak, diffuse firing at t=3-4 that does not follow a 3. This is why count recall is only ~0.57 while mass recall is ~0.83.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 706,
+    "predicate": "(phase==0) & (prev_tok==tok(\"3\")) & (t>=2) & (t<=4)",
+    "split": "test",
+    "precision": 0.8672230326954432,
+    "recall": 0.5628376496797549,
+    "f1": 0.6826364496082139,
+    "mass_recall": 0.8278141821803066,
+    "correlation": 0.8188923289364726,
+    "n_active": 71820,
+    "n_predicted": 46612,
+    "coverage_by_activation_quartile": [
+      0.11189083820662768,
+      0.2735171261487051,
+      0.8837649679754943,
+      0.9821776663881927
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 706,
+    "predicate": "(phase==0) & (prev_tok==tok(\"3\")) & (t>=2) & (t<=4)",
+    "split": "dev",
+    "precision": 0.869603056675865,
+    "recall": 0.5655691309449852,
+    "f1": 0.6853820736960977,
+    "mass_recall": 0.827503469528014,
+    "correlation": 0.8190675739628921,
+    "n_active": 72435,
+    "n_predicted": 47110,
+    "coverage_by_activation_quartile": [
+      0.11381081230327461,
+      0.2828427853553482,
+      0.885195206803247,
+      0.9804506295559974
+    ]
+  },
+  "gate": "update",
+  "feature": 706,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The main claims check out on dev. prev_tok=3: precision 1.00 at t=2, 0.97 at t=3, 0.59 at t=4 and 0.08 at t=5. Copy-phase activity is exactly 0. The delimiter holds 0.3% of the mass. t=0 and t=1 never fire. Max-activation examples are 'n 3 3 X' (about 0.40 on the second 3, about 1.0 on X). Original predicate on test: P 0.870, R 0.566, F1 0.685, mass recall 0.828.",
+      "Systematic miss: the 'weak, diffuse' firing at t=3-4 that does not follow a 3 is not diffuse. It clusters in sequences whose first token is n (or w). Predicate (phase==0)&(prev_tok!=3)&(t in 3..4)&(first_tok==n) has test precision 0.44 and covers 17.7% of all active steps (8.7% of mass). Adding w raises this to precision 0.34 and 27% of active steps. The base rate for these steps is about 3%, so this is a second mode. The explanation only says first_tok n/w raises the firing rate of the after-3 mode.",
+      "This n-start mode does not depend on a 3 or any digit having been seen. Precision is 0.43 with no 3 seen and 0.44 with no digits seen, so it cannot be folded into 'after a 3'.",
+      "The label overclaims at t=4. With prev_tok=3 at t=4 precision is only 0.59 (test 0.61), and those steps carry about 10% of the mass, so 'positions 2-4' is solid only for 2-3.",
+      "Minor: a 3 that follows an earlier 3 (n_seen(3)>1) fires less reliably (precision 0.55). Example test false positives: '3 3 b 3 *b*' and 'i 3 i 3 *3*' at t=4.",
+      "Adding the n-start mode as an OR term raises test F1 from 0.685 to 0.720 and mass recall from 0.83 to 0.915."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "early original-phase feature: the token right after the digit 3 at positions 2-3 (weaker at 4), plus a weaker secondary mode at positions 3-4 in sequences that start with 'n' (or 'w')",
+    "better_predicate": "((phase==0) & (prev_tok==tok('3')) & (t>=2) & (t<=4)) | ((phase==0) & (t>=3) & (t<=4) & (first_tok==tok('n')))",
+    "better_predicate_test_f1": 0.72
+  },
+  "final_label": "early original-phase feature: the token right after the digit 3 at positions 2-3 (weaker at 4), plus a weaker secondary mode at positions 3-4 in sequences that start with 'n' (or 'w')",
+  "scorecard": {
+    "format": "top40",
+    "summary": "Weighted combination of 40 cues. Raise it: t=2 & prev_tok=3 (+9.90), orig0=n (+7.59), t=3 & prev_tok=3 (+6.71), orig0=w (+6.32), orig0=0 (+5.52), orig0=a (+5.29). Lower it: orig0=3 (-7.17), t=6 (-6.30), prev_tok=n (-5.72), prev_tok=0 (-5.49).",
+    "test_f1": 0.7904364771703372,
+    "test_precision": 0.7930454526342345,
+    "test_recall": 0.787844611528822,
+    "full_test_f1": 0.9335617530985789,
+    "full_n_cues": 325,
+    "top40_test_f1": 0.7904364771703372,
+    "slot2_test_f1": 0.7467147839504206,
+    "file": "scorecards/update_706.json"
+  }
+}

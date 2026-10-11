@@ -1,0 +1,63 @@
+{
+  "label": "copy phase: input y while outputting y (a repeated \"yy\" being copied), early in the copy",
+  "predicate": "(phase==2)&(in_tok==tok(\"y\"))&(out_tok==tok(\"y\"))&(recall_idx<=3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, and only when the fed-back input is y (input y holds 100% of the mass). Almost all of the mass (96%) is on steps where the token being output is also y, meaning the original sequence has two y in a row and the model is copying the second one. It is concentrated on recall positions 1-3 (97% of mass) and nearly disappears from recall position 5 on. The largest activations come from runs of y early in the sequence (e.g. q y y y ... -> strongest on the first y-to-y copy step), and the value drops on later steps within a run. Weak residual firing (about 4% of mass) happens on input y with a different output when y appears more than once in the original. It never fires in the original or delimiter phases, on any input other than y, or on late recall positions. Most false positives are yy pairs at recall position 3 or later in longer sequences.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 161,
+    "predicate": "(phase==2)&(in_tok==tok(\"y\"))&(out_tok==tok(\"y\"))&(recall_idx<=3)",
+    "split": "test",
+    "precision": 0.9166666666666666,
+    "recall": 0.781360201511335,
+    "f1": 0.8436225183573566,
+    "mass_recall": 0.9301991454073466,
+    "correlation": 0.8587183986587714,
+    "n_active": 1985,
+    "n_predicted": 1692,
+    "coverage_by_activation_quartile": [
+      0.3038229376257545,
+      0.8548387096774194,
+      0.9737903225806451,
+      0.9939516129032258
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 161,
+    "predicate": "(phase==2)&(in_tok==tok(\"y\"))&(out_tok==tok(\"y\"))&(recall_idx<=3)",
+    "split": "dev",
+    "precision": 0.9114070642733063,
+    "recall": 0.7730844793713163,
+    "f1": 0.8365665692266809,
+    "mass_recall": 0.9280944257944369,
+    "correlation": 0.8553366551773317,
+    "n_active": 2036,
+    "n_predicted": 1727,
+    "coverage_by_activation_quartile": [
+      0.29862475442043224,
+      0.831041257367387,
+      0.9646365422396856,
+      0.9980353634577603
+    ]
+  },
+  "gate": "update",
+  "feature": 161,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most of the core claims check out. 100% of activation mass is in the copy phase on input y. out_tok==y holds 95.9% of mass. Recall positions 1-3 hold 97% of mass, and recall 5+ has only 20 activations. No firing in the original or delimiter phases. in_first==0 for every activation. Top examples peak on the first y-to-y copy step and decay along the run. Reproduced test scores: P 0.917, R 0.781, F1 0.844, mass recall 0.930.",
+      "Systematic false-positive class: the feature stays silent on the final output step (to_go==0), meaning a yy pair that ends the original sequence (e.g. 'c z y y <DEL> c z *y*', 's y y <DEL> s *y*'). On test, the original predicate restricted to to_go==0 predicts 97 steps with precision 0.113, so this one case accounts for about 86 of the 141 false positives.",
+      "The explanation's account of false positives is factually wrong. It says most are 'yy pairs at recall position 3 or later in longer sequences', but most are yy pairs at the very end of short sequences (L=3-5) on the last copy step. Restricted to L<=4, the original predicate's precision is only 0.57.",
+      "Adding to_go>=1 removes this class. Test precision goes from 0.917 to 0.966 and F1 from 0.844 to 0.860, with mass recall unchanged (0.929). Dev F1 also rises, from 0.837 to 0.855. The remaining ~55 false positives are mostly yy followed by one more token near the end of short sequences (to_go==1, precision 0.76), but excluding them hurts F1, so they are treated as residual.",
+      "Minor: the explanation says the weak off-target firing (input y, output not y) happens 'when y appears more than once in the original'. Misses include in_count==1 cases (e.g. 'i y r r 2 i o t s' fires at 0.15), about 1.5% of mass. Small, but the claim is too absolute."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy phase: input y while outputting y (copying a 'yy' in the original), at recall positions 1-3, but not on the final output step",
+    "better_predicate": "(phase==2)&(in_tok==tok('y'))&(out_tok==tok('y'))&(recall_idx<=3)&(to_go>=1)",
+    "better_predicate_test_f1": 0.86
+  },
+  "final_label": "copy phase: input y while outputting y (copying a 'yy' in the original), at recall positions 1-3, but not on the final output step"
+}

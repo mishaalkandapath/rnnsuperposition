@@ -1,0 +1,63 @@
+{
+  "label": "input token l (copy phase, and weakly at t=0)",
+  "predicate": "(in_tok == tok(\"l\")) & ((phase == 2) | (t == 0))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Single-token detector for the input letter l. 99.5% of activation mass is on steps whose input is l. It fires on every copy-phase l input (precision 1.0), at about 0.7 when l is fed back mid-copy and close to max (~1.0) when l is the first copy-phase input right after <DEL>, i.e. when the sequence starts with l. Repeated l inputs right after that come in somewhat lower (~0.8). An l at original position t=0 gives only a weak activation (~0.15). Later original-phase l inputs (t>=1) are mostly silent, with occasional small activations (~0.1). It does not fire on the delimiter or on other tokens (non-l activations are rare and tiny, e.g. on digits 2/3, k, n), and the token being output does not modulate it.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 442,
+    "predicate": "(in_tok == tok(\"l\")) & ((phase == 2) | (t == 0))",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.9506733175873374,
+    "f1": 0.9747129968058047,
+    "mass_recall": 0.9899486697003336,
+    "correlation": 0.9443878550094645,
+    "n_active": 113468,
+    "n_predicted": 107871,
+    "coverage_by_activation_quartile": [
+      0.8026932703493496,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 442,
+    "predicate": "(in_tok == tok(\"l\")) & ((phase == 2) | (t == 0))",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.9514415514802155,
+    "f1": 0.9751166267403952,
+    "mass_recall": 0.9901362647911943,
+    "correlation": 0.9439039667689391,
+    "n_active": 113801,
+    "n_predicted": 108275,
+    "coverage_by_activation_quartile": [
+      0.8057713261396787,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "reset",
+  "feature": 442,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core predicate holds up. On test it gets precision 1.0, recall 0.951, F1 0.975 and mass recall 0.990, with 0 false positives. On dev, 99.5% of activation mass is on in_tok==l, the delimiter never fires, and out_tok/next_out are flat (lift 1.6-2.1x), so the output token does not matter.",
+      "Magnitude claim is wrong: 'near its maximum (~1.0) when l is the first copy-phase input right after <DEL>' does not hold. For (in_tok==l)&(recall_idx==1), coverage by activation quartile is [0.02, 0.13, 0.18, 0.25], so only a quarter of the top quartile is first-copy l. Dev examples show first-copy l at 0.70 ('l d m <DEL> [l:0.70]'), 0.71 (L=8, 'l x k 1 g m w q') and 0.61. Top-list examples also show ~0.98-0.99 on l's that are NOT the first copy input ('g l n j t <DEL> g [l:0.99]', 't 3 x l l h h t e <DEL> t 3 x [l:0.98]').",
+      "Magnitude tracks sequence length more than position. Copy-phase l with L<=5 covers 36% of the top quartile but only 1% of the bottom quartile. With L>=8 the pattern reverses: 28% of the top quartile and 14% of the bottom. Short sequences give ~1.0 and long ones ~0.6-0.7. The explanation misses this.",
+      "The claim that repeated l's are lower (~0.8) is not consistent. For copy-phase l with prev_tok==l, quartile coverage is flat (0.006/0.03/0.03/0.02), and some repeats sit at 0.84, above the preceding l.",
+      "The residual misses (1% of mass) are systematic but tiny. (a) An l at t=1 fires ~0.15 in about 14% of cases ((in_tok==l)&(t==1): precision 0.14, mass 0.4%). The explanation folds this into 'occasional ~0.1'. (b) A non-l first copy input sometimes fires ~0.10-0.13 (r, k, 2, g). Neither is worth a better predicate: adding t<=1 lowers test F1 to 0.926."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "input token l in the copy phase (weakly at t=0); stronger in short sequences",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "input token l in the copy phase (weakly at t=0); stronger in short sequences"
+}

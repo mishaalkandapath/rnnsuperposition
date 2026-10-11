@@ -1,0 +1,63 @@
+{
+  "label": "input s in the first three original positions (t<=2)",
+  "predicate": "(in_tok == tok(\"s\")) & (t <= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only when the input token is s during the original phase at the very start of the sequence: t=0 (fires on nearly every s there, but weakly, ~0.04-0.05 of max, 8% of mass), t=1 and t=2 (91% of mass, activations up to max, e.g. d x [s]); a tiny weak tail at t=3 (0.5% of mass). Never fires on any other token, at t>=4, on the delimiter, or in the copy phase. At t=1-2 magnitude and firing probability depend on the preceding tokens: digits earlier in the prefix suppress it (excluding them raises precision 0.73->0.80), and some preceding letters give much larger activations than others (top examples are all d x s). False positives are s at t=1-2 after such non-preferred prefixes.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 275,
+    "predicate": "(in_tok == tok(\"s\")) & (t <= 2)",
+    "split": "test",
+    "precision": 0.7386871508379889,
+    "recall": 0.9930529478032294,
+    "f1": 0.8471888515136954,
+    "mass_recall": 0.996161612579301,
+    "correlation": 0.5791251272549548,
+    "n_active": 37282,
+    "n_predicted": 50120,
+    "coverage_by_activation_quartile": [
+      0.9978543074777384,
+      0.995923184207703,
+      0.9784334763948498,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 275,
+    "predicate": "(in_tok == tok(\"s\")) & (t <= 2)",
+    "split": "dev",
+    "precision": 0.7337497247412568,
+    "recall": 0.9920426556959969,
+    "f1": 0.843567318757192,
+    "mass_recall": 0.9951449112153389,
+    "correlation": 0.5768675171131694,
+    "n_active": 36947,
+    "n_predicted": 49953,
+    "coverage_by_activation_quartile": [
+      0.9977265345891523,
+      0.9972934935585147,
+      0.973801017646422,
+      0.9993503681247293
+    ]
+  },
+  "gate": "hidden",
+  "feature": 275,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The support claims hold. Every activation is on in_tok = s (100% of mass). There are no activations on the delimiter or in the copy phase, and none at t >= 4. Mass by t is 8.1% at t=0, 55.8% at t=1, 35.6% at t=2 and 0.5% at t=3. At t=0 the feature fires on essentially every s (test precision 1.0) but weakly, at about 0.04 of max. The top examples are 'd x s'.",
+      "Systematic false-positive class at t=1, which is deterministic rather than noise: an s at t=1 NEVER fires when the previous token is in {b, e, g, j, k, z, 0, 1, 2} (dev precision 0.0 for each). It fires on every s whose previous token is any other letter or the digit 3 (precision 1.0 for each).",
+      "This contradicts the explanation's 'digits earlier in the prefix suppress it'. Digit 3 does not suppress it (s after 3 at t=1 has precision 1.0, and at t=2 has precision 0.86). Meanwhile the letters b, e, g, j, k and z suppress it completely. The ~seen(DIGITS) refinement (test F1 0.866) is therefore the wrong cut.",
+      "At t=2 it depends just as strongly on prev_tok. After a, c, d, i, l, o, r, v, x, 3, s or w the precision is 0.73-1.0. After b, j, z, 0 or 1 it is 0.0-0.09, and after e, g, h, k, p, t, y or 2 it is about 0.17-0.35.",
+      "The label 'input s in the first three original positions' overclaims. 26% of the steps it predicts are inactive on test (precision 0.739), and they fall into the token-specific classes above. With the prefix gating added, test F1 rises from 0.847 to 0.954."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "input s at t<=2, gated by the previous token: weak on every s at t=0; at t=1-2 it fires only if the preceding token is not one of b/e/g/j/k/z/0/1/2 (strongest after d, x, v, c, i, l)",
+    "better_predicate": "(in_tok == tok('s')) & ((t==0) | ((t==1) & ~isin(prev_tok, [tok(c) for c in 'begjkz012'])) | ((t==2) & isin(prev_tok, [tok(c) for c in 'acdilorvx3sw'])))",
+    "better_predicate_test_f1": 0.954
+  },
+  "final_label": "input s at t<=2, gated by the previous token: weak on every s at t=0; at t=1-2 it fires only if the preceding token is not one of b/e/g/j/k/z/0/1/2 (strongest after d, x, v, c, i, l)"
+}

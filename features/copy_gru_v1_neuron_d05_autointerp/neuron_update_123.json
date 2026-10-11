@@ -1,0 +1,63 @@
+{
+  "label": "first original token (from a fixed token set) being input: at t=0, or re-fed after <DEL> in short sequences",
+  "predicate": "isin(in_tok, [tok(\"v\"),tok(\"m\"),tok(\"x\"),tok(\"h\"),tok(\"i\"),tok(\"a\"),tok(\"r\"),tok(\"1\"),tok(\"l\"),tok(\"n\"),tok(\"d\"),tok(\"0\")]) & ((t == 0) | ((recall_idx == 1) & (L <= 4)))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires when the sequence first token is being input, but only if that token is in a fixed set (v, m, x, h, i, a, r, 1, l, n, d, 0). (t==0) & token-in-set has precision 1.0: it fires on every such sequence start and never on other first tokens. The second context is recall_idx==1, where the model own output orig(0) is fed back as input right after <DEL>. This fires mainly for short sequences (L=3-4) and gives the largest activations: the top examples are all L=3 copy steps at about 0.9 of max, versus about 0.2 at t=0. Magnitude also depends on the token: v, m and x are strongest, while d and 0 barely cross threshold. Weaker spillover onto set tokens at t=1-3 that occur for the first time accounts for most of the missed activations. It is essentially silent at the delimiter, later copy steps, and positions t>=6.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 123,
+    "predicate": "isin(in_tok, [tok(\"v\"),tok(\"m\"),tok(\"x\"),tok(\"h\"),tok(\"i\"),tok(\"a\"),tok(\"r\"),tok(\"1\"),tok(\"l\"),tok(\"n\"),tok(\"d\"),tok(\"0\")]) & ((t == 0) | ((recall_idx == 1) & (L <= 4)))",
+    "split": "test",
+    "precision": 0.9327786808110189,
+    "recall": 0.7041055197688123,
+    "f1": 0.8024692493813077,
+    "mass_recall": 0.7473336220696639,
+    "correlation": 0.671139778344192,
+    "n_active": 61941,
+    "n_predicted": 46756,
+    "coverage_by_activation_quartile": [
+      0.6390933746609841,
+      0.5943170810461738,
+      0.7887633193412981,
+      0.7942525024216984
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 123,
+    "predicate": "isin(in_tok, [tok(\"v\"),tok(\"m\"),tok(\"x\"),tok(\"h\"),tok(\"i\"),tok(\"a\"),tok(\"r\"),tok(\"1\"),tok(\"l\"),tok(\"n\"),tok(\"d\"),tok(\"0\")]) & ((t == 0) | ((recall_idx == 1) & (L <= 4)))",
+    "split": "dev",
+    "precision": 0.9332891445188052,
+    "recall": 0.7045161082058234,
+    "f1": 0.8029248103012188,
+    "mass_recall": 0.746824096006974,
+    "correlation": 0.6693261994405635,
+    "n_active": 61956,
+    "n_predicted": 46769,
+    "coverage_by_activation_quartile": [
+      0.6367744851184711,
+      0.5914519981922655,
+      0.8092840080056815,
+      0.7805539415068758
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 123,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Label overclaims the token set in the re-fed context. At recall_idx==1 with L==3 the unit fires on tokens outside the 12-token set with precision 0.555, about the same mass as set tokens (0.030 vs 0.042 mass recall). So the L=3 copy step is token-agnostic. The token-set gate only really holds at t=0 and at the L=4 copy step (set 0.49 vs non-set 0.11 precision). The test misses show this directly, e.g. 'q e l <DEL> [q:0.31]' and 'c j e <DEL> [c:0.33]'.",
+      "The (recall_idx==1)&(L<=4) clause is loose for L=4: precision is only 0.49 even for set tokens. This causes the systematic false positives in test misses (step-5 rows of L=4 sequences such as 'i q s o <DEL> i').",
+      "The 'weaker spillover at t=1-3' misses are structured, not noise. (phase==0)&(t<=3)&in-set&~seen(set)&prev_tok in {e,2,t,g} has precision 0.72. In words: the first set token in the sequence, right after one of a few specific previous tokens. Adding this raises test recall from 0.70 to 0.84 while precision falls only from 0.93 to 0.885. That contradicts the claim that adding these positions 'costs much more precision'.",
+      "The magnitude claim is only partly right. 'd and 0 barely cross threshold' holds at t=0, but in the L=3 copy step d reaches about 0.58 of max (e.g. 'd 1 e <DEL> [d:0.58]').",
+      "Verified claims: (t==0)&set has precision 1.0 and covers 64% of activations on dev; the unit is silent at the delimiter and at t>=7; the recall_idx==1 context carries 17.5% of the activation mass at higher per-step magnitude; reported test scores reproduce (0.933 / 0.704 / 0.802)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "First input of a token from a fixed set (v,m,x,h,i,a,r,1,l,n,d,0): reliably at t=0, and at t<=3 when it is the first set token and follows e/2/t/g. Also fires when orig(0) is re-fed right after <DEL> in short sequences: any token if L=3, set tokens only if L=4.",
+    "better_predicate": "(isin(in_tok, [tok(\"v\"),tok(\"m\"),tok(\"x\"),tok(\"h\"),tok(\"i\"),tok(\"a\"),tok(\"r\"),tok(\"1\"),tok(\"l\"),tok(\"n\"),tok(\"d\"),tok(\"0\")]) & ((t==0) | ((recall_idx==1)&(L==4)) | ((phase==0)&(t<=3)&~seen([tok(\"v\"),tok(\"m\"),tok(\"x\"),tok(\"h\"),tok(\"i\"),tok(\"a\"),tok(\"r\"),tok(\"1\"),tok(\"l\"),tok(\"n\"),tok(\"d\"),tok(\"0\")])&isin(prev_tok,[tok('e'),tok('2'),tok('t'),tok('g')])))) | ((recall_idx==1)&(L==3))",
+    "better_predicate_test_f1": 0.861
+  },
+  "final_label": "First input of a token from a fixed set (v,m,x,h,i,a,r,1,l,n,d,0): reliably at t=0, and at t<=3 when it is the first set token and follows e/2/t/g. Also fires when orig(0) is re-fed right after <DEL> in short sequences: any token if L=3, set tokens only if L=4."
+}

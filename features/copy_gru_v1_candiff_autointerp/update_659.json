@@ -1,0 +1,63 @@
+{
+  "label": "1-2 steps after a v input, early in the original phase",
+  "predicate": "(phase == 0) & (t <= 5) & ((prev_tok == tok(\"v\")) | (prev2_tok == tok(\"v\")))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires during the original-input phase on the one or two steps right after the token v was input, and only early in the sequence (t <= 5; it peaks at t = 3-4 and is near zero from t >= 7). The step directly after v is strongest (prev_tok = v: 44% firing rate, 13x lift, 69% of activation mass). The step two after v is weaker (prev2_tok = v: about 28% of mass). The largest activations (around 0.9-1.0 of max) come one step after a v at t = 3-4, often after a repeated v v. It never fires in the copy phase and almost never on the delimiter. It does not fire after a v that comes late in a long sequence (t >= 6). On dev the predicate has precision 0.93 and mass recall 0.90, but count recall is only 0.57: about 40% of active steps are weak activations (mostly under 0.1 of max) at t = 2-5 with no v nearby, and these are not captured.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 659,
+    "predicate": "(phase == 0) & (t <= 5) & ((prev_tok == tok(\"v\")) | (prev2_tok == tok(\"v\")))",
+    "split": "test",
+    "precision": 0.929414008850908,
+    "recall": 0.5693419398262186,
+    "f1": 0.7061248032648613,
+    "mass_recall": 0.8956785502521021,
+    "correlation": 0.8293348183730126,
+    "n_active": 213947,
+    "n_predicted": 131060,
+    "coverage_by_activation_quartile": [
+      0.05184437339914372,
+      0.3081122515751491,
+      0.9245424121749211,
+      0.992876640616236
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 659,
+    "predicate": "(phase == 0) & (t <= 5) & ((prev_tok == tok(\"v\")) | (prev2_tok == tok(\"v\")))",
+    "split": "dev",
+    "precision": 0.9291859442511375,
+    "recall": 0.5695529076471636,
+    "f1": 0.706221174720066,
+    "mass_recall": 0.8965319641318181,
+    "correlation": 0.8289168947202651,
+    "n_active": 213334,
+    "n_predicted": 130765,
+    "coverage_by_activation_quartile": [
+      0.05394307571155361,
+      0.30507743653204333,
+      0.9256745354658467,
+      0.9935312095700598
+    ]
+  },
+  "gate": "update",
+  "feature": 659,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The reported test scores reproduce: precision 0.929, recall 0.569, F1 0.706, mass recall 0.896. Most of what the predicate misses is weak: 52% of the top-quartile activations are... (corrected) coverage by activation quartile is 0.05, 0.31, 0.92 and 0.99, so the misses are mostly in the bottom two quartiles.",
+      "The activations with no v nearby are spread out with no clear pattern. At t=2..5 with no v seen yet, precision is 0.045 and these steps hold only 5.7% of mass. Splitting by t==4, prev_tok in {c,3}, in_first==0 or L>=7 finds no subclass above about 0.19 precision or about 2% of mass. This looks like background noise, not a missed class of inputs.",
+      "The claims about where it fires check out. Copy phase: 0 active steps. Delimiter: 0.8% rate and 1.3% of mass. t>=7: about 0 active. After a v at t>=6: precision 0.20 and 0.8% of mass, so a little activity at t=6 and the claim holds roughly. At t=1 with prev_tok v: precision 1.0.",
+      "Small overstatement: 'often after a repeated v v'. Steps where both prev_tok and prev2_tok are v always fire (precision 1.0) but hold only about 3.7% of mass, so this is an occasional booster of the strongest activations, not the usual case.",
+      "The false positives cluster at prev2_tok = v at t=5, and the shown examples are actually weakly active (0.3-0.5). They are not a separate failure class.",
+      "Alternatives scored worse on test F1: prev_tok only scored 0.51, seen(v) 0.64, adding v at t-3 with t<=6 0.685, and excluding in_tok==v 0.69."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

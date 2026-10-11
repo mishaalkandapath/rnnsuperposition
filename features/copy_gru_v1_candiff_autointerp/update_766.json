@@ -1,0 +1,64 @@
+{
+  "label": "token right after a \"2\" early in the original sequence (positions 2-4)",
+  "predicate": "(phase == 0) & (prev_tok == tok(\"2\")) & (t >= 2) & (t <= 4)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires in the original (input) phase on the step right after the digit 2 was input, when that step is position 2-4. 96% of activation mass has prev_tok == 2; t=2-4 holds ~99% of mass. Never fires at t=0-1, almost never at t>=5, never in the copy phase, and only weakly at the delimiter. The current input token does not matter. Strongest activations (~0.95-1.0 of max) come at t=3 after a 2 at position 2, often with a digit or another 2 earlier and a first token of a/e/f; those first tokens have the highest rates (lift about 2.3x). Activation stays lower when the 2 sits at position 0-1 and the feature fires at t=2 (second 2 in examples like e 2 [2]). Missed activations are mostly weak (lowest quartile) and come after other digits (0/1/3) at the same positions; these hold 4% of mass. False positives are mostly at t=4 after a 2 at position 3 with letter-only prefixes.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 766,
+    "predicate": "(phase == 0) & (prev_tok == tok(\"2\")) & (t >= 2) & (t <= 4)",
+    "split": "test",
+    "precision": 0.8819649032919175,
+    "recall": 0.802085153474285,
+    "f1": 0.8401305554708232,
+    "mass_recall": 0.9587242526173086,
+    "correlation": 0.8661011883794518,
+    "n_active": 51507,
+    "n_predicted": 46842,
+    "coverage_by_activation_quartile": [
+      0.2933136600139784,
+      0.9163625067950609,
+      0.9988351324066165,
+      0.9998446722584654
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 766,
+    "predicate": "(phase == 0) & (prev_tok == tok(\"2\")) & (t >= 2) & (t <= 4)",
+    "split": "dev",
+    "precision": 0.8791893667988044,
+    "recall": 0.7981601939879143,
+    "f1": 0.8367176073031725,
+    "mass_recall": 0.9563504116789081,
+    "correlation": 0.8630658255210109,
+    "n_active": 51962,
+    "n_predicted": 47173,
+    "coverage_by_activation_quartile": [
+      0.2904318374259102,
+      0.9038565160495727,
+      0.9984603541185527,
+      0.9999230177059276
+    ]
+  },
+  "gate": "update",
+  "feature": 766,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claims hold. Phase shares on dev are original 0.998, delimiter 0.002, copy 0 (zero active steps). It never fires at t=0-1. The t=2-4 window holds 99.4% of the mass, t=5 holds 0.6%, and t>=6 only 4 steps. prev_tok==2 holds 96.4% of the mass (lift 29x). The current input token barely matters (in_tok lifts 1.1-1.4x). Test scores reproduce exactly: P 0.882, R 0.802, F1 0.840, mass recall 0.959.",
+      "Precision falls with position. prev_tok==2 gives P 1.00 at t=2, 0.97 at t=3, 0.63 at t=4 and 0.09 at t=5. The t=4 term is a weak, partly unreliable edge of the window and could be stated more clearly. Dropping it (t<=3) raises test P to 0.986 but cuts F1 to 0.77, so keeping it is right.",
+      "Wrong secondary claim: 'missed activations are mainly after other digits (0/1/3)'. Predicate (phase==0)&(prev_tok!=2)&(t in 2..5)&prev_tok in DIGITS covers only 2.6% of active steps, while the missed set is about 18% of active steps and mostly follows letters (h, o, t, g...). Each of those letters has lift 1.0x or less, so the misses are scattered and weak (lowest-quartile coverage 0.29) rather than a pattern. A 'lingering' class (2 two steps back) is also not a real class: P 0.09, mass 2.2%.",
+      "Questionable claim: 'false positives are mostly at t=4 after a 2 with all-letter prefixes'. At t=4, precision is actually lower when the earlier prefix contains another digit (0.57) than when the 2 is the only digit so far (0.66). The all-letter case may supply more FPs by count only because it is more common.",
+      "Small systematic false-positive class: first_tok==2 with another 2 at position 2 (t=3) fires only 17% of the time, but it covers 0.03% of the mass. Excluding it lifts test F1 only from 0.840 to 0.843, which is not material.",
+      "The label is ambiguous: 'positions 2-4' means the current step t, so the 2 itself sits at positions 1-3. The explanation states this correctly."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Original-phase step right after a '2' input, at steps t=2-4 (the 2 at positions 1-3); strongest at t=2-3, unreliable at t=4",
+    "better_predicate": "(phase==0)&(prev_tok==tok(\"2\"))&(t>=2)&(t<=4)&~((t==3)&(first_tok==tok(\"2\")))",
+    "better_predicate_test_f1": 0.843
+  },
+  "final_label": "Original-phase step right after a '2' input, at steps t=2-4 (the 2 at positions 1-3); strongest at t=2-3, unreliable at t=4"
+}

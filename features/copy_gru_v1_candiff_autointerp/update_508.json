@@ -1,0 +1,76 @@
+{
+  "label": "copy-phase input d (fed-back d) from original position >= 2",
+  "predicate": "(phase == 2) & (in_tok == tok(\"d\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost exclusively in the copy phase when the input token is the letter d, i.e. the model has just emitted (and is now reading back) a d. Essentially all activation mass (>99.9%) is on in_tok == d in the copy phase; it is silent in the original phase (158 tiny activations), on <DEL>, and on all other tokens. Magnitude grows with how late the d occurred in the original sequence: d copied from original positions 0-1 (recall_idx <= 2) gives weak or no activation (rate 0.5% at recall_idx 2, lowest-quartile examples), while d from position >= 3 fires at ~3.3% of all steps at that recall index with values near max; top examples are d at original position 5-6. Missed activations are mostly weak d at recall_idx 1-2; false positives are mostly d at original position 2 in longer sequences. Does not depend on output token, next token, or digits.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 508,
+    "predicate": "(phase == 2) & (in_tok == tok(\"d\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9088936340121174,
+    "recall": 0.9436904053786117,
+    "f1": 0.9259652287720415,
+    "mass_recall": 0.9839868287761984,
+    "correlation": 0.8867544481920825,
+    "n_active": 55479,
+    "n_predicted": 57603,
+    "coverage_by_activation_quartile": [
+      0.785436193222783,
+      0.9899783705839942,
+      0.999351117519827,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 508,
+    "predicate": "(phase == 2) & (in_tok == tok(\"d\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9103085261621847,
+    "recall": 0.9446387366599366,
+    "f1": 0.9271559503167133,
+    "mass_recall": 0.9836741236752029,
+    "correlation": 0.8870214869810538,
+    "n_active": 55472,
+    "n_predicted": 57564,
+    "coverage_by_activation_quartile": [
+      0.7908854917796365,
+      0.9881742140178829,
+      0.9994952408422267,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 508,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claim holds. On dev, 100% of the activation mass is on copy-phase steps (phase==2) with in_tok==d. The original phase has 158 weak activations and the delimiter has 0.",
+      "The position condition is wrong. The feature's onset depends jointly on recall_idx and sequence length L (equivalently to_go), not on recall_idx >= 3 alone. Dev precision on copy-phase d by cell: recall_idx==3 with L<=5 is 1.0, but recall_idx==3 with L>=7 is only 0.40 (8314 predicted). By to_go at recall_idx 3: 1.0, 1.0, 0.94, 0.53, 0.30, 0.38 for to_go 0 to 5. So most of the predicate's false positives are one systematic class: d at original position 2 in sequences of length 7-9.",
+      "There is a systematic miss class too. At recall_idx==2 with L<=4 (to_go<=1), d-input steps are active with precision 0.89 (2824 steps). The explanation calls recall_idx<=2 'weak or no activation'. That is true for long sequences (precision 0.0-0.004 at to_go>=2) but false for short ones.",
+      "The claim that the feature fires on 'about 3.3% of all steps at each recall index from 3 onward' is inexact. The rate at recall_idx 3 is 2.3%, against about 3.3-3.4% for recall_idx 4-8. That gap is the L-dependent drop-off.",
+      "recall_idx>=4 has precision 1.0 at every L tested, so the activation threshold slides with length: roughly recall_idx>=4, or recall_idx==3 with L<=6/7, or recall_idx==2 with L<=4.",
+      "With the L-dependent boundary, test F1 rises from 0.926 to 0.961 (precision 0.966, recall 0.956, mass recall 0.996). Residual misses after the fix are scattered weak activations (0.4% of mass)."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "copy-phase fed-back d, once enough of the copy has passed: recall_idx>=4, or recall_idx 3 in L<=7, or recall_idx 2 in L<=4 (onset depends on length/outputs remaining, not a fixed original position)",
+    "better_predicate": "(phase == 2) & (in_tok == tok('d')) & ((recall_idx >= 4) | ((recall_idx == 3) & (L <= 7)) | ((recall_idx == 2) & (L <= 4)))",
+    "better_predicate_test_f1": 0.9609
+  },
+  "final_label": "copy-phase fed-back d, once enough of the copy has passed: recall_idx>=4, or recall_idx 3 in L<=7, or recall_idx 2 in L<=4 (onset depends on length/outputs remaining, not a fixed original position)",
+  "scorecard": {
+    "format": "slot2",
+    "summary": "Graded preference over the current input token (most: d, q, z, n, 1, p; least: v, a, j, i) and the token being output (most: w, z, q, o, 1, 2; least: r, s, i, -); timing cues that raise it most: L=4 & t=6, recall_idx=6, recall_idx=4.",
+    "test_f1": 0.9641999190246975,
+    "test_precision": 0.9625803901843136,
+    "test_recall": 0.9658249067214622,
+    "full_test_f1": 0.9722850627754595,
+    "full_n_cues": 330,
+    "top40_test_f1": 0.95933620471244,
+    "slot2_test_f1": 0.9641999190246975,
+    "file": "scorecards/update_508.json"
+  }
+}

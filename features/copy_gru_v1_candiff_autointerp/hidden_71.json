@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input b (previous output was b), from the 3rd output on",
+  "predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the fed-back input token is the letter b (i.e. the model just output b) and the step is recall_idx >= 2. Essentially all activation (100% of mass) is on in_tok == b; no activation in the original phase or on the delimiter, and none on any other input token. At recall_idx 1 (b fed back right after the first copied token) it is nearly silent (rate 0.001 vs ~0.03 later). The output token, prev tokens, first token and repeat counts barely modulate the rate. About 11% of predicted b-input copy steps stay inactive with no obvious pattern in the misses; the few missed activations are weak ones where the sequence starts with b and b is fed back at recall_idx 1. Strongest examples have b fed back late in long sequences, often with a second b following, but I did not systematically check magnitude scaling.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 71,
+    "predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.8866371633655351,
+    "recall": 0.9902502976145627,
+    "f1": 0.9355837610427329,
+    "mass_recall": 0.9973063440148314,
+    "correlation": 0.815124537037414,
+    "n_active": 66361,
+    "n_predicted": 74116,
+    "coverage_by_activation_quartile": [
+      0.9653426556566813,
+      0.9959011452682339,
+      0.9997588908981314,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 71,
+    "predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.8852815888842603,
+    "recall": 0.9897093066927064,
+    "f1": 0.9345873941354216,
+    "mass_recall": 0.9971339131238004,
+    "correlation": 0.8146945708701748,
+    "n_active": 66565,
+    "n_predicted": 74417,
+    "coverage_by_activation_quartile": [
+      0.9637062853022473,
+      0.9957334294814013,
+      0.9993990745748452,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 71,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core label and predicate hold up. I reproduced the reported test scores exactly: P 0.887, R 0.990, F1 0.936, mass recall 0.997. On dev, all activation is in the copy phase (none in the original phase or on the delimiter), and in_tok == b carries 66564 of 66565 active steps (the one exception is g).",
+      "The explanation says the false positives 'show no clear pattern'. That is false. Precision of the predicate falls systematically on the last copy step of short sequences: L=3 with to_go=0 is 0.33, L=4 with to_go=0 is 0.66, L=5 with to_go=0 is 0.75. For L>=6 it is about 0.91-0.94 at every to_go. L=3 overall is 0.33 and L=4 overall is 0.78. Precision also climbs with recall_idx and with absolute t: L=9 at recall_idx 2 is 0.83, against about 0.94-0.97 later. So the feature is weaker early and at the end of short sequences, rather than being cleanly on for every b input at recall_idx >= 2.",
+      "Excluding those cells does not improve F1. Excluding (to_go==0)&(L<=5) gives test F1 0.918, and excluding (to_go==0)&(L<=4) gives 0.930, both below 0.936. The effect is graded, so the original predicate is still the best simple boolean one. The defect is in the explanation, not the predicate.",
+      "The recall_idx 1 rates are quoted on mismatched bases. 0.001 at recall_idx 1 and 'about 0.03 at later steps' are rates over all input tokens. Conditioned on b being the input, the firing rate is about 0.05 at recall_idx 1 (L=9: 0.055, L=6: 0.047) against about 0.89 at recall_idx >= 2. The qualitative claim ('almost silent' at recall_idx 1) is right, but the numbers don't compare like with like.",
+      "Other claims check out. Out_tok, prev_tok, prev2_tok, first_tok and repeat counts barely matter (in_count>=2 gives precision 0.85 against 0.89 for in_count==1). The missed activations are weak and hold 0.3% of the mass. In the examples, most misses are b fed back at recall_idx 1 in sequences starting with b. One exception is a b fed back at recall_idx 1 in 'b j b 2 2 1 y i'."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input b (model just output b), from recall_idx 2 on; weaker and less reliable on the final step of short sequences (L<=5) and at early copy positions",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "copy-phase input b (model just output b), from recall_idx 2 on; weaker and less reliable on the final step of short sequences (L<=5) and at early copy positions"
+}

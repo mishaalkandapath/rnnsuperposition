@@ -1,0 +1,62 @@
+{
+  "label": "Original-phase position >= 3 through the delimiter (input-phase ramp)",
+  "predicate": "(phase == 1) | ((phase == 0) & (t >= 3))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Positional feature on the input/encoding phase. It is silent at t=0-1, rare at t=2 (5%), fires on about 55% of t=3 steps and on more than 99% of original-phase steps with orig_idx >= 5. It also fires on 85% of delimiter steps. Within a sequence the activation ramps up over the original tokens and usually drops somewhat at <DEL>; the top examples peak at the last original tokens. It is exactly zero during the copy phase (t > L). Token identity hardly matters: in_tok, prev_tok and first_tok rates all sit within about 1.5x of each other. Longer sequences carry more mass only because they have more late original steps. Most false positives are weak or absent firings at t=3 and some delimiter steps; misses at t=2 hold 0.3% of the mass.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 35,
+    "predicate": "(phase == 1) | ((phase == 0) & (t >= 3))",
+    "split": "test",
+    "precision": 0.8543160922630249,
+    "recall": 0.9860388844759966,
+    "f1": 0.9154634809612425,
+    "mass_recall": 0.9974778292689334,
+    "correlation": 0.7245897079990945,
+    "n_active": 1933728,
+    "n_predicted": 2231880,
+    "coverage_by_activation_quartile": [
+      0.9455559416836288,
+      0.9985995962203578,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 35,
+    "predicate": "(phase == 1) | ((phase == 0) & (t >= 3))",
+    "split": "dev",
+    "precision": 0.8545317271307687,
+    "recall": 0.9860406294771815,
+    "f1": 0.9155880225008991,
+    "mass_recall": 0.997466415527133,
+    "correlation": 0.7246320155320175,
+    "n_active": 1934113,
+    "n_predicted": 2231765,
+    "coverage_by_activation_quartile": [
+      0.9455048197729609,
+      0.9986577819691931,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 35,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "All the factual claims check out on dev or test. Copy-phase firing is exactly zero (phase==2 precision about 4e-7, n_active=0 on dev). t=0 and t=1 never fire. t=2 fires 5.4% of the time. t=3 fires 55%, orig_idx 4 fires 93.5%, orig_idx >= 5 fires 99.4-99.9%, and the delimiter fires 84.6%. On test the predicate scores P 0.854, R 0.986, F1 0.915, mass recall 0.997, which matches the report.",
+      "Run on the test split, the misses are all at t=2 with low activation (0.3% of mass). The false positives fall in three groups: about 219k at t=3, about 77k at the delimiter and about 27k at t=4. None of these groups separates cleanly by token or history.",
+      "The t=3 firing is only modulated by tokens, not split by them. Firing rate is 0.67 if a digit was seen earlier versus 0.49 if not, 0.43 when in_tok is a vowel, and 0.67 when in_tok is one of b/g/z/q/x. These spreads stay within the claimed 1.5x. They fit a ramp that crosses threshold around t=3, not a separate token class.",
+      "Delimiter precision is roughly flat across conditions. It is 0.67 at L=3, 0.83 at L=4, 0.85 at L>=5 overall and 0.75 at L=9. By prev_tok class it is 0.86 for digits and 0.87 for vowels. Repeated prev tokens give 0.82. None of these splits is a usable class.",
+      "Alternative predicates did no better. Starting at t>=4 instead of t>=3 lowered F1 to 0.891. Keeping t=3 only when a digit had been seen gave F1 0.911 against 0.915. The claim that activation 'peaks near the last original tokens, dips at <DEL>' rests only on the example sequences, which do show it."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

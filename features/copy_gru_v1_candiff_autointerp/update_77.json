@@ -1,0 +1,63 @@
+{
+  "label": "token right after a c in the input phase",
+  "predicate": "(prev_tok == tok(\"c\")) & (phase == 0) & (t <= 6)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires on the original-phase step right after the letter c is input, i.e. it reads the previous token as c. The current token does not matter much. It is silent in the copy phase, very weak at the delimiter, and does not fire after a c at late positions (t >= 7). It fires most strongly at t = 3-5 and on the step after the first c in a sequence; a later repeated c drives it much less. The largest activations come after a doubled c (c c x, 2.6x mean magnitude; 99% precision, but only 1.4% of activations). There is also a long tail of weak activations, mostly in the lowest two quartiles, two steps after a c or at t of about 4 with no c. These account for the recall gap: about half of active steps but only about 16% of mass.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 77,
+    "predicate": "(prev_tok == tok(\"c\")) & (phase == 0) & (t <= 6)",
+    "split": "test",
+    "precision": 0.9327763604928121,
+    "recall": 0.5053847262436622,
+    "f1": 0.6555745805415465,
+    "mass_recall": 0.8428966315912827,
+    "correlation": 0.8777647235407199,
+    "n_active": 152654,
+    "n_predicted": 82709,
+    "coverage_by_activation_quartile": [
+      0.03980190755685987,
+      0.15797610313384342,
+      0.8259308754552839,
+      0.9978513219610617
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 77,
+    "predicate": "(prev_tok == tok(\"c\")) & (phase == 0) & (t <= 6)",
+    "split": "dev",
+    "precision": 0.9312406394973638,
+    "recall": 0.5053354917572433,
+    "f1": 0.6551535087719297,
+    "mass_recall": 0.8428666235164205,
+    "correlation": 0.8767879822036062,
+    "n_active": 151345,
+    "n_predicted": 82127,
+    "coverage_by_activation_quartile": [
+      0.04009303063139255,
+      0.15826197272438947,
+      0.8255100962046727,
+      0.9974891637593826
+    ]
+  },
+  "gate": "update",
+  "feature": 77,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Most claims check out. Silent in the copy phase: 0 of 2.73M copy steps fire. At the delimiter, prev_tok==c fires only 20.5% of the time and carries 1.5% of mass. After a c at t>=7: precision 0.034, mass 0.05%. A repeated c is weaker: precision 0.59 when an earlier c exists, versus 0.87 after the first c. After a doubled c (c c x): precision 0.92 on dev.",
+      "The claim that it 'fires most at t=3-5' is inaccurate. Given prev_tok==c, the firing rate falls steadily with position: t=1, 2 and 3 have precision 1.00, t=4 0.96, t=5 0.77 and t=6 0.29. Mass share given prev c is highest at t=3 (0.24) and t=2 (0.21), and only 0.07 at t=5. The overall active count peaks at t=4, but that peak includes the weak tail that has no c.",
+      "The predicate's cutoff t<=6 is loose: at t=6 the predicate is true but the feature fires only 29% of the time. Using t<=5 gives test precision 0.984 and mass recall 0.830 (F1 0.645), versus 0.933, 0.843 and 0.656 for t<=6. The cutoff is really a gradual decay, not a sharp edge at t=7.",
+      "Missed activations on test (75.5k steps, 15.7% of mass) are almost all weak (0.02-0.2 of max). They are mainly the step two after a c, a decaying echo: prev2==c without prev==c gives precision 0.41 and 9.6% of mass. The remaining misses, with no c in the previous two steps, fire at about a 1.4% rate and carry about 4.5% of mass, spread out with no pattern. This is a weak tail the explanation already describes, not a systematic counterexample class.",
+      "Adding the two-steps-after-c echo for t<=4 raises test F1 to 0.690 and mass recall to 0.897, but precision drops to 0.786. This trade-off matches the explanation's own note and does not overturn the verdict."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "step right after a c in the input phase (strongest early, fading by t=5-6)",
+    "better_predicate": "((prev_tok == tok(\"c\")) | ((prev2_tok == tok(\"c\")) & (t<=4))) & (phase == 0) & (t <= 5)",
+    "better_predicate_test_f1": 0.69
+  },
+  "final_label": "step right after a c in the input phase (strongest early, fading by t=5-6)"
+}

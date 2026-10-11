@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input w (fed-back w), from the 3rd original position on",
+  "predicate": "(in_tok == tok(\"w\")) & (phase == 2) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires when the token w is fed back as input during the copy phase (99.9% of mass is copy phase, 100% of mass is in_tok == w). It depends on where w sat in the original sequence (orig position = recall_idx - 1): w from original position >= 3 (recall_idx >= 4) always fires (precision 1.0 on dev); w from position 2 fires about half the time and weakly (~0.3-0.6 of max); w from position 1 fires rarely and weakly; w from position 0 does not fire at all. Activation grows with the w being later in the sequence, and is highest on the 2nd/3rd of consecutive w runs and on w near the end (top examples ~1.0 at the final copy steps). Does not fire on w during the original phase (except a tiny residue) or at the delimiter, and does not fire on any other token, nor on what is being output.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 875,
+    "predicate": "(in_tok == tok(\"w\")) & (phase == 2) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.8938014737754659,
+    "recall": 0.9381255686988171,
+    "f1": 0.9154273029966703,
+    "mass_recall": 0.9784496440330921,
+    "correlation": 0.883999331094194,
+    "n_active": 54950,
+    "n_predicted": 57675,
+    "coverage_by_activation_quartile": [
+      0.7670694424224778,
+      0.9871888193332363,
+      0.9983256897430298,
+      0.9999272039018708
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 875,
+    "predicate": "(in_tok == tok(\"w\")) & (phase == 2) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.8910034300837497,
+    "recall": 0.9379043639229486,
+    "f1": 0.9138525278139901,
+    "mass_recall": 0.9778581965695918,
+    "correlation": 0.8815715569833644,
+    "n_active": 54561,
+    "n_predicted": 57433,
+    "coverage_by_activation_quartile": [
+      0.7695183637563229,
+      0.9843841642228739,
+      0.9979472140762463,
+      0.9997800586510264
+    ]
+  },
+  "gate": "update",
+  "feature": 875,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The main claims hold. 99.9% of activation mass is in the copy phase and 100% is on in_tok == w. The original-phase residue is small (dev precision 0.0045 for w in phase 0). The feature never fires at the delimiter, and w at recall_idx 1 never fires (precision 0.0). w at recall_idx >= 4 always fires (precision 1.0, even when to_go >= 4). out_tok has no effect (flat profile).",
+      "Systematic gap: whether w fires at recall_idx 2-3 depends on to_go (how many copy steps are left), not on position alone. Dev precision for w at recall_idx 2: to_go 0 -> 1.00, to_go 1 -> 0.95, to_go 2 -> 0.01, to_go 3-5 -> 0.00. For w at recall_idx 3: to_go 0 -> 1.00, to_go 1 -> 1.00, to_go 2 -> 0.875, to_go 3 -> 0.40, to_go 4 -> 0.20, to_go 5 -> 0.28.",
+      "So 'position 1 fires rarely and weakly' and 'position 2 fires about half the time' are averages that hide a near-deterministic rule. A w from position 1 (recall_idx 2) fires reliably when it is in the last two copy steps (L <= 4) and never otherwise. A w from position 2 (recall_idx 3) fires reliably when to_go <= 2.",
+      "The predicate's false positives are not scattered noise. Most come from w at recall_idx 3 with to_go >= 3, which fires only 20-40% of the time. The predicate also misses all w at recall_idx 2 with to_go <= 1 (about 2.8k dev steps that fire at ~95-100%).",
+      "With recall_idx >= 4, or recall_idx 2-3 near the end of the copy, added to the predicate: test precision rises from 0.894 to 0.991, F1 from 0.915 to 0.967, and mass recall from 0.978 to 0.995. The misses that remain are very weak activations (0.00-0.14 of max, 0.5% of mass), mainly early-copy w at recall_idx 3, plus the tiny original-phase residue."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input w (fed-back w) from the 4th original position on, or from the 2nd/3rd position when it comes near the end of the copy",
+    "better_predicate": "(in_tok == tok('w')) & (phase == 2) & ((recall_idx >= 4) | ((recall_idx >= 2) & (to_go <= 1)) | ((recall_idx == 3) & (to_go <= 2)))",
+    "better_predicate_test_f1": 0.967
+  },
+  "final_label": "copy-phase input w (fed-back w) from the 4th original position on, or from the 2nd/3rd position when it comes near the end of the copy"
+}

@@ -1,0 +1,62 @@
+{
+  "label": "echoed f as the 1st/2nd copy-phase input (recall_idx 1-2)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"f\")) & isin(recall_idx, [1, 2])",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase when the fed-back input is the letter f at recall_idx 1 or 2, i.e. the model has just echoed f as original token 0 or 1. Magnitude is strongly modulated by position: when f was the first original token (prev_tok = <DEL>, recall_idx 1) it fires near max (~3.2-3.8; 85% of mass, precision 1.0 for that clause); when f was the second original token (recall_idx 2) it fires weakly (~0.15-0.3 of max) and is often silent for short sequences (L=3-4), which accounts for most false positives. Never fires in the original or delimiter phase, on f at recall_idx >= 3, or on other tokens (a handful of near-zero hits on digit 2 etc.). Insensitive to the token being output and to L beyond the short-sequence dropout.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 279,
+    "predicate": "(phase == 2) & (in_tok == tok(\"f\")) & isin(recall_idx, [1, 2])",
+    "split": "test",
+    "precision": 0.9504000959031378,
+    "recall": 0.9995587215533002,
+    "f1": 0.9743597621864102,
+    "mass_recall": 0.9999866248991343,
+    "correlation": 0.8175484648578253,
+    "n_active": 31726,
+    "n_predicted": 33367,
+    "coverage_by_activation_quartile": [
+      0.9982349974785678,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 279,
+    "predicate": "(phase == 2) & (in_tok == tok(\"f\")) & isin(recall_idx, [1, 2])",
+    "split": "dev",
+    "precision": 0.9499341632750778,
+    "recall": 0.9994962057999307,
+    "f1": 0.9740851553509782,
+    "mass_recall": 0.9999843711984981,
+    "correlation": 0.8165751392011047,
+    "n_active": 31759,
+    "n_predicted": 33416,
+    "coverage_by_activation_quartile": [
+      0.9979848866498741,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 279,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims hold up. On the test split the predicate scores P 0.950, R 1.000, F1 0.974 and mass recall 1.000. On the dev split, all activity is in the copy phase, every active step has recall_idx 1 or 2 (mass shares 0.845 and 0.155), and the input is f on 31,743 of 31,759 active steps.",
+      "The recall_idx==1 clause alone has precision 1.000 on test, which matches the claim.",
+      "The false positives are systematic, but the explanation already discloses them. They all come from the recall_idx==2 clause in short sequences: with L<=4 its precision is 0.42 (2,820 predicted steps), and with L==4 it is 0.50. With L>=5 the recall_idx==2 clause has precision 0.998.",
+      "There are 14 missed steps on test, carrying 0.0% of the mass. They have tiny activations (0.01-0.03) on digits 2 and 3 and on v, at recall_idx 1 in L=3-4 sequences. This is scattered noise, as the explanation says.",
+      "The label does not claim more than the predicate. Its wording 'echoed f as 1st/2nd copy-phase input' is accurate, though it doesn't say that the recall_idx 2 response is weak and length-gated."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"f\")) & ((recall_idx == 1) | ((recall_idx == 2) & (L >= 5)))",
+    "better_predicate_test_f1": 0.9803
+  }
+}

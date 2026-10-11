@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input token w",
+  "predicate": "(phase == 2) & (in_tok == tok(\"w\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires when the token w is fed back as input during the copy phase (t > L), i.e. the model has just emitted w and is now outputting the original token that followed it. Never fires in the original phase or at <DEL>, even when w is input there (all activations are copy-phase; in_first=1 steps have zero activation). Covers ~99.6% of active steps and 99.9% of activation mass; residual ~0.1% mass is weak firing on copy-phase z. Magnitude grows with position in the copy: w fed back as the very first copied token (recall_idx 1) fires weakly or not at all (most false positives are there), while top activations are w at recall_idx 3-7 in long sequences. Adding recall_idx >= 2 raises precision to 0.87 but costs recall (F1 0.884 vs 0.880), so the simpler predicate is kept. Not sensitive to out_tok, prev_tok or digit content.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 73,
+    "predicate": "(phase == 2) & (in_tok == tok(\"w\"))",
+    "split": "test",
+    "precision": 0.7911217110324665,
+    "recall": 0.9958495316888255,
+    "f1": 0.8817581017596943,
+    "mass_recall": 0.9990645751558194,
+    "correlation": 0.7567369069221052,
+    "n_active": 72281,
+    "n_predicted": 90986,
+    "coverage_by_activation_quartile": [
+      0.984616235958165,
+      0.9988378527946873,
+      0.9999446596568898,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 73,
+    "predicate": "(phase == 2) & (in_tok == tok(\"w\"))",
+    "split": "dev",
+    "precision": 0.7888943976202281,
+    "recall": 0.9956754501842453,
+    "f1": 0.880304893041554,
+    "mass_recall": 0.9990575087068342,
+    "correlation": 0.7557870257190424,
+    "n_active": 71915,
+    "n_predicted": 90765,
+    "coverage_by_activation_quartile": [
+      0.9839256910840425,
+      0.9988875910784805,
+      0.999888759107848,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 73,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The main claims hold. All activation is in the copy phase: 0 active steps in the original or delimiter phase on dev. in_tok w carries 99.9% of activation mass and z about 0.1%. correct==0 has essentially no firing, and out_tok, prev_tok and digit content show flat lift.",
+      "The false positives follow a pattern, and the explanation describes it wrongly. Whether copy-phase w fires depends mainly on absolute step t, i.e. on sequence length, not on recall_idx alone. Dev precision of the predicate within each t bucket: t<=6 0.31, t=7 0.52, t=8 0.69, t=9 0.76, t=10 0.85, t>=11 0.94. By L: L<=4 0.36, L=5 0.63, L>=6 0.86. At the same recall_idx, length still matters: recall_idx 1 gives 0.42 overall but 0.66 when L>=8. recall_idx>=3 still drops to 0.42 when L<=4. So 'weak or absent at recall_idx 1' is a side effect of an early-t / short-sequence effect.",
+      "The explanation's chosen refinement was recall_idx>=2, which barely helps (dev F1 0.884). Filtering on absolute step does better: (phase==2)&(in_tok==w)&(t>=7) scores test P 0.841 / R 0.960 / F1 0.896 / mass recall 0.983, against 0.791 / 0.996 / 0.882 / 0.999 for the original predicate.",
+      "The test-split false positives are inactive w inputs early in the copy, often in short sequences, e.g. 'v d w 0 <DEL> v d *w*' and 'q w 1 j <DEL> q *w* 1'. This is the same structured class, not scattered noise."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input token w (firing probability rises with absolute step t; weak or absent early in the copy and in short sequences)",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"w\")) & (t >= 7)",
+    "better_predicate_test_f1": 0.896
+  },
+  "final_label": "copy-phase input token w (firing probability rises with absolute step t; weak or absent early in the copy and in short sequences)"
+}

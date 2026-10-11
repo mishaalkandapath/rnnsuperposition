@@ -1,0 +1,63 @@
+{
+  "label": "Early original-phase positions (first ~4 input tokens)",
+  "predicate": "(phase == 0) & (t <= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Positional feature that fires on the first four input steps of the original phase (t = 0..3). It is active on almost every sequence at t=0..2 (90-97% rate), drops to 70% at t=3 and 36% at t=4, and is nearly silent from t>=6. Magnitude is small at t=0 (7% of mass) and largest at t=1-2 (about 70% of mass combined), then tapers off at t=3-4. Token identity barely matters (rates by in_tok are flat, 0.34-0.41); first occurrence of a token correlates only because early steps are mostly first occurrences, and adding in_first lowers F1. It does NOT fire in the copy phase (0.1% rate) and only rarely on the <DEL> step (6%, mostly short sequences). Misses are mostly weak activations at t=4-5 in longer sequences; false positives are mostly t=3 or t=0 steps with near-threshold values.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 434,
+    "predicate": "(phase == 0) & (t <= 3)",
+    "split": "test",
+    "precision": 0.8832396082974588,
+    "recall": 0.8738881660484763,
+    "f1": 0.8785390029632326,
+    "mass_recall": 0.9316832695756214,
+    "correlation": 0.6456740718353872,
+    "n_active": 2008281,
+    "n_predicted": 1987018,
+    "coverage_by_activation_quartile": [
+      0.808144664798405,
+      0.8206445316390145,
+      0.8788475710558289,
+      0.9879160276455474
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 434,
+    "predicate": "(phase == 0) & (t <= 3)",
+    "split": "dev",
+    "precision": 0.8836212558538654,
+    "recall": 0.8736511064335866,
+    "f1": 0.8786078975715274,
+    "mass_recall": 0.931563399477995,
+    "correlation": 0.6460185356664834,
+    "n_active": 2009610,
+    "n_predicted": 1986935,
+    "coverage_by_activation_quartile": [
+      0.8082475622159899,
+      0.8189083265824447,
+      0.8795785048626399,
+      0.9878702712170732
+    ]
+  },
+  "gate": "hidden",
+  "feature": 434,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claims hold. Rates by t on dev are t0 0.967, t1 0.956, t2 0.899, t3 0.704, t4 0.361, t5 0.109, and 0.018 or lower from t6 on. Mass shares are 0.075 at t0 and 0.364 + 0.335 at t1-2. The copy-phase rate is 0.001 and the delimiter rate is 0.059. The predicate scores test F1 0.879 and mass recall 0.932, as reported.",
+      "'Token identity barely matters' is partly wrong in two ways. First, the feature never fires at t=0 when the input is 'd' (precision 0.0 on 16.6k steps), while every other first token gives precision 1.0. That is an exact, systematic class of false positives, not values near threshold. It makes up about 7% of all false positives.",
+      "Second, digits earlier in the sequence strongly raise the rate at t=3 and t=4, which the explanation leaves out. At t=3 the rate is 0.63 with no earlier digits, 0.84 with one and 0.96 with two or more. At t=4 it is 0.31 with no earlier digits and 0.66 with two or more. So the falloff after t=2 depends partly on which tokens came before, not on position alone.",
+      "The in_first and length claims hold. Repeated tokens at t<=3 still fire (precision 0.83). The t=3 and t=4 rates are about the same for every L (0.71 and 0.39), so length does not explain the misses.",
+      "Both gaps are real but small. A refined predicate gains only about 0.008 F1 on test, so the label 'early original-phase positions' stands. The explanation's account of what drives the drop at t=3-4 is incomplete."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Early original-phase positions (t=0..3); silent at t=0 on 'd'; the t=3-4 tail fires more after earlier digit inputs",
+    "better_predicate": "(phase==0)&(((t<=3)&~((t==0)&(in_tok==tok('d'))))|((t==4)&(n_seen(DIGITS)>=2)))",
+    "better_predicate_test_f1": 0.886
+  },
+  "final_label": "Early original-phase positions (t=0..3); silent at t=0 on 'd'; the t=3-4 tail fires more after earlier digit inputs"
+}

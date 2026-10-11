@@ -1,0 +1,63 @@
+{
+  "label": "Third original input (t=2) when the sequence starts with f, z, n, r or o",
+  "predicate": "(t == 2) & isin(first_tok, [tok(\"f\"),tok(\"z\"),tok(\"r\"),tok(\"n\"),tok(\"o\")])",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost only at step t=2 (the third original token); 99.98% of activation mass is at t=2 and it is essentially silent in the delimiter and copy phases (22 copy-phase activations out of about 96k). Within t=2 it depends on the first original token: about 10% of t=2 steps fire when first_tok is one of f, z, n, r, o, and these account for about 98% of activation mass. Magnitude is graded by first token: strongest for f (36% of mass), then z (27%), n (20%), r (10%), o (5%). The top examples (0.867) are all f z at positions 0-1. Weak, low-quartile firing also occurs when first_tok is c, 1 or 0 (about 2% of mass). The current token at t=2 has little effect (rate is flat across in_tok), and L only matters through to_go. Dev: P=0.98, R=0.85, mass recall 0.98; most of the misses are low-quartile activations.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 402,
+    "predicate": "(t == 2) & isin(first_tok, [tok(\"f\"),tok(\"z\"),tok(\"r\"),tok(\"n\"),tok(\"o\")])",
+    "split": "test",
+    "precision": 0.9851505337651434,
+    "recall": 0.8446926455010131,
+    "f1": 0.9095308494321801,
+    "mass_recall": 0.9778306769703334,
+    "correlation": 0.8594076742882375,
+    "n_active": 97233,
+    "n_predicted": 83370,
+    "coverage_by_activation_quartile": [
+      0.42325887531366985,
+      0.955817014974494,
+      0.9997943064011848,
+      0.999917722560474
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 402,
+    "predicate": "(t == 2) & isin(first_tok, [tok(\"f\"),tok(\"z\"),tok(\"r\"),tok(\"n\"),tok(\"o\")])",
+    "split": "dev",
+    "precision": 0.9842411371479596,
+    "recall": 0.8458602953376473,
+    "f1": 0.9098189686903952,
+    "mass_recall": 0.9778130922243676,
+    "correlation": 0.8581079514790825,
+    "n_active": 96432,
+    "n_predicted": 82874,
+    "coverage_by_activation_quartile": [
+      0.4294425087108014,
+      0.9542890326862452,
+      0.9997511199601792,
+      0.9999585199933632
+    ]
+  },
+  "gate": "update",
+  "feature": 402,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The main claims hold up. On the dev split, t=2 holds 1.000 of activation mass. Delimiter activations are 0 and copy-phase activations are 22. Mass shares by first token are f 0.356, z 0.269, n 0.201, r 0.100 and o 0.052. Test scores reproduce exactly: P 0.985, R 0.845, F1 0.910, mass recall 0.978.",
+      "The '~10% of t=2 steps fire' figure is misstated. Steps at t=2 where the first token is in {f,z,n,r,o} make up about 5/30, roughly 17%. Each first token in that set fires at nearly 100% of its t=2 steps (for example, 16650 of 16650 for f in the dev profile). The ~0.10 numbers are rates in the prev2_tok breakdown, which also includes t != 2. In plain terms: it is 'fires at essentially every t=2 step whose first token is in the set'.",
+      "There is a systematic miss class: weak firing when the first token is c or 1 depends on the SECOND token. The explanation says only 'weak firing on c/1/0'. Taken alone, (t==2)&first_tok in {c,1,0} has test precision 0.26. Restricting it to second tokens in {z,r,o,k,h} picks out the misses (for example 'c r [u:0.20]' and 'c z [i:0.13]'). Adding that clause raises test F1 from 0.910 to 0.937, recall from 0.845 to 0.898 and mass recall to 0.990, while precision stays at 0.980. The second-token list was picked by looking at the dev split before scoring on test. The prev_tok profile is consistent with it: z, r, o, k and h are the most enriched previous tokens.",
+      "False positives (1238 on test) cluster when the first token is o (precision 0.927 when the first token is o). Several are o followed by v, t or 2, but that subset is tiny (precision 0.37, recall 0.006), so this is only minor noise.",
+      "In mass terms the gap is small: the missed class holds about 1% of mass and sits in the lowest activation quartile (test coverage of quartile 1 is 0.42). The core label is right, but the explanation leaves out that the weak tail is conditioned on the second token."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Third original input (t=2) when the sequence starts with f, z, n, r or o; weak firing when it starts with c or 1 and the second token is z, r, o, k or h",
+    "better_predicate": "(t == 2) & (isin(first_tok, [tok(\"f\"),tok(\"z\"),tok(\"r\"),tok(\"n\"),tok(\"o\")]) | (isin(first_tok, [tok('c'),tok('1')]) & isin(orig(1), [tok('z'),tok('r'),tok('o'),tok('k'),tok('h')])))",
+    "better_predicate_test_f1": 0.937
+  },
+  "final_label": "Third original input (t=2) when the sequence starts with f, z, n, r or o; weak firing when it starts with c or 1 and the second token is z, r, o, k or h"
+}

@@ -1,0 +1,62 @@
+{
+  "label": "z fed back as 1st/2nd copied token",
+  "predicate": "(phase == 2) & (in_tok == tok(\"z\")) & (recall_idx <= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase when the input token is z and it is one of the first two copied tokens fed back: input at step L+1 (original token 0 = z, recall_idx 1) or step L+2 (original token 1 = z, recall_idx 2). Magnitude is strongly modulated by position. When z is the first original token, the feature fires at about 0.85-1.0 of max (that case holds about 82% of the mass). When z is the second original token, it fires weakly, about 0.2-0.4 of max. It never fires during the original phase or at the delimiter, never on any non-z input, and never on z at later copy positions. False positives (about 4.5%) are mostly short sequences (L=3-4) where z is the second original token at recall_idx 2.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 510,
+    "predicate": "(phase == 2) & (in_tok == tok(\"z\")) & (recall_idx <= 2)",
+    "split": "test",
+    "precision": 0.9585813044785092,
+    "recall": 0.9998432454462802,
+    "f1": 0.9787776021606027,
+    "mass_recall": 0.999993732280635,
+    "correlation": 0.8393658918644319,
+    "n_active": 31897,
+    "n_predicted": 33270,
+    "coverage_by_activation_quartile": [
+      0.9993730407523511,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 510,
+    "predicate": "(phase == 2) & (in_tok == tok(\"z\")) & (recall_idx <= 2)",
+    "split": "dev",
+    "precision": 0.9549787976301465,
+    "recall": 0.9999685088962368,
+    "f1": 0.9769559732947729,
+    "mass_recall": 0.9999982508304474,
+    "correlation": 0.8376108412614215,
+    "n_active": 31755,
+    "n_predicted": 33251,
+    "coverage_by_activation_quartile": [
+      0.9998740395515808,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 510,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Main claims hold on the test split. Precision is 0.959, recall 0.9998, mass recall 0.99999. On dev the feature fires on no non-z input; it fires once in the original phase and never at the delimiter. The 5 test misses are tiny (about 0.02-0.03 of max) and hold 0.0% of the mass.",
+      "Magnitude split confirmed. z at recall_idx 1 has precision 1.0, holds 81.8% of the mass and fills the top two activation quartiles. z at recall_idx 2 holds 18.2% and sits only in the bottom two quartiles.",
+      "The false positives form a clear, systematic group. Almost all are z at recall_idx 2 with L<=4 (2788 predicted, precision 0.51). With L==3 (to_go 0) it essentially never fires (precision 0.007, 421 cases). With L==4 it fires about 60% of the time. With L>=5 precision is 0.9999. The explanation does mention this short-sequence group, but 'mostly L=3-4' undersells it: for L=3 the 2nd-copied-token case is a hard zero.",
+      "The label slightly overclaims: 'z fed back as 2nd copied token' does not hold when L=3, and only holds partly when L=4."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "z fed back as 1st copied token (strong) or 2nd copied token (weak; not when L=3)",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"z\")) & ((recall_idx == 1) | ((recall_idx == 2) & (L>=4)))",
+    "better_predicate_test_f1": 0.985
+  },
+  "final_label": "z fed back as 1st copied token (strong) or 2nd copied token (weak; not when L=3)"
+}

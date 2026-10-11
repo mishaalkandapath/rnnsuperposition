@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input y re-fed as original token 1-3 (not last step)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"y\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase when the fed-back input token is y, i.e. the model is re-reading a y that was original token 1, 2 or 3 (recall_idx 2-4). Never fires on any other input token, in the original or delimiter phase, on a y at original position 0 (recall_idx 1, near zero), or on y from original positions >=4 (recall_idx >=5, essentially none). Mostly silent on the final step of the sequence (to_go == 0). Magnitude is largest for y at original position 1 (recall_idx 2, 56% of mass; all top examples are y as the second original token, near max 3.1) and decreases for positions 2 and 3; weak activations also appear with small L / near the end of the sequence. Independent of which token is being output next, of first token, and of token counts.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 407,
+    "predicate": "(phase == 2) & (in_tok == tok(\"y\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+    "split": "test",
+    "precision": 0.8882474328108878,
+    "recall": 0.9835427887492519,
+    "f1": 0.9334693034543294,
+    "mass_recall": 0.998394328312908,
+    "correlation": 0.8295278987499177,
+    "n_active": 36762,
+    "n_predicted": 40706,
+    "coverage_by_activation_quartile": [
+      0.9345011424219345,
+      0.9996735937329997,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 407,
+    "predicate": "(phase == 2) & (in_tok == tok(\"y\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+    "split": "dev",
+    "precision": 0.8856016256229136,
+    "recall": 0.9819747324374346,
+    "f1": 0.931301593762322,
+    "mass_recall": 0.9982011783119018,
+    "correlation": 0.828746120678358,
+    "n_active": 37281,
+    "n_predicted": 41338,
+    "coverage_by_activation_quartile": [
+      0.9282265851303508,
+      0.9996781115879828,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 407,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Factual claims check out on the dev profile. All activation is in the copy phase (share 1.000). in_tok is 'y' for 100% of active steps. recall_idx 1 (y from original position 0) has 0.001 of the mass. recall_idx >= 5 has about 95 active steps in total. to_go == 0 has 90 active steps out of 1M.",
+      "Mass shares match the explanation: recall_idx 2 = 0.562, recall_idx 3 = 0.387, recall_idx 4 = 0.050.",
+      "The label treats original positions 1-3 alike, but position 3 (recall_idx 4) is much weaker. On test, precision is 0.95 at recall_idx 2, 0.85 at recall_idx 3 and only 0.51 at recall_idx 4. Within recall_idx 4, precision is 0.21 when L <= 6, 0.39 when to_go == 1 and about 0.71 when to_go >= 2. So most of the predicate's 4549 test false positives are y re-fed from original position 3 in short sequences, which carry little activation mass. This is a graded fall-off, not a different firing pattern.",
+      "A second, smaller group of false positives: L = 4 with y at original position 1 (step 6, to_go == 1) has precision 0.81. This matches the low rate at t = 6.",
+      "The 605 test misses (0.2% of activation mass) are tiny activations (0.00-0.07 of max), mostly y at original position 0 re-fed at step L+1. This is scattered noise.",
+      "Changing the recall_idx 4 clause to require to_go >= 2 gives test F1 0.939 (precision 0.924, recall 0.954), only slightly better than 0.933. No systematic counterexample class with real activation mass remains."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"y\")) & ((((recall_idx >= 2) & (recall_idx <= 3)) & (to_go >= 1)) | ((recall_idx == 4) & (to_go >= 2)))",
+    "better_predicate_test_f1": 0.939
+  }
+}

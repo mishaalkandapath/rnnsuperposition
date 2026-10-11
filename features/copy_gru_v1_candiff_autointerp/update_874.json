@@ -1,0 +1,64 @@
+{
+  "label": "original-phase token right after an \"a\"",
+  "predicate": "(phase == 0) & (prev_tok == tok(\"a\")) & (t <= 6)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires in the original (input) phase on the step right after the letter a was input, whatever the current token is (prev_tok=a gives 19.7x lift and 89% of activation mass). The largest activations (~1.0 of max) come at the step after a doubled \"a a\" pair, and the \"a a\" step itself is also strong (~0.6). A weaker tail (0.05-0.4 of max) fires two steps after an a, which accounts for most missed low-quartile activations. It is essentially silent when a appears at t>=7 (late positions), and does not fire at t=0, in the copy phase, or (beyond rare tiny values) on the delimiter. The current input token and L have little effect.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 874,
+    "predicate": "(phase == 0) & (prev_tok == tok(\"a\")) & (t <= 6)",
+    "split": "test",
+    "precision": 0.9604997887366451,
+    "recall": 0.5327962713703116,
+    "f1": 0.6853975172936605,
+    "mass_recall": 0.88056849879083,
+    "correlation": 0.9158033806204937,
+    "n_active": 149331,
+    "n_predicted": 82835,
+    "coverage_by_activation_quartile": [
+      0.03800926793989232,
+      0.1779926606487558,
+      0.9152760292502612,
+      0.9999196399871424
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 874,
+    "predicate": "(phase == 0) & (prev_tok == tok(\"a\")) & (t <= 6)",
+    "split": "dev",
+    "precision": 0.9594310943833236,
+    "recall": 0.5312967614365113,
+    "f1": 0.6838842264566278,
+    "mass_recall": 0.8795920019047881,
+    "correlation": 0.9145820757821652,
+    "n_active": 149696,
+    "n_predicted": 82896,
+    "coverage_by_activation_quartile": [
+      0.03847798204360838,
+      0.17697199657973492,
+      0.9097905087644292,
+      0.9999465583582727
+    ]
+  },
+  "gate": "update",
+  "feature": 874,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Core claim holds. On test the predicate scores precision 0.960, recall 0.533, F1 0.685 and mass recall 0.881. prev_tok=a has 19.7x lift and 0.887 of the mass. Copy-phase activity is exactly 0. t=0 is 0. The delimiter step holds 0.6% of the mass, and (phase==1)&prev_tok==a has precision only 0.13. Rates by in_tok are flat (1.1-1.3x) and rates by L are flat (0.8-1.2x).",
+      "Off-by-one in the explanation. It says the feature goes quiet when the 'a' is at t>=7, but the predicate's cutoff (current t<=6) puts the 'a' at t<=5. With the 'a' at t=5 (current t=6), precision is 0.68 and mass is 2.1%. With the 'a' at t=6 (current t=7), precision drops to 0.15 and mass is 0.2%. So the feature goes quiet when the 'a' is at t>=6, not t>=7.",
+      "The tail is described wrongly. It is not mostly 'two steps after an a'. Steps two after an 'a' (prev2=a, prev!=a) account for about 24% of active count (8.7% of mass). A separate, unmentioned weak tail of about 0.01-0.1 fires in sequences with no 'a' seen yet: ~seen(a) covers 20.5% of active count but only 2.4% of mass, at precision 0.01, and sits mostly around t=4 (e.g. '2 q o w [f:0.06]'). The two tails are about the same size, so 'most of the low-quartile misses' overclaims.",
+      "Minor systematic weakening on a repeated, non-adjacent 'a'. prev_tok==a with an earlier 'a' and prev2!=a has precision 0.52 (n=4852, 1.4% of mass). Example false positive on test: 'a n x a *1*' is inactive after the second 'a'. Restricting to the first 'a' (n_seen([a])==1) gives precision 0.972 at nearly the same recall. The feature is really about the first 'a', apart from doubled 'a a'.",
+      "Magnitude claims check out roughly. Steps right after a doubled 'a a' have precision 0.956, and 5.1% of them fall in the top quartile versus 0.06% in the bottom quartile. The second 'a' of a pair is also high-quartile.",
+      "None of these gaps carries much mass. A better predicate that adds the two-step tail only for the first 'a' improves test F1 from 0.685 to 0.784, with precision 0.822 and mass recall 0.960."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "original-phase step right after the first \"a\" (t <= 6), weaker two steps after",
+    "better_predicate": "(phase == 0) & (t <= 6) & ((prev_tok == tok(\"a\")) | ((prev2_tok == tok(\"a\")) & (n_seen([tok(\"a\")]) == 1) & (t <= 5)))",
+    "better_predicate_test_f1": 0.784
+  },
+  "final_label": "original-phase step right after the first \"a\" (t <= 6), weaker two steps after"
+}

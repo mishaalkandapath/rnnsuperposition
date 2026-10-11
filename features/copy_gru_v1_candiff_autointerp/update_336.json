@@ -1,0 +1,64 @@
+{
+  "label": "2-5 steps after an early i (first or second token)",
+  "predicate": "(phase <= 1) & (t >= 2) & (t <= 5) & ((orig(0) == tok(\"i\")) | ((orig(1) == tok(\"i\")) & (t >= 3) & (t <= 4)))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires on input steps t=2..5 (original phase, or the <DEL> step in short sequences) when the letter i was one of the first original tokens. Sequences starting with i carry about 86% of activation mass (prev2_tok=i lift 12x, first_tok=i lift 20x). Activation peaks around t=3-4, i.e. 2-3 steps after the i, and fades by t=6; it never fires at t=0-1 or in the copy phase. When i is the second token instead, the feature is weaker and fires at t=3-4. The identity of the current input token barely matters. Sequences beginning i i (i at both of the first two positions) give the strongest activations. It does not fire for i appearing later in the sequence, and it does not fire on the copy-phase outputs of i.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 336,
+    "predicate": "(phase <= 1) & (t >= 2) & (t <= 5) & ((orig(0) == tok(\"i\")) | ((orig(1) == tok(\"i\")) & (t >= 3) & (t <= 4)))",
+    "split": "test",
+    "precision": 0.8525080244194096,
+    "recall": 0.885249651446497,
+    "f1": 0.8685703903987346,
+    "mass_recall": 0.976037027114462,
+    "correlation": 0.7568221460223659,
+    "n_active": 91808,
+    "n_predicted": 95334,
+    "coverage_by_activation_quartile": [
+      0.6260456605088881,
+      0.9357790170791217,
+      0.9795660508888114,
+      0.999607877309167
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 336,
+    "predicate": "(phase <= 1) & (t >= 2) & (t <= 5) & ((orig(0) == tok(\"i\")) | ((orig(1) == tok(\"i\")) & (t >= 3) & (t <= 4)))",
+    "split": "dev",
+    "precision": 0.853147361533748,
+    "recall": 0.8874808236641386,
+    "f1": 0.8699754830578927,
+    "mass_recall": 0.9765878366459122,
+    "correlation": 0.7560302829802853,
+    "n_active": 92562,
+    "n_predicted": 96287,
+    "coverage_by_activation_quartile": [
+      0.631174106564107,
+      0.9388531178427899,
+      0.9808124459809853,
+      0.9990924805531547
+    ]
+  },
+  "gate": "update",
+  "feature": 336,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The main claims hold. On test the predicate gives P 0.853, R 0.885, F1 0.869, mass recall 0.976. The copy phase has only 56 active steps on dev, with 0.000 mass share. Nothing fires at t=0-1, and the mass peaks at t=3 (0.425) and t=4 (0.367). first_tok=i carries 86% of the mass at 20x lift. A later i (third token, first two not i) gives precision 0.007, so the feature really does not fire for it. Coverage of the lowest activation quartile is only 0.63, and those misses are mostly weak scattered steps.",
+      "Systematic counterexample: sequences that start with 'i i'. Here t=2 never fires (precision 0.0 over 538 test steps), but t=6 does fire (precision 0.96 over 344 steps). So the window is t=3..6, i.e. it moves with the i at position 1. The explanation says 't=2..5 when i was one of the first tokens', which is wrong for this case. The class is small but deterministic.",
+      "The <DEL>-step claim is only true for sequences that start with i (precision 0.72 at the delimiter). When i is only the second token, the delimiter step mostly stays off (precision 0.18 over 2791 steps). The predicate still includes those steps.",
+      "The second-token-i clause is imprecise: precision 0.65 at t=3-4, falling to 0.28 at t=5. Splitting on digit/letter tokens, prev_tok or orig(2) did not explain which of these steps fire. They look like near-threshold activations; the label's word 'weaker' is fair.",
+      "The claim that 'i i' sequences give the strongest activations is supported by the top examples and by mass per predicted step, but 'i i' sequences have the shifted window described above.",
+      "Correcting these lifts test F1 only from 0.869 to 0.881. The label is basically right; it needs small fixes, not a rewrite."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "2-4 steps after an early i (first or second original token); for sequences starting 'i i' the window shifts to t=3..6",
+    "better_predicate": "(phase <= 1) & (((orig(0) == tok('i')) & (orig(1) != tok('i')) & (t >= 2) & (t <= 5)) | ((orig(0) == tok('i')) & (orig(1) == tok('i')) & (t >= 3) & (t <= 6)) | ((orig(1) == tok('i')) & (orig(0) != tok('i')) & (phase == 0) & (t >= 3) & (t <= 4)))",
+    "better_predicate_test_f1": 0.881
+  },
+  "final_label": "2-4 steps after an early i (first or second original token); for sequences starting 'i i' the window shifts to t=3..6"
+}

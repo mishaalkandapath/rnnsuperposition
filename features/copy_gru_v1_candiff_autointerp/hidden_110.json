@@ -1,0 +1,75 @@
+{
+  "label": "Input phase from the 3rd original token through <DEL>",
+  "predicate": "(phase <= 1) & (t >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires on the input (reading) side of the sequence: original-phase steps from position 2 onward, and on the <DEL> delimiter step (rate 0.73, about 20% of mass). Almost silent on the first two original tokens (t=0,1) and on the whole copy phase (0.2% rate, 0.1% of mass). Within the window the rate falls off for later positions (0.80 at t=2 down to about 0.28 at t=8). It fires less on tokens that repeat an earlier input (in_first=0), but requiring in_first lowers F1, so this is not part of the predicate. The largest activations, close to max, land on <DEL> and the steps just before it in short sequences whose first tokens are x/t/c (first_tok lift 1.3x). Low quartile: weak activations spread over long sequences. Dev: P 0.73, R 0.97, F1 0.83, mass recall 0.99.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 110,
+    "predicate": "(phase <= 1) & (t >= 2)",
+    "split": "test",
+    "precision": 0.7348946513023998,
+    "recall": 0.9671165423113849,
+    "f1": 0.8351634546205978,
+    "mass_recall": 0.9918812388309096,
+    "correlation": 0.5903052875575875,
+    "n_active": 2075907,
+    "n_predicted": 2731880,
+    "coverage_by_activation_quartile": [
+      0.9034542956624282,
+      0.9653009670948809,
+      0.9997109698503016,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 110,
+    "predicate": "(phase <= 1) & (t >= 2)",
+    "split": "dev",
+    "precision": 0.7346623886022406,
+    "recall": 0.9669024673555843,
+    "f1": 0.8349336479601812,
+    "mass_recall": 0.991754325709237,
+    "correlation": 0.5896748694790737,
+    "n_active": 2075623,
+    "n_predicted": 2731765,
+    "coverage_by_activation_quartile": [
+      0.9031924857295927,
+      0.9647103714352888,
+      0.9997070760407473,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 110,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The positional window itself checks out. The predicate (phase<=1)&(t>=2) gives dev P 0.735, R 0.967, F1 0.835, mass recall 0.992. The copy phase has a 0.002 rate and 0.1% of mass. <DEL> has a 0.727 rate and 20.2% of mass. Rates at t=0 and t=1 are 0.033 and 0.091.",
+      "The claim that the rate falls with position (0.80 at t=2 to 0.28 at t=8) is a confound. The by-t table mixes original, <DEL> and copy steps. Conditioned on the original phase, the rate stays roughly flat: orig_idx 2..8 gives 0.805, 0.784, 0.732, 0.677, 0.645, 0.671, 0.712. Scoring (phase==0)&(orig_idx==8) gives P 0.71. Within the window, to_go==0 gives P 0.70 and to_go>=3 gives P 0.77. There is no strong decay.",
+      "The claim that it fires less on repeated tokens (in_first=0) is also a confound. The low overall in_first=0 rate comes from copy-phase steps, which all have in_first=0. Inside the window, in_first==0 gives P 0.738 and in_first==1 gives P 0.736. Repetition makes no difference.",
+      "The explanation misses a systematic content gate set by the first original tokens. Precision inside the window by first token: first_tok=b gives 0.0008, so the feature is completely silent on sequences that start with b. Other first tokens: z 0.31, l 0.37, m 0.50, versus 0.94 for the group {x,t,c,o,n,1,r,2,y,v,f}. The second token matters too: orig(1)=b gives 0.21 and orig(1)=t gives 0.96. The test-split false positives are whole silent sequences, not scattered noise, and that matches this gate.",
+      "Calling the first_tok effect a modest 1.3x lift on top activations understates it. It is a hard gate for b and a large modulation for the other first tokens."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "Input phase from the 3rd original token through <DEL>, gated by the identity of the first two tokens (silent when the sequence starts with b)",
+    "better_predicate": "(phase <= 1) & (t >= 2) & ~isin(first_tok,[tok('b'),tok('z'),tok('l')]) & (orig(1)!=tok('b'))",
+    "better_predicate_test_f1": 0.866
+  },
+  "final_label": "Input phase from the 3rd original token through <DEL>, gated by the identity of the first two tokens (silent when the sequence starts with b)",
+  "scorecard": {
+    "format": "slot2",
+    "summary": "Graded preference over the first original token (most: x, t, c, o, n, 1; least: m, l, z, b) and the second original token (most: t, c, x, n, 1, o; least: w, m, l, b); timing cues that raise it most: t=2, t=3, phase=1.",
+    "test_f1": 0.8828707557863348,
+    "test_precision": 0.8624970305828145,
+    "test_recall": 0.9042302954804815,
+    "full_test_f1": 0.9650129039713417,
+    "full_n_cues": 799,
+    "top40_test_f1": 0.8938159372883782,
+    "slot2_test_f1": 0.8828707557863348,
+    "file": "scorecards/hidden_110.json"
+  }
+}

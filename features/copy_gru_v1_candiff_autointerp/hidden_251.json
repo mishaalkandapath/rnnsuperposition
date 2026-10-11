@@ -1,0 +1,62 @@
+{
+  "label": "q fed back as input during the copy phase",
+  "predicate": "(phase == 2) & (in_tok == tok(\"q\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase (t > L), on steps where the input token is q, i.e. the model is re-reading its own previously emitted q. Never fires on q in the original phase, on <DEL>, or on any other input token (2 stray tiny activations on g/3 out of 80k). Covers ~100% of activation mass; ~12% of copy-phase q inputs are inactive, mostly the earliest copy steps (q at original position 0 or 1 being fed back). Magnitude is weak at the first copy steps (recall_idx 1-2, ~0.1-0.4 of max) and largest for q fed back at later positions (recall_idx >= 3); restricting to recall_idx >= 2 raises precision to 0.93 but lowers F1 to 0.90. Not modulated by output token, next output, or L in any notable way.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 251,
+    "predicate": "(phase == 2) & (in_tok == tok(\"q\"))",
+    "split": "test",
+    "precision": 0.8787428118183621,
+    "recall": 0.9999623918766454,
+    "f1": 0.9354418801013228,
+    "mass_recall": 0.9999915856223274,
+    "correlation": 0.7890279306962034,
+    "n_active": 79770,
+    "n_predicted": 90774,
+    "coverage_by_activation_quartile": [
+      0.9998495712781427,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 251,
+    "predicate": "(phase == 2) & (in_tok == tok(\"q\"))",
+    "split": "dev",
+    "precision": 0.8788095107352699,
+    "recall": 0.9999750068731099,
+    "f1": 0.935485190878961,
+    "mass_recall": 0.9999986432086487,
+    "correlation": 0.7884500898263614,
+    "n_active": 80022,
+    "n_predicted": 91055,
+    "coverage_by_activation_quartile": [
+      0.9999000299910027,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 251,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims hold up. On test, the base predicate scores P=0.879, R=1.000, F1=0.935, mass recall 1.000. The profile shows 0 activations in the original phase and 0 on <DEL>. Off-predicate activations come to 3 test steps (g and t inputs, at most 0.09 of max), holding 0.0% of the mass.",
+      "The false positives (about 11k on test) are not a new class. Precision rises with how late q is fed back: recall_idx 1 gives P=0.64, recall_idx 2 gives P=0.76, and recall_idx >= 3 gives P=0.98. About 1k inactive cases remain at recall_idx >= 3, mostly when q was original token 2. So 'mostly at the earliest copy steps' is accurate.",
+      "L does not split the recall_idx 1 false positives (P=0.650 for L<=5, P=0.651 for L>=7). prev_tok being a digit and in_count>=2 shift precision somewhat but give no clean rule. This looks like weaker firing early in the copy phase, which can't be cut cleanly.",
+      "Tightening the predicate lowers test F1 (recall_idx>=2: 0.898; recall_idx>=3: 0.823), so the simpler predicate is the right choice.",
+      "The label 'q fed back as input during the copy phase' matches the predicate and does not overclaim."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

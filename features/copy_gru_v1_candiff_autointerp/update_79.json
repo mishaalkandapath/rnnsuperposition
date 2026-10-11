@@ -1,0 +1,60 @@
+{
+  "label": "token right after an early digit 0 in the original sequence",
+  "predicate": "(phase == 0) & (prev_tok == tok(\"0\")) & (t <= 5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires during the original (input) phase on the step right after the digit 0 is input, only early in the sequence (t = 1..5; almost nothing at t >= 6, and never in the copy phase). 94% of activation mass lands on steps where prev_tok = 0 (25x lift). It is strongest when the 0 comes at position 2-3, especially after a sequence starting with v/k/3 (e.g. v k 0 [0] [2]); the step after a 0 0 pair is the top activation. It does not fire on the 0 itself, and it is weak or silent after a second, non-adjacent 0 (z 0 i 0 [y] stays silent). The missed activations are about 30% of active steps but only 6% of mass: weak, diffuse firing at other original-phase steps and the delimiter. On dev: precision 0.90, recall 0.69, F1 0.78, mass recall 0.94.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 79,
+    "predicate": "(phase == 0) & (prev_tok == tok(\"0\")) & (t <= 5)",
+    "split": "test",
+    "precision": 0.8976136923220251,
+    "recall": 0.6866346310474019,
+    "f1": 0.778075807130785,
+    "mass_recall": 0.9380975506621833,
+    "correlation": 0.8814008219568498,
+    "n_active": 98224,
+    "n_predicted": 75137,
+    "coverage_by_activation_quartile": [
+      0.10669490144974751,
+      0.6410653200847044,
+      0.9987783026551555,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 79,
+    "predicate": "(phase == 0) & (prev_tok == tok(\"0\")) & (t <= 5)",
+    "split": "dev",
+    "precision": 0.8983340681068227,
+    "recall": 0.6894384464745266,
+    "f1": 0.7801445593029597,
+    "mass_recall": 0.9389656854659955,
+    "correlation": 0.8822872011903785,
+    "n_active": 97533,
+    "n_predicted": 74853,
+    "coverage_by_activation_quartile": [
+      0.10486384514435695,
+      0.65402124430956,
+      0.9989336833039413,
+      0.9999589878193823
+    ]
+  },
+  "gate": "update",
+  "feature": 79,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The predicate's recall is low (0.687, test F1 0.778), but the steps it misses carry little activation. The 30,780 missed active steps hold 6.2% of the mass, and the examples are all tiny (0.00-0.09 of max). They are spread across original-phase steps with no clear pattern: every original-phase step at t=1..5 whose previous token is not 0 has precision 0.013 and holds 5.5% of the mass. The largest single class, prev_tok=y (t<=5), has precision 0.07 and holds 1.2% of the mass. The delimiter step holds 0.6% of the mass at a 0.25% firing rate. None of these is a systematic class worth adding to the predicate.",
+      "The t<=5 cutoff is fuzzy. After a 0, the feature fires reliably at t=1 (precision 1.0) and t=3 (0.99), but only about half the time at t=5 (precision 0.43, 2.5% of mass). Most of the predicate's false positives come from t=4-5. Cutting to t<=4 raises precision to 0.979 but lowers F1 to 0.772, so neither cutoff is clearly better.",
+      "The other claims check out. The feature never fires in the copy phase (0 active steps). It is almost silent at t>=6 (522 active steps at t=6, 5 at t=7). Firing after a non-adjacent second 0 is weaker (precision 0.57 when two or more 0s were seen before). After a 0 0 pair precision is 0.80. When the sequence starts with v, k or 3, the steps after a 0 at t=3-4 carry about 1.7x more mass per step (precision 1.0). Mass recall on the test split is 0.938."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

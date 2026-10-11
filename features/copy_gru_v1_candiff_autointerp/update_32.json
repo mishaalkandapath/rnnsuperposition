@@ -1,0 +1,75 @@
+{
+  "label": "third input step (t=2) when the first token is one of p/k/2/r (weakly o/h/3)",
+  "predicate": "(t == 2) & isin(first_tok, [tok(\"p\"),tok(\"2\"),tok(\"r\"),tok(\"k\"),tok(\"o\"),tok(\"h\"),tok(\"3\")])",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only at step t=2 (the third original token), never at other positions, the delimiter, or the copy phase. Gated by the first original token: p, k, 2, r give about a 10% firing rate at t=2 (wait, measured as all t=2 steps with those first tokens; precision 1.0) and carry about 92% of activation mass; o, h, 3 fire weakly (low-quartile activations), t weaker still. Magnitude is further modulated by the second token (e.g. p i at t=2 reaches max 0.71). The identity of the current token at t=2 has little effect. Dev F1 0.85, mass recall 0.99.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 32,
+    "predicate": "(t == 2) & isin(first_tok, [tok(\"p\"),tok(\"2\"),tok(\"r\"),tok(\"k\"),tok(\"o\"),tok(\"h\"),tok(\"3\")])",
+    "split": "test",
+    "precision": 0.8114072899065485,
+    "recall": 0.8958093407064064,
+    "f1": 0.8515219643269113,
+    "mass_recall": 0.9862786053651543,
+    "correlation": 0.7547338592002203,
+    "n_active": 105067,
+    "n_predicted": 115996,
+    "coverage_by_activation_quartile": [
+      0.6400426390528039,
+      0.9431986903719496,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 32,
+    "predicate": "(t == 2) & isin(first_tok, [tok(\"p\"),tok(\"2\"),tok(\"r\"),tok(\"k\"),tok(\"o\"),tok(\"h\"),tok(\"3\")])",
+    "split": "dev",
+    "precision": 0.8111968913690986,
+    "recall": 0.8977049925646684,
+    "f1": 0.8522613336450656,
+    "mass_recall": 0.9864341688635482,
+    "correlation": 0.7536582305708693,
+    "n_active": 105577,
+    "n_predicted": 116836,
+    "coverage_by_activation_quartile": [
+      0.6457662436067437,
+      0.9450632719557475,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 32,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core factual claims check out on dev. The feature fires only at t=2: zero activations at every other t, at the delimiter and in the copy phase. first_tok in {p,2,r,k} has precision 1.0 and mass recall 0.916. The 7-token predicate reproduces its reported scores: test P 0.811, R 0.896, F1 0.852, mass recall 0.986. in_tok lift is only about 1.1-1.2x.",
+      "Systematic gap: when the first token is o, h, 3 or t, the second token (prev_tok at t=2) decides almost all-or-nothing whether the feature fires. This is not graded 'weak' firing. Examples for first=o: second token in {a,b,c,d,f,h,i,l,m,q,u,v,x,y,1} gives precision 1.0, while {0,2,3,g,j,k,o,p,t,z} gives 0.0. The same split shows up for h, 3 and t: second tokens a/b/d/f/i/l/u reach about 0.9-1.0, and 2/3/e/g/k/o/t/z sit at 0.0.",
+      "Because of this, all 22k false positives of the stated predicate fall into one class: (o/h/3, a non-firing second token). The ~10.8k misses are another class: first=t with a firing second token. This is the explanation's 'weak firing' (o/h/3 fire only about 50-61% of the time at t=2, t about 32%), and it is a deterministic first-token x second-token conjunction rather than noise.",
+      "The label overclaims a one-factor rule (the first token alone). The explanation does mention that the second token changes the magnitude, but it misses that the second token switches the feature on and off for the o/h/3/t cases.",
+      "Minor: all top-activation examples are 'p i v', so the claim that 'p i' alone reaches the max may also depend on in_tok=v for peak magnitude."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "Third input step (t=2), gated by the first token and the second token: always fires when the first token is p/k/2/r. When the first token is o/h/3/t, it fires only if the second token is from a particular set (mostly a/b/d/f/i/l/u/1/n/q/s/y) and stays silent for 2/3/e/g/k/o/p/t/z.",
+    "better_predicate": "(t == 2) & (isin(first_tok, [tok(\"p\"),tok(\"2\"),tok(\"r\"),tok(\"k\")]) | ((first_tok == tok(\"o\")) & isin(prev_tok, [tok(c) for c in \"1abcdfhilmnqrsuvxy\"])) | ((first_tok == tok(\"h\")) & isin(prev_tok, [tok(c) for c in \"1abdfhijlmnsuvwxy\"])) | ((first_tok == tok(\"3\")) & isin(prev_tok, [tok(c) for c in \"01abcdfijlmnqsuwy\"])) | ((first_tok == tok(\"t\")) & isin(prev_tok, [tok(c) for c in \"1abdfilnquy\"])))",
+    "better_predicate_test_f1": 0.9525
+  },
+  "final_label": "Third input step (t=2), gated by the first token and the second token: always fires when the first token is p/k/2/r. When the first token is o/h/3/t, it fires only if the second token is from a particular set (mostly a/b/d/f/i/l/u/1/n/q/s/y) and stays silent for 2/3/e/g/k/o/p/t/z.",
+  "scorecard": {
+    "format": "slot2",
+    "summary": "Graded preference over the input two steps back (most: k, p, 2, r, o, h; least: q, 0, c, f) and the previous input (most: d, a, l, i, u, j; least: t, 2, k, 3); timing cues that raise it most: t=2, L=7 & t=2, L=8 & t=2.",
+    "test_f1": 0.9408814547084701,
+    "test_precision": 0.9235783239670331,
+    "test_recall": 0.9588453082318902,
+    "full_test_f1": 0.9448851076477254,
+    "full_n_cues": 173,
+    "top40_test_f1": 0.903116802681434,
+    "slot2_test_f1": 0.9408814547084701,
+    "file": "scorecards/update_32.json"
+  }
+}

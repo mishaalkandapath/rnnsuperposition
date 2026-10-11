@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input token d (not the first copied token)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"d\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token-identity feature: fires only when the fed-back copy-phase input is the letter d (99.99% of activations have in_tok == d, all in the copy phase). Never fires on d in the original phase or at the delimiter. Within the copy phase it is weak or absent when d is the very first copied token (recall_idx 1, rate 1%), and fires on most later d inputs; rate and mass peak at recall_idx 2-3 and taper later. Top activations are d inputs early in the copy phase (often followed by r); a second consecutive d gets a much smaller activation than the first. Indifferent to output token, L, and digit count. Remaining false positives are mostly d inputs late in long sequences or right after <DEL>.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 421,
+    "predicate": "(phase == 2) & (in_tok == tok(\"d\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.8674185968445787,
+    "recall": 0.9266707787643624,
+    "f1": 0.8960662468443975,
+    "mass_recall": 0.9728388192220635,
+    "correlation": 0.8035547061980387,
+    "n_active": 69713,
+    "n_predicted": 74475,
+    "coverage_by_activation_quartile": [
+      0.7795627976361237,
+      0.9379733761762681,
+      0.9897291714482442,
+      0.9994262106954326
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 421,
+    "predicate": "(phase == 2) & (in_tok == tok(\"d\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.8692156440230566,
+    "recall": 0.9283269086934008,
+    "f1": 0.8977993545515246,
+    "mass_recall": 0.9738406493143197,
+    "correlation": 0.803822812220481,
+    "n_active": 69524,
+    "n_predicted": 74252,
+    "coverage_by_activation_quartile": [
+      0.7843622346240148,
+      0.939474138427018,
+      0.9902192048788907,
+      0.9992520568436799
+    ]
+  },
+  "gate": "hidden",
+  "feature": 421,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The explanation says the feature 'rarely fires when d is the first copied token (rate 1%)'. That 1% is the rate over all recall_idx==1 steps. Conditioned on in_tok==d, phase==2 and recall_idx==1, precision is 0.30, so about 30% of first-copied d inputs do fire. They fire weakly: 7.2% of active steps but only 2.6% of activation mass, and they sit mostly in the bottom activation quartile. These account for all of the predicate's misses (5112 on test). The label 'not the first copied token' is right about where the mass is, but overstates how cleanly the feature is excluded there.",
+      "Precision falls steadily with copy position: 0.99 at recall_idx 2, 0.97 at 3, 0.86 at 4 and 0.74 at 5 and above. By to_go it is 0.81 at to_go 0 versus 0.92 at to_go 3 or more. The false positives are therefore mostly late d inputs. The decline is gradual, not a sharp cutoff: restricting to recall_idx<=4 gives precision 0.94 but recall 0.64 and F1 0.76, which is worse.",
+      "There is a moderate, spread-out dependence on the previous token. With prev_tok z precision is 0.68, with x 0.77, with d 0.80, while with a it is 0.999 and with r 0.98. No single excludable class beats the base predicate.",
+      "'A second d right after another d gets a much smaller activation' is only partly true. With prev_tok==d, precision is 0.80 and per-step mass is about 80% of the average, so it is smaller but not much smaller.",
+      "The other claims check out on dev. The feature never fires in the original or delimiter phase. In_tok d holds 99.99% of activations (one activation on r). Mass peaks at recall_idx 2-3 (0.31 and 0.27 of mass). Activations on repeated d (in_count>=2) have about the same precision (0.86) as on single d (0.87), so being the first occurrence of d is not a factor. L and output token have little effect."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input token d (mainly after the first copied position; weak at recall_idx 1, fading late in the copy)",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "copy-phase input token d (mainly after the first copied position; weak at recall_idx 1, fading late in the copy)"
+}

@@ -1,0 +1,64 @@
+{
+  "label": "copy phase: b fed back as original token 1-3, not on the final step",
+  "predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, only when the input token is b (the model feeding back its own just-emitted b), and almost only when that b was original token 1, 2 or 3 (recall_idx 2-4). It also requires at least one output still to come (to_go >= 1); false positives under the simpler predicate were mostly the final step of short sequences. Magnitude is largest when b is original token 1 (recall_idx 2, about 54% of activation mass; the top examples are all x b ... <DEL> x [b]) and drops off for later positions. The output token makes no difference. Never fires on b in the original phase, at the delimiter, or on any other input token. Weak residual activity appears on b at later recall positions (recall_idx >= 5) and at recall_idx 1 (b as the first token); this accounts for about 0.5% of mass.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 997,
+    "predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+    "split": "test",
+    "precision": 0.9483445962370558,
+    "recall": 0.9609113300492611,
+    "f1": 0.9545866059849765,
+    "mass_recall": 0.9954256927600383,
+    "correlation": 0.8533428706906824,
+    "n_active": 40600,
+    "n_predicted": 41138,
+    "coverage_by_activation_quartile": [
+      0.8460098522167487,
+      0.9976354679802956,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 997,
+    "predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (recall_idx >= 2) & (recall_idx <= 4) & (to_go >= 1)",
+    "split": "dev",
+    "precision": 0.948531549869148,
+    "recall": 0.9585659712018807,
+    "f1": 0.9535223618824904,
+    "mass_recall": 0.9953194001459774,
+    "correlation": 0.8537702104591575,
+    "n_active": 40836,
+    "n_predicted": 41268,
+    "coverage_by_activation_quartile": [
+      0.8361249877559016,
+      0.9981388970516211,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 997,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The test score reproduces: P 0.948, R 0.961, F1 0.955, mass recall 0.995. Coverage is 1.0 in the top two activation quartiles and 0.85 in the lowest.",
+      "Every factual claim checks out on dev. Activation is zero in the original and delimiter phases. 40,835 of the 40,836 active steps have in_tok b; the one exception is a t. recall_idx 2, 3 and 4 hold 54%, 38% and 8% of the activation mass. recall_idx 1 and recall_idx >= 5 together hold about 0.5%.",
+      "The to_go >= 1 clause is justified by a clean pattern. The cells it removes (recall_idx 2 with L=3, recall_idx 3 with L=4, recall_idx 4 with L=5) have precision 0.0, 0.0 and 0.05.",
+      "Remaining false positives are concentrated in a few cells where the feature fires weakly. recall_idx 4 with L=6 has precision 0.67 (923 dev false positives); this is to_go == 1, but recall_idx 3 with L=5 is also to_go == 1 and has precision 0.997, so to_go alone does not explain it. recall_idx 2 with L=4 has precision 0.85, and recall_idx 4 with L=9 has 0.86. Every other cell is about 1.0.",
+      "No context variable separates the weak cells. Within recall_idx 4, L=6, precision stays in the 0.55-0.78 range across: whether b is repeated in the sequence (in_count), whether the output or next output is a digit, digit count, and whether the output is a vowel.",
+      "Excluding the weak recall_idx 4, L=6 cell lowers test F1 to 0.940, so the original predicate is close to optimal.",
+      "Minor overclaim: 'the output token makes no difference' is only approximately true. In the weak cell, precision varies from 0.55 when the output is a vowel to 0.73 when it is a digit. This does not change the overall explanation."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

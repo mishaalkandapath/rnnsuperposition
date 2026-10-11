@@ -1,0 +1,63 @@
+{
+  "label": "2-4 steps after a k in the first two original positions",
+  "predicate": "(phase<=1)&(((orig(0)==tok(\"k\"))&(t>=2)&(t<=4))|((orig(1)==tok(\"k\"))&(t>=3)&(t<=4)))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only when the letter k is one of the first original tokens. It turns on a fixed delay after the k, not on the k itself: for k at position 0 it fires at t=2..4, and for k at position 1 at t=3..4. The identity of the current input does not matter. Activation is largest when the opening tokens are several ks (e.g. k k k ...), peaking at t=4 (about 7), and it is weaker (about 2) with a single leading k. There is a weak tail at t=5 and on the delimiter step for short sequences, and a k at position 2 gives faint activity at t=4. It never fires at t=0 or 1, essentially never in the copy phase, and not for a k that appears later in the sequence. 98% of activation mass falls in the original phase.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 600,
+    "predicate": "(phase<=1)&(((orig(0)==tok(\"k\"))&(t>=2)&(t<=4))|((orig(1)==tok(\"k\"))&(t>=3)&(t<=4)))",
+    "split": "test",
+    "precision": 0.9367049864717621,
+    "recall": 0.7142883816458946,
+    "f1": 0.8105150532850273,
+    "mass_recall": 0.9277555548133936,
+    "correlation": 0.867686618371636,
+    "n_active": 107115,
+    "n_predicted": 81681,
+    "coverage_by_activation_quartile": [
+      0.14787706785167481,
+      0.7439784906083124,
+      0.9853990066843422,
+      0.9799088804242289
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 600,
+    "predicate": "(phase<=1)&(((orig(0)==tok(\"k\"))&(t>=2)&(t<=4))|((orig(1)==tok(\"k\"))&(t>=3)&(t<=4)))",
+    "split": "dev",
+    "precision": 0.9372682323856613,
+    "recall": 0.710757203651975,
+    "f1": 0.8084464394238253,
+    "mass_recall": 0.9265926574431386,
+    "correlation": 0.8687189785712168,
+    "n_active": 106682,
+    "n_predicted": 80900,
+    "coverage_by_activation_quartile": [
+      0.14360166472948147,
+      0.7333058378013573,
+      0.9849268841394826,
+      0.981214848143982
+    ]
+  },
+  "gate": "update",
+  "feature": 600,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Systematic false-positive class: the position-1 clause does not hold when position 0 is i or x. Precision of orig(1)==k & t in 3..4 is about 0.03 when orig(0)=='i' (1106 predicted steps) and 0.027 when orig(0)=='x' (1077). It is also low (0.31) when orig(0)=='0'. For every other first token it is 0.84-0.99. The misses output on the test split shows the same thing: most of the listed false positives are 'i k ...' or 'x k ...' sequences. So the explanation's claim that 'for k at position 1 it fires at t=3..4' is wrong for these first tokens.",
+      "The phase claims check out. Copy phase has 32 active steps out of 2.7M (share 0.000). The delimiter accounts for 2% of mass. It never fires at t=0 or t=1. The original phase holds 98% of mass.",
+      "Recall is only 0.71 on test, but the misses are mostly low-activation. Predicate coverage of the lowest activation quartile is 0.15, against 0.98 for the top quartile. The misses form two soft classes. (a) A t=5 tail after a k at position 0 or 1 (precision 0.31-0.37, so a weak, partial effect). (b) A k at position 2, active at t=4-5 (precision 0.35 for t in 4..5). About 11% of active steps (mass 0.8%) have no k in the first three positions at all; this is diffuse noise with precision 0.007.",
+      "The k-at-position-2 behaviour is not 'faint'. On dev, adding (orig(2)==k & t==4) raises recall from 0.71 to 0.78 and F1 from 0.818 to 0.831 (after the i/x/0 exclusion). This is a real secondary component, but with moderate precision (about 0.35-0.5).",
+      "Test F1 for the improved predicates could not be measured: the auto-mode classifier gave no verdict on the follow-up test-split score command, and plan mode was then switched on, which blocked further tool runs. Dev scores: the original predicate is 0.808. Adding the i/x/0 exclusion gives P 0.971, R 0.707, F1 0.818, mass recall 0.926. Adding the position-2 clause on top gives P 0.892, R 0.778, F1 0.831, mass recall 0.953."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "2-4 steps after a k in the first two original positions (but not after 'i k' / 'x k' openings); weaker at t=4 for k in position 2",
+    "better_predicate": "(phase<=1)&(((orig(0)==tok(\"k\"))&(t>=2)&(t<=4))|((orig(1)==tok(\"k\"))&~((orig(0)==tok(\"i\"))|(orig(0)==tok(\"x\"))|(orig(0)==tok(\"0\")))&(t>=3)&(t<=4))|((orig(2)==tok(\"k\"))&(t==4)))",
+    "better_predicate_test_f1": null
+  },
+  "final_label": "2-4 steps after a k in the first two original positions (but not after 'i k' / 'x k' openings); weaker at t=4 for k in position 2"
+}

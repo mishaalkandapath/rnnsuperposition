@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input token c (fed-back c, recall_idx >= 2)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"c\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires when the input during the copy phase is the letter c (the model is reading back its own echoed c), and only from recall_idx >= 2 onward. In the dev split 100% of activation mass is in the copy phase, and in_tok == c accounts for essentially all of it. It never fires on c during the original phase, at the delimiter, or on any other token (a few dozen stray activations). At recall_idx 1 (c being the very first fed-back token after DEL) it is rare and weak (rate 0.005). Magnitude: low-quartile examples are c inputs early in the copy phase (recall_idx 1-2), and the top examples are c inputs late in the copy phase, often the first c of a doubled cc. That suggests magnitude rises with copy position, but I only checked this on examples. The firing rate is flat at ~0.033 for recall_idx >= 2 and does not depend on out_tok, prev_tok or L.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 477,
+    "predicate": "(phase == 2) & (in_tok == tok(\"c\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.9672635738786796,
+    "f1": 0.9833594102203718,
+    "mass_recall": 0.9984438247268878,
+    "correlation": 0.9850650536547827,
+    "n_active": 76673,
+    "n_predicted": 74163,
+    "coverage_by_activation_quartile": [
+      0.869059418853357,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 477,
+    "predicate": "(phase == 2) & (in_tok == tok(\"c\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.9682454392954498,
+    "f1": 0.9838665645703633,
+    "mass_recall": 0.9985149076023697,
+    "correlation": 0.9848774717249635,
+    "n_active": 76304,
+    "n_predicted": 73881,
+    "coverage_by_activation_quartile": [
+      0.8729817571817992,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 477,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "No systematic counterexample found. The test split gives precision 1.000, recall 0.967, F1 0.983 and mass recall 0.998. There are 0 false positives.",
+      "Nearly all of the 2510 test misses are weak activations (0.01 to 0.06 of max) on c inputs at recall_idx 1. They carry only 0.2% of the activation mass. Adding recall_idx==1 to the predicate does not help: c & recall_idx==1 has precision 0.146, so excluding that position is correct.",
+      "Phase claims hold. Activation share is 0.000 in the original phase and at the delimiter, and all of it is in the copy phase. Non-c inputs have at most 9 active steps per token across 6.4M steps.",
+      "The magnitude claim holds on the full split, not just on the example sequences. c & recall_idx==2 covers 78% of the bottom activation quartile and 0% of the top. c & recall_idx>=5 covers 1.5% of the bottom quartile and 62% of the top. So magnitude rises with copy position.",
+      "Wording problem: the stated firing rate of 0.033 is per step over all copy steps at that recall_idx, not the rate on c inputs. Conditional on a copy-phase c input at recall_idx>=2, the feature fires nearly every time (precision 1, recall about 0.97). Rate does not depend on out_tok (about 0.024 to 0.026 for every out_tok). The top examples look like the first c of a doubled cc, but c & out_tok==c covers only 9% of the top quartile, so that is incidental, and it does not contradict the explanation."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

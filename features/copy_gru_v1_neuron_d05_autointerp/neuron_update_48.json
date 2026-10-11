@@ -1,0 +1,63 @@
+{
+  "label": "First step on a fixed subset of tokens, plus first copy step of length-3 sequences",
+  "predicate": "((t == 0) & isin(in_tok, [0,2,3,6,8,9,11,15,16,18,19,20,21,22,24,28,29])) | ((recall_idx == 1) & (L == 3))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Two clauses, both tied to the start of a phase. (1) At t=0 the unit fires every time the first input is one of a c d g i j l p q s t u v w y 2 3, and never for the other 13 tokens. This covers about 89% of activations and 72% of the mass. The magnitude is small and set by the token alone, since h0 is fixed (c, q, t, i give the largest values). (2) At the second copy step (recall_idx=1, where the input is orig(0) fed back after <DEL>), it fires strongly in length-3 sequences. These are the top activations, up to the max of 0.234. In L=4 sequences it fires on about 30% of second copy steps, and I could not predict which ones from the tokens. It fires rarely for L>=5. It is essentially silent at t>=1 of the original phase, on <DEL>, and on later copy steps.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 48,
+    "predicate": "((t == 0) & isin(in_tok, [0,2,3,6,8,9,11,15,16,18,19,20,21,22,24,28,29])) | ((recall_idx == 1) & (L == 3))",
+    "split": "test",
+    "precision": 0.9963014253867459,
+    "recall": 0.9266158799968586,
+    "f1": 0.9601959683260496,
+    "mass_recall": 0.8816499004496571,
+    "correlation": 0.5886160761027205,
+    "n_active": 63665,
+    "n_predicted": 59212,
+    "coverage_by_activation_quartile": [
+      0.9753094176038198,
+      0.922153807489319,
+      0.9274315154561448,
+      0.8815657200301583
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 48,
+    "predicate": "((t == 0) & isin(in_tok, [0,2,3,6,8,9,11,15,16,18,19,20,21,22,24,28,29])) | ((recall_idx == 1) & (L == 3))",
+    "split": "dev",
+    "precision": 0.9968244900702309,
+    "recall": 0.9255549835415984,
+    "f1": 0.9598686286088708,
+    "mass_recall": 0.8797768907507361,
+    "correlation": 0.5853062724613435,
+    "n_active": 64101,
+    "n_predicted": 59518,
+    "coverage_by_activation_quartile": [
+      0.9762261325346312,
+      0.9225585023400936,
+      0.920811232449298,
+      0.8826209048361935
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 48,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The label says 'first copy step of length-3 sequences', but the predicate uses recall_idx==1. That is the SECOND output step: recall_idx 0 is the <DEL> step, and recall_idx 1 is the first step whose input is the fed-back orig(0). The explanation says 'second copy step' correctly, so the label contradicts the predicate and the explanation.",
+      "There is a systematic, coherent class of misses that the predicate does not capture: the second copy step of L=4 sequences (t==L+1, L==4). It fires on 30% of those steps (precision 0.30 dev) and holds about 11.8% of all activation mass, which is almost all of the test-split missed mass (11.8%). Its activations are among the larger ones (for example 0.28 and 0.45 relative to max in the misses output). The explanation discloses it, but the label leaves it out entirely.",
+      "I could not find a token-level predictor for the L=4 firing. I tried first_tok in the t=0 token set, digits and vowels in each orig position, n_digits, repeats, and the order of orig(1) and orig(3) relative to orig(0). All gave precision between 0.25 and 0.44. So about 12% of the mass stays unexplained, and the L=4 behavior looks like a graded continuation of the L=3 effect rather than a separate rule.",
+      "The claims that check out: t=0 & token-set has precision 1.0 and covers 88.8% of activations and 71.5% of mass. The complementary 13 tokens at t=0 never fire (precision 0). L=3 recall_idx==1 has precision 0.93. L>=5 recall_idx==1 is essentially silent (precision 0.0004). Original-phase t>=1 is silent (precision 0.0006). <DEL> has 10 of about 100k active. Test scores reproduce: precision 0.996, recall 0.927, F1 0.960, mass recall 0.882.",
+      "Extending to L<=4 gives test F1 0.921, precision 0.858, mass recall 0.998. That trades precision for the missing mass, so it is not a strictly better predicate under F1."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "First input step on a fixed set of 17 tokens (weak, set by the token), plus the second copy step (input = fed-back orig(0)) of short sequences: reliably for L=3, on about 30% of L=4 sequences in a way that is not token-predictable (about 12% of mass unexplained)",
+    "better_predicate": "((t == 0) & isin(in_tok, [0,2,3,6,8,9,11,15,16,18,19,20,21,22,24,28,29])) | ((recall_idx == 1) & (L <= 4))",
+    "better_predicate_test_f1": 0.921
+  },
+  "final_label": "First input step on a fixed set of 17 tokens (weak, set by the token), plus the second copy step (input = fed-back orig(0)) of short sequences: reliably for L=3, on about 30% of L=4 sequences in a way that is not token-predictable (about 12% of mass unexplained)"
+}

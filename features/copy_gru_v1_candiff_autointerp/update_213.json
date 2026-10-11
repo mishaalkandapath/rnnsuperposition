@@ -1,0 +1,64 @@
+{
+  "label": "Digit 1 fed back as input during copy phase of short sequences",
+  "predicate": "(phase == 2) & (in_tok == tok(\"1\")) & (L <= 5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, at the step where the token 1 comes back in as input (the model echoing an original 1). in_tok == 1 covers 99.9% of activation mass; the feature never fires in the original or delimiter phases, or on other input tokens. It depends strongly on sequence length: rate per step is highest for L = 3-4, lower at L = 5, rare at L = 6, and almost zero for L >= 7. The largest activations (around 4.0) are in L = 3 sequences where 1 is input right after <DEL> or one step later (recall_idx 1-2). Activation is also higher when the 1 sits early in the original sequence (first_tok = 1 has lift 7x). The 1s in longer sequences are the main false positives.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 213,
+    "predicate": "(phase == 2) & (in_tok == tok(\"1\")) & (L <= 5)",
+    "split": "test",
+    "precision": 0.7524537658849054,
+    "recall": 0.859148283590893,
+    "f1": 0.8022692222956598,
+    "mass_recall": 0.9679913428922424,
+    "correlation": 0.6983526545226745,
+    "n_active": 16954,
+    "n_predicted": 19358,
+    "coverage_by_activation_quartile": [
+      0.5786742156168908,
+      0.8716678461901392,
+      0.9863142991977348,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 213,
+    "predicate": "(phase == 2) & (in_tok == tok(\"1\")) & (L <= 5)",
+    "split": "dev",
+    "precision": 0.7509038511920356,
+    "recall": 0.8561954833313419,
+    "f1": 0.800100494095972,
+    "mass_recall": 0.9684838668273288,
+    "correlation": 0.6986090438250924,
+    "n_active": 16738,
+    "n_predicted": 19085,
+    "coverage_by_activation_quartile": [
+      0.5646356033452807,
+      0.8704898446833931,
+      0.9897227533460803,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 213,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold. On dev, all activation is in the copy phase (share 1.000; original and delimiter phases are 0). in_tok=1 carries 0.999 of the mass. Per-step rate by L is 0.013 / 0.012 / 0.008 / 0.002 / 0.000 for L = 3-7. Test scores reproduce: P 0.752, R 0.859, F1 0.802, mass recall 0.968.",
+      "Most false positives fall in one class: L=5 sequences where the 1 comes back at the edges of the copy phase. Dev precision for the predicate, broken out by L=5 and recall_idx: r=1 is 0.29 (n=2778), r=2 is 0.94, r=3 is 0.72, r=4 is 0.38 (n=2712). The r=1 and r=4 cells alone account for roughly 3,700 of the ~4,800 test false positives. Inside L<=4, precision is about 0.93 to 1.0 in every recall_idx cell.",
+      "The claim that the feature is more likely when the 1 is early in the original sequence is misleading. first_tok=1 does give about 7x lift (precision 0.019 against a 0.0026 base rate), but that comes from the L<=4 cells. In L=5, a first-token 1 fed back right after <DEL> (recall_idx 1) fires only 29% of the time. The firing depends jointly on length and position (middle of the copy phase for L=5), not simply on being early.",
+      "Splitting the cell by in_count or by prev_tok being a digit does not separate L=5 r=1 or r=4 hits from misses. Precision stays at 0.27-0.39 either way.",
+      "Remaining misses are mostly scattered L=6 hits (precision 0.22-0.25 at r=2-3) holding 3.2% of the mass. That is a long tail, not a gap that needs fixing.",
+      "The label 'short sequences' is close but slightly overclaims for L=5. The feature fires reliably only in the middle of the copy phase there, not at every step."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Digit 1 fed back as input during the copy phase, for L<=4 (any position) or L=5 (mainly mid-copy, recall_idx 2-3)",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"1\")) & ((L<=4) | ((L==5) & isin(recall_idx,[2,3])))",
+    "better_predicate_test_f1": 0.828
+  },
+  "final_label": "Digit 1 fed back as input during the copy phase, for L<=4 (any position) or L=5 (mainly mid-copy, recall_idx 2-3)"
+}

@@ -1,0 +1,66 @@
+{
+  "label": "first original token was w: late original steps and <DEL>",
+  "predicate": "(first_tok == tok(\"w\")) & (t >= 4) & (phase <= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires in sequences whose first original token is w (96% of activation mass has first_tok = w; 23x lift), from about the 4th or 5th original step through the <DEL> step, and never in the copy phase (85 copy-phase activations total). It is silent at t = 0-2, weak at t = 3, and the current input token does not matter. Within a sequence, activation rises to a peak around 3-5 steps after the start, then falls off toward <DEL>. In long sequences (L = 8-9) the last steps and <DEL> are weak or sometimes zero, and those make up most of the false positives. Doubled w w openings show up among the top examples, but they are not needed. Misses are low-magnitude activations (5.8% of mass), e.g. at t = 3 or in sequences where w appears at position 1.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 792,
+    "predicate": "(first_tok == tok(\"w\")) & (t >= 4) & (phase <= 1)",
+    "split": "test",
+    "precision": 0.9929508654383026,
+    "recall": 0.7158779278939291,
+    "f1": 0.8319518149788752,
+    "mass_recall": 0.9413045736075003,
+    "correlation": 0.9350478830459807,
+    "n_active": 79494,
+    "n_predicted": 57312,
+    "coverage_by_activation_quartile": [
+      0.08216765623427594,
+      0.7813726476803864,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 792,
+    "predicate": "(first_tok == tok(\"w\")) & (t >= 4) & (phase <= 1)",
+    "split": "dev",
+    "precision": 0.99287193648602,
+    "recall": 0.7188718384484655,
+    "f1": 0.8339421878171117,
+    "mass_recall": 0.9418204233878312,
+    "correlation": 0.934165687774608,
+    "n_active": 80024,
+    "n_predicted": 57940,
+    "coverage_by_activation_quartile": [
+      0.08722383285014496,
+      0.7882635209437169,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 792,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "On the test split the reported scores reproduce exactly: P 0.993, R 0.716, F1 0.832, mass recall 0.941. The predicate covers only 8% of the lowest activation quartile, so the recall gap is all low-magnitude activations.",
+      "Misses come from one systematic but weak class: sequences where w is the 2nd original token (orig(1)==w) and first_tok != w. As a predicate this class has precision 0.09, covers 13.7% of active steps and holds 3.0% of mass. Narrowing it to t>=5 gives precision 0.26-0.36. Adding it to the predicate lowers F1 (union F1 0.824 vs 0.832). The explanation does mention this class, so it is a known low-magnitude secondary pattern, not a refutation.",
+      "Sequences where first_tok != w and w is not at position 1 account for 8.1% of active steps but only 0.7% of mass (precision 0.002). This is scattered noise.",
+      "At t=3, first_tok==w has precision 0.31 and 2.1% of mass, which supports 'weak at t=3'. Adding t=3 lowers F1 to 0.809.",
+      "'Never fires in the copy phase' is very nearly true: 85 active steps on dev, and phase==2 holds 0.02% of mass on test.",
+      "Peak claim checks out. Mean relative magnitude per active step with first_tok==w, by t: 1.10 at t=4, 1.56 at t=5, 1.63 at t=6, 1.39 at t=7, 0.96 at t=8, 0.51 at t=9. So the peak is at t=5-6, then it falls off toward <DEL>, and late steps are weak.",
+      "Not in the explanation: when the first two tokens are both w ('w w ...'), magnitude is about 1.4x higher per step (mass/recall 1.81 vs 1.30). All the top activating examples start with 'w w'. This modulates strength and does not change the label.",
+      "The current input token does not matter: rates by in_tok are flat at about 1.0x apart from <DEL>.",
+      "False positives are negligible (404 of 57312 predicted steps) and mostly at the late steps and <DEL> of long sequences, as the explanation says."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

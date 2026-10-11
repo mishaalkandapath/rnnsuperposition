@@ -1,0 +1,64 @@
+{
+  "label": "<DEL> delimiter step, stronger for longer sequences",
+  "predicate": "(phase == 1) & (L >= 6)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Reset-gate unit 9 is almost purely a delimiter detector: 99.3% of activation mass falls on the <DEL> step (t == L), where it fires in 62.5% of sequences. Magnitude and firing rate increase steadily with sequence length L (rate at the delimiter rises from ~3% at L=4 to ~49% of t=9 steps; L>=7 holds ~87% of mass), so short sequences (L=3-5) mostly stay below threshold or fire weakly. It is essentially never active in the original phase (1 step out of 646k). A small residual (0.7% of mass) occurs late in the copy phase on repeated inputs of particular tokens (u, y, g, 3). Token identity of the original sequence (first token, prev token, digits) only weakly modulates it. phase == 1 alone gives recall 0.97 / mass recall 0.99 at precision 0.63; adding L >= 6 trades some weak short-sequence activations for precision 0.83.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 9,
+    "predicate": "(phase == 1) & (L >= 6)",
+    "split": "test",
+    "precision": 0.8301412352817177,
+    "recall": 0.8530294590914718,
+    "f1": 0.8414297269661034,
+    "mass_recall": 0.94919040867274,
+    "correlation": 0.77283913111336,
+    "n_active": 64632,
+    "n_predicted": 66414,
+    "coverage_by_activation_quartile": [
+      0.588253496719891,
+      0.8541279861368981,
+      0.9713454635474688,
+      0.998390889961629
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 9,
+    "predicate": "(phase == 1) & (L >= 6)",
+    "split": "dev",
+    "precision": 0.8291500414063088,
+    "recall": 0.85194467650608,
+    "f1": 0.8403928181728003,
+    "mass_recall": 0.9482452223072448,
+    "correlation": 0.7713543195363141,
+    "n_active": 64638,
+    "n_predicted": 66415,
+    "coverage_by_activation_quartile": [
+      0.5913366336633663,
+      0.8482673267326732,
+      0.9699857664459435,
+      0.9982053344885203
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 9,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The label and predicate hold up. On test, (phase == 1) & (L >= 6) scores P 0.830, R 0.853, F1 0.841, mass recall 0.949, matching the reported numbers. No systematic false-positive or miss class showed up. The misses are weak delimiter firings in short sequences plus a scattered tail of copy-phase activations, which hold 5.1% of the mass.",
+      "The explanation's main numbers are wrong. It says the delimiter-step firing rate goes from 'about 3% at L=4 to about 49% at t=9'. The measured precision of (phase==1)&(L==k) on dev, which is the firing rate at the delimiter, is: L=3 0.28, L=4 0.17, L=5 0.25, L=6 0.53, L=7 0.84, L=8 0.97, L=9 0.98. The 49% figure is actually the to_go==8 bucket (which pools the L=9 delimiter with other steps), not the rate at L=9. The 3% figure looks like the per-step activation share, not a rate.",
+      "'Rises steadily with sequence length' overclaims. The rate is not monotonic: L=3 (28%) fires more often than L=4 (17%) and about as often as L=5 (25%). The real pattern is a step change between L=5 and L=7: about 20-30% below L=6, about 53% at L=6, and about 97% or more at L>=8.",
+      "The L >= 6 cutoff is borderline. The delimiter at L=6 fires only 53% of the time, so it accounts for a large share of the predicate's false positives. Using L >= 7 instead gives test P 0.93 but R 0.72 (F1 0.81), so L >= 6 is still the best F1 among the simple cutoffs tried.",
+      "Checked whether firing in short sequences depends on the tokens (whether there are digits, a digit just before <DEL>, two or more digits). None of these splits the short-L delimiter firings much: precision stays around 0.22-0.36. This supports the claim that token content has little effect.",
+      "These claims are correct: the 99.3% delimiter mass share, 62.5% firing rate at the delimiter, 1 active step in the original phase, about 0.7% copy-phase residue concentrated on u/y/g/3, L >= 7 holding about 87% of the mass (0.192+0.312+0.363), and the dev scores for phase==1 alone."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "<DEL> delimiter step. Fires almost always when L >= 8 (about 97%), about 84% at L=7, about 53% at L=6, and only 17-28% at L = 3-5 (not monotonic: L=3 > L=4)",
+    "better_predicate": "(phase == 1) & (L >= 6)",
+    "better_predicate_test_f1": 0.841
+  },
+  "final_label": "<DEL> delimiter step. Fires almost always when L >= 8 (about 97%), about 84% at L=7, about 53% at L=6, and only 17-28% at L = 3-5 (not monotonic: L=3 > L=4)"
+}

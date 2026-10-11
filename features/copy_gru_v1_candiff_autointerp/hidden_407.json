@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input y (from recall position 2 on)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"y\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the fed-back input token is y (i.e. the previous output was y), from the third copy step onward (recall_idx >= 2). Never fires during the original phase, on the delimiter, or on any input other than y. At recall_idx 1 (y as the first copied token) activations are tiny. Magnitude is largest at recall_idx 2 (all top examples are y at the third copy step) and falls off for later positions; repeated consecutive y inputs get progressively weaker activations. Some late-position y inputs (recall_idx 5+) do not fire, which accounts for most false positives. Output token and sequence length have little effect.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 407,
+    "predicate": "(phase == 2) & (in_tok == tok(\"y\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.8803783081669102,
+    "recall": 0.9846402953905753,
+    "f1": 0.9295949710693622,
+    "mass_recall": 0.9976404231915468,
+    "correlation": 0.8261446363580114,
+    "n_active": 66082,
+    "n_predicted": 73908,
+    "coverage_by_activation_quartile": [
+      0.9388656860964832,
+      0.9996973548816658,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 407,
+    "predicate": "(phase == 2) & (in_tok == tok(\"y\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.8798869587345807,
+    "recall": 0.9848439420741762,
+    "f1": 0.92941168148604,
+    "mass_recall": 0.9976664939238111,
+    "correlation": 0.8256173977849864,
+    "n_active": 66706,
+    "n_predicted": 74663,
+    "coverage_by_activation_quartile": [
+      0.9398572884811417,
+      0.9995202974156023,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 407,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims check out. The feature has zero activations outside the copy phase and zero on any input other than y (dev profile). It never fires on the first occurrence of a token (in_first=1 -> 0 active), which fits copy-phase-only firing.",
+      "recall_idx==1 y inputs: test precision 0.06 and recall 0.015, so the 'tiny at the first copy step' claim holds. The missed activations (1015 steps, 0.2% of mass) are almost all weak recall_idx-1 y's.",
+      "The false positives (8841) are concentrated at late copy positions. Test precision by recall_idx: r2 1.00, r3 1.00, r4 0.99, r5 0.83, r6 0.55, r7 0.58, r8 0.69. The explanation already says firing tapers off at late positions. Probing to_go, L, number of digits or vowels seen, earlier y's, and the class of prev_tok gave only graded shifts (precision 0.57-0.79), no clean rule. So this is a soft decay with position, not a separate class of counterexamples.",
+      "Capping the window at recall_idx<=5 gives test F1 0.898, worse than the original. A digit-history refinement gives F1 0.930, no real gain. The original predicate (test F1 0.93, mass recall 0.998) is about as good as these simple predicates get.",
+      "Minor: 'magnitude peaks at recall_idx 2' is supported by the top examples, but the mass shares for r2 (0.346) and r3 (0.342) are nearly equal on similar counts. Treat it as a plateau over r2-r4 with a small edge to r2, not a sharp peak. Inside the window, consecutive y's (prev_tok==y) still fire at precision 0.94, which fits 'weaker but active'."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

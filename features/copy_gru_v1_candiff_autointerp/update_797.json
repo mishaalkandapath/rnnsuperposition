@@ -1,0 +1,62 @@
+{
+  "label": "bigram \"i d\" at the very start of the sequence (plus weaker \"i i _\")",
+  "predicate": "(phase==0) & (t<=2) & (((prev_tok == tok(\"i\")) & (in_tok == tok(\"d\"))) | ((t==2)&(prev_tok==tok(\"i\"))&(prev2_tok==tok(\"i\"))))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the original phase, at t=1..2 (a few weak t=3 hits): on input d when the previous input is i and that i is at position 0 or 1 (\"i d ...\" or \"x i d ...\"). It also fires weakly at t=2 on any token after \"i i\". Strongest at \"i i d\" (max) and at \"i d\" at t=1 (mean ~1.5 of max 2.15); \"x i d\" at t=2 is weaker (~0.4-0.55 of max), and \"i i X\" with X != d is weak (~0.2 of max). Weak tail (~3% of mass): \"i X d\" at t=2. Does not fire on \"i d\" at t>=3, at t=0, at the delimiter, or anywhere in the copy phase, even when the copied sequence repeats \"i d\". Dev: P=1.00, R=0.87, F1=0.93, mass recall 0.96.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 797,
+    "predicate": "(phase==0) & (t<=2) & (((prev_tok == tok(\"i\")) & (in_tok == tok(\"d\"))) | ((t==2)&(prev_tok==tok(\"i\"))&(prev2_tok==tok(\"i\"))))",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.8752609603340292,
+    "f1": 0.9334817701085445,
+    "mass_recall": 0.9572798761364774,
+    "correlation": 0.8814227683079866,
+    "n_active": 1916,
+    "n_predicted": 1677,
+    "coverage_by_activation_quartile": [
+      0.5908141962421712,
+      0.9394572025052192,
+      0.9707724425887265,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 797,
+    "predicate": "(phase==0) & (t<=2) & (((prev_tok == tok(\"i\")) & (in_tok == tok(\"d\"))) | ((t==2)&(prev_tok==tok(\"i\"))&(prev2_tok==tok(\"i\"))))",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.8725388601036269,
+    "f1": 0.9319313779745434,
+    "mass_recall": 0.9592059938300896,
+    "correlation": 0.8785893364331873,
+    "n_active": 1930,
+    "n_predicted": 1684,
+    "coverage_by_activation_quartile": [
+      0.5755693581780539,
+      0.9358178053830227,
+      0.979253112033195,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 797,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Core claims check out on the test split. The feature never fires at the delimiter or in the copy phase (activation mass share 0 in both), and never fires at t=0 or t>=4. The predicate has 0 false positives (precision 1.0). 'i d' at t>=3 gives only 0.02 precision, so the claim that it does not fire on 'i d' at t>=3 holds.",
+      "Minor systematic miss: the explanation calls the t=3 hits 'a few weak hits', but they are the exact pattern 'x i i d', with d at t=3 after 'i i'. That pattern is 27/27 active on test (precision 1.0) at about 0.40 of max, which is the same strength as 'x i d', not weak. It is a clean extension of the 'i i' context and should be in the label and predicate. It holds about 1.3% of activation mass.",
+      "The remaining misses are the tail the explanation already admits: 'i X d' at t=2 (about 0.04-0.17 of max). As a predicate term this pattern has only 0.38 precision and 2.9% mass recall, so leaving it out is reasonable.",
+      "Adding the 'i i d'@t=3 term raises test F1 from 0.933 to 0.941 and mass recall from 0.957 to 0.971, still with precision 1.0. This is a small refinement and does not refute the label."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "\"i d\" at the very start of the sequence (i at position 0 or 1), plus \"i i _\" at t=2 and \"x i i d\" at t=3",
+    "better_predicate": "(phase==0) & (t<=2) & (((prev_tok == tok(\"i\")) & (in_tok == tok(\"d\"))) | ((t==2)&(prev_tok==tok(\"i\"))&(prev2_tok==tok(\"i\")))) | (phase==0)&(t==3)&(in_tok==tok(\"d\"))&(prev_tok==tok(\"i\"))&(prev2_tok==tok(\"i\"))",
+    "better_predicate_test_f1": 0.941
+  },
+  "final_label": "\"i d\" at the very start of the sequence (i at position 0 or 1), plus \"i i _\" at t=2 and \"x i i d\" at t=3"
+}

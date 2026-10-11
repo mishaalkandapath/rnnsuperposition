@@ -1,0 +1,64 @@
+{
+  "label": "early original-phase steps (t=2-4) after a \"c\" has appeared",
+  "predicate": "(phase == 0) & (t >= 2) & (t <= 4) & seen([tok(\"c\")])",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires during the original-input phase at positions t=2..4 (a weak tail at t=5) once the letter c has appeared earlier in the sequence. It is strongest when c is the first token or the first tokens are c c (top activations: c c c then the next token, around 7.9), and it decays a step or two after the c, and as the c moves later. The current input token barely matters. It almost never fires at t=0-1, at t>=6, on the delimiter (0.4% of mass), or in the copy phase. It does not fire in sequences with no c. False positives are mostly at t=4-5 when the c came at position 2 or later, and some activation goes unexplained on later c-free steps.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 612,
+    "predicate": "(phase == 0) & (t >= 2) & (t <= 4) & seen([tok(\"c\")])",
+    "split": "test",
+    "precision": 0.7432884007573415,
+    "recall": 0.8892749490099814,
+    "f1": 0.8097544940934772,
+    "mass_recall": 0.9657890203199722,
+    "correlation": 0.713412782452191,
+    "n_active": 110806,
+    "n_predicted": 132569,
+    "coverage_by_activation_quartile": [
+      0.655331745000361,
+      0.9445527398743773,
+      0.9675823977473738,
+      0.9896393631998844
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 612,
+    "predicate": "(phase == 0) & (t >= 2) & (t <= 4) & seen([tok(\"c\")])",
+    "split": "dev",
+    "precision": 0.7414745984027208,
+    "recall": 0.8890972481406971,
+    "f1": 0.8086034680453851,
+    "mass_recall": 0.9650715428737686,
+    "correlation": 0.7134728279713091,
+    "n_active": 109853,
+    "n_predicted": 131724,
+    "coverage_by_activation_quartile": [
+      0.6576609379551412,
+      0.9443615045697848,
+      0.965480828751411,
+      0.9888941484906966
+    ]
+  },
+  "gate": "update",
+  "feature": 612,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Reproduced the reported test scores for the original predicate: P 0.743, R 0.889, F1 0.810, mass recall 0.966.",
+      "Systematic false-positive class: the predicate counts any c seen before the step, but a c that first appears at position 3 almost never triggers the feature. For (t==4)&(orig(3)==c) with no earlier c, precision is 0.142 (12,437 predicted). At t=5 it is 0.019. This is about a third of the predicate's 34k test false positives. The predicate should require the c to be among the first three tokens.",
+      "Timing is graded by how long ago the c was, and the predicate ignores this. When c is the first token (c at 0, not at 1): precision is 1.00 at t=2, 0.98 at t=3, 0.555 at t=4 and 0.054 at t=5. When c first appears at 1: 0.70 at t=2 (the very next step), 0.99 at t=3, 0.86 at t=4, 0.22 at t=5. When c first appears at 2: 0.60 at t=3, 0.68 at t=4, 0.20 at t=5. So the feature peaks 2-3 steps after an early c. The step right after the c is weaker, and so is a lag of 3 or more when the c was first.",
+      "Claims that check out: zero firing at t=0-1, a weak tail at t=5 (t==5 & seen c has precision 0.106 and 2.4% of mass), essentially nothing at t>=6, delimiter 0.4% of mass, copy phase about 0 (19 steps), the input token itself matters little, the top activations are on c c openings, and c-free sequences hold only 0.4% of mass (precision 0.003).",
+      "The explanation partly admits the false positives ('mostly at t=4-5 when c came at position 2 or later'), but the predicate and label do not encode it. 'After a c has appeared' overclaims: a late c (position 3+) does not count.",
+      "Refined predicate: c within the first three positions and already seen, t=2..4. Test P 0.806, R 0.873, F1 0.838, mass recall 0.962. That is better than 0.810 at about the same mass recall. The remaining false positives are mostly the weaker lag-1 steps (e.g. 'q c [r]') and lag-3 when the c was first."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "original-phase steps t=2-4 shortly (mostly 2-3 steps) after an EARLY c (c among the first three tokens)",
+    "better_predicate": "(phase == 0) & (t >= 2) & (t <= 4) & ((orig(0)==tok('c'))|(orig(1)==tok('c'))|((orig(2)==tok('c'))&(t>=3)))",
+    "better_predicate_test_f1": 0.838
+  },
+  "final_label": "original-phase steps t=2-4 shortly (mostly 2-3 steps) after an EARLY c (c among the first three tokens)"
+}

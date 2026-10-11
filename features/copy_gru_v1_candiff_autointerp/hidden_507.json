@@ -1,0 +1,63 @@
+{
+  "label": "input w during copy phase",
+  "predicate": "(phase == 2) & (in_tok == tok(\"w\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires when the token w is fed back as input during the copy phase (t > L). It is essentially a copy-phase w detector: it never fires on w in the original phase or at the delimiter, and almost never on any other input token (1 stray activation on d). Recall is ~100%. Magnitude grows with position in the copy phase: weak (~0.1-0.3 of max) when w is the first copied token right after <DEL> or early in short sequences, strongest (~0.9-1.0) for late steps in long sequences (t ~ 13-17). When two copied ws come in a row, the second is weaker than the first. Most false positives are early-copy-phase ws (small t / recall_idx 1) where it stays at zero; requiring t >= 7 raises precision a little (0.83 vs 0.79) for similar F1.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 507,
+    "predicate": "(phase == 2) & (in_tok == tok(\"w\"))",
+    "split": "test",
+    "precision": 0.7921548370078914,
+    "recall": 0.9999861257561463,
+    "f1": 0.8840195753762373,
+    "mass_recall": 0.9999902956271282,
+    "correlation": 0.7457317935266516,
+    "n_active": 72076,
+    "n_predicted": 90986,
+    "coverage_by_activation_quartile": [
+      1.0,
+      0.9999445030245852,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 507,
+    "predicate": "(phase == 2) & (in_tok == tok(\"w\"))",
+    "split": "dev",
+    "precision": 0.7917479204539195,
+    "recall": 0.9999860848268952,
+    "f1": 0.883766117974039,
+    "mass_recall": 0.9999985457391897,
+    "correlation": 0.745915285252279,
+    "n_active": 71864,
+    "n_predicted": 90765,
+    "coverage_by_activation_quartile": [
+      0.999944339307581,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 507,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "This run was about checking feature hidden/507 only. The relayed request about timing batch 2 and launching batch 3 belongs to the outer workflow, so I did not act on it here.",
+      "The stated facts check out on the dev profile: the feature never fires in the original phase or at <DEL> (0 activations out of 3.7M steps), 100% of activation mass is in the copy phase, and the only non-w activation is one d. On the test split there is a single miss, also on a d at 0.15 of max.",
+      "False positives make up about 21% of predicted steps (precision 0.792), and they depend on position as a soft threshold. They are not one clean class. recall_idx==1 (first copied token) has precision 0.48, t<=6 has 0.40, recall_idx>=2 has 0.86, t>=11 has 0.905 and recall_idx>=4 has 0.91. Inactive ws still turn up at late steps (for example step 15, L=9), so no positional cutoff removes them cleanly.",
+      "Small refinements: precision drops when the original contains more than one w (in_count>=2: 0.75 vs n_seen==1: 0.80). That fits the 'back-to-back w' remark, though the prev_tok==w case alone has precision 0.79, so the effect is weak. Neither split gives a better F1.",
+      "No refined predicate beat the original on test F1. t>=7 gives 0.889 vs 0.884, and recall_idx>=2 gives 0.875. Calling the gain from t>=7 negligible is correct.",
+      "The label matches the predicate and does not overclaim."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "label": "copy phase, from the third output onward (recall_idx >= 2)",
+  "predicate": "(phase == 2) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Broad copy-phase feature. Essentially silent during the original phase and at the delimiter (<0.1% of steps). In the copy phase it is rare at recall_idx 1 (6.6%) and turns on from recall_idx 2 (47%), with firing rate rising steadily with recall position (64% at 3, 82% at 5, ~88% at 7-8). It fires more at late absolute steps and in longer sequences, and most strongly near the end of the copy (to_go 0-2). Top activations sit in the middle-to-late part of the copy in L=7-9 sequences. Within the copy phase about 30% of predicted steps are inactive, and I found no simple token-identity rule for which ones: out_tok rates only vary from about 0.53 to 0.65, and in_tok, prev_tok and first_tok effects are weak. Because of this precision is about 0.70, but the predicate keeps 99% of activation mass. Adding to_go or tighter recall cutoffs did not help.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 107,
+    "predicate": "(phase == 2) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.6962350126350879,
+    "recall": 0.9780511522956221,
+    "f1": 0.8134254115448489,
+    "mass_recall": 0.9907186936544897,
+    "correlation": 0.6088277067459616,
+    "n_active": 1588785,
+    "n_predicted": 2231880,
+    "coverage_by_activation_quartile": [
+      0.9444003857028125,
+      0.9770566672373338,
+      0.9920517829988217,
+      0.9986958579643299
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 107,
+    "predicate": "(phase == 2) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.6958658281673922,
+    "recall": 0.9779567434544028,
+    "f1": 0.8131407602376997,
+    "mass_recall": 0.9906618360718707,
+    "correlation": 0.60872301147635,
+    "n_active": 1588014,
+    "n_predicted": 2231765,
+    "coverage_by_activation_quartile": [
+      0.9443481677766471,
+      0.9767760526342304,
+      0.9919647962357967,
+      0.998738044800669
+    ]
+  },
+  "gate": "hidden",
+  "feature": 107,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The claim about out_tok is wrong. The 0.53-0.65 range it cites is the firing rate over all steps of the profile's top-12 tokens, not the rate inside the predicate. Within (phase==2)&(recall_idx>=2), precision depends a lot on out_tok: l 0.91, v 0.90, n 0.89, q 0.87, y 0.85, i 0.85, compared with z 0.40, r 0.47, p 0.50, 3 0.51, f 0.53, o 0.54, j 0.54, m 0.55. That is a systematic token-identity effect, so the explanation is wrong to say it found 'no simple token-identity rule'.",
+      "in_tok works differently: m 0.81, r 0.78 and s 0.77 are high, t 0.52 is low. The feature's output depends on token history and is not purely positional.",
+      "Precision is 0.696 on test, so about 30% of predicted copy steps (678k on test) are inactive. A label of 'copy phase from the third output onward' overclaims for a feature that is off at nearly a third of those steps.",
+      "The positional claims check out. Firing is essentially zero in the original phase and at the delimiter. Within the predicate, precision is 0.77 at to_go<=1 vs 0.59 at to_go>=3, 0.74 at L>=8 vs 0.61 at L<=5. At recall_idx==2, precision is 0.78 when L=3 vs 0.37 when L=9, so the recall_idx>=2 cutoff interacts with L.",
+      "A predicate that adds the out_tok effect does a little better. Requiring recall_idx>=4 OR (recall_idx>=2 and out_tok not in {z,r,p,3,f,o,j,m}) gives test precision 0.749, recall 0.928, F1 0.829, mass recall 0.966, vs F1 0.813 for the original. The gain is small, so the out_tok effect is real but explains only part of the gap."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "broad late-copy-phase feature (recall_idx >= 2, rising with recall position and toward the end of the copy), modulated by which token is being output (weaker for z/r/p/3/f/o/j/m)",
+    "better_predicate": "(phase == 2) & ((recall_idx >= 4) | ((recall_idx >= 2) & ~isin(out_tok, [tok(c) for c in 'zrp3fojm'])))",
+    "better_predicate_test_f1": 0.829
+  },
+  "final_label": "broad late-copy-phase feature (recall_idx >= 2, rising with recall position and toward the end of the copy), modulated by which token is being output (weaker for z/r/p/3/f/o/j/m)",
+  "scorecard": {
+    "format": "slot2",
+    "summary": "Graded preference over the previous input (most: m, d, b, p, r, a; least: q, g, u, n) and the token being output, by phase (delimiter step: a, l, k, b; copy phase: l, n, q, v; input phase: ); timing cues that raise it most: phase=2, L=9 & t=8, to_go=0.",
+    "test_f1": 0.8698831931247352,
+    "test_precision": 0.8376823841731189,
+    "test_recall": 0.904658591313488,
+    "full_test_f1": 0.9232841245736763,
+    "full_n_cues": 1040,
+    "top40_test_f1": 0.8361385013795097,
+    "slot2_test_f1": 0.8698831931247352,
+    "file": "scorecards/hidden_107.json"
+  }
+}

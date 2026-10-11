@@ -1,0 +1,62 @@
+{
+  "label": "first copy step after <DEL> when the fed-back input is l (sequence starts with l)",
+  "predicate": "(recall_idx == 1) & (in_tok == tok(\"l\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, at step t = L+1 (recall_idx 1). That is the step where the model has just fed back its first output, orig(0), and is now emitting orig(1), and the feature requires that input to be the letter l, which means the sequence started with l. It is silent in the original phase, on the delimiter step, and at every other copy position. Original-phase inputs of l never activate it, and neither do l inputs at later copy steps. Strength is higher for shorter sequences: the top activations (about 3.1) come at L = 4-6, while L = 8-9 tends to give lower values (about 0.3-1.1). Which token is output next has little effect. The few false positives are mostly at L = 3 (t = 4) and L = 9 (t = 10). The handful of misses are tiny activations (up to 0.06 of max) when the fed-back input at this step is m or y.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 377,
+    "predicate": "(recall_idx == 1) & (in_tok == tok(\"l\"))",
+    "split": "test",
+    "precision": 0.9888348640374572,
+    "recall": 0.9998786039453718,
+    "f1": 0.9943260698979899,
+    "mass_recall": 0.9999886224923095,
+    "correlation": 0.9195111787444926,
+    "n_active": 16475,
+    "n_predicted": 16659,
+    "coverage_by_activation_quartile": [
+      0.9995144452537024,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 377,
+    "predicate": "(recall_idx == 1) & (in_tok == tok(\"l\"))",
+    "split": "dev",
+    "precision": 0.9892186481843492,
+    "recall": 0.9997006704980843,
+    "f1": 0.9944320381122526,
+    "mass_recall": 0.9999813208719447,
+    "correlation": 0.9192528788002813,
+    "n_active": 16704,
+    "n_predicted": 16881,
+    "coverage_by_activation_quartile": [
+      0.9988026819923371,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 377,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Only systematic gap is at L=3 (t=4). On the test split the predicate restricted to L==3 has precision 0.72 (461 predicted, about 127 false positives). These steps carry only 0.5% of activation mass. The explanation already says false positives cluster at L=3, so this is a documented minor caveat, not a refutation. Excluding L=3 drops test F1 to 0.988 (recall 0.98), so the original predicate is better.",
+      "The L=9 claim is mostly fine: precision is 0.98 there, but activations are weak (L=9 holds 16.6% of firing steps and only 7.6% of mass). This matches the claimed shorter-L magnitude trend: dev mass share by L goes 0.153/0.237/0.231/0.182/0.116/0.078 for L=4..9, and the top examples are all at L=4-6 with values around 3.1.",
+      "Misses are negligible noise: only 2 test steps (y and m inputs at recall_idx 1, at 0.01 and 0.08 of max), holding 0.0% of mass.",
+      "Minor overstatement: 'which token is output next has little effect' looks only approximately true. The top activations disproportionately have orig(1) in {1, y, q, 2}, so the next token may modulate magnitude somewhat. It does not affect whether the feature fires.",
+      "Verified: zero activation in the original and delimiter phases and at every recall_idx other than 1; in_tok l holds 100% of mass; test precision 0.989, recall 1.000, F1 0.994, mass recall 1.000 all reproduce."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

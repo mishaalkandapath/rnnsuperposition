@@ -1,0 +1,63 @@
+{
+  "label": "<DEL> delimiter step in longer sequences (L >= 6)",
+  "predicate": "(phase == 1) & (L >= 6)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost only at the <DEL> step (97% of activation mass). The firing rate and magnitude rise steadily with sequence length: at <DEL> it is active about 60% of the time overall, about 49% of steps with to_go=8 fall in L=9 sequences, and the L>=6 condition lifts precision from 0.60 to 0.81. In long sequences the activation often carries over weakly into the first one or two copy steps (recall_idx 1-2, about 3% of mass). It is essentially silent during the original phase and later in the copy phase. It does not depend on token identity: tables by out_tok, prev_tok and first_tok are flat. Misses are mostly weak <DEL> activations at L=4-5; false positives are inactive <DEL> steps at L=6-7.",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 119,
+    "predicate": "(phase == 1) & (L >= 6)",
+    "split": "test",
+    "precision": 0.812750323726925,
+    "recall": 0.8369590498193602,
+    "f1": 0.8246770608141658,
+    "mass_recall": 0.9219803123821533,
+    "correlation": 0.7848965798982006,
+    "n_active": 64493,
+    "n_predicted": 66414,
+    "coverage_by_activation_quartile": [
+      0.5934011411560407,
+      0.8193264280841035,
+      0.9443031693853501,
+      0.9908205668920176
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 119,
+    "predicate": "(phase == 1) & (L >= 6)",
+    "split": "dev",
+    "precision": 0.8140932018369345,
+    "recall": 0.8346789755623137,
+    "f1": 0.8242575766815049,
+    "mass_recall": 0.9219248164299935,
+    "correlation": 0.7866398942602911,
+    "n_active": 64777,
+    "n_predicted": 66415,
+    "coverage_by_activation_quartile": [
+      0.5816610064834825,
+      0.8200568111646289,
+      0.945782388538965,
+      0.991231320242065
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 119,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The claim that token identity does not matter is false. The flat out_tok, prev_tok and first_tok tables are marginals over all steps, and they hide strong token effects within each L at the <DEL> step. At L=6 the <DEL> firing rate is 0.74-0.76 when the original sequence contains k or p, but only 0.32-0.36 when it contains v, u, h or i. At L=5 the same split is 0.53 vs 0.10. At L=7 the rate is 0.986 when first_tok=n, against 0.81 overall.",
+      "Token effects depend on position. A first token of n, f, h or i raises the rate (n at pos0 at L=6: 0.83). The same tokens late in the sequence lower it (n at pos5: 0.38). k, p and a raise it at later positions (k at pos5: 0.80) but not as the first token (k at pos0: 0.37). The unit behaves like a length-plus-content accumulator, not a pure length detector.",
+      "The <DEL> rate rises steadily with L (test precision: L=3 0.06, L=4 0.11, L=5 0.25, L=6 ~0.51, L=7 0.81, L=8 0.95, L=9 0.98). So the label's hard cutoff at L>=6 is a crude threshold. Calling the L=6-7 false positives and L=4-5 misses 'noise' hides a content-dependent class that can be predicted.",
+      "The other factual claims check out: 97% of the mass is at <DEL>, the <DEL> rate is 0.60, the rate at to_go=8 is 0.49, about 3% of the mass carries over to recall_idx 1-2, and test P/R/F1 are 0.813/0.837/0.825.",
+      "A predicate that adds token counts beats the label predicate on the test split (F1 0.872 vs 0.825), which confirms the gap is systematic."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "<DEL> step, graded by sequence length plus token content (late k/p/a/o/r raise it, u/v/h/i/x/c/e lower it, and a first token of n/f/h/i/u raises it)",
+    "better_predicate": "(phase==1)&((2*L + 2*n_seen([tok('k'),tok('p'),tok('a'),tok('o'),tok('r')]) - n_seen([tok('u'),tok('v'),tok('h'),tok('i'),tok('x'),tok('c'),tok('e'),tok('j'),tok('0')]) + 2*isin(first_tok,[tok('n'),tok('f'),tok('h'),tok('i'),tok('u')])) >= 12)",
+    "better_predicate_test_f1": 0.872
+  },
+  "final_label": "<DEL> step, graded by sequence length plus token content (late k/p/a/o/r raise it, u/v/h/i/x/c/e lower it, and a first token of n/f/h/i/u raises it)"
+}

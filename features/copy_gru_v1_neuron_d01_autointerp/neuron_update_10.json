@@ -1,0 +1,63 @@
+{
+  "label": "first original token being read (t=0 or fed back at step L+1), in short sequences",
+  "predicate": "((recall_idx == 1) & (L == 3)) | ((recall_idx == 1) & (L == 4) & isin(in_tok, [tok(\"r\"), tok(\"o\"), tok(\"x\"), tok(\"f\"), tok(\"e\"), tok(\"c\")])) | ((t == 0) & isin(in_tok, [tok(\"r\"), tok(\"o\")]))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires only on steps where the input is the first original token. (1) Main mass (~80%): copy step L+1 (recall_idx==1), where orig(0) comes back in as input after <DEL>. Almost always active for L=3 (precision ~0.75, about half the total mass, top activations up to max). For L=4 it fires only on some first tokens (r, o, x, f, e, c most often) and with smaller magnitude. Essentially never active at recall_idx==1 for L>=5. (2) At t=0 when the first token is r or o: fires on almost every such sequence but very weakly (~0.06 of max for r, ~0.01 for o). This is ~20% of mass. Never active at the delimiter, at original steps t>=1, or at copy steps other than L+1 (apart from a handful at t=6). Magnitude mostly depends on sequence length (L=3 >> L=4) and on the identity of the first token.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 10,
+    "predicate": "((recall_idx == 1) & (L == 3)) | ((recall_idx == 1) & (L == 4) & isin(in_tok, [tok(\"r\"), tok(\"o\"), tok(\"x\"), tok(\"f\"), tok(\"e\"), tok(\"c\")])) | ((t == 0) & isin(in_tok, [tok(\"r\"), tok(\"o\")]))",
+    "split": "test",
+    "precision": 0.8083802989463367,
+    "recall": 0.9040833104960263,
+    "f1": 0.8535575679172057,
+    "mass_recall": 0.9020065535791445,
+    "correlation": 0.5076234103994156,
+    "n_active": 10947,
+    "n_predicted": 12243,
+    "coverage_by_activation_quartile": [
+      0.9678480087687249,
+      0.8940445743514798,
+      0.9035440263061747,
+      0.8508771929824561
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 10,
+    "predicate": "((recall_idx == 1) & (L == 3)) | ((recall_idx == 1) & (L == 4) & isin(in_tok, [tok(\"r\"), tok(\"o\"), tok(\"x\"), tok(\"f\"), tok(\"e\"), tok(\"c\")])) | ((t == 0) & isin(in_tok, [tok(\"r\"), tok(\"o\")]))",
+    "split": "dev",
+    "precision": 0.8084546426515339,
+    "recall": 0.9061578171091446,
+    "f1": 0.8545225366192898,
+    "mass_recall": 0.9048579340037386,
+    "correlation": 0.5105604927761364,
+    "n_active": 10848,
+    "n_predicted": 12159,
+    "coverage_by_activation_quartile": [
+      0.9701327433628318,
+      0.890117994100295,
+      0.9022861356932154,
+      0.862094395280236
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 10,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The headline numbers check out. recall_idx==1 & L==3 has dev precision 0.746 and 0.52 of the mass. recall_idx==1 & L==4 has 0.28 of the mass. t==0 with r has precision 1.0 and 0.17 mass; t==0 with o has precision 1.0 and 0.03 mass. recall_idx==1 & L>=5 has about 0.003 mass. Test scores reproduce (F1 0.854, mass recall 0.902).",
+      "The L=4 clause is systematically wrong. At recall_idx==1 with L=4, activation depends on all four original tokens, not just the first. Scanning orig(1), orig(2) and orig(3) shows strong selectivity at every position: v, k, d, w, 2, u, 3, t, p, q, b and s have precision 0.2-0.42, while 0, x, f, h, m and n are near 0.02-0.06. The test misses show this directly. Sequences starting with y, j, p, 0 or n, outside the first-token list, fire up to 0.18 of max, and x- and f-first sequences are false positives. The stated first-token list r/o/x/f/e/c reaches only 0.43 precision on this slice.",
+      "The 'apart from 45 dev activations at t=6' exception is mislabeled. All 45 are recall_idx==1 at L=5 (t=6 = L+1), so they belong to case 1, not to some other copy step.",
+      "The label and explanation overclaim. 'Fires only on steps where the input is the first original token' implies it fires whenever orig(0) is the input, but it is silent at t=0 for 28 of 30 first tokens and at step L+1 for L>=5. Also, the t=0 r/o clause does not depend on length, so 'in short sequences' covers only one of the two cases.",
+      "By step count, recall is dominated by the very weak t=0 r/o firings (about 61% of active steps but only 20% of the mass)."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "Mainly the step after the delimiter (recall_idx==1), when the first token is fed back in L=3 sequences. In L=4 sequences it fires only when the whole 4-token sequence suits it: first token from roughly r/x/f/o/e/c/j/y/g/t/0/z, and later tokens mostly from v/k/d/w/2/u/3/t/p/q/b/s/c. Also a weak firing at t=0 whenever the first token is r or o.",
+    "better_predicate": "((recall_idx == 1) & (L == 3)) | ((recall_idx==1)&(L==4)&isin(orig(0),[tok(\"r\"),tok(\"x\"),tok(\"f\"),tok(\"o\"),tok(\"e\"),tok(\"c\"),tok(\"j\"),tok(\"y\"),tok(\"g\"),tok(\"t\"),tok(\"0\"),tok(\"z\")])&((isin(orig(1),[tok(\"v\"),tok(\"k\"),tok(\"d\"),tok(\"w\"),tok(\"2\"),tok(\"u\"),tok(\"3\"),tok(\"t\"),tok(\"p\"),tok(\"q\"),tok(\"b\"),tok(\"s\"),tok(\"c\")])*1+isin(orig(2),[tok(\"v\"),tok(\"k\"),tok(\"d\"),tok(\"w\"),tok(\"2\"),tok(\"u\"),tok(\"3\"),tok(\"t\"),tok(\"p\"),tok(\"q\"),tok(\"b\"),tok(\"s\"),tok(\"c\")])*1+isin(orig(3),[tok(\"v\"),tok(\"k\"),tok(\"d\"),tok(\"w\"),tok(\"2\"),tok(\"u\"),tok(\"3\"),tok(\"t\"),tok(\"p\"),tok(\"q\"),tok(\"b\"),tok(\"s\"),tok(\"c\")])*1)>=2)) | ((t == 0) & isin(in_tok, [tok(\"r\"), tok(\"o\")]))",
+    "better_predicate_test_f1": 0.898
+  },
+  "final_label": "Mainly the step after the delimiter (recall_idx==1), when the first token is fed back in L=3 sequences. In L=4 sequences it fires only when the whole 4-token sequence suits it: first token from roughly r/x/f/o/e/c/j/y/g/t/0/z, and later tokens mostly from v/k/d/w/2/u/3/t/p/q/b/s/c. Also a weak firing at t=0 whenever the first token is r or o."
+}

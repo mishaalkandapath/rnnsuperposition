@@ -1,0 +1,63 @@
+{
+  "label": "Early copy phase: first two echoed tokens (recall 1-2) in longer sequences",
+  "predicate": "(phase == 2) & (recall_idx <= 2) & (L >= 6)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, almost entirely at the first two steps after <DEL> (recall_idx 1 and 2, where the input is the echoed orig(0) or orig(1)); recall 1 carries 67% of the mass and recall 2 31%. It is strongest when many outputs remain: rate rises with L, and it is weak or absent for L<=5 (to_go>=4 is a near-equivalent condition). Magnitude is largest at recall 1 and is boosted when the echoed first token is k (all top examples start with k), then falls off at recall 2 and is near zero at recall 3 and later. Token identity otherwise matters little. Never fires in the original phase or on the <DEL> step, and never on the first occurrence of a token (consistent with the input being a repeat). Misses are mostly low-magnitude activations in L=5 sequences; false positives are mostly L=6-7 steps where it stays silent.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 441,
+    "predicate": "(phase == 2) & (recall_idx <= 2) & (L >= 6)",
+    "split": "test",
+    "precision": 0.8558147661681951,
+    "recall": 0.8842909993042986,
+    "f1": 0.8698198808493179,
+    "mass_recall": 0.9544607419901775,
+    "correlation": 0.7461669877457812,
+    "n_active": 642517,
+    "n_predicted": 663896,
+    "coverage_by_activation_quartile": [
+      0.6977837265766046,
+      0.8867576838553437,
+      0.9588617248442062,
+      0.9937620230468969
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 441,
+    "predicate": "(phase == 2) & (recall_idx <= 2) & (L >= 6)",
+    "split": "dev",
+    "precision": 0.8553077166207613,
+    "recall": 0.8845641971561325,
+    "f1": 0.8696899785360928,
+    "mass_recall": 0.9547060307496668,
+    "correlation": 0.7457655945701995,
+    "n_active": 642435,
+    "n_predicted": 664410,
+    "coverage_by_activation_quartile": [
+      0.6979434527330349,
+      0.8871918759222709,
+      0.9595228162805323,
+      0.993599322574218
+    ]
+  },
+  "gate": "hidden",
+  "feature": 441,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most of the core holds up. The feature fires only in the copy phase (original and delimiter phases are 0% active). Recall 1 holds 67.4% of the activation mass and recall 2 holds 31.3%. Recall 3 and later is under 2%. The dev scores match the report (P 0.855, R 0.885, F1 0.870, mass recall 0.955).",
+      "The explanation treats k only as something that makes activations bigger. In fact an echoed k is a separate trigger that ignores the L and position rule. Firing rate when in_tok==k: 99.8% at recall 1 with L=5 (vs 35% for other tokens), 96.5% at recall 1 with L=4, 99% at recall 2 with L=5, and 78% at recall 1 with L=3. At recall 3 or later it is 25% (43% if to_go>=2), vs 0.6% for non-k inputs at those steps. The test misses list shows this directly, e.g. 'k s x c j <DEL> [k:0.36]' at L=5.",
+      "The L cutoff in the predicate is a hard threshold, but the firing rate is a smooth ramp. At recall 1 it runs L=4 11%, L=5 38%, L=6 76%, L=7 96%, L=8 99.8%. At recall 2 it runs L=5 11%, L=6 43%, L=7 77%, L=8 93%. So recall 2 at L=6 is a systematic false-positive cell (57% silent), and recall 1 at L=5 is a systematic miss cell (38% active). Saying the feature is 'weak or absent for L<=5' overstates it for recall 1.",
+      "'Firing rate rises with L' is only true within recall 1 and 2. Across all steps the rate by L is flat to slightly falling from L=7 to L=9 (0.128, 0.126, 0.117).",
+      "'Never fires on the first occurrence of a token' says nothing: copy-phase inputs are never first occurrences, so this follows from 'copy phase only'."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Early copy phase: fires on the first two echoed tokens (recall 1-2) when many outputs remain, with the rate rising smoothly with L. A separate trigger: an echoed 'k' makes it fire at any length, and sometimes later in the copy phase.",
+    "better_predicate": "(phase == 2) & (((recall_idx==1)&(L>=6)) | ((recall_idx==2)&(L>=7)) | ((recall_idx <= 2) & (in_tok==tok('k'))))",
+    "better_predicate_test_f1": 0.881
+  },
+  "final_label": "Early copy phase: fires on the first two echoed tokens (recall 1-2) when many outputs remain, with the rate rising smoothly with L. A separate trigger: an echoed 'k' makes it fire at any length, and sometimes later in the copy phase."
+}

@@ -1,0 +1,61 @@
+{
+  "label": "copy-phase input b",
+  "predicate": "(phase == 2) & (in_tok == tok(\"b\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires when the token b is fed back as input during the copy phase (i.e. step after the model output b). In_tok==b accounts for essentially 100% of activation mass; never fires in the original or delimiter phase (b input in the original phase gives zero). Fires on ~80% of copy-phase b inputs; the inactive cases are mostly very early in the copy (recall_idx 1, short t / short L), and activation magnitude grows with position in the sequence: largest activations are b inputs late in long sequences (t ~ 15-17), weak ones (0.1-0.3 of max) when b is fed in right after <DEL> or at small t. Adding t>=7 raises dev F1 only from 0.89 to 0.90. Does not fire on other input tokens (a handful of tiny activations on k/d).",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 64,
+    "predicate": "(phase == 2) & (in_tok == tok(\"b\"))",
+    "split": "test",
+    "precision": 0.8052669886852378,
+    "recall": 0.9998356884653302,
+    "f1": 0.8920652373098772,
+    "mass_recall": 0.9999644344224917,
+    "correlation": 0.7648182744202133,
+    "n_active": 73032,
+    "n_predicted": 90678,
+    "coverage_by_activation_quartile": [
+      0.9993975243728777,
+      0.9999452294884434,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 64,
+    "predicate": "(phase == 2) & (in_tok == tok(\"b\"))",
+    "split": "dev",
+    "precision": 0.8050866086344852,
+    "recall": 0.9998907969095525,
+    "f1": 0.891976473739969,
+    "mass_recall": 0.9999712244677945,
+    "correlation": 0.76462445311423,
+    "n_active": 73258,
+    "n_predicted": 90984,
+    "coverage_by_activation_quartile": [
+      0.9995631995631996,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 64,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor, not mentioned in the explanation: the preceding copy-phase token changes how often the feature fires. With recall_idx>=2, precision ranges from 0.64-0.71 when prev_tok is e, 0, d or m up to 0.97-0.99 when it is a, q, i or 2. This is a graded effect with no clean rule. It accounts for some of the roughly 8.4k false positives that are not at recall_idx 1.",
+      "Claim checks all pass. Original and delimiter phases have 0 active steps. In the copy phase, input b carries 1.000 of the activation mass, and k (6 steps) and d (2 steps) are the only other tokens that fire. Precision is 0.805, so it fires on about 80% of copy-phase b inputs. recall_idx==1 has precision 0.44 and holds about 53% of the false positives, which supports 'most inactive cases are early'. Firing rate rises with t, from 0.005 at t=6 to 0.033 at t=16-17.",
+      "The 12 active steps the predicate misses on test are almost all an input k that comes just before a b (k fed back right before b). They are tiny (0.02-0.18 of max) and hold 0.0% of the mass, so this is noise.",
+      "Refinements barely help on test: adding t>=7 raises F1 from 0.892 to 0.906, and adding t>=7 & recall_idx>=2 drops it to 0.886. No systematic counterexample class remains that would justify a different predicate."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok('b')) & (t >= 7)",
+    "better_predicate_test_f1": 0.906
+  }
+}

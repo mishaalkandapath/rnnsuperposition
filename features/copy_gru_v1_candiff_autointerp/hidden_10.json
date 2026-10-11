@@ -1,0 +1,61 @@
+{
+  "label": "copy-phase input token c (from the 2nd copied position on)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"c\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, at steps where the fed-back input is the letter c (i.e. the model just emitted c). It never fires in the original or delimiter phases, on any other input token, or on the first occurrence of c in the sequence. It is nearly silent when c is the first copied token (recall_idx 1, about 0.9% of mass). With in_tok==c in the copy phase, recall is 1.0 and precision is 0.71. Adding recall_idx>=2 raises precision to 0.85 and F1 to 0.91 on dev. Magnitude is largest when the next token to output is also c (an original c c run): those steps are 4% of activations but 9% of the mass. In a run the second c fires more weakly. The remaining false positives are copy-phase c inputs where the feature stays at zero, and no further condition was found that separates them.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 10,
+    "predicate": "(phase == 2) & (in_tok == tok(\"c\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.8512600622952146,
+    "recall": 0.9732979773063641,
+    "f1": 0.9081976882188353,
+    "mass_recall": 0.990534233187229,
+    "correlation": 0.7842514345672753,
+    "n_active": 64864,
+    "n_predicted": 74163,
+    "coverage_by_activation_quartile": [
+      0.9166872224963,
+      0.9809447459299457,
+      0.9957449432659102,
+      0.9998149975333005
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 10,
+    "predicate": "(phase == 2) & (in_tok == tok(\"c\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.8504351592425657,
+    "recall": 0.9731584164549903,
+    "f1": 0.9076673047058399,
+    "mass_recall": 0.9908451795593529,
+    "correlation": 0.7834135902226332,
+    "n_active": 64564,
+    "n_predicted": 73881,
+    "coverage_by_activation_quartile": [
+      0.9158044730809739,
+      0.9804225264853479,
+      0.9966544823740784,
+      0.9997521838795613
+    ]
+  },
+  "gate": "hidden",
+  "feature": 10,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Factual claims check out on dev. All activation mass is in the copy phase (phase 2: share 1.000). Every activation has in_tok == c (32.7x lift, share 1.000). At recall_idx == 1 the share is 0.009. Precision when next_out == c is 0.94 (1,901 predicted steps). Precision when prev_tok == c is 0.71, which fits the claim that the second c in a run fires more weakly.",
+      "The claim that it 'never fires on the first occurrence of c' is true but adds nothing. A fed-back c in the copy phase is never the first c in the sequence, because the same c already appeared among the original tokens. in_first is always 0 there.",
+      "The leftover false positives are not completely unstructured, which partly contradicts 'no condition was found'. Precision at recall_idx == 2 is only 0.70, against 0.92-0.93 at recall_idx 3-4. Precision also depends on the previous token. At recall_idx == 2 it is 0.29 after r, 0.42 after i, 0.47 after l, 0.48 after g and 0.49 after c, but 0.93 after e or m. This dependence is graded, not a clean cutoff. Excluding these previous tokens did not raise test F1 (best was 0.905 vs 0.908), so it does not overturn the predicate.",
+      "Test misses: 1,732 missed steps holding 0.9% of activation mass. They are almost all weak activations on c as the first copied token (recall_idx 1), which the explanation already notes. The test false positives showed no single token, position or length class that could be split off."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

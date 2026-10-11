@@ -1,0 +1,64 @@
+{
+  "label": "copy-phase input z in short sequences",
+  "predicate": "(phase == 2) & (in_tok == tok(\"z\")) & (L <= 6)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost exclusively in the copy phase when the fed-back input token is z (99.8% of activation mass is on in_tok == z; essentially zero in the original or delimiter phase, so a z in the original sequence does not trigger it). It is gated by sequence length: activation is strong for L = 3-6 and weak or absent for L >= 7, and also falls off for late recall positions (recall_idx >= 5). The largest activations (about 4.3-4.6) come from very short sequences (L = 3-4) where z is the second original token, so it is re-input right after the first copied token (recall_idx 1-2). The weakest activations are z inputs in longer sequences (L = 7-9). Repeated z within one copy fires on each occurrence. Copy-phase z on its own gets recall 0.98 but precision 0.35, and adding L <= 6 raises dev F1 to 0.81.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 810,
+    "predicate": "(phase == 2) & (in_tok == tok(\"z\")) & (L <= 6)",
+    "split": "test",
+    "precision": 0.8139788860575173,
+    "recall": 0.8206006483576977,
+    "f1": 0.8172763546647984,
+    "mass_recall": 0.9541704212459443,
+    "correlation": 0.7567760992565932,
+    "n_active": 32698,
+    "n_predicted": 32964,
+    "coverage_by_activation_quartile": [
+      0.48795107033639146,
+      0.8118654434250765,
+      0.9826278443846342,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 810,
+    "predicate": "(phase == 2) & (in_tok == tok(\"z\")) & (L <= 6)",
+    "split": "dev",
+    "precision": 0.810124269005848,
+    "recall": 0.8169671652793562,
+    "f1": 0.8135313278991879,
+    "mass_recall": 0.9531737177071199,
+    "correlation": 0.7563047626280036,
+    "n_active": 32557,
+    "n_predicted": 32832,
+    "coverage_by_activation_quartile": [
+      0.47911547911547914,
+      0.8035385182454847,
+      0.9853790391940042,
+      0.9998771347831429
+    ]
+  },
+  "gate": "update",
+  "feature": 810,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claims hold on dev. 99.8% of activation mass is on in_tok == z. Only 8 of 32557 active steps fall outside the copy phase (0 at the delimiter). Copy-phase z alone gives recall 1.0 and F1 about 0.5. The reported test numbers are reproduced (dev F1 0.814, mass recall 0.953).",
+      "'Strong for L = 3-6' is too broad for L = 6. Precision of copy-phase z by L and recall_idx: L 3-4 is 1.0 everywhere; L = 5 is 0.93-1.0; L = 6 is 0.34 at r = 1, 0.84 at r = 2, 0.89 at r = 3, 0.56 at r = 4 and 0.22 at r = 5. So at L = 6 the feature also drops off at recall_idx 1 (z as the first original token), and the explanation only mentions the late-position drop (r >= 5).",
+      "'Weak or absent for L >= 7' is right for activation mass (L >= 7 holds 4.4% of it) but hides a band in the middle of the recall: L = 7 r = 3 fires 49% of the time, and L = 8 r = 3 about 21%. L >= 7 still accounts for 16% of active steps by count. It looks like a soft acceptance band centred on recall_idx 2-3 that narrows as L grows, not a clean cut at L <= 6.",
+      "This is a systematic pattern, but small. Remaining misses are mostly low-magnitude (relative activation 0.00-0.2) at the edges of that band, and no token-history pattern separated active from inactive steps at L = 7 r = 3 (in_count, digit content and prev_tok all gave precision 0.37-0.55).",
+      "Other claims check out: the largest activations are at L <= 4 (precision 1.0, 49% of mass from 25% of active steps). Repeated z also fires: at L <= 5 with in_count >= 2, precision is 0.95.",
+      "Possible refinement: (phase==2)&(in_tok==tok('z'))&((L<=5)|((L==6)&(recall_idx>=2)&(recall_idx<=4))|((L==7)&(recall_idx==3))) gives test F1 0.845 (P 0.877, R 0.815, mass recall 0.956), versus 0.817 for the original predicate. That is only a modest gain."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input z, strongest in short sequences (L <= 5) and fading at the outer recall positions as L grows",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"z\")) & ((L <= 5) | ((L == 6) & (recall_idx >= 2) & (recall_idx <= 4)) | ((L == 7) & (recall_idx == 3)))",
+    "better_predicate_test_f1": 0.845
+  },
+  "final_label": "copy-phase input z, strongest in short sequences (L <= 5) and fading at the outer recall positions as L grows"
+}

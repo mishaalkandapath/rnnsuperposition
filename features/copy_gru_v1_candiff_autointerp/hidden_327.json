@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input y (fed-back y, not the first copied token)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"y\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token detector for y being fed back as input during the copy phase. Fires on essentially every copy-phase step whose input is y (rate ~1.0 when recall_idx >= 2), i.e. right after the model has emitted a y and is now outputting the token that followed y. Never fires in the original phase (even on y inputs) or at the delimiter step, and never on any other input token. When y is the first original token (input y at recall_idx 1, the first fed-back token), it fires only weakly (~0.01-0.08 of max) or not at all; these are the only misses. Magnitude is lower when y is copied back early (orig position 1-2, ~0.5-0.8 of max) and highest for y at original positions 3+ (~0.8-1.0); repeated y in a row gets slightly smaller on the second. Independent of which token is being output next.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 327,
+    "predicate": "(phase == 2) & (in_tok == tok(\"y\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.9792641076941423,
+    "f1": 0.9895234333683669,
+    "mass_recall": 0.9992066909438153,
+    "correlation": 0.9878503524328852,
+    "n_active": 75473,
+    "n_predicted": 73908,
+    "coverage_by_activation_quartile": [
+      0.917059727595527,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 327,
+    "predicate": "(phase == 2) & (in_tok == tok(\"y\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.979687971552663,
+    "f1": 0.9897397828651723,
+    "mass_recall": 0.9992392020206675,
+    "correlation": 0.9876607780097283,
+    "n_active": 76211,
+    "n_predicted": 74663,
+    "coverage_by_activation_quartile": [
+      0.9187529522909778,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 327,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I found no systematic counterexample. On test, the predicate scores precision 1.0, recall 0.979, F1 0.990, mass recall 0.999 and correlation 0.988. Misses on test produced 0 false positives.",
+      "Every test miss is a fed-back y at recall_idx 1 (y was the first original token), firing weakly at 0.01-0.06 of max. On test, the y & recall_idx==1 slice has precision 0.094, so about 9% of those steps fire, and it holds 0.08% of activation mass. This matches the explanation's stated exception.",
+      "The phase claims check out on dev. The feature fires 0 times in the original phase, 0 times at the delimiter step, and only in the copy phase. Input y accounts for 76210 of 76211 active steps; the single exception is one activation on input v, which is noise.",
+      "The magnitude claims match the examples. A y from original position 1 (recall_idx 2) sits around 0.46-0.70 of max, position 2 around 0.7-0.85, and position 3 and later around 0.8-1.0. A second y in a row is somewhat lower (0.81-0.90). Output token and next_out are flat, consistent with 'which token is being output next has no effect'.",
+      "Minor wording point: the label says 'not the first copied token'. It would be more precise to say the feature excludes y fed back at recall_idx 1, meaning y as the first original token, rather than y as the first token output. The meaning is the same."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

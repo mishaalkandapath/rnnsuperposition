@@ -1,0 +1,63 @@
+{
+  "label": "3rd original token (t=2) when the sequence starts with w (strong) or n (weak)",
+  "predicate": "(t == 2) & isin(orig(0), [tok(\"w\"), tok(\"n\")])",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost only at step t=2, the third original input, and only when the first original token is w or n. Sequences starting with w hold about 87% of the activation mass and fire every time (the w-only predicate has precision 1.0 and correlation 0.96 with activation). Sequences starting with n fire weakly, mostly in the lowest quartile, and not always, which is the main source of false positives. Activation does not depend on the current input token. It is somewhat higher when the second token is m or w, e.g. w m t gives 0.81 of max. A tiny tail fires at t=3 or t=5 when first_tok is u/k/e/s, and the copy-phase step at recall_idx=2 holds 0.4% of the mass. Never fires at t=0, t=1, the delimiter, or later copy steps.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 515,
+    "predicate": "(t == 2) & isin(orig(0), [tok(\"w\"), tok(\"n\")])",
+    "split": "test",
+    "precision": 0.8847286495582667,
+    "recall": 0.9080030840400926,
+    "f1": 0.8962147847130267,
+    "mass_recall": 0.9878087142501292,
+    "correlation": 0.7742918128354925,
+    "n_active": 32425,
+    "n_predicted": 33278,
+    "coverage_by_activation_quartile": [
+      0.6660910324411002,
+      0.9715025906735751,
+      0.9959289415247965,
+      0.9985196150999259
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 515,
+    "predicate": "(t == 2) & isin(orig(0), [tok(\"w\"), tok(\"n\")])",
+    "split": "dev",
+    "precision": 0.8870256224317138,
+    "recall": 0.9107464168269529,
+    "f1": 0.8987295270166844,
+    "mass_recall": 0.9878624094150709,
+    "correlation": 0.7792622713143907,
+    "n_active": 32234,
+    "n_predicted": 33096,
+    "coverage_by_activation_quartile": [
+      0.6766348182156595,
+      0.9724531579600447,
+      0.9957805907172996,
+      0.998138495904691
+    ]
+  },
+  "gate": "update",
+  "feature": 515,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Gap 1: for n-starts, whether the feature fires depends heavily on the second token, which the label and explanation leave out. On dev, (t==2)&orig(0)=n&orig(1)=X has precision 0.0 for X in {c,e,f,j,n} (about 500-570 steps each), precision 0.22 for X=a, 0.69 for o and 0.80 for b. For almost every other second token it is 0.9-1.0. These cases are most of the predicate's 3836 test false positives. The explanation says n-starts fire 'weakly and not always' and treats that as noise, but it is a sharp, predictable set of second tokens.",
+      "Gap 2: most of the 2983 test misses are t=2 cases where the first token is u/k (and partly e/s) and the second token is w or m (e.g. 'u m e', 'k w r', 'e m t'). With orig(1) in {w,m}, precision is 0.78 for u, 0.74 for k, 0.43 for e and 0.29 for s, and 0.0 for every other first token. The explanation mentions only a t=3/t=5 tail for u/k/e/s and misses this t=2 pattern. The activations are small (about 0.01-0.07 of max), so these cases carry little activation mass but many active steps.",
+      "Claims that checked out: w-start alone has precision 1.0 and correlation 0.965 on test, with about 87% of the activation mass. t=2 carries 99.5% of the mass, the delimiter and t=0/1 are never active, and the only copy-phase activations are at recall_idx=2 (0.4% of mass). Activation does not depend on the current input token (rate is a flat 1.2x across tokens).",
+      "The label overclaims a bit. 'Sequences starting with n (weak)' implies every n-start fires, when about a fifth of n-starts (second token in {a,c,e,f,j,n}) essentially never do.",
+      "Fixing both gaps raises test F1 from 0.896 to 0.961 (precision 0.963, recall 0.960, mass recall 0.993)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "3rd original token (t=2) when the sequence starts with w (strong); weaker when it starts with n, unless the 2nd token is a/c/e/f/j/n; faint when it starts with u/k and the 2nd token is w/m",
+    "better_predicate": "(t == 2) & ((orig(0)==tok('w')) | ((orig(0)==tok('n')) & ~isin(orig(1),[tok('a'),tok('c'),tok('e'),tok('f'),tok('j'),tok('n')])) | (isin(orig(0),[tok('u'),tok('k')]) & isin(orig(1),[tok('w'),tok('m')])))",
+    "better_predicate_test_f1": 0.961
+  },
+  "final_label": "3rd original token (t=2) when the sequence starts with w (strong); weaker when it starts with n, unless the 2nd token is a/c/e/f/j/n; faint when it starts with u/k and the 2nd token is w/m"
+}

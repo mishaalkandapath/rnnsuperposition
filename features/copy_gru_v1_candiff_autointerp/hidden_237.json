@@ -1,0 +1,63 @@
+{
+  "label": "Copy phase, from the 4th recalled token onward (recall_idx >= 3)",
+  "predicate": "(recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase. It never fires in the original phase or at the delimiter, and almost never at recall_idx 0-1. Firing rate is 0.25 at recall_idx 2, 0.75 at recall_idx 3, and about 0.9 from recall_idx 4 onward, regardless of L. Activation mass peaks around recall_idx 4-5. Magnitude depends on the input token: the top activations (up to 7.7) are almost always on copy-phase input l (in_tok l carries about 8.5% of the mass versus about 3% for a typical token), with i/h/p also elevated. Inputs w and c largely suppress it (precision about 0.33 when in_tok is w or c), and excluding them gives only a small F1 gain (0.899 vs 0.891). Many low-magnitude activations at recall_idx 2 fall outside the predicate. It does not track which token is being output, the first token, or the digit count.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 237,
+    "predicate": "(recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.8608055985403146,
+    "recall": 0.922945676156892,
+    "f1": 0.8907932585155875,
+    "mass_recall": 0.9681278290519003,
+    "correlation": 0.7275075538496344,
+    "n_active": 1615276,
+    "n_predicted": 1731880,
+    "coverage_by_activation_quartile": [
+      0.7961487696220336,
+      0.9244240612749771,
+      0.9744588540905703,
+      0.9967510196399872
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 237,
+    "predicate": "(recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.8614159542432143,
+    "recall": 0.923107863096601,
+    "f1": 0.8911955481145052,
+    "mass_recall": 0.9680950892632958,
+    "correlation": 0.7275632936957193,
+    "n_active": 1616030,
+    "n_predicted": 1731765,
+    "coverage_by_activation_quartile": [
+      0.7969396645610978,
+      0.9242688263598741,
+      0.9745326194843159,
+      0.9966906513996044
+    ]
+  },
+  "gate": "hidden",
+  "feature": 237,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claims hold. On the dev split, all activation mass falls in the copy phase (0 in the original phase and at the delimiter). Firing rate by recall_idx is 0, 0.00007, 0.248, 0.752, then 0.89-0.93. Test scores reproduce exactly: P 0.861, R 0.923, F1 0.891, mass recall 0.968.",
+      "The w/c suppression claim checks out. On dev, precision at recall_idx>=3 is 0.32 for input c and 0.34 for input w, versus about 0.83-0.86 for other tokens such as v, n and q. Excluding c and w gives test F1 0.899.",
+      "Missing detail: the onset at recall_idx 2 depends strongly on the input token, which is a systematic pattern rather than noise. Firing rate at recall_idx 2 is l 0.96, i 0.84, m 0.63, p 0.55, r 0.45 and g 0.40, but c 0.003, w 0.011, e 0.018 and k 0.04. So the 25% firing at recall_idx 2 is mostly specific tokens, not scattered low-magnitude noise.",
+      "'Regardless of L' overclaims at the onset. At recall_idx 2 the rate is 0.49 for L<=4 but 0.16 for L>=8. At recall_idx>=3 precision is 0.64 for L<=4 versus 0.92 for L>=6, excluding c/w inputs. At recall_idx>=4 it is 0.83 for L=5 versus 0.91 for L=9. The ramp is shaped by sequence length near its start.",
+      "The remaining false positives sit mainly at recall_idx 3, where 25% of steps are inactive: a gradual ramp, not a sharp threshold. Beyond the token and L effects above, no other pattern stands out in the misses output (test split)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Copy phase from about the 3rd-4th recalled token onward. The onset is earlier for inputs l/i/m/p and for short L; inputs c/w are suppressed.",
+    "better_predicate": "((recall_idx >= 3) & ~isin(in_tok,[tok('c'),tok('w')])) | ((recall_idx == 2) & isin(in_tok,[tok('l'),tok('i'),tok('m'),tok('p')]))",
+    "better_predicate_test_f1": 0.911
+  },
+  "final_label": "Copy phase from about the 3rd-4th recalled token onward. The onset is earlier for inputs l/i/m/p and for short L; inputs c/w are suppressed."
+}

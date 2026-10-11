@@ -1,0 +1,62 @@
+{
+  "label": "sequence started with y: fires from step 3 through <DEL>",
+  "predicate": "(orig(0)==tok(\"y\")) & (t>=3) & (phase<2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires when the first original token is y. It is silent at t=0-2, turns on at step 3 (weakly, about 0.2 of max), peaks around steps 4-6 (top examples near max), and stays on through the <DEL> step at a somewhat lower level. Almost nothing fires in the copy phase (140 of 109k active steps). The identity of the current input does not matter much. Most of the leftover weak activations (lowest quartile, about 0.05-0.3 of max) come from sequences whose second token (orig(1)) is y. Adding that clause raises recall to 0.94 but drops precision to 0.70, so it is left out. Dev: precision 0.99, recall 0.68, F1 0.80, mass recall 0.90.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 820,
+    "predicate": "(orig(0)==tok(\"y\")) & (t>=3) & (phase<2)",
+    "split": "test",
+    "precision": 0.9875593696027634,
+    "recall": 0.6790873748573444,
+    "f1": 0.80477653953785,
+    "mass_recall": 0.9059298426280433,
+    "correlation": 0.9183614591998441,
+    "n_active": 107777,
+    "n_predicted": 74112,
+    "coverage_by_activation_quartile": [
+      0.06791612544071256,
+      0.651833432304038,
+      0.9966226247030879,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 820,
+    "predicate": "(orig(0)==tok(\"y\")) & (t>=3) & (phase<2)",
+    "split": "dev",
+    "precision": 0.987511828444243,
+    "recall": 0.6774060834346629,
+    "f1": 0.803578981617049,
+    "mass_recall": 0.9038799014121313,
+    "correlation": 0.9180312395653917,
+    "n_active": 109379,
+    "n_predicted": 75031,
+    "coverage_by_activation_quartile": [
+      0.06666666666666667,
+      0.6465533004205523,
+      0.9964161638325105,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 820,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold on the test split. Predicate precision is 0.988, recall 0.679, F1 0.805, mass recall 0.906. The feature never fires at t=0-2 and is silent in the copy phase (phase==2 gives precision 5e-5 and 0.03% of mass). Activation peaks at steps 4-6 (the dev profile shows mass shares of 0.26, 0.25 and 0.18) and stays on at <DEL> (orig(0)==y & phase==1 has precision 0.978). In-token identity is flat, about 1.0x lift for every token.",
+      "The second-token clause was rejected on the basis of a badly scoped version. The scoped version is ((orig(0)==y) | ((orig(1)==y) & t>=4 & phase==0)) & t>=3 & phase<2. It reaches test precision 0.861, recall 0.905, F1 0.882 and mass recall 0.988, against 0.805 F1 for the original. The 0.70 precision quoted in the explanation came from including t=3 and the <DEL> step for orig(1)==y sequences, where the feature is mostly silent.",
+      "Misses on the test split are systematic, not scattered noise. They are 34,587 steps holding 9.4% of the mass, and most are weak activations in sequences shaped like 'x y ...' (second token y) during the original phase from step 4 on. Examples: 'q y g x [w][z][p][v]', 'e y m u [t][d][f]'. Taken alone, orig(1)==y & orig(0)!=y & t>=4 & phase==0 has precision 0.62 and covers about 23% of active steps (8% of mass).",
+      "There is also an unmentioned systematic false-positive class. When the sequence is 'y ? y ...' (orig(0)==y and orig(2)==y), the feature is silent at t=3 and turns on only from step 4. Excluding that case raises precision from 0.988 to 0.995 at the same recall. It is small (about 900 steps), but it is a real pattern."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "sequence starts with y: fires from step 3 (step 4 if token 2 is also y) through <DEL>; weakly also when the second token is y (original phase, step 4 on)",
+    "better_predicate": "(((orig(0)==tok('y')) & ~((orig(2)==tok('y')) & (t==3))) | ((orig(1)==tok('y')) & (orig(0)!=tok('y')) & (t>=4) & (t<=7) & (phase==0))) & (t>=3) & (phase<2)",
+    "better_predicate_test_f1": 0.887
+  },
+  "final_label": "sequence starts with y: fires from step 3 (step 4 if token 2 is also y) through <DEL>; weakly also when the second token is y (original phase, step 4 on)"
+}

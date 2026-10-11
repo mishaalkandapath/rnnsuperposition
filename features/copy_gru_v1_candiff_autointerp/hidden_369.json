@@ -1,0 +1,63 @@
+{
+  "label": "input token u in the original phase (not at step 1 or step 7+)",
+  "predicate": "(phase == 0) & (in_tok == tok(\"u\")) & (t != 1) & (t < 7)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "A token detector for the letter u while the original sequence is being read. Essentially all activation (>99.9% of mass) is on steps where the input is u and t < L. It never fires on u at step 1, almost never at step 7 or later, and it is weaker and less reliable at step 2 (and at t=0); most mass sits at steps 3-5. It is silent on the delimiter and in the copy phase, including when u is fed back as a copy input, and silent on every other token. The strongest activations (top examples) come in sequences that start with q / contain an earlier q: q-seen steps make up 10% of active steps but 16% of mass. Repeat u occurrences fire weaker than the first u.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 369,
+    "predicate": "(phase == 0) & (in_tok == tok(\"u\")) & (t != 1) & (t < 7)",
+    "split": "test",
+    "precision": 0.8250912430812366,
+    "recall": 0.99418977166822,
+    "f1": 0.90178182250459,
+    "mass_recall": 0.9979325020680797,
+    "correlation": 0.7218085286511572,
+    "n_active": 68672,
+    "n_predicted": 82746,
+    "coverage_by_activation_quartile": [
+      0.9871272134203168,
+      0.9910298229263746,
+      0.9986020503261882,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 369,
+    "predicate": "(phase == 0) & (in_tok == tok(\"u\")) & (t != 1) & (t < 7)",
+    "split": "dev",
+    "precision": 0.8276927516020054,
+    "recall": 0.9944675564800369,
+    "f1": 0.9034480496046718,
+    "mass_recall": 0.9980002883367773,
+    "correlation": 0.7226822055296902,
+    "n_active": 69228,
+    "n_predicted": 83177,
+    "coverage_by_activation_quartile": [
+      0.9880973016698446,
+      0.9910440862078927,
+      0.9987288380424106,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 369,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claim holds. On test the predicate gets P 0.825, R 0.994, F1 0.902, mass recall 0.998. The feature is silent at the delimiter (0 active steps), and u fed back in the copy phase scores P 0.0002. Steps 1 and 8+ are fully silent, and step 7 is near-silent (P 0.065 on u).",
+      "Systematic false-positive class: at t=2, whether u fires depends strongly on the first token of the sequence. Precision on u at t=2, split by first token: first in {b,e,g,n,q,u,w,z,0,2} gives 0.84-1.0. First in {a,d,i,k,m,r,v} gives 0.0-0.09. The explanation calls step 2 'weaker and less reliable' but misses this rule, and the t=2 cases make up most of the 14.5k false positives in test misses. t=6 (P 0.60) is also partial; it rises to 0.84 when the first token is in that set.",
+      "The claim that t=0 is 'less reliable' is wrong. u at t=0 has precision 1.0: it fires on every u at t=0 and is only weaker in size (24% of active steps, 7.7% of mass).",
+      "The claim that repeat occurrences of u fire more weakly is not supported. in_first==0 covers 10.6% of active steps but 15.8% of the mass, so repeats are stronger on average. This is probably because repeats sit at later steps, but as stated the claim is backwards.",
+      "The q-history claim checks out: steps with q already seen are 10.3% of active steps and carry 16.5% of the mass."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "input token u in the original phase, fires on every u at t=0 and t=3-5, never at t=1 or t>=8; at t=2 (and partly t=6) only when the first token is one of b,e,g,n,q,u,w,z,0,2",
+    "better_predicate": "(phase == 0) & (in_tok == tok(\"u\")) & (isin(t,[0,3,4,5,6]) | ((t==2) & isin(first_tok,[1,4,5,6,13,16,20,22,25,26,28])))",
+    "better_predicate_test_f1": 0.938
+  },
+  "final_label": "input token u in the original phase, fires on every u at t=0 and t=3-5, never at t=1 or t>=8; at t=2 (and partly t=6) only when the first token is one of b,e,g,n,q,u,w,z,0,2"
+}

@@ -1,0 +1,63 @@
+{
+  "label": "early original-phase input of w/u/v (and d)",
+  "predicate": "(phase == 0) & ((in_tok == tok(\"w\")) & (t < 6) | isin(in_tok, [tok(\"u\"),tok(\"v\")]) & (t < 5) | (in_tok == tok(\"d\")) & (t < 3))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Token detector for the letters w, u, v (and weakly d, n) while the original sequence is being read, gated by position: it fires mostly in the first ~5 original steps and fades for later positions. 97% of activation mass is in the original phase. Activation rate and mass rank w (52% rate, 42% of mass) > u > v > d > n; x and m fire rarely, and other tokens, digits, the delimiter and the copy phase almost never fire (copy phase holds 2.6% of mass, mostly w inputs). The largest activations (about 0.4) come from w at steps 2-3 when preceded by v/w, so a run of w/v/u inputs strengthens it. Misses are mostly late-position w/u inputs and n inputs; false positives are d/v/u at steps 2-4 that stay below threshold.",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 81,
+    "predicate": "(phase == 0) & ((in_tok == tok(\"w\")) & (t < 6) | isin(in_tok, [tok(\"u\"),tok(\"v\")]) & (t < 5) | (in_tok == tok(\"d\")) & (t < 3))",
+    "split": "test",
+    "precision": 0.8204950151282179,
+    "recall": 0.7960028230463236,
+    "f1": 0.8080633736881956,
+    "mass_recall": 0.8965052726206868,
+    "correlation": 0.7464297334680658,
+    "n_active": 62344,
+    "n_predicted": 60483,
+    "coverage_by_activation_quartile": [
+      0.6111253689208264,
+      0.6992172462466316,
+      0.9049788271525728,
+      0.9686898498652637
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 81,
+    "predicate": "(phase == 0) & ((in_tok == tok(\"w\")) & (t < 6) | isin(in_tok, [tok(\"u\"),tok(\"v\")]) & (t < 5) | (in_tok == tok(\"d\")) & (t < 3))",
+    "split": "dev",
+    "precision": 0.8198292125906067,
+    "recall": 0.7961141644971556,
+    "f1": 0.8077976714607181,
+    "mass_recall": 0.8972853329158446,
+    "correlation": 0.7470202123388401,
+    "n_active": 62226,
+    "n_predicted": 60426,
+    "coverage_by_activation_quartile": [
+      0.6092434273960275,
+      0.6990422317927621,
+      0.9092311648238621,
+      0.9669580869118025
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 81,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reported test scores reproduce exactly: P 0.820, R 0.796, F1 0.808, MR 0.897. The phase shares (original 97.4%, copy 2.6%), the token rates (w 52% > u 38% > v 32% > d 21% > n 9.5%, with x and m rare) and the copy-phase mass sitting almost entirely on w inputs all check out.",
+      "The unit is really a token-strength x position gradient, not a hard cutoff. At t=0, w, u, v and d fire 100% of the time and n 0%. Precision then falls with t at a rate that depends on the token: for w it is 1.0/1.0/0.97/0.92/0.82/0.60/0.34 over t=0..6, and for d it is 1.0/0.63/0.44/0.32/0.16. The predicate's per-token cutoffs are a fair way to cut this gradient, and the explanation's description of the fading matches it.",
+      "Systematic gap: the effect of the previous token is much stronger than 'a run of w/v/u seems to make it stronger' suggests, and the predicate ignores it. When the previous input is in {w,u,v,d,n}, firing is close to certain even for weak tokens or later positions. d at t=2 fires 99% of the time after a w/u/v and 33% otherwise; n at t=1 fires 100% after a w/u/v/d/n and 23-60% otherwise; u at t=4 fires 99% after a w/u/v and 55% when no w/u/v came before. Many of the missed activations are n inputs, or later w/u/v inputs, that follow a token from this family.",
+      "The fix is modest. Adding 'family token following a family token, t<7' raises test F1 from 0.808 to 0.820 and mass recall from 0.897 to 0.935. Adding copy-phase w inputs lowers F1 to 0.761 because precision drops, so leaving the copy phase out is the right call.",
+      "The label leaves n out even though the explanation mentions it. That is minor: n never fires at t=0 and fires mostly after another family token."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "original-phase input of w/u/v/d/n, strongest early and decaying with position (w slowest to decay); kept alive at later positions when the previous input is also one of these letters",
+    "better_predicate": "(phase==0)&(((in_tok == tok(\"w\")) & (t < 6) | isin(in_tok, [tok(\"u\"),tok(\"v\")]) & (t < 5) | (in_tok == tok(\"d\")) & (t < 3)) | isin(in_tok,[tok(\"w\"),tok(\"u\"),tok(\"v\"),tok(\"d\"),tok(\"n\")])&isin(prev_tok,[tok(\"w\"),tok(\"u\"),tok(\"v\"),tok(\"d\"),tok(\"n\")])&(t<7))",
+    "better_predicate_test_f1": 0.82
+  },
+  "final_label": "original-phase input of w/u/v/d/n, strongest early and decaying with position (w slowest to decay); kept alive at later positions when the previous input is also one of these letters"
+}

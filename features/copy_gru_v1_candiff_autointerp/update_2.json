@@ -1,0 +1,61 @@
+{
+  "label": "step right after a k in the first three original tokens",
+  "predicate": "(phase == 0) & (t <= 3) & ((prev_tok == tok(\"k\")) | ((t == 2) & (prev2_tok == tok(\"k\"))))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires during the original phase on the step right after the letter k was input, but only when that k sits at original position 0-2 (so t = 1..3). At t <= 3 with prev_tok == k it is active about 99.7% of the time. It also fires more weakly one step later when the sequence starts with k (t = 2, prev2_tok == k). Activation is strongest at t = 2 after a repeated k k start (top examples are k k at positions 0-1, activation at t = 2 at max 3.45). It is weaker after a single k, and activations at t = 4 or later are rare and small. It essentially never fires at t = 0, at the delimiter, in the copy phase, or after k at original position 3 or later. Which token is currently being input matters little.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 2,
+    "predicate": "(phase == 0) & (t <= 3) & ((prev_tok == tok(\"k\")) | ((t == 2) & (prev2_tok == tok(\"k\"))))",
+    "split": "test",
+    "precision": 0.9310433805895388,
+    "recall": 0.7961967808930426,
+    "f1": 0.8583563062369685,
+    "mass_recall": 0.9556809999282732,
+    "correlation": 0.8069850333406576,
+    "n_active": 77040,
+    "n_predicted": 65882,
+    "coverage_by_activation_quartile": [
+      0.35077881619937695,
+      0.87533748701973,
+      0.9588785046728971,
+      0.9997923156801661
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 2,
+    "predicate": "(phase == 0) & (t <= 3) & ((prev_tok == tok(\"k\")) | ((t == 2) & (prev2_tok == tok(\"k\"))))",
+    "split": "dev",
+    "precision": 0.9304029862116249,
+    "recall": 0.7974691809444212,
+    "f1": 0.8588224539592578,
+    "mass_recall": 0.9557738361277541,
+    "correlation": 0.8058660266503788,
+    "n_active": 76576,
+    "n_predicted": 65635,
+    "coverage_by_activation_quartile": [
+      0.3514939406602591,
+      0.8782908483075638,
+      0.9608754701211868,
+      0.9992164646886753
+    ]
+  },
+  "gate": "update",
+  "feature": 2,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the one-step-later echo is not limited to t=2. When k is at position 1, (t==3)&(prev2==k)&(prev!=k) fires 35% of the time on dev (about 5.4k active steps, 2.3% of activation mass), and the predicate misses these. On test misses this shows up as e.g. 'q k [w:0.64] [x:0.12]'. Adding the clause lowers F1 (t<=3 & (prev==k | prev2==k) gives dev F1 0.844, below 0.86), so the original predicate is the better tradeoff.",
+      "The t=2 echo clause is noisy: precision 0.73 (dev). Its 4.4k test false positives are all of the form 'k X Y' with X taking no single obvious token class (e.g. k 1 d, k 0 j, k g u), so whether the echo appears seems to depend on the intermediate token in a way that is hard to state as a rule.",
+      "Weak activations with no k in the history: about 7k t=2 steps on dev (precision 0.013, 0.7% of mass). They lean slightly toward prev_tok z/o, but even those subsets have precision of only 0.15/0.09. This is low-magnitude noise, not a real class.",
+      "Claims verified: copy phase has 0 active steps; delimiter has 166 (0.1% mass); t=0 has 0; t>=5 has 2 steps. t<=3 & prev==k has precision 0.997 and mass recall 0.899. t=4 & prev==k (k at position 3) has precision 0.18 and 1.2% of mass. The top examples are all k k at positions 0-1 with max activation 3.449 at t=2. No k in the history at t<=3 except via prev/prev2 gives precision 0.0, and orig(0)==k with no k at prev/prev2 at t=3 also gives 0.0."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

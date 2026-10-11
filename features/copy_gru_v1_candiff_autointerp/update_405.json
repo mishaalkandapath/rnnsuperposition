@@ -1,0 +1,75 @@
+{
+  "label": "Early original-phase step (t=2-3) after a leading digit 0",
+  "predicate": "(phase==0)&(((t==3)&((orig(0)==tok(\"0\"))|(orig(1)==tok(\"0\"))))|((t==2)&(orig(0)==tok(\"0\"))))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires only in the original (input) phase at fixed early positions: t=3 (75% of mass), t=2 (20%), t=4 (5%); never at t<2, t>=5, at <DEL>, or during copy. It is gated by a digit 0 at the very start of the sequence: first_tok=0 has 15.5x lift (67% of mass) and prev2_tok=0 has 17.5x lift. The predicate (t=3 with 0 at position 0 or 1, or t=2 with 0 at position 0) gets dev precision 0.93, recall 0.66, mass recall 0.88. The strongest activations (~2.7) are sequences starting 0 0 e, at t=3, with a weaker echo at t=4. Which token is input at the firing step barely matters. Remaining misses are weak t=3 activations with no leading 0 (rate about 1-2%, usually <0.1 of max) and t=4 activations in 0-initial sequences. A 0 at position 2 or later does not reliably trigger it.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 405,
+    "predicate": "(phase==0)&(((t==3)&((orig(0)==tok(\"0\"))|(orig(1)==tok(\"0\"))))|((t==2)&(orig(0)==tok(\"0\"))))",
+    "split": "test",
+    "precision": 0.9326166328600406,
+    "recall": 0.6585407774499413,
+    "f1": 0.7719740089658994,
+    "mass_recall": 0.8781447057554709,
+    "correlation": 0.8128532624583448,
+    "n_active": 69818,
+    "n_predicted": 49300,
+    "coverage_by_activation_quartile": [
+      0.15714694929819537,
+      0.5935262102549412,
+      0.9213360834192735,
+      0.9621863183224476
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 405,
+    "predicate": "(phase==0)&(((t==3)&((orig(0)==tok(\"0\"))|(orig(1)==tok(\"0\"))))|((t==2)&(orig(0)==tok(\"0\"))))",
+    "split": "dev",
+    "precision": 0.9348845783576739,
+    "recall": 0.6587668148490272,
+    "f1": 0.772905465475636,
+    "mass_recall": 0.8801232093170457,
+    "correlation": 0.8146788391201286,
+    "n_active": 69284,
+    "n_predicted": 48821,
+    "coverage_by_activation_quartile": [
+      0.15495641129265053,
+      0.5941342878586686,
+      0.9213671266093182,
+      0.9646094336354714
+    ]
+  },
+  "gate": "update",
+  "feature": 405,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The main claims hold up. Firing is almost entirely in the original phase: share of activation mass is 0.196 at t=2, 0.749 at t=3 and 0.055 at t=4. It never fires in the copy phase (0 of 2.7M steps), and fires only 14 times at <DEL> and 12 times at t=5. first_tok=0 has 15.5x lift and prev2_tok=0 has 17.5x lift. On the test split the original predicate scores P=0.933, R=0.659, F1=0.772, mass recall 0.878.",
+      "There is a systematic miss class, and the explanation understates it. At t=3 in sequences with no 0 at position 0 or 1, the feature fires at a rate of 3.7%, not the claimed 1-2%. That class is 24% of all active steps (6.5% of mass). It depends on the first token in a graded way: orig(0)=d fires 22.6% of the time, i 21.6%, f 10.8%, m/a/b about 8%, h/w/y about 5%. Several first tokens (j,k,n,p,r,s,t,v and the digits 3/2/1) are near 0%. So the weak firings are a first-token-identity effect, not scattered noise. Adding it to the predicate (t==3 & orig(0) in {d,i}) lowers precision to 0.66 (test F1 0.703), so it stays a low-magnitude side effect that is best mentioned rather than encoded.",
+      "The t=4 misses are partly systematic. t=4 with orig(0)==0 and orig(1)==0 has P=0.994, and with orig(0)==0 and orig(2)==0 has P=0.980. t=4 with any leading 0 has only P=0.276. Adding the two-zero t=4 clause raises test F1 from 0.772 to 0.782 and mass recall to 0.901.",
+      "The label overclaims a little: 'after a leading digit 0' leaves out the predicate's t=3 case where position 1 is 0 and position 0 is not. That case is 25% of mass but less precise (P=0.866). The FPs are of the form 't 0 w *0*' and 'k 0 a *e*'. There is also an asymmetry: at t=2, orig(1)==0 without orig(0)==0 never fires (P=0.000). The label should say that only position 0 counts at t=2.",
+      "Smaller points: 'never fires at <DEL>' is effectively true (14 steps). 'A 0 at position 2 does not reliably trigger it' is confirmed (t=3 & orig(2)==0: P=0.23). In the test misses, a 0 at position 2 does add a t=4 echo, e.g. '0 c 0 d d' gives 0.56 at t=3 and 0.31 at t=4."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "Early original-phase step (mostly t=3, also t=2 and some t=4) gated by a digit 0 at position 0 (or position 1 at t=3); weaker graded firing at t=3 when the first token is d/i/f/a/b/m",
+    "better_predicate": "(phase==0)&(((t==3)&((orig(0)==tok(\"0\"))|(orig(1)==tok(\"0\"))))|((t==2)&(orig(0)==tok(\"0\")))|((t==4)&(orig(0)==tok(\"0\"))&((orig(1)==tok(\"0\"))|(orig(2)==tok(\"0\")))))",
+    "better_predicate_test_f1": 0.782
+  },
+  "final_label": "Early original-phase step (mostly t=3, also t=2 and some t=4) gated by a digit 0 at position 0 (or position 1 at t=3); weaker graded firing at t=3 when the first token is d/i/f/a/b/m",
+  "scorecard": {
+    "format": "top40",
+    "summary": "Weighted combination of 40 cues. Raise it: orig0=0 (+9.20), prev3_tok=0 (+5.37), prev2_tok=0 (+4.61), orig1=0 (+3.48), orig_idx=3 (+3.31), orig0=i (+3.17). Lower it: orig_idx=-1 (-8.69), prev2_tok=- (-7.68), t=8 (-6.00), orig0=v (-5.50).",
+    "test_f1": 0.817261330761813,
+    "test_precision": 0.9309435758485591,
+    "test_recall": 0.7283222091724197,
+    "full_test_f1": 0.9205125474745324,
+    "full_n_cues": 348,
+    "top40_test_f1": 0.817261330761813,
+    "slot2_test_f1": 0.7618229445398981,
+    "file": "scorecards/update_405.json"
+  }
+}

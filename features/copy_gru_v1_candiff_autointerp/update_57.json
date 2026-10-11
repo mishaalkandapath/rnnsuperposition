@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input p (fed-back p) from recall position 3 on",
+  "predicate": "(phase == 2) & (in_tok == tok(\"p\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token detector for the letter p used as a fed-back input during the copy phase. More than 99% of steps where it is active have in_tok == p, and it never fires in the original or delimiter phases. It is mostly silent when p comes back early in the copy (recall_idx <= 2, meaning p was original token 0 or 1): the firing rate starts at recall_idx 2 and levels off at recall_idx >= 3. Activations are weakest at the earliest positions (bottom-quartile examples are p fed back at recall_idx 2-3), and the strongest ones (about 0.95-1.0 of max) are p fed back with few outputs left. Most false positives are p at original position 2 in long sequences (L=7-9). It does not fire on p in the original sequence or on any other token, and the output token has no effect.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 57,
+    "predicate": "(phase == 2) & (in_tok == tok(\"p\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9353965050285498,
+    "recall": 0.944948852447589,
+    "f1": 0.9401484152853874,
+    "mass_recall": 0.9804209178687306,
+    "correlation": 0.8960590714311482,
+    "n_active": 57383,
+    "n_predicted": 57969,
+    "coverage_by_activation_quartile": [
+      0.7961104140526977,
+      0.9855708908406524,
+      0.9981876481249129,
+      0.9999302892994074
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 57,
+    "predicate": "(phase == 2) & (in_tok == tok(\"p\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9376085295547684,
+    "recall": 0.9461353799786224,
+    "f1": 0.9418526561832247,
+    "mass_recall": 0.9806157731386965,
+    "correlation": 0.896986900799836,
+    "n_active": 57069,
+    "n_predicted": 57588,
+    "coverage_by_activation_quartile": [
+      0.8008130081300813,
+      0.9852807177402397,
+      0.9985981635943085,
+      0.9998598163594309
+    ]
+  },
+  "gate": "update",
+  "feature": 57,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold. The feature only fires in the copy phase (0 active steps in the original or delimiter phases). Of the copy-phase activations, 56681/57069 have in_tok == p; the predicate (phase==2)&(in_tok!=p) has precision 0.00015. The output token has no effect: the out_tok rates are flat at about 0.019.",
+      "The fixed cutoff recall_idx >= 3 is wrong at the edges, and the error depends on sequence length. It is not scattered noise. (1) At recall_idx==2 the feature fires reliably when L<=4: precision 0.92 at L=4 and 1.00 at L=3. It is almost silent when L>=5 (0.015 at L=5, 0.0 at L>=6). So the claim that it is mostly silent when recall_idx<=2 is wrong for short sequences, where that step is one of the last outputs. (2) At recall_idx==3 precision is 0.99 for L<=6 but only 0.72, 0.45 and 0.53 for L=7, 8 and 9. This is the false-positive class the explanation names, and the predicate does not handle it.",
+      "The rule is roughly 'fires on fed-back p once enough of the copy is done': it fires at recall_idx>=4 for every L (precision 1.00), at recall_idx 3 only when L<=7, and at recall_idx 2 only when L<=4. The explanation says that trying to cover sequences with few outputs left did not help. A predicate with these length-dependent thresholds does help: test F1 rises from 0.940 to 0.963, precision from 0.935 to 0.981, and missed activation mass falls from 2.0% to 0.7%.",
+      "The remaining misses on the test split are very weak activations (0.00-0.09 of max) on p at recall_idx 2-3 in L=8 sequences, plus a few boundary cases. The remaining false positives are near-threshold p at recall_idx 2 (L=4) and recall_idx 3 (L=7). This is scattered noise at the boundary.",
+      "The label 'from recall position 3 on' slightly overclaims: at recall_idx 3 with L>=7 the feature fires only about half the time, and the label leaves out recall_idx 2 in short sequences (L<=4)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase fed-back p once enough of the copy is done (recall_idx>=4; recall_idx 3 if L<=7; recall_idx 2 if L<=4)",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"p\")) & ((recall_idx >= 4) | ((recall_idx == 3) & (L <= 7)) | ((recall_idx == 2) & (L <= 4)))",
+    "better_predicate_test_f1": 0.963
+  },
+  "final_label": "copy-phase fed-back p once enough of the copy is done (recall_idx>=4; recall_idx 3 if L<=7; recall_idx 2 if L<=4)"
+}

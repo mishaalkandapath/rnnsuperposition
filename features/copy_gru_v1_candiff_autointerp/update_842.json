@@ -1,0 +1,77 @@
+{
+  "label": "token right after an early h input (original phase, t<=4)",
+  "predicate": "(phase == 0) & (prev_tok == tok(\"h\")) & (t <= 4)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires on the original-phase step immediately after the letter h was input, only early in the sequence (t = 1..4, about 97% of mass at t=1..3). Never fires at t=0, in the copy phase, or (beyond ~0.1% of mass) at the delimiter. The current input token barely matters. Magnitude is about 0.4 of max after a single h at t=0 and highest (about 1.0 of max) on the step after a repeated h (h h X), so an h two steps back also adds to it; the h step itself in h h also fires (about 0.4-0.6). Rarely fires when the h came at t=4 (the step after is t=5). The leftover activations (about 11% of mass) are weak, diffuse firings at steps 1-4 with no h, mostly under 0.1 of max, plus moderate firings two steps after an h.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 842,
+    "predicate": "(phase == 0) & (prev_tok == tok(\"h\")) & (t <= 4)",
+    "split": "test",
+    "precision": 0.9196466665613198,
+    "recall": 0.5635573114874745,
+    "f1": 0.6988568134876795,
+    "mass_recall": 0.889246223026898,
+    "correlation": 0.8760408545135937,
+    "n_active": 103269,
+    "n_predicted": 63283,
+    "coverage_by_activation_quartile": [
+      0.05867999070415989,
+      0.23523259867529148,
+      0.9603749467405198,
+      0.9999612658325909
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 842,
+    "predicate": "(phase == 0) & (prev_tok == tok(\"h\")) & (t <= 4)",
+    "split": "dev",
+    "precision": 0.9197615339845532,
+    "recall": 0.5656026310698394,
+    "f1": 0.7004606086742977,
+    "mass_recall": 0.8897736143033861,
+    "correlation": 0.8771436421466257,
+    "n_active": 103380,
+    "n_predicted": 63573,
+    "coverage_by_activation_quartile": [
+      0.056722770361772104,
+      0.24147804217450183,
+      0.9642097117430838,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 842,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The figure '97% of mass at t=1..3' is wrong. The dev profile gives t=1: 0.216, t=2: 0.382, t=3: 0.335, which is about 93%. t=4 holds 6.6%.",
+      "The t<=4 bound overclaims. Every sampled test false positive is at t=4 (h input at t=3). (prev_tok==h)&(t==4) has precision 0.63 and mostly lands in activation quartiles 1-2. With t<=3 instead, precision is 1.00 (49,433 predicted steps), so the step after an h at t=3 is weak and unreliable.",
+      "The magnitude description is incomplete. Strength depends on where the h sits. After a single h at t=0, step 1 always fires but only in quartile 3 (coverage 0.64, 0 in the top quartile). After a single h at t=1, step 2 is mostly top quartile (0.60) and carries the largest mass share (0.33). After h at t=2, step 3 is mixed. After h at t=3, step 4 is weak and fires only 62% of the time. Saying 'about 0.4 of max, peaks after h h X' leaves out that a lone h at t=1 already gives about 0.5-0.75 of max and makes up most of the top quartile. h h X (h h at t=1,2) gives the max but is only 3.6% of mass.",
+      "There is a systematic miss class: two steps after an h, with a non-h in between. At t=2 and t=3 it fires about 55% of the time (precision 0.55 and 0.56 as standalone predicates), adding about 7% of mass. At t=4 the rate is 0.20. The explanation mentions this class, but it is a real second rule, not noise.",
+      "Recall is 0.564, so about 44% of active steps are missed. Of those, about 23% of all active steps have no h before them. They hold only 3.1% of mass and look scattered: digits earlier in the prefix raise the rate a little (3.3% vs 0.6%), but the predicate precision is about 0.03. That part is fair to call noise.",
+      "These claims check out: never fires at t=0; zero copy-phase activations; delimiter about 0.1% of mass; prev_tok==h has 20x lift and 89% of mass; the current input token barely matters; h h X gives the top activations (precision 0.99); the second h in h h fires 0.42-0.64; t=5 almost never fires.",
+      "The reported test scores reproduce exactly: P 0.920, R 0.564, F1 0.699, mass recall 0.889."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "original-phase step right after an h input at t=0..2 (strongest after h at t=1, or after h h); weaker one step later, and weak or unreliable after an h at t=3",
+    "better_predicate": "(phase==0)&(t<=4)&((prev_tok==tok(\"h\"))|((prev2_tok==tok(\"h\"))&(t<=3)))",
+    "better_predicate_test_f1": 0.765
+  },
+  "final_label": "original-phase step right after an h input at t=0..2 (strongest after h at t=1, or after h h); weaker one step later, and weak or unreliable after an h at t=3",
+  "scorecard": {
+    "format": "slot2",
+    "summary": "Graded preference over the previous input (most: h, l, 2, x, 3, r; least: a, c, t, w) and the input two steps back (most: h, 1, 2, 0, z, p; least: a, t, w, s); timing cues that raise it most: t=3, t=2, t=4.",
+    "test_f1": 0.8059936317662485,
+    "test_precision": 0.7803356574879183,
+    "test_recall": 0.8333962757458676,
+    "full_test_f1": 0.929277331686226,
+    "full_n_cues": 405,
+    "top40_test_f1": 0.8227134761662621,
+    "slot2_test_f1": 0.8059936317662485,
+    "file": "scorecards/update_842.json"
+  }
+}

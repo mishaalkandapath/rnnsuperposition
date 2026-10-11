@@ -1,0 +1,63 @@
+{
+  "label": "L=3: first copy-phase step after the delimiter (outputting the 2nd original token)",
+  "predicate": "(L == 3) & (recall_idx == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost exclusively in length-3 sequences (99.7% of mass), at step t=4, the first copy step after <DEL>, where the input is the fed-back first token and the model outputs original token 1 (97% of mass). Active on ~79% of such steps. A weak tail fires at the final step t=5 of L=3 sequences (recall_idx 2, ~3% of mass), plus a handful of L=4 steps. Never fires in the original phase, on the delimiter, or in sequences of length >= 5. Token identity modulates magnitude only mildly (e.g. letters like y, l, b, q common among top activations; digit-heavy sequences fire less: rate drops with n_digits), with no strong token selectivity.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 14,
+    "predicate": "(L == 3) & (recall_idx == 1)",
+    "split": "test",
+    "precision": 0.7695852534562212,
+    "recall": 0.9018901890189019,
+    "f1": 0.8305014504765852,
+    "mass_recall": 0.9709962724848867,
+    "correlation": 0.7342553994986246,
+    "n_active": 2222,
+    "n_predicted": 2604,
+    "coverage_by_activation_quartile": [
+      0.7086330935251799,
+      0.9118705035971223,
+      0.9873873873873874,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 14,
+    "predicate": "(L == 3) & (recall_idx == 1)",
+    "split": "dev",
+    "precision": 0.7788867562380039,
+    "recall": 0.898980948161276,
+    "f1": 0.8346359522830111,
+    "mass_recall": 0.9702701613723943,
+    "correlation": 0.7358239495001422,
+    "n_active": 2257,
+    "n_predicted": 2605,
+    "coverage_by_activation_quartile": [
+      0.7044247787610619,
+      0.898936170212766,
+      0.9929078014184397,
+      1.0
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 14,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Scope mismatch: the user asked to run the baseline on the new subsampled data in features/copy_transcoder_v2_1of5. That folder only holds raw .pt files and a subsample_manifest.json, with no neuron-baseline store. Everything here was scored on the old features/copy_gru_v1_neuron_baseline_store, as the computed task specified, so these results do not cover the 1/5 subsample.",
+      "Core label and predicate hold up. The test scores reproduce exactly (P 0.770, R 0.902, F1 0.831, mass recall 0.971). 99.7% of activation mass is in L=3 and none is in the original or delimiter phases. (L==4)&(t==5) has recall 0.002, so the L=4 tail is real but tiny. The misses are all the t=5 (recall_idx 2) tail, which holds 2.9% of mass.",
+      "The claim that the firing rate drops as the number of digits goes up is backwards. Precision of the predicate by n_digits on test: 0 digits 0.74, 1 digit 0.81, 2 or more 0.90. When the input token is a digit, precision is 0.96.",
+      "The claim that there is no strong preference for particular tokens is false. The 600 test false positives cluster by which token is input at t=4 (the fed-back first original token). Per-token precision: v 0.21, o 0.45, t 0.47, s 0.50, r 0.52, u 0.56, n 0.59. By contrast q 1.00, y 1.00, b 0.99, 0 0.99, l 0.98, digits 0.92-0.99. The input token gates whether the unit fires at all, not just how strongly.",
+      "No compact predicate improves much on the original. Excluding in_tok v gives test F1 0.838 versus 0.831. Excluding v, o, t, s lowers dev F1 to 0.825 because it costs recall. So the gap only matters for the explanation text, not the predicate."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "L=3: first copy step after <DEL> (input is the fed-back first token, output is original token 1). Firing depends on the input token: almost always for digits and for q, y, b, l; rarely for v, o, t, s, r. The rate rises with the number of digits in the sequence.",
+    "better_predicate": "(L == 3) & (recall_idx == 1) & (in_tok != tok('v'))",
+    "better_predicate_test_f1": 0.838
+  },
+  "final_label": "L=3: first copy step after <DEL> (input is the fed-back first token, output is original token 1). Firing depends on the input token: almost always for digits and for q, y, b, l; rarely for v, o, t, s, r. The rate rises with the number of digits in the sequence."
+}

@@ -1,0 +1,76 @@
+{
+  "label": "sequence started with q: late original-phase steps (t>=4) through <DEL>",
+  "predicate": "(first_tok == tok(\"q\")) & (t >= 4) & (phase <= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires on sequences whose first original token is q (96% of activation mass), at every original-phase step from t=4 (weakly at t=3) through the <DEL> step, whatever the current input token is. It is essentially silent during the copy phase (10 activations), including while q is being output. Magnitude builds over the original phase, is largest around orig_idx 4-7, and drops somewhat at <DEL>. Sequences that also have q as the second token are overrepresented among the strongest activations. Remaining misses are weak (about 4% of mass): sequences with q at position 1 instead of position 0 give faint activations, and t=3 gives moderate ones. With t>=4 the predicate has about 0.997 precision on dev. It does not fire on sequences without an early q.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 560,
+    "predicate": "(first_tok == tok(\"q\")) & (t >= 4) & (phase <= 1)",
+    "split": "test",
+    "precision": 0.996600536940832,
+    "recall": 0.7388303715670436,
+    "f1": 0.8485716618300837,
+    "mass_recall": 0.9322824629769733,
+    "correlation": 0.9390985312047195,
+    "n_active": 77375,
+    "n_predicted": 57362,
+    "coverage_by_activation_quartile": [
+      0.10178866832092638,
+      0.8590260545905707,
+      0.994727047146402,
+      0.9997932068448534
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 560,
+    "predicate": "(first_tok == tok(\"q\")) & (t >= 4) & (phase <= 1)",
+    "split": "dev",
+    "precision": 0.996604205155274,
+    "recall": 0.7363180199152433,
+    "f1": 0.8469135248689827,
+    "mass_recall": 0.9322601922491346,
+    "correlation": 0.9394458008419841,
+    "n_active": 76926,
+    "n_predicted": 56835,
+    "coverage_by_activation_quartile": [
+      0.09697379367720466,
+      0.8541493344425957,
+      0.9941760698871613,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 560,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims check out on the test split. Precision is 0.997, and silence in the copy phase holds (10 dev activations, all at recall_idx 1-3). The original-phase part alone (phase 0, q first, t>=4) has precision 0.998, and <DEL> with q first has precision 0.973. A second q in the sequence does not suppress firing (precision 0.98).",
+      "There is a systematic class of misses that the explanation describes wrongly. Count recall is only 0.739, and the predicate covers only 10% of the bottom activation quartile. Most of the missed active steps come from sequences where q is the SECOND original token (orig(1)=='q', t>=5). That class alone covers about 15% of all active test steps.",
+      "That q-at-position-1 class depends on what the first token is. It is not just 'faint activations'. With orig(1)=='q' and t>=5, precision is about 0.55-0.71 when the first token is a, c, e, f, l, u, w, y, 0 or 1. It is exactly 0 when the first token is h, i, j, k or r, and close to 0 for m, o, p, s, t, z or 2. So it is a gated secondary trigger, not uniform weak leakage.",
+      "The explanation says the remaining misses hold 'about 4% of mass'. The misses tool on the test split reports 6.8% of activation mass in missed steps (20,208 steps), and the bottom quartile of activations is almost entirely uncovered.",
+      "There is also a t=3 class of misses, as the explanation admits. Extending the predicate to t>=3 lowers precision to 0.86, so that onset is only partial.",
+      "Caveat on the better predicate: I picked its first-token set by looking at test-split counts, so its F1 of 0.879 (vs 0.849) is somewhat optimistic."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "q early in the sequence: late original-phase steps through <DEL>. Mainly sequences that start with q (t>=4). Weaker secondary firing when q is the second token and the first token is from a specific set (e.g. a/c/e/f/l/u/w/y/0/1). Silent in the copy phase.",
+    "better_predicate": "(phase<=1) & (((orig(0)==tok('q')) & (t>=4)) | ((orig(1)==tok('q')) & isin(orig(0), [tok(c) for c in \"aceflnuwy01\"]) & (t>=5)))",
+    "better_predicate_test_f1": 0.879
+  },
+  "final_label": "q early in the sequence: late original-phase steps through <DEL>. Mainly sequences that start with q (t>=4). Weaker secondary firing when q is the second token and the first token is from a specific set (e.g. a/c/e/f/l/u/w/y/0/1). Silent in the copy phase.",
+  "scorecard": {
+    "format": "slot2",
+    "summary": "Graded preference over the first original token (most: q, l, w, 1, e, a; least: m, h, j, i) and the third original token (most: j, r, m, i, t, 0; least: w, l, q, 3); timing cues that raise it most: t=5, t=6, t=4.",
+    "test_f1": 0.874020041783223,
+    "test_precision": 0.9667554441485195,
+    "test_recall": 0.797518578352181,
+    "full_test_f1": 0.9502243771599526,
+    "full_n_cues": 404,
+    "top40_test_f1": 0.9026277503830258,
+    "slot2_test_f1": 0.874020041783223,
+    "file": "scorecards/update_560.json"
+  }
+}

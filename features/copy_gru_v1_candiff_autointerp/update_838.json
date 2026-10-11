@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input f fed back (from original position >= 2)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"f\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token detector for the letter f, but only during the copy phase: it fires when the model's own fed-back output f arrives as input (in_tok == f, t > L), for f that sat at original position >= 2 (recall_idx >= 3). It essentially never fires on f in the original phase (219 of 57k activations) or on any other token. Firing is weak or absent when the fed-back f came from original position 0-1 (recall_idx 1-2): rate is 0.6% at recall_idx 2 versus about 3.3% (near-saturated for f) at recall_idx >= 3. Where f is at original position 2, firing depends on the sequence: long sequences (L = 8-9, many outputs still to go) often give false positives, while short sequences (L = 4) sometimes give weak activations at position 1. The strongest activations (near max) are on f fed back from mid or late original positions (about 4-7). When f appears twice, both occurrences usually fire, and the later one fires more strongly.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 838,
+    "predicate": "(phase == 2) & (in_tok == tok(\"f\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9482584465343086,
+    "recall": 0.9468403297047264,
+    "f1": 0.9475488575257122,
+    "mass_recall": 0.982462100976368,
+    "correlation": 0.9053410067696988,
+    "n_active": 57506,
+    "n_predicted": 57420,
+    "coverage_by_activation_quartile": [
+      0.7929331571259651,
+      0.994574667872296,
+      0.9998608792431831,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 838,
+    "predicate": "(phase == 2) & (in_tok == tok(\"f\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9474170384829894,
+    "recall": 0.9467734912479318,
+    "f1": 0.9470951555435531,
+    "mass_recall": 0.9820409733204978,
+    "correlation": 0.9049465154604758,
+    "n_active": 57415,
+    "n_predicted": 57376,
+    "coverage_by_activation_quartile": [
+      0.7954577121359899,
+      0.9919882959453811,
+      0.9996516650411035,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 838,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claim holds. The feature is a detector for f fed back during the copy phase: in_tok f accounts for 100% of activation mass, the copy phase also accounts for 100%, and the original phase has only 219 of 57k activations. The original predicate reproduces on test (P 0.948, R 0.947, F1 0.948, mass recall 0.982).",
+      "The fixed cutoff recall_idx >= 3 is wrong at the edges, and the error depends systematically on L. Firing precision for f at recall_idx 2 (original position 1) by L: L=3 0.998, L=4 0.929, L=5 0.032, L=6 to 9 0.000. So for L = 3-4, f at position 1 fires almost every time, at full strength. Calling these 'some weak misses' undersells them: the test misses list shows them at 0.11 to 0.37 of max, and they are a whole class of activations the predicate leaves out.",
+      "Firing precision at recall_idx 3 (original position 2) falls as L grows: L=4-5 1.00, L=6 0.985, L=7 0.79, L=8 0.54, L=9 0.60. The false positives in the test misses list are all of this kind (f at position 2 with L = 7-9). They are a systematic class, not scattered noise.",
+      "Taken together, the gate tracks something like 'enough copy steps passed or close to the end' rather than a fixed original position. At recall_idx 2 it fires only when to_go <= 1. Adding that rule takes test recall from 0.947 to 0.993 and mass recall from 0.982 to 0.9995.",
+      "Minor inconsistency: the explanation says 'errors sit at the boundary, original position 2', but the misses are at original position 1 (recall_idx 2). Only the false positives are at position 2."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input f fed back, except early copies (f from original position 1 fires only when it is the last or second-to-last output; f from position 2 fires unreliably when L >= 8)",
+    "better_predicate": "(phase == 2) & (in_tok == tok('f')) & ((recall_idx >= 3) | (to_go <= 1))",
+    "better_predicate_test_f1": 0.966
+  },
+  "final_label": "copy-phase input f fed back, except early copies (f from original position 1 fires only when it is the last or second-to-last output; f from position 2 fires unreliably when L >= 8)"
+}

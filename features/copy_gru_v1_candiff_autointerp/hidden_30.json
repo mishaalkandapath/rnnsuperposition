@@ -1,0 +1,61 @@
+{
+  "label": "copy-phase input token o (fed-back o)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"o\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires when the letter o is fed back as an input during the copy phase (t > L). Essentially 100% of activation mass is on copy-phase o inputs; it never fires on o (or anything else) during the original phase or on <DEL>, and the ~56 off-token activations are tiny. Magnitude is largest early in the copy (o fed back at recall_idx 1-2, i.e. o was one of the first two original tokens; top examples ~0.9-1.0 of max) and weaker for o later in the copy (~0.05-0.3). About 27% of copy-phase o inputs stay inactive, mostly in short sequences (L=3-4) or at the final copy step; adding L>=5 or to_go>=1 gives only small F1 gains (0.84 -> 0.86).",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 30,
+    "predicate": "(phase == 2) & (in_tok == tok(\"o\"))",
+    "split": "test",
+    "precision": 0.7320020559705165,
+    "recall": 0.9993281576590027,
+    "f1": 0.8450268588129098,
+    "mass_recall": 0.9998709228852359,
+    "correlation": 0.6820577751901926,
+    "n_active": 66980,
+    "n_predicted": 91441,
+    "coverage_by_activation_quartile": [
+      0.9976112272320096,
+      0.9997014034040012,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 30,
+    "predicate": "(phase == 2) & (in_tok == tok(\"o\"))",
+    "split": "dev",
+    "precision": 0.7281696168914544,
+    "recall": 0.9991567408032044,
+    "f1": 0.8424066221466114,
+    "mass_recall": 0.9998576978736246,
+    "correlation": 0.680318666278276,
+    "n_active": 66409,
+    "n_predicted": 91123,
+    "coverage_by_activation_quartile": [
+      0.996868035897127,
+      0.9997590651728707,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 30,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claims hold. Activation is 0 in the original phase and on <DEL>; the copy phase carries 100% of the mass. in_tok=o holds 66353 of 66409 active dev steps. The 45 test misses outside the predicate carry 0.0% of the mass. Most of them are the step just before o is fed back, where o is the output (e.g. 'f o x ... <DEL> [f:0.09] o'), and they are tiny.",
+      "The account of the 27% inactive copy-phase o inputs is partly wrong. Inactivity is not mostly L=3-4 or the final step. Precision falls steadily with outputs remaining (to_go=7: 1.00, 5: 1.00, 4: 0.93, 3: 0.82, 2: 0.71, 1: 0.59, 0: 0.40). It also depends on L. By L and recall_idx: L=9 is r1-3 = 1.00, r4 0.76, r5 0.61, r6 0.69, r8 (final step) 0.81. L=7 is r4 0.74, r5 0.46, r6 0.33. L=5 is r1 0.73, r2 0.97, r4 0.37. L=3 is r1 0.09, r2 0.00. So many inactive steps sit in the middle-to-late copy positions at every length, and the final step in L=9 is usually active.",
+      "I found no token or history factor behind the mid-position inactivity. A second o in the copy, in_count>=2, digit count, a digit or vowel as the previous token, and next_out all leave precision around 0.57-0.64. It looks like a graded fall in magnitude by position that crosses the activity threshold, not a separate class.",
+      "A position-aware predicate gains only a little on test: F1 0.865 against 0.845 for the original. That fits the original agent's choice to keep the simple predicate."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"o\")) & (L>=5) & ((recall_idx<=4) | (L>=8))",
+    "better_predicate_test_f1": 0.865
+  }
+}

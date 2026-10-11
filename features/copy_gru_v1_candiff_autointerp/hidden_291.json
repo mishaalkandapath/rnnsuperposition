@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input j (fed-back j, from 2nd copy input on)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"j\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase when the input token is j (the model feeding back its own j output), from recall_idx >= 2 onward. It never fires in the original phase, on <DEL>, or on any other input token; when j is the first fed-back copy input (recall_idx 1) it almost never fires. In the examples, activations are lowest when the j comes early in the copy (recall_idx 2-3, about 0.5-0.7 of max) and highest for j near the end of longer sequences (about 0.8-1.0 of max). Where j appears several times in a row, the later j occurrences in the examples tend to activate more strongly than the first one. Activation does not depend on which token is being output.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 291,
+    "predicate": "(phase == 2) & (in_tok == tok(\"j\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.9742125984251968,
+    "f1": 0.986937880147572,
+    "mass_recall": 0.9990285319940859,
+    "correlation": 0.9904013780063821,
+    "n_active": 76200,
+    "n_predicted": 74235,
+    "coverage_by_activation_quartile": [
+      0.8968503937007875,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 291,
+    "predicate": "(phase == 2) & (in_tok == tok(\"j\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.9736637959371508,
+    "f1": 0.9866561852545185,
+    "mass_recall": 0.9990199347206119,
+    "correlation": 0.9903944047568214,
+    "n_active": 76055,
+    "n_predicted": 74052,
+    "coverage_by_activation_quartile": [
+      0.8946565688440097,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 291,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core predicate holds up. On test: P 1.000, R 0.974, F1 0.987, mass recall 0.999, correlation 0.990, and 0 false positives. On dev, every activation is in the copy phase with in_tok j: there is no activation in the original phase, on <DEL>, or on any other in_tok, and in_first is 0 for 100% of the mass.",
+      "The misses are not a systematic class. All 1965 test misses are j at recall_idx 1 with tiny activations (about 0.01-0.04 of max). Together they carry 0.1% of the mass. Of j inputs at recall_idx 1, 11.8% are active (P 0.118 when scored alone), so 'almost never fires' is fair in mass terms. Dropping the recall_idx >= 2 condition gives test P 0.839 and F1 0.912, which confirms the condition is needed.",
+      "One magnitude claim is wrong. The explanation says that 'where j appears several times in a row, later js tend to fire more strongly than the first'. The top-activating dev examples show the opposite. With consecutive js, the second is weaker than the first: 'h n s x [j:0.98] [j:0.88]', 'j 2 r d j 3 [j:0.99] [j:0.88]', 'n k n q j x [j:0.98] [j:0.91]' and 'h w n 2 j t [j:1.00] [j:0.94]'. In those sequences it is the js later in the copy, after a gap, that are stronger. That fits the separate claim that activation rises with recall_idx: low-quartile examples sit at recall_idx 1-2 around 0.5-0.7, and top examples near the end of long sequences reach about 0.98-1.0. Magnitude can only be checked from rendered examples; the tool cannot score magnitude directly.",
+      "The out_tok table is flat (about 0.024 rate for every token), so the claim that the output token doesn't matter checks out. The label does not overclaim relative to the predicate."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input j (fed-back j, from 2nd copy input on); stronger later in the copy, weaker for a j that directly follows another j",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "copy-phase input j (fed-back j, from 2nd copy input on); stronger later in the copy, weaker for a j that directly follows another j"
+}

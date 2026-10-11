@@ -1,0 +1,75 @@
+{
+  "label": "copy-phase input of the letter a (from the 3rd copy step on)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"a\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, on steps where the token fed back in is the letter a (a fed back copy of an original a). It is silent during the original phase and on the <DEL> step, even when the input is a, and it is silent on every other input token. It almost never fires at recall_idx 1, where the input is orig(0). About 79% of copy-phase a inputs activate it, and the misses are weak. Magnitude is highest when a is followed by another a in the original (an aa pair), where the first a of the pair gets close to the max activation. It is also larger at mid-to-late copy positions. Isolated a inputs give weaker activations.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 413,
+    "predicate": "(phase == 2) & (in_tok == tok(\"a\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.7923786602486963,
+    "recall": 0.9985340949299903,
+    "f1": 0.883590901974817,
+    "mass_recall": 0.9995917140612496,
+    "correlation": 0.7540563518301832,
+    "n_active": 59349,
+    "n_predicted": 74790,
+    "coverage_by_activation_quartile": [
+      0.9949454104326728,
+      0.9992586102311788,
+      0.9999326009301072,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 413,
+    "predicate": "(phase == 2) & (in_tok == tok(\"a\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.7948059974204643,
+    "recall": 0.9983798835541304,
+    "f1": 0.8850374381951871,
+    "mass_recall": 0.9995172293867399,
+    "correlation": 0.7562429363999789,
+    "n_active": 59255,
+    "n_predicted": 74432,
+    "coverage_by_activation_quartile": [
+      0.9946672066963683,
+      0.998987444309437,
+      0.9998649925745916,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 413,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold. All activation mass is in the copy phase (original 0, delimiter 0). in_tok=a holds 100% of mass. At recall_idx 1 the feature is almost silent (precision 0.006 over 16,744 a inputs). Top activations are on the first a of an aa pair (out_tok==a: precision 0.994). Test scores reproduce: P 0.792, R 0.999, F1 0.884, mass recall 0.9996.",
+      "The 21% of false positives are systematic, not scattered noise. By recall_idx, dev precision is 0.545 at recall_idx 2, then 0.897 at 3, 0.928 at 4 and 0.818 at 5 and above. Including recall_idx 2 in the predicate (the 'from the 3rd copy step on' wording) treats a coin-flip position as part of the feature.",
+      "Whether the feature fires also depends on the neighbouring original tokens, and the explanation does not mention this. By prev_tok, precision ranges from 0.51 (c) and 0.54 (digit 0) to 0.95 (g, q). By out_tok (the token after a in the original), it ranges from 0.39 (digit 2), 0.56 (h, z) and 0.60 (e) to 0.98-0.99 (a, f, r). For example, out_tok in DIGITS gives precision 0.682 and prev_tok in DIGITS gives 0.735.",
+      "Precision is also lower for short sequences (L<=4: 0.659) and for a inputs with many outputs left (to_go>=6: 0.589). This fits a graded magnitude that only crosses threshold later in the copy phase.",
+      "Dropping recall_idx 2 entirely is not a fix: test P 0.867, R 0.849, F1 0.858. Recall_idx 2 carries about 10% of the mass, so the fix has to be conditional on the neighbouring tokens."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "copy-phase input of the letter a (recall_idx >= 2), weakened at recall_idx 2 and by certain neighbouring original tokens (e.g. preceded by c or a digit, followed by a digit, h or z)",
+    "better_predicate": "(phase == 2) & (in_tok == tok('a')) & (recall_idx>=2) & ~((recall_idx==2) & (isin(prev_tok,[2,3,22,25,26,7]) | isin(out_tok,[28,25,7,4,29,23,19,22,20])))",
+    "better_predicate_test_f1": 0.8996
+  },
+  "scorecard": {
+    "format": "slot2",
+    "summary": "Graded preference over the current input token (most: a, -, r, c, g, s; least: m, u, v, 0) and the token being output (most: a, f, r, p, b, y; least: e, h, 2, -); timing cues that raise it most: recall_idx=4, recall_idx=3, L=5 & t=8.",
+    "test_f1": 0.9042639545432841,
+    "test_precision": 0.8568067683119939,
+    "test_recall": 0.9572865591669615,
+    "full_test_f1": 0.9229636152583757,
+    "full_n_cues": 238,
+    "top40_test_f1": 0.9026547287355602,
+    "slot2_test_f1": 0.9042639545432841,
+    "file": "scorecards/hidden_413.json"
+  },
+  "final_label": "copy-phase input of the letter a (recall_idx >= 2), weakened at recall_idx 2 and by certain neighbouring original tokens (e.g. preceded by c or a digit, followed by a digit, h or z)"
+}

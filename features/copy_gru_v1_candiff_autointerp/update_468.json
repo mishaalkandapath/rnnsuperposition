@@ -1,0 +1,63 @@
+{
+  "label": "copy phase: digit 3 fed back as input, from original position >= 2",
+  "predicate": "(phase == 2) & (in_tok == tok(\"3\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost only in the copy phase on steps where the input is the token 3, i.e. the model just output a 3 and it is fed back in. In-tok 3 holds 100% of the activation mass, and the original/delimiter phases are essentially silent (127 weak activations). The position of the 3 in the original sequence gates it: a 3 from original position 0 never fires, position 1 fires weakly and rarely, position 2 fires about half the time at low magnitude, and position >= 3 fires reliably (precision 1.0 for recall_idx >= 4). Magnitude is lowest for early-position 3s (weak examples come from short or early copies) and saturates around 0.6 to 1.0 of the max for later positions. When a sequence has two 3s, the later one is usually stronger. It does not fire on other digits or letters, on 3 as an original input, or on what is being output next.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 468,
+    "predicate": "(phase == 2) & (in_tok == tok(\"3\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9230115213770128,
+    "recall": 0.942455220310756,
+    "f1": 0.9326320403243481,
+    "mass_recall": 0.9762947242980853,
+    "correlation": 0.8892756843208498,
+    "n_active": 56443,
+    "n_predicted": 57632,
+    "coverage_by_activation_quartile": [
+      0.795053504358302,
+      0.9800155906739423,
+      0.9953936645170435,
+      0.9993621545003544
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 468,
+    "predicate": "(phase == 2) & (in_tok == tok(\"3\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.92065396216068,
+    "recall": 0.943981725531541,
+    "f1": 0.9321719213617671,
+    "mass_recall": 0.9763065352456244,
+    "correlation": 0.8877496110176331,
+    "n_active": 56910,
+    "n_predicted": 58352,
+    "coverage_by_activation_quartile": [
+      0.802291256676975,
+      0.9790553837503514,
+      0.9956420889857314,
+      0.9989456666900963
+    ]
+  },
+  "gate": "update",
+  "feature": 468,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The explanation says position matters but it actually depends on two things: the 3's original position and how near the end of the copy the step is. recall_idx + to_go = L-1, so this is really an L effect. A 3 from original position 1 (recall_idx==2) is not 'weak and rare' across the board. It fires at precision 1.0 when to_go==0 and 0.97 when to_go==1, i.e. L=3 or 4 with the 3 fed back at the last or second-to-last step. At to_go >= 2 it is about 0 (0.03 at to_go 2, then 0.0). The predicate's recall_idx >= 3 cutoff misses this whole class.",
+      "The claim that a 3 from position 2 'fires about half the time' is too vague and hides the same structure. Overall precision for recall_idx==3 is 0.72. By to_go it is 1.0 (0), 1.0 (1), 0.97 (2), 0.61 (3), 0.34 (4) and 0.44 (5). So it fires reliably when the 3 comes back near the end of the sequence and unreliably when it comes back early in a long sequence.",
+      "The ~7.7% false positives of the original predicate are also systematic: they are recall_idx==3 steps with to_go >= 3 (long sequences). They are not scattered noise.",
+      "Claims that check out: copy-phase only (mass share 1.0); input 3 carries 100% of activation mass; recall_idx==1 never fires (precision 0); precision is 1.0 for recall_idx >= 4 on dev; other tokens and original-phase 3s are silent.",
+      "Alternative predicate: (phase==2)&(in_tok==3)&(recall_idx>=2)&((recall_idx>=4)|(recall_idx>to_go)). Test scores: P 0.997, R 0.923, F1 0.958, mass recall 0.991 (original: P 0.923, F1 0.933, mass recall 0.976). On test it misses 4352 steps holding only 0.9% of mass, and these are near-zero activations, which is noise."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy phase: digit 3 fed back as input, except early-position 3s replayed early in long sequences",
+    "better_predicate": "(phase == 2) & (in_tok == tok('3')) & (recall_idx >= 2) & ((recall_idx >= 4) | (recall_idx > to_go))",
+    "better_predicate_test_f1": 0.958
+  },
+  "final_label": "copy phase: digit 3 fed back as input, except early-position 3s replayed early in long sequences"
+}

@@ -1,0 +1,63 @@
+{
+  "label": "Dense positional: first ~4 input steps and the whole copy phase",
+  "predicate": "(phase == 2) | ((phase == 0) & (t < 4))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "A broad, dense feature (active on about 72% of all steps) that tracks position. It fires on the first four original-input steps (100% at t=0, then falling to about 62% at t=3) and on nearly every copy-phase step after the delimiter (about 94%). It is mostly silent at the <DEL> step (18%) and at later original-phase positions (orig_idx 4-8, rate dropping to 12-47%). Magnitude: the largest activations are early in the input phase (t=1-3), and the inputs p, q and f boost them; the top examples all begin q p p, peaking on the second p. Copy-phase activations are moderate and fairly uniform across recall_idx. Output token, first token, digit count and whether the copy is correct have little effect. Misses are mostly weak activations at original positions 4-6; false positives are mostly near-zero steps late in the input or at the end of the copy.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 488,
+    "predicate": "(phase == 2) | ((phase == 0) & (t < 4))",
+    "split": "test",
+    "precision": 0.8872459205517899,
+    "recall": 0.89669035097263,
+    "f1": 0.8919431356354123,
+    "mass_recall": 0.9164436277794584,
+    "correlation": 0.40759295179112315,
+    "n_active": 4669196,
+    "n_predicted": 4718898,
+    "coverage_by_activation_quartile": [
+      0.8369175335539566,
+      0.9057567941033103,
+      0.9213928907674898,
+      0.9226941854657633
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 488,
+    "predicate": "(phase == 2) | ((phase == 0) & (t < 4))",
+    "split": "dev",
+    "precision": 0.8874925297221692,
+    "recall": 0.8966027754833588,
+    "f1": 0.8920243924726613,
+    "mass_recall": 0.9163620487509527,
+    "correlation": 0.4077978546658139,
+    "n_active": 4670754,
+    "n_predicted": 4718700,
+    "coverage_by_activation_quartile": [
+      0.8370978916475191,
+      0.9054174527635355,
+      0.9212657833256829,
+      0.9226300176074431
+    ]
+  },
+  "gate": "hidden",
+  "feature": 488,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most factual claims hold on dev. Overall active rate is 72.3%. By t, the rate is 1.00, 0.89, 0.74, 0.62 for t=0-3. Copy phase is 94.1%, the <DEL> step 18.5%, and orig_idx 4-8 falls from 0.465 to 0.121. The top examples all begin q p p and peak on the second p. Original test scores reproduce: P 0.887, R 0.897, F1 0.892, mass recall 0.916.",
+      "Systematic miss class that the predicate leaves out: inputs p, q and f at late original positions (phase 0, t>=4). Active rates there are p 0.985, q 0.931 and f 0.779 (combined 0.899), against 0.15-0.35 for most other letters. u (0.54), 1 (0.48) and 3 (0.47) are also elevated. The explanation names p/q/f only as magnitude boosters. It says misses are 'mostly weak activations at original positions 4-6', but in fact a clear token class at those positions fires almost every time.",
+      "There is also a carry-over effect: after a p/q/f input in late original positions, a non-p/q/f token fires about 65% of the time. In the misses output, late original-phase activations often trail off after a strong earlier activation.",
+      "Smaller points that don't change the picture. At the <DEL> step the feature fires about 41% of the time when L<=4 (54% when L=3), versus 18% overall, so <DEL> is not uniformly silent. Copy-phase rates are flat at about 0.90-0.97 across recall_idx, which matches the explanation.",
+      "The label 'first ~4 input steps' is a soft cutoff. The rate declines smoothly (t=2: 0.74, t=3: 0.62, t=4: 0.47), and t<3 gives dev F1 0.873 versus 0.892 for t<4. The label slightly overstates the step at t=4, but this is minor."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Dense positional: first ~4 input steps, the whole copy phase, and inputs p/q/f anywhere in the original phase",
+    "better_predicate": "(phase==2)|((phase==0)&((t<4)|isin(in_tok,[tok('p'),tok('q'),tok('f')])|isin(prev_tok,[tok('p'),tok('q'),tok('f')])))",
+    "better_predicate_test_f1": 0.908
+  },
+  "final_label": "Dense positional: first ~4 input steps, the whole copy phase, and inputs p/q/f anywhere in the original phase"
+}

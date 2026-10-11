@@ -1,0 +1,63 @@
+{
+  "label": "early z: original-phase steps 2-4 after a z among the first three tokens",
+  "predicate": "(phase == 0) & (t >= 2) & (t <= 4) & ((orig(0) == tok(\"z\")) | (orig(1) == tok(\"z\")) | ((orig(2) == tok(\"z\")) & (t >= 3)))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires during the original (input) phase at steps 2-4 (peak at t=3, 99.6% of mass in the original phase) when the letter z appeared earlier among the first three original tokens (positions 0-2). It is a short-lived z-in-prefix detector: rate is 16x baseline when the token two steps back is z, and 9.5x when the previous token is z. Magnitude is largest when z is the first token, and largest of all for runs like z z z (top examples reach the max at t=3 right after z z z), usually decaying over the next 1-2 steps. It is weak or near zero when z appears at position 2 and only fires at t=3-4, then fades. It does not fire at t=0-1, on the z token itself at t<2, after step ~5, on z appearing later in the sequence (position >=3), or in the copy phase (only a weak echo at the delimiter step). Current input token identity barely matters (about 1x lift for every token). Residual errors: steps where the activation has already decayed to zero, and weak tails at t=5.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 1010,
+    "predicate": "(phase == 0) & (t >= 2) & (t <= 4) & ((orig(0) == tok(\"z\")) | (orig(1) == tok(\"z\")) | ((orig(2) == tok(\"z\")) & (t >= 3)))",
+    "split": "test",
+    "precision": 0.8115255476879093,
+    "recall": 0.8785460434567457,
+    "f1": 0.8437069326778098,
+    "mass_recall": 0.9620160764473955,
+    "correlation": 0.7594411845301283,
+    "n_active": 111145,
+    "n_predicted": 120324,
+    "coverage_by_activation_quartile": [
+      0.613884190448771,
+      0.9387101417980278,
+      0.9715684157489383,
+      0.9900309508385517
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 1010,
+    "predicate": "(phase == 0) & (t >= 2) & (t <= 4) & ((orig(0) == tok(\"z\")) | (orig(1) == tok(\"z\")) | ((orig(2) == tok(\"z\")) & (t >= 3)))",
+    "split": "dev",
+    "precision": 0.8126311039053294,
+    "recall": 0.8806263471535438,
+    "f1": 0.845263501032272,
+    "mass_recall": 0.9634899376909649,
+    "correlation": 0.7591096251959801,
+    "n_active": 110418,
+    "n_predicted": 119657,
+    "coverage_by_activation_quartile": [
+      0.6189820684658577,
+      0.939069009237457,
+      0.9731922909723228,
+      0.9912693812490944
+    ]
+  },
+  "gate": "update",
+  "feature": 1010,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Precision falls off along the lag axis inside the predicate. z@0 by step: t=2 1.00, t=3 0.96, t=4 0.46. z@1: t=2 0.77, t=3 0.99, t=4 0.85. z@2: t=3 0.69, t=4 0.77. So the feature is better described as 'z 1-3 steps back, while z was in the first three positions' than as a fixed t=2-4 window. Most false positives are the z@0, t=4 cell (13.8k predicted steps, 46% precision). Restricting that cell to sequences that have a second z gives test F1 0.8445, against 0.8437 for the original predicate. Precision goes up (0.859) but recall drops (0.830), so it is no real improvement.",
+      "Undercovered weak activations. The predicate covers only 61% of the lowest activation quartile. The misses are 12% of active steps but only 3.8% of activation mass. They are spread over t=5-6 tails (t=5 with z@2 or z@3: precision 0.17) and weak firing after a z at position 3 (precision 0.13, 0.9% of mass). The label's 'does not fire on a z at position 3 or later' is mostly true, but there is a faint low-precision tail.",
+      "The 'weak echo at the delimiter' wording is slightly off. In top examples with L=4-5 after 'z z z', <DEL> reaches 0.5 of max. That is the normal t=3-4 continuation landing on the delimiter step, not a separate echo. It covers only 865 steps (0.4% of mass), and adding phase<=1 lowers test F1 to 0.821.",
+      "Other claims check out. Original-phase mass share is 0.996. Firing is zero at t=0-1 and peaks at t=3. Lift is 15.9x when the token two steps back is z and 9.5x when the previous token is z. The current input token gives about 1x lift. The maximum is at t=3 after 'z z z' and fades over the next 1-2 steps. z first carries 46% of mass and z@1 37%. Test scores reproduce exactly: P 0.812, R 0.879, F1 0.844, mass recall 0.962.",
+      "Minor: there is a slight lift for prev/prev2 == '1' (1.3-1.5x). It is negligible and not systematic enough to matter."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "early z: original-phase steps 1-3 after a z among the first three tokens (t=2-4)",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "early z: original-phase steps 1-3 after a z among the first three tokens (t=2-4)"
+}

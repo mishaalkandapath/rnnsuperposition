@@ -1,0 +1,62 @@
+{
+  "label": "Early copy steps (2nd/3rd output) of long sequences",
+  "predicate": "((recall_idx == 1) & (L >= 7)) | ((recall_idx == 2) & (L == 9))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires only in the copy phase, almost always on the second output step (input = first copied token, right after <DEL>, recall_idx 1; 82% of mass) or the third (recall_idx 2; 16%), and only when the sequence is long (L >= 7; nothing for L <= 5). The firing probability goes up with the number of outputs still left, L - recall_idx: about 98% at recall_idx 1 with L=9, high at recall_idx 1 with L=8 and at recall_idx 2 with L=9, and about 37-51% where L - recall_idx = 6. The strongest activations are at recall_idx 1 with L=9, with mild modulation by the input token (v, w, s are strongest). It never fires in the original phase, on the delimiter, or on the first output step (recall_idx 0). It is close to silent on later copy steps, apart from a small tail on the last couple of steps of L=9 sequences. In short, it marks positions shortly after <DEL> when many outputs are still to come.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 95,
+    "predicate": "((recall_idx == 1) & (L >= 7)) | ((recall_idx == 2) & (L == 9))",
+    "split": "test",
+    "precision": 0.787919826652221,
+    "recall": 0.8112605354486861,
+    "f1": 0.7994198473282443,
+    "mass_recall": 0.9289766269606513,
+    "correlation": 0.737068289614288,
+    "n_active": 64544,
+    "n_predicted": 66456,
+    "coverage_by_activation_quartile": [
+      0.5455503222607834,
+      0.763448190381755,
+      0.9370352007932573,
+      0.999008428358949
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 95,
+    "predicate": "((recall_idx == 1) & (L >= 7)) | ((recall_idx == 2) & (L == 9))",
+    "split": "dev",
+    "precision": 0.7891236306729265,
+    "recall": 0.8102153694033309,
+    "f1": 0.7995304233812567,
+    "mass_recall": 0.928218857095079,
+    "correlation": 0.73670030669284,
+    "n_active": 64726,
+    "n_predicted": 66456,
+    "coverage_by_activation_quartile": [
+      0.546224199728093,
+      0.7586206896551724,
+      0.937333910141524,
+      0.9987021815709783
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 95,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The numbers in the explanation check out. Cell precisions on dev: L9/r1 0.999 (the explanation says ~98%), L8/r1 0.954, L9/r2 0.692, L7/r1 0.511, L8/r2 0.366, L6 under 2%, L<=5 zero. Recall_idx 1 and 2 hold 82% and 16% of activation mass. It never fires in the original phase, on <DEL>, or at recall_idx 0.",
+      "The predicate's test F1 is 0.799, below the 0.8 cutoff for 'explained'. So by the stated criterion the verdict should not be 'explained'.",
+      "The explanation says the input token shifts the size 'a little'. It does much more than that: in the borderline cells, the current input token decides whether the unit fires at all. At L7/r1, firing rate by input token (= orig(0)) is v 0.99, w 0.92, f/n 0.90, s 0.88, z 0.85, k 0.80, but i 0.01, m 0.06, 2 0.06, t 0.08, h 0.16. At L8/r2 with input orig(1): v 1.00, w 0.96, s 0.88, k 0.84, r 0.82, but i 0.00, 2 0.01, m 0.02, h 0.03, o 0.06. The false positives (14k on test) and misses at L7/r1 and L8/r2 follow this token split. That is a systematic gap, not noise.",
+      "Firing at L8/r2 on good tokens is left out of the predicate entirely. These are the systematic misses, along with a small late-step tail (L9, recall_idx >= 6: precision 0.036, mass 0.9%) that is correctly described as minor."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Second/third copy step of long sequences. Always fires at recall_idx 1 when L >= 8. When fewer outputs remain (L7/r1, L8/r2, L9/r2), it fires only if the current input token is in a favoured set (v, w, s, k, r, b, z, ...) and never on i, m, h, t, 2.",
+    "better_predicate": "((recall_idx==1)&(L>=8)) | ((recall_idx==1)&(L==7)&isin(in_tok,[tok(c) for c in 'bfknpqrsuvwz1lg'])) | ((recall_idx==2)&(L==9)&~isin(in_tok,[tok(c) for c in 'himt2jyo0'])) | ((recall_idx==2)&(L==8)&isin(in_tok,[tok(c) for c in 'bkrsvwz']))",
+    "better_predicate_test_f1": 0.854
+  },
+  "final_label": "Second/third copy step of long sequences. Always fires at recall_idx 1 when L >= 8. When fewer outputs remain (L7/r1, L8/r2, L9/r2), it fires only if the current input token is in a favoured set (v, w, s, k, r, b, z, ...) and never on i, m, h, t, 2."
+}

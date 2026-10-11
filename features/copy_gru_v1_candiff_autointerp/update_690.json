@@ -1,0 +1,63 @@
+{
+  "label": "Third original token (t=2) when the second token is one of 2/o/z/k/r/3/t/g",
+  "predicate": "(t == 2) & isin(prev_tok, [tok(\"2\"),tok(\"o\"),tok(\"z\"),tok(\"k\"),tok(\"r\"),tok(\"3\"),tok(\"t\"),tok(\"g\")])",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires almost only at step t=2 of the original phase, i.e. on the third input token (100% of activation mass; 28% of t=2 steps fire). Whether it fires depends mostly on the second token (prev_tok): 2, o, z, k, r, 3, t and g each raise the firing rate 3-4x. The first token also changes magnitude: first tokens p, g, k, 2, o push it up, and the top activations (max 1.59) are all on sequences starting p o. The identity of the current token barely matters, and it fires a bit more when the current token is a first occurrence. Activation per t=2 step goes down as L grows because the t=2 count is the same at every L. It is silent on the delimiter and in the copy phase (13 activations), and at t=0, t=1 and t>=3 (only about 1200 weak activations at t=1/3). The two-token-context predicate gets dev F1 0.80 and mass recall 0.91. Most misses are weak activations under other prefixes, so the real dependence is a graded function of the first two tokens and not a clean set.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 690,
+    "predicate": "(t == 2) & isin(prev_tok, [tok(\"2\"),tok(\"o\"),tok(\"z\"),tok(\"k\"),tok(\"r\"),tok(\"3\"),tok(\"t\"),tok(\"g\")])",
+    "split": "test",
+    "precision": 0.8257015138424552,
+    "recall": 0.7859732681126773,
+    "f1": 0.8053477346503601,
+    "mass_recall": 0.9083827353853692,
+    "correlation": 0.7564025674445657,
+    "n_active": 139833,
+    "n_predicted": 133105,
+    "coverage_by_activation_quartile": [
+      0.5287622643668297,
+      0.7216087876880829,
+      0.8961325018593741,
+      0.9973968762515018
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 690,
+    "predicate": "(t == 2) & isin(prev_tok, [tok(\"2\"),tok(\"o\"),tok(\"z\"),tok(\"k\"),tok(\"r\"),tok(\"3\"),tok(\"t\"),tok(\"g\")])",
+    "split": "dev",
+    "precision": 0.8237575830470506,
+    "recall": 0.784965723741234,
+    "f1": 0.8038939507313997,
+    "mass_recall": 0.9076137081504853,
+    "correlation": 0.755449552035475,
+    "n_active": 139601,
+    "n_predicted": 133027,
+    "coverage_by_activation_quartile": [
+      0.5254577232744048,
+      0.7239541547277937,
+      0.8930372492836676,
+      0.9974212034383955
+    ]
+  },
+  "gate": "update",
+  "feature": 690,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The positional claims check out on the dev profile. t=2 holds 100% of the activation mass (138394 actives, 27.7% rate). There are 1143 weak actives at t=1 and 51 at t=3, 13 in the copy phase and none on the delimiter. The per-L firing rate falls off as described.",
+      "The listed second-token set leaves out a strong token. At t=2 with prev_tok='p' the feature fires 56% of the time (dev precision 0.56). That is close to the listed 'g' (0.65) and 't' (0.71) and far above every unlisted token, most of which are at 0. Many test misses come from second token 'p', for example 'o p [p]', 'j p [2]', '1 p [x]' and 'p w'. Adding 'p' alone raises test F1 from 0.805 to 0.825 and mass recall from 0.908 to 0.953.",
+      "There is a second systematic miss class. Second tokens e, h, l, m, w and x fire 12-26% of the time at t=2, and these firings come from strong first tokens (p/g/k/2/o/t/r/u), for example 'g e [r]' and 'p w [3]'. So the 'clean set' framing overclaims. The real rule is additive (second token plus first token), and an AND-gated clause recovers almost all of the missing recall.",
+      "The false positives are also systematic, not scattered noise. They are mostly the weaker listed second tokens (g/z/r/3) with first tokens like c, a, i, v and 0 ('c g i', 'v g w', 'a r 3', 'c z h'). This is the same additive effect of the first token working in the other direction.",
+      "Better predicate: test F1 0.869 against 0.805, with recall 0.983 and mass recall 0.999 against 0.786 and 0.908."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Third original token (t=2), gated additively by the first two tokens: fires when the second token is one of 2/o/z/k/r/p/3/t/g, or when the second token is e/h/l/m/w/x and the first token is one of p/g/k/2/o/t/r/u. The current token barely matters.",
+    "better_predicate": "(t==2) & (isin(prev_tok,[tok(\"2\"),tok(\"o\"),tok(\"z\"),tok(\"k\"),tok(\"r\"),tok(\"3\"),tok(\"t\"),tok(\"g\"),tok(\"p\")]) | (isin(prev2_tok,[tok(\"p\"),tok(\"g\"),tok(\"k\"),tok(\"2\"),tok(\"o\"),tok(\"t\"),tok(\"r\"),tok(\"u\")]) & isin(prev_tok,[tok(\"e\"),tok(\"h\"),tok(\"l\"),tok(\"m\"),tok(\"w\"),tok(\"x\")])))",
+    "better_predicate_test_f1": 0.869
+  },
+  "final_label": "Third original token (t=2), gated additively by the first two tokens: fires when the second token is one of 2/o/z/k/r/p/3/t/g, or when the second token is e/h/l/m/w/x and the first token is one of p/g/k/2/o/t/r/u. The current token barely matters."
+}

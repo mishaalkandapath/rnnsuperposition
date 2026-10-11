@@ -1,0 +1,62 @@
+{
+  "label": "input token o during the original (pre-<DEL>) phase",
+  "predicate": "(in_tok == tok(\"o\")) & (phase == 0) & (t >= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token detector for the letter o being read as an original input. Fires on every original-phase step with in_tok = o at positions 1..8 (dev precision 1.00, recall 0.999) and on nothing else: never on other tokens, never at t = 0 (an o as the first token is silent), never on <DEL>, and essentially never in the copy phase when o is fed back (62 tiny activations at the step right after <DEL> + o, ~0% of mass). Magnitude: weaker at t = 1 (t = 1 holds about half the mass per activation of t = 2-3, judging by mass share vs count), strongest at t = 2-4 (top examples are o at position 3), and lower for a repeated o (the 2nd o in a sequence is typically ~0.3-0.5 of max, vs ~1.0 for the first; in_first = 0 has lift 0.2x across all tokens but within o steps it still fires).",
+  "test_scores": {
+    "gate": "update",
+    "feature": 686,
+    "predicate": "(in_tok == tok(\"o\")) & (phase == 0) & (t >= 1)",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.9992785387129568,
+    "f1": 0.9996391391829237,
+    "mass_recall": 0.999959911650199,
+    "correlation": 0.9606832549491429,
+    "n_active": 91481,
+    "n_predicted": 91415,
+    "coverage_by_activation_quartile": [
+      0.9971142494862489,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 686,
+    "predicate": "(in_tok == tok(\"o\")) & (phase == 0) & (t >= 1)",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.999320033778967,
+    "f1": 0.9996599012616565,
+    "mass_recall": 0.9999662316777573,
+    "correlation": 0.9604420300705598,
+    "n_active": 91181,
+    "n_predicted": 91119,
+    "coverage_by_activation_quartile": [
+      0.9972802246008071,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 686,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The label and predicate hold up. On test: precision 1.000, recall 0.9993, F1 0.9996, mass recall 0.99996, and 0 false positives. The 66 missed test steps are all copy-phase o fed back at the step right after <DEL> + first original token (e.g. 'q o x <DEL> q [o:0.00]'). They are activations of about 0.00-0.06 and hold 0.0% of the mass, so this is negligible noise. Delimiter: 0 activations. t=0: 0 activations. Other in_toks: 0 activations.",
+      "Magnitude claim checks out. Mass per activation from the dev profile, in units of 1e-6: t1 6.9, t2 13.8, t3 14.5, t4 12.5, t5 10.7, t6 9.0, t7 7.0, t8 5.0. So t=1 is about half of t=2-3, the peak is t=2-4 (highest at t=3), and it falls steadily to t=8.",
+      "The repeated-o claim is FALSE. The explanation says the second o is typically 0.3-0.5 of max against about 1.0 for the first. I ran misses on '(in_tok==o)&(phase==0)&(t>=1)&(n_seen([o])==0)', so the only remaining activations are non-first o's. They make up 10158 dev steps with 10.5% of the mass, about 10.3e-6 per activation. First occurrences have 89.5% over 81023 steps, about 11.0e-6 per activation, so they are almost the same. in_count gives the same picture: 1 -> 11.0e-6, 2 -> 10.7e-6. Counterexamples where the second o is STRONGER than the first: 'c [o:0.41] [o:0.82] <DEL>', 'l [o:0.39] [o:0.83] q', 'k [o:0.38] [o:0.83] j x', '3 [o:0.39] a 1 [o:0.69]'. The weaker second o in the top examples (e.g. t=8, 0.37) is explained by position decay, not by repetition.",
+      "Minor: an o at t=0 is silent, but a later o in the same sequence still fires (e.g. 'o m e b r v [o:0.56]'). This agrees with the predicate."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "input token o during the original (pre-<DEL>) phase at t >= 1; magnitude depends on position (peak at t=2-4, about half at t=1, decaying toward t=8), not on whether the o is repeated",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "input token o during the original (pre-<DEL>) phase at t >= 1; magnitude depends on position (peak at t=2-4, about half at t=1, decaying toward t=8), not on whether the o is repeated"
+}

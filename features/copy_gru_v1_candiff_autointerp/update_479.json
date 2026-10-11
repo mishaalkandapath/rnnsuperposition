@@ -1,0 +1,64 @@
+{
+  "label": "first copy step after <DEL> when the first original token is g",
+  "predicate": "(recall_idx == 1) & (in_tok == tok(\"g\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost only at the first copy-phase step (t = L+1, prev input <DEL>, input = fed-back orig(0), output = orig(1)), and strongly only when that token (the first original token) is g. The predicate captures 92% of activation mass at 99% precision; it is near-certain to fire whenever it holds, except at L=3 where it is mostly silent. Magnitude grows with sequence length: weak at L=4 (~0.2 of max), strongest at L>=6 (~0.9-1.0 of max). Weak residual activations (<0.2 of max, about 8% of mass) occur at the same step for other first tokens (h, x, r, l, 2, m, ...), plus a few tiny activations at recall_idx=2 when g is input again (e.g. g g ... sequences). It does not fire during the original phase, at the <DEL> step, or later in the copy phase.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 479,
+    "predicate": "(recall_idx == 1) & (in_tok == tok(\"g\"))",
+    "split": "test",
+    "precision": 0.9856313237143028,
+    "recall": 0.4577887770424337,
+    "f1": 0.6251969999050604,
+    "mass_recall": 0.9151070985940885,
+    "correlation": 0.9534600155860857,
+    "n_active": 35962,
+    "n_predicted": 16703,
+    "coverage_by_activation_quartile": [
+      0.006339673006339673,
+      0.011233455677900123,
+      0.8136818687430478,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 479,
+    "predicate": "(recall_idx == 1) & (in_tok == tok(\"g\"))",
+    "split": "dev",
+    "precision": 0.9866571360495592,
+    "recall": 0.4581639144745941,
+    "f1": 0.6257531969551009,
+    "mass_recall": 0.9153707617425925,
+    "correlation": 0.9542315491514831,
+    "n_active": 36153,
+    "n_predicted": 16788,
+    "coverage_by_activation_quartile": [
+      0.005199690231220268,
+      0.011285682673157778,
+      0.8162204027439699,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 479,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims hold on the test split. Precision is 0.986, recall 0.458, F1 0.625, mass recall 0.915 and correlation 0.95. Adding & (L >= 4) brings precision to 1.000 with F1 0.623. All 240 false positives are L=3 (t=4) sequences, which matches the explanation that the feature is mostly silent at L=3.",
+      "Magnitude growth with L checks out. The predicate at L==4 covers 0.27 of the third activation quartile and 0.001 of the top quartile. At L>=6 it covers 0.86 of the top quartile.",
+      "The 19.5k missed steps (54% of active steps, 8.5% of mass) are systematic, not random noise. They all sit at recall_idx==1, rarely fire at L=4-5, and are densest at L=6-7: precision for non-g first tokens is 0.08 at L=6/7 and 0.0 at L=3/4. Within L=6/7, no single token explains them. Firing rates are 0.2-0.3 when out_tok is y/g/e or in_tok is h, and 0.11 for digit inputs. So this is a weak, distributed secondary response to the first copy step. None of it reaches the top activation quartile. The explanation already describes this weak tail, and no simple predicate captures it without losing precision: (recall_idx==1) alone gives precision 0.069 and F1 0.129.",
+      "The recall_idx=2 claim checks out. Every recall_idx==2 activation has in_tok==g (recall of that predicate equals recall of recall_idx==2 overall, 0.0375). This is about 1.3k steps, all small.",
+      "Original phase: 0.29% of active steps and about 0.1% of mass. Delimiter step: zero activations. recall_idx>=3: essentially zero. These match the 'does not fire' claims.",
+      "Minor overclaim: the label leaves out the L>=4 condition, and the feature is nearly silent at L=3."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "first copy step after <DEL> when the first original token is g (L >= 4; strength grows with L)",
+    "better_predicate": "(recall_idx == 1) & (in_tok == tok(\"g\")) & (L >= 4)",
+    "better_predicate_test_f1": 0.623
+  },
+  "final_label": "first copy step after <DEL> when the first original token is g (L >= 4; strength grows with L)"
+}

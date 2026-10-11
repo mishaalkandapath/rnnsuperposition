@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input token n (fed-back n, recall position >= 2)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"n\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the input fed back at this step is the letter n (in_tok == n accounts for 100% of activation mass). It never fires on n in the original phase or at the delimiter, and is essentially silent when n is the first fed-back token (recall_idx 1, ~0% mass). The strongest activations come from an n near the start of the copy (recall positions 2-3, e.g. u t t n ... <DEL> u t t [n]). When n repeats, a second consecutive n fires more weakly (about 0.3-0.6 of the first). Some copy-phase n inputs do not fire at all (about 12% false positives), mostly late n steps. Rate of firing does not depend on L, first_tok or prev_tok.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 365,
+    "predicate": "(phase == 2) & (in_tok == tok(\"n\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.8785260243781161,
+    "recall": 0.9976041142089762,
+    "f1": 0.9342861226239817,
+    "mass_recall": 0.9994451754374344,
+    "correlation": 0.802202476489779,
+    "n_active": 65529,
+    "n_predicted": 74411,
+    "coverage_by_activation_quartile": [
+      0.9910272843801502,
+      0.999389573922598,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 365,
+    "predicate": "(phase == 2) & (in_tok == tok(\"n\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.8793084819016748,
+    "recall": 0.9980683734478001,
+    "f1": 0.9349321461908524,
+    "mass_recall": 0.9995485028567617,
+    "correlation": 0.8025582923348009,
+    "n_active": 65230,
+    "n_predicted": 74040,
+    "coverage_by_activation_quartile": [
+      0.9928256070640177,
+      0.9994481236203091,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 365,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Core claims hold. All activation mass is in the copy phase (original and delimiter phases have 0 activations) and all of it is on in_tok == n. recall_idx 1 is nearly silent (126 of 500k steps). Test scores reproduce: P 0.879, R 0.998, F1 0.934.",
+      "Missed activations are negligible: 157 test steps holding 0.1% of mass, almost all tiny n:0.02-0.16 activations when n is the first fed-back token (recall_idx 1).",
+      "The explanation says the false positives are 'mostly late n steps'. The data do not support this. Precision is 0.82 at recall_idx==2 and 0.854 at recall_idx>=6, and it is also flat across to_go (0.84 at to_go 0, 0.88 at to_go >= 4).",
+      "The explanation says the feature does not depend on prev_tok. Firing frequency within the predicate does vary with context, though in a graded way. By prev_tok, precision ranges from 0.75 (prev '1') to 0.997 (prev 't'). By out_tok (the original token right after the n), it ranges from 0.62 to 0.998: o 0.68, t 0.65, z 0.69, 3 0.62, versus u 0.998, v 0.99, 1 0.99. So the ~12% false positives depend partly on neighbouring tokens. They are not scattered noise, but they don't form a clean class.",
+      "Excluding the low-precision next tokens (o, t, z, 3) raises test precision to 0.912 but drops recall to 0.897, for a test F1 of 0.905. That is worse than the original, so no better simple predicate was found.",
+      "The 'recall positions 2-3' peak is slightly off. By mass share, the peak is at recall_idx 3-4 (0.249 and 0.228), which is n at original index 2-3. Minor wording issue."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "label": "early copy steps (first two fed-back outputs) plus any copy-phase x input",
+  "predicate": "(phase == 2) & ((recall_idx <= 2) | (in_tok == tok(\"x\")))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires only in the copy phase (essentially never during the original phase or at the <DEL> step). Main mode: the first two copy steps after <DEL> (recall_idx 1: 84% rate, 60% of mass; recall_idx 2: 56% rate, 29% of mass); the rate drops to about 3% for later copy steps. Second mode: a fed-back x input at any copy step (94% precision), and x sets magnitude. The top activations are all sequences starting with x, at the step where x is fed back right after <DEL> (100% precision there, 2% of activations but 9% of mass). For non-x tokens, magnitude falls from recall_idx 1 to 2. The feature is largely silent at recall_idx 2 in about 44% of sequences, and which ones did not reduce to a simple token rule. That, plus misses at recall_idx 1, accounts for about 0.71 precision. It does not fire on original-phase inputs, the delimiter, or later copy steps unless the input is x.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 66,
+    "predicate": "(phase == 2) & ((recall_idx <= 2) | (in_tok == tok(\"x\")))",
+    "split": "test",
+    "precision": 0.7144077052924238,
+    "recall": 0.9834732584433489,
+    "f1": 0.8276208860190929,
+    "mass_recall": 0.9950011073747981,
+    "correlation": 0.593286475445356,
+    "n_active": 768149,
+    "n_predicted": 1057455,
+    "coverage_by_activation_quartile": [
+      0.9510044886949458,
+      0.9859558314283186,
+      0.9970526513119867,
+      0.9998802314137379
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 66,
+    "predicate": "(phase == 2) & ((recall_idx <= 2) | (in_tok == tok(\"x\")))",
+    "split": "dev",
+    "precision": 0.7146926019262321,
+    "recall": 0.9834945834282183,
+    "f1": 0.8278195818136015,
+    "mass_recall": 0.995059798258868,
+    "correlation": 0.5931786667006184,
+    "n_active": 768475,
+    "n_predicted": 1057505,
+    "coverage_by_activation_quartile": [
+      0.9508637875483424,
+      0.9859982614941781,
+      0.9972464982640967,
+      0.9998698716413871
+    ]
+  },
+  "gate": "hidden",
+  "feature": 66,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most of the factual claims hold. The feature fires only in the copy phase (4 active steps outside it, out of 768k). recall_idx 1 fires at 84% and recall_idx 2 at 56%. Later copy steps fire at about 3%. Copy-phase x inputs have precision 0.936 and hold 28% of the mass. At recall_idx >= 3, non-x steps have precision 0.008.",
+      "Systematic gap the explanation misses: it says the silences at recall_idx 2 'did not reduce to a simple token rule', but they mostly reduce to sequence length L. Precision at recall_idx 2 is 0.148 for L<=4, 0.436 for L=5, 0.611 for L=6 and 0.733 for L>=7.",
+      "recall_idx 1 is also length-dependent. L=3 gives only 0.56 precision; L=4 gives 0.82, L=5 0.89 and L>=6 0.85. So the 'first two copy steps' mode really means the early copy steps of longer sequences, where many outputs are still to go. Short sequences are a systematic false-positive class.",
+      "Adding the length condition improves test F1 from 0.828 to 0.857 (precision 0.714 -> 0.796, mass recall 0.995 -> 0.972), using (phase==2)&((recall_idx==1)|((recall_idx==2)&(L>=6))|(in_tok==tok('x'))).",
+      "Even after that, about 20% false positives remain, scattered across recall_idx 1 and 2 with no obvious token pattern. With precision of only about 0.8, the verdict 'explained' overclaims; 'partially explained' fits better."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "first one or two copy steps after <DEL>, stronger in longer sequences (recall_idx 2 mostly only when L>=6), plus any copy-phase x input",
+    "better_predicate": "(phase==2)&((recall_idx==1)|((recall_idx==2)&(L>=6))|(in_tok==tok('x')))",
+    "better_predicate_test_f1": 0.857
+  },
+  "final_label": "first one or two copy steps after <DEL>, stronger in longer sequences (recall_idx 2 mostly only when L>=6), plus any copy-phase x input",
+  "scorecard": {
+    "format": "slot2",
+    "summary": "Graded preference over the current input token, by step (t=12: x, s, c, n; t=11: x, s, n, c; t=9: x, s, c, n) and the previous input (most: <DEL>, k, a, y, r, 2; least: e, x, u, f); timing cues that raise it most: recall_idx=2, recall_idx=1, L=9 & t=11.",
+    "test_f1": 0.8873830041846967,
+    "test_precision": 0.8401394926292941,
+    "test_recall": 0.9402563825507811,
+    "full_test_f1": 0.945666461451185,
+    "full_n_cues": 709,
+    "top40_test_f1": 0.8740784491317513,
+    "slot2_test_f1": 0.8873830041846967,
+    "file": "scorecards/hidden_66.json"
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "label": "input q at original position >= 4",
+  "predicate": "(phase == 0) & (in_tok == tok(\"q\")) & (t >= 4)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires when the input token is q during the original (pre-<DEL>) phase at position 4 or later (fires on every such step, precision 1.0). Never fires on q at positions 0-3, on the delimiter, or anywhere in the copy phase (including when q is fed back as an input), and essentially never on any other token. Magnitude depends on how close the q is to the end of the original sequence: it is largest (~3.5, near max) when q is the last original token right before <DEL> (to_go=0), about 0.7 of max at to_go=1, and about 0.2-0.5 of max further back. So it looks like a late-position q-token detector whose strength tracks proximity to the delimiter.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 334,
+    "predicate": "(phase == 0) & (in_tok == tok(\"q\")) & (t >= 4)",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.9987195593351372,
+    "f1": 0.9993593695229116,
+    "mass_recall": 0.9999629243190339,
+    "correlation": 0.8982653852076489,
+    "n_active": 41392,
+    "n_predicted": 41339,
+    "coverage_by_activation_quartile": [
+      0.9948782373405489,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 334,
+    "predicate": "(phase == 0) & (in_tok == tok(\"q\")) & (t >= 4)",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.9986729080204614,
+    "f1": 0.9993360134246013,
+    "mass_recall": 0.9999610385167849,
+    "correlation": 0.898431479577895,
+    "n_active": 41444,
+    "n_predicted": 41389,
+    "coverage_by_activation_quartile": [
+      0.9946916320818454,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 334,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The predicate and the core label check out. Test split: precision 1.0, recall 0.9987, F1 0.9994, mass recall 1.0000. The 53 test misses are all at step 8 on non-q tokens, with activations of 0.01-0.02 of max and 0.0% of the mass. That is scattered noise. There are 0 false positives.",
+      "The claims of no firing at t=0-3, on the delimiter, or in the copy phase hold. The profile shows 0 activations in delimiter and copy phases (recall_idx >= 0 all zero) and 0 at t<4.",
+      "The magnitude claim is wrong. Magnitude grows with absolute position t, not with to_go (closeness to <DEL>). The two are confounded because the top examples are all L=9 with q at t=8.",
+      "Evidence for the magnitude error, part 1: q at t==4 with to_go==0 (that is, L=5, q is the last original token) has quartile coverage [0.197, 0.064, 0, 0]. It sits entirely in the bottom two quartiles, not 'near max ~3.5'.",
+      "Evidence for the magnitude error, part 2: q at t==8 has quartile coverage [0, 0, 0, 0.264], entirely in the top quartile. q at t==4 has [0.995, 0.338, 0, 0], all low regardless of to_go.",
+      "Evidence for the magnitude error, part 3: examples in the profile. '2 f w y [q:0.21] a [q:0.69] <DEL>' (to_go=0 gives only 0.69). 'q r x 0 s e [q:0.71] <DEL>' (to_go=0 at t=6 gives 0.71). 'i k k h [q:0.20] n x' and '2 f w y [q:0.21]' (t=4 gives about 0.2 whether to_go is 1 or 2). The rough scale is t=4 about 0.2, t=5 about 0.47, t=6 about 0.7, t=8 about 1.0."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "input q at original position >= 4 (magnitude increases with absolute position t: ~0.2 of max at t=4 up to ~1.0 at t=8, independent of distance to <DEL>)",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "input q at original position >= 4 (magnitude increases with absolute position t: ~0.2 of max at t=4 up to ~1.0 at t=8, independent of distance to <DEL>)"
+}

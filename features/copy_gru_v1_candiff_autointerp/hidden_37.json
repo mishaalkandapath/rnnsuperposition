@@ -1,0 +1,64 @@
+{
+  "label": "copy-phase input w (fed-back w from original position >= 2)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"w\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, at steps where the fed-back input token is w (in_tok w covers 100% of activation mass; essentially no activity on any other token, and none in the original or delimiter phases). Equivalently, it fires on the step right after the model has output a w. Strength depends on where the w sat in the original sequence: weak or absent when w was original token 0-1 (recall_idx <= 2), strongest when w was late in the original (top examples have w at original positions 6-7). A w input that directly follows another w input in the copy phase gets a weaker activation than the first one. Does not depend on the token being output or on the surrounding tokens.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 37,
+    "predicate": "(phase == 2) & (in_tok == tok(\"w\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9857477243172952,
+    "recall": 0.9249052367860222,
+    "f1": 0.9543577519640098,
+    "mass_recall": 0.9836187305834101,
+    "correlation": 0.9033985596759818,
+    "n_active": 61469,
+    "n_predicted": 57675,
+    "coverage_by_activation_quartile": [
+      0.7088755856324831,
+      0.9908244940456823,
+      0.9999349254896857,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 37,
+    "predicate": "(phase == 2) & (in_tok == tok(\"w\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9857747288144446,
+    "recall": 0.9252038631869658,
+    "f1": 0.9545293611855747,
+    "mass_recall": 0.9835250671796039,
+    "correlation": 0.9025772409938302,
+    "n_active": 61193,
+    "n_predicted": 57433,
+    "coverage_by_activation_quartile": [
+      0.709065952023008,
+      0.9918289972545431,
+      0.9999346319780363,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 37,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The label and predicate hold up. All activation mass is in the copy phase (original and delimiter phases have 0 active steps). Input w accounts for 1.000 of the mass; the next most active input token, z, has 12 active steps out of about 199k. Activation does not vary with out_tok, prev_tok or prev2_tok (lift is about 1.2-2.5x for every value). Test scores reproduce exactly: P 0.986, R 0.925, F1 0.954, mass recall 0.984.",
+      "One explanation claim is not supported: 'when a w input directly follows another w input, the second one activates more weakly'. At recall_idx 4, mass_recall/recall is 1.089 when the previous input was also w versus 1.047 when it was not (the repeat is slightly STRONGER). At recall_idx 6 it is 1.317 versus 1.365 (slightly weaker). Across all positions >= 3 it is 1.064 versus 1.063, so there is no systematic penalty for a repeated w. The anecdote in misses also goes both ways: 'i w w' gives 0.04 then 0.13, and '2 w w' gives 0.12 then 0.08. This sentence should be removed.",
+      "The position claim is correct. Mean activation rises steadily with recall_idx: mass/active is about 0.9e-5 at 3, 1.7e-5 at 4, 2.1e-5 at 5, 2.2e-5 at 6, 2.4e-5 at 7 and 2.6e-5 at 8.",
+      "The misses (4616 on test, 1.6% of mass) are almost all weak activations on w at recall_idx 2 (original position 1). Firing at recall_idx 2 depends partly on L: precision is 0.73 at L=4, 0.31 at L=5 and 0.17 at L>=7. Adding the case (recall_idx==2 & L<=4) raises test F1 only from 0.954 to 0.964, so this is a minor refinement, not a missing feature class.",
+      "The false positives (822, about 1.4% of predicted steps) are all w at recall_idx 3 (original position 2), where precision is 0.949. No token or history pattern stands out, so this looks like scattered noise near the low-position threshold.",
+      "Notation check: recall_idx is the output index, so the input at recall_idx r is original token r-1. 'recall_idx >= 3' therefore matches the label's 'original position >= 2'. The explanation's 'original token 0 or 1 (recall_idx <= 2)' is consistent with this."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input w (fed-back w from original position >= 2; magnitude grows with original position)",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"w\")) & ((recall_idx >= 3) | ((recall_idx == 2) & (L <= 4)))",
+    "better_predicate_test_f1": 0.964
+  },
+  "final_label": "copy-phase input w (fed-back w from original position >= 2; magnitude grows with original position)"
+}

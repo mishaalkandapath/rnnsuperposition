@@ -1,0 +1,75 @@
+{
+  "label": "<DEL> delimiter step in sequences of length 5 or more",
+  "predicate": "(phase == 1) & (L >= 5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost only at the <DEL> delimiter step (about 98% of activation mass), where it is active on about 70% of delimiters. Magnitude and firing rate rise with sequence length: it is nearly silent at L=3, weak at L=4, and strongest at L=8-9. The L=9 delimiters (t=9) alone carry about 31% of the mass. Within long sequences (L=7-9) there is a small, weak run-up on the last one or two original tokens before <DEL> (about 2% of mass). The strongest examples tend to start with r, but first_tok has only a mild effect (1.5x lift). It essentially never fires in the copy phase or on early original tokens, and does not depend on token identity. Misses are mostly weak firings at L=4 delimiters and late original steps. False positives are L=5-6 delimiters where it stays silent.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 343,
+    "predicate": "(phase == 1) & (L >= 5)",
+    "split": "test",
+    "precision": 0.8120236473758947,
+    "recall": 0.8992313987259511,
+    "f1": 0.8534054136368827,
+    "mass_recall": 0.9668020838353691,
+    "correlation": 0.7562958854535964,
+    "n_active": 373926,
+    "n_predicted": 414084,
+    "coverage_by_activation_quartile": [
+      0.6983269506429045,
+      0.9152243212597078,
+      0.9845423134112814,
+      0.9988339876552454
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 343,
+    "predicate": "(phase == 1) & (L >= 5)",
+    "split": "dev",
+    "precision": 0.8122563211735186,
+    "recall": 0.8995145254934233,
+    "f1": 0.8536614123813159,
+    "mass_recall": 0.9674327296588902,
+    "correlation": 0.7565394826684742,
+    "n_active": 374273,
+    "n_predicted": 414480,
+    "coverage_by_activation_quartile": [
+      0.6969188513289658,
+      0.9164457934336525,
+      0.9859033002735978,
+      0.9987923221614227
+    ]
+  },
+  "gate": "hidden",
+  "feature": 343,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claim holds. The feature fires on <DEL> (97.9% of activation mass, active on 69.5% of delimiters), essentially never in the copy phase (5 steps), and the weak run-up on the last original tokens of L=8-9 sequences is about 2% of mass.",
+      "The L>=5 cutoff in the label is not a real boundary. Firing rate at the delimiter rises steadily with length (dev precision of (phase==1)&(L==k)): L=3 about 1%, L=4 0.15, L=5 0.43, L=6 0.74, L=7 0.92, L=8 0.98, L=9 0.99. At L=5 the feature is silent on the majority (57%) of delimiters, so the label's 'L >= 5' claim is wrong for L=5. Most of the predicate's false positives are a systematic class: L=5 and L=6 delimiters (77,838 false-positive steps on test).",
+      "The claim that it 'does not depend on token identity' is false for short sequences. At L=5 delimiters, firing depends on which tokens were in the sequence. Precision given that token X appeared somewhere in the original: i 0.70, x 0.65, s 0.62, h 0.59, v 0.57, 1 0.57, m 0.55, d 0.54, compared with k 0.25, o 0.27, e 0.28, w 0.28, a 0.31, z 0.31, against a base rate of 0.43. The tokens add together like a score, which tips L=5-6 delimiters over or under threshold. At L>=7 the delimiter fires almost every time, so token identity matters little there.",
+      "The explanation calls L=5-6 silence 'false positives' as if it were noise. It is a graded length x token-content threshold effect.",
+      "(phase==1)&(L>=6) gives the same test F1 (0.852) as the proposed predicate (0.853), which shows the 5 cutoff is arbitrary."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "<DEL> delimiter step; probability rises with sequence length (rare at L<=4, about half at L=5, near-certain at L>=7), and at short lengths it is pushed up or down by which tokens were seen",
+    "better_predicate": "(phase==1) & ((L>=7) | ((L==6) & ((n_seen([tok(c) for c in 'ixshvm1d3u']) - n_seen([tok(c) for c in 'koewazgqc2'])) >= -1)) | ((L==5) & ((n_seen([tok(c) for c in 'ixshvm1d3u']) - n_seen([tok(c) for c in 'koewazgqc2'])) >= 1)) | ((L==4) & ((n_seen([tok(c) for c in 'ixshvm1d3u']) - n_seen([tok(c) for c in 'koewazgqc2'])) >= 3)))",
+    "better_predicate_test_f1": 0.8815
+  },
+  "scorecard": {
+    "format": "slot2",
+    "summary": "Graded preference over the first original token (most: r, i, x, d, 3, p; least: q, b, e, k) and the second original token (most: i, x, d, s, h, 3; least: z, e, k, w); timing cues that raise it most: phase=1, recall_idx=0, t=7.",
+    "test_f1": 0.8923377043894003,
+    "test_precision": 0.8892391532396207,
+    "test_recall": 0.8954579248300466,
+    "full_test_f1": 0.9708745088503277,
+    "full_n_cues": 481,
+    "top40_test_f1": 0.892288736555178,
+    "slot2_test_f1": 0.8923377043894003,
+    "file": "scorecards/hidden_343.json"
+  },
+  "final_label": "<DEL> delimiter step; probability rises with sequence length (rare at L<=4, about half at L=5, near-certain at L>=7), and at short lengths it is pushed up or down by which tokens were seen"
+}

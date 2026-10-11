@@ -1,0 +1,64 @@
+{
+  "label": "Copy phase: fed-back token a, from the 3rd copy position on",
+  "predicate": "(phase == 2) & (in_tok == tok(\"a\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost only in the copy phase when the input is the letter a, i.e. the model just output an a and it is fed back (orig(recall_idx-1) == a). Input a carries 100% of activation mass. It does not fire on a in the original phase or at the first two copy positions, and is weak at recall_idx 2. At recall_idx 3 it fires only some of the time, mostly in shorter sequences (L <= 6) or near the end of the output (to_go <= 2). From recall_idx >= 4 it fires on essentially every copied a. The largest activations come at late copy positions near the end of the sequence. It responds to no other token, including other vowels and digits. Which token comes next or came before has little effect. A refinement ((recall_idx>=4) | (recall_idx==3 & L<=6)) gets dev F1 0.95, against 0.91 for this simpler predicate.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 188,
+    "predicate": "(phase == 2) & (in_tok == tok(\"a\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.8825036980976297,
+    "recall": 0.9501472249486101,
+    "f1": 0.9150770931984982,
+    "mass_recall": 0.9869550656429233,
+    "correlation": 0.8782633746066215,
+    "n_active": 53999,
+    "n_predicted": 58138,
+    "coverage_by_activation_quartile": [
+      0.8074814814814815,
+      0.9931851851851852,
+      0.9999259259259259,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 188,
+    "predicate": "(phase == 2) & (in_tok == tok(\"a\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.879290677175153,
+    "recall": 0.952553924505692,
+    "f1": 0.914457246598242,
+    "mass_recall": 0.9873661390893508,
+    "correlation": 0.8764841807920192,
+    "n_active": 53408,
+    "n_predicted": 57858,
+    "coverage_by_activation_quartile": [
+      0.8160575194727382,
+      0.9943079688436189,
+      0.999850209706411,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 188,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The token claim holds. Input a carries 100% of the activation mass. Other tokens (z 84, e 53, 3 43 of 53408 active steps) and the 75 original-phase activations are scattered noise.",
+      "The rule is set by both start and end position, not a cutoff at the 3rd copy position. It fires on a fed-back a when recall_idx>=4, or when the output is close to finishing (to_go small) and recall_idx>=2. The recorded predicate (recall_idx>=3) gets this wrong in both directions.",
+      "Systematic false positives: recall_idx==3 with L>=7 (to_go>=3) has test precision 0.22 (P=0.22, R=0.034). recall_idx==3 overall has precision only 0.58. All 8 rendered false positives on test were recall_idx 3 in L=7..9 sequences.",
+      "Systematic misses: the explanation says the feature does not fire at recall_idx 2 and is weak there, but this is false for short sequences. recall_idx==2 & to_go==0 (L=3) has precision 0.998, and recall_idx==2 & to_go==1 (L=4) has precision 0.79. The predicate drops these, and the rendered misses on test are mostly a at step 6 in L=4 sequences.",
+      "The label 'from the 3rd copy position on' overclaims relative to the data. It should be conditioned on distance to the end of the output.",
+      "The refined dev predicate in the explanation (recall_idx>=4 | recall_idx==3 & L<=6) scores test F1 0.952. It still misses the recall_idx-2 short-sequence class. The explanation's 'L<=6 or to_go<=2' wording describes one condition, since at recall_idx 3, L<=6 is the same as to_go<=2."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Copy phase: fed-back token a, late in the output (copy position >=4, or within the last 2-3 outputs once copy position >=2)",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"a\")) & ((recall_idx>=4) | ((recall_idx>=3)&(to_go<=2)) | ((recall_idx==2)&(to_go<=1)))",
+    "better_predicate_test_f1": 0.971
+  },
+  "final_label": "Copy phase: fed-back token a, late in the output (copy position >=4, or within the last 2-3 outputs once copy position >=2)"
+}

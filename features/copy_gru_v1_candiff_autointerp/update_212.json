@@ -1,0 +1,60 @@
+{
+  "label": "absolute position >= 5 before copying (late original tokens and <DEL>)",
+  "predicate": "(t >= 5) & (phase <= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Position counter. Fires on every input step at absolute position t >= 5 during the original phase, and on the <DEL> step whenever L >= 5, regardless of token identity (in_tok, prev_tok, first_tok, next_out all flat). Magnitude ramps with absolute step t, roughly 0.3 of max at t=5, 0.55 at t=6, 0.78 at t=7, 0.95 at t=8, and the <DEL> at t=9 reaches the max. The <DEL> step follows the same ramp: about 0.25 for L=5, 0.5 for L=6, 0.7 for L=7. Never fires at t <= 3, never on short sequences (L=3,4), and never during the copy phase. The only misses are near-zero activations (<=0.02 of max, 0.1% of mass) at t=4 on some sequences with L >= 5.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 212,
+    "predicate": "(t >= 5) & (phase <= 1)",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.9322679088298179,
+    "f1": 0.964946842588096,
+    "mass_recall": 0.9991552752215719,
+    "correlation": 0.9083171337078365,
+    "n_active": 1335305,
+    "n_predicted": 1244862,
+    "coverage_by_activation_quartile": [
+      0.7290722440066262,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 212,
+    "predicate": "(t >= 5) & (phase <= 1)",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.9321189920657978,
+    "f1": 0.964867066566317,
+    "mass_recall": 0.99915789161783,
+    "correlation": 0.9082731588428046,
+    "n_active": 1335484,
+    "n_predicted": 1244830,
+    "coverage_by_activation_quartile": [
+      0.7284759682631915,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 212,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claims hold up. On test the predicate (t >= 5) & (phase <= 1) scores precision 1.0 (0 false positives), recall 0.932, F1 0.965 and mass recall 0.999. The profile confirms it never fires at t <= 3, on L = 3 or 4, or in the copy phase (0 of 2.73M steps). It fires on 100% of original steps with orig_idx >= 5 and on every <DEL> with L >= 5 (414480 of 500000). Rates are flat across in_tok, prev_tok, prev2_tok, next_out and first_tok.",
+      "The only misses are at t = 4 (18% of all t = 4 steps, all with L >= 5). Their activations are at most 0.01 of max, so they are a small systematic but near-zero class holding 0.1% of the mass. Adding t = 4 & L >= 5 to the predicate lowers precision to 0.80 and F1 to 0.89, so the original predicate is the better one.",
+      "One numeric claim is wrong. The explanation says the <DEL> magnitude is about 0.25 for L=5, 0.5 for L=6 and 0.7 for L=7. The test examples show about 0.51 for L=5, 0.69-0.72 for L=6 and 0.76-0.87 for L=7. <DEL> sits about one step higher than an original token at the same t (t=5 token about 0.29, t=5 <DEL> about 0.51). This is a minor magnitude error and does not affect the label or predicate."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "label": "copy-phase input w",
+  "predicate": "(phase == 2) & (in_tok == tok(\"w\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, at steps where the fed-back input token is w (i.e. the model just emitted w and it is now its input). Never fires on w in the original phase, on <DEL>, or on any other token; 100% of activations are copy-phase w inputs. About 19% of copy-phase w inputs are inactive, mostly early steps in short sequences (t<=6); activation is weak at early t and small L and grows with t/sequence length. Strongest activations are on w originally placed late in a long sequence, often repeated w (ww), and the first w of a repeated pair tends to be higher than the second.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 136,
+    "predicate": "(phase == 2) & (in_tok == tok(\"w\"))",
+    "split": "test",
+    "precision": 0.81266348669026,
+    "recall": 1.0,
+    "f1": 0.8966512457026442,
+    "mass_recall": 1.0,
+    "correlation": 0.7744859248887337,
+    "n_active": 73941,
+    "n_predicted": 90986,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 136,
+    "predicate": "(phase == 2) & (in_tok == tok(\"w\"))",
+    "split": "dev",
+    "precision": 0.8115352834242274,
+    "recall": 1.0,
+    "f1": 0.8959640928331631,
+    "mass_recall": 1.0,
+    "correlation": 0.7730069689790012,
+    "n_active": 73659,
+    "n_predicted": 90765,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 136,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold. All activation is in the copy phase on w inputs (test recall 1.0, mass recall 1.0, 0 missed activations). There is no activation in the original phase or on <DEL>, and none on any other token. Every active step has in_first==0, which follows from the copy phase. Precision is 0.813 on test.",
+      "One factual claim is wrong: the inactive w inputs are not 'mostly early steps (t <= 6)'. On test, the predicate restricted to t<=6 gives 8470 predicted at precision 0.416, about 4.9k false positives. Restricted to t>=7 it gives 82516 predicted at precision 0.853, about 12.1k false positives. So about 71% of the 17045 false positives are at t>=7. Even at late steps, roughly 15% of copy-phase w inputs stay inactive.",
+      "The late false positives look diffuse rather than systematic. Precision sits at about 0.85-0.91 across out_tok letter/digit, in_count, n_digits, prev_tok digit and recall_idx>=2. This looks like threshold noise on a graded magnitude.",
+      "There are mild lower-precision pockets. When the w was the first original token (recall_idx==1), precision is 0.64. On the final copy step (to_go==0), it is 0.68. When t<=6, it is 0.42. These match the weak-at-small-t/L account but are not a separate counterexample class.",
+      "The claim that 'the first w of a pair activates more strongly than the second' is only anecdotal. A w that follows a w (prev_tok==w) still fires at precision 0.91. When the next output is also w (out_tok==w), precision is 0.97. Both members of a doubled w reliably fire.",
+      "The label does not overclaim relative to the predicate."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input w",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"w\")) & (t >= 6)",
+    "better_predicate_test_f1": 0.904
+  },
+  "final_label": "copy-phase input w"
+}

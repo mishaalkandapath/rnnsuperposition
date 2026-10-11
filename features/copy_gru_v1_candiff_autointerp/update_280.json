@@ -1,0 +1,62 @@
+{
+  "label": "token right after an early f (f at position 0 or 1)",
+  "predicate": "(prev_tok == tok(\"f\")) & (t <= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires in the original phase on the input that immediately follows an f, but only when that f was original token 0 or 1 (i.e. at step 1 or 2). Strongest (near max, about 2.4) at step 1 when the sequence starts with f; this accounts for about 75% of activation mass. Weaker and more variable (0.05-0.9 of max) at step 2 after f at position 1. It does not fire after an f later in the sequence, after any other token, on the f itself, or in the delimiter/copy phases. Missed activations (about 2%) are near-zero blips, e.g. after a leading z or after f at position 2. False positives are mostly step-2 cases where the activation is zero.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 280,
+    "predicate": "(prev_tok == tok(\"f\")) & (t <= 2)",
+    "split": "test",
+    "precision": 0.889111996883148,
+    "recall": 0.9769164910432033,
+    "f1": 0.9309484584608142,
+    "mass_recall": 0.9997575237090014,
+    "correlation": 0.866300794467662,
+    "n_active": 30368,
+    "n_predicted": 33367,
+    "coverage_by_activation_quartile": [
+      0.9076659641728135,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 280,
+    "predicate": "(prev_tok == tok(\"f\")) & (t <= 2)",
+    "split": "dev",
+    "precision": 0.8908606655494374,
+    "recall": 0.9776996847083552,
+    "f1": 0.932262307403232,
+    "mass_recall": 0.9997269035833101,
+    "correlation": 0.866551634158536,
+    "n_active": 30448,
+    "n_predicted": 33416,
+    "coverage_by_activation_quartile": [
+      0.9107987388334209,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 280,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Systematic false-positive class at step 2: the feature stays silent after an f at position 1 when the first token is d, f, r, s, t or x (dev precision is 0.0 for each of these first tokens, about 560 steps per token). It is only partly active when the first token is i (0.76) or p (0.63). For every other first token, precision is 1.0. So the 3,700 test false positives are not just 'step-2 cases where activation is zero'. They come from a gate on the first token.",
+      "One consequence: 'f f X' sequences (f at both position 0 and position 1) never fire at step 2. The explanation's claim that the feature fires 'after an f at position 1' therefore overclaims.",
+      "Decomposition on the test split: t==1 & prev f has precision 1.0, recall 0.55 and mass 0.75. t==2 & prev f has precision 0.78, recall 0.43 and mass 0.25. The step-2 part is where the original predicate is imprecise.",
+      "The other claims hold. Activation is confined to the original phase (1 delimiter step and 9 copy steps out of 30,448, essentially zero mass). The max is about 2.44 at step 1 with a leading f. It never fires on the f itself or after later f's. The misses are about 700 near-zero blips (mostly step 1 after a leading z, about 0.00 of max). Mass recall is 0.9998."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "token right after an early f: step 1 after a leading f (strong), or step 2 after f at position 1 unless the first token is d/f/r/s/t/x",
+    "better_predicate": "(prev_tok == tok(\"f\")) & ((t == 1) | ((t == 2) & ~isin(orig(0), [tok(\"d\"),tok(\"f\"),tok(\"r\"),tok(\"s\"),tok(\"t\"),tok(\"x\")])))",
+    "better_predicate_test_f1": 0.983
+  },
+  "final_label": "token right after an early f: step 1 after a leading f (strong), or step 2 after f at position 1 unless the first token is d/f/r/s/t/x"
+}

@@ -1,0 +1,62 @@
+{
+  "label": "first two copy-phase steps after <DEL> (outputting original tokens 1 and 2), for L >= 5",
+  "predicate": "((recall_idx == 1) | (recall_idx == 2)) & (L >= 5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "A positional copy-phase feature. It fires on the first two steps after the delimiter: the step whose input is the echoed first token (recall_idx 1, prev_tok <DEL>; 84% active, 78% of mass) and the next step (recall_idx 2; 69% active, 22% of mass). It is essentially silent during the original phase, on the <DEL> step, and from recall_idx 3 on. Magnitude is largest at recall_idx 1 (top examples about 1.0 of max there vs about 0.3 at recall_idx 2) and grows with sequence length: L=3 never fires, L=4 rarely fires (and only weakly at recall_idx 1), and activation mass rises with L. Token identity (input, output, first token, digit count) has no effect. Misses are tiny residual activations (0.1% of mass); false positives are mostly the recall_idx 2 step in L=5 sequences.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 475,
+    "predicate": "((recall_idx == 1) | (recall_idx == 2)) & (L >= 5)",
+    "split": "test",
+    "precision": 0.9168888438094686,
+    "recall": 0.9851783040679224,
+    "f1": 0.9498076838886005,
+    "mass_recall": 0.999382514316736,
+    "correlation": 0.7929234856197335,
+    "n_active": 770762,
+    "n_predicted": 828168,
+    "coverage_by_activation_quartile": [
+      0.9407133701106953,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 475,
+    "predicate": "((recall_idx == 1) | (recall_idx == 2)) & (L >= 5)",
+    "split": "dev",
+    "precision": 0.9168295213279289,
+    "recall": 0.9852692195006858,
+    "f1": 0.9498181009261794,
+    "mass_recall": 0.9993850777830909,
+    "correlation": 0.792794723755896,
+    "n_active": 771378,
+    "n_predicted": 828960,
+    "coverage_by_activation_quartile": [
+      0.9410770307760118,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 475,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Systematic false-positive class in the predicate: at recall_idx==2 with L==5 the feature is mostly silent. Test precision is 0.163 (only about 13k of 82k steps active) and these steps hold 0.1% of mass. They account for nearly all of the predicate's roughly 69k false positives. The explanation mentions these false positives but the predicate and label still include them, so the label overclaims for L=5.",
+      "Per-length test precision at recall_idx==2: L=5 0.163, L=6 0.9986, L=7 1.0, L>=6 overall 0.9996. At recall_idx==1 with L>=5, precision is 1.0, so the feature fires every time. The real rule is that the length threshold differs between the two steps: L>=5 for the first copy step and L>=6 for the second.",
+      "The other claims check out on test. recall_idx==1 with L==4 fires rarely (precision 0.078) and weakly (mass 0.02%). recall_idx==2 with L==4 never fires. recall_idx==3 is near silent (precision 0.0096). Activity in the original and delimiter phases is negligible (1057 steps at orig_idx 8, i.e. L=9, about 0 mass). Token identity shows flat lift.",
+      "Running misses on the improved predicate (test) leaves 24,850 missed steps holding only 0.2% of mass. They are weak (about 0.01-0.08 of max), mostly the second copy step at L=5 plus a few at L=4. There are 120 false positives, scattered at the L=6 second step. This is scattered noise."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "first copy step after <DEL> (outputting original token 1) when L >= 5, and second copy step (outputting original token 2) when L >= 6; strongest at the first step",
+    "better_predicate": "((recall_idx == 1) & (L >= 5)) | ((recall_idx == 2) & (L >= 6))",
+    "better_predicate_test_f1": 0.9835
+  },
+  "final_label": "first copy step after <DEL> (outputting original token 1) when L >= 5, and second copy step (outputting original token 2) when L >= 6; strongest at the first step"
+}

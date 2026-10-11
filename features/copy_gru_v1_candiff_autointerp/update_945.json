@@ -1,0 +1,61 @@
+{
+  "label": "first copy step (after <DEL>) when the fed-back input is first token l, in longer sequences",
+  "predicate": "(recall_idx == 1) & (in_tok == tok(\"l\")) & (L >= 7)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only at step t = L+1 (recall_idx 1), the step after <DEL>, when the model is fed back its first output, which is the first original token. 99% of activation mass comes from in_tok = l (so first_tok = l). Magnitude grows with sequence length: L=6 gives weak activations (~2.6% of mass, many l-first L=6 sequences stay inactive), L=7..9 fire reliably, with L=9 carrying the most mass (45%). The top activations (~0.9-1.0 of max) are all l-first sequences with L=8 or 9. A small weak tail fires on other first tokens (mainly 2, x) at the same step. It never fires in the original or delimiter phase, at any other copy position, or for L<=5, and the identity of the token being output (orig(1)) has little effect.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 945,
+    "predicate": "(recall_idx == 1) & (in_tok == tok(\"l\")) & (L >= 7)",
+    "split": "test",
+    "precision": 0.9700361010830325,
+    "recall": 0.8389883430474604,
+    "f1": 0.8997655988391562,
+    "mass_recall": 0.9614580703110643,
+    "correlation": 0.8890527404757147,
+    "n_active": 9608,
+    "n_predicted": 8310,
+    "coverage_by_activation_quartile": [
+      0.42298084929225643,
+      0.9358867610324729,
+      0.9970857618651124,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 945,
+    "predicate": "(recall_idx == 1) & (in_tok == tok(\"l\")) & (L >= 7)",
+    "split": "dev",
+    "precision": 0.9755140853441103,
+    "recall": 0.8496738792835697,
+    "f1": 0.9082558654271802,
+    "mass_recall": 0.964805290128957,
+    "correlation": 0.893344614138619,
+    "n_active": 9659,
+    "n_predicted": 8413,
+    "coverage_by_activation_quartile": [
+      0.4616977225672878,
+      0.9407867494824017,
+      0.9966873706004141,
+      0.9995857497928748
+    ]
+  },
+  "gate": "update",
+  "feature": 945,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Profile matches the claims. Every activation is in the copy phase at recall_idx 1, never in the original or delimiter phase. in_tok=l accounts for 99.0% of activation mass. L=9 carries 45.5% of mass, L=6 2.6%, and L<=5 has only 3 activations.",
+      "Test scores reproduce: P 0.970, R 0.839, F1 0.900, mass recall 0.961. Recall by count is modest because the misses are mostly very weak activations (<0.12 of max): 1547 missed steps hold only 3.9% of mass. Two classes make them up: l-first sequences at L=6 (as a predicate, P 0.31, mass 2.6%) and a weak tail on other first tokens at recall_idx 1 (mass 0.95%). Both are disclosed in the explanation.",
+      "False positives (249 test steps) are mostly l-first sequences at L=7 that stay inactive (the L==7 subset has P 0.93, versus 0.9997 at L=9). This fits the claim that magnitude grows with length. I found no token pattern in the sampled false positives.",
+      "Minor overclaim: the label says 'fires on' l-first sequences with L>=7. At L=7 about 7% stay inactive, and the strict predicate excludes the weak L=6 activity. Both points are described in the explanation."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

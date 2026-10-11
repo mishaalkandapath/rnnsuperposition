@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input s (fed back) at recall positions 3-4 in long sequences",
+  "predicate": "(phase == 2) & (in_tok == tok(\"s\")) & (recall_idx >= 3) & (recall_idx <= 4) & (L >= 7)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, at steps whose input is the token s (99.5% of activation mass), meaning the model has just emitted s and is now recalling the original token right after it. It is strongly position-gated: almost all mass falls at recall_idx 3-4 (s was originally at position 2-3) in sequences of length 7-9. The strongest activations are s at original position 2 in L=9 sequences (t=12, five outputs still to go), and magnitude rises with L. It is near zero or silent for s in short sequences (L<=6), for s copied early (recall_idx<=2) or late (recall_idx>=6), and for s during the original phase or at the delimiter. It essentially never fires on other tokens. A repeated s directly after the first one gets a weaker activation. Dev: P 0.83, R 0.76, F1 0.79, mass recall 0.91.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 867,
+    "predicate": "(phase == 2) & (in_tok == tok(\"s\")) & (recall_idx >= 3) & (recall_idx <= 4) & (L >= 7)",
+    "split": "test",
+    "precision": 0.822512647554806,
+    "recall": 0.7627478358000559,
+    "f1": 0.7915036657103944,
+    "mass_recall": 0.9137660256787312,
+    "correlation": 0.7536962596395005,
+    "n_active": 17905,
+    "n_predicted": 16604,
+    "coverage_by_activation_quartile": [
+      0.4297520661157025,
+      0.7046470062555853,
+      0.9222520107238605,
+      0.9944146559428061
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 867,
+    "predicate": "(phase == 2) & (in_tok == tok(\"s\")) & (recall_idx >= 3) & (recall_idx <= 4) & (L >= 7)",
+    "split": "dev",
+    "precision": 0.8258416851707375,
+    "recall": 0.7596467016284847,
+    "f1": 0.7913623555121054,
+    "mass_recall": 0.9128295045549084,
+    "correlation": 0.7528580443647791,
+    "n_active": 18115,
+    "n_predicted": 16663,
+    "coverage_by_activation_quartile": [
+      0.42989622433208213,
+      0.6939721792890263,
+      0.9180834621329211,
+      0.9966872791519434
+    ]
+  },
+  "gate": "update",
+  "feature": 867,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reported test scores reproduce exactly: P 0.823, R 0.763, F1 0.792, mass recall 0.914.",
+      "The factual claims hold. Activation is 100% in the copy phase, with zero in the original phase and at the delimiter. in_tok s carries 99.5% of mass, and other tokens fire only scattered (61 or fewer steps each). recall_idx 3 and 4 carry 57.7% and 36.8% of mass. L=9 carries 54% of mass, and magnitude rises with L. L<=5 is effectively silent (mass 0.002), and recall_idx<=2 and >=6 are near silent (mass about 0.01 each). to_go 0-1 is near silent.",
+      "Precision varies with length inside the predicate. In the L=9 cells precision is 0.997 (recall_idx 3) and 0.94 (recall_idx 4). In the L=8 cells it is 0.94 and 0.82. In the L=7 cells it drops to 0.69 and 0.53. So most of the 2947 false positives come from L=7. This matches the claim that strength is graded by L. It is not a separate missing class.",
+      "The missed activations (8.6% of mass) are weak, low-magnitude tails of the same s-in-copy-phase pattern: recall_idx 5 (mass 0.036), L=6 (mass 0.022) and recall_idx 2 (0.011). Every variant I tried that widens or narrows the predicate (recall_idx 3-5, L>=6, L>=8, L>=8 or L=7 with recall_idx 3, excluding a preceding s) lowers test F1 (0.70-0.78). No better predicate found.",
+      "The claim that a second s gives a weaker activation is supported: inside the predicate, precision is 0.61 when prev_tok==s versus 0.83 otherwise.",
+      "Minor: F1 of 0.79 sits just under the 0.8 cutoff. The verdict 'explained' rests on mass recall 0.91 and high precision for L>=8. That is acceptable, but the label could mention the graded fall-off at L=7."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "label": "copy-phase input token d",
+  "predicate": "(phase == 2) & (in_tok == tok(\"d\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires when the input token is d during the copy phase (when the model reads back its own echoed d). It never fires on d in the original phase or at the delimiter, and it essentially never fires on any other token (only a few weak activations on u or 0 at the last step). Activation is usually weaker when d is echoed at the first copy step (recall_idx 1, i.e. first_tok d), and about 12% of copy-phase d inputs are inactive, mostly early in the copy phase. The strongest activations come late in the copy phase, often when d is the next-to-last original token or the d is repeated (dd); for a repeated dd the first echoed d is stronger than the second. Dev: P 0.88, R 1.00, F1 0.94.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 45,
+    "predicate": "(phase == 2) & (in_tok == tok(\"d\"))",
+    "split": "test",
+    "precision": 0.8791789563710924,
+    "recall": 0.9999251758367835,
+    "f1": 0.9356726511036297,
+    "mass_recall": 0.9999897769069713,
+    "correlation": 0.820331001804768,
+    "n_active": 80188,
+    "n_predicted": 91201,
+    "coverage_by_activation_quartile": [
+      0.9997007033471342,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 45,
+    "predicate": "(phase == 2) & (in_tok == tok(\"d\"))",
+    "split": "dev",
+    "precision": 0.8802240982686318,
+    "recall": 0.9998999737431076,
+    "f1": 0.936253161000281,
+    "mass_recall": 0.9999826440288635,
+    "correlation": 0.8218692912169728,
+    "n_active": 79979,
+    "n_predicted": 90853,
+    "coverage_by_activation_quartile": [
+      0.9995998999749938,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 45,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core predicate holds up. Test: P 0.879, R 1.000, F1 0.936, mass recall 1.000. Only 6 test activations fall outside it (weak u/0, about 0% of mass). The inactive copy-phase d steps are spread out with no clear pattern. The inactive rate is about 9-12% in every slice tried: in_count==1 P 0.90, in_count>=2 P 0.79, prev_tok digit P 0.92, next_out digit P 0.87, n_digits 0 vs >=2 P 0.88 vs 0.87, L>=7 P 0.89. Misses on dev and test show no token or history pattern.",
+      "The explanation's magnitude claim is wrong. 'The strongest activations come late in the copy phase, often when d is the next-to-last original token' is contradicted by quartile coverage. d at to_go==0, which is exactly the next-to-last original token being read back, covers 0.236/0.241/0.176/0.092 of quartiles 1-4, so it is strongly depleted in the top quartile. t>=14 is also depleted (0.217 -> 0.140). The top quartile is instead enriched for to_go>=3, mid copy phase with outputs still to come (0.403 -> 0.574). The claim was generalised from the max-activating examples, which happen to be L=9 at to_go 0 (that subset is only 3% of activations).",
+      "'About 12% of copy-phase d inputs are inactive, mostly early in the copy phase' is overstated. recall_idx==1 has 27% inactive, about 4.5k of about 10.9k dev false positives (around 42%). The remaining ~58% sit at recall_idx>=2, where about 8.6% are inactive. L==3 is also weak (P 0.31), but it is tiny (870 steps).",
+      "Claims that check out: zero activation in the original and delimiter phases. Weaker activation at recall_idx 1: share of mass 0.121 vs share of activations 0.151, top-quartile coverage 0.08 vs 0.23 in the bottom quartile. In repeated dd the first echoed d is stronger, as the top examples show. The reported refinement F1s match (recall_idx>=2 gives 0.88).",
+      "The non-d exceptions are not only 'at the last step'. Test misses include u at steps 9, 11 and 16, right before an echoed d. They are negligible in mass.",
+      "Not upheld because one factual magnitude claim in the explanation is contradicted and the false-positive location is overstated. The label and predicate themselves are fine, and I found no systematic false-positive class that a better predicate would fix."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input token d",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "copy-phase input token d"
+}

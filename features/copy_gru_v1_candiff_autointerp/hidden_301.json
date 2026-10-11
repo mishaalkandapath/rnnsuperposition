@@ -1,0 +1,61 @@
+{
+  "label": "copy-phase input q (echoed q)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"q\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, at steps where the input (the model own echoed output) is the letter q; 99.5% of activations and 99.97% of mass fall in this predicate. Never fires during the original phase or on <DEL>, even when q is an original token. Magnitude is strongly modulated by position: largest when q is the first echoed token (recall_idx 1, i.e. q was the first original token, ~61% of mass, up to max), decaying with later recall positions; q echoed late (recall_idx >= 5) is often weak or inactive, which accounts for most false positives (precision 0.76). Does not fire on other tokens (tiny residual on the input right before q).",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 301,
+    "predicate": "(phase == 2) & (in_tok == tok(\"q\"))",
+    "split": "test",
+    "precision": 0.7646021988675171,
+    "recall": 0.9948541532286963,
+    "f1": 0.864662169317113,
+    "mass_recall": 0.9996523382863736,
+    "correlation": 0.6290542540195126,
+    "n_active": 69765,
+    "n_predicted": 90774,
+    "coverage_by_activation_quartile": [
+      0.9796468294920307,
+      0.9997706553523307,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 301,
+    "predicate": "(phase == 2) & (in_tok == tok(\"q\"))",
+    "split": "dev",
+    "precision": 0.7639119213662072,
+    "recall": 0.9950218865333448,
+    "f1": 0.864283894856518,
+    "mass_recall": 0.9996610786443736,
+    "correlation": 0.6284269139846392,
+    "n_active": 69906,
+    "n_predicted": 91055,
+    "coverage_by_activation_quartile": [
+      0.9802597699834068,
+      0.9998283458259427,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 301,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Core claims check out on test: (phase==2)&(in_tok==q) gives P 0.765, R 0.995, F1 0.865, mass recall 0.9997. The feature never fires in the original or delimiter phase (0 of 3.23M and 0 of 500k steps on dev), even when q is an original token. It never fires on in_first==1. Missed activations hold 0.0% of the mass. They are tiny activations on the input just before a q, as the explanation says.",
+      "The explanation's 'gets weaker at later recall positions' is not monotone in firing rate. Precision of the predicate at each recall_idx and L (dev) is: r=1-2 1.00 for all L; r=3 0.94-1.00; r=4 0.50 (L=5), 0.65 (L=7), 0.51 (L=9); r=5-6 0.27-0.29 at L=7 vs 0.48/0.66 at L=9; r=7 0.76 and r=8 0.84 at L=9. Reliability dips around recall 4-6 and recovers at the last recall positions of long sequences. So the false positives come from a position-by-length gating pattern, not simply from 'late = silent'.",
+      "I could not find a clean history variable that explains the r=4 false positives. Within r=4, L=7, splitting on prev_tok digit or vowel, in_count, n_digits, next_out digit or seen(DIGITS) moves precision only between about 0.57 and 0.79. The residual looks like diffuse positional modulation of magnitude around the threshold, not a token or history class.",
+      "Position-aware refinements give only marginal test gains. Excluding (L==7 & recall_idx>=5) gives F1 0.876. Using (recall_idx<=4)|(recall_idx>=7) gives F1 0.877, versus 0.865 baseline. The agent's recall_idx<=4 numbers reproduce on test (P 0.883, R 0.800, F1 0.840). The simple predicate is a reasonable choice."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok('q')) & ((recall_idx <= 4) | (recall_idx >= 7))",
+    "better_predicate_test_f1": 0.877
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "label": "<DEL> delimiter step, stronger for shorter sequences",
+  "predicate": "(phase == 1) & (L <= 7)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost exclusively at the <DEL> delimiter step (t == L, the step that outputs original token 0): phase==1 alone has ~100% recall and mass recall (13 stray original-phase activations out of 64.6k), but only 65% precision because firing probability at <DEL> falls off with sequence length: about 100% of delimiters at L=3-4, 90% at L=5, 75% at L=6, 54% at L=7, about 35% at L=8-9. Magnitude also falls with L (activation mass per firing is highest for L=3-4) and is modulated by content: the top activations are short sequences starting with early letters (a, d) with few digits; more digits in the sequence lowers the firing rate. Never fires during the copy phase or on ordinary original-token inputs. The plain predicate phase == 1 scores dev F1 0.785 with mass recall 1.0; adding L <= 7 gives F1 0.81.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 12,
+    "predicate": "(phase == 1) & (L <= 7)",
+    "split": "test",
+    "precision": 0.7968782767608377,
+    "recall": 0.8232180990993779,
+    "f1": 0.8098340691124981,
+    "mass_recall": 0.89511279210902,
+    "correlation": 0.7462567158616144,
+    "n_active": 64622,
+    "n_predicted": 66758,
+    "coverage_by_activation_quartile": [
+      0.6650779896013865,
+      0.7660930923495914,
+      0.8801609408851748,
+      0.981553698545342
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 12,
+    "predicate": "(phase == 1) & (L <= 7)",
+    "split": "dev",
+    "precision": 0.7953054315587645,
+    "recall": 0.8212628387575795,
+    "f1": 0.8080757347457499,
+    "mass_recall": 0.8958308597450174,
+    "correlation": 0.746419299009425,
+    "n_active": 64648,
+    "n_predicted": 66758,
+    "coverage_by_activation_quartile": [
+      0.6534463556490533,
+      0.7666130429402301,
+      0.8821309243905457,
+      0.9828610320504888
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 12,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The factual claims check out on dev. phase == 1 has recall 0.9998 and mass recall 1.0, with only 13 original-phase activations. Per-L firing rates at <DEL> are about 100/98/90/75/54/37/32% for L=3..9. The original predicate scores test P 0.797, R 0.823, F1 0.81.",
+      "Systematic gap: the explanation calls the first-token effect a side note ('content matters too'), but the first original token (the token output at <DEL>) controls firing about as much as L does, and the predicate ignores it. At L>=8, sequences starting with a, d, s, c fire 86-95% of the time, while h, o, 2, m, x, g fire 1-4%. At L=6, a-d, q, y fire 100%, while 2, o, h, x fire only 20-39%.",
+      "Misses on test hold 10.5% of activation mass (11.4k steps), almost all at L=8-9 <DEL> steps. False positives number 13.6k, almost all at L=6-7 <DEL> steps. These are not scattered noise. They are the first-token classes the predicate leaves out.",
+      "The label 'stronger for shorter sequences' is accurate as far as it goes. But it describes this unit as a length detector when it is really a joint threshold on L and the first token / out_tok. The n_digits effect is weak by comparison: at L=7, n_digits==0 gives precision 0.57 vs 0.50 for n_digits>=2.",
+      "A first-token-aware predicate raises test F1 from 0.81 to 0.889 and mass recall from 0.895 to 0.977."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "<DEL> delimiter step, gated jointly by sequence length and the first original token (fires at all lengths when the first token is in {a,b,c,d,f,q,s,v,y}; only for short L when it is in {g,h,m,o,r,x,1,2,...})",
+    "better_predicate": "(phase == 1) & (isin(first_tok, [tok(c) for c in 'abcdfqsvy']) | (L <= 6) | ((L <= 7) & isin(first_tok, [tok(c) for c in 'eijlw03ktu'])))",
+    "better_predicate_test_f1": 0.889
+  },
+  "final_label": "<DEL> delimiter step, gated jointly by sequence length and the first original token (fires at all lengths when the first token is in {a,b,c,d,f,q,s,v,y}; only for short L when it is in {g,h,m,o,r,x,1,2,...})"
+}

@@ -1,0 +1,62 @@
+{
+  "label": "sequence started with w: late original steps (t>=7) and <DEL>",
+  "predicate": "(first_tok == tok(\"w\")) & (t >= 7) & (phase <= 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires almost only in sequences whose first original token is w (93% of activation mass), at the late end of the input: original positions 6-8 and the <DEL> step (t = 6..9), and never in the copy phase. Activation grows across the late original positions. It peaks on the last original token (to_go = 0) and is somewhat lower on <DEL>. So it shows up mostly in long sequences (L = 8-9); in L = 7 sequences it is usually silent on <DEL>. It does not fire before t = 6, does not depend on the identity of the current input token, and fires only weakly at the end of sequences that do not start with w. Predicate (first token w, t >= 7, not copy phase): dev precision 0.80, recall 0.75, mass recall 0.92. Most missed steps are weak activations.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 129,
+    "predicate": "(first_tok == tok(\"w\")) & (t >= 7) & (phase <= 1)",
+    "split": "test",
+    "precision": 0.7976190476190477,
+    "recall": 0.7479882126260909,
+    "f1": 0.7720067848160496,
+    "mass_recall": 0.9162157281672396,
+    "correlation": 0.7509594725550045,
+    "n_active": 17646,
+    "n_predicted": 16548,
+    "coverage_by_activation_quartile": [
+      0.37647325475974613,
+      0.6781504986400725,
+      0.9412831557469962,
+      0.9961459986397643
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 129,
+    "predicate": "(first_tok == tok(\"w\")) & (t >= 7) & (phase <= 1)",
+    "split": "dev",
+    "precision": 0.7998067516154357,
+    "recall": 0.748671565856416,
+    "f1": 0.7733948436450699,
+    "mass_recall": 0.915281172049845,
+    "correlation": 0.7523934990131598,
+    "n_active": 17690,
+    "n_predicted": 16559,
+    "coverage_by_activation_quartile": [
+      0.3707890572009948,
+      0.6911598462581958,
+      0.9384893713251922,
+      0.9943464495703301
+    ]
+  },
+  "gate": "update",
+  "feature": 129,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The magnitude claim is wrong for L=8. The explanation says activation 'peaks on the last original token (to_go = 0) and is somewhat lower on <DEL>'. That holds only for L=9. Within first_tok==w sequences on dev: L=8 t=7 (last original) has precision 0.78 and mass 0.111, while L=8 t=8 (<DEL>) has precision 0.92 and mass 0.159, so <DEL> beats the last original token there. L=9: t=7 is 0.77/0.106, t=8 (last original) 0.99/0.283, t=9 (<DEL>) 0.99/0.230. The peak follows absolute step t=8, not to_go=0. Firing reads as a ramp in absolute time over steps 7..L, which is consistent with by-t (t=8 holds 50% of mass) and by-L (L=9 holds 69% of mass).",
+      "Most of the L=7 behaviour checks out. For w-start L=7, t=7 (<DEL>) has precision 0.35, so it is mostly silent, and t=6 has precision 0.08. Dropping L=7 gives test P 0.886, R 0.697, F1 0.780, against the original's test P 0.798, R 0.748, F1 0.772. That matches the claimed trade-off. Calling the L=7 <DEL> step the source of 'most false positives' overclaims, though: test misses also show inactive or weak steps in L=8 (e.g. t=7 inactive), and L=8 t=7 contributes about 22% false positives.",
+      "The factual claims that check out: zero activation in the copy phase (by-phase copy = 0 of 2.7M steps); no firing before t=6; first_tok==w holds 93% of activation mass; little dependence on in_tok (largest lift 1.6x, for f).",
+      "Missed activations (about 25% of active steps, 8.4% of mass on test) are diffuse weak firing in sequences that do not start with w, at t>=7 and L=9. I found no systematic class behind them. Candidates tested: orig(1)==w gives precision 0.06; first_tok in {n,t,c,k} at L9 t8 gives precision 0.12; in_tok==f gives precision 0.18. Treating these as noise is reasonable, so the verdict stays 'explained'. The failed point is the specific magnitude claim."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "sequence started with w: steps t=7..L (late original tokens and <DEL>), strongest at absolute step t=8; mostly silent for L<=7",
+    "better_predicate": "(first_tok == tok('w')) & (t >= 7) & (phase <= 1) & (L >= 8)",
+    "better_predicate_test_f1": 0.78
+  },
+  "final_label": "sequence started with w: steps t=7..L (late original tokens and <DEL>), strongest at absolute step t=8; mostly silent for L<=7"
+}

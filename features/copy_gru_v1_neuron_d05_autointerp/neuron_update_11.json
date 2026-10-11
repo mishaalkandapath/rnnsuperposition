@@ -1,0 +1,63 @@
+{
+  "label": "Early-sequence input of a token in a fixed set (t=0: e,h,p,s,2,b,v,x,t,k,u,o; t=1-2: mainly e,h,p,s)",
+  "predicate": "((t == 0) & isin(in_tok, [tok(\"e\"),tok(\"h\"),tok(\"p\"),tok(\"s\"),tok(\"2\"),tok(\"b\"),tok(\"v\"),tok(\"x\"),tok(\"t\"),tok(\"k\"),tok(\"u\"),tok(\"o\")])) | ((t >= 1) & (t <= 2) & isin(in_tok, [tok(\"e\"),tok(\"h\"),tok(\"p\"),tok(\"s\")]))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Update-gate unit that fires almost only in the first three original-phase steps (t=0..2 hold 99% of the activation mass). It is never active at the delimiter and almost never active later in the original phase or in the copy phase. At t=0 it is an exact token detector: it fires on every one of 12 tokens (e,h,p,s,2,b,v,x,t,k,u,o) and on no other token (precision 1.0). At t=1-2 it fires dependably on e, h, p, s and only sometimes on the other set tokens, depending on context; it rarely fires once a set token has already appeared. Magnitude is largest for e (about 0.46 of max at t=0, up to 0.65 at t=1-2 after tokens like k c / k q), then h, p, s; digits and o, u are weak. A small tail (about 1% of mass) fires at copy step t=4 when L=3 and a set token is fed back (e.g. e a n <DEL> e gives the maximum activation).",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 11,
+    "predicate": "((t == 0) & isin(in_tok, [tok(\"e\"),tok(\"h\"),tok(\"p\"),tok(\"s\"),tok(\"2\"),tok(\"b\"),tok(\"v\"),tok(\"x\"),tok(\"t\"),tok(\"k\"),tok(\"u\"),tok(\"o\")])) | ((t >= 1) & (t <= 2) & isin(in_tok, [tok(\"e\"),tok(\"h\"),tok(\"p\"),tok(\"s\")]))",
+    "split": "test",
+    "precision": 0.8216327326741587,
+    "recall": 0.8492579209379507,
+    "f1": 0.835216960268436,
+    "mass_recall": 0.9181231340585209,
+    "correlation": 0.6926384146497654,
+    "n_active": 64481,
+    "n_predicted": 66649,
+    "coverage_by_activation_quartile": [
+      0.6969170646982197,
+      0.8486352357320099,
+      0.8807692307692307,
+      0.9707196029776675
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 11,
+    "predicate": "((t == 0) & isin(in_tok, [tok(\"e\"),tok(\"h\"),tok(\"p\"),tok(\"s\"),tok(\"2\"),tok(\"b\"),tok(\"v\"),tok(\"x\"),tok(\"t\"),tok(\"k\"),tok(\"u\"),tok(\"o\")])) | ((t >= 1) & (t <= 2) & isin(in_tok, [tok(\"e\"),tok(\"h\"),tok(\"p\"),tok(\"s\")]))",
+    "split": "dev",
+    "precision": 0.8225794392523365,
+    "recall": 0.8491687377471789,
+    "f1": 0.8356626359603816,
+    "mass_recall": 0.9197588435746823,
+    "correlation": 0.6939082899863254,
+    "n_active": 64781,
+    "n_predicted": 66875,
+    "coverage_by_activation_quartile": [
+      0.6914670288960237,
+      0.8528558196974375,
+      0.8787280024698981,
+      0.9736338376041989
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 11,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The t=0 claims hold: precision 1.0 on test, recall 0.62, 65% of activation mass. The timing claims also hold: t=0..2 carry 99% of the mass, the unit never fires at <DEL>, and the copy tail at t=4 is about 1% of mass.",
+      "The claim that it 'fires dependably on e, h, p, s at t=1-2' is false. Precision of that clause is 0.55 on test. By token: e 0.89, h 0.47, p 0.44, s 0.42. At t=2 the clause has precision 0.42, so h/p/s fire less than half the time. This clause produces most of the 11.9k test false positives (e.g. 'm 2 *p*', 'n *h* 0', 'l *s* w').",
+      "The claim that it 'rarely fires once a set token has already appeared' is not supported. For e/h/p/s at t=1-2, precision is 0.50 when a set token was seen earlier and 0.61 when none was. Adding ~seen(SET) to the predicate makes it worse (F1 0.743).",
+      "Missed activations at t=1-2 on other set tokens (b, u, o, 2, x, v) are systematic and depend on context: they fire more after c/q/y (precision 0.73 with prev in c,q,y, versus 0.21-0.34 per token overall). The label mentions this context dependence only vaguely.",
+      "A simpler predicate does better on test: t=0 set tokens, plus t=1 on e/h/p/s, plus t=2 on e only, gives F1 0.855 (P 0.913, R 0.803)."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "First-token detector for a fixed set of 12 tokens (e,h,p,s,2,b,v,x,t,k,u,o) at t=0 (exact). It fires weaker and context-dependently on the same tokens at t=1-2: reliably only for e, and about half the time for h/p/s, boosted when the previous token is c, q or y.",
+    "better_predicate": "((t == 0) & isin(in_tok, [tok(\"e\"),tok(\"h\"),tok(\"p\"),tok(\"s\"),tok(\"2\"),tok(\"b\"),tok(\"v\"),tok(\"x\"),tok(\"t\"),tok(\"k\"),tok(\"u\"),tok(\"o\")])) | ((t==1)&isin(in_tok,[tok(\"e\"),tok(\"h\"),tok(\"p\"),tok(\"s\")])) | ((t==2)&isin(in_tok,[tok(\"e\")]))",
+    "better_predicate_test_f1": 0.855
+  },
+  "final_label": "First-token detector for a fixed set of 12 tokens (e,h,p,s,2,b,v,x,t,k,u,o) at t=0 (exact). It fires weaker and context-dependently on the same tokens at t=1-2: reliably only for e, and about half the time for h/p/s, boosted when the previous token is c, q or y."
+}

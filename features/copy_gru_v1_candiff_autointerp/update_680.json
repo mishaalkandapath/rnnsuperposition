@@ -1,0 +1,62 @@
+{
+  "label": "third input after \"b\" at position 1, gated by first token",
+  "predicate": "(t == 2) & (prev_tok == tok(\"b\")) & isin(first_tok, [tok(c) for c in \"12tnxcoviprj3\"])",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the original phase, almost entirely (94% of mass) at step t=2 when the previous input (position 1) was \"b\"; the token at step 2 itself is irrelevant. Whether it fires depends on the first token: it is strongest for first token 1 (top examples all \"1 b _\" at 1.0 of max), and also fires for 2, t, n, x, c, o, v, i, p, r, and weakly for j and 3. It is silent for first tokens such as k, e, q, d, w, 0, a, s, h, g, y, b. Small residual activity: t=3 after \"b\" (about 5% of mass, e.g. \"2 1 b f\"), and near-zero activations at t=1 after an initial b. Never fires at the delimiter or during the copy phase. Magnitude is set mainly by the identity of the first token (1 highest).",
+  "test_scores": {
+    "gate": "update",
+    "feature": 680,
+    "predicate": "(t == 2) & (prev_tok == tok(\"b\")) & isin(first_tok, [tok(c) for c in \"12tnxcoviprj3\"])",
+    "split": "test",
+    "precision": 0.9787985865724381,
+    "recall": 0.7406417112299465,
+    "f1": 0.843226788432268,
+    "mass_recall": 0.9358277689415476,
+    "correlation": 0.854166911232093,
+    "n_active": 9350,
+    "n_predicted": 7075,
+    "coverage_by_activation_quartile": [
+      0.2780153977758768,
+      0.7519247219846023,
+      0.9328198545143346,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 680,
+    "predicate": "(t == 2) & (prev_tok == tok(\"b\")) & isin(first_tok, [tok(c) for c in \"12tnxcoviprj3\"])",
+    "split": "dev",
+    "precision": 0.9772569685203162,
+    "recall": 0.7448472677306839,
+    "f1": 0.845369481765835,
+    "mass_recall": 0.9364218737709654,
+    "correlation": 0.8538060942517618,
+    "n_active": 9461,
+    "n_predicted": 7211,
+    "coverage_by_activation_quartile": [
+      0.28360101437024515,
+      0.7644820295983087,
+      0.9315010570824525,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 680,
+  "final_verdict": "explained",
+  "skeptic": {
+    "issues": [
+      "Minor overclaim: the explanation says the step-2 input 'doesn't matter'. That holds for whether the feature fires: (t==2)&prev b&first 1&in_tok!=l has precision 1.0 over 504 steps. It does not hold for magnitude. All 12 top examples are '1 b [l]' at 1.00, yet only 16 of the ~520 '1 b X' steps have X=l, so an 'l' at step 2 appears to push activation to the max. 'Every top example is 1 b _' should read '1 b l'.",
+      "The residual activity is real but not systematic. t=3 after b is 930 steps and 5.6% of mass. It is not well predicted by prev2_tok or first_tok: (t==3)&prev b&prev2 in the set has precision 0.13, and the best subset I found (prev2 in t/c) reached only 0.57 precision and 2% mass. So it is scattered low activations, not a missed class.",
+      "The t=1 claim checks out: all 527 t=1 actives fall under first_tok==b (recall 0.0557 = 527/9461), with mass about 4e-6, so effectively zero.",
+      "The other claims check out. There are zero actives at the delimiter or in the copy phase, and zero actives at t>=4. The silent first-token set (k,e,q,d,w,0,a,s,h,g,y,b) has precision 0.03 and mass 0.0006. The unlisted letters (f,l,m,u,z) are silent too, with 0 actives over 2819 steps. The j/3 subset is weaker (precision 0.87, mass 0.019).",
+      "The count recall of 0.74 is low because of near-zero t=1 activations, small t=3 activations and a few tiny prev=v hits (408 steps, 0.5% mass). It is not due to a missed high-mass pattern: mass recall is 0.936 on test and precision 0.979."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null,
+    "upheld": true
+  }
+}

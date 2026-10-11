@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input v re-fed as 1st/2nd copied token",
+  "predicate": "(phase == 2) & (in_tok == tok(\"v\")) & (recall_idx <= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase when the fed-back input is v and it is the first or second copied token (v was original token 0 or 1; recall_idx 1 or 2). Magnitude depends strongly on position: v as the first copied token (input right after <DEL>, orig(0)=v) gives near-max activation (~0.85-1.0 of max, 82% of mass); v as the second copied token (orig(1)=v) gives weak activation (~0.05-0.3). Almost no activation for v deeper in the copy (a handful of tiny ~0.02 activations at recall_idx 3). Never fires in the original phase or at the delimiter, never on v when it is the original-phase input, and never on any token other than v. Small false-positive set is mostly weak recall_idx 2 cases.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 144,
+    "predicate": "(phase == 2) & (in_tok == tok(\"v\")) & (recall_idx <= 2)",
+    "split": "test",
+    "precision": 0.9616207860158155,
+    "recall": 0.9979637799648289,
+    "f1": 0.9794552694130294,
+    "mass_recall": 0.9999106979824678,
+    "correlation": 0.8390409821863045,
+    "n_active": 32413,
+    "n_predicted": 33638,
+    "coverage_by_activation_quartile": [
+      0.9918558736426456,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 144,
+    "predicate": "(phase == 2) & (in_tok == tok(\"v\")) & (recall_idx <= 2)",
+    "split": "dev",
+    "precision": 0.9611812336270541,
+    "recall": 0.9976208867603893,
+    "f1": 0.9790621162272389,
+    "mass_recall": 0.9998952687582932,
+    "correlation": 0.8399720021744851,
+    "n_active": 32365,
+    "n_predicted": 33592,
+    "coverage_by_activation_quartile": [
+      0.990484429065744,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 144,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most of the label checks out. On the dev split, all activations are in the copy phase. 32364 of 32365 are on in_tok v (one is on r). Mass is 82% at recall_idx 1 and 18% at recall_idx 2, with 76 tiny activations at recall_idx 3 and nothing in the original or delimiter phases. Precision for v at recall_idx 1 is 1.000 (16980 predicted).",
+      "There is a systematic false-positive class the explanation does not mention: the second-token (recall_idx 2) case depends on sequence length. For v at recall_idx 2, dev precision is 0.016 at L=3 (450 predicted) and 0.64 at L=4 (2396 predicted). At L=5, 6 and 9 it is 1.000. So the feature almost never fires on a second copied v when L=3, the step that emits the last token. The roughly 1291 test false positives are almost all at L=3 and L=4. They are not 'mostly weak cases at recall_idx 2' scattered at random.",
+      "Within L=4, the misses I sampled did not separate cleanly by prev_tok (digits, vowels, ranges) or by next_out. Precision stayed between 0.58 and 0.69 in every split, so part of the L=4 behaviour is still unexplained.",
+      "The 66 missed activations hold 0.0% of the mass. They are all tiny (0.01-0.06) and sit on v at recall_idx 3 (orig(2)=v). That is consistent with the claim and is scattered noise.",
+      "Adding the length condition to the predicate improves test F1 from 0.979 to 0.985 (precision 0.973, recall 0.998, mass recall 1.000)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input v re-fed as the 1st copied token (strong), or as the 2nd copied token (weak, only when L>=4, partial at L=4)",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"v\")) & ((recall_idx == 1) | ((recall_idx == 2) & (L >= 4)))",
+    "better_predicate_test_f1": 0.9854
+  },
+  "final_label": "copy-phase input v re-fed as the 1st copied token (strong), or as the 2nd copied token (weak, only when L>=4, partial at L=4)"
+}

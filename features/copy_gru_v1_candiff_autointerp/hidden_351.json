@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input g (fed-back g from original position >= 2)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"g\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token-specific copy-phase feature: fires only when the fed-back input token is the letter g during the copy phase (after <DEL>). It never fires in the original phase, on the delimiter, or on any other input token. It is essentially silent when the copied g came from original position 0 or 1 (recall_idx <= 2): those few activations are tiny and hold 0.1% of mass. Magnitude grows with how late g sat in the original sequence; the strongest activations come from g at original positions 4-7. When gg repeats, the second g is usually somewhat weaker. Most false positives are early-position g (original position 2) in longer sequences.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 351,
+    "predicate": "(phase == 2) & (in_tok == tok(\"g\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9764191987748425,
+    "recall": 0.9946638774641895,
+    "f1": 0.9854571002019846,
+    "mass_recall": 0.9993655934715304,
+    "correlation": 0.8973102825216218,
+    "n_active": 56408,
+    "n_predicted": 57462,
+    "coverage_by_activation_quartile": [
+      0.9786555098567579,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 351,
+    "predicate": "(phase == 2) & (in_tok == tok(\"g\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9775148747751488,
+    "recall": 0.994754813954307,
+    "f1": 0.9860594957689959,
+    "mass_recall": 0.9993372861598362,
+    "correlation": 0.8986124610359568,
+    "n_active": 56814,
+    "n_predicted": 57816,
+    "coverage_by_activation_quartile": [
+      0.9790199943677838,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 351,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Factual claims hold up. The feature never fires in the original or delimiter phase (0 active steps in each). On the dev split, 56813 of 56814 active steps have in_tok g (1 stray j). Copy-phase g at recall_idx 0-1 never fires, and recall_idx 2 (g from original position 1) has precision 0.018 and 0.06% of the mass. The test numbers reproduce: P 0.976, R 0.995, F1 0.985, mass recall 0.999.",
+      "False positives are a boundary effect, not a separate class of input. At recall_idx==3 (g from original position 2) precision is 0.916, versus 0.9999 for recall_idx>=4. Splitting by length gives 0.960 for L<=5 and 0.888 for L>=7, so the claim that longer sequences produce more of the FPs is right. Dropping recall_idx==3 would lose about 10% of the mass, so the threshold of >=3 is the right call.",
+      "The magnitude claim checks out. Mass per active step is about 7e-6 at recall_idx 3, 1.8e-5 at 4, and a plateau of about 2.3e-5 at 5-8. That puts the top activations at original positions 4-7, as stated.",
+      "The gg claim is weakly supported at best. Among predicted steps, prev_tok==g has the same precision (0.978) as the rest, and its average mass per step (~1.7e-5) is close to the overall average. Saying the second g is 'usually weaker' may overstate it, but this is minor and does not change the predicate.",
+      "The 'correct' flag doesn't matter: only 3 predicted steps have correct==0. The label's 'original position >= 2' matches recall_idx>=3, because the input at copy step t is the original token at t-L-1."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

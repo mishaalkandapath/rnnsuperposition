@@ -1,0 +1,63 @@
+{
+  "label": "<DEL> step in long sequences (L>=7), plus last original token when L=9",
+  "predicate": "((phase == 1) & (L >= 7)) | ((L == 9) & (t == 8))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "A position/length unit that fires at the delimiter step when the sequence is long (L >= 7, so t >= 7). It never fires before step 7, whatever the tokens. About 76% of activation mass sits on <DEL>. Activation is strongest (near max) at <DEL> for L=8 and L=9, which fire on almost every sequence. It is weaker and less reliable at <DEL> for L=7 (about 65% of those sequences; low-quartile examples are mostly L=7). For L=9 it also fires on the last original token (t=8, about 99% of sequences, typically 0.6-0.8 of max), and occasionally (about 17%) on the last original token for L=8. Small spillover goes to the first copy step (t = L+1, about 0.1-0.3 of max) and a few earlier tokens at t=7. It does not fire on short sequences (L <= 6), on early original tokens, or past the first copy output. Token identity barely matters.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 74,
+    "predicate": "((phase == 1) & (L >= 7)) | ((L == 9) & (t == 8))",
+    "split": "test",
+    "precision": 0.9135367762128326,
+    "recall": 0.9392598551890587,
+    "f1": 0.9262197540658469,
+    "mass_recall": 0.989607415682232,
+    "correlation": 0.8764702884758461,
+    "n_active": 64636,
+    "n_predicted": 66456,
+    "coverage_by_activation_quartile": [
+      0.7583390061266168,
+      0.9987004146296181,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 74,
+    "predicate": "((phase == 1) & (L >= 7)) | ((L == 9) & (t == 8))",
+    "split": "dev",
+    "precision": 0.912182496689539,
+    "recall": 0.9378964631618034,
+    "f1": 0.9248607826683959,
+    "mass_recall": 0.9894687605430785,
+    "correlation": 0.8758256400122553,
+    "n_active": 64634,
+    "n_predicted": 66456,
+    "coverage_by_activation_quartile": [
+      0.7525218144687171,
+      0.9990717247354416,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 74,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claim that the unit fires on the last original token in about 17% of L=8 sequences is wrong. (L==8)&(t==7) has test precision 0.082, so it is about 8%. (L==9)&(t==7), the second-to-last token, fires at the same rate (0.083), which the explanation leaves out.",
+      "The claim that 'token identity barely matters' is false for <DEL> at L=7, where firing depends strongly on tokens. Firing rate by prev_tok: z 0.88 vs u 0.16 vs w 0.33. By orig(0): w 0.86 vs x 0.21 vs i 0.48. For L>=8 the claim holds, because <DEL> fires there with precision 1.0.",
+      "The spillover onto the first copy step comes almost entirely from L=9 (about 7% of sequences). For L=8 it is about 0.2%. This is minor.",
+      "Misses on the test split are not systematic and hold only 1% of activation mass. They are mostly t=7 for L=8/9 plus first-copy spillover. The false positives are a single class: <DEL> at L=7 that falls below threshold (about 34%), which the explanation already admits.",
+      "Adding a token filter on L=7 <DEL> only raises test F1 from 0.926 to 0.932, so the existing predicate is essentially enough."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "<DEL> step in long sequences (reliable for L>=8, token-dependent for L=7), plus last original token when L=9",
+    "better_predicate": "((phase == 1) & (L >= 8)) | ((L == 9) & (t == 8)) | ((phase==1)&(L==7)&~isin(prev_tok,[tok('u'),tok('w'),tok('i')])&~isin(orig(0),[tok('x'),tok('i')]))",
+    "better_predicate_test_f1": 0.932
+  },
+  "final_label": "<DEL> step in long sequences (reliable for L>=8, token-dependent for L=7), plus last original token when L=9"
+}

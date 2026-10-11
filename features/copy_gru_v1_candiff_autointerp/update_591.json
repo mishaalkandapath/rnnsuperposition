@@ -1,0 +1,63 @@
+{
+  "label": "Sequence started with x: input steps t>=3 through <DEL>",
+  "predicate": "(first_tok == tok(\"x\")) & (t >= 3) & (phase <= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires on sequences whose first original token is x (first_tok=x: 21x lift, 94% of activation mass), on every step from t=3 through the <DEL> step, regardless of the current input token. Never fires at t<3 or during the copy phase (t>L). Magnitude ramps up over t=3..5 (t=3 often weak, especially when the step-3 token is small), peaks around t=4-6, and decays toward <DEL>; the <DEL> step itself is typically 0.2-0.8 of max. Top activations come from sequences starting x x. Misses are diffuse low-magnitude activations (6% of mass) in sequences not starting with x, often with x at position 1; false positives are rare (precision 0.98), mostly at t=3 or late <DEL> steps of long sequences. Does not fire for other first tokens beyond weak background (1, l slightly).",
+  "test_scores": {
+    "gate": "update",
+    "feature": 591,
+    "predicate": "(first_tok == tok(\"x\")) & (t >= 3) & (phase <= 1)",
+    "split": "test",
+    "precision": 0.9844899501896572,
+    "recall": 0.6999769656019657,
+    "f1": 0.8182057855087422,
+    "mass_recall": 0.9362946644267998,
+    "correlation": 0.9067487434869744,
+    "n_active": 104192,
+    "n_predicted": 74081,
+    "coverage_by_activation_quartile": [
+      0.09758906633906633,
+      0.7042383292383292,
+      0.9980804668304668,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 591,
+    "predicate": "(first_tok == tok(\"x\")) & (t >= 3) & (phase <= 1)",
+    "split": "dev",
+    "precision": 0.9836462255814902,
+    "recall": 0.6998075379363038,
+    "f1": 0.8177985736728489,
+    "mass_recall": 0.9360118563031773,
+    "correlation": 0.906127259023517,
+    "n_active": 103397,
+    "n_predicted": 73561,
+    "coverage_by_activation_quartile": [
+      0.0972147001934236,
+      0.703663584664784,
+      0.9983751789237495,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 591,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I reproduced the test scores exactly: P 0.984, R 0.700, F1 0.818, mass recall 0.936.",
+      "The copy-phase claim holds. The dev profile shows 0 activations at phase 2 and 0 at recall_idx >= 1. There is also no activation at t = 0..2.",
+      "The magnitude claims hold. Activation mass by orig_idx peaks at t = 4-6. At t = 3 activation is weak (top examples show 0.02-0.29 there), and it decays toward <DEL>. All of the top-12 sequences start with 'x x', and the <DEL> step in those runs about 0.4-0.8 of max.",
+      "One part of the miss class is systematic, but it is weak: sequences that start '? x', with x at position 1. Scoring (first_tok != x) & (orig(1) == x) & (t >= 3) & (phase <= 1) gives precision 0.24, step recall 0.165 and only 0.049 mass recall. The explanation already names this, and adding it to the predicate lowers F1 to 0.72. It is a low-magnitude echo, not a missing main case.",
+      "There are small false-positive subclasses. (a) At t = 3 in sequences of the form 'x ? x' the feature is silent: 548 predicted steps, precision 0.0. (b) At the <DEL> step when L = 9, precision is 0.87 versus 0.99 or more for L <= 8. Both are tiny and the explanation broadly mentions them ('t=3 or the late <DEL> steps of long sequences').",
+      "The remaining misses are scattered activations below 0.1 of max in unrelated sequences. That is background noise."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

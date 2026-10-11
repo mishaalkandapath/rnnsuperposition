@@ -1,0 +1,64 @@
+{
+  "label": "<DEL> delimiter step of long sequences (L >= 6)",
+  "predicate": "(phase == 1) & (L >= 6)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires on the <DEL> delimiter step, the step that outputs the first original token. 92% of activation mass is at the delimiter. The firing rate and magnitude grow with sequence length: rarely active for L <= 5, about 25% of steps active at t=8 and the most mass at t=8-9 (L=8,9), and the top activations (~0.43) are all at <DEL> of L=8-9 sequences. Within L=6 the rate also depends somewhat on the first token: lower when it is a/m/p/u/w/x/o/d/i/c/0/2, and adding that clause raises dev F1 to 0.82. Weaker secondary activity sits on the last 1-3 original tokens of long sequences (orig_idx 7-8, mostly first occurrences, about 7% of mass). Almost silent during the copy phase (0.4% of mass) and at t < 3. Dev: P 0.78, R 0.80, F1 0.79, mass recall 0.90.",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 98,
+    "predicate": "(phase == 1) & (L >= 6)",
+    "split": "test",
+    "precision": 0.7816273677236727,
+    "recall": 0.8016523820554398,
+    "f1": 0.7915132386463265,
+    "mass_recall": 0.8986672749431159,
+    "correlation": 0.7560318328354082,
+    "n_active": 64755,
+    "n_predicted": 66414,
+    "coverage_by_activation_quartile": [
+      0.5406139971585645,
+      0.7743529557106678,
+      0.9146951633825438,
+      0.9769582406721028
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 98,
+    "predicate": "(phase == 1) & (L >= 6)",
+    "split": "dev",
+    "precision": 0.7819317925167507,
+    "recall": 0.804960086801519,
+    "f1": 0.7932788512945848,
+    "mass_recall": 0.9002050457646149,
+    "correlation": 0.7566850185516177,
+    "n_active": 64515,
+    "n_predicted": 66415,
+    "coverage_by_activation_quartile": [
+      0.550251100502201,
+      0.774753549507099,
+      0.9177878355756711,
+      0.9770585317460317
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 98,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Main claim holds: the <DEL> step carries 91.9% of activation mass, the unit never fires at t<3, the copy phase carries 0.4% of mass, and the top activations are at the <DEL> of L=8-9 sequences.",
+      "The 'L >= 6' cutoff in the label and predicate is too generous. At L=6 the <DEL> step is active only 39% of the time (precision 0.39, about 10k false positives on dev). L=7 is 0.78, L=8 is 0.97, L=9 is 0.99. Most of the predicate's false positives come from L=6, so 'long sequences (L>=6)' overclaims for L=6.",
+      "The first-token effect is systematic and graded, and it is not limited to L=6 as the explanation says. Precision at <DEL> by first token at L=6 runs from 0.01 ('o') to 0.85 ('j','s'). At L=7 it runs from 0.21 ('o') and 0.40 ('d') to 0.99+ ('j','r','y'). So the unit behaves like a length-dependent drive plus an offset set by the first token, and a hard L threshold misses that.",
+      "The explanation's 'low' token list is only partly right. It includes p (L=6 precision 0.31) and x (0.33), which are middling. It leaves out q (0.09) and '3' (0.21), which are clearly low.",
+      "Test misses also include high-first-token L=5 <DEL> steps (for example j at 0.48, s at 0.57) and last-original-token steps at orig_idx 8 (precision 0.27, about 5% of mass). Both are secondary.",
+      "With first-token identity added, the improved predicate reaches test F1 0.825, above the 0.8 bar. The original verdict leaned on mass recall alone with F1 0.79."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "<DEL> delimiter step: strength grows with sequence length and depends on the first token being recalled (reliably active for L>=8; at L=6-7 mainly when the first token is j/s/y/e/b/r/n/k/h/z/1)",
+    "better_predicate": "(phase == 1) & ((L >= 7) | ((L == 6) & isin(first_tok, [1,4,5,6,7,9,10,13,17,18,24,25,27])) | ((L==5) & isin(first_tok,[9,18])))",
+    "better_predicate_test_f1": 0.826
+  },
+  "final_label": "<DEL> delimiter step: strength grows with sequence length and depends on the first token being recalled (reliably active for L>=8; at L=6-7 mainly when the first token is j/s/y/e/b/r/n/k/h/z/1)"
+}

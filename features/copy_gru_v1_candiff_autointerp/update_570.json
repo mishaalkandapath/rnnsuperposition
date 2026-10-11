@@ -1,0 +1,63 @@
+{
+  "label": "early original-phase steps (t=2-4) after the sequence started with e",
+  "predicate": "(phase == 0) & (t >= 2) & (t <= 4) & ((orig(0) == tok(\"e\")) | ((orig(1) == tok(\"e\")) & (t >= 3)))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires during the original-input phase at steps 2-4 (rarely 5) when the first original token was e. When the sequence is e e ..., activation is highest at t=3 (about 1.0 of max), lower at t=4 (about 0.6-0.7), and weak at t=2 (about 0.15). A much weaker version (usually under 0.2 of max) fires at t=3-4 when e was the second token rather than the first. The current input token barely matters. Never fires at t=0-1, essentially silent after t=5, nearly absent at the delimiter and in the copy phase, and silent in sequences with no early e. The simpler predicate first_tok==e & t in 2..4 has dev precision 0.99 and mass recall 0.86. Adding the second-token clause raises dev F1 to 0.84 and mass recall to 0.97.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 570,
+    "predicate": "(phase == 0) & (t >= 2) & (t <= 4) & ((orig(0) == tok(\"e\")) | ((orig(1) == tok(\"e\")) & (t >= 3)))",
+    "split": "test",
+    "precision": 0.8577768440954807,
+    "recall": 0.8184973126025784,
+    "f1": 0.8376768667577045,
+    "mass_recall": 0.9683915435726346,
+    "correlation": 0.7951257630703503,
+    "n_active": 79817,
+    "n_predicted": 76162,
+    "coverage_by_activation_quartile": [
+      0.35309446254071664,
+      0.9482309311416257,
+      0.9824596572115867,
+      0.9902275233035983
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 570,
+    "predicate": "(phase == 0) & (t >= 2) & (t <= 4) & ((orig(0) == tok(\"e\")) | ((orig(1) == tok(\"e\")) & (t >= 3)))",
+    "split": "dev",
+    "precision": 0.8577520198553097,
+    "recall": 0.818794737372719,
+    "f1": 0.8378207607994841,
+    "mass_recall": 0.9689323764110136,
+    "correlation": 0.7957808346781347,
+    "n_active": 79352,
+    "n_predicted": 75748,
+    "coverage_by_activation_quartile": [
+      0.3509426353463051,
+      0.9517088416170985,
+      0.9825587256779917,
+      0.9899687468494808
+    ]
+  },
+  "gate": "update",
+  "feature": 570,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The label and predicate hold up. Test scores reproduce exactly (P 0.858, R 0.818, F1 0.838, mass recall 0.968). The feature is silent at t=0-1 and t>=8. Copy phase holds 0.1% of activation mass and the delimiter 0.8%. Sequences with neither orig(0) nor orig(1) equal to e hold only about 1.1% of mass. None of the variants I tried beat test F1 0.838: adding orig(2)==e at t=4 gives 0.774, adding orig(1)==i at t=2 gives 0.820, and dropping the phase gate gives 0.820.",
+      "The magnitude profile in the explanation is wrong for typical sequences. It was read off the top examples, and every top example is the rare pattern 'e e i ...': t=2 about 0.15, t=3 about 1.0, t=4 about 0.6. In ordinary e-first sequences (orig(1) not e, about 16k steps per t on dev) the mean activation per step is: t=2 about 1.62e-5 of mass per step, t=3 about 2.56e-5, t=4 about 1.15e-5. So t=2 is roughly 0.6x of t=3 and not weak. t=4 is lower than t=2, not 0.6-0.7 of the peak. Random third-quartile examples confirm this: 'e k [f:0.28] [0:0.57] [2:0.31]' and 'e h [h:0.30] [z:0.50] [m:0.29]'. Typical peaks are about 0.5-0.6 of max.",
+      "When e is repeated ('e e', orig(1)==e) at t=2, activation per step is about half that of ordinary e-first sequences (mass 0.0041 over 520 steps vs 0.266 over 16194). This contradicts the explanation's claim that 'e e ...' sequences are the strongest case. The max of about 1.0 needs the specific e e i conjunction (21 steps on dev), which runs about 1.9x the typical e-first t=3 value. So the claim that 'the current input token barely matters' is too strong at the top end. i at t=2 together with e e drives the maximum activations, and prev_tok=i shows a 3.8x lift in the profile.",
+      "Small point: about 13.5% of active steps (by count) fall in sequences with no e at position 0 or 1, so 'silent in sequences with no early e' is approximate. These are scattered, low-magnitude firings at t=2-5, for example after orig(1)==i (precision 0.14). They carry about 1% of mass, so this is noise and not a systematic class.",
+      "The second-token clause (orig(1)==e at t=3-4) has precision of only 0.66 on dev and carries 14% of mass. It is a real but weak and unreliable sub-pattern, consistent with the explanation's description of it as 'much weaker'."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "early original-phase steps (t=2-4) when the first original token was e (peak at t=3; weaker when e was the second token)",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "early original-phase steps (t=2-4) when the first original token was e (peak at t=3; weaker when e was the second token)"
+}

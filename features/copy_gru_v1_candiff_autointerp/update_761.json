@@ -1,0 +1,64 @@
+{
+  "label": "early original-phase steps (t=1,2) after a \"v\" input",
+  "predicate": "(phase==0) & isin(t,[1,2]) & seen([tok(\"v\")])",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only at original-phase steps t=1 and t=2 (99.8% of mass), and essentially only when a v has already been input: either v is the first token (t=1, activation about 0.64-0.72 of max), or v is at step 0 or 1 and this is step 2. prev_tok==v alone has precision 1.0 and covers 89% of mass. The strongest activations (about 1.0 of max) come at t=2 for sequences starting v v, or v followed by certain tokens such as r or s. Some step-2 cases after v at step 0 stay silent (e.g. v 0 y, v o e), and these are most of the false positives. Missed activations are tiny near-zero firings after u/j/s first tokens, worth 0.3% of mass. Does not fire at t=0, at t>=3, on the delimiter, or in the copy phase (139 negligible steps).",
+  "test_scores": {
+    "gate": "update",
+    "feature": 761,
+    "predicate": "(phase==0) & isin(t,[1,2]) & seen([tok(\"v\")])",
+    "split": "test",
+    "precision": 0.9077825373313584,
+    "recall": 0.7267439065429546,
+    "f1": 0.8072373866377124,
+    "mass_recall": 0.9967279947259261,
+    "correlation": 0.8938649938647735,
+    "n_active": 62403,
+    "n_predicted": 49958,
+    "coverage_by_activation_quartile": [
+      0.0,
+      0.9069931414652906,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 761,
+    "predicate": "(phase==0) & isin(t,[1,2]) & seen([tok(\"v\")])",
+    "split": "dev",
+    "precision": 0.9100240096038416,
+    "recall": 0.7285906513311761,
+    "f1": 0.8092628507375051,
+    "mass_recall": 0.9965698183749707,
+    "correlation": 0.8940708201740439,
+    "n_active": 62426,
+    "n_predicted": 49980,
+    "coverage_by_activation_quartile": [
+      0.0,
+      0.9143973857884282,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 761,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The explanation says prev_tok==v alone has precision 1.0. That is false: on the test split it scores precision 0.186 (recall 0.545, mass recall 0.89). Precision is 1.0 only once you restrict to (phase==0)&isin(t,[1,2]).",
+      "The explanation says the strongest activations include 'v followed by certain tokens such as r or s'. 'v r' is wrong: at t=2 with orig(0)=v and orig(1)=r the feature is completely silent (precision 0.0). 's' is correct (precision 1.0).",
+      "The false positives are not scattered. Every one of them (4607 on test) is a single fixed class: t=2, orig(0)=v, orig(1) in {f,g,o,p,r,z,0,2}. For each of those second tokens precision is 0.0. For every other second token after a leading v, precision is 1.0.",
+      "The 'v v' sequences that the explanation calls the strongest case hold only 2.2% of activation mass. The main mass sits on t=1 after a leading v (46%) and on t=2 when v is at step 1 (41%).",
+      "Checks that hold up: phase/t localisation is correct (t=1 and t=2 carry 99.8% of mass; t=0, the delimiter and t>=4 are silent; there are 139 negligible copy-phase steps and 433 negligible steps at t=3). The misses are many tiny activations (0.00-0.03 of max) after other first tokens (u, j, s, e, m, a), worth 0.3% of mass and each with low precision. That is diffuse weak noise, not a meaningful class.",
+      "The label 'after a v input' is broadly right, but the predicate seen(v) overclaims: it includes the deterministic silent class."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "original-phase t=1/t=2 steps right after a \"v\" input (t=2 after a leading v only when the second token is not one of f,g,o,p,r,z,0,2)",
+    "better_predicate": "(phase==0)&(((t==1)&(orig(0)==tok(\"v\")))|((t==2)&(orig(1)==tok(\"v\")))|((t==2)&(orig(0)==tok(\"v\"))&~isin(orig(1),[tok(c) for c in \"fgoprz02\"])))",
+    "better_predicate_test_f1": 0.842
+  },
+  "final_label": "original-phase t=1/t=2 steps right after a \"v\" input (t=2 after a leading v only when the second token is not one of f,g,o,p,r,z,0,2)"
+}

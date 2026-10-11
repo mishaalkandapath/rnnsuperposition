@@ -1,0 +1,65 @@
+{
+  "label": "j re-fed as copy input at the 2nd/3rd copy step (j was orig token 0 or 1)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"j\")) & isin(recall_idx, [1,2])",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase when the input token is j and the step is recall_idx 1 or 2, i.e. the model is re-reading a j that was the first or second original token. Strongest (~0.9-1.0 of max, ~82% of mass) when j was the first original token (step L+1, right after <DEL>). Weaker (~0.05-0.35 of max) when j was the second original token (step L+2); there magnitude grows with L. It never fires in the original or delimiter phases, on any token other than j, or on j later in the copy (except 17 negligible activations at recall_idx 3). Most false positives are j at recall_idx 2 in short sequences (L=3-4).",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 310,
+    "predicate": "(phase == 2) & (in_tok == tok(\"j\")) & isin(recall_idx, [1,2])",
+    "split": "test",
+    "precision": 0.9730128610584019,
+    "recall": 0.9994122014602154,
+    "f1": 0.9860358641739795,
+    "mass_recall": 0.9999727268725294,
+    "correlation": 0.8372796310723366,
+    "n_active": 32324,
+    "n_predicted": 33201,
+    "coverage_by_activation_quartile": [
+      0.9976488058408612,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 310,
+    "predicate": "(phase == 2) & (in_tok == tok(\"j\")) & isin(recall_idx, [1,2])",
+    "split": "dev",
+    "precision": 0.9746912268989166,
+    "recall": 0.999470998257406,
+    "f1": 0.9869255941864217,
+    "mass_recall": 0.9999748762828227,
+    "correlation": 0.8371386863259775,
+    "n_active": 32136,
+    "n_predicted": 32953,
+    "coverage_by_activation_quartile": [
+      0.997883993029624,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 310,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most of the claims hold up. All activation mass is in the copy phase, in_tok is always j, and nothing fires on non-j tokens or in the original/delimiter phases. Recall_idx 1 holds 0.819 of the mass and recall_idx 2 holds 0.181. Recall_idx 3 has only 17 negligible activations.",
+      "There is one systematic class of false positives: j at recall_idx 2 when L=3. That subset has precision 0.019 on dev (413 predicted steps, 8 active), so the feature essentially never fires there. The explanation only says false positives are 'mostly short sequences (L=3-4)'. It does not state that L=3 is a hard exclusion, and the predicate does not encode it.",
+      "At L=4, recall_idx 2 has precision 0.82. That is a softer, partial drop-off. The remaining false positives (e.g. 'q j y h <DEL> q j') show no obvious token pattern.",
+      "The predicate is precise for every other case: recall_idx 1 has precision 1.0 at every L, and recall_idx 2 has precision 1.0 for L=5-9.",
+      "The label overclaims slightly. 'j re-fed at the 3rd copy step (j was orig token 1)' is false when L=3.",
+      "The claim that the recall_idx-2 activation 'rises with L' was not checked systematically. The original agent said so themselves, so it should not be stated as fact.",
+      "Missed activations on test are scattered noise: 19 steps, 0.0% of the mass, all tiny j activations at recall_idx 3."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "j re-fed as a copy input when j was original token 0 (strong) or original token 1 (weaker; absent when L=3, partial when L=4)",
+    "better_predicate": "(phase == 2) & (in_tok == tok('j')) & ((recall_idx==1) | ((recall_idx==2) & (L>=4)))",
+    "better_predicate_test_f1": 0.993
+  },
+  "final_label": "j re-fed as a copy input when j was original token 0 (strong) or original token 1 (weaker; absent when L=3, partial when L=4)"
+}

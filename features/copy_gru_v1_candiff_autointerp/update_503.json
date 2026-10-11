@@ -1,0 +1,63 @@
+{
+  "label": "echoed first token c at first copy step",
+  "predicate": "(phase == 2) & (in_tok == tok(\"c\")) & (recall_idx == 1) & (L <= 8)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the input is c being fed back as the copy of original token 0 (the step right after <DEL> echoed c, i.e. first_tok == c, recall_idx 1). Magnitude is highest for short sequences (L 3-6, up to 3.2) and falls with L; at L = 9 it is almost always off. There is a weak tail (about 3% of mass): c fed back as original token 1 (recall_idx 2, sequences like x c ...), at about 0.1 of max or less. It never fires in the original or delimiter phases, on c at later copy positions, or on any other token. The output token does not matter.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 503,
+    "predicate": "(phase == 2) & (in_tok == tok(\"c\")) & (recall_idx == 1) & (L <= 8)",
+    "split": "test",
+    "precision": 0.9783876013081189,
+    "recall": 0.8277396848309876,
+    "f1": 0.8967809201094747,
+    "mass_recall": 0.9727377301702858,
+    "correlation": 0.8920131892767766,
+    "n_active": 16626,
+    "n_predicted": 14066,
+    "coverage_by_activation_quartile": [
+      0.3974019725763772,
+      0.9136396439740198,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 503,
+    "predicate": "(phase == 2) & (in_tok == tok(\"c\")) & (recall_idx == 1) & (L <= 8)",
+    "split": "dev",
+    "precision": 0.9784883295529377,
+    "recall": 0.8195746767175338,
+    "f1": 0.8920090715048025,
+    "mass_recall": 0.970907680495652,
+    "correlation": 0.8893962468448744,
+    "n_active": 16317,
+    "n_predicted": 13667,
+    "coverage_by_activation_quartile": [
+      0.3818627450980392,
+      0.8965432704094141,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 503,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The test scores reproduce: P 0.978, R 0.828, F1 0.897, mass recall 0.973. On dev all activity is in the copy phase (share 1.000) and all of it has in_tok == c (lift 32.7x).",
+      "Recall_idx 1 holds 97.3% of the mass and recall_idx 2 holds 2.7%. Recall_idx 3 has 1 activation and later positions have none, so the claim holds.",
+      "The misses are a real class, not scattered noise: c fed back at recall_idx 2 (orig(1) == c) makes up about 16% of active steps by count, which is why recall is about 0.83. They are low-magnitude, 0.00-0.19 of max in the test misses. Within recall_idx 2 they are diffuse: precision 0.16 overall, 0.24 at L=4, 0.0 at L=3, and no first_tok subset stands out. Adding (recall_idx==2)&(L<=4) lowers test F1 to 0.852, so leaving it out is justified.",
+      "The L cutoff checks out. At recall_idx 1, precision is 0.89 at L=8, 0.11 at L=9 and about 1.0 at L<=6. Using L<=7 instead gives P 1.0 but test F1 drops to 0.807. All 304 test false positives are L=8 sequences whose first token is c.",
+      "The output token makes no difference: precision stays about 0.98 when out_tok is a digit and 0.998 when out_tok == c. first_tok != c with recall_idx 1 and in_tok c gives 0 predictions (rows where the model fed back the wrong token are excluded), so first_tok == c is implied.",
+      "Small overstatement, not material: 'magnitude falls as L grows' really shows up as the firing rate dropping, from 0.99 at L<=6 to 0.89 at L=8 and 0.11 at L=9."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

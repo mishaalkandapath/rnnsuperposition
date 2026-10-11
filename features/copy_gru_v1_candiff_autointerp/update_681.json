@@ -1,0 +1,60 @@
+{
+  "label": "first copy-phase input is \"a\" (fed-back orig token 0 = a), long sequences",
+  "predicate": "(recall_idx == 1) & (in_tok == tok(\"a\")) & (L >= 5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only at step t = L+1, the first step after <DEL> where the model is fed back its own first output, and only when that input token is \"a\" (i.e. the sequence starts with a). Never fires in the original or delimiter phases, at other copy steps, or for any other first token (stray tiny activations on v/p/b/k at step 10 hold ~0% mass). Magnitude grows with sequence length: zero for L=3-4, weak and often absent for L=5 (~1.5% of mass), strongest for L=8-9 (top examples are all L=9, ~0.97-1.0 of max). Not modulated by the token being output, by later tokens, or by digit count. With L>=6 precision is 1.0 (recall 0.88, mass recall 0.985); L>=5 trades a little precision for full recall.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 681,
+    "predicate": "(recall_idx == 1) & (in_tok == tok(\"a\")) & (L >= 5)",
+    "split": "test",
+    "precision": 0.9131130839761316,
+    "recall": 0.9946100190234622,
+    "f1": 0.9521207982396237,
+    "mass_recall": 0.9998244241262962,
+    "correlation": 0.8772182525619046,
+    "n_active": 12616,
+    "n_predicted": 13742,
+    "coverage_by_activation_quartile": [
+      0.9784400760938491,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 681,
+    "predicate": "(recall_idx == 1) & (in_tok == tok(\"a\")) & (L >= 5)",
+    "split": "dev",
+    "precision": 0.9133545310015898,
+    "recall": 0.9958241411913016,
+    "f1": 0.9528081417263475,
+    "mass_recall": 0.9998536837808831,
+    "correlation": 0.8764413379385595,
+    "n_active": 12692,
+    "n_predicted": 13838,
+    "coverage_by_activation_quartile": [
+      0.9832965647652064,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 681,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: at L=5 the predicate is only about 56% precise on dev (about 1525 of 2724 predicted steps are active). Test false positives are 1194 steps, almost all L=5 at step 6. This is a graded threshold effect: activation rises with L (L=5 low-quartile values are 0.10-0.24 of max). It is not a separable counterexample class. Within L=5, digits only shift the firing rate a little (n_digits==0: 0.49, n_digits>=1: 0.65, orig(2) is a digit: 0.73). So the claim that digit count does not change it is slightly overstated near the threshold, but it holds for L>=6.",
+      "Misses (68 test steps, 0.0% of the mass) are tiny activations (<=0.09) at step 10 for other first tokens (i/j/v/u/y). This is scattered noise, as claimed.",
+      "Verified: zero activity in the original and delimiter phases. All mass is at recall_idx==1 and prev_tok==<DEL>. 99.6% of active steps have in_tok==a. Nothing fires at L=3-4. L=5 holds 1.5% of the mass. The top examples are all L=9 at 0.96-1.0 of max. out_tok and next_out are flat (about 2.0-2.5x lift each). Test scores reproduce: P 0.913, R 0.995, F1 0.952. The L>=6 variant gives test P 1.0, R 0.875, F1 0.934."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

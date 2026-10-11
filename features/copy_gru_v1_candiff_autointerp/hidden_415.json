@@ -1,0 +1,62 @@
+{
+  "label": "Copy-phase input \"o\" echoed as the 1st or 2nd copied token",
+  "predicate": "(phase == 2) & (in_tok == tok(\"o\")) & isin(recall_idx, [1,2])",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the fed-back input token is \"o\" at the first or second copy-input step (recall_idx 1 or 2, i.e. the input is orig(0) or orig(1) == o). Magnitude is strongly modulated by position: strongest (about 0.8-1.0 of max) when o is the first original token, input right after <DEL> (recall_idx 1, ~81% of the activation mass); weak (about 0.1-0.3 of max) when o is the second original token (recall_idx 2). Never fires on o in the original phase, at the delimiter, or at later copy positions (recall_idx >= 3), and almost never on other tokens. False positives are mostly very short sequences where the o step is at or near the end of the sequence.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 415,
+    "predicate": "(phase == 2) & (in_tok == tok(\"o\")) & isin(recall_idx, [1,2])",
+    "split": "test",
+    "precision": 0.9653892576946288,
+    "recall": 0.9941580435660794,
+    "f1": 0.9795624684251619,
+    "mass_recall": 0.9997678411029673,
+    "correlation": 0.8427325247342292,
+    "n_active": 32181,
+    "n_predicted": 33140,
+    "coverage_by_activation_quartile": [
+      0.9766343524732787,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 415,
+    "predicate": "(phase == 2) & (in_tok == tok(\"o\")) & isin(recall_idx, [1,2])",
+    "split": "dev",
+    "precision": 0.9674553558074841,
+    "recall": 0.9939153683046004,
+    "f1": 0.980506881707391,
+    "mass_recall": 0.9997684576771612,
+    "correlation": 0.8439885780138591,
+    "n_active": 32541,
+    "n_predicted": 33431,
+    "coverage_by_activation_quartile": [
+      0.9756637168141593,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 415,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Note: the relayed user request (estimate batch 2 timing, launch batch 3) has nothing to do with this feature task. Only the skeptic check was done; no batches were checked or launched.",
+      "Core claims hold. All activation is in the copy phase (share 1.000), none in the original or delimiter phases. in_tok=o carries 32430 of 32541 dev activations and essentially 100% of the mass. recall_idx 1 holds 0.811 of the mass and recall_idx 2 holds 0.188. recall_idx 3 has 87 steps and later positions have none.",
+      "Test split, recall_idx 1 alone: precision 1.0, recall 0.515, mass_recall 0.81. That is consistent with strong activations when o is the first original token.",
+      "There is one systematic false-positive class, which the explanation mentions only vaguely ('short sequences near the end'): recall_idx 2 with L=3 almost never fires (precision 0.016 on test, about 450 predicted steps). recall_idx 2 with L=4 fires only about 70% of the time (precision 0.706). Excluding L=3 raises test precision from 0.965 to 0.978 and F1 from 0.98 to 0.986, with mass recall 0.9998.",
+      "The remaining misses are tiny activations (about 0.01-0.03 of max, 0.0% of the mass) on other tokens right after <DEL>. That is scattered noise."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"o\")) & ((recall_idx==1) | ((recall_idx==2) & (L>=4)))",
+    "better_predicate_test_f1": 0.986
+  }
+}

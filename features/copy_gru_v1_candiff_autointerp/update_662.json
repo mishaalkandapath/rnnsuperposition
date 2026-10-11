@@ -1,0 +1,62 @@
+{
+  "label": "token right after an early s (input phase, t<=2)",
+  "predicate": "(prev_tok == tok(\"s\")) & (t <= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires during the original-input phase on the token immediately following an s, when that s is very early in the sequence. 99.9% of activation mass has prev_tok == s. It is almost always active at t=1 when the first token is s (51% of mass), active on about 64% of t=2 cases (s at position 1), and only sporadically at t=3/4. At t=2-3 it is much more likely to fire, and fires most strongly (top activations ~1.0), when the earliest tokens are j/e/0/q (for example j 0 s [x], j q s [m]). Adding t==3 restricted to first_tok in {j,e,0,q,o,1,c} raises dev F1 from 0.85 to 0.88, but I kept the simpler predicate. The identity of the current token barely matters. It does not fire at t=0, on the delimiter, in the copy phase (fewer than 30 activations), after any token other than s, or after an s that appears later in the sequence (t>=5).",
+  "test_scores": {
+    "gate": "update",
+    "feature": 662,
+    "predicate": "(prev_tok == tok(\"s\")) & (t <= 2)",
+    "split": "test",
+    "precision": 0.8205580117098817,
+    "recall": 0.8803038072042045,
+    "f1": 0.8493815708101423,
+    "mass_recall": 0.8950325201027414,
+    "correlation": 0.7737404384139828,
+    "n_active": 31204,
+    "n_predicted": 33476,
+    "coverage_by_activation_quartile": [
+      0.7518266888860402,
+      0.9471862581720292,
+      0.9493654659659018,
+      0.8728368157928471
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 662,
+    "predicate": "(prev_tok == tok(\"s\")) & (t <= 2)",
+    "split": "dev",
+    "precision": 0.819383524604939,
+    "recall": 0.8799199896760872,
+    "f1": 0.8485734731340032,
+    "mass_recall": 0.8930306780488324,
+    "correlation": 0.7709302062148522,
+    "n_active": 30996,
+    "n_predicted": 33286,
+    "coverage_by_activation_quartile": [
+      0.7545489740611692,
+      0.9478642405471673,
+      0.9483804361853142,
+      0.8688863079106982
+    ]
+  },
+  "gate": "update",
+  "feature": 662,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The reported scores reproduce on test: P 0.821, R 0.880, F1 0.849, mass recall 0.895. Most of the factual claims also hold. prev_tok==s gets 99.9% mass recall. t=1 with an s first is precision 1.0 and carries 51% of the mass. There are 0 activations at t=0 or t>=5, 2 on the delimiter and 29 in the copy phase.",
+      "There is a systematic false-positive class at t=2. Whether the feature fires after s at position 1 depends almost entirely on the first token, and many first tokens give an all-or-nothing result. With first_tok in {a,b,c,e,f,g,j,n,o,q,u,y,z,0,1} precision is 1.0. With first_tok in {d,i,k,l,s,v} precision is 0.0. Only h, m, r, w, x and 2 are mixed (0.17-0.59). The '64% of t=2 cases' figure averages over this split, and the predicate's 6007 test false positives are mostly this class (e.g. m s w, d s t, v s v, x s l, l s e).",
+      "There is a systematic miss class at t=3, worth about 10% of mass. The feature fires reliably after s at position 2 when the first token is in {e,j,0} (precision 0.92-0.95) and fairly often for {c,o,1} (0.53-0.65). The predicate excludes t=3 entirely. The explanation mentions this but leaves it out of the predicate.",
+      "The label 'token right after an early s (t<=2)' overclaims. The feature is not just 'after an early s'. At t>=2 it is gated by the identity of the first token. The explanation's description of that gate (j/e/0/q 'more likely') is vague and in the wrong direction at t=2, where many more first tokens give deterministic firing."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "token right after an s at position 0, or after an s at position 1-2 whose sequence starts with an 'enabling' first token",
+    "better_predicate": "(prev_tok == tok('s')) & ((t == 1) | ((t == 2) & isin(first_tok,[tok(c) for c in 'abcefgjnoquyzpt013'])) | ((t==3) & isin(first_tok,[tok(c) for c in 'cejo01'])))",
+    "better_predicate_test_f1": 0.946
+  },
+  "final_label": "token right after an s at position 0, or after an s at position 1-2 whose sequence starts with an 'enabling' first token"
+}

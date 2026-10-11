@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input r (fed-back r)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"r\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the fed-back input token is r (the model just output r). Never fires during the original phase (including original r inputs), on the delimiter step, or on other tokens (8 of ~75k dev activations are on other inputs, carrying 0% of the mass). Magnitude increases with how far into the copy phase the r appears: weak (~0.05-0.2 of max) when r is fed back at recall_idx 1-2, strongest (~0.9-1.0 of max) for r at late positions in long sequences. Most of the false positives are copy-phase r inputs early in the copy phase or in short sequences, where the feature stays silent. Dev: P=0.82, R=1.00, F1=0.90, mass recall 1.00.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 423,
+    "predicate": "(phase == 2) & (in_tok == tok(\"r\"))",
+    "split": "test",
+    "precision": 0.8199872510660746,
+    "recall": 0.999785594639866,
+    "f1": 0.9010041482250789,
+    "mass_recall": 0.9999497155219143,
+    "correlation": 0.7557312434131741,
+    "n_active": 74625,
+    "n_predicted": 90988,
+    "coverage_by_activation_quartile": [
+      0.9991960122206143,
+      0.9999463979416809,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 423,
+    "predicate": "(phase == 2) & (in_tok == tok(\"r\"))",
+    "split": "dev",
+    "precision": 0.8221111599297012,
+    "recall": 0.9998931238560913,
+    "f1": 0.9023286094048575,
+    "mass_recall": 0.99997797215518,
+    "correlation": 0.7559945449335473,
+    "n_active": 74853,
+    "n_predicted": 91040,
+    "coverage_by_activation_quartile": [
+      0.9995725125574436,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 423,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Test scores match the reported ones: P=0.820, R=1.000, F1=0.901, mass recall 1.000. The phase claims hold: 0 activations in the original phase or on the delimiter step, and 100% of activation mass is in the copy phase.",
+      "Activations on non-r inputs are negligible: 16 test steps with 0.0% of the mass, almost all on the input just before a fed-back r (f, x, h). This looks like a weak lead-in to the next r, not a systematic miss.",
+      "False positives are concentrated early in the copy phase, as the explanation says. Precision by position: recall_idx 1 = 0.51, recall_idx 2 = 0.72, recall_idx 3 = 0.87, recall_idx >= 4 = 0.97. But no simple variable separates them. Within recall_idx 3, precision is 0.86 for L >= 7. By number of r's in the original, it is 0.83 for one r and 0.80 for two or more. Filtering on position (recall_idx >= 2 or 3, or excluding short sequences) raises precision but costs more recall than it gains, giving F1 0.88 or lower. That fits a magnitude ramp crossing the activation threshold, not a separate class of counterexamples.",
+      "The magnitude claim holds: top activations are about 0.9-1.0 of max for r late in the copy phase of long sequences, and about 0.05-0.2 at recall_idx 1-2. Mass share rises with recall_idx.",
+      "The label does not overclaim: 'copy-phase input r (fed-back r)' is exactly the predicate."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

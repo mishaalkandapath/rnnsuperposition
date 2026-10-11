@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input y at recall position >= 3",
+  "predicate": "(in_tok == tok(\"y\")) & (phase == 2) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires when the fed-back input token is y during the copy phase, at later output positions (recall_idx >= 3). 99.8% of activation mass is in the copy phase and essentially 100% on in_tok == y. Rate on copy-phase y is ~0 at recall_idx 0-1, low at 2, partial at 3, and ~100% at recall_idx >= 4 (precision 1.0 for that subset). Magnitude grows with position: low-quartile examples sit at recall_idx 2-3, and top activations (~4.0) at recall_idx 5-7. Only a tiny amount of activation on original-phase y (orig_idx 4-6, ~0.2% of mass). Does not fire on any other token, and output/history tokens have no meaningful effect.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 327,
+    "predicate": "(in_tok == tok(\"y\")) & (phase == 2) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.8551647357617507,
+    "recall": 0.9495113377370881,
+    "f1": 0.8998718652754897,
+    "mass_recall": 0.9908706170070606,
+    "correlation": 0.8578786257159507,
+    "n_active": 51774,
+    "n_predicted": 57486,
+    "coverage_by_activation_quartile": [
+      0.802070457354759,
+      0.9960599505562423,
+      0.999922738159623,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 327,
+    "predicate": "(in_tok == tok(\"y\")) & (phase == 2) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.8567352091728205,
+    "recall": 0.9484597269820605,
+    "f1": 0.9002671415850402,
+    "mass_recall": 0.9907197586299153,
+    "correlation": 0.8586604568873946,
+    "n_active": 52231,
+    "n_predicted": 57823,
+    "coverage_by_activation_quartile": [
+      0.7972890182263747,
+      0.9965538367284423,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 327,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The token and phase parts of the claim hold up. In the profile, 100% of activation mass is on in_tok == y and 99.8% is in the copy phase. Original-phase firing is tiny (0.2% of mass, orig_idx 4-6). The out/prev/prev2 token lifts are flat.",
+      "The cutoff 'recall_idx >= 3' is wrong. Whether it fires depends on recall_idx together with how close the step is to the end of the sequence (to_go), not on recall_idx alone. Precision on copy-phase y at recall_idx 3 (dev), by L: L=4 1.00, L=5 0.97, L=6 0.50, L=7 0.18, L=8 0.11, L=9 0.19. So recall_idx 3 is a reliable trigger only in short sequences, and it is the main source of the original predicate's false positives (test precision 0.855).",
+      "The claim 'low at recall_idx 2' hides a systematic positive class. Precision on copy-phase y at recall_idx 2 is 0.92 for L=3 (to_go 0) and 0.53 for L=4 (to_go 1), but 0 for L >= 5. The 'about 0 / low / partial' rates in the explanation are averages over L that hide this structure.",
+      "Recall_idx >= 4 does hold as a sufficient condition: precision is about 1.0 for every L from 5 to 9.",
+      "Better predicate (test split): y in the copy phase AND (recall_idx >= 4, OR recall_idx == 3 with to_go <= 2, OR recall_idx == 2 with to_go <= 1). It scores precision 0.949, recall 0.955, F1 0.952 and mass recall 0.995, against F1 0.900 for the original. A simpler variant, y in the copy phase AND (recall_idx >= 4 OR (recall_idx >= 2 AND to_go <= 1)), scores F1 0.951 with precision 0.974. What is left after this is scattered boundary noise: very weak activations (<0.1 relative) on y at recall_idx 2 in longer sequences, and some misses at recall_idx 3 / to_go 2."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase fed-back input y, once at least about 4 tokens have been recalled or near the end of the copy (recall_idx >= 2-3 with <= 1-2 outputs left)",
+    "better_predicate": "(in_tok == tok('y')) & (phase == 2) & ((recall_idx >= 4) | ((recall_idx == 3) & (to_go <= 2)) | ((recall_idx == 2) & (to_go <= 1)))",
+    "better_predicate_test_f1": 0.952
+  },
+  "final_label": "copy-phase fed-back input y, once at least about 4 tokens have been recalled or near the end of the copy (recall_idx >= 2-3 with <= 1-2 outputs left)"
+}

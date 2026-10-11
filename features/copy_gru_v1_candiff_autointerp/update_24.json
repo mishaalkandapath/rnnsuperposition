@@ -1,0 +1,63 @@
+{
+  "label": "Step 2 (third original token) when the first token is 1/m/h/x/n/v",
+  "predicate": "(t == 2) & isin(first_tok, [tok(\"1\"),tok(\"m\"),tok(\"h\"),tok(\"x\"),tok(\"n\"),tok(\"v\")])",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost only at t=2, the third original-phase input, and only when the sequence started with one of a small set of first tokens. First token 1 gives the largest activations: the top examples all begin 1 3, and 1 carries about 32% of the mass. m, h and x give strong activations, about 20% of the mass each. n and v give weaker ones, about 5% each. First token u gives faint activations and s rarely fires. Silent at t=0,1 and at t>=3 (apart from a handful of t=3/5 cases), at the delimiter, and during the copy phase. The current input token at t=2 has almost no effect (about 1.1-1.2x lift for every token). Dev F1 0.93, mass recall 0.99. The misses are small activations on sequences starting with u or s. The false positives are mostly at the n/v boundary.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 24,
+    "predicate": "(t == 2) & isin(first_tok, [tok(\"1\"),tok(\"m\"),tok(\"h\"),tok(\"x\"),tok(\"n\"),tok(\"v\")])",
+    "split": "test",
+    "precision": 0.9124709218158764,
+    "recall": 0.9539486044715362,
+    "f1": 0.9327488811891798,
+    "mass_recall": 0.9940492727692356,
+    "correlation": 0.838683844896671,
+    "n_active": 95806,
+    "n_predicted": 100161,
+    "coverage_by_activation_quartile": [
+      0.8162575150300602,
+      0.9996659986639946,
+      0.9998747442695504,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 24,
+    "predicate": "(t == 2) & isin(first_tok, [tok(\"1\"),tok(\"m\"),tok(\"h\"),tok(\"x\"),tok(\"n\"),tok(\"v\")])",
+    "split": "dev",
+    "precision": 0.9120544348575494,
+    "recall": 0.9530256861328391,
+    "f1": 0.93209004137479,
+    "mass_recall": 0.9940404687990093,
+    "correlation": 0.8397416733481574,
+    "n_active": 95499,
+    "n_predicted": 99789,
+    "coverage_by_activation_quartile": [
+      0.8122722513089006,
+      0.9998324607329843,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 24,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims check out. The feature fires only at t=2 (95393 of 95499 active steps on dev; 96 at t=3, 10 at t=5, 10 in copy, none at the delimiter). Activation mass by first token: 1=32%, m=20%, h=21%, x=16%, n=5%, v=4.5%. With first token 1, m, h or x, precision at t=2 is 1.0. The current (third) input token gives a flat 1.1-1.2x lift, as claimed.",
+      "Systematic gap: the explanation calls the n/v false positives boundary noise, but they depend on the SECOND token (orig(1)). Precision at t=2 for first=v, by second token: a/c/j/n/v = 0.0, s = 0.03, o = 0.50, i/t/w = 0.58-0.61, while b/g/h/l/m/p/r/x/y/z/1/2/3 = 0.96-1.0. For first=n with second in {a,c,j,n,s,v,o}, precision is 0.29.",
+      "Same pattern for first=u (which the predicate leaves out). The feature fires reliably when the second token is h (0.93), 1 (0.93) or m (0.80), often for x/3/2/r (0.52-0.69), and almost never for most other second tokens. So the u/s misses are not scattered small activations either: they are a second-token effect.",
+      "This suggests the feature responds to a combined score over the first two tokens. The same tokens 1/m/h/x push it on in either position, and a/c/j/n/s/v push it off. A rule based on the first token alone is only an approximation.",
+      "Better predicate (handles second-token modulation at the boundary): test F1 0.964 (P 0.971, R 0.958, mass recall 0.996), up from 0.933."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Step 2 (third original token), gated by the first two tokens: always fires when the first token is 1/m/h/x; when it is n/v/u, fires depending on the second token (on for 1/m/h/x and similar, off for a/c/j/n/s/v)",
+    "better_predicate": "(t == 2) & (isin(first_tok, [tok(\"1\"),tok(\"m\"),tok(\"h\"),tok(\"x\")]) | (isin(first_tok,[tok(\"n\"),tok(\"v\")]) & ~isin(orig(1),[tok(\"a\"),tok(\"c\"),tok(\"j\"),tok(\"n\"),tok(\"s\"),tok(\"v\"),tok(\"o\")])) | ((first_tok==tok(\"u\")) & isin(orig(1),[tok(\"h\"),tok(\"m\"),tok(\"1\"),tok(\"x\")])))",
+    "better_predicate_test_f1": 0.964
+  },
+  "final_label": "Step 2 (third original token), gated by the first two tokens: always fires when the first token is 1/m/h/x; when it is n/v/u, fires depending on the second token (on for 1/m/h/x and similar, off for a/c/j/n/s/v)"
+}

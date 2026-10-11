@@ -1,0 +1,62 @@
+{
+  "label": "copy phase (steps after <DEL>, inputs are fed-back outputs)",
+  "predicate": "phase == 2",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Broad copy-phase feature: fires on nearly every step after the <DEL> step (t > L, recall_idx >= 1), and on essentially nothing in the original phase or at the <DEL> step itself. It does not depend on token identity (in_tok, out_tok, prev_tok and first_tok rates are flat). Misses are mostly early copy steps in short sequences: the firing rate is 0.77 at recall_idx 1 versus 0.92-0.96 at recall_idx 2-4, and for L=3 only 15% of all steps are active. Magnitude typically peaks around the 2nd-4th copied token and falls off toward the end of long sequences. Weak exceptions: the <DEL> step of L>=8 sequences and the last original step occasionally show tiny activations (0.0% of mass).",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 90,
+    "predicate": "phase == 2",
+    "split": "test",
+    "precision": 0.8904713969866905,
+    "recall": 0.9997176729345741,
+    "f1": 0.9419375098253165,
+    "mass_recall": 0.9999342383865714,
+    "correlation": 0.726390592389972,
+    "n_active": 2433348,
+    "n_predicted": 2731880,
+    "coverage_by_activation_quartile": [
+      0.9989528830237188,
+      0.9999260278431199,
+      0.9999917808714578,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 90,
+    "predicate": "phase == 2",
+    "split": "dev",
+    "precision": 0.8906080867131689,
+    "recall": 0.9997152396116904,
+    "f1": 0.9420128973804495,
+    "mass_recall": 0.9999333102298764,
+    "correlation": 0.7264756020836718,
+    "n_active": 2433625,
+    "n_predicted": 2731765,
+    "coverage_by_activation_quartile": [
+      0.998938210770093,
+      0.9999309671502253,
+      0.9999917818035983,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 90,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The explanation says 'for L=3 only 15% of steps are active'. That 15% is the rate over all 6 steps of an L=3 sequence. Counting only copy-phase steps, about 45% are active (test precision of (phase==2)&(L==3) is 0.45). L=3 also runs the opposite way from the general trend: the rate is 0.63 at recall_idx 1 and 0.27 at recall_idx 2, while everywhere else recall_idx 2 is higher than recall_idx 1. This is a real exception, but it covers only about 0.5% of active steps and 0.2% of the mass. Removing it does not change F1 in any meaningful way: (phase==2)&(L>=4) scores test F1 0.9421 against 0.9419.",
+      "The false positives (299k test steps, 11% of copy steps) do not form a clear class. Test precision within the copy phase is 0.87-0.91 when split by repeated tokens (in_count), digits, in_tok==prev_tok, to_go, or recall_idx 5/6. Two cells are somewhat lower: recall_idx==1 at 0.77, with 0.74 for L>=7, and L=3. Some long-sequence cells are higher, e.g. L=9 at recall_idx 5 is 0.92. I found no token, history or position class that a predicate could carve out to raise F1.",
+      "Missed activations: 687 test steps holding 0.0% of the mass. Nearly all are tiny activations (0.01-0.09 of max) at the <DEL> step of L>=8 sequences, which matches what the explanation says.",
+      "The magnitude claim was not measured by the original agent. I checked it from the profile's mass share divided by the number of active steps per recall_idx. The average activation per active step is lowest at recall_idx 1, peaks at recall_idx 3, and falls somewhat at recall_idx 5-6. That is roughly consistent with 'peaks around the 2nd-4th copied token'.",
+      "Test scores reproduce exactly: precision 0.890, recall 0.9997, F1 0.942, mass recall 0.99993. The label matches the predicate and does not overclaim."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "label": "final copy step of length-3 sequences",
+  "predicate": "(L == 3) & (t == 5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost only in the copy phase of L=3 sequences, at t=5. That is the last output step, where the model has just been fed back original token 1 (prev2 = <DEL>) and has to output original token 2. This one condition holds 93% of activation mass, with precision 0.97 on dev. Never fires in the original or delimiter phases, or on the first occurrence of a token. The misses (7% of mass) are weak activations: the step before (t=4) in L=3 sequences, and scattered late copy steps in long sequences (L=6-9, mostly the last or second-to-last output). The strongest examples tend to begin with c/d/a, and the inactive L=3 cases often begin with h/r/t/k/p, so the first original token may modulate magnitude, but this was not checked quantitatively.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 20,
+    "predicate": "(L == 3) & (t == 5)",
+    "split": "test",
+    "precision": 0.9735023041474654,
+    "recall": 0.7515564779128372,
+    "f1": 0.8482516312531371,
+    "mass_recall": 0.928832863799897,
+    "correlation": 0.8988382552965212,
+    "n_active": 3373,
+    "n_predicted": 2604,
+    "coverage_by_activation_quartile": [
+      0.22511848341232227,
+      0.7924080664294187,
+      0.9905100830367735,
+      0.9988137603795967
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 20,
+    "predicate": "(L == 3) & (t == 5)",
+    "split": "dev",
+    "precision": 0.9727447216890595,
+    "recall": 0.7589098532494759,
+    "f1": 0.8526244952893675,
+    "mass_recall": 0.9302146926736858,
+    "correlation": 0.8953378210677798,
+    "n_active": 3339,
+    "n_predicted": 2605,
+    "coverage_by_activation_quartile": [
+      0.23952095808383234,
+      0.8143712574850299,
+      0.9832335329341317,
+      0.9988009592326139
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 20,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Dataset mismatch: the user asked to run the baseline on features/copy_transcoder_v2_1of5. That directory holds raw seq .pt files plus a subsample manifest, not an autointerp store, so this verdict, like the original, comes from features/copy_gru_v1_neuron_baseline_store. The 1/5 subsample has not been analyzed yet.",
+      "All reported test numbers reproduce exactly: P 0.974, R 0.752, F1 0.848, mass recall 0.929. On the dev split it is never active in the original or delimiter phase, or when in_first==1. 93% of mass is at t=5 and 93.6% in L=3.",
+      "The low recall (25% of active steps missed) is made up of weak activations, only 7.1% of mass. The predicate catches 99% of the top two activation quartiles but only 22.5% of the bottom quartile.",
+      "A small systematic subclass the explanation misses: at t=4 in L=3, the unit fires reliably when the first token is '0' (precision 0.67 over 82 steps). Adding it only raises F1 from 0.848 to 0.855.",
+      "The L=9, t=17 last-output-step activity (12% rate, 2.2% of mass) can't be added cheaply: it drops F1 to 0.24.",
+      "The claim that the first token modulates magnitude is weak. When the first token is h/r/t/k/p, precision at L3/t5 is 0.952 against 0.974 overall, a minor effect. The explanation correctly marked it as unverified."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "final copy step of length-3 sequences",
+    "better_predicate": "((L==3)&(t==5)) | ((L==3)&(t==4)&(first_tok==tok('0')))",
+    "better_predicate_test_f1": 0.855
+  },
+  "final_label": "final copy step of length-3 sequences"
+}

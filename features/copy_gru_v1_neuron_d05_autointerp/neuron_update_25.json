@@ -1,0 +1,63 @@
+{
+  "label": "First input token, when it is one of a b c g i j k l n o p q t u 2 3",
+  "predicate": "(t == 0) & isin(in_tok, [0,1,2,6,8,9,10,11,13,14,15,16,19,20,28,29])",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Update-gate unit that fires at step 0 only, and only for a fixed subset of first tokens (a b c g i j k l n o p q t u 2 3). For those tokens it fires on every sequence (dev precision 1.0), and it never fires for the other first tokens (d e f h m r s v w x y z 0 1). At t=0 the activation depends only on the token. q is strongest (the top examples all start with q, about 18% of activation mass), then 2 and g. i, n and t are weak. The ~13% of activation mass it misses comes from small, sparse activations at t=1..3, mostly on the first occurrence of q, g, 2 or u in the sequence. Adding those raises recall but drops precision to about 0.70, so the F1 goes down. It essentially never fires at t>=4, on the delimiter, or in the copy phase (6 activations out of about 64k).",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 25,
+    "predicate": "(t == 0) & isin(in_tok, [0,1,2,6,8,9,10,11,13,14,15,16,19,20,28,29])",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.8358140923879729,
+    "f1": 0.9105650684931507,
+    "mass_recall": 0.869514575272349,
+    "correlation": 0.7171982737970948,
+    "n_active": 63623,
+    "n_predicted": 53177,
+    "coverage_by_activation_quartile": [
+      0.8076826354834653,
+      0.8789136175028291,
+      0.7941028542688294,
+      0.8625589437283873
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 25,
+    "predicate": "(t == 0) & isin(in_tok, [0,1,2,6,8,9,10,11,13,14,15,16,19,20,28,29])",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.8375456354491468,
+    "f1": 0.9115916571448062,
+    "mass_recall": 0.8713105215897715,
+    "correlation": 0.7187235916611181,
+    "n_active": 63821,
+    "n_predicted": 53453,
+    "coverage_by_activation_quartile": [
+      0.8063424417147155,
+      0.8805390159824507,
+      0.7967408335944844,
+      0.8665622062049514
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 25,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The t=0 part holds up. The predicate has test precision 1.0, recall 0.836 and F1 0.911. It never fires for the excluded first tokens (precision 0 at t==0 for tokens outside the set), and it is essentially silent at t>=4, on <DEL> and in the copy phase.",
+      "The claim that 'adding those raises recall but drops precision to about 0.70, so F1 goes down' is wrong. It only holds if you add every listed token at t=1..3 (precision about 0.07). Adding just the first occurrence of q at t=1..3 has precision 0.66 on dev on its own. Combined with the t=0 predicate it raises test F1 from 0.911 to 0.942 (precision 0.951, recall 0.933) and mass recall from 0.87 to 0.97.",
+      "The missed t=1..3 activations are called 'small, sparse', but the q misses are not small. Test misses include q at 0.46 and 0.28 of max, larger than most of the t=0 activations on weak tokens like i, n and t.",
+      "Systematic missed class: the first q in the sequence at steps 1 to 3. It fires in 66% of those cases overall, and in 98.5% when no token from the firing set came earlier. That makes it a real second mode, not scattered noise.",
+      "Small leftover: weaker misses on the first 2, g, j or l at steps 2 to 3, about 3% of activation mass. False positives of the improved predicate are mostly a q at step 1 to 3 after a strong t=0 token such as g or 3."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "First input token when it is one of a b c g i j k l n o p q t u 2 3 (q strongest), plus the first q to appear at steps 1 to 3",
+    "better_predicate": "((t==0)&isin(in_tok,[0,1,2,6,8,9,10,11,13,14,15,16,19,20,28,29]))|((t>=1)&(t<=3)&(in_tok==16)&(in_first==1))",
+    "better_predicate_test_f1": 0.942
+  },
+  "final_label": "First input token when it is one of a b c g i j k l n o p q t u 2 3 (q strongest), plus the first q to appear at steps 1 to 3"
+}

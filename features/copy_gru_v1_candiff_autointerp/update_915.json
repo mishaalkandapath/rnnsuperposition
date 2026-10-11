@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input r (echoing original position >= 2)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"r\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost exclusively when the token r is fed back as input during the copy phase (in_tok r accounts for 100% of activation mass; never fires in the original or delimiter phase, and never on r in the original sequence). It requires the echoed r to be original token 2 or later (recall_idx >= 3); r echoed from original positions 0-1 gives no or weak activation (recall_idx 2 rate 0.7%, recall_idx<=1 zero). Magnitude increases with copy position: the strongest activations (~5) are r near the end of the copy (to_go 0-1), and early-copy r gives weak activations (lowest-quartile examples). Does not depend on output token, next token, first token, or L beyond this position effect. Simple predicate in_tok==r in copy phase gives F1 0.78 (precision 0.65) because of early-copy r.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 915,
+    "predicate": "(phase == 2) & (in_tok == tok(\"r\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9606199889411114,
+    "recall": 0.9409464811617752,
+    "f1": 0.9506814645074132,
+    "mass_recall": 0.9750353660024841,
+    "correlation": 0.9044083900303096,
+    "n_active": 59082,
+    "n_predicted": 57872,
+    "coverage_by_activation_quartile": [
+      0.7872858980434635,
+      0.9777943267212782,
+      0.9987136086662153,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 915,
+    "predicate": "(phase == 2) & (in_tok == tok(\"r\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9612224778179428,
+    "recall": 0.9407214313523029,
+    "f1": 0.9508614642325526,
+    "mass_recall": 0.9749462264063931,
+    "correlation": 0.9041222810747435,
+    "n_active": 59077,
+    "n_predicted": 57817,
+    "coverage_by_activation_quartile": [
+      0.7849018280297901,
+      0.9792132168731803,
+      0.9987812309567337,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 915,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The reported test scores reproduce: precision 0.961, recall 0.941, F1 0.951, mass recall 0.975 on the test split. The claims about phase and token also hold: the feature is silent in the original and delimiter phases, and in_tok r carries 100% of the activation mass.",
+      "There is one systematic miss class, not scattered noise. An echoed r from original position 1 (recall_idx == 2) fires almost every time in short sequences. Precision of copy-phase r at recall_idx 2 is 1.00 for L=3 (423 steps) and 0.99 for L=4 (2455 steps), but 0.15 for L=5 and 0.00 for L>=6. These steps make up most of the 3489 test misses. Misses output shows examples like 'z r d 0 <DEL> z [r:0.23]' and 'p r 0 <DEL> p [r:0.47]'.",
+      "The explanation says the rate is 0.7% at recall_idx 2. That is the base rate across all input tokens. Among echoed r at recall_idx 2 the rate is about 20%, and close to 100% when the r is near the end of the copy (to_go <= 1). So the cutoff depends on distance to the end of the copy, not only on original position.",
+      "The fixed position boundary also gives systematic false positives. An echoed r from original position 2 (recall_idx 3) in long sequences fires less often: precision 0.61 at L=8 and 0.68 at L=9, against 1.00 for L<=6. These are cases with to_go 4-5, and most of the 2279 test false positives look like this, e.g. 'n i r l 1 2 h d <DEL> n i *r*'.",
+      "So the label 'echoing original position >= 2' overclaims a hard position cutoff. The real condition mixes position and to_go: the feature fires on echoed r unless it is early in the copy, i.e. high to_go together with low recall_idx. This fits the profile, where activation is zero at to_go >= 6."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input r, except early in the copy (fires when the echoed r is from original position >= 2 or is within the last two copy steps)",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"r\")) & ((recall_idx >= 3) | (to_go <= 1))",
+    "better_predicate_test_f1": 0.972
+  },
+  "final_label": "copy-phase input r, except early in the copy (fires when the echoed r is from original position >= 2 or is within the last two copy steps)"
+}

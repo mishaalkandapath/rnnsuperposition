@@ -1,0 +1,64 @@
+{
+  "label": "copy-phase input t (from original position >= 2)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"t\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token-specific copy-phase feature: fires when the fed-back input is the letter t during the copy phase, i.e. the model is re-reading a t it copied, from original position >= 2 (recall_idx >= 3). Every activation has in_tok = t; essentially all mass is in the copy phase (a trace on the original-phase t at positions 3-6, 0.0005 mass). Does not fire on any other token, on the first-seen t in the original phase, or at the delimiter. Weak or absent when the t came from original positions 0-1 (recall_idx 1-2) or when many outputs remain (to_go >= 5); rate per copy-phase t is about 0.03 at recall_idx >= 4 vs 0.006 at recall_idx 2. Strongest activations are on t at original position 2-5 when the copy is near its end (the top examples are mostly t as the second-to-last or last copied input). Independent of the output token, prev tokens, first token and L.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 774,
+    "predicate": "(phase == 2) & (in_tok == tok(\"t\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.8888773514701556,
+    "recall": 0.9392681454931149,
+    "f1": 0.9133782654313303,
+    "mass_recall": 0.9715036654689849,
+    "correlation": 0.880519260527303,
+    "n_active": 54683,
+    "n_predicted": 57783,
+    "coverage_by_activation_quartile": [
+      0.7887499085655768,
+      0.9833955087411309,
+      0.9886621315192744,
+      0.996269202633504
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 774,
+    "predicate": "(phase == 2) & (in_tok == tok(\"t\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.8873006578720766,
+    "recall": 0.9403025933969668,
+    "f1": 0.9130330766708902,
+    "mass_recall": 0.9717451528490287,
+    "correlation": 0.8793983900062148,
+    "n_active": 54793,
+    "n_predicted": 58066,
+    "coverage_by_activation_quartile": [
+      0.7921746112854953,
+      0.9824791940429259,
+      0.9899985399328369,
+      0.9965688421667397
+    ]
+  },
+  "gate": "update",
+  "feature": 774,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Systematic miss that contradicts the explanation: the explanation says the feature is 'weak or silent when the t came from original position 0 or 1', but a copy-phase t at recall_idx == 2 with to_go <= 1 fires 98.6% of the time (test: precision 0.986 over 2,919 steps). These are short sequences (L = 3-4) where that t is the last or second-to-last copied input, and they make up most of the 3,321 test misses (e.g. 'p t k <DEL> p [t]', 'a t v e <DEL> a [t] v'). recall_idx == 2 with to_go >= 2 has precision 0.005, so what actually silences the feature is distance from the end of the copy, not the source position.",
+      "Systematic false positives: recall_idx >= 3 with to_go == 5 has precision only 0.245, and with to_go == 4 only 0.586. The test false positives are mainly a t at recall_idx 3 in long sequences (L = 7-9) with 5-6 outputs still to go (e.g. '1 g t a o e m p y <DEL> 1 g *t*').",
+      "The main variable is to_go (how close the copy is to finishing), not original position. Copy-phase t with to_go <= 1 has precision 0.986 at any recall_idx. recall_idx >= 3 only works as a rough stand-in for 'near the end'.",
+      "The rate figures are misstated. The quoted 'firing rate about 0.03 at recall_idx >= 4' is the rate over all steps, not per copy-phase t. Per copy-phase t the feature fires about 60% of the time overall (P = 0.597 for phase==2 & in_tok==t), and about 100% when to_go <= 1.",
+      "The agent dismissed the to_go <= 4 refinement as only a slight gain, but adding the to_go <= 1 case for recall_idx == 2 raises test F1 from 0.913 to 0.947 and mass recall from 0.972 to 0.998.",
+      "Claims that hold up: the feature is specific to the token t (all activations have in_tok = t), it fires almost only in the copy phase (original-phase mass 0.0005), it never fires at the delimiter, and it does not depend on out_tok, prev_tok or first_tok."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input t near the end of the copy (<= 4 outputs remaining; at recall_idx 2 only when <= 1 remains)",
+    "better_predicate": "(phase == 2) & (in_tok == tok('t')) & (to_go <= 4) & ((recall_idx >= 3) | (to_go <= 1))",
+    "better_predicate_test_f1": 0.947
+  },
+  "final_label": "copy-phase input t near the end of the copy (<= 4 outputs remaining; at recall_idx 2 only when <= 1 remains)"
+}

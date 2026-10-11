@@ -1,0 +1,64 @@
+{
+  "label": "copy-phase input t (fed-back output t) from recall step 3 on",
+  "predicate": "(phase == 2) & (in_tok == tok(\"t\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the input is the letter t (the model feeding back its own previous output t, i.e. original token recall_idx-1 is t) and recall_idx >= 3. It is essentially silent on t during the original phase or at the delimiter, on early copy steps (recall_idx <= 2), and on any other input token. Magnitude is smallest at recall_idx 3 (mass per activation about half of what later steps show) and larger for later positions. When two t tokens come in a row, the second one is weaker (about 0.6-0.7 of the first). The preceding token, the next output, and the first token have little effect.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 456,
+    "predicate": "(phase == 2) & (in_tok == tok(\"t\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9755810532509561,
+    "recall": 0.992674508699021,
+    "f1": 0.9840535563100611,
+    "mass_recall": 0.9991530283830727,
+    "correlation": 0.8961836831239052,
+    "n_active": 56788,
+    "n_predicted": 57783,
+    "coverage_by_activation_quartile": [
+      0.9706980347960836,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 456,
+    "predicate": "(phase == 2) & (in_tok == tok(\"t\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.975682843660662,
+    "recall": 0.9927281010706338,
+    "f1": 0.9841316715160463,
+    "mass_recall": 0.9990707417111278,
+    "correlation": 0.8958360457421649,
+    "n_active": 57069,
+    "n_predicted": 58066,
+    "coverage_by_activation_quartile": [
+      0.9709139332772638,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 456,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I reproduced the test scores exactly: P 0.976, R 0.993, F1 0.984, mass recall 0.999.",
+      "The claims about phase and token hold. On dev there are 0 activations in the original phase and 0 at the delimiter, and in_tok == t carries 100% of the activation mass (the next-highest token has 2 activations).",
+      "'Silent at recall_idx <= 2' is slightly overstated: there are 408 dev activations at recall_idx 2. They carry only 0.1% of the mass and are weak, with the largest shown about 0.12 of max (examples are L=3/4 with t at position 1), so this is small noise.",
+      "The false positives cluster at recall_idx 3: on test, 16157 predicted steps there have precision 0.914, while recall_idx >= 4 has precision 0.9996. So roughly 1.4k misfires sit at the onset step. They are spread across all L values (precision 0.87-0.96 for each L) and are not explained by prev_tok == t. This fits the weak-onset claim already in the explanation, so I don't count it as a separate counterexample class.",
+      "'Mass per activation at recall_idx 3 is about half' checks out: mass/recall is about 0.48 at recall_idx 3 versus about 1.19 at recall_idx >= 4, a ratio of roughly 0.4.",
+      "The repeated-t claim is weakly supported: when prev_tok == t, mass per activation is about 0.83 of the average. That is in the claimed direction, but I did not confirm the exact 0.6-0.7 ratio.",
+      "The label matches the predicate and does not overclaim."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

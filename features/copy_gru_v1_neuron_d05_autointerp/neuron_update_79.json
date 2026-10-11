@@ -1,0 +1,64 @@
+{
+  "label": "Sequence start on selected tokens (p,q,1,...) + first copy step (input orig(0)) in short L<=4 sequences",
+  "predicate": "((t == 0) & isin(in_tok, [tok(\"p\"),tok(\"q\"),tok(\"1\"),tok(\"u\"),tok(\"b\"),tok(\"f\"),tok(\"a\"),tok(\"k\"),tok(\"t\"),tok(\"j\"),tok(\"3\"),tok(\"y\")])) | ((t == 1) & isin(in_tok, [tok(\"p\"),tok(\"q\"),tok(\"1\")])) | ((recall_idx == 1) & (L <= 4))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Update-gate unit tied to the start of the sequence. (1) At t=0 it fires deterministically (precision 1.0) when the first token is one of a fixed set of about 12 tokens (p,q,1,u,b,f,a,k,t,j,3,y); magnitude depends only on the token (p/q about 0.29 of max, 1 about 0.20, f 0.12, u/a/k about 0.09-0.10, 3/t small). It also fires weakly at t=1 when the input is p/q/1. (2) In the copy phase it fires at recall_idx==1, the step where the model feeds back orig(0) and outputs orig(1). This is nearly always active for L=3-4 and rare for longer L. These are the largest activations (up to max), largest when orig(0) is p/q/1. Smaller activations continue at recall_idx 2-3 in short sequences. It never fires on the <DEL> step, at t=2-3 of the original phase (only rarely), or at later original positions. Together t=0 and the first copy step carry about 85% of activation mass. Misses: weak t=1 activations on other tokens, recall_idx 2-3 tails, and some t=0 tokens outside the set.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 79,
+    "predicate": "((t == 0) & isin(in_tok, [tok(\"p\"),tok(\"q\"),tok(\"1\"),tok(\"u\"),tok(\"b\"),tok(\"f\"),tok(\"a\"),tok(\"k\"),tok(\"t\"),tok(\"j\"),tok(\"3\"),tok(\"y\")])) | ((t == 1) & isin(in_tok, [tok(\"p\"),tok(\"q\"),tok(\"1\")])) | ((recall_idx == 1) & (L <= 4))",
+    "split": "test",
+    "precision": 0.8140534089213785,
+    "recall": 0.8594153594153594,
+    "f1": 0.836119581373255,
+    "mass_recall": 0.8881347564475647,
+    "correlation": 0.6099984504932014,
+    "n_active": 63492,
+    "n_predicted": 67030,
+    "coverage_by_activation_quartile": [
+      0.6863856863856864,
+      0.942039942039942,
+      0.9233289233289234,
+      0.8859068859068859
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 79,
+    "predicate": "((t == 0) & isin(in_tok, [tok(\"p\"),tok(\"q\"),tok(\"1\"),tok(\"u\"),tok(\"b\"),tok(\"f\"),tok(\"a\"),tok(\"k\"),tok(\"t\"),tok(\"j\"),tok(\"3\"),tok(\"y\")])) | ((t == 1) & isin(in_tok, [tok(\"p\"),tok(\"q\"),tok(\"1\")])) | ((recall_idx == 1) & (L <= 4))",
+    "split": "dev",
+    "precision": 0.8119697693870236,
+    "recall": 0.8597795315440699,
+    "f1": 0.8351910032954117,
+    "mass_recall": 0.8882500324607677,
+    "correlation": 0.6086436757071545,
+    "n_active": 63229,
+    "n_predicted": 66952,
+    "coverage_by_activation_quartile": [
+      0.6879428137651822,
+      0.9404061491744165,
+      0.9249699500221421,
+      0.885810084139938
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 79,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Missing token at t=0: when the first token is 'n', the unit is active every time (dev precision 1.0, 3216 steps, about 5% of active steps). It is left out of the 12-token set even though the t=0 rule is described as a fixed token set with precision 1.0.",
+      "The claim that recall_idx==1 is 'nearly always active for L=3-4' is false for L=4. Precision is 1.0 at L=3 but only 0.44 at L=4. Within L=4 it depends on the input token: 0.80 when the input orig(0) is in the token set and 0.21 when it is not. So the copy-phase mode is token-gated as well, not just positional.",
+      "Systematic miss at L=3: the whole copy phase is active at L=3 (phase==2 & L==3, precision 0.91), not only recall_idx 1. The 'recall_idx 2-3 tails' are left out of the predicate, but at L=3 they are a deterministic class, not scattered noise.",
+      "Copy-phase tails at L=4 (recall_idx 2-3) come mostly from inputs in the token set, e.g. a fed-back p giving 0.2-0.37. This repeats the t=0 token preference, which the explanation never mentions.",
+      "Minor: 'rarely active for longer L' undersells how clean this is. recall_idx==1 with L>=5 has essentially zero activity (precision 7e-5).",
+      "Checks that held up: t=1 activations come only from inputs p/q/1 (all t=1 activity is covered); no activity at <DEL> or at t>=3 in the original phase; t=2 is close to zero; t=0 plus the first copy step hold about 85% of the activation mass."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "The unit prefers a fixed set of 13 tokens (p,q,1,f,u,a,k,b,j,y,t,3,n). It is active whenever one of them is the first input. At t=1 it is weakly active on p/q/1. In short sequences it is active in the copy phase: every copy step at L=3, and at L=4 mainly the first copy step when the fed-back token orig(0) is in the set.",
+    "better_predicate": "((t==0)&isin(in_tok,[tok('p'),tok('q'),tok('1'),tok('u'),tok('b'),tok('f'),tok('a'),tok('k'),tok('t'),tok('j'),tok('3'),tok('y'),tok('n')])) | ((t==1)&isin(in_tok,[tok('p'),tok('q'),tok('1')])) | ((phase==2)&(L==3)) | ((recall_idx==1)&(L==4)&isin(in_tok,[tok('p'),tok('q'),tok('1'),tok('u'),tok('b'),tok('f'),tok('a'),tok('k'),tok('t'),tok('j'),tok('3'),tok('y'),tok('n')]))",
+    "better_predicate_test_f1": 0.911
+  },
+  "final_label": "The unit prefers a fixed set of 13 tokens (p,q,1,f,u,a,k,b,j,y,t,3,n). It is active whenever one of them is the first input. At t=1 it is weakly active on p/q/1. In short sequences it is active in the copy phase: every copy step at L=3, and at L=4 mainly the first copy step when the fed-back token orig(0) is in the set."
+}

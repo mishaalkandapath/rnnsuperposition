@@ -1,0 +1,63 @@
+{
+  "label": "sequence began with v (original phase from step 3 through <DEL>)",
+  "predicate": "(first_tok == tok(\"v\")) & (t >= 3) & (t <= L)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires in sequences whose first original token is v, from step 3 of the original phase through the <DEL> step (when v is about to be output). It does not depend on the current input token. Magnitude ramps up over steps 3-5 and stays high until <DEL>: step 3 is weak and is where most false positives fall, and starting at t>=4 gives precision ~1.0. Activations are strongest when the second token is also v (top examples are v v ...). It is essentially silent during the copy phase (86 steps) and at t<3. Missed activations are weak (4% of mass), scattered mid-sequence activations, often in sequences with v at position 1. Dev: P 0.98, R 0.77, F1 0.86, mass recall 0.96.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 182,
+    "predicate": "(first_tok == tok(\"v\")) & (t >= 3) & (t <= L)",
+    "split": "test",
+    "precision": 0.9785751333235807,
+    "recall": 0.7700244877456623,
+    "f1": 0.8618631808891309,
+    "mass_recall": 0.9572427614853689,
+    "correlation": 0.9105139883970753,
+    "n_active": 95558,
+    "n_predicted": 75193,
+    "coverage_by_activation_quartile": [
+      0.24336542486395982,
+      0.8367517789870239,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 182,
+    "predicate": "(first_tok == tok(\"v\")) & (t >= 3) & (t <= L)",
+    "split": "dev",
+    "precision": 0.9778553391768796,
+    "recall": 0.7742246134843457,
+    "f1": 0.8642067627883064,
+    "mass_recall": 0.9583941539674681,
+    "correlation": 0.9099255551790231,
+    "n_active": 95533,
+    "n_predicted": 75639,
+    "coverage_by_activation_quartile": [
+      0.25079551163959135,
+      0.8461248586860947,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 182,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The test scores reproduce exactly: P 0.979, R 0.770, F1 0.862, mass recall 0.957, correlation 0.91.",
+      "The factual claims check out. The feature never fires at t<3 (0 active at t=0..2). The copy phase is essentially silent (phase==2 gives P 3e-5 on 86 active steps; recall_idx>=1 has 86 active of about 2.7M steps). Restricting to t>=4 gives P 0.9999 but R 0.61. The t==3 slice alone has P 0.90, so it holds most of the false positives. The <DEL> step with v first has P 0.993.",
+      "The missed activations (about 23% of active steps) are a systematic but low-mass class, not purely scattered noise. About 15% of all activations fall in sequences with v at position 1 and a different first token. Predicate (first_tok!=v)&(orig(1)==v)&(t>=5)&(t<=L) scores P 0.33 and mass recall 0.034, and those activations are weak (about 0.1 of max). The rest (about 7%) is a diffuse background at a 0.3-0.6% rate in other sequences, holding about 0.6% of mass. The explanation already notes the v-at-position-1 misses.",
+      "Adding the v-at-position-1 class does not raise F1. OR-ing in (orig(1)==v)&(t>=5)&(t<=L) gives F1 0.827 (R 0.91, mass recall 0.992). Using t==L only gives F1 0.816. So the original predicate is the best simple description.",
+      "A minor nuance on 'strongest when the second token is also v': top examples do start with 'v v', but the v-v subset has slightly lower precision (0.84) than the overall v-first predicate (0.98). Some of these sequences are inactive at step 3, so the boost applies to magnitude at later steps, not to reliability.",
+      "L=3 sequences fire rarely (P 0.72 at their single t=3=L step). Their mass share is negligible."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

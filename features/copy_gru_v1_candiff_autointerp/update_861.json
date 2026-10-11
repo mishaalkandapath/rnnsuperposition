@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input m (fed-back m at recall_idx >= 3)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"m\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the fed-back input token is m (97% of activation mass on in_tok == m; zero activation in original/delimiter phases, so an m in the original sequence never triggers it). Gated by position: m echoed at recall_idx 0-1 never fires and at recall_idx 2 rarely does; strong at recall_idx >= 3, i.e. when the m came from original position >= 3. Top activations (~0.9-1.0 of max) are m inputs late in the copy of long sequences; m echoed at original position 2 gives weaker activations (~0.3-0.6). Remaining ~29k active steps not on m are tiny (mostly <0.1 of max, 4% of mass), scattered over arbitrary copy-phase tokens, often right after an m. Does not depend on the output token or on the first token.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 861,
+    "predicate": "(phase == 2) & (in_tok == tok(\"m\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.930918091809181,
+    "recall": 0.6482293951739266,
+    "f1": 0.7642711989654536,
+    "mass_recall": 0.9571533039896889,
+    "correlation": 0.8832976359610326,
+    "n_active": 82966,
+    "n_predicted": 57772,
+    "coverage_by_activation_quartile": [
+      0.08745540449329862,
+      0.5137402371998843,
+      0.9917554601996047,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 861,
+    "predicate": "(phase == 2) & (in_tok == tok(\"m\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9333437592312638,
+    "recall": 0.6490604797293215,
+    "f1": 0.7656659824381343,
+    "mass_recall": 0.9573347388292485,
+    "correlation": 0.8838767897360131,
+    "n_active": 82755,
+    "n_predicted": 57549,
+    "coverage_by_activation_quartile": [
+      0.09091787906617042,
+      0.5138479385180531,
+      0.9915413988109624,
+      0.9999516627996906
+    ]
+  },
+  "gate": "update",
+  "feature": 861,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Core claims hold on test. The original predicate gives P 0.931, R 0.648, F1 0.764, mass recall 0.957. The feature never fires in the original or delimiter phases (0 active steps in the profile). in_tok==m holds 0.970 of the activation mass. An m at recall_idx 2 gives P 0.14 and mass 0.012, and recall_idx 0-1 never fires.",
+      "There is one small systematic false-positive pocket the explanation does not mention: m at recall_idx==3 in long sequences. On test, precision is 1.0 for L=4, 1.0 for L=5, 0.92 for L=6, 0.63 for L=7, 0.45 for L=8 and 0.56 for L=9. This is about 2.4k of the 4k false positives. Excluding (recall_idx==3)&(L>=7) raises precision to 0.996, but F1 drops slightly to 0.743, so the original predicate is still the better trade-off.",
+      "The firing threshold tracks recall_idx, not closeness to the end. For m inputs, recall_idx>=4 gives precision 1.0. Within recall_idx>=3, to_go only reflects L.",
+      "The explanation says leftover activations land 'often right after an m'. That is overstated: only about 5.5% of active steps are non-m inputs with prev_tok==m (P 0.06). Most of the residual, 21.7% of active steps, comes in sequences where no m has been seen at all. The residual is scattered low-magnitude noise spread over all tokens (bottom activation quartile coverage is only 0.087), consistent with the 4% mass.",
+      "The explanation says an m copied from an earlier position gives a weaker activation (it was not scored). This is not supported. Repeated m (in_count>1) has precision 0.92 and a mass-to-step ratio of about 1.5, the same as single-occurrence m (about 1.47). There is no clear weakening."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

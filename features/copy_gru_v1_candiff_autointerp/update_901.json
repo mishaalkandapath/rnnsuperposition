@@ -1,0 +1,64 @@
+{
+  "label": "last two copy-phase outputs of short sequences (L<=7)",
+  "predicate": "(phase == 2) & (to_go <= 1) & (L <= 7)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost only in the copy phase (100% of activation mass), near the end of the copy: the final and second-to-last output steps (to_go 0-1 hold ~94% of mass, to_go 2 adds weak activations). Activation is largest for the shortest sequences: the top activations are all L=3 at the last output step (t=5, ~10 of max 10.5), and the second-to-last step there is ~0.25-0.3 of max. Firing rate falls off sharply for L>=8 (rate 0.03 and 0.01 for L=8, 9), and it is silent on the original phase, on the delimiter, and on the first copy output. It does not depend on token identity (in_tok, out_tok and first_tok lift are all flat). Misses are mostly weak activations (<0.2 of max) two or three steps before the end; false positives are mostly long sequences (L=7).",
+  "test_scores": {
+    "gate": "update",
+    "feature": 901,
+    "predicate": "(phase == 2) & (to_go <= 1) & (L <= 7)",
+    "split": "test",
+    "precision": 0.8773904594540292,
+    "recall": 0.7469081514517552,
+    "f1": 0.8069083871305813,
+    "mass_recall": 0.9348496293102306,
+    "correlation": 0.6839034070937495,
+    "n_active": 783431,
+    "n_predicted": 666922,
+    "coverage_by_activation_quartile": [
+      0.3899202483431874,
+      0.6622246729773611,
+      0.9356370431639249,
+      0.9998519327876971
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 901,
+    "predicate": "(phase == 2) & (to_go <= 1) & (L <= 7)",
+    "split": "dev",
+    "precision": 0.8777754832685384,
+    "recall": 0.7473178761120575,
+    "f1": 0.8073103075253529,
+    "mass_recall": 0.9346470094836928,
+    "correlation": 0.6828894223989719,
+    "n_active": 784919,
+    "n_predicted": 668262,
+    "coverage_by_activation_quartile": [
+      0.39090353157009633,
+      0.6639096978035978,
+      0.9346532130662998,
+      0.9998063487048295
+    ]
+  },
+  "gate": "update",
+  "feature": 901,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims check out. On the dev split, 100% of activation mass is in the copy phase, the delimiter step never fires, and to_go 0 and 1 hold 52.1% and 41.8% of the mass. Token lift is flat. The reported test scores reproduce exactly (P 0.877, R 0.747, F1 0.807, mass recall 0.935).",
+      "The claim 'silent in the original phase' is slightly wrong. The feature fires on 4430 original-phase steps, all at t=2 (rate 0.009). Their mass is negligible.",
+      "'Activation is strongest for the shortest sequences' is misleading. Only the top single activations are L=3 at the last step. L=4 holds 46.1% of the mass, against 11.0% for L=3. In L=3, the second-to-last step holds only 2.1% of the mass, while both of the last two L=4 steps hold about 23% each. The magnitude does not simply fall as L shrinks.",
+      "There is a systematic miss class: L=5 at to_go==2. This is the third-to-last step, and it fires at 72% precision, while L=4 and L=3 at to_go 2 are almost silent (2.4% and 0%). Here the cutoff is not 'last two steps'; it depends on L.",
+      "There is a systematic false-positive class: L=7 at to_go<=1 fires only 55-67% of the time, while L<=6 fires 86-100% of the time. Digit count and token repetition do not explain which L=7 sequences fire (precision stays around 0.59-0.62 within every split I tried). The label's 'L<=7' boundary is therefore soft: L=7 is roughly a coin flip, and L=8 at to_go 1 still fires 13.6% of the time.",
+      "A predicate that adds the L=5/to_go=2 case raises test F1 from 0.807 to 0.841 and mass recall from 0.935 to 0.963. It beats the original predicate and the agent's recall_idx>=2 variant (test F1 0.827)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "end of the copy phase in short sequences: the last two outputs for L<=6 (strongest for L=4, peak at the L=3 final step), plus the third-to-last output for L=5; L=7 fires only about 60% of the time and L>=8 rarely",
+    "better_predicate": "(phase == 2) & (((to_go <= 1) & (L <= 7)) | ((to_go == 2) & (L == 5)))",
+    "better_predicate_test_f1": 0.841
+  },
+  "final_label": "end of the copy phase in short sequences: the last two outputs for L<=6 (strongest for L=4, peak at the L=3 final step), plus the third-to-last output for L=5; L=7 fires only about 60% of the time and L>=8 rarely"
+}

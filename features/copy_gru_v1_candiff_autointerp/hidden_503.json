@@ -1,0 +1,64 @@
+{
+  "label": "copy-phase input c echoed at the 2nd or 3rd copy step (original token 0 or 1 is c)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"c\")) & (recall_idx <= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase when the fed-back input is the letter c at copy steps recall_idx 1 or 2, i.e. the model is re-reading original token 0 or 1 = c. Magnitude depends strongly on position: when c is the first original token (input right after <DEL>, recall_idx 1) it is strong (~0.8-1.0 of max, 78% of mass); when c is the second original token (recall_idx 2) it is weak (~0.1-0.4 of max). Never fires in the original or delimiter phase, never on any token other than c, and essentially never past recall_idx 2 (a few tiny ~0.03 activations at recall_idx 3). False positives are mostly recall_idx 2 cases in short sequences (L=3-4).",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 503,
+    "predicate": "(phase == 2) & (in_tok == tok(\"c\")) & (recall_idx <= 2)",
+    "split": "test",
+    "precision": 0.9419491905802089,
+    "recall": 0.9997141768292683,
+    "f1": 0.9699724220808233,
+    "mass_recall": 0.9999868867637844,
+    "correlation": 0.862023330973673,
+    "n_active": 31488,
+    "n_predicted": 33419,
+    "coverage_by_activation_quartile": [
+      0.9988567073170732,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 503,
+    "predicate": "(phase == 2) & (in_tok == tok(\"c\")) & (recall_idx <= 2)",
+    "split": "dev",
+    "precision": 0.9438989758617564,
+    "recall": 0.999616073713847,
+    "f1": 0.9709588700529858,
+    "mass_recall": 0.9999830878464747,
+    "correlation": 0.8610368484644213,
+    "n_active": 31256,
+    "n_predicted": 33101,
+    "coverage_by_activation_quartile": [
+      0.9984642948553878,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 503,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "This answers the feature-503 check only. It did not touch the relayed user request about timing batch 2 and launching batch 3.",
+      "Most of the claims check out on the dev split. The feature fires only in the copy phase and only when the input is c. Activation share by recall_idx is 0.782 at recall_idx 1 and 0.218 at recall_idx 2, with 12 tiny activations at recall_idx 3. It never fires at to_go 0. recall_idx==1 alone scores precision 1.0, recall 0.529. The reported test scores reproduce: P 0.942, R 0.9997, F1 0.970.",
+      "The false positives are systematic, not noise. All of them are c at recall_idx 2 when L <= 4. With L==3 (recall_idx 2 is the last step) the feature never fires: precision 0.0. With L==4 precision is only 0.39. With L>=5, recall_idx 2 has precision 1.0.",
+      "The explanation mentions this pattern, but the predicate and label still say 'original token 1 is c' fires for every L. That overclaims. The L>=5 condition is missing.",
+      "The 9 test misses are c at recall_idx 3 (~0.01-0.05, 0% of mass) when original tokens 0 and 1 are not c. This is negligible scattered noise.",
+      "Adding (L>=5) to the recall_idx 2 term removes every false positive. Test scores go from P 0.942 / F1 0.970 to P 1.0 / R 0.972 / F1 0.986, with mass recall 0.998."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input c echoed as original token 0 (strong) or original token 1 (weak, only when L>=5)",
+    "better_predicate": "(phase==2)&(in_tok==tok('c'))&((recall_idx==1)|((recall_idx==2)&(L>=5)))",
+    "better_predicate_test_f1": 0.986
+  },
+  "final_label": "copy-phase input c echoed as original token 0 (strong) or original token 1 (weak, only when L>=5)"
+}

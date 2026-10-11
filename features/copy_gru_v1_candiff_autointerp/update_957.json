@@ -1,0 +1,62 @@
+{
+  "label": "input token l at the start of the sequence (position 0 or 1)",
+  "predicate": "(in_tok == tok(\"l\")) & (t <= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only when the input token is l during the first two original-phase steps. At t=0, l always fires at the max activation (1.317), which is 86% of the mass; the t=0 clause alone has precision 1.0. At t=1, l fires more weakly (usually 0.03-0.5 of max), and how strongly depends on the preceding token: after a, c, o, x it often does not fire at all, which accounts for most of the false positives. Tiny residual activations (<0.02 of max) occur on l at t=2 after prefixes like m z / 1 1. Never fires on any other token, on l at t>=2 in any real amount, or in the delimiter or copy phases.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 957,
+    "predicate": "(in_tok == tok(\"l\")) & (t <= 1)",
+    "split": "test",
+    "precision": 0.8834780005986231,
+    "recall": 0.9980051393021369,
+    "f1": 0.9372558981360937,
+    "mass_recall": 0.9999704919703195,
+    "correlation": 0.7986209259878386,
+    "n_active": 29576,
+    "n_predicted": 33410,
+    "coverage_by_activation_quartile": [
+      0.9920205572085474,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 957,
+    "predicate": "(in_tok == tok(\"l\")) & (t <= 1)",
+    "split": "dev",
+    "precision": 0.8841126492781177,
+    "recall": 0.9984232420826624,
+    "f1": 0.9377973845911455,
+    "mass_recall": 0.9999788898522609,
+    "correlation": 0.7999916250306887,
+    "n_active": 29808,
+    "n_predicted": 33662,
+    "coverage_by_activation_quartile": [
+      0.9936929683306495,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 957,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The false positives are not scattered noise. They form one clean class. On the dev split, at t=1 with in_tok=l, the feature has precision exactly 0.0 when prev_tok is in {a,c,d,i,o,r,x} and exactly 1.0 for each of the other 23 previous tokens. The explanation says 'after tokens like a, c, o and x it often does not fire'. That understates it: the feature never fires after these 7 tokens and always fires after the rest. It also leaves out d, i and r.",
+      "When the t=1 clause excludes those 7 previous tokens, the 3893 test false positives (precision 0.883) all go away. Test precision rises to 1.000 with recall unchanged at 0.998, so F1 goes from 0.937 to 0.999.",
+      "Every other claim checks out. Delimiter and copy phases have 0 activations. No token other than l ever fires. t=0 carries 86.4% of the activation mass and fires at max. The t=0 clause alone has test precision 1.0 (recall 0.563). The t=2 activations are tiny (59 test steps, about 0% of mass) and follow 'm z', 'm 1' or '1 1' prefixes.",
+      "The label 'input token l at position 0 or 1' slightly overclaims at position 1, because the feature is silent at t=1 whenever the previous token is one of the 7 above."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "input token l at position 0 (always, at max), or at position 1 unless the previous token is a, c, d, i, o, r or x",
+    "better_predicate": "(in_tok == tok(\"l\")) & ((t == 0) | ((t == 1) & ~isin(prev_tok, [tok(\"a\"),tok(\"c\"),tok(\"d\"),tok(\"i\"),tok(\"o\"),tok(\"r\"),tok(\"x\")])))",
+    "better_predicate_test_f1": 0.999
+  },
+  "final_label": "input token l at position 0 (always, at max), or at position 1 unless the previous token is a, c, d, i, o, r or x"
+}

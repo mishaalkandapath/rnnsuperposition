@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input h (fed-back h, from the 3rd original position onward)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"h\")) & (recall_idx >= 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only during the copy phase, when the fed-back input token is the letter h. It is completely silent on h during the original phase, at the delimiter, and on every other input token. Within copy-phase h it rises with position: it never fires when h is the first original token being fed back (recall_idx 1), fires weakly and only about 40% of the time when h is the second (recall_idx 2, 4.7% of the mass), and fires at a steady ~3% per step from recall_idx 3 onward. The remaining false positives are mostly short sequences or the last copy steps, and some repeated h tokens. Output token, next output, first token and digit count barely change the rate. The top activations are copy-phase h at original positions 3-6 in long sequences.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 141,
+    "predicate": "(phase == 2) & (in_tok == tok(\"h\")) & (recall_idx >= 3)",
+    "split": "test",
+    "precision": 0.9182484268597535,
+    "recall": 0.8863575850362777,
+    "f1": 0.902021219844704,
+    "mass_recall": 0.9526790574725236,
+    "correlation": 0.8365171182019764,
+    "n_active": 60092,
+    "n_predicted": 58005,
+    "coverage_by_activation_quartile": [
+      0.6783598482327099,
+      0.8908340544498435,
+      0.9781668108899687,
+      0.9980696265725887
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 141,
+    "predicate": "(phase == 2) & (in_tok == tok(\"h\")) & (recall_idx >= 3)",
+    "split": "dev",
+    "precision": 0.9188685432235127,
+    "recall": 0.886155587363936,
+    "f1": 0.9022156322812963,
+    "mass_recall": 0.9528066959039936,
+    "correlation": 0.8381672956384527,
+    "n_active": 60082,
+    "n_predicted": 57943,
+    "coverage_by_activation_quartile": [
+      0.6761200985287265,
+      0.8909526662672259,
+      0.9789613848202396,
+      0.9986018641810919
+    ]
+  },
+  "gate": "hidden",
+  "feature": 141,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced test scores: P 0.918, R 0.886, F1 0.902, mass recall 0.953. Profile confirms zero activation in the original phase, at the delimiter, and on every in_tok except h. All activation mass is on copy-phase h with in_first==0.",
+      "recall_idx==2 (fed-back orig token 1) fires at a rate of 0.41 and holds 4.7% of the mass, as the explanation says. I tried splitting it by prev_tok (digit or vowel), in_count and L (precision 0.13-0.59). Nothing cleanly predicts which of these steps fire, so this is weak, partial firing and not a missed rule.",
+      "False positives (about 8%) are partly concentrated in L==4: precision there is 0.55 on 2372 predicted steps, and those steps all have to_go==0. Precision at to_go==0 is 0.85 against 0.95 at to_go>=2. Both match the stated 'short sequences / late copy steps' caveat. Excluding L==4 does not raise F1 (0.898 vs 0.902), so it is not worth carving out.",
+      "'Rises with position' is weakly supported. From recall_idx 3 onward the firing rate is flat (about 0.031), and mass per active step goes up only modestly from recall_idx 3 to 8. This is a minor overstatement, not a refutation.",
+      "I checked alternative predicates: t>=8 gives F1 0.83, to_go<=5 with recall_idx>=2 gives 0.89. Neither beats the original. No systematic counterexample class remains."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

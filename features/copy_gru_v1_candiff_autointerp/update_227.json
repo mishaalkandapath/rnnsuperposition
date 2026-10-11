@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input z, from the 3rd copied token on (or near the end)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"z\")) & ((recall_idx >= 3) | (to_go <= 1))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token-specific copy-phase feature. It fires when the input token is z (the model re-reading its own copied z) during the copy phase. Almost all activation mass is there: 99.98% of mass is on in_tok z in phase 2, and in_tok z has 32x lift. It is suppressed for z at the first copy positions (recall_idx <= 1 is never active), and it is weak or absent at recall_idx 2 unless the sequence is nearly finished (to_go <= 1, i.e. short L). Activation is larger later in the copy phase: active rate and mass rise with recall_idx and t. The top examples are late z inputs, often the second of a repeated zz pair, at 0.9-1.0 of max, while lowest-quartile examples are early copy-phase z (step 5-6, recall_idx 2) at 0.1-0.4 of max. It does not fire on z in the original phase, on the delimiter, on any other input token (only stray tiny activations on a or v), and it does not depend on which token is being output. Remaining false positives are mostly z at recall_idx 3 in long sequences, which is the boundary region where activation is low.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 227,
+    "predicate": "(phase == 2) & (in_tok == tok(\"z\")) & ((recall_idx >= 3) | (to_go <= 1))",
+    "split": "test",
+    "precision": 0.9163022906741499,
+    "recall": 0.996681396298071,
+    "f1": 0.9548031723633766,
+    "mass_recall": 0.9998170624434137,
+    "correlation": 0.881604695317589,
+    "n_active": 56349,
+    "n_predicted": 61292,
+    "coverage_by_activation_quartile": [
+      0.9867262918796138,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 227,
+    "predicate": "(phase == 2) & (in_tok == tok(\"z\")) & ((recall_idx >= 3) | (to_go <= 1))",
+    "split": "dev",
+    "precision": 0.9149159663865546,
+    "recall": 0.9969596165539937,
+    "f1": 0.9541774361958885,
+    "mass_recall": 0.9998207200133457,
+    "correlation": 0.881719912021093,
+    "n_active": 55914,
+    "n_predicted": 60928,
+    "coverage_by_activation_quartile": [
+      0.9878389012089563,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 227,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The test score reproduces: P 0.916, R 0.997, F1 0.955, mass recall 1.000. On dev, in_tok z holds 100% of the activation mass with 32.5x lift. There are 0 activations on z at recall_idx 0-1. Original-phase z: 53 of 107,738 steps are active (precision 0.0005). The delimiter never fires. The other non-z tokens are tiny (a 49, v 23 steps). out_tok and next_out are flat at about 2x.",
+      "The false positives cluster in one place: z at recall_idx 3 with to_go >= 3. Precision by to_go there is 0.56 (to_go 3), 0.34 (to_go 4) and 0.46 (to_go 5), about 4.5k of the 5.1k false positives. Every recall_idx >= 4 cell has precision 1.0. recall_idx 2 has precision about 1.0 at to_go <= 1 and 0.01 or less at to_go >= 2. So the to_go <= 1 clause is right.",
+      "The recall_idx 3 / long-sequence region looks like a graded threshold, not a separate class. No single history variable separates active from inactive there: prev_tok == z gives 0.75, in_count, n_digits and vowel/digit prev all give about 0.4-0.5, and precision by prev_tok and by orig(0) is spread between 0.15 and 0.78. The explanation already says this is the low-activation boundary.",
+      "Moving the boundary only helps a little. Keeping recall_idx 3 only when to_go <= 3 gives test F1 0.962 against 0.955. That is a refinement, not a missed counterexample class.",
+      "Minor inaccuracy in the explanation: lowest-quartile examples are not only step 5-6 / recall_idx 2. They also include recall_idx 3 in long sequences, for example 'n t z e m w s <DEL> n t [z:0.06]' and '1 1 w z o y j u <DEL> 1 1 w [z:0.36]'. The top-examples claim holds (the second z of zz pairs and late z at 0.9-1.0 of max)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"z\")) & ((recall_idx >= 4) | ((recall_idx==3)&(to_go<=3)) | (to_go <= 1))",
+    "better_predicate_test_f1": 0.962
+  }
+}

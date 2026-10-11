@@ -1,0 +1,63 @@
+{
+  "label": "copy-phase input g fed back as the 1st or 2nd copied token",
+  "predicate": "(phase == 2) & (in_tok == tok(\"g\")) & isin(recall_idx, [1, 2])",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, when the fed-back input token is g at the first two copy-phase inputs (recall_idx 1 or 2, so the g being fed back is original token 0 or 1). Magnitude is strongly modulated by position: it is strongest (about 0.85-1.0 of max) when g is the first original token, fed back right after <DEL> (recall_idx 1). This case holds about 82% of activation mass and every such step is active. When g is original token 1, fed back at recall_idx 2, it fires weakly (about 0.1-0.35 of max). It is essentially silent on g during the original phase, on g fed back later in the copy (recall_idx >= 3), and on every other token. Output token and sequence length have little effect.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 479,
+    "predicate": "(phase == 2) & (in_tok == tok(\"g\")) & isin(recall_idx, [1, 2])",
+    "split": "test",
+    "precision": 0.9682777644519069,
+    "recall": 0.996851463143598,
+    "f1": 0.9823568777757499,
+    "mass_recall": 0.9998646497024705,
+    "correlation": 0.8414986130280292,
+    "n_active": 32396,
+    "n_predicted": 33352,
+    "coverage_by_activation_quartile": [
+      0.987405852574392,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 479,
+    "predicate": "(phase == 2) & (in_tok == tok(\"g\")) & isin(recall_idx, [1, 2])",
+    "split": "dev",
+    "precision": 0.9672754491017964,
+    "recall": 0.9967604590892262,
+    "f1": 0.981796632832918,
+    "mass_recall": 0.9998574618814375,
+    "correlation": 0.8413351771161978,
+    "n_active": 32412,
+    "n_predicted": 33400,
+    "coverage_by_activation_quartile": [
+      0.9870418363569049,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 479,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold. All activation mass is in the copy phase, in_tok g carries 100% of it, and recall_idx 1 holds 81.6% of the mass with recall_idx 2 holding 18.4%. On dev, recall_idx 1 with g has precision 1.0. Test scores reproduce: P 0.968, R 0.997, F1 0.982.",
+      "Systematic false-positive class: g at recall_idx 2 depends on sequence length, which contradicts the explanation's claim that length has little effect. Dev precision of (phase==2)&(in_tok==g)&(recall_idx==2) is 0.097 at L=3 (464 predicted), 0.716 at L=4 (2362 predicted), 0.9985 at L=5 and 1.0 at L=6. Test misses show the same thing: almost all of the 1058 false positives are short sequences such as 'n g k <DEL> n *g*' and 'm g z 1 <DEL> m *g* z'.",
+      "At L=4 the feature does fire on g at recall_idx 2 when orig(0) is also g (precision 1.0 on 82 steps), so whether it fires at L=4 partly depends on history.",
+      "Missed activations (102 steps on test, 0.0% of mass) are tiny values of about 0.01-0.04 on g at recall_idx 3, which is scattered noise.",
+      "The gap is small (about 1-3% of predictions), so the feature is still explained. The fix is to exclude L=3 at recall_idx 2: test F1 rises to 0.988 and precision to 0.980."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input g fed back as the 1st copied token (strong), or as the 2nd copied token in sequences with L >= 4 (weak)",
+    "better_predicate": "(phase == 2) & (in_tok == tok(\"g\")) & (isin(recall_idx,[1]) | ((recall_idx==2) & (L>=4)))",
+    "better_predicate_test_f1": 0.9877
+  },
+  "final_label": "copy-phase input g fed back as the 1st copied token (strong), or as the 2nd copied token in sequences with L >= 4 (weak)"
+}

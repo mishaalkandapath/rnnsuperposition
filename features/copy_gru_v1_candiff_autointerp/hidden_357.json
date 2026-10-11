@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input x (from 3rd copied token onward)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"x\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token detector for the letter x fed back as input during the copy phase. All activation mass is in the copy phase and nearly all of it (>99.9%) is on steps where the input is x; there are essentially none on x during the original phase, on <DEL>, or on other tokens (a few tiny activations on 1/v/n). It needs recall_idx >= 2, i.e. it is silent when x is the first fed-back copy token (recall_idx 1). The firing rate on copy-phase x rises from recall_idx 2 to 3+ and with longer L. Magnitude is largest when x follows e and/or v is being output next (x preceded by e: ~99% precision; out_tok v: ~98% precision; both appear in the top examples). Of qualifying x steps, ~21% stay silent, mostly in short sequences or at the last steps.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 357,
+    "predicate": "(phase == 2) & (in_tok == tok(\"x\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.7849368095925331,
+    "recall": 0.9985072834274145,
+    "f1": 0.8789343321452304,
+    "mass_recall": 0.9996406589844734,
+    "correlation": 0.7432735490330284,
+    "n_active": 58283,
+    "n_predicted": 74141,
+    "coverage_by_activation_quartile": [
+      0.9945782719099582,
+      0.9995195937135406,
+      0.9999313705305058,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 357,
+    "predicate": "(phase == 2) & (in_tok == tok(\"x\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.7866814111554644,
+    "recall": 0.998339922301518,
+    "f1": 0.8799619860766462,
+    "mass_recall": 0.9996836957679393,
+    "correlation": 0.7440768099350797,
+    "n_active": 58431,
+    "n_predicted": 74152,
+    "coverage_by_activation_quartile": [
+      0.9935651697699891,
+      0.9997946330777656,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 357,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "All factual claims check out on dev. 100% of activation mass is in the copy phase, with none in the original or delimiter phases. in_tok x carries essentially all the mass, apart from tiny activations on 1 (71 steps), v (12) and n (4). recall_idx 1 has only 6 active steps. x after e scores 0.986 precision and out_tok==v scores 0.980. Test scores (P 0.785, R 0.999) match the reported ones. Missed activations hold 0.0% of the mass.",
+      "Wording: the explanation says the 98% holds when 'the next output is v', but that only holds for out_tok==v (0.980), the token output at the x step itself. With next_out==v (the output one step later) precision is 0.917.",
+      "Label is slightly off. Firing starts at recall_idx 2, where the fed-back input is original token 1, i.e. the 2nd fed-back token (or the step that outputs the 3rd token). 'From 3rd copied token onward' could be read as recall_idx >= 3, which is a stricter rule than the predicate.",
+      "False positives (about 21%) follow a smooth gradient, not a distinct class. Precision is 0.54 at recall_idx 2, 0.80 at recall_idx 3 and 0.88 at recall_idx >= 4, and only 0.49 for L <= 4. Excluding these regions did not beat the original: excluding L<=4 gave dev F1 0.876, excluding (recall_idx 2 & L<=5) gave 0.870 and the recall_idx>=3|L>=8 variant gave 0.865, against 0.880 for the original. So no better crisp predicate exists. The silent steps are graded weak firing early in the copy phase and in short sequences."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase fed-back input x (not when x is the first fed-back token; firing gets stronger later in the copy phase and in longer sequences)",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "copy-phase fed-back input x (not when x is the first fed-back token; firing gets stronger later in the copy phase and in longer sequences)"
+}

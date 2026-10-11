@@ -1,0 +1,62 @@
+{
+  "label": "Copy phase from the 3rd/4th output onward",
+  "predicate": "(phase == 2) & ((recall_idx >= 3) | ((recall_idx == 2) & (L <= 5)))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Position/phase feature that is token-agnostic. It is active at every copy-phase step with recall_idx >= 3, and also at recall_idx == 2 when the sequence is short (L <= 5 always, L = 6 about half the time, L >= 7 almost never). Magnitude grows over the copy phase: it ramps from about 0.3-0.5 of max at the first active step to about 1.0 near the end, and the top activations fall on the last outputs. It never fires during the original phase (apart from rare weak activations at t=2), at the <DEL> step, or at recall_idx 0-1. Input, output, previous and first tokens, digit count and repeats have no effect.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 322,
+    "predicate": "(phase == 2) & ((recall_idx >= 3) | ((recall_idx == 2) & (L <= 5)))",
+    "split": "test",
+    "precision": 0.999996315657613,
+    "recall": 0.9697245159097243,
+    "f1": 0.9846277985910976,
+    "mass_recall": 0.9963691830077844,
+    "correlation": 0.9558286522566672,
+    "n_active": 1959242,
+    "n_predicted": 1899932,
+    "coverage_by_activation_quartile": [
+      0.8788981872599839,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 322,
+    "predicate": "(phase == 2) & ((recall_idx >= 3) | ((recall_idx == 2) & (L <= 5)))",
+    "split": "dev",
+    "precision": 0.9999978942491945,
+    "recall": 0.969688616359714,
+    "f1": 0.9846100577064523,
+    "mass_recall": 0.996359058731954,
+    "correlation": 0.9558128466643286,
+    "n_active": 1958934,
+    "n_predicted": 1899560,
+    "coverage_by_activation_quartile": [
+      0.878754589225988,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "reset",
+  "feature": 322,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Test scores reproduce: precision 1.0, recall 0.970, F1 0.985, mass recall 0.996.",
+      "Breakdown at recall_idx==2 by L matches the explanation. Precision is 1.0 for L=3,4,5, 0.55 for L=6, and 0.02 or lower for L>=7. Rates by recall_idx are 0 at 0-1 and 1.0 at 3 and above. The feature never fires on the delimiter step, and the original phase fires only at t=2 (2.2%, 0.1% of mass).",
+      "Test misses hold 0.4% of the activation mass. They are mostly weak (about 0.05-0.12) activations at recall_idx 2 for L=6 and at t=2. This is a low-magnitude tail, not a strong systematic class.",
+      "Only 7 test false positives, all at L=5 with recall_idx 2 (t=7), where the predicate is true but the feature is inactive. This is scattered noise.",
+      "Using L<=6 at recall_idx 2 gives a marginal test F1 of 0.987, not a meaningful improvement. Token identity has no effect (rates are flat across in/out/prev tokens)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "label": "3rd/4th input step when the input is one of u,d,o,0,c,f,2,b,q (or <DEL> at L=3)",
+  "predicate": "isin(t,[2,3]) & isin(in_tok,[tok(\"u\"),tok(\"d\"),tok(\"o\"),tok(\"0\"),tok(\"c\"),tok(\"f\"),tok(\"2\"),tok(\"b\"),tok(\"q\"),30])",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Position-plus-token unit. It fires only at steps t=2 and t=3 (the third and fourth inputs; t=4 holds under 1% of mass) and never in the copy phase. At those positions it is selective for the input token: u is strongest (the top activations are all u at t=3), then d, o, 0, c, f, 2, with weaker b and q. It also fires on <DEL> when <DEL> lands at t=3 (L=3). Within that set, activations are lower when the token repeats an earlier input. It does not fire at t=0, 1, or t>=5, or on any copy step. Other tokens at t=2/3 (e.g. a, 3, h) sometimes give weak activations, which accounts for most of the missed recall.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 69,
+    "predicate": "isin(t,[2,3]) & isin(in_tok,[tok(\"u\"),tok(\"d\"),tok(\"o\"),tok(\"0\"),tok(\"c\"),tok(\"f\"),tok(\"2\"),tok(\"b\"),tok(\"q\"),30])",
+    "split": "test",
+    "precision": 0.7910011466593453,
+    "recall": 0.7542851862689234,
+    "f1": 0.7722069813641094,
+    "mass_recall": 0.8829441894753479,
+    "correlation": 0.7250435495462798,
+    "n_active": 64933,
+    "n_predicted": 61919,
+    "coverage_by_activation_quartile": [
+      0.4981520266108168,
+      0.6689459742499846,
+      0.8617630752171502,
+      0.9882954475451241
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 69,
+    "predicate": "isin(t,[2,3]) & isin(in_tok,[tok(\"u\"),tok(\"d\"),tok(\"o\"),tok(\"0\"),tok(\"c\"),tok(\"f\"),tok(\"2\"),tok(\"b\"),tok(\"q\"),30])",
+    "split": "dev",
+    "precision": 0.786311246180954,
+    "recall": 0.7560501733061846,
+    "f1": 0.7708838491893691,
+    "mass_recall": 0.8846401786169089,
+    "correlation": 0.7239314137609948,
+    "n_active": 64337,
+    "n_predicted": 61861,
+    "coverage_by_activation_quartile": [
+      0.4967360895244016,
+      0.6714125839343447,
+      0.8676324297438448,
+      0.988435712509326
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 69,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Core facts hold. Activity is almost entirely at t=2 (56% of activation mass) and t=3 (43%). t=4 holds 0.9% of the mass, there is zero activity at t=0, t=1, t>=5 or in the copy phase, and <DEL> at t=3 fires with precision 0.72. The reported test scores reproduce exactly (P 0.791, R 0.754, F1 0.772, mass recall 0.883).",
+      "The token set is a graded ranking, not a clean category. Precision at t=2 / t=3 by token: u 1.00/0.995, d 0.999/0.96, o 0.975/0.86, 0 0.96/0.78, c 0.90/0.67, f 0.86/0.64, 2 0.83/0.59, b 0.69/0.46, q 0.64/0.39, 3 0.45/0.25, a 0.44/0.27, h/j/i/p/w about 0.2-0.32. b and q (0.39-0.46 at t=3) are barely separable from a and 3, which were excluded. The cutoff is therefore arbitrary, and the label overstates how crisp the token set is.",
+      "There is a systematic missed context effect that the explanation never mentions: the previous input token strongly modulates activation. For the borderline tokens (a, 3, b, q, h, j, i, p) at t=2/3, precision ranges from 0.04-0.18 when prev_tok is 3, q, p, b, v, l, s, 1 or z up to 0.58-0.76 when prev_tok is 0, w, y, j or r. Many of the false positives (b, q, 3 after a suppressing prev token) and missed activations (a, h, j, p after a boosting prev token) follow this pattern rather than being scattered noise. The unit looks like an additive weighting of current and previous tokens, gated to t=2/3.",
+      "The explanation's account of repeats (activations are lower when a token repeats an earlier input) is weak in the data. For a at t=2, precision is 0.437 on first occurrence and 0.474 on repeat.",
+      "A predicate that adds the previous-token context reaches test F1 0.801 (P 0.793, R 0.810, mass recall 0.913), compared with 0.772 for the original. That puts it over the 0.8 bar the original missed."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "3rd/4th input step (t=2,3, plus <DEL> at L=3), graded by current token (u>d>o>0>c>f>2>b>q>a,3) and modulated by the previous token (boosted after 0/w/y/j/r/h, suppressed after q/3/p/b/v/l/s/1/z/f)",
+    "better_predicate": "(isin(t,[2,3])&isin(in_tok,[tok('u'),tok('d'),tok('o'),tok('0'),tok('c'),tok('f'),tok('2'),30])&~((t==3)&isin(in_tok,[tok('c'),tok('f'),tok('2')])&isin(prev_tok,[tok('q'),tok('3'),tok('p'),tok('b'),tok('v'),tok('l'),tok('s'),tok('1'),tok('z'),tok('f')]))) | (isin(t,[2,3])&isin(in_tok,[tok('a'),tok('3'),tok('b'),tok('q')])&~isin(prev_tok,[tok('q'),tok('3'),tok('p'),tok('b'),tok('v'),tok('l'),tok('s'),tok('1'),tok('z'),tok('f')])) | ((t==2)&isin(in_tok,[tok('h'),tok('i'),tok('j'),tok('p'),tok('w')])&isin(prev_tok,[tok('0'),tok('w'),tok('y'),tok('j'),tok('r'),tok('h')]))",
+    "better_predicate_test_f1": 0.801
+  },
+  "final_label": "3rd/4th input step (t=2,3, plus <DEL> at L=3), graded by current token (u>d>o>0>c>f>2>b>q>a,3) and modulated by the previous token (boosted after 0/w/y/j/r/h, suppressed after q/3/p/b/v/l/s/1/z/f)"
+}

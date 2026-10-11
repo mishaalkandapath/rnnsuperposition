@@ -1,0 +1,62 @@
+{
+  "label": "input q during the copy phase",
+  "predicate": "(phase == 2) & (in_tok == tok(\"q\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only when the fed-back input token is q during the copy phase (t > L), i.e. while the model is outputting the original token after a q. Never fires in the original phase, on <DEL>, or on any other input token; dev recall 1.0, precision 0.87. Magnitude is largest when q is copied at recall_idx 2-4 (2-4 steps after <DEL>, e.g. original sequences like d q ... / 1 m q ...); weak at recall_idx 1 (q as first token, rate 0.02) and later positions; a repeated q later in the copy is usually weaker. Remaining false positives are mostly q at the first copy step or a second q in the sequence. Adding recall_idx >= 2 raises precision to 0.93 but lowers F1.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 196,
+    "predicate": "(phase == 2) & (in_tok == tok(\"q\"))",
+    "split": "test",
+    "precision": 0.8723092515478,
+    "recall": 1.0,
+    "f1": 0.9318003965708974,
+    "mass_recall": 1.0000000620395155,
+    "correlation": 0.7990475507151905,
+    "n_active": 79183,
+    "n_predicted": 90774,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 196,
+    "predicate": "(phase == 2) & (in_tok == tok(\"q\"))",
+    "split": "dev",
+    "precision": 0.8731096589973093,
+    "recall": 1.0,
+    "f1": 0.9322568540538005,
+    "mass_recall": 1.0,
+    "correlation": 0.7995696010809598,
+    "n_active": 79501,
+    "n_predicted": 91055,
+    "coverage_by_activation_quartile": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 196,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Checked on the test split: the feature never fires outside the copy phase and never fires on any copy-phase input other than q. The predicate has recall 1.0, mass recall 1.0, 0 missed activations and precision 0.872. The core claims hold.",
+      "One factual error: the explanation says q right after <DEL> (recall_idx 1) fires at rate 0.02. That 0.02 is the rate over all input tokens at recall_idx 1. Restricted to q, recall_idx==1 has precision 0.61, so the feature fires on 61% of those q's. The activations there are weak, though: they carry only 4% of the activation mass and sit almost entirely in the bottom two quartiles. So 'weak at recall_idx 1' is right, but 'rarely fires' is wrong.",
+      "False positives are partly systematic: about 6.5k of the 11.6k test false positives come from q at recall_idx 1, which the explanation already admits. The rest are spread across later positions, often q near the end of the copy, with no clean cut. Adding to_go>=1 raises precision to 0.96 but drops recall to 0.70. Adding in_count==1 does not raise precision over recall_idx>=2 alone (0.931 vs 0.931), so 'a repeated q is weaker' is not a strong effect for firing (in_count>=2 precision 0.85, about the same as the base rate).",
+      "The recall_idx>=2 refinement scores test P 0.931 / R 0.872 / F1 0.901, which is below the base predicate's 0.932. Keeping the simpler predicate is justified.",
+      "Magnitude claim checked: recall_idx 2-4 holds 80% of the mass, and the top examples have q at copy positions 2-3. Confirmed."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

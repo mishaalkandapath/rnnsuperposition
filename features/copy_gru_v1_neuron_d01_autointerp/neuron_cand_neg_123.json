@@ -1,0 +1,61 @@
+{
+  "label": "Early-sequence bigram detector: step-1 input from {o,n,a,l,i,f,p,m} after first token from {i,a,x,f,n,d,m,r,s}, or o as first token",
+  "predicate": "((t==0)&(in_tok==tok(\"o\"))) | ((t==1) & isin(in_tok, [tok(\"o\"),tok(\"n\"),tok(\"a\"),tok(\"l\"),tok(\"i\"),tok(\"f\"),tok(\"p\"),tok(\"m\")]) & isin(prev_tok, [tok(\"i\"),tok(\"a\"),tok(\"x\"),tok(\"f\"),tok(\"n\"),tok(\"d\"),tok(\"m\"),tok(\"r\"),tok(\"s\")]))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "explanation": "Fires only in the original phase at steps 0-2 and never at the delimiter or during the copy phase. About 79% of activation mass is at t=1, about 12% at t=0 and about 8% at t=2. At t=1 it fires when the second input is one of o,n,a,l,i,f,p,m and the first input is one of i,a,x,f,n,d,m (plus r,s, which give weaker activations). At t=0 it fires only when the first token is o, at about 0.17 of max. The strongest activations (1.0 of max) are on o at t=1 after i (\"i o\"), and o is the dominant input token (31% of mass). The weaker t=2 activations (for example x i [o], f x [n]) are left out because they are inconsistent: adding t=2 o lowered F1. It does not fire on b, and only rarely on d, s or r as the current input. It does not fire on first tokens such as c, w, t, y, j or g, and is silent from t>=3 onward.",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 123,
+    "predicate": "((t==0)&(in_tok==tok(\"o\"))) | ((t==1) & isin(in_tok, [tok(\"o\"),tok(\"n\"),tok(\"a\"),tok(\"l\"),tok(\"i\"),tok(\"f\"),tok(\"p\"),tok(\"m\")]) & isin(prev_tok, [tok(\"i\"),tok(\"a\"),tok(\"x\"),tok(\"f\"),tok(\"n\"),tok(\"d\"),tok(\"m\"),tok(\"r\"),tok(\"s\")]))",
+    "split": "test",
+    "precision": 0.9212131930320984,
+    "recall": 0.804416647363138,
+    "f1": 0.8588623248145095,
+    "mass_recall": 0.8819650759598836,
+    "correlation": 0.7615489390111786,
+    "n_active": 12951,
+    "n_predicted": 11309,
+    "coverage_by_activation_quartile": [
+      0.5719579987646696,
+      0.9206300185299567,
+      0.7773316862260655,
+      0.9477911646586346
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 123,
+    "predicate": "((t==0)&(in_tok==tok(\"o\"))) | ((t==1) & isin(in_tok, [tok(\"o\"),tok(\"n\"),tok(\"a\"),tok(\"l\"),tok(\"i\"),tok(\"f\"),tok(\"p\"),tok(\"m\")]) & isin(prev_tok, [tok(\"i\"),tok(\"a\"),tok(\"x\"),tok(\"f\"),tok(\"n\"),tok(\"d\"),tok(\"m\"),tok(\"r\"),tok(\"s\")]))",
+    "split": "dev",
+    "precision": 0.923699421965318,
+    "recall": 0.8056934533043748,
+    "f1": 0.8606703401416912,
+    "mass_recall": 0.8852458038172689,
+    "correlation": 0.7652704708001471,
+    "n_active": 12892,
+    "n_predicted": 11245,
+    "coverage_by_activation_quartile": [
+      0.5640707415451442,
+      0.9211914365497983,
+      0.7821905057399938,
+      0.9553211293825629
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 123,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The explanation says adding a t=2 clause lowered F1. That is false. Adding ((t==2) & in_tok in {o,n,a,l,i,f,p,m} & prev_tok in {i,a,x,f,n,d,m} & prev2_tok in {i,a,x,f,n,d,m}) raises dev F1 from 0.861 to 0.890 and test F1 from 0.859 to 0.888. Mass recall rises from 0.885 to 0.955.",
+      "The t=2 activity is not inconsistent. It follows the same rule as t=1, pushed one position later: the current input is from the second-token set and both earlier inputs are from the first-token set (P=0.70 on its own). The label and predicate leave out about 8% of activation mass and about 10% of active steps that this rule covers.",
+      "The other claims check out. Activity at t=0 is exactly first token o (precision 1.0, all t=0 activity). Nothing fires at the delimiter, in the copy phase, or at t>=3. First tokens c, w, t, y, j, g, b, e, h, k, p, q, u, z and the digits give zero activity. Current inputs b, c and e give zero, and d, s and r are rare. First tokens i, a, x, f and n give precision 1.0 at t=1, while r and s are weaker (P about 0.64)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Fires only in the first three original positions. The current input is from {o,n,a,l,i,f,p,m} and every earlier input is from {i,a,x,f,n,d,m} (r and s also count at t=1). At t=0 it fires on first token o alone. Strongest on o right after i.",
+    "better_predicate": "((t==0)&(in_tok==tok('o'))) | ((t==1)&isin(in_tok,[tok('o'),tok('n'),tok('a'),tok('l'),tok('i'),tok('f'),tok('p'),tok('m')])&isin(prev_tok,[tok('i'),tok('a'),tok('x'),tok('f'),tok('n'),tok('d'),tok('m'),tok('r'),tok('s')])) | ((t==2)&isin(in_tok,[tok('o'),tok('n'),tok('a'),tok('l'),tok('i'),tok('f'),tok('p'),tok('m')])&isin(prev_tok,[tok('i'),tok('a'),tok('x'),tok('f'),tok('n'),tok('d'),tok('m')])&isin(prev2_tok,[tok('i'),tok('a'),tok('x'),tok('f'),tok('n'),tok('d'),tok('m')]))",
+    "better_predicate_test_f1": 0.888
+  },
+  "final_label": "Fires only in the first three original positions. The current input is from {o,n,a,l,i,f,p,m} and every earlier input is from {i,a,x,f,n,d,m} (r and s also count at t=1). At t=0 it fires on first token o alone. Strongest on o right after i."
+}

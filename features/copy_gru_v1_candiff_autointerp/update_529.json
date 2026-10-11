@@ -1,0 +1,61 @@
+{
+  "label": "early original-phase step within 2 steps after an l",
+  "predicate": "(phase == 0) & (t <= 5) & ((rel_tok(-1) == tok(\"l\")) | (rel_tok(-2) == tok(\"l\")))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires during the original (input) phase on the 1-2 steps right after the letter l was input, and only early in the sequence (t = 1..5; peak at t = 3, almost nothing at t >= 6). The token at the current step does not matter. Activation is largest when l is both one and two steps back (e.g. l l l x: about 1.0 of max at the step after the third l). It is weaker at t=1-2 (a single leading l gives about 0.15-0.2) and when l is only two steps back. Never fires in the copy phase and only rarely at the delimiter. Does not fire on l itself unless l was also the previous input. Misses are mostly weak activations (4-5% of mass) 3 steps after an l or with no recent l. Dev: P 0.91, R 0.76, F1 0.83, mass recall 0.95.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 529,
+    "predicate": "(phase == 0) & (t <= 5) & ((rel_tok(-1) == tok(\"l\")) | (rel_tok(-2) == tok(\"l\")))",
+    "split": "test",
+    "precision": 0.9087483341247836,
+    "recall": 0.7598675573032413,
+    "f1": 0.8276660679095237,
+    "mass_recall": 0.9521441398851053,
+    "correlation": 0.8320235542464756,
+    "n_active": 156143,
+    "n_predicted": 130562,
+    "coverage_by_activation_quartile": [
+      0.21303412234860128,
+      0.8479864740239779,
+      0.9806076442258428,
+      0.9978480850518765
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 529,
+    "predicate": "(phase == 0) & (t <= 5) & ((rel_tok(-1) == tok(\"l\")) | (rel_tok(-2) == tok(\"l\")))",
+    "split": "dev",
+    "precision": 0.908945942852783,
+    "recall": 0.7597834128421643,
+    "f1": 0.8276980903977963,
+    "mass_recall": 0.9520867009023684,
+    "correlation": 0.8319819074624418,
+    "n_active": 156796,
+    "n_predicted": 131065,
+    "coverage_by_activation_quartile": [
+      0.21046455266715988,
+      0.8505574121788821,
+      0.9808158371387026,
+      0.9972958493839128
+    ]
+  },
+  "gate": "update",
+  "feature": 529,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "One sentence in the explanation is wrong: 'It does not fire on an l itself unless the previous input was also l.' On dev, (phase==0)&(t<=5)&(rel_tok(-1)!=l)&(rel_tok(-2)==l)&(in_tok==l), i.e. the 'l x l' pattern, fires at precision 0.875 (n=1803). So the feature does fire on an l when there is an l two steps back. The predicate already covers this case and it holds only about 1% of the activation mass, so the label and predicate still stand. The sentence should say the current token does not matter, including when it is l.",
+      "The claim that it is weaker at t=5 is understated. At t=5, prediction accuracy drops to 0.69 when the previous token is l and 0.62 when l is only two steps back (dev), against 0.87-1.0 at t=1-4. Most of the predicate's false positives come from t=5. This is a gradual fade, not a separate class.",
+      "Misses are weak background activations: 3 steps after an l (precision 0.31 for that rule), or scattered activations around 0.01-0.05 of max with no recent l. Test coverage of the lowest activation quartile is 0.21, but misses hold only 4.8% of the mass. Adding 'l three steps back' for t<=4 gives dev F1 0.821 and for t<=3 gives 0.817, both slightly worse than the original's test F1 of 0.828, so no better predicate was found.",
+      "These claims check out: no firing in the copy phase (0 active steps); the delimiter carries 0.7% of the mass; t=0 is silent; t>=6 is almost silent (t=6 rate 0.005, t=7 has 50 steps); mass peaks at t=3 (0.356); 'l l l x' reaches 0.98-1.00 of max at the step after the third l (top examples); a single leading l gives 0.15-0.17 of max at t=1-2; the previous token being l gives precision 0.95 and two steps back gives 0.85, so l two steps back is weaker; the reported test scores reproduce (P 0.909, R 0.760, F1 0.828, mass recall 0.952)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

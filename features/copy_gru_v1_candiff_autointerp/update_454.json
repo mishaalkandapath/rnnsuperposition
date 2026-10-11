@@ -1,0 +1,63 @@
+{
+  "label": "token right after an early q (positions 1-5)",
+  "predicate": "(prev_tok == tok(\"q\")) & (phase <= 1) & (t <= 5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires on the input step right after a q, during the original phase (or at <DEL> when q was the last original token), only when that q is early in the sequence: step t <= 5, so q is at position 0-4. The token at the firing step itself does not matter. Activation is strongest at t = 2-4 and is very large when the q is a repeat (as in x y q [q] [next]); the step after the second q is often the top activation, and the step two after a q gets weaker spillover (prev2_tok = q). It gets weaker for later positions and does not fire at t >= 6 even right after a q. It never fires in the copy phase, so q being fed back as an output does not trigger it. Outside this context there are only scattered weak activations, about 8% of activation mass and mostly in the lowest quartile.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 454,
+    "predicate": "(prev_tok == tok(\"q\")) & (phase <= 1) & (t <= 5)",
+    "split": "test",
+    "precision": 0.940718780100324,
+    "recall": 0.6574003654069742,
+    "f1": 0.7739458869780893,
+    "mass_recall": 0.9204146562310068,
+    "correlation": 0.8356443159127904,
+    "n_active": 114393,
+    "n_predicted": 79941,
+    "coverage_by_activation_quartile": [
+      0.08437357949578657,
+      0.656374571648367,
+      0.8889083152668019,
+      0.9999650325197567
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 454,
+    "predicate": "(prev_tok == tok(\"q\")) & (phase <= 1) & (t <= 5)",
+    "split": "dev",
+    "precision": 0.9391321690786931,
+    "recall": 0.6570960089310633,
+    "f1": 0.7731977278208529,
+    "mass_recall": 0.9210069618967422,
+    "correlation": 0.8360948777088594,
+    "n_active": 114656,
+    "n_predicted": 80223,
+    "coverage_by_activation_quartile": [
+      0.08139129221322913,
+      0.6517234161317332,
+      0.8954437622104382,
+      0.9998255651688529
+    ]
+  },
+  "gate": "update",
+  "feature": 454,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The test scores reproduce exactly: P 0.941, R 0.657, F1 0.774, mass recall 0.920.",
+      "The claim that it never fires in the copy phase holds: phase==2 has 0 active steps out of 2.73M.",
+      "The early-position cutoff holds, but it is a gradual decline rather than a sharp edge. Precision of prev_tok==q by step: t=1-3 about 1.00, t=4 0.95, t=5 0.69, t=6 0.07. A q at position 4 is only partly reliable.",
+      "The <DEL> part of the explanation overclaims slightly. At the delimiter step (prev_tok==q, phase==1, t<=5) precision is 0.54 and mass recall 0.019. Restricting to phase==0 gives P 0.971 and F1 0.765, which is nearly the same.",
+      "The misses are mostly one weak background pattern. About 17k of the 39k missed steps are at t=4 with no q in the previous two steps (precision 0.045, 2.9% of mass, almost all in the lowest quartile). Spillover two steps after a q (prev2_tok==q) has precision 0.18 and 4% of mass. Neither can be added without hurting F1, so this counts as low-mass noise.",
+      "The label 'positions 1-5' refers to the firing step t (1-5), while the explanation says the q is at positions 0-4. The two are consistent but could be read the wrong way."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

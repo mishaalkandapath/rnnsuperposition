@@ -1,0 +1,64 @@
+{
+  "label": "copy-phase input \"c\" (fed-back c, not at first output)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"c\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, only when the input token is c (the model feeding back an already-emitted c), and never in the original or delimiter phases or on any other input token. Almost no firing at recall_idx 1 (c as first copied input). Magnitude grows with position in the copy phase: top activations (~4) are on c fed back late in long sequences, often the last output step and frequently right before a second c; c early in the copy phase (recall_idx 1-2) gives weak activations. Misses are faint activations at recall_idx 1; false positives are mostly c inputs early in the copy phase.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 230,
+    "predicate": "(phase == 2) & (in_tok == tok(\"c\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.8734544179712256,
+    "recall": 0.977795891258736,
+    "f1": 0.9226846708258555,
+    "mass_recall": 0.9915051438347835,
+    "correlation": 0.7912752247412901,
+    "n_active": 66249,
+    "n_predicted": 74163,
+    "coverage_by_activation_quartile": [
+      0.9357604298738151,
+      0.9812824538099263,
+      0.9943243569617196,
+      0.9998188624562251
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 230,
+    "predicate": "(phase == 2) & (in_tok == tok(\"c\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.8762063318038468,
+    "recall": 0.9800463264348326,
+    "f1": 0.9252218903197222,
+    "mass_recall": 0.9922362034038439,
+    "correlation": 0.7910090941866676,
+    "n_active": 66053,
+    "n_predicted": 73881,
+    "coverage_by_activation_quartile": [
+      0.9422308344435025,
+      0.9837098043965361,
+      0.9946708653787925,
+      0.9995760915642221
+    ]
+  },
+  "gate": "hidden",
+  "feature": 230,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The predicate holds up. On dev it scores P 0.876, R 0.980, F1 0.925 and mass recall 0.992. The profile confirms the main claims: zero activations in the original and delimiter phases, every activation is on in_tok c, only 1318 activations at recall_idx 1, and the firing rate rises with recall_idx (0.026 at 2, 0.032 at 7-8).",
+      "One explanation claim is wrong. It says top activations come 'often right after another c'. In fact all 12 top activations (0.94-1.00 of max) are on the FIRST c of a doubled 'cc' in the original, where the current output out_tok is also c, e.g. '0 r q 1 y o g c c <DEL> 0 r q 1 y o g [c:1.00]', where the previous input is g. When c directly follows another c (the second c of the pair) the feature fires weaker or not at all: 'u f r y l v c c c' gives [c:1.00] then [c:0.68], and 's l c c a e' gives [c:0.58] then [c:0.08]. Restricted to recall_idx>=2, precision is 0.632 when prev_tok==c, below the 0.876 baseline, and 0.996 when out_tok==c. So the strongest firing is on a fed-back c when the model is about to output c again, not right after one.",
+      "Magnitude depends partly on the output token. Restricted to recall_idx>=2, precision is 0.996 when out_tok is c, 0.977 when out_tok is a digit, but only 0.46 for m, 0.68 for s and 0.73 for p and b. Dropping those output tokens from the predicate does not raise F1 (0.925 to 0.926 at best), so this is a modulation of strength, not a missing class.",
+      "There is a smaller absolute-position effect beyond recall_idx: precision is 0.45 for t<=7 and 0.85 for t>=10. Thresholds on t or to_go did not raise F1 (t>=6 gives 0.925, to_go<=4 gives 0.884).",
+      "Precision is lower when c appears more than once in the original: 0.79 for in_count>=2 vs 0.90 for in_count==1, both restricted to recall_idx>=2. This is a modulation, not a separate class.",
+      "On test, the misses are faint activations (mostly 0.02-0.18 of max) at recall_idx 1, matching the explanation. The false positives are spread across positions and output tokens with no clean class. No better predicate was found."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input \"c\" (fed-back c, not at first output); strongest when the next output is also c (a doubled cc) and late in the copy phase",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "copy-phase input \"c\" (fed-back c, not at first output); strongest when the next output is also c (a doubled cc) and late in the copy phase"
+}

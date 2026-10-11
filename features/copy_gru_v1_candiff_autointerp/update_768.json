@@ -1,0 +1,64 @@
+{
+  "label": "copy-phase input \"0\" (fed-back output 0) near the end of short sequences",
+  "predicate": "(phase == 2) & (in_tok == tok(\"0\")) & (to_go <= 3) & (L <= 6)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires almost exclusively (99.8% of mass) on copy-phase steps whose input is the digit 0, i.e. the step right after the model has output a 0 and it is fed back. Never fires in the original or delimiter phase, and essentially never on any other input token (including other digits). Among copy-phase 0 inputs it is gated by position: it fires when at most ~3 outputs remain and the sequence is short (L <= 6); 0 inputs early in long sequences (L >= 7, many outputs left) are mostly silent. Strongest activations (near max) are when the 0 was the first original token and is fed back at step L+1 in L = 3-4 sequences; magnitude is lowest for late/long-sequence 0 inputs. Residual misses are weak activations on 0 inputs with 4-5 outputs left; false positives are mostly 0 inputs at the final step of L = 6 sequences.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 768,
+    "predicate": "(phase == 2) & (in_tok == tok(\"0\")) & (to_go <= 3) & (L <= 6)",
+    "split": "test",
+    "precision": 0.8324856439704676,
+    "recall": 0.8381235546745953,
+    "f1": 0.83529508601531,
+    "mass_recall": 0.9631247387461749,
+    "correlation": 0.7419707000302465,
+    "n_active": 30270,
+    "n_predicted": 30475,
+    "coverage_by_activation_quartile": [
+      0.5377906976744186,
+      0.8267706131078224,
+      0.9879740980573543,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 768,
+    "predicate": "(phase == 2) & (in_tok == tok(\"0\")) & (to_go <= 3) & (L <= 6)",
+    "split": "dev",
+    "precision": 0.831604938271605,
+    "recall": 0.835842625988551,
+    "f1": 0.8337183972539441,
+    "mass_recall": 0.9612093086348755,
+    "correlation": 0.7402061942247703,
+    "n_active": 30221,
+    "n_predicted": 30375,
+    "coverage_by_activation_quartile": [
+      0.5393065113816834,
+      0.8206485771012575,
+      0.9834546657842489,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 768,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claim holds. All activation is in the copy phase (share 1.000; the original and delimiter phases have 0 active steps), and in_tok == '0' carries 99.8% of the mass. Non-0 inputs account for 1.2% of active steps and 0.2% of mass, so that is scattered noise.",
+      "On the data, the predicate is identical to '(L<=5) | (L==6 & recall_idx>=2)'. The two give the same dev and test scores (P 0.832, R 0.838, F1 0.835 on test). So 'to_go<=3' only matters for L=6 and simply drops recall_idx 1.",
+      "'Near the end' is wrong for L>=6. Precision in each (L, recall_idx) cell for copy-phase 0 inputs: L=6 peaks mid-copy (r=3, to_go 2: 0.92; r=4: 0.79) and falls at the last step (r=5, to_go 0: 0.41). For L=7 it fires mid-copy (r=3: 0.45, r=4: 0.36) but hardly at the end (r=5: 0.12, r=6: 0.05). For L=8-9 the only weak firing is at r=3-4 (0.10-0.14). The behaviour is better described as a window of recall_idx of about 2-4 that shrinks and weakens as L grows. In L<=4 the window covers the whole copy phase, and L=5 r=1 is only partial (0.55).",
+      "The description of the misses is wrong. The largest class of missed activations is L=7 with to_go<=3: 9.2% of active steps, 2.5% of mass, at precision 0.25. The class the explanation names (L>=7 with 4-5 outputs left) holds only 3.3% of active steps and 0.7% of mass.",
+      "The description of the false positives is roughly right: the main ones are L=6 r=5 (59% silent), L=5 r=1 (45% silent) and L=6 r=2 (45% silent).",
+      "I found no hidden variable behind the cells that only partly fire. Split by number of prior 0s, previous token digit vs letter, previous token vowel or n_digits, the firing rate barely moves (for example L=6 r=5 is 0.39 vs 0.38 for 1 vs 3 prior 0s). It looks like a graded position effect cut off by the activation threshold. That caps F1 near 0.835 for every simple predicate I tried, so the predicate itself is acceptable."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "copy-phase input '0' (fed-back output 0) in short sequences, positionally gated: fires anywhere in the copy for L<=5 (strongest at the first copy steps of L=3-4), only mid-copy (recall_idx ~2-4) for L=6-7, and almost never for L>=8",
+    "better_predicate": "(phase == 2) & (in_tok == tok('0')) & ((L <= 4) | ((L == 5) & (recall_idx >= 1)) | ((L == 6) & isin(recall_idx,[2,3,4,5])) | ((L == 7) & isin(recall_idx,[3])))",
+    "better_predicate_test_f1": 0.838
+  },
+  "final_label": "copy-phase input '0' (fed-back output 0) in short sequences, positionally gated: fires anywhere in the copy for L<=5 (strongest at the first copy steps of L=3-4), only mid-copy (recall_idx ~2-4) for L=6-7, and almost never for L>=8"
+}

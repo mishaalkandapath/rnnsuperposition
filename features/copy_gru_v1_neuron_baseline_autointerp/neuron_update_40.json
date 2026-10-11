@@ -1,0 +1,61 @@
+{
+  "label": "Final copy step of length-3 sequences (outputting 3rd token)",
+  "predicate": "(L == 3) & (t == 5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, almost entirely at t=5 of L=3 sequences, i.e. the last output step, where the input is the 2nd original token and the model outputs the 3rd original token (94% of activation mass, precision 0.98). Weak spillover: L=3 at t=4 (recall_idx 1, input = first token, more often when orig(0)=d) and L=4 at its last steps (t=6-7); these are low-magnitude. Never fires in the original or delimiter phase, nor on sequences with L>=5 beyond a handful of steps. Magnitude is highest when the step-5 input (orig(1)) is 1 or p (top examples), and the few false positives mostly have orig(1)=l. Does not depend on correctness of copying.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 40,
+    "predicate": "(L == 3) & (t == 5)",
+    "split": "test",
+    "precision": 0.9811827956989247,
+    "recall": 0.7586104513064132,
+    "f1": 0.8556597454789014,
+    "mass_recall": 0.9321889763369945,
+    "correlation": 0.921252706483629,
+    "n_active": 3368,
+    "n_predicted": 2604,
+    "coverage_by_activation_quartile": [
+      0.19596199524940616,
+      0.8456057007125891,
+      0.9928741092636579,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 40,
+    "predicate": "(L == 3) & (t == 5)",
+    "split": "dev",
+    "precision": 0.9831094049904031,
+    "recall": 0.7658492822966507,
+    "f1": 0.8609850395024373,
+    "mass_recall": 0.9357301784442756,
+    "correlation": 0.9191569142539691,
+    "n_active": 3344,
+    "n_predicted": 2605,
+    "coverage_by_activation_quartile": [
+      0.21411483253588517,
+      0.8576555023923444,
+      0.9916267942583732,
+      1.0
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 40,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Recall is only 0.76. This comes from many low-magnitude spillover activations: the misses hold 6.8% of activation mass, and only 20% of the bottom activation quartile is covered. The steps involved are L=3 t=4 (dev rate about 10%) and L=4 t=6-7 (precision about 2%). This is real but weak and diffuse, as the explanation already says.",
+      "The orig(0)=d spillover at L=3 t=4 checks out (precision 0.94), and orig(0)='1' behaves the same way. Adding both gives test F1 0.885 (P 0.979, R 0.807, mass recall 0.953), against 0.856 for the reported predicate. That is a modest gain from a small token-specific case, not a systematic failure of the label.",
+      "The supporting claims check out. The unit never fires in the original or delimiter phases. At t=5 the input is orig(1). Predicate steps with orig(1) in {1,p} are 100% active, and orig(1)=l has the lowest precision at 0.71. Conditioning on correct copying does not change F1. On L>=5 sequences there are fewer than 35 active steps."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Final copy step of length-3 sequences (outputting 3rd token); weak spillover at L=3 t=4 when orig(0) is d or 1",
+    "better_predicate": "((L == 3) & (t == 5)) | ((L == 3) & (t == 4) & isin(orig(0), [tok('d'), tok('1')]))",
+    "better_predicate_test_f1": 0.885
+  },
+  "final_label": "Final copy step of length-3 sequences (outputting 3rd token); weak spillover at L=3 t=4 when orig(0) is d or 1"
+}

@@ -1,0 +1,64 @@
+{
+  "label": "2-4 steps after a j at the start of the input (j as token 0 or 1)",
+  "predicate": "(phase<=1) & (((orig(0)==tok(\"j\")) & (t>=2) & (t<=4)) | ((orig(1)==tok(\"j\")) & (t>=3) & (t<=5)))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires during the original-input phase (and occasionally the <DEL> step of short sequences) in sequences whose first or second original token is j, in a short window 2-4 steps after that j: t=2..4 when orig(0)=j, t=3..5 when orig(1)=j. The token being read at those steps does not matter. It never fires at t=0-1, almost never at t>=6, and essentially never in the copy phase. It is strongest when j comes first (82% of mass is in first_tok=j sequences), and strongest when the leading run contains several j tokens (e.g. j j j ...), with a peak about 2 steps after the last leading j. Activations decay over the next 1-2 steps. A j that first appears later in the sequence produces at most weak activation. Dev: P 0.77, R 0.87, mass recall 0.97.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 966,
+    "predicate": "(phase<=1) & (((orig(0)==tok(\"j\")) & (t>=2) & (t<=4)) | ((orig(1)==tok(\"j\")) & (t>=3) & (t<=5)))",
+    "split": "test",
+    "precision": 0.7722994787819958,
+    "recall": 0.8752899815846746,
+    "f1": 0.8205757718436806,
+    "mass_recall": 0.9730916147615278,
+    "correlation": 0.7666376833831487,
+    "n_active": 83626,
+    "n_predicted": 94778,
+    "coverage_by_activation_quartile": [
+      0.5523508872626393,
+      0.963361553546659,
+      0.9899072036735865,
+      0.9955515163111068
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 966,
+    "predicate": "(phase<=1) & (((orig(0)==tok(\"j\")) & (t>=2) & (t<=4)) | ((orig(1)==tok(\"j\")) & (t>=3) & (t<=5)))",
+    "split": "dev",
+    "precision": 0.7717659312162565,
+    "recall": 0.8738612979698913,
+    "f1": 0.8196465960460746,
+    "mass_recall": 0.9730024704302647,
+    "correlation": 0.7661197317769383,
+    "n_active": 83099,
+    "n_predicted": 94092,
+    "coverage_by_activation_quartile": [
+      0.5479663056558364,
+      0.9626955475330926,
+      0.9894584837545126,
+      0.995330701838837
+    ]
+  },
+  "gate": "update",
+  "feature": 966,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core idea holds up: the feature is about j at orig(0) or orig(1). Sequences where neither of the first two tokens is j hold only 0.4% of activation mass. A j that first appears at position 2 gives almost nothing (P 0.002, mass 0.05%). Copy-phase firing is ~0.1% of mass, and t=0-1 never fire. Those claims check out.",
+      "The orig(1)=j window is wrong. It is t=3..4, not t=3..5. When orig(1)=j and orig(0)!=j (phase 0), precision is 0.81 at t=3 and 0.77 at t=4 but only 0.148 at t=5 (10674 steps predicted, mostly false positives). In the <DEL> phase it is 0.023 (5291 predicted, almost all false positives). This is a systematic false-positive class, not scattered noise, and the test misses list is dominated by it (e.g. 'r j f c <DEL>', 'u j w b <DEL>', 'n j r <DEL>').",
+      "The orig(0)=j window is the reverse problem: it is too short. orig(0)=j at t=5 in phase 0 is active with precision 0.51, recall 0.067 and 2.8% of mass. These are the main systematic misses on test (e.g. 'j h b l [j] ...', 'j t z z [p] ...').",
+      "So the windows are not '2-4 steps after the j' for both cases. When orig(0)=j the window is t=2..5 (2-5 steps after). When orig(1)=j it is t=3..4 (2-3 steps after). The firing is better described as a roughly fixed span of early positions, gated on j at the start, than as a symmetric offset from the j. The explanation's claim that false positives are 'mostly the window edges' admits the problem, but the predicate builds the wrong edges in.",
+      "The <DEL>-step claim only holds for orig(0)=j: precision 0.69 at phase 1 with t<=4. For orig(1)=j the <DEL> step almost never fires (P 0.023).",
+      "With the windows corrected, test F1 goes from 0.821 to 0.887 (P 0.858, R 0.918, mass recall 0.989)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Early positions (t=2-5) of sequences that start with j: t=2..5 when j is token 0 (including the <DEL> step of short sequences), t=3..4 when j is token 1",
+    "better_predicate": "((orig(0)==tok(\"j\"))&(t>=2)&(t<=4)&(phase<=1)) | ((orig(0)==tok(\"j\"))&(t==5)&(phase==0)) | ((orig(1)==tok(\"j\"))&(t>=3)&(t<=4)&(phase==0))",
+    "better_predicate_test_f1": 0.887
+  },
+  "final_label": "Early positions (t=2-5) of sequences that start with j: t=2..5 when j is token 0 (including the <DEL> step of short sequences), t=3..4 when j is token 1"
+}

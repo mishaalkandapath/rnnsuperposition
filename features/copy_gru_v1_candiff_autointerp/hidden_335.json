@@ -1,0 +1,61 @@
+{
+  "label": "copy-phase input b (from 3rd output onward)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token feature for the letter b fed back as input during the copy phase. Fires only when in_tok is b and phase is copy; never fires in the original phase, on the delimiter, or on any other token. Almost silent when b is the first copy-phase input (recall_idx 1, i.e. b was original token 0): 272 weak activations there, about 0.1% of mass. Within the predicate, about 7% of b inputs do not fire, mostly when b sits near the end of the copy (small to_go) or in short sequences. Strongest activations (about 4.1) come from b fed back at recall_idx 2, i.e. original position 2 being b. When two b inputs come in a row, the second fires noticeably weaker (about 0.4-0.8 of max) than the first.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 335,
+    "predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.9284904743914945,
+    "recall": 0.9958179581795817,
+    "f1": 0.9609763931267062,
+    "mass_recall": 0.9990205629386555,
+    "correlation": 0.846289045043485,
+    "n_active": 69105,
+    "n_predicted": 74116,
+    "coverage_by_activation_quartile": [
+      0.9840250043410315,
+      0.9992475109979162,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 335,
+    "predicate": "(phase == 2) & (in_tok == tok(\"b\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.9271268661730518,
+    "recall": 0.9960731094620737,
+    "f1": 0.9603641349359354,
+    "mass_recall": 0.9990613717330891,
+    "correlation": 0.844120279995748,
+    "n_active": 69266,
+    "n_predicted": 74417,
+    "coverage_by_activation_quartile": [
+      0.9853900791130104,
+      0.9989028122654039,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 335,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Small factual slip about the peak. The explanation says the max is 'at recall_idx 2, i.e. when original position 2 is b'. That is self-inconsistent: the input at recall_idx r is orig(r-1). Most of the top-12 activations (0.95-1.00 of max) have b at original position 2, which is recall_idx 3 (e.g. 'e a b b v c 2 x h <DEL> e a [b:1.00]'). One top example has b at orig 1 / recall 2 ('w b b i ...' 0.97). Mass share also peaks at recall_idx 3 (0.298, vs 0.229 at recall 2). The peak should read 'b at original position 1-2 (recall_idx 2-3)'.",
+      "The 'second b in a row fires at 0.4-0.8' claim holds when the first b is at recall_idx >= 2 (top examples 0.40-0.83). When the first b is orig(0), at recall_idx 1, the following b is weaker still: 0.24-0.49 in the test misses.",
+      "False positives follow a gradient rather than scattered noise, but the explanation already admits it. Predicate precision is 0.81 at to_go==0, 0.94 at to_go==1 and 0.98 at to_go>=3. It is 0.75 for L<=4 and 0.69 for L==4 & to_go==0. Excluding these cells does not help F1: test F1 is 0.955 for ~((L<=4)&(to_go==0)) and 0.962 for L>=4, vs 0.961 for the original.",
+      "Verified claims: zero activations in the original and delimiter phases. All activations are on in_tok b. recall_idx 1 has only 272 activations (0.1% of mass). Test P 0.928 / R 0.996 / F1 0.961 / mass recall 0.999 reproduced. Precision barely changes with in_count, prev_tok == b, digit context or correct, so no history-based counterexample class turned up."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

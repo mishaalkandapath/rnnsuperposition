@@ -1,0 +1,64 @@
+{
+  "label": "copy-phase echo of digit 3 early in a short sequence",
+  "predicate": "(phase == 2) & (in_tok == tok(\"3\")) & (recall_idx <= 3) & (L <= 5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only in the copy phase, on steps where the fed-back input is the digit 3, i.e. the model has just emitted a 3 and is now outputting the next original token (recall_idx 1-3). Almost all of it is in short sequences (L 3-5; 98% of mass at L<=5, 0 activations at L>=7 apart from a trace). in_tok=3 alone covers 99.6% of the mass, and the length and position conditions supply the precision. Activation is strongest when 3 was the first original token (3 at recall_idx 1, right after <DEL>; top examples are all 3 x n <DEL> 3 at L=3) and drops off at later positions and longer L. It does not fire in the original or delimiter phase (including when 3 is first read as an original token), on other digits, or on letters (a handful of weak exceptions). Most false positives are L=5 sequences where the 3 sits at original position 1-2.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 294,
+    "predicate": "(phase == 2) & (in_tok == tok(\"3\")) & (recall_idx <= 3) & (L <= 5)",
+    "split": "test",
+    "precision": 0.7839956252278527,
+    "recall": 0.9221698113207547,
+    "f1": 0.847487684729064,
+    "mass_recall": 0.9790538601875741,
+    "correlation": 0.7134648427466341,
+    "n_active": 13992,
+    "n_predicted": 16458,
+    "coverage_by_activation_quartile": [
+      0.775871926815323,
+      0.9248141795311606,
+      0.9882790165809033,
+      0.9997141223556318
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 294,
+    "predicate": "(phase == 2) & (in_tok == tok(\"3\")) & (recall_idx <= 3) & (L <= 5)",
+    "split": "dev",
+    "precision": 0.7825530358449159,
+    "recall": 0.9212055974165769,
+    "f1": 0.8462375160684268,
+    "mass_recall": 0.9780434971012785,
+    "correlation": 0.7103686218446604,
+    "n_active": 13935,
+    "n_predicted": 16404,
+    "coverage_by_activation_quartile": [
+      0.7812858783008036,
+      0.9187715269804823,
+      0.9847876004592423,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 294,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Factual claims hold up. Activation is entirely in the copy phase (share 1.000), with zero activation in the original and delimiter phases. in_tok=3 carries 99.6% of the mass. recall_idx 1-3 carry 99.9%. L<=5 carries 98.3%. Top examples are all '3 x y <DEL> [3]' at L=3. Letter activations are weak scattered exceptions (about 0.4% of mass).",
+      "Test scores reproduce: P 0.784, R 0.922, F1 0.847, mass recall 0.979. On dev, (phase==2)&(in_tok==3) alone covers 99.8% of mass. The predicate's L/recall_idx conditions are what supply the precision.",
+      "Firing rate given (copy, in_tok=3) across the L x recall_idx grid: L=3 1.0/1.0. L=4 0.996/1.0/0.881. L=5 0.667/0.743/0.418/0.027. L=6 0.06/0.11/0.06. L=7 about 0. The drop-off is smooth with length and position, so it looks like the feature weakening below the activation threshold rather than a separate class.",
+      "Minor inaccuracy: the explanation says most false positives are L=5 with the 3 at original position 1-2. In fact, L=5 with the 3 at position 0 (recall_idx 1, precision 0.667, about 930 FPs) contributes about as many as position 1 (about 720). Position 2 (recall_idx 3, precision 0.418, about 1600) is the largest single group.",
+      "I found no token or history driver that separates firing from non-firing among L=5 cases. Splitting on n_digits, in_count, next_out letter vs digit, whether 0/1/2/n occur in the sequence, and the previous token all left precision around 0.55-0.67 (one small subset, next_out=n, reached 0.82). The remaining false positives look like a magnitude threshold effect, not a missed pattern.",
+      "Misses on both the dev and test splits (about 1.1k steps, 2.1-2.2% of mass) are scattered. Most are weak activations on a fed-back 3 at L=6 (often in sequences with a repeated '3 3'), plus a few weak letter activations. No systematic class.",
+      "Alternatives I tried were not clearly better. Dropping L=5 recall_idx 3 gives test F1 0.848 (P 0.858, R 0.839, mass 0.949), essentially a tie. Adding L=6 gives F1 0.703."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

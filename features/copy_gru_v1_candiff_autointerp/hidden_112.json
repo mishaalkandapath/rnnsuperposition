@@ -1,0 +1,65 @@
+{
+  "label": "copy-phase input k (fed-back k, from the 2nd copy input onward)",
+  "predicate": "(phase == 2) & (in_tok == tok(\"k\")) & (recall_idx >= 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "A token-identity feature for the fed-back letter k during the copy phase. It fires only when the input is k (100% of activation mass) and only in the copy phase (never on original-phase or delimiter k). It is essentially silent when the k is orig(0) fed back at the first copy step (recall_idx 1: 2 activations), and weaker when k is orig(1) (recall_idx 2: 8% of mass). Rate and magnitude peak at recall_idx 3-5. The strongest activations (up to 3.0) are on the first of a doubled k k in the middle of the sequence, and the second k of the pair is weaker. Activations are smaller on k near the end of the copy, for example the final input. About 27% of predicted steps stay inactive. These false positives are mostly k at recall_idx 2 or k on the last steps. Adding conditions to drop them (recall_idx>=3, to_go>=1) cuts recall more than it gains in precision. The feature does not fire on any other token.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 112,
+    "predicate": "(phase == 2) & (in_tok == tok(\"k\")) & (recall_idx >= 2)",
+    "split": "test",
+    "precision": 0.7269945237839579,
+    "recall": 0.9999815378934737,
+    "f1": 0.841912193302194,
+    "mass_recall": 0.9999983503300887,
+    "correlation": 0.7139655369471629,
+    "n_active": 54165,
+    "n_predicted": 74504,
+    "coverage_by_activation_quartile": [
+      0.9999261556638606,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 112,
+    "predicate": "(phase == 2) & (in_tok == tok(\"k\")) & (recall_idx >= 2)",
+    "split": "dev",
+    "precision": 0.7257313160332398,
+    "recall": 0.9999630047538891,
+    "f1": 0.8410579541034617,
+    "mass_recall": 0.9999954725178748,
+    "correlation": 0.7138020304067553,
+    "n_active": 54061,
+    "n_predicted": 74489,
+    "coverage_by_activation_quartile": [
+      0.9998520272269902,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 112,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The test scores reproduce exactly: P 0.727, R 1.000, F1 0.842, mass recall 1.000. Only 1 activation in the test split is missed (k at recall_idx 1, 0.02 of max).",
+      "Token claim holds: in_tok k carries 100% of activation mass. No other in_tok ever fires.",
+      "Phase claim holds: there are 0 activations in the original and delimiter phases. All mass is in the copy phase. in_first==1 has 0 activations, consistent with the feature firing only on repeated (fed-back) k.",
+      "Recall_idx claims hold: recall_idx 1 has 2 activations in dev. recall_idx 2 holds 8.1% of mass and has precision 0.44. Mass peaks at recall_idx 3-5 (26%, 27%, 19%).",
+      "The doubled-k claim holds. In the top examples the first k of a 'k k' pair reaches 0.9-1.0 of max and the second k is at 0.3-0.6.",
+      "The 27% false positives are graded, not a sharp class. By subgroup: recall_idx==2 has precision 0.44, to_go==0 has 0.68, recall_idx>=6 has 0.70, to_go>=5 has 0.92, prev_tok a digit has 0.86. About 70% of the false positives are at recall_idx 2 or to_go 0, which matches the explanation.",
+      "Tightening does not help. recall_idx>=3 gives F1 0.837, below the original. Adding to_go<=6 changes nothing because to_go>=7 never occurs with recall_idx>=2. Within recall_idx 2 the dependence on L, prev_tok and out_tok is also graded (L<=4 0.67, L>=7 0.37), so no clean split improves on the original predicate.",
+      "Minor wording point: 'from the 2nd copy input onward' is accurate in that recall_idx>=2 means the fed-back token is orig(1) or later. Activations at recall_idx 2 are weak, so the label slightly overstates how consistently the feature fires there. This does not affect the verdict."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

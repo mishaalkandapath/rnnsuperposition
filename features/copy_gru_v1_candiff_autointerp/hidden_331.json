@@ -1,0 +1,61 @@
+{
+  "label": "input token l at original positions 0-4",
+  "predicate": "(phase == 0) & (in_tok == tok(\"l\")) & (t <= 4)",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Token detector for the letter l in the original (pre-<DEL>) phase, limited to positions 0-4. Every l input at t<=4 activates the feature (precision 1.0 on dev). Magnitude is highest at t=0-2 (about 0.8-1.0 of max) and drops at later positions (t=3 lower, t=4 often only about 0.25 of max); it fades out at t=5 (a few weak activations) and is silent from t=6 on. Repeated l still fires (slightly weaker than the first l). Does not fire on l during the delimiter or copy phase (when the model outputs or is fed l back), nor on other tokens, apart from rare tiny activations (about 0.02 of max) on y/0 after an initial r.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 331,
+    "predicate": "(phase == 0) & (in_tok == tok(\"l\")) & (t <= 4)",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.9660606790272093,
+    "f1": 0.9827373990361358,
+    "mass_recall": 0.9988263010246494,
+    "correlation": 0.9434103826153167,
+    "n_active": 83060,
+    "n_predicted": 80241,
+    "coverage_by_activation_quartile": [
+      0.864242716108837,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 331,
+    "predicate": "(phase == 0) & (in_tok == tok(\"l\")) & (t <= 4)",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.9661600057538778,
+    "f1": 0.9827887892404021,
+    "mass_recall": 0.9988329366304638,
+    "correlation": 0.9432715747513942,
+    "n_active": 83422,
+    "n_predicted": 80599,
+    "coverage_by_activation_quartile": [
+      0.8646432681242808,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 331,
+  "final_verdict": "explained",
+  "skeptic": {
+    "revised_verdict": "explained",
+    "upheld": true,
+    "issues": [
+      "Small wording error: the explanation says the feature is 'silent from t=6 on', but the dev profile shows 65 tiny copy-phase activations at t=7-11 (231 copy-phase activations in total, mostly at recall_idx 2, e.g. a fed-back l at about 0.02). They carry roughly 0 activation mass, so this is noise rather than a pattern.",
+      "Test misses (2819 steps, 0.1% of mass) fall into two groups. One is l at t=5 with activations of 0.01-0.05. The other is y or 0 at t=1 after an initial r, at 0.02. Both match the explanation.",
+      "Widening the predicate to t<=5 does worse: test F1 0.937 versus 0.983, because l at t=5 is active only 13% of the time. So the t<=4 cutoff is the right boundary.",
+      "No false positives on test (precision 1.000). The magnitude claims match the per-t mass shares: the mean at t=4 is about 0.28 of the mean at t=0. A repeated l in the examples is weaker (0.56 after 0.91). I could not confirm this in bulk: an n_seen([\"l\"]) > 0 predicate matched 0 steps, which looks like a quirk of the helper."
+    ],
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

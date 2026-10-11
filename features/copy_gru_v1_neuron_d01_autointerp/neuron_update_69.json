@@ -1,0 +1,62 @@
+{
+  "label": "first input token is u, d, or 0 (plus weaker step-3 echo)",
+  "predicate": "(t == 0) & isin(in_tok, [tok(\"u\"), tok(\"d\"), tok(\"0\")])",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires on essentially every sequence whose first input (t=0) is u, d or the digit 0 (precision 1.0 on dev); this is 77% of activation mass, with typical activation about 0.12-0.22 of max. A secondary component (about 20% of mass) fires at t=3 when the input is again u/d/0 (occasionally f/h) and the earlier prefix contains tokens like k, y, t, 1, n, s; this component carries the very largest activations (top examples are all k/y-initial sequences with u/d/0 at step 3) but is sparse and only partially predictable (adding it as first_tok in {k,y} raises F1 only 0.873 -> 0.877). Never fires at t=1, t>=5, or anywhere in the copy phase; a few weak activations at the delimiter. Does not fire on other letters at t=0, nor on u/d/0 at later positions in general.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 69,
+    "predicate": "(t == 0) & isin(in_tok, [tok(\"u\"), tok(\"d\"), tok(\"0\")])",
+    "split": "test",
+    "precision": 1.0,
+    "recall": 0.7740060451057893,
+    "f1": 0.8726081258191349,
+    "mass_recall": 0.7625139217017707,
+    "correlation": 0.7786612801458607,
+    "n_active": 12903,
+    "n_predicted": 9987,
+    "coverage_by_activation_quartile": [
+      0.6230626162430254,
+      0.8276503409795413,
+      0.9380037197768134,
+      0.7072868217054263
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 69,
+    "predicate": "(t == 0) & isin(in_tok, [tok(\"u\"), tok(\"d\"), tok(\"0\")])",
+    "split": "dev",
+    "precision": 1.0,
+    "recall": 0.7753494478338095,
+    "f1": 0.8734612205837575,
+    "mass_recall": 0.7676165986202247,
+    "correlation": 0.7839319381488085,
+    "n_active": 12949,
+    "n_predicted": 10040,
+    "coverage_by_activation_quartile": [
+      0.6176652254478073,
+      0.8310163731850478,
+      0.9335804757491505,
+      0.7191844300278035
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 69,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Label calls the step-3 component a 'weaker' echo. It is rarer (about 20% of mass), but it holds the largest activations (up to 0.61 of max in test misses), and top-quartile coverage of the predicate is only 0.71. The explanation text says this correctly; the label wording is misleading.",
+      "The t=3 component is only weakly predictable. (t==3)&in u/d/0 alone has precision 0.17. Prefix conditions (seen/n_seen of k,y,t,1,n,s; first_tok; no earlier u/d/0 or vowels) reach at most about 0.3-0.6 precision at low recall. So about 20% of mass stays unexplained, as the author acknowledged.",
+      "All factual claims verified. Test: P=1.0, R=0.774, F1=0.873, mass recall 0.763. Zero false positives. No activity at t=1, t>=5 or in the copy phase. Delimiter: 212 steps, 1.4% of mass. t=2 u/d/0: precision 0.03. f/h at t=3: precision 0.06.",
+      "Best extended predicate I found matches the author's alternative: test F1 0.887, mass recall 0.84. It is a modest gain, not a systematic gap."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "first input token is u, d, or 0 (plus a rarer but stronger, only partly predictable step-3 u/d/0 component)",
+    "better_predicate": "((t==0) & isin(in_tok,[tok(\"u\"),tok(\"d\"),tok(\"0\")])) | ((t==3) & isin(in_tok,[tok(\"u\"),tok(\"d\"),tok(\"0\")]) & (n_seen([tok(\"k\"),tok(\"y\"),tok(\"t\"),tok(\"1\"),tok(\"n\"),tok(\"s\")])>=2))",
+    "better_predicate_test_f1": 0.887
+  },
+  "final_label": "first input token is u, d, or 0 (plus a rarer but stronger, only partly predictable step-3 u/d/0 component)"
+}

@@ -1,0 +1,62 @@
+{
+  "label": "copy-phase input token q",
+  "predicate": "(phase == 2) & (in_tok == tok(\"q\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "explanation": "Fires only when the input is the letter q during the copy phase, i.e. when a q the model emitted is fed back in. It never fires in the original phase or on the delimiter step, and it essentially never fires on any other token (2 stray activations on u). The predicate covers ~100% of activations and activation mass. About 11% of copy-phase q inputs do not activate, mostly q at the first copy input (recall_idx 1, where the firing rate is lower at 0.022 vs about 0.032 elsewhere) or q near the end of short sequences. Magnitude varies a lot. The top activations are q fed back in the middle of the copy, and repeated q inputs in the same sequence tend to get smaller activations. I did not fully characterize what drives magnitude.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 233,
+    "predicate": "(phase == 2) & (in_tok == tok(\"q\"))",
+    "split": "test",
+    "precision": 0.8935377971665895,
+    "recall": 0.99997534273597,
+    "f1": 0.9437650535820253,
+    "mass_recall": 0.9999942192564555,
+    "correlation": 0.8235348610008756,
+    "n_active": 81112,
+    "n_predicted": 90774,
+    "coverage_by_activation_quartile": [
+      0.9999013709438801,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 233,
+    "predicate": "(phase == 2) & (in_tok == tok(\"q\"))",
+    "split": "dev",
+    "precision": 0.8938663445170502,
+    "recall": 0.9999754278623468,
+    "f1": 0.9439483206531825,
+    "mass_recall": 0.9999957952691312,
+    "correlation": 0.8231379120764647,
+    "n_active": 81393,
+    "n_predicted": 91055,
+    "coverage_by_activation_quartile": [
+      0.9999017150719937,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 233,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I reproduced the test scores: precision 0.894, recall 1.000, F1 0.944, mass recall 1.000. The profile shows 0 activations in the original and delimiter phases, and only 2 off-token activations, both on u, holding 0.0% of the mass.",
+      "The gaps in the predicate are a firing-rate issue, not a different concept. At recall_idx 1 (the first copy input) the precision is 0.675, against 0.942 for recall_idx > 1. Short sequences are also weaker (L<=4: precision 0.70; L<=5: 0.78). The test-split false positives look like scattered q inputs, with no extra token or history class behind them.",
+      "Removing the weak cases makes the predicate worse. Excluding recall_idx 1 gives F1 0.90 and excluding to_go==0 gives 0.85, both below the base 0.944. So no better predicate was found.",
+      "The magnitude claim is overstated. Repeated copy-phase q inputs are only about 4% smaller in mean activation than the first copy q in the same kind of sequence (mass/count about 1.10 vs 1.15). Over all steps, q tokens that appear more than once in the original (in_count>=2) actually have a higher mean activation share (mass 0.209 vs count 0.186). This is a minor wording issue and does not affect the label or predicate.",
+      "Correctness is not a factor in practice: all activations fall where correct==1. Most likely the model almost always copies correctly, so this tells us little."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}
