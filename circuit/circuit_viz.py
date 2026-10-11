@@ -13,7 +13,7 @@ import numpy as np
 import torch 
 from torch.utils.data import StackDataset
 
-from circuit.edge_att import CircuitTracer
+from circuit.edge_att import CircuitTracer, compute_rl_input_baseline, RL_INPUT_NAMES
 from circuit.copy_find_features import CopyFeatureActivationAnalyzer, checkpoint_fingerprint
 from circuit.rl_find_features import RLFeatureActivationAnalyzer
 from circuit.graph_prune import GraphPruner
@@ -55,8 +55,13 @@ class InteractiveCircuitVisualizer:
             return {'type': 'initial', 'timestep': -1}
         elif node_name.startswith('e_'):
             return {'type': 'error', 'gate': parts[1], 'timestep': int(parts[2])}
+        elif node_name.startswith('o_') and parts[2] == 'c':
+            # RL choice node: logit(a1) - logit(a2) at a GO step
+            return {'type': 'output', 'timestep': int(parts[1]), 'dimension': 'a1-a2'}
         elif node_name.startswith('o_'):
             return {'type': 'output', 'timestep': int(parts[1]), 'dimension': int(parts[2])}
+        elif node_name.startswith('v_'):
+            return {'type': 'value', 'timestep': int(parts[1])}
         else:
             return {'type': 'unknown', 'timestep': 0}
     
@@ -82,7 +87,7 @@ class InteractiveCircuitVisualizer:
         for node, info in node_info.items():
             t = info['timestep']
             if t not in timesteps:
-                timesteps[t] = {'input': [], 'error': [], 'feature_reset': [], 'feature_update': [], 'feature_hidden': [], 'initial': [], 'output': []}
+                timesteps[t] = {'input': [], 'error': [], 'feature_reset': [], 'feature_update': [], 'feature_hidden': [], 'initial': [], 'output': [], 'value': []}
             timesteps[t][info['type']].append(node)
         
         # Sort nodes within each type by contribution (highest contribution at bottom)
@@ -92,15 +97,17 @@ class InteractiveCircuitVisualizer:
         
         positions = {}
         timestep_width = 200
-        type_spacing = {'input': 80, 'error': 24, 'feature_reset': 60, 'feature_update': 60, 'feature_hidden': 60, 'initial': 24, 'output': 80}
-        
+        type_spacing = {'input': 80, 'error': 24, 'feature_reset': 60, 'feature_update': 60, 'feature_hidden': 60, 'initial': 24, 'output': 80, 'value': 80}
+
         for t, nodes_by_type in timesteps.items():
             x_base = t * timestep_width
-            
+
             # Place output nodes at the top (lowest y-values)
             # Sorted by contribution - highest contribution nodes at bottom of their group
             for i, node in enumerate(nodes_by_type['output']):
                 positions[node] = (x_base, -100 - i * type_spacing['output'])
+            for i, node in enumerate(nodes_by_type['value']):  # RL value nodes, next to outputs
+                positions[node] = (x_base + 60, -100 - i * type_spacing['value'])
             
             # Place input nodes at the bottom
             # Sorted by contribution - highest contribution nodes at bottom of their group
@@ -135,7 +142,8 @@ class InteractiveCircuitVisualizer:
             'feature_update': '#2196F3', 
             'feature_hidden': '#FF9800',
             'initial': '#8E7CC3',
-            'output': '#F44336'
+            'output': '#F44336',
+            'value': '#00897B'
         }
         return color_map.get(node_type, '#757575')
     
@@ -186,14 +194,40 @@ class InteractiveCircuitVisualizer:
         total = sum(v for _, v in pieces)
         return f"<br><b>memory input {total:+.3f} via r_t</b>: {self._format_pieces(pieces, top_k)}"
 
+    def _set_targets(self, rl_target=None):
+        """Pruning targets for the current view: the root of a rooted graph;
+        in the main graph, the selected RL target (default: next-trial
+        choice), or None for the copy task (probability-weighted logits)."""
+        view = getattr(self, 'current_view', 'main')
+        if view != 'main':
+            self.current_target_weights = {view[1]: 1.0}
+            self.current_target_label = f"root {view[1]}"
+            return
+        options = getattr(self, 'current_rl_targets', None)
+        if options:
+            label = rl_target if rl_target in options else next(iter(options))
+            self.current_target_weights, self.current_target_label = options[label], label
+        else:
+            self.current_target_weights, self.current_target_label = None, "weighted logits"
+
+    def _view_label(self, rl_target=None) -> str:
+        view = getattr(self, 'current_view', 'main')
+        if view != 'main':
+            return f"rooted at {view[1]}"
+        if getattr(self, 'current_rl_targets', None):
+            return f"main graph, target: {self.current_target_label}"
+        return "main graph"
+
     def _gate_ranking_text(self, top_k: int = 8) -> List[str]:
         """Top gate pieces by exact effect on the current view's target
-        (probability-weighted logits, or the root of a rooted graph)."""
+        (probability-weighted logits, the selected RL target, or the root of
+        a rooted graph)."""
         acts = getattr(self, 'current_acts', None)
         if acts is None or self.current_edge_weights is None:
             return []
         targets = getattr(self, 'current_target_weights', None)
-        root = next(iter(targets)) if targets else None
+        view = getattr(self, 'current_view', 'main')
+        root = view[1] if view != 'main' else None
         if targets is None:
             names = [n.name for n in self.circuit_tracer._build_nodes(acts)]
             pruner = self.pruner or GraphPruner()
@@ -204,7 +238,7 @@ class InteractiveCircuitVisualizer:
         features = [r for r in ranking if r[0].startswith(('f_z_', 'f_r_'))]
         other = [r for r in ranking if not r[0].startswith(('f_z_', 'f_r_'))]
         fmt = lambda rows: ", ".join(f"{name} ({where}) {score:+.4f}" for name, score, where in rows[:top_k])
-        target = f"root {root}" if root else "weighted logits"
+        target = getattr(self, 'current_target_label', "weighted logits")
         return [f"Top gate features by effect on {target} (drop if removed; paste into Explain):",
                 "  " + (fmt(features) or "none"),
                 "Largest error / bias gate pieces: " + (fmt(other[:3]) or "none")]
@@ -370,7 +404,7 @@ class InteractiveCircuitVisualizer:
         # ... (rest of the node creation code remains the same) ...
         
         # Add nodes by type (this part remains unchanged)
-        node_types = ['input', 'error', 'initial', 'feature_reset', 'feature_update', 'feature_hidden', 'output']
+        node_types = ['input', 'error', 'initial', 'feature_reset', 'feature_update', 'feature_hidden', 'output', 'value']
         
         for node_type in node_types:
             nodes_of_type = [node for node, info in node_info.items() if info['type'] == node_type]
@@ -393,7 +427,17 @@ class InteractiveCircuitVisualizer:
                 node_x.append(x)
                 node_y.append(y)
                 
-                if info['type'] == 'input':
+                rl = self.circuit_tracer.task == "rl" and getattr(self, 'current_acts', None) is not None
+                step = (self.circuit_tracer.rl_step_label(self.current_acts, info['timestep'])
+                        if rl and info.get('timestep', -1) >= 0 else None)
+                if info['type'] == 'input' and rl:
+                    t, d = info['timestep'], info['dimension']
+                    input_value = float(self.current_acts["inputs"][t, d])
+                    deviation = float(self.current_acts["input_dev"][t, d])
+                    text = RL_INPUT_NAMES[d]
+                    hover_info = (f"Input {RL_INPUT_NAMES[d]} at {step}<br>value {input_value:.3f} vs baseline "
+                                  f"{input_value - deviation:.3f} (edges use the difference {deviation:+.3f})")
+                elif info['type'] == 'input':
                     text = f"x_{info['timestep']}_{info['dimension']}"
                     hover_info = f"Input Node<br>Timestep: {info['timestep']}<br>Dimension: {info['dimension']}"
                 elif info['type'] in ['feature_reset', 'feature_update', 'feature_hidden']:
@@ -418,7 +462,9 @@ class InteractiveCircuitVisualizer:
                 elif info['type'] == 'initial':
                     text = "h_init"
                     hover_info = ("Hidden state entering the window<br>"
-                                  "Source-only: learned initial state (RL) or zero (copy)")
+                                  + ("Source-only: state carried in from the episode's earlier trials<br>"
+                                     "(e.g. the agent's estimate of the reward allocation)"
+                                     if self.circuit_tracer.task == "rl" else "Source-only: zero for the copy task"))
 
                 elif info['type'] == 'error':
                     text = f"e_{info['gate']}_{info['timestep']}"
@@ -426,6 +472,15 @@ class InteractiveCircuitVisualizer:
                                   f"Timestep: {info['timestep']}<br>"
                                   "Source-only: unexplained by the transcoder")
                         
+                elif info['type'] == 'output' and rl:
+                    choice = float(self.current_acts["choice"][info['timestep']])
+                    text = f"choice {step}"
+                    hover_info = (f"Choice at {step}: logit(a1) - logit(a2) = {choice:+.3f}<br>"
+                                  "Incoming edges are effects on the a1 vs a2 preference")
+                elif info['type'] == 'value' and rl:
+                    value = float(self.current_acts["value"][info['timestep']])
+                    text = f"value {step}"
+                    hover_info = f"Value head at {step}: {value:+.3f}"
                 elif info['type'] == 'output':
                     text = f"o_{info['timestep']}_{info['dimension']}"
                     hover_info = (f"Output Node<br>Timestep: {info['timestep']}<br>Dimension: {info['dimension']}<br>"
@@ -638,6 +693,13 @@ class InteractiveCircuitVisualizer:
                     html.Button('Explain', id='explain-gate-button', style={'margin-right': '5px'}),
                     html.Button('Main graph', id='main-graph-button'),
                 ], style={'text-align': 'center'}),
+                # RL: what the main graph explains (choice at a GO step, or value at a step)
+                html.Div([
+                    html.Label("Target:", style={'font-weight': 'bold', 'margin-right': '10px'}),
+                    dcc.Dropdown(id='rl-target', options=[], value=None, clearable=False,
+                                 style={'width': '360px', 'display': 'inline-block', 'vertical-align': 'middle'}),
+                ], style={'text-align': 'center', 'margin-top': '10px',
+                          'display': 'block' if self.circuit_tracer.task == "rl" else 'none'}),
                 html.Div(id='split-edge-output', style={'margin-top': '10px', 'font-family': 'monospace',
                                                         'font-size': '12px', 'text-align': 'left'}),
                 html.Div(id='gate-ranking', style={'margin-top': '10px', 'font-family': 'monospace',
@@ -673,13 +735,32 @@ class InteractiveCircuitVisualizer:
             return [html.Div(line) for line in self._gate_ranking_text()]
 
         @self.app.callback(
+            [Output('rl-target', 'options'),
+             Output('rl-target', 'value')],
+            [Input('graph-stats', 'children')],
+            [State('rl-target', 'value')],
+            prevent_initial_call=True
+        )
+        def update_rl_targets(stats, current):
+            # Targets for the current window (RL). The value is only changed
+            # when the current one is not valid for this window, so this does
+            # not re-trigger the graph callback in a loop.
+            options = getattr(self, 'current_rl_targets', None)
+            if not options:
+                return [], (None if current is not None else dash.no_update)
+            value = current if current in options else next(iter(options))
+            return ([{'label': label, 'value': label} for label in options],
+                    dash.no_update if value == current else value)
+
+        @self.app.callback(
             [Output('circuit-graph', 'figure'),
             Output('graph-stats', 'children')],
             [Input('generate-button', 'n_clicks'),
             Input('display-normalize-toggle', 'value'),  # Add display toggle as input
             Input('normalize-toggle', 'value'),  # Add pruning toggle as input
             Input('explain-gate-button', 'n_clicks'),
-            Input('main-graph-button', 'n_clicks')],
+            Input('main-graph-button', 'n_clicks'),
+            Input('rl-target', 'value')],
             [State('sequence-input', 'value'),
             State('node-threshold-input', 'value'),
             State('edge-threshold-input', 'value'),
@@ -687,7 +768,7 @@ class InteractiveCircuitVisualizer:
             State('circuit-graph', 'figure')]  # Keep current figure state
         )
         def generate_and_display_circuit(n_clicks, display_normalize_toggle, normalize_toggle,
-                                        explain_clicks, main_clicks,
+                                        explain_clicks, main_clicks, rl_target,
                                         sequence_text, node_threshold, edge_threshold, gate_feature,
                                         current_figure):
             """Generate and display circuit graph"""
@@ -705,19 +786,20 @@ class InteractiveCircuitVisualizer:
                 except ValueError as e:
                     return current_figure or go.Figure(), f"Error: {e}"
                 self.current_edge_weights, self.current_edge_weights_normalized = edges, normalized
-                self.current_target_weights = targets
+                self.current_view = ("rooted", next(iter(targets)))
             elif 'main-graph-button.n_clicks' in triggered:
                 if getattr(self, 'main_edge_weights', None) is None:
                     return current_figure or go.Figure(), "Generate a circuit first."
                 self.current_edge_weights, self.current_edge_weights_normalized = self.main_edge_weights
-                self.current_target_weights = None
-            view = (f"rooted at {next(iter(self.current_target_weights))}"
-                    if getattr(self, 'current_target_weights', None) else "main graph")
+                self.current_view = "main"
+            self._set_targets(rl_target)
+            view = self._view_label(rl_target)
 
             # Check if this is just a display toggle change (or a view switch)
             display_triggered = ctx.triggered and any(
                 prop_id in ['display-normalize-toggle.value', 'normalize-toggle.value',
-                            'explain-gate-button.n_clicks', 'main-graph-button.n_clicks']
+                            'explain-gate-button.n_clicks', 'main-graph-button.n_clicks',
+                            'rl-target.value']
                 for prop_id in triggered
             )
             
@@ -769,12 +851,16 @@ class InteractiveCircuitVisualizer:
                 dataset_idx, sequence_index = map(int, options)
                 sequence_tensor = self.datasets[dataset_idx][sequence_index]
                 
-                if hasattr(self.feature_analyzer, "cur_type"):
-                    self.feature_analyzer.cur_type = ["commonp", "common_p", "uncommonp", "uncommon_p"][dataset_idx]
-                
-                tokens = self.feature_analyzer.convert_sequence_to_text(
-                    sequence_tensor["inputs"], sequence_tensor["outputs"]
-                )
+                if hasattr(self.feature_analyzer, "window_key"):
+                    # RL: label and core trial from the window's metadata, padded
+                    # trials stripped. Old files without metadata fall back to
+                    # (pattern, start) from the file position (4 patterns per start).
+                    self.feature_analyzer.cur_type = (dataset_idx % 4, dataset_idx // 4)
+                    tokens = self.feature_analyzer.window_key(sequence_tensor)
+                else:
+                    tokens = self.feature_analyzer.convert_sequence_to_text(
+                        sequence_tensor["inputs"], sequence_tensor["outputs"]
+                    )
                 
                 # Recompute live activations from the checkpoint currently
                 # loaded in the tracer. Cached analyses are for feature
@@ -792,12 +878,16 @@ class InteractiveCircuitVisualizer:
                 self.current_edge_weights = edge_weights
                 self.current_edge_weights_normalized = edge_weights_normalized
                 self.main_edge_weights = (edge_weights, edge_weights_normalized)
-                self.current_target_weights = None
                 self.current_sequence_tensor = sequence_tensor
                 self.current_active_features = active_features
                 self.current_tokens = tokens
                 self.current_acts = acts
                 self.current_output_logits = acts["logits"].detach().cpu()
+                self.current_view = "main"
+                self.current_rl_targets = (self.circuit_tracer.rl_target_options(acts)
+                                           if self.circuit_tracer.task == "rl" else None)
+                self._set_targets(rl_target)
+                view = self._view_label(rl_target)
                 
                 # Choose which edge weights to use for pruning
                 use_normalized_for_display = 'normalized' in display_normalize_toggle
@@ -814,17 +904,19 @@ class InteractiveCircuitVisualizer:
                         self.pruner.edge_threshold = edge_threshold
                     
                     print(f"Auto-pruning {len(selected_edge_weights)} edges with node_threshold={self.pruner.node_threshold}, edge_threshold={self.pruner.edge_threshold}")
-                    pruned_edges, kept_nodes = self.pruner.prune_graph(selected_edge_weights, self.current_output_logits)
+                    pruned_edges, kept_nodes = self.pruner.prune_graph(
+                        selected_edge_weights, self.current_output_logits,
+                        target_weights=self.current_target_weights)
                     print(f"After pruning: {len(pruned_edges)} edges, {len(kept_nodes)} nodes")
-                    
+
                     fig = self._create_circuit_graph(pruned_edges, display_edge_weights, kept_nodes, active_features)
                     display_type = "normalized" if use_normalized_for_display else "raw"
-                    stats = f"Circuit for '{' '.join(tokens)}', main graph (pruning: raw attribution, display: {display_type}): {len(kept_nodes)} nodes, {len(pruned_edges)} edges (pruned from {len(selected_edge_weights)}) | Thresholds: node={self.pruner.node_threshold}, edge={self.pruner.edge_threshold}"
+                    stats = f"Circuit for '{' '.join(tokens)}', {view} (pruning: raw attribution, display: {display_type}): {len(kept_nodes)} nodes, {len(pruned_edges)} edges (pruned from {len(selected_edge_weights)}) | Thresholds: node={self.pruner.node_threshold}, edge={self.pruner.edge_threshold}"
                 else:
                     fig = self._create_circuit_graph(selected_edge_weights, display_edge_weights, None, active_features)
                     all_nodes = set(sum(selected_edge_weights.keys(), ()))
                     display_type = "normalized" if use_normalized_for_display else "raw"
-                    stats = f"Circuit for '{' '.join(tokens)}', main graph (pruning: raw attribution, display: {display_type}): {len(all_nodes)} nodes, {len(selected_edge_weights)} edges (no pruning)"
+                    stats = f"Circuit for '{' '.join(tokens)}', {view} (pruning: raw attribution, display: {display_type}): {len(all_nodes)} nodes, {len(selected_edge_weights)} edges (no pruning)"
                 
                 return fig, stats
                 
@@ -884,13 +976,14 @@ if __name__ == "__main__":
         reset_transcoder = Transcoder(input_size=159, out_size=128, n_feats=args.n_feats_reset) if args.reset_transcoder_path else None
         analyzer = CopyFeatureActivationAnalyzer
     
-    rnn_model.load_state_dict(torch.load(args.rnn_path))
-    update_transcoder.load_state_dict(torch.load(args.update_transcoder_path)["transcoder"])
-    hidden_transcoder.load_state_dict(torch.load(args.hidden_transcoder_path)["transcoder"])
+    rnn_model.load_state_dict(torch.load(args.rnn_path, map_location="cpu"))
+    update_transcoder.load_state_dict(torch.load(args.update_transcoder_path, map_location="cpu")["transcoder"])
+    hidden_transcoder.load_state_dict(torch.load(args.hidden_transcoder_path, map_location="cpu")["transcoder"])
     if reset_transcoder:
-        reset_transcoder.load_state_dict(torch.load(args.reset_transcoder_path)["transcoder"])
+        reset_transcoder.load_state_dict(torch.load(args.reset_transcoder_path, map_location="cpu")["transcoder"])
     
     metadata_path = args.feature_dict_path.replace("_features.p", "_metadata.p")
+    metadata = {}
     if not os.path.exists(metadata_path):
         if not args.allow_legacy_feature_cache:
             raise ValueError(
@@ -919,9 +1012,19 @@ if __name__ == "__main__":
     feature_analyzer.feature_activations = analysis_dict
     feature_analyzer.sequence_activations = analysis_dict_sequences
 
-    # RL: the readout is 3 policy logits + 1 value unit, and the agent acts at
-    # every step. Copy: all readout units are logits, emitted in the second half.
-    tracer_kwargs = dict(output_dims=3, outputs_at="all") if args.rl else {}
+    # Copy: all readout units are logits, emitted in the second half.
+    # RL: choice (a1 vs a2) and value targets; inputs measured from the mean
+    # input per phase, so e.g. "no reward" is visible. The baseline stored with
+    # the feature cache (fixed for a run) is preferred over one computed from
+    # whichever windows are loaded now.
+    tracer_kwargs = {}
+    if args.rl:
+        if metadata.get("input_baseline") is not None:
+            input_baseline = torch.tensor(metadata["input_baseline"])
+        else:
+            print("-- Feature cache has no input baseline; computing it from the loaded windows")
+            input_baseline = compute_rl_input_baseline(datasets)
+        tracer_kwargs = dict(task="rl", input_baseline=input_baseline)
     circuit_tracer = CircuitTracer(rnn_model, update_transcoder, hidden_transcoder, reset_transcoder=reset_transcoder,
                                    device="cpu", **tracer_kwargs)
     

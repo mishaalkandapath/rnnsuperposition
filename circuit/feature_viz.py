@@ -14,6 +14,7 @@ import numpy as np
 
 from circuit.copy_find_features import CopyFeatureActivationAnalyzer
 from circuit.rl_find_features import RLFeatureActivationAnalyzer
+from circuit.feature_store import is_feature_store, open_feature_store
 
 class EnhancedInteractiveFeatureVisualizer:
     """Interactive web-based visualizer for RNN transcoder feature activations with inactive sequence support"""
@@ -44,6 +45,16 @@ class EnhancedInteractiveFeatureVisualizer:
         self._setup_layout()
         self._setup_callbacks()
         
+    def _feature_options(self, transcoder_type: str, features) -> List[Dict]:
+        """Dropdown options; with a feature store, labels include how often each feature fires."""
+        activations = getattr(self.analyzer, 'feature_activations', None)
+        gate = activations.get(transcoder_type) if isinstance(activations, dict) else None
+        counts = getattr(gate, 'counts', None)
+        if counts is None:
+            return [{'label': f'Feature {f}', 'value': f} for f in features]
+        return [{'label': f'Feature {f} ({counts[f][0]} seqs)' if f in counts else f'Feature {f} (never fires)',
+                 'value': f} for f in features]
+
     def _get_inactive_sequences_for_feature(self, transcoder_type: str,
                                              feature_idx: int) -> List[Dict]:
         """Get sequences where the specified feature never activated"""
@@ -276,7 +287,7 @@ class EnhancedInteractiveFeatureVisualizer:
                     html.Label("Feature Index:", style={'font-weight': 'bold'}),
                     dcc.Dropdown(
                         id='feature-dropdown',
-                        options=[{'label': f'Feature {f}', 'value': f} for f in update_features[:100]],  # Limit options
+                        options=self._feature_options('update', update_features[:100]),  # Limit options
                         value=update_features[0] if update_features else 0,
                         style={'margin': '10px 0'}
                     )
@@ -425,7 +436,7 @@ class EnhancedInteractiveFeatureVisualizer:
                 else:
                     features = [0]  # Default fallback
                 
-                options = [{'label': f'Feature {f}', 'value': f} for f in features]
+                options = self._feature_options(transcoder_type, features)
                 value = features[0] if features else 0
                 
                 return options, value
@@ -753,8 +764,8 @@ class EnhancedInteractiveFeatureVisualizer:
                                         style={'margin': '10px 0'}
                                     )
                                 )
-                            if stats.get('copy_tokens_prev_distribution'):
-                                copy_tokens_prev_dist = stats['copy_tokens_prev_distribution'] 
+                            if stats.get('copy_target_tokens_distribution'):
+                                copy_tokens_prev_dist = stats['copy_target_tokens_distribution']
                                 tokens = list(range(len(copy_tokens_prev_dist)))
                                 total_count = sum(copy_tokens_prev_dist)
                                 normalized_copytokenprev_counts = []
@@ -768,14 +779,14 @@ class EnhancedInteractiveFeatureVisualizer:
                                 fig6.add_trace(go.Bar(
                                     x=self.analyzer.tokens,
                                     y= normalized_copytokenprev_counts,
-                                    name=f'Previous copy-phase input-token distribution {total_count/total_feature_activations}',
+                                    name=f'Output (target) token distribution {total_count/total_feature_activations}',
                                     marker_color='lightcoral',
                                     text=[f"{val:.3f}" for val in normalized_copytokenprev_counts],
                                     textposition='auto'
                                 ))
                                 fig6.update_layout(
-                                    title=f"Previous copy-phase input-token distribution {total_count/total_feature_activations}",
-                                    xaxis_title="Input token",
+                                    title=f"Token being output at the step (delimiter and copy phase) {total_count/total_feature_activations}",
+                                    xaxis_title="Output token",
                                     yaxis_title="Activation Rate",
                                     height=300,
                                     margin=dict(l=50, r=50, t=80, b=50)
@@ -842,11 +853,13 @@ class EnhancedInteractiveFeatureVisualizer:
             Input('sort-option', 'value'),
             Input('category-option', 'value'),
             Input('include-inactive', 'value'),
-            Input('ranking-mode', 'value'), 
-            Input('length-filter', 'value')]
+            Input('ranking-mode', 'value'),
+            Input('length-filter', 'value'),
+            Input('type-filter', 'value')]
         )
         def update_sequence_display(transcoder_type, feature_idx, sort_option,
-                                     category_option, include_inactive, ranking_mode, length_filter):
+                                     category_option, include_inactive, ranking_mode, length_filter,
+                                     type_filter=None):
             """Update main sequence display with ranking options"""
             try:
                 print(f"=== DEBUG: update_sequence_display called ===")
@@ -930,7 +943,16 @@ class EnhancedInteractiveFeatureVisualizer:
                     
                     if not all_sequences_data:
                         return [html.Div(f"No sequences of length {length_filter} found for this feature.")]
-                
+
+                # RL: the first key element is the window's type (start config + pattern)
+                if self.rl and ranking_mode == 'by_type' and type_filter is not None:
+                    all_sequences_data = [
+                        seq_data for seq_data in all_sequences_data
+                        if seq_data.get('sequence') and seq_data['sequence'][0] == type_filter
+                    ]
+                    if not all_sequences_data:
+                        return [html.Div(f"No {type_filter} sequences found for this feature.")]
+
                 # Sort sequences based on selected option
                 def get_sort_key(x, sort_option):
                     if sort_option == 'total':
@@ -1009,14 +1031,25 @@ if __name__ == "__main__":
     parser.add_argument("--allow_legacy_feature_cache", action="store_true",
                         help="Allow cache without provenance/full-sequence metadata (unsafe)")
 
+    parser.add_argument("--max_cached_entries", type=int, default=3_000_000,
+                        help="Feature store only: (feature, sequence) entries kept in memory")
+
     args = parser.parse_args()
-     
-    # Load feature activations
-    with open(args.feature_dict_path, "rb") as f:
-        analysis_dict = pickle.load(f)
-    
+
+    if is_feature_store(args.feature_dict_path):
+        # Lazily loaded store (circuit/convert_feature_cache.py): features are
+        # read from disk when selected, with an LRU cache.
+        analysis_dict, all_sequences, _ = open_feature_store(
+            args.feature_dict_path, max_cached_entries=args.max_cached_entries)
+    else:
+        # Load feature activations
+        with open(args.feature_dict_path, "rb") as f:
+            analysis_dict = pickle.load(f)
+
     metadata_path = args.feature_dict_path.replace("_features.p", "_metadata.p")
-    if os.path.exists(metadata_path):
+    if is_feature_store(args.feature_dict_path):
+        pass
+    elif os.path.exists(metadata_path):
         with open(metadata_path, "rb") as f:
             all_sequences = pickle.load(f).get("all_sequences", [])
     else:

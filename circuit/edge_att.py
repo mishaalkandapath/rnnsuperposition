@@ -4,6 +4,40 @@ from dataclasses import dataclass
 import torch
 import torch.nn as nn
 
+# RL task layout: readout = [logit fixation, logit a1, logit a2, value];
+# input = [state one-hot (fix, S1, S2), last action one-hot (fix, a1, a2),
+# reward, go signal]; phases DELAY_1, GO, DELAY_2.
+RL_ACTION_1, RL_ACTION_2, RL_VALUE = 1, 2, 3
+RL_GO = 1
+RL_PHASES = ["D1", "GO", "D2"]
+RL_INPUT_NAMES = ["s:fix", "s:S1", "s:S2", "a:fix", "a:a1", "a:a2", "reward", "go"]
+RL_PAD = 5
+
+
+def compute_rl_input_baseline(datasets, snap: float = 1e-3) -> torch.Tensor:
+    """Mean input per phase over the real (unpadded) trials of RL trace
+    windows: the (3, X) reference that input edges are measured from.
+
+    Entries within `snap` of 0 or 1 are snapped to exactly 0 / 1: rare error
+    trials otherwise leave e.g. the fixation one-hot at GO at 0.9999, and
+    every typical input would get a ~1e-4 node. Expects StackDatasets (or
+    dicts) of (window, trial, phase, X) inputs, as written by
+    datasets/transcoder_rl_datasets.py.
+    """
+    total, count = None, 0
+    for dataset in datasets:
+        inputs = dataset.datasets["inputs"] if hasattr(dataset, "datasets") else dataset["inputs"]
+        if inputs.dim() != 4:
+            raise ValueError(f"expected (window, trial, phase, X) inputs, got shape {tuple(inputs.shape)}")
+        real = ~(inputs == RL_PAD).flatten(2).all(-1)                       # (window, trial)
+        trials = inputs[real].float()                                       # (n_trials, 3, X)
+        total = trials.sum(0) if total is None else total + trials.sum(0)
+        count += trials.shape[0]
+    baseline = total / max(count, 1)
+    for value in (0.0, 1.0):
+        baseline[(baseline - value).abs() < snap] = value
+    return baseline
+
 @dataclass
 class CircuitNode:
     """Represents a node in the circuit graph.
@@ -52,20 +86,24 @@ class CircuitTracer:
         hidden_transcoder: nn.Module,
         device: str = "cuda",
         reset_transcoder: Optional[nn.Module] = None,
-        output_dims: Optional[int] = None,
-        outputs_at: str = "second_half",
+        task: str = "copy",
+        input_baseline: Optional[torch.Tensor] = None,
     ):
         """
         Args:
-            output_dims: Treat only the first output_dims readout units as
-                logits (RL: 3 policy logits, excluding the value unit).
-                None uses all readout units.
-            outputs_at: Timesteps with output nodes. "second_half" for the
-                copy task (outputs at t >= T // 2), "all" for RL.
+            task: "copy": mean-centred logit nodes o_t_k at t >= T // 2.
+                "rl": readout is [3 policy logits, value]; choice nodes o_t_c
+                (logit a1 - logit a2) at GO steps (t % 3 == 1) and value
+                nodes v_t at every step. Trace windows are flattened.
+            input_baseline: (3, X) reference input per phase (RL; see
+                compute_rl_input_baseline). Input edges are measured from it,
+                x - x_ref, so e.g. "no reward" gets a node; the remainder
+                W_x x_ref is a bias term like the encoder bias. None = zero.
         """
-        if outputs_at not in ("second_half", "all"):
-            raise ValueError(f"outputs_at must be 'second_half' or 'all', got {outputs_at!r}")
-        self.outputs_at = outputs_at
+        if task not in ("copy", "rl"):
+            raise ValueError(f"task must be 'copy' or 'rl', got {task!r}")
+        self.task = task
+        self.input_baseline = None if input_baseline is None else input_baseline.to(device)
         self.rnn_model = rnn_model.to(device)
         self.update_transcoder = update_transcoder.to(device)
         self.hidden_transcoder = hidden_transcoder.to(device)
@@ -107,12 +145,21 @@ class CircuitTracer:
             print("No output weight?")
             self.W_o = torch.eye(Hz, device=device)  # (H, H)
             self.b_o = torch.zeros(Hz, device=device)
-        if output_dims is not None:
-            self.W_o, self.b_o = self.W_o[:output_dims], self.b_o[:output_dims]
+        if task == "rl":
+            # Policy logits (fixation, a1, a2) and value. The agent's choice at
+            # GO is a1 vs a2, so the policy target is their logit difference.
+            self.W_choice = self.W_o[RL_ACTION_1] - self.W_o[RL_ACTION_2]
+            self.b_choice = self.b_o[RL_ACTION_1] - self.b_o[RL_ACTION_2]
+            self.W_value, self.b_value = self.W_o[RL_VALUE], self.b_o[RL_VALUE]
 
     def _output_steps(self, T: int) -> List[int]:
-        """Timesteps that have output nodes; row r of acts["logits"] is step r of this list."""
-        return list(range(T // 2, T)) if self.outputs_at == "second_half" else list(range(T))
+        """Copy task: timesteps with logit nodes; row r of acts["logits"] is step r of this list."""
+        return list(range(T // 2, T)) if self.task == "copy" else list(range(T))
+
+    @staticmethod
+    def go_steps(T: int) -> List[int]:
+        """RL GO steps (phase 1 of each trial)."""
+        return [t for t in range(T) if t % 3 == RL_GO]
 
     @staticmethod
     def _flatten_rl_layout(acts: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
@@ -125,8 +172,10 @@ class CircuitTracer:
         n_pad = 0
         while n_pad < lead[0] and torch.all(acts["inputs"][n_pad] == 5):
             n_pad += 1
-        return {k: (v[n_pad:].reshape(-1, *v.shape[2:]) if v.shape[:2] == lead else v)
+        flat = {k: (v[n_pad:].reshape(-1, *v.shape[2:]) if v.shape[:2] == lead else v)
                 for k, v in acts.items()}
+        flat["n_pad"] = torch.tensor(n_pad)
+        return flat
 
     @torch.no_grad()
     def run_forward_pass(self, sequence: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
@@ -156,11 +205,20 @@ class CircuitTracer:
         # datasets (and RL traces) do not; recover the logits from the
         # hidden states and the frozen RNN output projection instead of
         # softmaxing saved one-hot feedback tokens.
-        if "logits" in acts:
-            acts["logits"] = acts["logits"][..., :self.W_o.shape[0]]
+        if self.task == "rl":
+            acts["choice"] = acts["h_ts"] @ self.W_choice + self.b_choice   # (T,), meaningful at GO steps
+            acts["value"] = acts["h_ts"] @ self.W_value + self.b_value       # (T,)
+            acts["logits"] = torch.nn.functional.linear(acts["h_ts"], self.W_o, self.b_o)
+        elif "logits" in acts:
+            pass
         else:
             acts["logits"] = torch.nn.functional.linear(
                 acts["h_ts"][self._output_steps(T)], self.W_o, self.b_o)
+
+        # Input relative to the per-phase baseline (= the input when there is none).
+        acts["input_dev"] = acts["inputs"].clone()
+        if self.input_baseline is not None:
+            acts["input_dev"] -= self.input_baseline[torch.arange(T, device=acts["inputs"].device) % 3]
 
         # Pre/post feature activations are assumed to be produced by calling the transcoders.
         # We compute per-timestep masks needed for local linear maps.
@@ -289,6 +347,9 @@ class CircuitTracer:
         """
         t = node.timestep
         if node.node_type == "output":
+            if self.task == "rl":
+                # o_t_c: logit(a1) - logit(a2) at a GO step; v_t: value head
+                return t, (self.W_value if node.name.startswith("v_") else self.W_choice), None
             W_c = self.W_o - self.W_o.mean(dim=0, keepdim=True)  # mean-centred logits
             return t, W_c[node.feature_idx], None
         j = node.feature_idx
@@ -327,7 +388,8 @@ class CircuitTracer:
         Gates are frozen at their actual values, as the paper freezes
         attention patterns, so the replacement model is linear and edges into
         a node sum exactly to its value minus bias terms. Two kinds of edge:
-          x_t[d] -> feature at t:   x_t[d] * W_x[j, d]  (times JumpReLU mask)
+          x_t[d] -> feature at t:   (x_t[d] - x_ref[d]) * W_x[j, d]  (times JumpReLU mask;
+                                    x_ref is the per-phase input baseline, or 0)
           writer at s -> reader of h_tau (s <= tau):
               sum_i read[i] * r_t[i] * prod_{u=s+1}^{tau} (1 - z_u[i]) * z_s[i] * write[i]
         Gate features get no edges; see gate_pieces / split_edge_by_gate.
@@ -339,7 +401,7 @@ class CircuitTracer:
             if to_node.node_type != "feature" or from_node.timestep != to_node.timestep:
                 return zero
             d = from_node.input_dim
-            return acts["inputs"][from_node.timestep, d] * self._input_row(to_node, acts)[d]
+            return acts["input_dev"][from_node.timestep, d] * self._input_row(to_node, acts)[d]
         if not self._writes_hidden(from_node):
             return zero
         s, write, write_gate = self._write_terms(from_node, acts)
@@ -359,10 +421,10 @@ class CircuitTracer:
         T = acts["inputs"].shape[0]
         active_features = self._active_features_from_acts(acts)
         nodes: List[CircuitNode] = []
-        # Inputs: one node per nonzero input dimension (copy inputs are
-        # one-hot; RL inputs mix one-hots with a reward scalar).
+        # Inputs: one node per input dimension that differs from the baseline
+        # (with no baseline: nonzero dimensions; copy inputs are one-hot).
         for t in range(T):
-            for d in torch.nonzero(acts["inputs"][t], as_tuple=False).flatten().tolist():
+            for d in torch.nonzero(acts["input_dev"][t].abs() > 1e-6, as_tuple=False).flatten().tolist():
                 nodes.append(CircuitNode(f"x_{t}_{d}", "input", t, input_dim=d))
 
         # Active candidate features. Gate (update/reset) features are not
@@ -386,11 +448,71 @@ class CircuitTracer:
             nodes.append(CircuitNode(f"e_n_{t}", "error", t))
 
         # Outputs
+        if self.task == "rl":
+            # Choice (logit a1 - logit a2) at GO steps; value at every step.
+            for t in range(T):
+                if t % 3 == RL_GO:
+                    nodes.append(CircuitNode(f"o_{t}_c", "output", t))
+                nodes.append(CircuitNode(f"v_{t}", "output", t))
+            return nodes
         sorted_outs = torch.argsort(acts["logits"], dim=-1, descending=True)
         for row, t in enumerate(self._output_steps(T)):
             for k in sorted_outs[row].tolist():
                 nodes.append(CircuitNode(f"o_{t}_{k}", "output", t, feature_idx=k))
         return nodes
+
+    # ------------------------------------------------------------------
+    # RL targets and labels
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def rl_core_trial(acts: Dict[str, torch.Tensor]) -> Optional[int]:
+        """Core trial index in the flattened (unpadded) window, from its metadata."""
+        if "core_trial" not in acts:
+            return None
+        return int(acts["core_trial"]) - int(acts.get("n_pad", torch.tensor(0)))
+
+    def rl_target_options(self, acts: Dict[str, torch.Tensor]) -> Dict[str, Dict[str, float]]:
+        """Named pruning targets for an RL window ({label: target_weights}).
+
+        The first is the default: the next trial's choice (a1 vs a2 at its
+        GO), i.e. the stay/switch decision following the core trial. Windows
+        whose core is the last trial have no next trial; their default is the
+        core trial's own choice, labelled as such (it precedes the core
+        outcome). Then all GO choices, each GO choice, and the value at each
+        step. Labels are relative to the core trial, so a label means the same
+        trial in every window.
+        """
+        T = acts["inputs"].shape[0]
+        n_trials = T // 3
+        core = self.rl_core_trial(acts)
+        has_next = bool(acts["has_next"]) if "has_next" in acts else False
+        if core is not None and has_next:
+            trial, name = core + 1, "next-trial choice"
+        elif core is not None:
+            trial, name = core, "core-trial choice (no next trial)"
+        else:
+            trial, name = n_trials - 1, "last choice (no window metadata)"
+        step = 3 * trial + RL_GO
+        options = {f"{name} ({self.rl_step_label(acts, step)})": {f"o_{step}_c": 1.0}}
+        go = self.go_steps(T)
+        options["all GO choices"] = {f"o_{t}_c": 1.0 / len(go) for t in go}
+        for t in go:
+            options[f"choice at {self.rl_step_label(acts, t)}"] = {f"o_{t}_c": 1.0}
+        for t in range(T):
+            options[f"value at {self.rl_step_label(acts, t)}"] = {f"v_{t}": 1.0}
+        return options
+
+    def rl_step_label(self, acts: Dict[str, torch.Tensor], t: int) -> str:
+        """Trial relative to the core trial, and phase: e.g. "core-1·D2",
+        "core·GO", "core+1·GO". Windows without metadata: "T2·GO" (trial
+        index in the window)."""
+        trial, phase = t // 3, RL_PHASES[t % 3]
+        core = self.rl_core_trial(acts)
+        if core is None:
+            return f"T{trial}·{phase}"
+        offset = trial - core
+        return f"core{'' if offset == 0 else f'{offset:+d}'}·{phase}"
 
     def _compute_edges_reference(self, nodes: List[CircuitNode], acts: Dict[str, torch.Tensor]) -> Dict[Tuple[str, str], float]:
         """O(N^2) loop over compute_edge_weight. Slow; kept to verify _compute_edges."""
@@ -472,7 +594,7 @@ class CircuitTracer:
             if t not in inputs_at:
                 continue
             d = torch.tensor([nodes[n].input_dim for n in inputs_at[t]], dtype=torch.long, device=dev)
-            add(inputs_at[t], dst_ids, torch.stack(rows)[:, d] * acts["inputs"][t, d][None, :])
+            add(inputs_at[t], dst_ids, torch.stack(rows)[:, d] * acts["input_dev"][t, d][None, :])
 
         if not ws:
             return {}
@@ -493,7 +615,8 @@ class CircuitTracer:
         """
         group = {}
         for node in nodes:
-            kind = node.name[2] if node.node_type in ("feature", "error") else ""
+            kind = (node.name[2] if node.node_type in ("feature", "error")
+                    else node.name[0] if node.node_type == "output" else "")  # o (choice/logit) vs v (value)
             group[node.name] = (node.node_type, kind, node.timestep)
         max_abs: Dict[Tuple, float] = {}
         for (src, dst), w in edge_weights.items():
@@ -574,7 +697,8 @@ class CircuitTracer:
 
     @staticmethod
     def node_from_name(name: str) -> CircuitNode:
-        """Inverse of the node naming scheme (x_t_d, f_*_t_j, e_n_t, h_init, o_t_k)."""
+        """Inverse of the node naming scheme (x_t_d, f_*_t_j, e_n_t, h_init,
+        o_t_k; RL: o_t_c choice, v_t value)."""
         parts = name.split("_")
         if name == "h_init":
             return CircuitNode(name, "initial", -1)
@@ -584,8 +708,12 @@ class CircuitTracer:
             return CircuitNode(name, "feature", int(parts[2]), feature_idx=int(parts[3]))
         if parts[0] == "e":
             return CircuitNode(name, "error", int(parts[2]))
+        if parts[0] == "o" and parts[2] == "c":
+            return CircuitNode(name, "output", int(parts[1]))
         if parts[0] == "o":
             return CircuitNode(name, "output", int(parts[1]), feature_idx=int(parts[2]))
+        if parts[0] == "v":
+            return CircuitNode(name, "output", int(parts[1]))
         raise ValueError(f"Unrecognised node name {name!r}")
 
     def edge_gate_steps(self, src: str, dst: str) -> List[Tuple[int, str, str]]:

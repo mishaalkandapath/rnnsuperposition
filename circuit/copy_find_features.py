@@ -54,11 +54,16 @@ class FeatureActivationAnalyzer:
         self.max_length =0
         # Full inventory, including sequences on which every feature is dead.
         self.all_sequences = set()
-    def convert_sequence_to_text(self, 
-                                 inputs: torch.Tensor, 
+    def convert_sequence_to_text(self,
+                                 inputs: torch.Tensor,
                                  outputs: torch.Tensor) -> List[str]:
         raise NotImplementedError
-    
+
+    def sequence_key(self, batched: Dict[str, torch.Tensor], batch_idx: int):
+        """Key under which a batch row's activations are stored. Subclasses
+        may use other columns of the row (e.g. RL window metadata)."""
+        return self.convert_sequence_to_text(batched["inputs"][batch_idx], batched["outputs"][batch_idx])
+
     def analyze_activations(self, 
                                   batched,
                                   valid_h_prev, 
@@ -96,8 +101,7 @@ class FeatureActivationAnalyzer:
                 batch_idx, feat_idx = nonzero_reset_acts[idx, 0].item(), nonzero_reset_acts[idx, 1].item()
                 activation_magnitude = reset_activations[batch_idx, feat_idx].item()
                 if batch_idx not in batch_keys:
-                    batch_keys[batch_idx] = self.convert_sequence_to_text(
-                        batched["inputs"][batch_idx], batched["outputs"][batch_idx])
+                    batch_keys[batch_idx] = self.sequence_key(batched, batch_idx)
                 sequence_tokens = batch_keys[batch_idx]
                 self.feature_activations['reset'][feat_idx][sequence_tokens]["positions"].append(t)
                 self.feature_activations['reset'][feat_idx][sequence_tokens]["magnitudes"].append(activation_magnitude)
@@ -108,9 +112,7 @@ class FeatureActivationAnalyzer:
             batch_idx, feat_idx = nonzero_update_acts[idx, 0].item(), nonzero_update_acts[idx, 1].item()
             activation_magnitude = update_activations[batch_idx, feat_idx].item()
             if batch_idx not in batch_keys:
-                batch_keys[batch_idx] = self.convert_sequence_to_text(
-                    batched["inputs"][batch_idx],
-                    batched["outputs"][batch_idx])
+                batch_keys[batch_idx] = self.sequence_key(batched, batch_idx)
             sequence_tokens = batch_keys[batch_idx]
             self.feature_activations['update'][feat_idx][sequence_tokens]["positions"].append(t)
             self.feature_activations['update'][feat_idx][sequence_tokens]["magnitudes"].append(activation_magnitude)
@@ -120,9 +122,7 @@ class FeatureActivationAnalyzer:
             batch_idx, feat_idx = nonzero_hidden_acts[idx, 0].item(), nonzero_hidden_acts[idx, 1].item()
             activation_magnitude = hidden_activations[batch_idx, feat_idx].item()
             if batch_idx not in batch_keys:
-                batch_keys[batch_idx] = self.convert_sequence_to_text(
-                    batched["inputs"][batch_idx],
-                    batched["outputs"][batch_idx])
+                batch_keys[batch_idx] = self.sequence_key(batched, batch_idx)
             sequence_tokens = batch_keys[batch_idx]
             self.feature_activations['hidden'][feat_idx][sequence_tokens]["positions"].append(t)
             self.feature_activations['hidden'][feat_idx][sequence_tokens]["magnitudes"].append(activation_magnitude)
@@ -258,23 +258,27 @@ class CopyFeatureActivationAnalyzer(FeatureActivationAnalyzer):
         all_magnitudes = []
         all_lengths = []
 
-        if getattr(self, "tokens"):
-            all_tokens_og = list(range(len(self.tokens)))
-            all_tokens_copy = list(range(len(self.tokens)))
-            all_tokens_copy_prev = list(range(len(self.tokens)))
+        # Token distributions hold real counts only (minlength in bincount
+        # keeps every token present); seeding them with one count per token
+        # inflated sparse features.
+        # A sequence is L tokens, <DEL> at t = L, then the model's own outputs
+        # fed back, so the input at copy step t > L is entry[t - L - 1] and
+        # the token being output at any step t >= L is entry[t - L].
+        all_tokens_og, all_tokens_copy, all_tokens_target = [], [], []
         for entry in activations:
             for position in activations[entry]['positions']:
                 true_len = len(entry)//2
                 assert len(entry) % 2 == 0
-                if position >= true_len: 
+                if position >= true_len:
                     if position > true_len and getattr(self, "tokens"):
                         all_tokens_copy.append(self.token_to_idx[entry[position]])
-                        all_tokens_copy_prev.append(self.token_to_idx[entry[(position-true_len)]])
                     elif getattr(self, "tokens"):
                         all_tokens_og.append(self.token_to_idx[entry[position]])
+                    if getattr(self, "tokens"):
+                        all_tokens_target.append(self.token_to_idx[entry[position - true_len]])
                     position = 9 + (position-true_len)
                     all_positions.append(position)
-                else: 
+                else:
                     all_positions.append(position)
                     if getattr(self, "tokens"):
                         all_tokens_og.append(self.token_to_idx[entry[position]])
@@ -299,7 +303,7 @@ class CopyFeatureActivationAnalyzer(FeatureActivationAnalyzer):
         if getattr(self, "tokens"):
             stat_dict["og_tokens_distribution"] = np.bincount(all_tokens_og, minlength=len(self.tokens)).tolist()
             stat_dict["copy_tokens_distribution"] = np.bincount(all_tokens_copy, minlength=len(self.tokens)).tolist()
-            stat_dict["copy_tokens_prev_distribution"] = np.bincount(all_tokens_copy_prev, minlength=len(self.tokens)).tolist()
+            stat_dict["copy_target_tokens_distribution"] = np.bincount(all_tokens_target, minlength=len(self.tokens)).tolist()
         return stat_dict
 
 def collate_fn(batch):

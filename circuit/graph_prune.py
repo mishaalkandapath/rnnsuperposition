@@ -111,6 +111,10 @@ class GraphPruner:
             if not name.startswith("o_"):
                 continue
             _, timestep, token = name.split("_")
+            if not token.isdigit():
+                # RL choice nodes (o_t_c) and value nodes have no token logits
+                raise ValueError(f"{name} is not a token-logit node: RL graphs need explicit "
+                                 "target_weights (e.g. CircuitTracer.rl_target_options)")
             output_nodes.setdefault(int(timestep), {})[int(token)] = name
         return output_nodes
 
