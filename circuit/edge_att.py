@@ -849,7 +849,6 @@ class CircuitTracer:
         nodes = self._rooted_nodes(acts, root) if root else self._build_nodes(acts)
         if edges is None:
             edges = self._compute_edges(nodes, acts)
-        T, H = acts["h_ts"].shape
         dev, dtype = acts["h_ts"].device, acts["h_ts"].dtype
 
         # D: sensitivity of the weighted target to each feature/output value,
@@ -863,6 +862,17 @@ class CircuitTracer:
                 J[pos[dst], pos[src]] = w / self._node_value(scalar[pos[src]], acts)
         w_vec = torch.tensor([target_weights.get(n.name, 0.0) for n in scalar], device=dev, dtype=dtype)
         D = torch.linalg.solve((torch.eye(len(scalar), device=dev, dtype=dtype) - J).T, w_vec)
+        return self.gate_scores(acts, scalar, D)
+
+    @torch.no_grad()
+    def gate_scores(self, acts: Dict[str, torch.Tensor], scalar: List[CircuitNode],
+                    D: torch.Tensor) -> List[Tuple[str, float, str]]:
+        """Second half of gate_feature_ranking, for a precomputed sensitivity
+        D over the feature/output nodes `scalar` (D[i] = d target / d value
+        of scalar[i] through all paths)."""
+        T, H = acts["h_ts"].shape
+        dev, dtype = acts["h_ts"].device, acts["h_ts"].dtype
+        pos = {n.name: i for i, n in enumerate(scalar)}
 
         # Aggregate reads per h step: R[tau] = sum_r D[r] * read_r (gated),
         # and per-step candidate reads without their reset gate.
@@ -907,7 +917,7 @@ if __name__ == "__main__":
     import pickle
     from models.rnn import RNN
     from models.transcoders import Transcoder
-    from circuit.copy_find_features import CopyFeatureActivationAnalyzer
+    from circuit.copy_task.copy_find_features import CopyFeatureActivationAnalyzer
     from torch.utils.data import StackDataset
     torch.serialization.add_safe_globals([StackDataset])
 

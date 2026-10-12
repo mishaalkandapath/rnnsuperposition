@@ -12,7 +12,7 @@ import colorsys
 import pandas as pd
 import numpy as np
 
-from circuit.copy_find_features import CopyFeatureActivationAnalyzer
+from circuit.copy_task.copy_find_features import CopyFeatureActivationAnalyzer
 from circuit.rl_find_features import RLFeatureActivationAnalyzer
 from circuit.feature_store import is_feature_store, open_feature_store
 
@@ -1055,7 +1055,7 @@ if __name__ == "__main__":
     else:
         if not args.allow_legacy_feature_cache:
             parser.error(
-                "Feature cache has no metadata; regenerate it with circuit.copy_find_features "
+                "Feature cache has no metadata; regenerate it with circuit.copy_task.copy_find_features "
                 "or pass --allow_legacy_feature_cache explicitly."
             )
         # Legacy caches cannot know about sequences with no activations.

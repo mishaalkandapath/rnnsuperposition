@@ -5,10 +5,10 @@ Model: `copy_128_high` (GRU, hidden size 128) on the copy task, sequence lengths
 candidate (512), JumpReLU. Baseline: the GRU's own gate units, thresholded so
 each unit "fires" on a fixed share of steps.
 
-Code: `circuit/autointerp.py` and `circuit/autointerp_workflows/` (interpretation),
-`circuit/scorecards.py`, `circuit/neuron_baseline.py`, `circuit/explained_fidelity.py`
-(ablations), `circuit/feature_probe.py` (dense-feature probe),
-`circuit/autointerp_plots.py` (figures). Raw outputs live in `features/` (not tracked).
+Code: `circuit/copy_task/autointerp.py` and `circuit/copy_task/autointerp_workflows/` (interpretation),
+`circuit/copy_task/scorecards.py`, `circuit/copy_task/neuron_baseline.py`, `circuit/copy_task/explained_fidelity.py`
+(ablations), `circuit/copy_task/feature_probe.py` (dense-feature probe),
+`circuit/copy_task/autointerp_plots.py` (figures). Raw outputs live in `features/` (not tracked).
 
 ## Summary
 
@@ -88,7 +88,7 @@ timesteps. Hence the functional test below.
 
 ## 4. Does the model still work with only the explained part?
 
-`circuit/explained_fidelity.py`, 20,000 held-out sequences (258,300 steps).
+`circuit/copy_task/explained_fidelity.py`, 20,000 held-out sequences (258,300 steps).
 For one gate at a time, keep a subset of components and set the rest to their
 mean. **fve**: share of the true gate value's variance explained, one step at a
 time on the stored inputs. **Top-1**: agreement of the output token with the
@@ -185,8 +185,8 @@ the time, so random looks better. Testing them directly:
 
 ## 6. What the 5 dense candidate features encode
 
-`circuit/feature_probe.py` (output `features/dense_probe/probe.json`; figures via
-`python -m circuit.autointerp_plots probe`). Profile, regression, decoder,
+`circuit/copy_task/feature_probe.py` (output `features/dense_probe/probe.json`; figures via
+`python -m circuit.copy_task.autointerp_plots probe`). Profile, regression, decoder,
 conditional-ablation and divergence sections on 20,000 held-out sequences;
 token tables on 60,000.
 

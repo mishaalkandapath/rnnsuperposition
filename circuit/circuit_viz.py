@@ -14,7 +14,7 @@ import torch
 from torch.utils.data import StackDataset
 
 from circuit.edge_att import CircuitTracer, compute_rl_input_baseline, RL_INPUT_NAMES
-from circuit.copy_find_features import CopyFeatureActivationAnalyzer, checkpoint_fingerprint
+from circuit.copy_task.copy_find_features import CopyFeatureActivationAnalyzer, checkpoint_fingerprint
 from circuit.rl_find_features import RLFeatureActivationAnalyzer
 from circuit.graph_prune import GraphPruner
 
@@ -987,7 +987,7 @@ if __name__ == "__main__":
     if not os.path.exists(metadata_path):
         if not args.allow_legacy_feature_cache:
             raise ValueError(
-                "Feature cache has no provenance metadata. Re-run circuit.copy_find_features "
+                "Feature cache has no provenance metadata. Re-run circuit.copy_task.copy_find_features "
                 "or pass --allow_legacy_feature_cache explicitly."
             )
     else:

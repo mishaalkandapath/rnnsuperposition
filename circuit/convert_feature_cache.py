@@ -1,6 +1,6 @@
 """Convert a pickled feature-activation cache into a lazily loaded feature store.
 
-The extractor (circuit/copy_find_features.py) pickles
+The extractor (circuit/copy_task/copy_find_features.py) pickles
 {gate: {feature: {sequence: {"positions": [...], "magnitudes": [...]}}}}; for a
 large dictionary that pickle is tens of GB of Python objects once loaded. This
 streams the pickle once with a minimal opcode interpreter, builds one feature at

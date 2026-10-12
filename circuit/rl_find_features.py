@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 from models.rnn import RNN
 from models.transcoders import Transcoder
-from circuit.copy_find_features import FeatureActivationAnalyzer, convert_dict, checkpoint_fingerprint
+from circuit.copy_task.copy_find_features import FeatureActivationAnalyzer, convert_dict, checkpoint_fingerprint
 from circuit.edge_att import compute_rl_input_baseline
 torch.serialization.add_safe_globals([StackDataset])
 
