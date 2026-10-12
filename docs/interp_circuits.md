@@ -19,6 +19,9 @@ token output one step earlier (token k-1) and the model outputs token k. Token j
    - **relay:** dense features hold it and hand it on each step;
    - **read-out:** dense features write it into the logit at its output step;
    - **pop:** the fed-back token cancels its own stored copy in the candidate's next write.
+
+   About 10 candidate features per step (of 512) are both sufficient and necessary to carry a token from input i to
+   output L + i, even with the rest of the model held fixed (§3, minimal circuit).
 3. **The token's code turns about 180° between write and read-out.** Two groups of dense features do this: "keepers"
    hold the token in roughly its input orientation, and "flippers" read the keepers with the opposite sign. The stored
    code ends up opposite to the input code, and that is exactly why feeding the token back cancels it.
@@ -51,6 +54,7 @@ stated, results use sequences with distinct tokens and the real GRU. Outputs are
 | `circuit/copy_task/circuit_tests.py` | interventions: `<DEL>`, pop, freezing, carry, gate time-shifts, pop matching, resample, reset combinations | `circuit_tests_L4.json`, `reset_combos_L{4,7}.json` |
 | `circuit/copy_task/rotation_edges.py` | rotation by edges, feature angles (keepers / flippers), sign test, reversal decomposition, reversal interventions | `rotation_edges_L4.json`, `rotation_phases_L4.json`, `reversal_tests_L4.json` |
 | `circuit/copy_task/gate_features.py` | what drives the gate features, which reads / writes they open | `gate_features_L4.json` |
+| `circuit/copy_task/circuit_sufficiency.py` | minimal circuit: sufficiency and necessity patching (free and clamped) against circuit size | `circuit_sufficiency_L4.json` |
 | `circuit/copy_task/circuit_extras.py` | trace cosine, pop split, early feedback, dense-carrier drops, token-conditional ablation | `circuit_extras.json` |
 | `circuit/copy_task/autointerp_plots.py` | figures: subcommands `circuits`, `feature_circuit`, `token_circuit`, `rotation_wheel`, `circuit_summary` | `features/copy_circuits/plots/` |
 
@@ -198,6 +202,55 @@ Every label's sign agrees with how `g` actually moves the feature.
 | same with each feature's token rows shuffled (same size of push) | 0–3% |
 
 *Code:* `feature_circuits.py`, `token_circuits.py`; plots via `autointerp_plots.py feature_circuit / token_circuit`.
+
+### Is the circuit enough, and is it needed? (minimal circuit, activation patching)
+
+For each sequence and slot i, take the original run (token v) and the run with v swapped for another token b
+(feedback matched). The circuit is that sequence's top-k candidate features per step, at steps i … L+i, ranked by
+|contrastive flow| (so features driving either token count). Patching sets a feature to its value in the other run, in
+the real GRU (gates and transcoder error left as they are). Four modes:
+
+| mode | run | circuit features | every other feature | question |
+|---|---|---|---|---|
+| sufficiency, free | swapped | set to original values | recomputed | does output i become v again? |
+| sufficiency, clamped | original | held at original values | held at swapped values | does output i stay v? |
+| necessity, free | original | set to swapped values | recomputed | does output i stop being v? |
+| necessity, clamped | original | set to swapped values | held at original values | does output i stop being v? |
+
+"Free" lets the rest of the model react to the patched circuit; "clamped" holds the rest fixed, so only the circuit's
+own writes can change the result. Patching happens at every step from i to L + i, each step with its own top-k
+features; the values patched in come from a clean run of the other sequence (e.g. in necessity, the circuit takes
+the values it had in the clean swapped run). The update and reset gates and the transcoder error are never patched:
+they are computed live from the patched state.
+
+| features per step | share of \|flow\| | sufficiency free: output = v | sufficiency clamped: output = v | necessity free: output ≠ v | necessity clamped: output ≠ v |
+|---|---|---|---|---|---|
+| 1 | 29% | 39–51% | 1–2% | 86–93% | 16–37% |
+| 3 | 55% | 91–97% | 31–41% | 100% | 76–82% |
+| 5 | 68% | 97–100% | 75–84% | 100% | 96–97% |
+| **10** | **84%** | **100%** | **97–100%** | **100%** | **100%** |
+| 20 | 95% | 100% | 100% | 100% | 100% |
+| random features outside the circuit (any k) | | 0% | 0% | 0–2% | 0–2% |
+
+(Ranges over slots 0–3, 300 sequences each; about 38–48 features per step carry any flow, out of 512.)
+
+- **About 10 features per step are both sufficient and necessary**, even with the rest of the model held fixed:
+  clamped, they keep output i correct 97–100% of the time, and corrupting them changes it 100% of the time (to the
+  swapped token b in 93–97%). Random features outside the circuit do nothing in any mode.
+- **When the rest can react, far fewer are needed**: 3 per step written in restore the token 91–97% of the time, and
+  corrupting just the top 1 per step changes the output 86–93% of the time. The other features follow the circuit.
+- Corrupting slot i's circuit also breaks later outputs (other outputs 14–57% for slots 0–2): the stored token no
+  longer matches the fed-back one, so it is not popped (§1).
+- So the circuit is small relative to the dictionary (about 10 of 512 per step) but not a handful; the token is spread
+  over a few dozen carriers per step, matching §5.
+
+An earlier version of this test ("complement") let the circuit features themselves be recomputed while the rest was
+held at swapped values; the corrupted rest then dragged the circuit along, so it needed about 20 features per step.
+The clamped modes above hold the circuit at its values too.
+
+![minimal circuit](figures/circuits/minimal_circuit_L4.png)
+
+*Code:* `circuit_sufficiency.py`; output `circuit_sufficiency_L4.json`.
 
 ---
 

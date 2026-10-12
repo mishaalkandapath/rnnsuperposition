@@ -1122,6 +1122,42 @@ def circuit_summary_plots(d, outdir):
          "code. Removing the flippers' input drive (B) makes them reverse a step early; removing 10 keepers at +1 (A) weakens the "
          "reversal. Random controls (not drawn) change nothing.")
 
+    # 10. minimal circuit: sufficiency and complement against circuit size
+    if os.path.exists(os.path.join(d, "circuit_sufficiency_L4.json")):
+        sf = J("circuit_sufficiency_L4.json")["slots"]
+        ks = [int(k.split()[-1]) for k in sf["0"] if k.startswith("circuit top")]
+        fig, axes = plt.subplots(2, 2, figsize=(11, 7.4), facecolor=SURFACE, layout="constrained", sharey=True)
+        series = [("circuit", lambda r, k: r[f"circuit top {k}"], SOURCE_COLORS[0]),
+                  ("random features outside the circuit", lambda r, k: r[f"random {k} (outside the circuit)"], SOURCE_COLORS[1])]
+        panels = [
+            (axes[0, 0], "sufficiency_free", False, "Sufficiency, free: swapped run, circuit set to original values,\nthe rest recomputed",
+             "output i = original token"),
+            (axes[0, 1], "sufficiency_clamped", False, "Sufficiency, clamped: circuit at original values,\nevery other feature clamped to the swapped run", None),
+            (axes[1, 0], "necessity_free", True, "Necessity, free: original run, circuit set to swapped values,\nthe rest recomputed",
+             "output i is no longer the original token"),
+            (axes[1, 1], "necessity_clamped", True, "Necessity, clamped: circuit at swapped values,\nevery other feature clamped to the original run", None)]
+        for ax, mode, flip, title, ylabel in panels:
+            key = f"{mode}_output_is_v"
+            val = (lambda x: 1 - x) if flip else (lambda x: x)
+            for name, get, color in series:
+                for r in sf.values():
+                    ax.plot(ks, [val(get(r, k)[key]) for k in ks], color=color, lw=0.8, alpha=0.35)
+                ax.plot(ks, [np.mean([val(get(r, k)[key]) for r in sf.values()]) for k in ks], marker="o", color=color, lw=2.2,
+                        label=name)
+            ax.set_xscale("log")
+            ax.set_xticks(ks, [str(k) for k in ks])
+            ax.set_ylim(-0.03, 1.05)
+            style(ax, None, "features per step (top k by |contrastive flow|)" if flip else None, ylabel)
+            ax.set_title(title, fontsize=9.5, color=INK, loc="left")
+        axes[0, 0].legend(frameon=False, fontsize=8, loc="center right")
+        cover = {k: np.mean([r[f"circuit top {k}"]["share_of_abs_flow"] for r in sf.values()]) for k in ks}
+        save(fig, "minimal_circuit_L4.png", "Length 4: the circuit is both sufficient and necessary to carry token i to output L + i",
+             "Real GRU, 300 sequences per slot (circuit_sufficiency.py). Circuit = each sequence's top-k candidate features per step "
+             "(steps i .. L+i) by |contrastive flow| between the original run and the run with token i swapped. Patching sets a "
+             "feature to its value in the other run. Free: unpatched features are recomputed; clamped: they are held at the other "
+             "run's values. Thin lines: slots 0-3; thick: mean. Share of |flow| in the top k: "
+             + ", ".join(f"k={k} {v:.0%}" for k, v in cover.items()) + ".")
+
     # 9. carry test
     cr = ct["carry"]
     keys = sorted({k.rsplit(":", 1)[0] for k in cr})
