@@ -44,7 +44,8 @@ token output one step earlier (token k-1) and the model outputs token k. Token j
 Models: `data/models/copy_train/copy_128_high/copy_128_high.ckpt`; transcoders in `copy_transcoders/`
 (`reset_512_sparse_e100.ckpt`, `candidate_1024_sparse_dpi_final.ckpt` = **update**, `candidate_512_updatelike_e100.ckpt`
 = **candidate**). Data: `features/copy_transcoder_v2_1of5/1M_128_high_seq{3,4,7}.pt` (the 1/5 subsample). Unless
-stated, results use sequences with distinct tokens and the real GRU. Outputs are in `features/copy_circuits/`.
+stated, results use sequences with distinct tokens and the real GRU. Outputs are in `features/copy_circuits/` (index:
+`features/copy_circuits/README.md`; all copy-task data: `features/README.md`); figures: `docs/figures/README.md`.
 
 | file | what it does | output |
 |---|---|---|

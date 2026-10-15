@@ -2,6 +2,7 @@
 
     python -m circuit.copy_task.autointerp_plots specificity RESULTS_DIR [--out FILE]
     python -m circuit.copy_task.autointerp_plots coverage STORE RESULTS_DIR [--out FILE]
+    python -m circuit.copy_task.autointerp_plots coverage_plots FEATURES_COVERAGE_JSON [--units "LABEL=JSON" ...] [--out DIR]
     python -m circuit.copy_task.autointerp_plots fidelity FIDELITY_JSON [--out DIR]
     python -m circuit.copy_task.autointerp_plots probe PROBE_JSON [--out DIR]
 
@@ -1350,6 +1351,11 @@ def main():
     c.add_argument("store"); c.add_argument("results"); c.add_argument("--gates", nargs="*")
     c.add_argument("--subset_store", help="only count sequences of this store (e.g. a unit store on a subsample)")
     c.add_argument("--out", help="write the numbers as JSON")
+    cp = sub.add_parser("coverage_plots", help="activation-share and step-coverage figures from saved coverage JSONs")
+    cp.add_argument("features_json", help="coverage --out JSON of the transcoder features")
+    cp.add_argument("--units", nargs="*", default=[], metavar="LABEL=JSON",
+                    help='unit baselines, e.g. "units, matched density=features/<run>/coverage_by_f1.json"')
+    cp.add_argument("--out", help="output directory (default: next to the features JSON)")
     f = sub.add_parser("fidelity", help="figures for circuit/copy_task/explained_fidelity.py output")
     f.add_argument("fidelity_json"); f.add_argument("--out", help="output directory (default: next to the JSON)")
     pr = sub.add_parser("probe", help="token tables from circuit/copy_task/feature_probe.py output")
@@ -1369,6 +1375,12 @@ def main():
     cd = sub.add_parser("conditional", help="figures for circuit/copy_task/conditional_analyses.py output")
     cd.add_argument("dir", help="features/copy_circuits"); cd.add_argument("--out", help="output directory (default: DIR/plots)")
     args = ap.parse_args()
+    if args.cmd == "coverage_plots":
+        units = {k: json.load(open(v)) for k, v in (u.rsplit("=", 1) for u in args.units)}
+        for p in coverage_plots(json.load(open(args.features_json)), units,
+                                args.out or os.path.dirname(args.features_json)):
+            print(p)
+        return
     if args.cmd == "conditional":
         for p in conditional_plots(args.dir, args.out or os.path.join(args.dir, "plots")):
             print(p)

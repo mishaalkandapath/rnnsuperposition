@@ -8,7 +8,8 @@ each unit "fires" on a fixed share of steps.
 Code: `circuit/copy_task/autointerp.py` and `circuit/copy_task/autointerp_workflows/` (interpretation),
 `circuit/copy_task/scorecards.py`, `circuit/copy_task/neuron_baseline.py`, `circuit/copy_task/explained_fidelity.py`
 (ablations), `circuit/copy_task/feature_probe.py` (dense-feature probe),
-`circuit/copy_task/autointerp_plots.py` (figures). Raw outputs live in `features/` (not tracked).
+`circuit/copy_task/autointerp_plots.py` (figures). Raw outputs live in `features/` (index: `features/README.md`); figures:
+`docs/figures/README.md`.
 
 ## Summary
 
