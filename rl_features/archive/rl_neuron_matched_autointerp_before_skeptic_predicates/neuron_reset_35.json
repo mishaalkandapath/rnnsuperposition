@@ -1,0 +1,65 @@
+{
+  "label": "D2 arrival at S2 after a rewarded previous trial, first half of the episode",
+  "predicate": "(phase == D2) & (state == 2) & (ep_trial < 50) & (action == 2) & (prev_reward == 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (100% of mass), and almost only when the reached state shown is S2 (99.6% of mass; S1 arrivals essentially never). It is also confined to episode trials 0-49: nearly silent from trial 50 on. Inside D2&S2 it favours common a2->S2 trials whose previous trial was rewarded, i.e. the agent is in an a2/S2-is-good regime and the value estimate is high (value > 8.1 holds 98% of mass; the predicate D2 & S2 & value>8.1 gives dev F1 0.84, about the same as the behavioural one recorded here, F1 0.82, which uses only observed variables). Magnitude: the strongest activations (top windows) are rare a1->S2 arrivals during an S2-good streak, and on a2->S2c streaks activation builds over consecutive rewarded trials. It is weak or absent after an unrewarded previous trial, and never at D1/GO.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 35,
+    "predicate": "(phase == D2) & (state == 2) & (ep_trial < 50) & (action == 2) & (prev_reward == 1)",
+    "split": "test",
+    "precision": 0.762443294358188,
+    "recall": 0.8538004722268597,
+    "f1": 0.8055399293445242,
+    "mass_recall": 0.8951468061769837,
+    "correlation": 0.7254182466182795,
+    "n_active": 41929,
+    "n_predicted": 46953,
+    "coverage_by_activation_quartile": [
+      0.7475913383573405,
+      0.7971761114291166,
+      0.904884564014501,
+      0.9655600076321312
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 35,
+    "predicate": "(phase == D2) & (state == 2) & (ep_trial < 50) & (action == 2) & (prev_reward == 1)",
+    "split": "dev",
+    "precision": 0.7865116484292269,
+    "recall": 0.8659671111758848,
+    "f1": 0.8243291674855776,
+    "mass_recall": 0.9043784775186754,
+    "correlation": 0.741483706364682,
+    "n_active": 41169,
+    "n_predicted": 45328,
+    "coverage_by_activation_quartile": [
+      0.7660546002137375,
+      0.8171395258453168,
+      0.9107073455110766,
+      0.9699766809172172
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 35,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Factual claims check out on dev. 100% of activation mass is at D2, and the unit is exactly zero at D1 and GO. 99.6% of mass is on in_state==2 and 0.4% on S1. After trial 49 the unit is almost silent: (D2 & S2 & ep_trial>=50) has P 0.003 and mass 0.002. value>8.1 holds 98% of mass. The recorded predicate scores dev F1 0.824 and test F1 0.806 (P 0.762, R 0.854, mass 0.895), matching what was reported. D2 & S2 & value>8.1 scores dev F1 0.838, as claimed.",
+      "Label vs predicate: the label says 'D2 arrival at S2', but the predicate also requires action==2, so rare a1->S2 arrivals are excluded. Those arrivals are a low-yield class: D2 & S2 & ep<50 & action==1 has P 0.022 and mass 0.022. They fire mainly right after a rewarded a2 trial (P 0.41, n=558), and they include the strongest activations. The label should name the a2 choice (common a2->S2) to match the predicate.",
+      "There is a small systematic false-positive class: a common a2->S2 trial right after a switch from a1. D2 & S2 & ep<50 & action==2 & prev_reward==1 & prev_action==1 has n=1749 and P 0.005 (essentially never active). This fits the magnitude note that activation builds over a run of consecutive a2/S2 trials. Adding prev_action != 1 raises test F1 from 0.806 to 0.824.",
+      "The trial-50 cutoff is not sharp. Activation fades gradually: the rate is 0.089 at trials 10-19, 0.050 at trials 40-49 and 0.002 at trials 50-59. Under the predicate, trials 40-49 have P 0.59. value>8.1 does the same job (adding ep_trial<50 on top of it barely changes F1), so the cutoff looks like a proxy for the model's high-value regime early in the episode.",
+      "Misses after an unrewarded previous trial are real but low-mass. D2 & S2 & ep<50 & action==2 & prev_reward==0 has P 0.18, recall 0.11 and mass 0.068, consistent with 'weak or absent'.",
+      "Minor overclaim in the magnitude note. Rare a1->S2 arrivals are strongest only right after a rewarded a2 trial. Conditioning on the hidden good state instead does not pick them out: (action==1 & S2 & good==2) has P 0.056."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 arrival at S2 on a continued, rewarded a2 streak (common a2->S2, previous trial rewarded and not an a1 choice), early in the episode / high-value regime",
+    "better_predicate": "(phase == D2) & (state == 2) & (value > 8.1) & (prev_action != 1)",
+    "better_predicate_test_f1": 0.841
+  },
+  "final_label": "D2 arrival at S2 on a continued, rewarded a2 streak (common a2->S2, previous trial rewarded and not an a1 choice), early in the episode / high-value regime"
+}

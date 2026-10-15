@@ -1,0 +1,83 @@
+{
+  "label": "D1 reset gate high after unrewarded trials (esp. S1), low after rewarded S2",
+  "terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 1) * (prev_state == S2) ;; (phase == D1) * (prev_reward == 0) * (prev_state == S1) ;; (phase == D1) * (prev_action == 1) ;; (phase == D1) * (prev_action == 2) ;; (phase == D1) * (prev_reward == 0) * (ep_trial / 100.0) ** 4 ;; (phase == D2) * (state == S2) ;; (phase == D2) * (common == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r of unit 31. Beyond timing (timing alone R^2 0.58; the gate falls late in the episode), the magnitude is set mainly at D1 by the previous trial outcome shown there. After an unrewarded trial it is high (+0.13 to +0.28 over timing), most of all when the unrewarded state was S1. After a rewarded trial it is low, most of all when the rewarded state was S2 (about -0.17 to -0.21; rewarded S1 about 0 to -0.09). After unrewarded trials it stays high late in the episode, where the timing baseline drops, so it is captured by an unrewarded x (ep_trial/100)^4 term. D1 is also slightly lower on the window first trial, where the previous choice is unknown (separate prev_action == 1 / == 2 indicators). At D2 there is a small effect of the reached state (S2 higher, about +0.07) and of transition (common slightly lower). GO is almost entirely timing. The trial before last, the hidden good state and value add little. All terms are observed at their step. Test R^2 beyond timing 0.757 (dev 0.746), against an all-cue ceiling of 0.85 (0.81 observed-only).",
+  "gate": "unit_reset",
+  "feature": 31,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 31,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_reward == 1) * (prev_state == S2)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == S1)",
+      "(phase == D1) * (prev_action == 1)",
+      "(phase == D1) * (prev_action == 2)",
+      "(phase == D1) * (prev_reward == 0) * (ep_trial / 100.0) ** 4",
+      "(phase == D2) * (state == S2)",
+      "(phase == D2) * (common == 1)"
+    ],
+    "weights": [
+      -0.12648307467266548,
+      -0.1735210275503758,
+      0.11848879014819727,
+      0.13814189533118243,
+      0.08350338894003893,
+      0.1251798374559925,
+      0.06797843501500507,
+      -0.03186738211941665
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7571253937967681,
+    "r2": 0.8989571092067437,
+    "r2_timing_only": 0.5839709536833755
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 31,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_reward == 1) * (prev_state == S2)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == S1)",
+      "(phase == D1) * (prev_action == 1)",
+      "(phase == D1) * (prev_action == 2)",
+      "(phase == D1) * (prev_reward == 0) * (ep_trial / 100.0) ** 4",
+      "(phase == D2) * (state == S2)",
+      "(phase == D2) * (common == 1)"
+    ],
+    "weights": [
+      -0.12648307467266548,
+      -0.1735210275503758,
+      0.11848879014819727,
+      0.13814189533118243,
+      0.08350338894003893,
+      0.1251798374559925,
+      0.06797843501500507,
+      -0.03186738211941665
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7565521294294991,
+    "r2": 0.8995319148165524,
+    "r2_timing_only": 0.5873117109301118
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The D2 part of the claim is wrong. The two rare transitions push the gate in opposite directions. The profile's D2 residual by this choice x state is a1 S1 -0.02, a1 S2 (rare) +0.098, a2 S1 (rare) -0.112, a2 S2 +0.028. A symmetric 'common == 1' indicator cannot fit that, and its fitted weight is only -0.032. Swapping the two D2 terms for (phase==D2)*(action==1)*(state==S2) and (phase==D2)*(action==2)*(state==S1) raises test R^2 beyond timing from 0.757 to 0.803 (dev 0.804), with weights +0.088 and -0.122. Those two terms alone score 0.081, against 0.042 for the claimed S2 + common pair.",
+      "The claim that 'S2 is higher at D2, about +0.07' is mostly an artefact of the rare a2->S1 dip. With the rare-direction terms in the model, the S2 main effect falls to +0.04.",
+      "Misses on the claimed terms show systematic D2 errors: D2 is over-predicted after a2 S1 r (-0.060), a2 S1 u (-0.043) and a2 S2 r (-0.040), and under-predicted after a1 S2 u (+0.064).",
+      "The prev_action handling contradicts its description. It is described as covering the window's first trial ('D1 slightly lower when the previous choice is unknown'). But misses show D1 on the first trial ('?') is UNDER-predicted by +0.067. The two indicators also differ (+0.138 vs +0.084), so they encode a real effect of the previous action: after a1 the D1 value is about 0.05 higher (a1 S1 u +0.284 vs a2 S1 u +0.225). The label does not mention this.",
+      "The D1 claims hold. Dropping the unrewarded x ep_trial^4 term costs 0.011 (0.757 to 0.719 after the D2 terms are also removed). Collapsing the two prev_action indicators into one costs about 0.012. The reward-by-state pattern matches the residual tables.",
+      "The worst-fit windows are late in the episode (t94-99), where actual values sit below the predictions at every phase. A further late-episode drop is not fully captured, but it is a smaller gap than the D2 one."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 reset gate high after unrewarded trials (esp. S1, and after a1), low after rewarded S2; at D2 raised after rare a1->S2, lowered after rare a2->S1",
+    "better_terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 1) * (prev_state == S2) ;; (phase == D1) * (prev_reward == 0) * (prev_state == S1) ;; (phase == D1) * (prev_action == 1) ;; (phase == D1) * (prev_action == 2) ;; (phase == D1) * (prev_reward == 0) * (ep_trial / 100.0) ** 4 ;; (phase==D2)*(action==1)*(state==S2) ;; (phase==D2)*(action==2)*(state==S1)",
+    "better_terms_test_r2_beyond_timing": 0.803
+  },
+  "final_label": "D1 reset gate high after unrewarded trials (esp. S1, and after a1), low after rewarded S2; at D2 raised after rare a1->S2, lowered after rare a2->S1"
+}

@@ -1,0 +1,80 @@
+{
+  "label": "GO after a rewarded S1 visit (any choice); decays over the episode",
+  "terms": "(phase == GO) * (prev_reward == 1) * (prev_state == 1) ;; (phase == GO) * (prev_reward == 1) * (prev_state == 1) * ep_trial ;; (phase == GO) * (prev_reward == 1) * (prev_state == -1) ;; (phase == GO) * (prev_reward == 1) * (prev_state == -1) * belief ;; (phase == GO) * (prev_reward == 1) * (prev_state == -1) * belief * ep_trial ;; (phase == GO) * (prev_reward != 1) * belief ;; (phase == GO) * (prev_reward == 1) * (prev_state == 2) * belief",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO. The main driver is the previous trial: it is large (about +0.58 above timing early in the episode) when the previous trial reached S1 and was rewarded, whether a1 (common) or a2 (rare) got it there. This boost shrinks by about 0.005 per episode trial, so it is near zero by trial ~100. After any unrewarded trial, or a rewarded S2 visit, it sits below the timing baseline, and lower still when the ideal-observer belief that S1 is good is high (negative belief weights). On the first trial of a window, where the previous state is unknown, rewarded trials are modelled by belief (P(S1 good)) as a stand-in for having been rewarded in S1, with the same decay over the episode. Observed-only: test R^2 beyond timing 0.607 (dev 0.601). That is above the additive all-observed (0.54) and all (0.56) reference scores, so nothing is lost by dropping the model value/policy. The upcoming choice (future, action == 1) adds nothing (dev 0.589 vs 0.589 without it), and neither does the trial before or staying with the same choice. Remaining misses: GO after long runs of S1 rewards late in the episode is underpredicted (actual about 1.1 vs predicted 0.35), so the linear decay over the episode is only approximate.",
+  "gate": "hidden",
+  "feature": 91,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 91,
+    "terms": [
+      "(phase == GO) * (prev_reward == 1) * (prev_state == 1)",
+      "(phase == GO) * (prev_reward == 1) * (prev_state == 1) * ep_trial",
+      "(phase == GO) * (prev_reward == 1) * (prev_state == -1)",
+      "(phase == GO) * (prev_reward == 1) * (prev_state == -1) * belief",
+      "(phase == GO) * (prev_reward == 1) * (prev_state == -1) * belief * ep_trial",
+      "(phase == GO) * (prev_reward != 1) * belief",
+      "(phase == GO) * (prev_reward == 1) * (prev_state == 2) * belief"
+    ],
+    "weights": [
+      0.5823380265419479,
+      -0.005321196030093173,
+      -0.15056435885425262,
+      0.7327206016887192,
+      -0.00487892179763592,
+      -0.1654394184209831,
+      -0.2028642249023771
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6071954955457022,
+    "r2": 0.7064036035738506,
+    "r2_timing_only": 0.25256357018098075
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 91,
+    "terms": [
+      "(phase == GO) * (prev_reward == 1) * (prev_state == 1)",
+      "(phase == GO) * (prev_reward == 1) * (prev_state == 1) * ep_trial",
+      "(phase == GO) * (prev_reward == 1) * (prev_state == -1)",
+      "(phase == GO) * (prev_reward == 1) * (prev_state == -1) * belief",
+      "(phase == GO) * (prev_reward == 1) * (prev_state == -1) * belief * ep_trial",
+      "(phase == GO) * (prev_reward != 1) * belief",
+      "(phase == GO) * (prev_reward == 1) * (prev_state == 2) * belief"
+    ],
+    "weights": [
+      0.5823380265419479,
+      -0.005321196030093173,
+      -0.15056435885425262,
+      0.7327206016887192,
+      -0.00487892179763592,
+      -0.1654394184209831,
+      -0.2028642249023771
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6007082071071844,
+    "r2": 0.7021308064857534,
+    "r2_timing_only": 0.2540062209738292
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold. I reproduced test R^2 beyond timing of 0.607. The S1-rewarded GO indicator alone scores 0.358 on test; adding the linear ep_trial decay gives 0.442; adding the window-start belief terms gives 0.531; adding prev_reward!=1 * belief gives 0.584. The feature is zero at D1 and D2.",
+      "It misses a systematic effect of the previous choice. Adding the single term (phase==GO)*(prev_action==2)*(1 - prev-trial-S1-rewarded) to the original 7 terms raises test R^2 from 0.607 to 0.656. Its weight is about -0.14: after any a2 trial that was not rewarded at S1, the feature is lower. The original misses output showed this directly as over-prediction after 'a2 S1 u' (-0.123) and 'a2 S2 r' (-0.094). The explanation only checked 'stay' and the trial before, never the previous choice itself.",
+      "Part of the 'lower still when belief is high' story after unrewarded trials or rewarded S2 visits mixes belief with the previous choice. Once the prev_action==2 term is added, the belief weight on prev_reward!=1 drops from -0.165 to -0.10.",
+      "The decay is not linear in ep_trial. Fitting a separate S1-rewarded boost per episode decile gives 0.45, 0.44, 0.45, 0.43, 0.38, 0.32, 0.20, 0.04: flat until about trial 45, then a steep drop. A hinge at np.clip(ep_trial-45, 0, None) fits better than the reported '0.005 per trial'.",
+      "The worst misses remain: mid-to-late GO steps after runs of rewarded S1 trials (t50-75) have actual values of 1.0-1.3 against predictions of about 0.4. Within a run, the activation falls by about 0.1 per trial. None of the following removed this error: belief, belief_lo, belief_cover, run length via tv(-2), start_high, or the hidden cues good and since_rev. Some of this variance cannot be explained from these cues.",
+      "There is a small leftover asymmetry by choice: a rare-rewarded S1 visit (a2) raises the feature slightly more than a common one (+0.356 vs +0.277 residual). An a2 term for rewarded S1 trials gets a weight of +0.09. The label's 'any choice' is fine as a first approximation."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after a rewarded S1 visit (stronger if reached via a2); suppressed after other a2 trials; boost flat until about trial 45, then fades",
+    "better_terms": "S1r := (phase == GO) * (prev_reward == 1) * (prev_state == 1); U := (phase == GO) * (prev_reward == 1) * (prev_state == -1); terms: S1r ;; S1r * np.clip(ep_trial-45,0,None) ;; S1r * (prev_action == 2) ;; U * belief ;; U * belief * np.clip(ep_trial-45,0,None) ;; (phase == GO) * (prev_action == 2) * (1 - S1r) ;; (phase == GO) * (prev_reward != 1) * belief ;; (phase == GO) * (prev_reward == 1) * (prev_state == 2) * belief",
+    "better_terms_test_r2_beyond_timing": 0.662
+  },
+  "final_label": "GO after a rewarded S1 visit (stronger if reached via a2); suppressed after other a2 trials; boost flat until about trial 45, then fades"
+}

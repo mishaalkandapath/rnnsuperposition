@@ -1,0 +1,83 @@
+{
+  "label": "late-episode drop of z, much deeper after choosing a1 (strongest at D2)",
+  "terms": "np.exp((ep_trial-99)/6.0)*(phase==D1) ;; np.exp((ep_trial-99)/6.0)*(phase==D2) ;; np.exp((ep_trial-99)/6.0)*(phase==D2)*(action==1) ;; np.exp((ep_trial-99)/6.0)*(phase!=D2)*(prev_action==1) ;; np.exp((ep_trial-99)/6.0)*(phase==D1)*(prev_reward==0) ;; (phase==D2)*(action==1) ;; (phase==D1)*(prev_action==1)*(prev_state==2) ;; np.exp((ep_trial-99)/6.0)*(phase==D2)*(state==1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Update gate z of unit 8 sits near 1 (mean 0.987) and drops only late in the episode (trials ~90-99), mostly at D2. Beyond the per-decile timing baseline, the size of that drop is set by the choice. At D2 after choosing a1, z falls far below the decile mean (down to ~0.35-0.45 at t95-99); after a2 it stays near 0.85-0.9. At D1/GO the drop is deeper when the previous choice was a1, and at D1 somewhat deeper after an unrewarded previous trial. A late-episode ramp (exp((ep_trial-99)/6)) times these choice indicators carries nearly all of the gain (late ramp x a1 at D2 has the largest weight). Small episode-wide terms add that D2 after a1 is lower and D1 after a1->S2 is lower; reaching S1 at D2 slightly offsets. Value, hidden good state and trials since reversal add little. Test R^2 beyond timing 0.57 (dev 0.55), versus 0.16 for the profile additive all ceiling, which lacks the within-decile ramp x choice interaction. Observed-only terms (action is known at D2). Caveat: much of the gain is a timing x choice interaction within the last decile.",
+  "gate": "unit_update",
+  "feature": 8,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 8,
+    "terms": [
+      "np.exp((ep_trial-99)/6.0)*(phase==D1)",
+      "np.exp((ep_trial-99)/6.0)*(phase==D2)",
+      "np.exp((ep_trial-99)/6.0)*(phase==D2)*(action==1)",
+      "np.exp((ep_trial-99)/6.0)*(phase!=D2)*(prev_action==1)",
+      "np.exp((ep_trial-99)/6.0)*(phase==D1)*(prev_reward==0)",
+      "(phase==D2)*(action==1)",
+      "(phase==D1)*(prev_action==1)*(prev_state==2)",
+      "np.exp((ep_trial-99)/6.0)*(phase==D2)*(state==1)"
+    ],
+    "weights": [
+      0.027539094849981693,
+      0.1225448269868954,
+      -0.4360559986949275,
+      -0.09580558541985969,
+      -0.054822384069437055,
+      -0.0073741641641707975,
+      -0.016695406597192434,
+      0.014665888022234915
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5702598485558121,
+    "r2": 0.7843431448287669,
+    "r2_timing_only": 0.4981691739845693
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 8,
+    "terms": [
+      "np.exp((ep_trial-99)/6.0)*(phase==D1)",
+      "np.exp((ep_trial-99)/6.0)*(phase==D2)",
+      "np.exp((ep_trial-99)/6.0)*(phase==D2)*(action==1)",
+      "np.exp((ep_trial-99)/6.0)*(phase!=D2)*(prev_action==1)",
+      "np.exp((ep_trial-99)/6.0)*(phase==D1)*(prev_reward==0)",
+      "(phase==D2)*(action==1)",
+      "(phase==D1)*(prev_action==1)*(prev_state==2)",
+      "np.exp((ep_trial-99)/6.0)*(phase==D2)*(state==1)"
+    ],
+    "weights": [
+      0.027539094849981693,
+      0.1225448269868954,
+      -0.4360559986949275,
+      -0.09580558541985969,
+      -0.054822384069437055,
+      -0.0073741641641707975,
+      -0.016695406597192434,
+      0.014665888022234915
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5526076455215384,
+    "r2": 0.7835274866130865,
+    "r2_timing_only": 0.5161461495262656
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced: the original 8 terms score test R^2 beyond timing 0.570. The core claim holds. Using only ramp*D2*a1 plus ramp*D2 gives 0.480, so the a1-at-D2 interaction carries most of the gain. Adding the ramp x prev_action==a1 term at D1/GO and a D1 ramp brings it to 0.548.",
+      "The 'deeper at D1 after an unrewarded previous trial' claim is real but small. Adding ramp*D1*(prev_reward==0) moves test R^2 from 0.548 to 0.557 (weight -0.06).",
+      "The single exp((ep_trial-99)/6) ramp has the wrong shape. Other taus score worse (tau 3: 0.48, tau 4: 0.53, tau 9: 0.55). Two ramps (tau 6 and tau 2.5) crossed with the same choice indicators reach test 0.640 using timing x choice terms only. So about 0.07 of what the stated terms miss is ramp shape, not new behavioural content.",
+      "'Value adds little' is overstated as tested. Adding ramp*D2*value to the 5 core terms raises test R^2 from 0.557 to 0.644 (positive weight: lower value at D2 means a deeper drop). Once the ramp shape is fixed, value adds only about 0.03 (to 0.668). So value acts mostly as a finer end-of-episode clock. Observed proxies such as state==prev_state x prev_reward, state==good, and this trial's reward add at most 0.01.",
+      "Misses on the original terms: per-window errors are large in long a1 streaks at t93-99. D2 actual is about 0.37-0.46 against predicted 0.6-0.7, so the model under-predicts the drop. Adding recent-trial a1-count terms did not help (0.569), so this is mostly ramp shape rather than streak length. The aggregate errors by phase x previous trial are small (|mean| <= 0.012; D2 after a1 S2 u is the most over-predicted) and do not form a large systematic class.",
+      "The caveat is fair: almost all of the gain is a timing x choice interaction inside the last decile. The explained verdict holds only because the baseline uses decile-level timing."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "late-episode (t~90-99) drop of z that is much deeper at D2 after choosing a1, and deeper at D1/GO after a previous a1; the drop is lower when value is low",
+    "better_terms": "np.exp((ep_trial-99)/6.0)*(phase==D2)*(action==1) ;; np.exp((ep_trial-99)/6.0)*(phase==D2) ;; np.exp((ep_trial-99)/6.0)*(phase!=D2)*(prev_action==1) ;; np.exp((ep_trial-99)/2.5)*(phase==D2)*(action==1) ;; np.exp((ep_trial-99)/2.5)*(phase==D2) ;; np.exp((ep_trial-99)/2.5)*(phase!=D2)*(prev_action==1) ;; np.exp((ep_trial-99)/6.0)*(phase==D2)*value ;; np.exp((ep_trial-99)/6.0)*(phase==D1)*(prev_reward==0)",
+    "better_terms_test_r2_beyond_timing": 0.6676
+  },
+  "final_label": "late-episode (t~90-99) drop of z that is much deeper at D2 after choosing a1, and deeper at D1/GO after a previous a1; the drop is lower when value is low"
+}

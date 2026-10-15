@@ -1,0 +1,63 @@
+{
+  "label": "GO step right after a broken-fixation penalty at D1",
+  "predicate": "(phase == GO) & (in_rew == -1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO, and only when the reward input there is -1, i.e. the agent failed to fixate at this trial D1 and gets a penalty (equivalent to d1_err == 1). It fires on 91% of such steps and almost never elsewhere: dev P=0.97, R=0.98, mass recall 1.00. It never fires at D1 or D2 or on ordinary GO steps. Magnitude: strongest when the premature D1 action was a2 (in_action == 2); adding that condition raises precision to 0.99 but drops the weaker activations, which come from a1 breaks, so I kept the simpler predicate. These D1 errors cluster late in episodes (trials 80-99), at low value and strongly a2-favoring choice logits, so the feature also correlates with value, choice and good == S2, but only as side effects of the error event. Uses only observed inputs.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 85,
+    "predicate": "(phase == GO) & (in_rew == -1)",
+    "split": "test",
+    "precision": 0.9826839826839827,
+    "recall": 0.978448275862069,
+    "f1": 0.980561555075594,
+    "mass_recall": 0.9996147961674932,
+    "correlation": 0.966592451079616,
+    "n_active": 464,
+    "n_predicted": 462,
+    "coverage_by_activation_quartile": [
+      0.9137931034482759,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 85,
+    "predicate": "(phase == GO) & (in_rew == -1)",
+    "split": "dev",
+    "precision": 0.9719222462203023,
+    "recall": 0.9803921568627451,
+    "f1": 0.9761388286334057,
+    "mass_recall": 0.9996866840363404,
+    "correlation": 0.9633284977856166,
+    "n_active": 459,
+    "n_predicted": 463,
+    "coverage_by_activation_quartile": [
+      0.9217391304347826,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "reset",
+  "feature": 85,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claims check out. All activation is at GO (D1 and D2 have 0 active steps). 91.5% of in_rew==-1 steps are active and they carry 100% of the activation mass. On test the predicate scores P=0.983, R=0.978, F1=0.981, mass recall 0.9996.",
+      "All 10 test misses (0.0% of the mass) are tiny activations (about 0.01 of max) on ordinary GO steps. This is noise, not a class the predicate fails to cover.",
+      "All 8 test false positives are at window step 1, the first GO step of a window. That looks like a short-history or window-start artifact rather than a missing behavioral condition. It is small and does not change the label.",
+      "Minor overclaim: adding in_action==2 is said to raise precision to 0.99. On test it gives P=0.983, the same as the base predicate, while recall drops to 0.90 (F1 0.939). Keeping the simpler predicate is still the right call.",
+      "I did not verify the side claims that the errors cluster late in episodes (trials 80-99) and come with low value. They are not part of the predicate."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

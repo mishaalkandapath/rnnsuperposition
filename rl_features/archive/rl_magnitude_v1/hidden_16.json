@@ -1,0 +1,70 @@
+{
+  "label": "D1 only; large when S1 went unrewarded two trials back (plus last a1 S1 u)",
+  "terms": "(phase == D1) * (tv(\"reward\", -2) == 0) * (tv(\"state\", -2) == 1) ;; (phase == D1) * last_is(\"a1 S1 u\") ;; (phase == D1) * last_is(\"a2 S2 u\") ;; (phase == D1) * (tv(\"reward\", -1) == 1) * (tv(\"state\", -1) == 2) ;; (phase == D1) * (tv(\"reward\", -2) == 1) * (tv(\"state\", -2) == 2)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (exactly 0 at GO and D2). The main driver of its magnitude is the trial before the last one: if that trial reached S1 and went unrewarded, D1 activation goes up by about +0.87. Smaller additions: last trial a1 S1 u (+0.34) and last trial a2 S2 u (+0.11). S2 rewarded on the last trial (-0.10) or the trial before (-0.14) lowers it. Read loosely, it looks like a delayed, somewhat persistent trace of S1 being unrewarded (evidence that S1 is bad) that S2 rewards weaken. Choice, this trial s state, future reward, hidden good state, trials since reversal and value add almost nothing. The policy logit adds about 0.01 on dev, so it was left out. Test R^2 beyond timing 0.49 against an all ceiling of 0.58 (84%). Remaining error is mostly at the window s first trials, where the history two trials back is missing, and in over-prediction after S2 rewarded trials.",
+  "gate": "hidden",
+  "feature": 16,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 16,
+    "terms": [
+      "(phase == D1) * (tv(\"reward\", -2) == 0) * (tv(\"state\", -2) == 1)",
+      "(phase == D1) * last_is(\"a1 S1 u\")",
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * (tv(\"reward\", -1) == 1) * (tv(\"state\", -1) == 2)",
+      "(phase == D1) * (tv(\"reward\", -2) == 1) * (tv(\"state\", -2) == 2)"
+    ],
+    "weights": [
+      0.8696430456321501,
+      0.3445103593083545,
+      0.11067006810640649,
+      -0.09878721915295591,
+      -0.1429327083085945
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.48935531719020553,
+    "r2": 0.5759705977193705,
+    "r2_timing_only": 0.1696194701422703
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 16,
+    "terms": [
+      "(phase == D1) * (tv(\"reward\", -2) == 0) * (tv(\"state\", -2) == 1)",
+      "(phase == D1) * last_is(\"a1 S1 u\")",
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * (tv(\"reward\", -1) == 1) * (tv(\"state\", -1) == 2)",
+      "(phase == D1) * (tv(\"reward\", -2) == 1) * (tv(\"state\", -2) == 2)"
+    ],
+    "weights": [
+      0.8696430456321501,
+      0.3445103593083545,
+      0.11067006810640649,
+      -0.09878721915295591,
+      -0.1429327083085945
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.49222765389808865,
+    "r2": 0.574924016551406,
+    "r2_timing_only": 0.16286109964074347
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claim checks out. The feature is exactly 0 at GO and D2 (the timing baseline and every residual there are +0). The two-back S1-unrewarded term is the main driver: alone it scores 0.39 test R^2 beyond timing, and the 'trial before' reference is 0.45. The original 5 terms reproduce 0.489 on test.",
+      "There is a systematic over-prediction the explanation leaves out. With the original terms, misses shows D1 over-predicted after a1 S2 r (-0.171), a1 S2 u (-0.139) and a1 S1 r (-0.114). So a previous a1 choice that was not 'a1 S1 u' LOWERS D1 magnitude. That contradicts 'choice adds almost nothing'. Adding prev_action==1 at D1 alone lifts test R^2 to 0.518. Separate last_is terms give weights of -0.26, -0.14 and -0.14.",
+      "The two-back S1-unrewarded trace depends on the last trial. When the last trial reached S2, the effect is cut by about 0.36 (interaction weight -0.357, main effect +1.06). So the trace is not a fixed lagged add-on: it is erased by an intervening S2 trial. The label and explanation present it as a constant +0.87.",
+      "The one-back S1-unrewarded effect is specific to a1: a2 S1 u at lag 1 has residual only +0.047, and a generic lag-1 S1u term adds about 0.02. The label's '(plus last a1 S1 u)' is accurate. But the explanation's reading of 'evidence that S1 is bad' is loose, because a rare a2->S1 omission does little at lag 1 yet counts fully at lag 2.",
+      "Better terms (8) reach 0.529 test R^2 beyond timing, against 0.489 originally and a ceiling of 0.58. That closes about 40% of the remaining gap. Once those terms are in, the residual by previous trial is flat (largest is -0.06 after a2 S1 r). The remaining worst misses are first-trial windows with no history, which no cue can fix."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 only; large when S1 went unrewarded two trials back (weakened if the last trial reached S2), plus last a1 S1 u; lowered after other a1 outcomes and after S2 rewards",
+    "better_terms": "(phase == D1) * (tv(\"reward\", -2) == 0) * (tv(\"state\", -2) == 1) ;; (phase == D1) * last_is(\"a1 S1 u\") ;; (phase == D1) * last_is(\"a2 S2 u\") ;; (phase == D1) * last_is(\"a1 S2 r\") ;; (phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a1 S1 r\") ;; (phase == D1) * (tv(\"reward\", -2) == 0) * (tv(\"state\", -2) == 1) * (tv(\"state\", -1) == 2) ;; (phase == D1) * (tv(\"reward\", -2) == 1) * (tv(\"state\", -2) == 2)",
+    "better_terms_test_r2_beyond_timing": 0.5294
+  },
+  "final_label": "D1 only; large when S1 went unrewarded two trials back (weakened if the last trial reached S2), plus last a1 S1 u; lowered after other a1 outcomes and after S2 rewards"
+}

@@ -1,0 +1,114 @@
+{
+ "label": "Update gate dips after a1 choices reaching S2 or failing, and when belief favors S1, growing through the episode.",
+ "short_terms": "belief_lo * ep_trial ;; last_is('a1 S2 u') * ep_trial ;; (tv('action', -2) == 1) * (tv('reward', -2) == 0) * ep_trial",
+ "terms": "belief_lo * ep_trial ;; (prev_action == 1) * (prev_reward == 0) * ep_trial ;; (tv(\"action\", -2) == 1) * (tv(\"reward\", -2) == 0) * ep_trial ;; (prev_action == 1) * ep_trial ;; (phase == D1) * last_is(\"a1 S2 r\") ;; (phase == D1) * last_is(\"a1 S2 u\") ;; belief_lo ;; (prev_reward == 0) * (tv(\"reward\", -2) == 0) * ep_trial",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Raw z of unit 29 sits near 1 and dips (sometimes to ~0.5) in an a1-specific way: lower after the previous trial was a1 that reached S2 (rare, strongest at D1 and for unrewarded), lower when the trial before was an unrewarded a1, and lower the more the ideal observer believes S1 is good (graded belief_lo, negative weight). a2 histories raise it slightly. All these effects grow with episode trial (dips are largest in the last deciles), captured by multiplying by ep_trial. Effects are weakest at D2. The free fit adds D1-specific a1 S2 indicators and unrewarded streaks; future reward and hidden reversal timing add nothing. Observed-only terms.",
+ "full_test_scores": {
+  "gate": "unit_update",
+  "feature": 29,
+  "terms": [
+   "belief_lo * ep_trial",
+   "(prev_action == 1) * (prev_reward == 0) * ep_trial",
+   "(tv(\"action\", -2) == 1) * (tv(\"reward\", -2) == 0) * ep_trial",
+   "(prev_action == 1) * ep_trial",
+   "(phase == D1) * last_is(\"a1 S2 r\")",
+   "(phase == D1) * last_is(\"a1 S2 u\")",
+   "belief_lo",
+   "(prev_reward == 0) * (tv(\"reward\", -2) == 0) * ep_trial"
+  ],
+  "weights": [
+   -7.901045365140864e-05,
+   -0.0005608626796053493,
+   -0.00045584914663695223,
+   0.00020829261456236463,
+   -0.05835418172490498,
+   -0.036584732995018014,
+   -0.0011648018961010465,
+   -5.238917735496227e-05
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.4548320006790312,
+  "r2": 0.5604355252755593,
+  "r2_timing_only": 0.19370822338813376
+ },
+ "gate": "unit_update",
+ "feature": 29,
+ "test_scores": {
+  "gate": "unit_update",
+  "feature": 29,
+  "terms": [
+   "belief_lo * ep_trial",
+   "last_is('a1 S2 u') * ep_trial",
+   "(tv('action', -2) == 1) * (tv('reward', -2) == 0) * ep_trial"
+  ],
+  "weights": [
+   -7.032818451782404e-05,
+   -0.0008407018416414669,
+   -0.00048315145392574256
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.4283914838076539,
+  "r2": 0.5391167539528006,
+  "r2_timing_only": 0.19370822338813376
+ },
+ "dev_scores": {
+  "gate": "unit_update",
+  "feature": 29,
+  "terms": [
+   "belief_lo * ep_trial",
+   "last_is('a1 S2 u') * ep_trial",
+   "(tv('action', -2) == 1) * (tv('reward', -2) == 0) * ep_trial"
+  ],
+  "weights": [
+   -7.032818451782404e-05,
+   -0.0008407018416414669,
+   -0.00048315145392574256
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.43511039259408546,
+  "r2": 0.5416358900348568,
+  "r2_timing_only": 0.18857754868240129
+ },
+ "final_verdict": "partially_explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The label says the gate dips after a1 choices that reach S2, whatever the reward. That holds only at D1. In the profile residuals, the trial after a1 S2 r gives D1 -0.054, but GO +0.0045 and D2 +0.004. Only a1 S2 u dips at all three phases (D1 -0.073, GO -0.074, D2 -0.026).",
+   "Running misses on the recorded short form shows this as a systematic error: it under-predicts GO after a1 S2 r by +0.040 and D2 after a1 S2 r by +0.040, and over-predicts GO after a1 S2 u by -0.030 and D1 after a1 S2 u by -0.029. The (prev_action==1)*(prev_state==2) term averages two cases that behave differently.",
+   "Replacing that term with last_is('a1 S2 u')*ep_trial raises test R^2 beyond timing from 0.403 to 0.428. That is about 94% of the free fit (0.455).",
+   "The revised form still leaves one systematic miss: the D1-only dip after a1 S2 r is over-predicted at -0.050, which is large next to the activation std of 0.038. No 3-term short form I tried covers both cases.",
+   "The label's 'or failing' leaves out that the failed a1 is two trials back (tv(-2)), not the previous trial. When the previous trial's unrewarded a1 is used instead, test R^2 drops to 0.390.",
+   "These claims check out: weight scales with ep_trial (dropping ep_trial gives 0.354; ep_dec gives 0.396); belief that S1 is good lowers the gate (monotone in belief decile); D2 effects are weakest; there are no future variables.",
+   "Remaining headroom: the short form reaches 0.43, against 0.55 for all observed cues."
+  ],
+  "revised_verdict": "partially_explained",
+  "revised_label": "Late in episodes z dips after unrewarded a1->S2, after an unrewarded a1 two trials back, and when belief favors S1.",
+  "better_short_terms": "belief_lo * ep_trial ;; last_is('a1 S2 u') * ep_trial ;; (tv('action', -2) == 1) * (tv('reward', -2) == 0) * ep_trial",
+  "better_short_terms_test_r2_beyond_timing": 0.428
+ },
+ "final_label": "Late in episodes z dips after unrewarded a1->S2, after an unrewarded a1 two trials back, and when belief favors S1.",
+ "original_short_terms": "belief_lo * ep_trial ;; (prev_action == 1) * (prev_state == 2) * ep_trial ;; (tv(\"action\", -2) == 1) * (tv(\"reward\", -2) == 0) * ep_trial",
+ "original_test_scores": {
+  "gate": "unit_update",
+  "feature": 29,
+  "terms": [
+   "belief_lo * ep_trial",
+   "(prev_action == 1) * (prev_state == 2) * ep_trial",
+   "(tv(\"action\", -2) == 1) * (tv(\"reward\", -2) == 0) * ep_trial"
+  ],
+  "weights": [
+   -7.584688795676478e-05,
+   -0.0006384186113540044,
+   -0.00044146642673739656
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.40317484234578893,
+  "r2": 0.518784783308329,
+  "r2_timing_only": 0.19370822338813376
+ },
+ "terms_from": "skeptic"
+}

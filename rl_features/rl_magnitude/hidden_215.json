@@ -1,0 +1,104 @@
+{
+ "label": "Fires at D1 after a rewarded S2 visit reached via a1, now or one trial earlier.",
+ "short_terms": "(phase == D1) * last_is('a1 S2 r') ;; (phase == D1) * last_is('a2 S2 r') * belief ;; (phase == D1) * last_is('a2 S2 r') * (tv('action', -2) == 1)",
+ "terms": "(phase == D1) * last_is(\"a1 S2 r\") ;; (phase == D1) * last_is(\"a2 S2 r\") ;; (phase == D1) * last_is(\"a2 S2 r\") * belief_lo ;; (phase == D1) * last_is(\"a1 S2 r\") * belief_lo ;; (phase == D1) * last_is(\"a2 S2 r\") * (tv(\"state\", -2) == 2) ;; (phase == D1) * last_is(\"a2 S2 r\") * (tv(\"action\", -2) == 1)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "D1-only feature (zero at GO and D2). Its magnitude is set by the previous trial: large (~+2.5) after a1 -> S2 rewarded (rare-rewarded, a model-based switch-to-a2 signal), and moderate (~+1.5) after a2 -> S2 rewarded when the trial before that chose a1 (the agent just switched to a2 and was rewarded). After a2 S2 r following an a2 choice it is near zero, and after any other pattern it is near zero. Belief log-odds and older trial history add almost nothing (free fit 0.69 vs short 0.68 on dev). The main remaining misses are on the window first trial, where the previous trial is not in the window.",
+ "full_test_scores": {
+  "gate": "hidden",
+  "feature": 215,
+  "terms": [
+   "(phase == D1) * last_is(\"a1 S2 r\")",
+   "(phase == D1) * last_is(\"a2 S2 r\")",
+   "(phase == D1) * last_is(\"a2 S2 r\") * belief_lo",
+   "(phase == D1) * last_is(\"a1 S2 r\") * belief_lo",
+   "(phase == D1) * last_is(\"a2 S2 r\") * (tv(\"state\", -2) == 2)",
+   "(phase == D1) * last_is(\"a2 S2 r\") * (tv(\"action\", -2) == 1)"
+  ],
+  "weights": [
+   2.4045180084411184,
+   0.7109097917030816,
+   0.19628409922903428,
+   0.12459913756707479,
+   -0.01235843940751661,
+   1.4146713733291865
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6849045888347248,
+  "r2": 0.7064887672053812,
+  "r2_timing_only": 0.06850045289721796
+ },
+ "gate": "hidden",
+ "feature": 215,
+ "test_scores": {
+  "gate": "hidden",
+  "feature": 215,
+  "terms": [
+   "(phase == D1) * last_is('a1 S2 r')",
+   "(phase == D1) * last_is('a2 S2 r') * belief",
+   "(phase == D1) * last_is('a2 S2 r') * (tv('action', -2) == 1)"
+  ],
+  "weights": [
+   2.473051632961422,
+   1.8154018541526935,
+   1.4499357306505944
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6834399434594018,
+  "r2": 0.7051244507016017,
+  "r2_timing_only": 0.06850045289721796
+ },
+ "dev_scores": {
+  "gate": "hidden",
+  "feature": 215,
+  "terms": [
+   "(phase == D1) * last_is('a1 S2 r')",
+   "(phase == D1) * last_is('a2 S2 r') * belief",
+   "(phase == D1) * last_is('a2 S2 r') * (tv('action', -2) == 1)"
+  ],
+  "weights": [
+   2.473051632961422,
+   1.8154018541526935,
+   1.4499357306505944
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.689334737067135,
+  "r2": 0.7114491696257977,
+  "r2_timing_only": 0.07118411743202113
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The label misdescribes the second term. 'A rewarded S2 visit reached via a1, now or one trial earlier' suggests the feature fires when trial -2 was a1->S2 rewarded. The term is actually last trial a2 S2 r AND trial -2 chose a1 with any outcome. Requiring trial -2 to be a1 S2 for that term adds nothing: test 0.613, about the same as a1 S2 r alone (0.611). Requiring trial -2 to be a1 S2 r also gives 0.613. The useful cases are a1 S1 at -2 (0.664) and a1 unrewarded at -2 (0.665); a1 S1 u at -2 gives 0.664. So the boost really means the agent switched away from a1 after a failure and was then rewarded at S2.",
+   "The short form leaves out the belief dependence among a2 S2 r trials. Adding the term (phase == D1) * last_is('a2 S2 r') * belief (belief = P(S1 good) before the trial) raises test R^2 beyond timing from 0.660 to 0.683. That matches the free fit (0.685), and the all-observed ceiling is 0.68. A rewarded S2 visit fires the feature more when the observer expected S1 to be the good state. The explanation's statement that belief adds 'almost nothing' is wrong: it only looked at belief_lo, which gives just 0.662 here.",
+   "Claims that checked out: it is active only at D1 (exactly zero at GO and D2). a1 S2 r is the main driver (weight +2.47; that term alone scores 0.611 on test). The a2 S2 r after a1 boost is real (+1.6). The other misses are small: a uniform over-prediction of about -0.12 on non-firing D1 cells, which is an intercept/baseline effect, not a pattern."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "D1 after a1 to S2 rewarded; weaker after a2 to S2 rewarded, more if a1 preceded or S1 was believed good.",
+  "better_short_terms": "(phase == D1) * last_is('a1 S2 r') ;; (phase == D1) * last_is('a2 S2 r') * belief ;; (phase == D1) * last_is('a2 S2 r') * (tv('action', -2) == 1)",
+  "better_short_terms_test_r2_beyond_timing": 0.6834
+ },
+ "final_label": "D1 after a1 to S2 rewarded; weaker after a2 to S2 rewarded, more if a1 preceded or S1 was believed good.",
+ "original_short_terms": "(phase == D1) * last_is(\"a1 S2 r\") ;; (phase == D1) * last_is(\"a2 S2 r\") * (tv(\"action\", -2) == 1)",
+ "original_test_scores": {
+  "gate": "hidden",
+  "feature": 215,
+  "terms": [
+   "(phase == D1) * last_is(\"a1 S2 r\")",
+   "(phase == D1) * last_is(\"a2 S2 r\") * (tv(\"action\", -2) == 1)"
+  ],
+  "weights": [
+   2.4657127583129737,
+   1.6242029551204311
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6601643645452322,
+  "r2": 0.6834432594844977,
+  "r2_timing_only": 0.06850045289721796
+ },
+ "terms_from": "skeptic"
+}

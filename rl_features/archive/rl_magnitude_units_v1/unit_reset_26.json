@@ -1,0 +1,83 @@
+{
+  "label": "D2: high after choosing a1; D1/GO: raised after unrewarded or a1/S1 last trial",
+  "terms": "(phase == D2) * (action == 1) ;; (phase == D2) * (prev_action == 1) ;; (phase == D2) * (prev_reward == 1) * (2*(prev_action == 1) - 1) ;; (phase == D1) * (prev_reward == 0) ;; (phase == D1) * (prev_state == 1) ;; (phase == GO) * (prev_reward == 0) ;; (phase == GO) * (prev_action == 1) ;; (phase == D2) * np.tanh(choice)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r26: timing (low at D1/D2, ~0.8 at GO, slowly rising over the episode) explains R^2 0.93; beyond timing the dominant driver is the choice just made at D2 (a1 raises r by ~0.2 vs a2, observed at D2 via the action input), plus a residual graded term in the policy logit at D2 and a previous-trial term at D2 (rewarded a1 raises, rewarded a2 lowers; small negative main effect of prev a1). At D1 it is raised after an unrewarded trial (+0.04) and after reaching S1 (+0.07); at GO raised after unrewarded (+0.04) and after a prior a1 choice (+0.05). Value, this trial reward and time since reversal add nothing. Dev R^2 beyond timing 0.76 (observed-only variant replacing the policy term with tv reward -2 at D1: 0.74).",
+  "gate": "unit_reset",
+  "feature": 26,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 26,
+    "terms": [
+      "(phase == D2) * (action == 1)",
+      "(phase == D2) * (prev_action == 1)",
+      "(phase == D2) * (prev_reward == 1) * (2*(prev_action == 1) - 1)",
+      "(phase == D1) * (prev_reward == 0)",
+      "(phase == D1) * (prev_state == 1)",
+      "(phase == GO) * (prev_reward == 0)",
+      "(phase == GO) * (prev_action == 1)",
+      "(phase == D2) * np.tanh(choice)"
+    ],
+    "weights": [
+      0.17979049217660606,
+      -0.039069754752076996,
+      0.04649548972332366,
+      0.03738368563723145,
+      0.07115888694483885,
+      0.03986407805334935,
+      0.04894336251658383,
+      0.028667808445835205
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.748891605231953,
+    "r2": 0.9826449779977352,
+    "r2_timing_only": 0.9308863328990021
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 26,
+    "terms": [
+      "(phase == D2) * (action == 1)",
+      "(phase == D2) * (prev_action == 1)",
+      "(phase == D2) * (prev_reward == 1) * (2*(prev_action == 1) - 1)",
+      "(phase == D1) * (prev_reward == 0)",
+      "(phase == D1) * (prev_state == 1)",
+      "(phase == GO) * (prev_reward == 0)",
+      "(phase == GO) * (prev_action == 1)",
+      "(phase == D2) * np.tanh(choice)"
+    ],
+    "weights": [
+      0.17979049217660606,
+      -0.039069754752076996,
+      0.04649548972332366,
+      0.03738368563723145,
+      0.07115888694483885,
+      0.03986407805334935,
+      0.04894336251658383,
+      0.028667808445835205
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7575090825335171,
+    "r2": 0.9829906298818257,
+    "r2_timing_only": 0.9298556403848599
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most individual claims hold up. I reproduced test R^2 beyond timing of 0.749. Dropping one term at a time on test gives: without D2 action==1, 0.570; without D2 prev_action, 0.744; without D2 prev_reward*sign(prev_action), 0.719; without D1 prev_reward==0, 0.730; without D1 prev_state==1, 0.680; without GO prev_reward==0, 0.727; without GO prev_action==1, 0.720; without D2 tanh(choice), 0.729. The weight signs match the text (D1 unrewarded +0.037, D1 S1 +0.071, GO unrewarded +0.040, GO prev a1 +0.049).",
+      "The headline claim 'choosing a1 raises it by about 0.18 at D2' is misleading because the a1 effect depends on the previous reward. Replacing the D2 prev_action term with (phase==D2)*(action==1)*(prev_reward==1) gives weights of +0.078 for a1 alone and +0.113 for a1 after a rewarded trial, and test R^2 rises from 0.749 to 0.775. So the a1 effect is about 0.09 after an unrewarded trial and about 0.2 after a rewarded one. The terms 'D2 prev_action' (-0.039) and 'D2 prev_reward*(+/-prev_action)' only approximate this interaction, and the label's wording ('rewarded a1 raises it, rewarded a2 lowers it, on top of a small negative effect of a previous a1') does not match where the effect actually sits.",
+      "Misses on the original terms show systematic over-prediction at D2 that follows the previous trial: after a1 S2 r -0.076, after a2 S2 u -0.063, after a2 S1 u -0.048, after a1 S2 u -0.044. The raw D2 residuals by previous trial are large (a1 S1 r +0.177, a2 S2 r -0.127, a2 S1 u -0.117), and these trial-history effects are only partly captured.",
+      "A GO error class remains under both term sets. On the original terms it is over-predicted after a1 S2 r (-0.057) and under-predicted after a2 S2 u (+0.037). The GO residual mostly follows the reached state x reward (S2 rewarded is negative, S2 unrewarded positive), which 'prev_reward==0 + prev_action==1' does not capture.",
+      "The examples show the D1 value climbing over runs of unrewarded trials (residual +0.04 -> +0.08 -> +0.2 -> +0.28). Adding a 2-back unrewarded term barely moves the score (test 0.746 when it replaces the D2 prev_action term). This is a gap in the worst-fit windows, not a large share of variance.",
+      "Improved 8 terms (below) score 0.791 on test (0.80 on dev), against 0.749 for the original. Most of the gain comes from the D2 action x prev_reward interaction. The original explanation is broadly right but understates this interaction, so the evidence is mixed: verdict not upheld, though the magnitude is still largely explained."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2: high after choosing a1, about doubled when the last trial was rewarded; D1/GO: raised after an unrewarded trial, after reaching S1 (D1) and after a previous a1 choice (GO)",
+    "better_terms": "(phase == D2) * (action == 1) ;; (phase == D2) * (action == 1) * (prev_reward == 1) ;; (phase == D2) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 0) ;; (phase == D1) * (prev_state == 1) ;; (phase == GO) * (prev_reward == 0) ;; (phase == GO) * (prev_action == 1) ;; (phase == D2) * np.tanh(choice)",
+    "better_terms_test_r2_beyond_timing": 0.791
+  },
+  "final_label": "D2: high after choosing a1, about doubled when the last trial was rewarded; D1/GO: raised after an unrewarded trial, after reaching S1 (D1) and after a previous a1 choice (GO)"
+}

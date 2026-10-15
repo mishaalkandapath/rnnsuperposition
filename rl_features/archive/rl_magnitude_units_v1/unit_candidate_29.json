@@ -1,0 +1,71 @@
+{
+  "label": "GO-only: high after S1 rewarded (esp. a1 S1 r), low after S2 unrewarded; tracks a1 policy",
+  "terms": "(phase == GO) * choice ;; (phase == GO) * last_is(\"a1 S1 r\") ;; (phase == GO) * last_is(\"a2 S1 r\") ;; (phase == GO) * last_is(\"a1 S2 u\") ;; (phase == GO) * last_is(\"a2 S2 u\")",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw candidate n of unit 29 is near +0.98 at D1 and -0.97 at D2 at almost every step (timing alone gives R^2 0.93), so the magnitude beyond timing is almost entirely at GO. At GO it is raised when the last trial was a1 S1 rewarded (about +0.56 residual) or a2 S1 rewarded (+0.17), and lowered after unrewarded S2 trials (a1 S2 u -0.27, a2 S2 u -0.39), a2 S1 u (-0.26) and a2 S2 r (-0.23). So it acts like an \"S1 / a1 is good\" signal, and it rises further over streaks of a1 S1 r. It also tracks the model policy logit at GO (the top a1 decile is about +0.34, the most-a2 decile about -0.25). Five GO terms (policy logit plus four last-trial patterns) score test R^2 beyond timing 0.72 (dev 0.73), close to the all-cue ceiling of 0.80. With observed inputs only, a 7-pattern last-trial table scores 0.65 on test. The trial before adds only about 0.01, and value, this reward (future), the hidden good state and time since reversal add little. D1 and D2 residuals are tiny (under 0.03), apart from rare large D2 excursions after strings of unrewarded a2 trials, which these terms do not capture. The policy term is a model output, not a future variable.",
+  "gate": "unit_candidate",
+  "feature": 29,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 29,
+    "terms": [
+      "(phase == GO) * choice",
+      "(phase == GO) * last_is(\"a1 S1 r\")",
+      "(phase == GO) * last_is(\"a2 S1 r\")",
+      "(phase == GO) * last_is(\"a1 S2 u\")",
+      "(phase == GO) * last_is(\"a2 S2 u\")"
+    ],
+    "weights": [
+      0.024727640392338743,
+      0.33490180379475515,
+      0.2463393932229072,
+      -0.5085037824135915,
+      -0.28049771207102253
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.722794038114724,
+    "r2": 0.980512805166007,
+    "r2_timing_only": 0.929701386285271
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 29,
+    "terms": [
+      "(phase == GO) * choice",
+      "(phase == GO) * last_is(\"a1 S1 r\")",
+      "(phase == GO) * last_is(\"a2 S1 r\")",
+      "(phase == GO) * last_is(\"a1 S2 u\")",
+      "(phase == GO) * last_is(\"a2 S2 u\")"
+    ],
+    "weights": [
+      0.024727640392338743,
+      0.33490180379475515,
+      0.2463393932229072,
+      -0.5085037824135915,
+      -0.28049771207102253
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7291002466255301,
+    "r2": 0.9806968252820402,
+    "r2_timing_only": 0.9287442145018245
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The reported score reproduces: the 5 terms give test R^2 beyond timing 0.723. The policy logit term is needed (without it the four patterns score 0.546; the logit alone scores 0.415). It sits on top of the last-trial table, which on its own reaches 0.647.",
+      "The explanation's reading, an 'S1 / a1 is good' (model-based) signal, does not fit the GO residuals. After a2 S2 u, which is common-unrewarded and so model-based evidence for a1, the unit is at its lowest (-0.39). After a1 S2 u, rare-unrewarded and also evidence for a1, it is low too (-0.27). The pattern is closer to 'high only after rewarded S1, mainly a1 S1 r (+0.56); low after any trial that was not S1-rewarded'.",
+      "The label says 'low after S2 unrewarded', but a2 S2 r (-0.23) and a2 S1 u (-0.26) are just as low. The label leaves these out; the explanation does mention them.",
+      "The streak claim holds, but the effect is small. Adding a term for a1 S1 r on both of the last two trials raises test R^2 from 0.723 to 0.742. Trial-before terms add about 0.02, a little more than the stated 0.01.",
+      "One small systematic miss remains: the model over-predicts GO after a1 S2 r (-0.089) and after a1 S1 u (-0.086). D2 under-predictions are small (at most +0.034). The rare large D2 excursions after strings of a2 trials are not captured. Terms for D2 after a2 unrewarded trials, and the D2 policy logit, added nothing (0.723).",
+      "Value and early-episode terms add nothing (0.723). No future variables are used, as claimed."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO-only: high after a rewarded S1 trial (mostly a1 S1 r, growing over a1 S1 r streaks), low after other a2 or unrewarded trials; tracks the a1 policy logit",
+    "better_terms": "(phase == GO) * choice ;; (phase == GO) * last_is('a1 S1 r') ;; (phase == GO) * last_is('a2 S1 r') ;; (phase == GO) * last_is('a1 S2 u') ;; (phase == GO) * last_is('a2 S2 u') ;; (phase == GO) * last_is('a2 S2 r') ;; (phase == GO) * last_is('a2 S1 u') ;; (phase == GO) * last_is('a1 S1 r') * (tv('action',-2)==1)*(tv('state',-2)==1)*(tv('reward',-2)==1)",
+    "better_terms_test_r2_beyond_timing": 0.742
+  },
+  "final_label": "GO-only: high after a rewarded S1 trial (mostly a1 S1 r, growing over a1 S1 r streaks), low after other a2 or unrewarded trials; tracks the a1 policy logit"
+}

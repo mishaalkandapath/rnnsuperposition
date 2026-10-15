@@ -1,0 +1,110 @@
+{
+ "label": "High when observer believes S2 is good and last choice was a2; low after unrewarded a1.",
+ "short_terms": "np.tanh(belief_lo/2) ;; (prev_action==2) - 2*(prev_action==1)*(prev_reward==0) ;; (2*prev_reward-1)*(phase==D1)",
+ "terms": "np.tanh(belief_lo) ;; (prev_action==2) ;; (phase==D2)*(action==2) ;; (phase==D1)*(prev_action==1)*(prev_reward==0) ;; (phase==D1)*np.tanh(belief_lo) ;; (phase==D1)*(prev_action==2) ;; (phase==GO)*(prev_action==2)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "The raw candidate value of unit 5 is an anti-S1 belief signal: it decreases with the ideal observer log-odds that S1 is good (saturating, tanh(belief_lo)) on every phase, is higher after a previous a2 choice, and drops sharply after an unrewarded a1 trial (strongest at D1, around -1 relative to timing). Reward alone after a2 matters little. The free fit adds phase-specific belief and prev-action weights and the just-made a2 choice at D2 (+0.04 dev R2). Using the upcoming choice (future at D1/GO) would add more (0.82 dev), consistent with the unit tracking the a2-vs-a1 preference, but it is not recorded.",
+ "full_test_scores": {
+  "gate": "unit_candidate",
+  "feature": 5,
+  "terms": [
+   "np.tanh(belief_lo)",
+   "(prev_action==2)",
+   "(phase==D2)*(action==2)",
+   "(phase==D1)*(prev_action==1)*(prev_reward==0)",
+   "(phase==D1)*np.tanh(belief_lo)",
+   "(phase==D1)*(prev_action==2)",
+   "(phase==GO)*(prev_action==2)"
+  ],
+  "weights": [
+   -0.5396393462996344,
+   0.020831661831791345,
+   0.3715161333017293,
+   -0.8365497116466531,
+   0.3004980236789398,
+   0.3512989255202147,
+   0.33723180850531737
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7527959686915546,
+  "r2": 0.7665366893317427,
+  "r2_timing_only": 0.05558453301695221
+ },
+ "gate": "unit_candidate",
+ "feature": 5,
+ "test_scores": {
+  "gate": "unit_candidate",
+  "feature": 5,
+  "terms": [
+   "np.tanh(belief_lo/2)",
+   "(prev_action==2) - 2*(prev_action==1)*(prev_reward==0)",
+   "(2*prev_reward-1)*(phase==D1)"
+  ],
+  "weights": [
+   -0.5677086514019829,
+   0.21363096190197245,
+   0.23957162684812738
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7610557990073785,
+  "r2": 0.7743374008366622,
+  "r2_timing_only": 0.05558453301695221
+ },
+ "dev_scores": {
+  "gate": "unit_candidate",
+  "feature": 5,
+  "terms": [
+   "np.tanh(belief_lo/2)",
+   "(prev_action==2) - 2*(prev_action==1)*(prev_reward==0)",
+   "(2*prev_reward-1)*(phase==D1)"
+  ],
+  "weights": [
+   -0.5677086514019829,
+   0.21363096190197245,
+   0.23957162684812738
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.7733599185373286,
+  "r2": 0.7857978555361754,
+  "r2_timing_only": 0.05487968817596567
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The explanation says 'whether an a2 trial was rewarded matters little'. That is false at D1. Residual after timing at D1 is a2 S2 r +0.595 vs a2 S2 u -0.109, and a2 S1 r +0.564 vs a2 S1 u +0.325. At D1 the previous reward raises the unit whatever the previous choice was. Misses on the recorded short form put the largest systematic errors in D1 split by reward: under-predicted after a1 S1 r (+0.36) and a2 S1 r (+0.34), over-predicted after a2 S1 u (-0.36), a1 S1 u (-0.34) and a2 S2 u (-0.27).",
+   "At GO and D2 the reward effect is different: after a2 S1 u the unit is higher than after a2 S1 r (+0.66 vs +0.37 at GO). So 'low after unrewarded a1' plus a single reward-free a2 term hides a phase-dependent reward effect: at D1 reward raises the unit for both choices, while later phases follow the belief.",
+   "Swapping the third term for a D1-only reward-sign term gives test R^2 0.725, about the same as the a1-unrewarded term (0.719). Packing the two history effects into one term and adding the D1 reward-sign term raises test to 0.761.",
+   "Tanh saturation: tanh(belief_lo/2) scores better than tanh(belief_lo) (test 0.725 vs 0.719), so the belief dependence is softer than recorded.",
+   "The recorded form's numbers reproduce (test 0.7185; weights -0.48, +0.23, -0.53), and dropping the a1-unrewarded term costs 0.06 (0.657), so the core claims hold. The worst misses are windows where the unit is strongly negative while the ideal observer favours S2 (predicted +0.6 to +1.0). There the unit follows the agent's own a1 preference, not the observer, which is why the policy-decile reference scores 0.83. A gap of about 0.12 to the 'all observed' ceiling of 0.88 remains."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "High when the observer favours S2 and last choice was a2; low after unrewarded a1; D1 tracks last reward.",
+  "better_short_terms": "np.tanh(belief_lo/2) ;; (prev_action==2) - 2*(prev_action==1)*(prev_reward==0) ;; (2*prev_reward-1)*(phase==D1)",
+  "better_short_terms_test_r2_beyond_timing": 0.761
+ },
+ "final_label": "High when the observer favours S2 and last choice was a2; low after unrewarded a1; D1 tracks last reward.",
+ "original_short_terms": "np.tanh(belief_lo) ;; (prev_action==2) ;; (prev_action==1)*(prev_reward==0)",
+ "original_test_scores": {
+  "gate": "unit_candidate",
+  "feature": 5,
+  "terms": [
+   "np.tanh(belief_lo)",
+   "(prev_action==2)",
+   "(prev_action==1)*(prev_reward==0)"
+  ],
+  "weights": [
+   -0.47954653860629404,
+   0.22893866301245852,
+   -0.5343050141271679
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.718530206703824,
+  "r2": 0.7341755737225699,
+  "r2_timing_only": 0.05558453301695221
+ },
+ "terms_from": "skeptic"
+}

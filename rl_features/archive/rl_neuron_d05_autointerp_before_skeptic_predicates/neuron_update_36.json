@@ -1,0 +1,64 @@
+{
+  "label": "D2 step late in the episode (episode-clock unit)",
+  "predicate": "(phase == D2) & (ep_trial >= 85)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (100% of mass) and only in the last ~25 trials of the 100-trial episode: zero activations before trial 50, 2.6% of steps in trials 70-79, 17% in 80-89, 30% in 90-99. It acts as an episode-time / end-of-episode signal and is correspondingly anti-correlated with the value head (79% of mass at value < 5.22; value falls as the episode nears its end). Never fires at D1 or GO, or when a reward input is shown. Magnitude grows with episode trial and is larger after choosing a2 (in_action == 2 holds 75% of mass); rare transitions give the top activations, but the transition and reward history have little effect on the firing rate. Recorded (phase == D2) & (ep_trial >= 85) (dev F1 0.815, mass recall 0.93); a variant that admits a2 trials from trial 80 reaches F1 0.84, and (phase == D2) & (value < 6.5) gives F1 0.83. Only observed variables are used (the episode clock is implicit in the recurrent state).",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 36,
+    "predicate": "(phase == D2) & (ep_trial >= 85)",
+    "split": "test",
+    "precision": 0.8332291261807797,
+    "recall": 0.8281074181683825,
+    "f1": 0.8306603773584906,
+    "mass_recall": 0.9404567069679846,
+    "correlation": 0.7983014233416126,
+    "n_active": 59543,
+    "n_predicted": 59177,
+    "coverage_by_activation_quartile": [
+      0.5134354426978369,
+      0.8164046755340588,
+      0.9831385194142147,
+      0.999462546187437
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 36,
+    "predicate": "(phase == D2) & (ep_trial >= 85)",
+    "split": "dev",
+    "precision": 0.8225370757974203,
+    "recall": 0.8079531876010403,
+    "f1": 0.8151799090481974,
+    "mass_recall": 0.9305438389291941,
+    "correlation": 0.7904250636491247,
+    "n_active": 56908,
+    "n_predicted": 55899,
+    "coverage_by_activation_quartile": [
+      0.47951078934420466,
+      0.7820341603992409,
+      0.9704786673226963,
+      0.9997891333380192
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 36,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The factual claims check out on dev. 100% of activation mass is at D2, with zero activity at D1 and GO. The unit never fires before trial 50 (44 steps in trials 50-59, 408 in 60-69). Firing rates are 2.6% in trials 70-79, 16.9% in 80-89 and 30.3% in 90-99. 79.4% of the mass is at value < 5.22. in_action==2 holds 74.9% of the mass. 'Never when a reward input is shown' is true but follows trivially from D2-only firing, so it is not an independent finding.",
+      "Recorded predicate reproduces on test: P 0.833, R 0.828, F1 0.831, mass recall 0.940. Missed steps hold only 6% of the mass, and coverage by activation quartile is 0.51, 0.82, 0.98 and 1.00. So the misses are mostly the weakest activations, from the ramp-up in trials ~70-84.",
+      "The explanation understates how much the choice modulates firing. Within D2 at ep_trial >= 85, precision is 0.94 after a2 and 0.66 after a1. a2 & good==2 gives 0.976, while a1 & good==1 gives 0.647, so it is the action (not the good state) that drives this. The policy logit also gates it: at late D2 with choice (logit a1 - a2) >= 2.78, precision is only 0.168. The unit is an episode clock whose threshold is lower when the agent is choosing or leaning toward a2. That is a systematic modulation, though a fairly small one in F1 terms.",
+      "Transition and reward history are only weak modulators, so the claim that they barely matter holds roughly. Late-D2 precision is 0.84 for common vs 0.76 for rare transitions, and stay vs switch makes little difference.",
+      "Refined predicates beat the recorded one only slightly on test. (phase == D2) & (ep_trial >= 82) & (choice < 2) gets F1 0.858 and mass recall 0.963. (phase == D2) & ((ep_trial >= 88) | ((ep_trial >= 80) & (action == 2))) & (choice < 2.5) gets F1 0.857. Misses for the refined predicate are scattered weak ramp-onset activations with no remaining systematic class. Both refined predicates use only observed variables plus the model's own policy logit."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 step late in the episode (episode-clock unit), with an earlier and stronger onset after choosing or leaning toward a2",
+    "better_predicate": "(phase == D2) & (ep_trial >= 82) & (choice < 2)",
+    "better_predicate_test_f1": 0.858
+  },
+  "final_label": "D2 step late in the episode (episode-clock unit), with an earlier and stronger onset after choosing or leaning toward a2"
+}

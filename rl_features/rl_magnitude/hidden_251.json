@@ -1,0 +1,112 @@
+{
+ "label": "Late-episode D2 after a1->S1, ramping with trial number, boosted if last trial was rewarded a1->S1.",
+ "short_terms": "(in_state == 1) * (in_action == 1) * np.clip(ep_trial - 89, 0, 10) ;; (in_state == 1) * (in_action == 1) * (ep_dec == 9) ;; (in_state == 1) * np.clip(ep_trial - 89, 0, 10) * last_is(\"a1 S1 r\")",
+ "terms": "(phase == D2) * (ep_dec == 9) * (action == 1) * (state == 1) ;; (phase == D2) * (ep_dec == 9) * (action == 1) * (state == 1) * (ep_trial - 90) ;; (phase == D2) * (ep_dec == 9) * (action == 1) * (state == 1) * (prev_reward == 1) ;; (phase == D2) * (ep_dec == 9) * (action == 1) * (state == 1) * (tv(\"action\", -1) == 1) * (tv(\"state\", -1) == 1) ;; (phase == D2) * (ep_dec == 9) * (action == 1) * (state == 1) * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 1) ;; (phase == D2) * (ep_dec == 9) * (action == 1) * (state == 1) * belief_lo ;; (phase == D2) * (ep_dec == 9) * belief_lo ;; (phase == D2) * (ep_dec == 9) * (prev_reward == 1)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Silent at D1/GO and before trial 90. At D2 in the last episode decile it fires when the agent just chose a1 and reached S1 (common), its magnitude rising roughly linearly with ep_trial (~+0.1 per trial from 90 to 99) and raised by ~0.3 when the previous trial was a rewarded a1->S1. Other D2 transitions (rare, or a2) give near zero. The free fit adds the previous trial being any a1->S1 (run building up), a prev_reward boost, and small belief_lo terms; it still under-predicts long a1->S1 runs, where activation keeps building. All terms observed at D2 (action and state are inputs there).",
+ "full_test_scores": {
+  "gate": "hidden",
+  "feature": 251,
+  "terms": [
+   "(phase == D2) * (ep_dec == 9) * (action == 1) * (state == 1)",
+   "(phase == D2) * (ep_dec == 9) * (action == 1) * (state == 1) * (ep_trial - 90)",
+   "(phase == D2) * (ep_dec == 9) * (action == 1) * (state == 1) * (prev_reward == 1)",
+   "(phase == D2) * (ep_dec == 9) * (action == 1) * (state == 1) * (tv(\"action\", -1) == 1) * (tv(\"state\", -1) == 1)",
+   "(phase == D2) * (ep_dec == 9) * (action == 1) * (state == 1) * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 1)",
+   "(phase == D2) * (ep_dec == 9) * (action == 1) * (state == 1) * belief_lo",
+   "(phase == D2) * (ep_dec == 9) * belief_lo",
+   "(phase == D2) * (ep_dec == 9) * (prev_reward == 1)"
+  ],
+  "weights": [
+   -0.4187346810671802,
+   0.09937657663316589,
+   0.39806900137069107,
+   0.1624560837789946,
+   0.021087909785886046,
+   -0.015446137363815992,
+   0.007240503151297851,
+   -0.0955368014926989
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6819804409485528,
+  "r2": 0.7227854909431362,
+  "r2_timing_only": 0.1283098753934886
+ },
+ "gate": "hidden",
+ "feature": 251,
+ "test_scores": {
+  "gate": "hidden",
+  "feature": 251,
+  "terms": [
+   "(in_state == 1) * (in_action == 1) * np.clip(ep_trial - 89, 0, 10)",
+   "(in_state == 1) * (in_action == 1) * (ep_dec == 9)",
+   "(in_state == 1) * np.clip(ep_trial - 89, 0, 10) * last_is(\"a1 S1 r\")"
+  ],
+  "weights": [
+   0.06335396696404542,
+   -0.23374576612647974,
+   0.07124025309201026
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6253046599032279,
+  "r2": 0.6733817723015656,
+  "r2_timing_only": 0.1283098753934886
+ },
+ "dev_scores": {
+  "gate": "hidden",
+  "feature": 251,
+  "terms": [
+   "(in_state == 1) * (in_action == 1) * np.clip(ep_trial - 89, 0, 10)",
+   "(in_state == 1) * (in_action == 1) * (ep_dec == 9)",
+   "(in_state == 1) * np.clip(ep_trial - 89, 0, 10) * last_is(\"a1 S1 r\")"
+  ],
+  "weights": [
+   0.06335396696404542,
+   -0.23374576612647974,
+   0.07124025309201026
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.598007092793583,
+  "r2": 0.6473383166745081,
+  "r2_timing_only": 0.12271665244977648
+ },
+ "final_verdict": "partially_explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The reward boost is not a constant about 0.3. It grows with trial number. Making the last_is(\"a1 S1 r\") term multiply the ramp, (in_state == 1) * np.clip(ep_trial - 89, 0, 10) * last_is(\"a1 S1 r\"), raises test R^2 beyond timing from 0.578 to 0.625 (dev 0.547 -> 0.598). The label's 'boosted if last trial was rewarded' misses that the boost scales with the ramp.",
+   "The second term, (in_state==1)*(in_action==1)*(ep_dec==9), gets a negative weight (-0.38 in the recorded form, -0.23 in the revised one). It is a fitted offset that moves the effective start of the ramp to about trial 93 rather than 90. That is a curve-fitting correction, not a described mechanism. The '+0.1 per trial from 90' claim is only right together with this offset.",
+   "Large systematic under-prediction remains for long consecutive a1->S1 runs late in the episode. Worst-fit windows: t95-97 actual 1.51/1.61/1.68 vs predicted 0.63/0.73/0.82; t92-96 run actual 0.74-1.31 vs predicted 0.02-0.63. Activation also starts before trial 90 in runs (t89 actual 0.24 vs predicted 0). Counting previous a1/S1 trials with sums of tv terms did not help (0.471), and neither did belief or belief_lo terms (0.47-0.49 in place of the reward term). So the run build-up is real and not captured. Free fit 0.682 vs best short form 0.625.",
+   "The claim 'other D2 transitions give near zero' is mostly true. Rare a1->S2 late shows about 0.28-0.32 in examples, but a (phase==D2)*(in_action==1)*ramp term does not help (0.602), so this is minor. Residual over-prediction of about -0.01 on S2-reaching D2 cells comes from the decile-9 baseline and is small.",
+   "Checked claims that hold: silent at D1/GO and before about trial 90 (baseline is all zero apart from D2 decile 9 at 0.11). The rewarded-a1->S1 previous trial is the right history term: last_is a1 S1 u gives 0.475, prev_state==1 gives 0.505, prev_reward==1 gives 0.491, all vs 0.578. No future variables are used."
+  ],
+  "revised_verdict": "partially_explained",
+  "revised_label": "Late-episode D2 after a1->S1: ramps up over the last ten trials, ramping steeper if last trial rewarded a1->S1.",
+  "better_short_terms": "(in_state == 1) * (in_action == 1) * np.clip(ep_trial - 89, 0, 10) ;; (in_state == 1) * (in_action == 1) * (ep_dec == 9) ;; (in_state == 1) * np.clip(ep_trial - 89, 0, 10) * last_is(\"a1 S1 r\")",
+  "better_short_terms_test_r2_beyond_timing": 0.6253
+ },
+ "final_label": "Late-episode D2 after a1->S1: ramps up over the last ten trials, ramping steeper if last trial rewarded a1->S1.",
+ "original_short_terms": "(in_state == 1) * (in_action == 1) * np.clip(ep_trial - 89, 0, 10) ;; (in_state == 1) * (in_action == 1) * (ep_dec == 9) ;; (in_state == 1) * (ep_dec == 9) * last_is(\"a1 S1 r\")",
+ "original_test_scores": {
+  "gate": "hidden",
+  "feature": 251,
+  "terms": [
+   "(in_state == 1) * (in_action == 1) * np.clip(ep_trial - 89, 0, 10)",
+   "(in_state == 1) * (in_action == 1) * (ep_dec == 9)",
+   "(in_state == 1) * (ep_dec == 9) * last_is(\"a1 S1 r\")"
+  ],
+  "weights": [
+   0.09718041355910725,
+   -0.3793339280536158,
+   0.3160464484920628
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5775196517288936,
+  "r2": 0.6317280525717569,
+  "r2_timing_only": 0.1283098753934886
+ },
+ "terms_from": "skeptic"
+}

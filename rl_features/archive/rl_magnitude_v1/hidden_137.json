@@ -1,0 +1,62 @@
+{
+  "label": "D2 after a1 lands rare in S2; grows steeply after trial ~60, scaled by a1 policy logit",
+  "terms": "(phase == D2) * (action == 1) * (state == 2) * np.clip(ep_trial-60,0,None) ;; (phase == D2) * (action == 1) * (state == 2) * np.clip(ep_trial-80,0,None) ;; (phase == D2) * (action == 1) * (state == 2) * np.clip(choice,0,None) * np.clip(ep_trial-60,0,None)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 on trials where the agent chose a1 and reached S2 (rare transition); silent at D1/GO and on every other choice x state. Within a1->S2 at D2 the magnitude rises with episode trial: near zero before ~60, then grows, and faster after ~80 (hinge terms at 60 and 80). It is further scaled by the model policy logit toward a1 at that D2 step (choice clipped at 0, times the late ramp): late a1->S2 trials where the policy still leans a1 give the largest values (~1.5-2), and ones where it leans a2 stay near zero. Previous-trial reward/pattern, value, hidden good state and since_rev add little. Dev R^2 beyond timing: indicator alone 0.15, plus linear ep_trial 0.43, final 3 terms 0.78; profile all ceiling 0.21. All terms are observable at D2 (choice is the model own internal logit).",
+  "gate": "hidden",
+  "feature": 137,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 137,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 2) * np.clip(ep_trial-60,0,None)",
+      "(phase == D2) * (action == 1) * (state == 2) * np.clip(ep_trial-80,0,None)",
+      "(phase == D2) * (action == 1) * (state == 2) * np.clip(choice,0,None) * np.clip(ep_trial-60,0,None)"
+    ],
+    "weights": [
+      -0.0021042617824677586,
+      0.04815285242648687,
+      0.00642023738518354
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7741504974538078,
+    "r2": 0.7917007630964884,
+    "r2_timing_only": 0.07770778967773506
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 137,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 2) * np.clip(ep_trial-60,0,None)",
+      "(phase == D2) * (action == 1) * (state == 2) * np.clip(ep_trial-80,0,None)",
+      "(phase == D2) * (action == 1) * (state == 2) * np.clip(choice,0,None) * np.clip(ep_trial-60,0,None)"
+    ],
+    "weights": [
+      -0.0021042617824677586,
+      0.04815285242648687,
+      0.00642023738518354
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7805524348859095,
+    "r2": 0.7977616501733583,
+    "r2_timing_only": 0.07842062534848238
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The 3 terms reproduce the reported score: test R^2 beyond timing is 0.774. The core claims hold. The feature is zero at D1 and GO, and at D2 it is non-zero only after a1 -> S2 (choice x state residual at D2: +0.159 for a1->S2, about -0.02 for every other combination). Dropping the choice-scaled term lowers test R^2 to 0.674, so the a1-logit scaling is real.",
+      "The 'rises from trial ~60' ramp is redundant. Its fitted weight is -0.002, and dropping it barely changes test R^2 (0.774 -> 0.773). Growth after 60 only enters through choice*ramp60, so it applies only when the policy leans a1. For the rest it is the ramp from trial 80 that carries the late growth.",
+      "The claim that the previous trial 'added little' is slightly understated. With last_is('a1 S1 r')*ramp60 added (inside a1->S2 at D2), test R^2 goes from 0.815 to 0.852; with prev_reward==1 it goes to 0.843. Misses show the largest remaining under-prediction is D2 after a1 S1 r (+0.015). The worst-fit windows are late a1->S2 trials right after an a2 trial (actual about 0, predicted 1.1 to 1.4), but a stay term adds only 0.015 (0.774 -> 0.789).",
+      "Part of the remaining error comes from the timing-baseline setup: the per-decile D2 baseline over-predicts non-a1->S2 D2 steps late in the episode (predicted about 0.12, actual 0). A (phase==D2)*(not a1S2)*ep_dec term fixes this and adds about 0.04. This is consistent with the label, not a contradiction of it.",
+      "None of these is a large systematic error class. The remaining biases by phase and previous trial are all under 0.03."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after a1 lands rare in S2, late in the episode (grows after trial ~80, and from ~60 when the policy leans a1); somewhat larger after a common-rewarded a1 trial",
+    "better_terms": "(phase == D2) * (action == 1) * (state == 2) * np.clip(ep_trial-80,0,None) ;; (phase == D2) * (action == 1) * (state == 2) * np.clip(choice,0,None) * np.clip(ep_trial-60,0,None) ;; (phase == D2) * (action == 1) * (state == 2) * np.clip(choice,0,None) * np.clip(ep_trial-80,0,None) ;; (phase == D2) * (1 - (action == 1) * (state == 2)) * ep_dec ;; (phase == D2) * (action == 1) * (state == 2) * last_is('a1 S1 r') * np.clip(ep_trial-60,0,None)",
+    "better_terms_test_r2_beyond_timing": 0.852
+  },
+  "final_label": "D2 after a1 lands rare in S2, late in the episode (grows after trial ~80, and from ~60 when the policy leans a1); somewhat larger after a common-rewarded a1 trial"
+}

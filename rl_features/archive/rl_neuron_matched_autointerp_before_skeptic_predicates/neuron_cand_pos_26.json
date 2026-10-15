@@ -1,0 +1,63 @@
+{
+  "label": "D2 after a rare a2->S1 transition, mostly when the previous trial was rewarded",
+  "predicate": "(phase == D2) & (in_action == 2) & (in_state == 1) & (prev_reward == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2, and only when the agent chose a2 and landed in S1 (a rare transition): (D2 & a2 & S1) covers 99.99% of activations and mass (dev precision 0.60). Inside that set it is gated by the previous trial being rewarded (the D1 reward input of this trial): adding prev_reward==1 gives dev P 0.79 / R 0.84 / F1 0.82 / mass recall 0.91, and it covers all of the top two activation quartiles. The misses are weak activations on a2->S1 D2 steps after an unrewarded trial. Magnitude also follows the agent being confident in a2 (choice logit < -4.4 holds for 99% of mass; with that condition instead, F1 is 0.81), and the value output in its middle range (7.1-7.5). It never fires at D1 or GO, after a1, or in S2 (so never on common a2->S2). Uses only observed inputs: the current action/state and the previous reward.",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 26,
+    "predicate": "(phase == D2) & (in_action == 2) & (in_state == 1) & (prev_reward == 1)",
+    "split": "test",
+    "precision": 0.7828982196093728,
+    "recall": 0.8360806950726017,
+    "f1": 0.8086159513086519,
+    "mass_recall": 0.901625979274244,
+    "correlation": 0.8075721660589286,
+    "n_active": 33608,
+    "n_predicted": 35891,
+    "coverage_by_activation_quartile": [
+      0.600571292549393,
+      0.7510116638895501,
+      0.9933349202570817,
+      0.9994049035943823
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 26,
+    "predicate": "(phase == D2) & (in_action == 2) & (in_state == 1) & (prev_reward == 1)",
+    "split": "dev",
+    "precision": 0.7946726498676792,
+    "recall": 0.8400279745796211,
+    "f1": 0.8167211127699517,
+    "mass_recall": 0.907598846637267,
+    "correlation": 0.8180770058067435,
+    "n_active": 32887,
+    "n_predicted": 34764,
+    "coverage_by_activation_quartile": [
+      0.5929214303089273,
+      0.7693991729506203,
+      0.9978107516419362,
+      1.0
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 26,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "None of the factual claims failed. On test: the unit never fires off D2 (F1 0). It never fires in S2 (0 activations). D2 & in_action==1 catches only about 5 of 33608 activations. D2 & a2 & S1 covers 99.99% of activations and of activation mass with precision 0.588, matching the reported 0.60 on dev.",
+      "The recorded predicate's test scores reproduce: P 0.783, R 0.836, F1 0.809, mass recall 0.902. Top two activation quartiles are covered at 0.993 and 0.999. Misses are 9.8% of mass and mostly weak activations (rel 0.1-0.5) on a2->S1 D2 steps where the trial's D1 reward input was 0. This is a graded effect, as the explanation says, not a separate class.",
+      "False positives are a2->S1 D2 steps with prev_reward==1 where the unit stays silent. In the examples these often come after earlier a1 choices or an earlier rare a2->S1. That fits the claim that the unit tracks the agent's confidence in a2. Adding choice<-4.4 removes some of them (test F1 0.826 vs 0.809), a small gain that does not overturn the label.",
+      "Tried and rejected as alternatives (test F1): prev_action==2 / stay 0.715; good==2 0.694; prev_common conditions 0.72-0.79. None beats prev_reward==1.",
+      "Small caveat: `choice` is the model's logit at the D2 step itself, not at GO. The explanation's 'confidence in a2' should be read that way. The recorded predicate uses only observed inputs, as claimed."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == D2) & (in_action == 2) & (in_state == 1) & (prev_reward == 1) & (choice < -4.4)",
+    "better_predicate_test_f1": 0.826
+  }
+}

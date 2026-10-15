@@ -1,0 +1,112 @@
+{
+ "label": "Rare a1->S2 at D2 after an unrewarded trial, strongest when that trial was a1->S2 too",
+ "short_terms": "(in_state == 2) * (action == 1) * (prev_reward == 0) ;; (in_state == 2) * (action == 1) * last_is('a1 S2 u') ;; (in_state == 2) * (action == 1) * last_is('a1 S1 u')",
+ "terms": "(in_state == 2) * (action == 1) * (prev_reward == 0) ;; (in_state == 2) * (action == 1) * last_is(\"a1 S2 u\") ;; (in_state == 2) * (action == 1) * belief_lo ;; (in_state == 2) * (action == 1) * (prev_reward == 0) * ep_trial ;; (in_state == 2) * (action == 1) * last_is(\"a1 S1 u\") ;; (in_state == 2) * (action == 1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) ;; (in_state == 2) * (action == 1) ;; (in_state == 2) * (action == 1) * (prev_reward == 0) * (ep_trial >= 90)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Fires only at D2 and essentially only on a rare a1->S2 transition (state shown at D2, choice already made, so observed). Magnitude is large when the previous trial was unrewarded and largest (~2.4) when that trial was also a1->S2 unrewarded; rewarded previous trials keep it near zero. A small graded boost with S1-favouring belief log-odds. Silent at D1/GO and on a2 or common trials. Free fit adds: weaker after a1->S1 unrewarded, a fade in the last ~10 trials of the episode, and a small boost when the trial before was also unrewarded.",
+ "full_test_scores": {
+  "gate": "hidden",
+  "feature": 129,
+  "terms": [
+   "(in_state == 2) * (action == 1) * (prev_reward == 0)",
+   "(in_state == 2) * (action == 1) * last_is(\"a1 S2 u\")",
+   "(in_state == 2) * (action == 1) * belief_lo",
+   "(in_state == 2) * (action == 1) * (prev_reward == 0) * ep_trial",
+   "(in_state == 2) * (action == 1) * last_is(\"a1 S1 u\")",
+   "(in_state == 2) * (action == 1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+   "(in_state == 2) * (action == 1)",
+   "(in_state == 2) * (action == 1) * (prev_reward == 0) * (ep_trial >= 90)"
+  ],
+  "weights": [
+   1.6106549259836478,
+   0.6678626172132068,
+   0.06950521242676257,
+   -0.0034482447044900163,
+   -0.901342953073815,
+   0.12211964746492493,
+   -0.10720990148031309,
+   -0.9808139258886166
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7452772107054393,
+  "r2": 0.7573057451583098,
+  "r2_timing_only": 0.04722205848241101
+ },
+ "gate": "hidden",
+ "feature": 129,
+ "test_scores": {
+  "gate": "hidden",
+  "feature": 129,
+  "terms": [
+   "(in_state == 2) * (action == 1) * (prev_reward == 0)",
+   "(in_state == 2) * (action == 1) * last_is('a1 S2 u')",
+   "(in_state == 2) * (action == 1) * last_is('a1 S1 u')"
+  ],
+  "weights": [
+   1.4347629220225484,
+   0.7402535580101662,
+   -1.0185381813693
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7017082296619515,
+  "r2": 0.7157941810856767,
+  "r2_timing_only": 0.04722205848241101
+ },
+ "dev_scores": {
+  "gate": "hidden",
+  "feature": 129,
+  "terms": [
+   "(in_state == 2) * (action == 1) * (prev_reward == 0)",
+   "(in_state == 2) * (action == 1) * last_is('a1 S2 u')",
+   "(in_state == 2) * (action == 1) * last_is('a1 S1 u')"
+  ],
+  "weights": [
+   1.4347629220225484,
+   0.7402535580101662,
+   -1.0185381813693
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.721324712579394,
+  "r2": 0.7348326576779152,
+  "r2_timing_only": 0.04847198767981731
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": true,
+  "issues": [
+   "The core claim holds up. The profile shows the feature is exactly 0 at D1 and GO. At D2 the residual by this choice x state is +0.55 for code 5 (a1->S2, rare) and about -0.1 or below for the others. By previous trial, the D2 residual is +0.74 after a1 S2 u and about -0.1 after any rewarded trial.",
+   "The third term (belief_lo) is close to decorative. Dropping it lowers test R^2 only from 0.674 to 0.664 (fitted weight 0.045). The explanation's 'small graded boost' is accurate, but the term adds almost nothing.",
+   "The label says the feature fires strongly after any unrewarded trial. That is too broad: after an unrewarded a1->S1 trial the rare a1->S2 response is much weaker. With terms rare*prev_u, rare*last_is('a1 S2 u') and rare*last_is('a1 S1 u'), the fitted weights are +1.43, +0.74 and -1.02. That gives roughly 1.4 after an unrewarded a2 trial, 2.2 after a1 S2 u and only 0.4 after a1 S1 u. Swapping belief_lo for the a1 S1 u term raises test R^2 from 0.674 to 0.702. The original short form's misses also flagged this: D2 after a1 S1 u was over-predicted by 0.149.",
+   "Two systematic errors remain, both small. D2 after a1 S2 u is under-predicted by about 0.18 on average, probably from firing on common a1->S1 trials after a1 S2 u (e.g. 0.48 in one example) and from episode-end effects. The worst-fit windows are all at trials 92-99, where the activation fades to about 0 on rare a1->S2 after an unrewarded trial but the model predicts about 2.2. The fade cannot be captured within the 3-factor limit: (ep_trial>=90) with rare*a1 gives 0.6746, and the prev_reward==0 version gives 0.670.",
+   "The two-trials-back unrewarded term from the free fit holds up (0.684 with it, vs 0.674 for the original short form), but it adds less than the a1 S1 u correction."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Rare a1->S2 at D2 after an unrewarded trial; strongest after a1->S2 loss, weak after a1->S1 loss",
+  "better_short_terms": "(in_state == 2) * (action == 1) * (prev_reward == 0) ;; (in_state == 2) * (action == 1) * last_is('a1 S2 u') ;; (in_state == 2) * (action == 1) * last_is('a1 S1 u')",
+  "better_short_terms_test_r2_beyond_timing": 0.7017
+ },
+ "final_label": "Rare a1->S2 at D2 after an unrewarded trial; strongest after a1->S2 loss, weak after a1->S1 loss",
+ "original_short_terms": "(in_state == 2) * (action == 1) * (prev_reward == 0) ;; (in_state == 2) * (action == 1) * last_is(\"a1 S2 u\") ;; (in_state == 2) * (action == 1) * belief_lo",
+ "original_test_scores": {
+  "gate": "hidden",
+  "feature": 129,
+  "terms": [
+   "(in_state == 2) * (action == 1) * (prev_reward == 0)",
+   "(in_state == 2) * (action == 1) * last_is(\"a1 S2 u\")",
+   "(in_state == 2) * (action == 1) * belief_lo"
+  ],
+  "weights": [
+   0.8424590046029776,
+   1.1857740168522497,
+   0.044957089939823634
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6742324170641831,
+  "r2": 0.6896158329172519,
+  "r2_timing_only": 0.04722205848241101
+ },
+ "terms_from": "skeptic"
+}

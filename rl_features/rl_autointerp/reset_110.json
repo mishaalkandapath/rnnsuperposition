@@ -1,0 +1,103 @@
+{
+  "label": "GO step choosing a2 after an unrewarded trial (first ~70 trials of the episode)",
+  "predicate": "(phase == GO) & (model_act == 2) & (prev_reward == 0) & (ep_trial < 70) & (prev_action != 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO (never D1/D2), and almost only when the agent is about to pick a2 (99% of mass; model_act==2 works just as well, so this is the agent computing its own choice, not reading a future variable). It needs the previous trial to be unrewarded (96% of mass). It also depends on time in the episode: it fades after about trial 60 and is silent after trial 80, so ep_trial < 70 lifts precision from 0.56 to 0.81 (dev F1 0.81, mass recall 0.95). Magnitude builds over runs of consecutive unrewarded a2 choices (e.g. 0.57 -> 0.79 -> 0.91 -> 0.97 of max). It tracks the strength of the a2 policy logit (choice < -4 scores a similar F1, 0.82). Remaining activations are weak (about 0.03-0.3 of max), at a2 GO steps after a rewarded trial. It does not fire when choosing a1, at fixation or state steps, or late in the episode.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 110,
+    "predicate": "(phase == GO) & (model_act == 2) & (prev_reward == 0) & (ep_trial < 70) & (prev_action != 1)",
+    "split": "test",
+    "precision": 0.8598885065104953,
+    "recall": 0.7920621385140145,
+    "f1": 0.8245829031293122,
+    "mass_recall": 0.9409716406568274,
+    "correlation": 0.8033646533115663,
+    "n_active": 53944,
+    "n_predicted": 49689,
+    "coverage_by_activation_quartile": [
+      0.3862524099065698,
+      0.790449354886549,
+      0.991917544119828,
+      0.9996292451431114
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 110,
+    "predicate": "(phase == GO) & (model_act == 2) & (prev_reward == 0) & (ep_trial < 70) & (prev_action != 1)",
+    "split": "dev",
+    "precision": 0.8689305735230702,
+    "recall": 0.7898130364912006,
+    "f1": 0.8274849598587356,
+    "mass_recall": 0.9415859957503196,
+    "correlation": 0.8093066566051155,
+    "n_active": 51026,
+    "n_predicted": 46380,
+    "coverage_by_activation_quartile": [
+      0.37751822528807716,
+      0.7881163282903504,
+      0.9938852304797742,
+      0.9997648165569144
+    ]
+  },
+  "gate": "reset",
+  "feature": 110,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Systematic false-positive class: the label says 'choosing a2 after an unrewarded trial', but when that unrewarded previous trial was an a1 choice (a lose-switch from a1 to a2), the feature is almost silent. The original predicate restricted to prev_action==1 gives test precision 0.21 on 5578 predicted steps (about 10% of all predictions) and covers only 0.9% of activation mass. In the profile, prev_action==1 holds 0.9% of mass and prev_action==2 holds 81% (the rest is the window's first trial, where prev_action is unknown). The feature fires when the agent repeats a2 after an unrewarded a2 trial (lose-stay on a2), not on any a2 choice after no reward.",
+      "Excluding prev_action==1 raises test precision from 0.794 to 0.859 and test F1 from 0.803 to 0.824, while mass recall stays at 0.94. Dev F1 goes from 0.808 to 0.826.",
+      "The claim that 'choice < -4 scores a similar dev F1 of 0.82' leaves out conditions. choice<-4 at GO alone gives dev F1 0.40, and adding ep_trial<70 gives 0.52. It reaches 0.82 only when prev_reward==0 and ep_trial<70 are also added. So the policy logit alone does not explain the feature; the unrewarded history is needed.",
+      "Claims that check out: the feature fires only at GO (100% of mass); 99% of mass is on a2 choices; model_act==2 scores the same as action==2 (test F1 0.802), so it is not a future variable; prev_reward==0 holds 96% of mass; it fades after about trial 60 (2 active steps in trials 80-89, 0 in 90-99); misses are weak a2 GO steps after a rewarded trial (5% of mass); the good state does not drive it (precision 0.78 when S1 is good, 0.90 when S2 is good)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step repeating a2 after an unrewarded a2 trial (lose-stay on a2), first ~70 trials of the episode; builds over runs of unrewarded a2 choices, silent when switching to a2 from an unrewarded a1",
+    "better_predicate": "(phase == GO) & (model_act == 2) & (prev_reward == 0) & (ep_trial < 70) & (prev_action != 1)",
+    "better_predicate_test_f1": 0.825
+  },
+  "final_label": "GO step repeating a2 after an unrewarded a2 trial (lose-stay on a2), first ~70 trials of the episode; builds over runs of unrewarded a2 choices, silent when switching to a2 from an unrewarded a1",
+  "original_predicate": "(phase == GO) & (action == 2) & (prev_reward == 0) & (ep_trial < 70)",
+  "original_test_scores": {
+    "gate": "reset",
+    "feature": 110,
+    "predicate": "(phase == GO) & (action == 2) & (prev_reward == 0) & (ep_trial < 70)",
+    "split": "test",
+    "precision": 0.793548853953724,
+    "recall": 0.8131580898709773,
+    "f1": 0.8032338103478269,
+    "mass_recall": 0.9487592330236337,
+    "correlation": 0.7661706285239113,
+    "n_active": 53944,
+    "n_predicted": 55277,
+    "coverage_by_activation_quartile": [
+      0.43571110781551237,
+      0.8242621978347916,
+      0.9934005635473825,
+      0.9992584902862227
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "reset",
+    "feature": 110,
+    "predicate": "(phase == GO) & (action == 2) & (prev_reward == 0) & (ep_trial < 70)",
+    "split": "dev",
+    "precision": 0.8069571341928667,
+    "recall": 0.8083330067024654,
+    "f1": 0.8076444844770362,
+    "mass_recall": 0.9481478722899841,
+    "correlation": 0.7746695239449319,
+    "n_active": 51026,
+    "n_predicted": 51113,
+    "coverage_by_activation_quartile": [
+      0.4213373050090147,
+      0.8182174492435526,
+      0.994433991846974,
+      0.9993728441517717
+    ]
+  },
+  "predicate_from": "skeptic"
+}

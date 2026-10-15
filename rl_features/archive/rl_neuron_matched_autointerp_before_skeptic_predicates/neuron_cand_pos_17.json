@@ -1,0 +1,63 @@
+{
+  "label": "End-of-episode clock at GO (late trials, biased toward choosing a2)",
+  "predicate": "(phase == GO) & (ep_trial >= 87) & ((model_act == 2) | (ep_trial >= 93))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires almost only at GO (99.9% of mass) and only in the final ~13 trials of the 100-trial episode: never before trial ~80, 9x lift in trials 90-99. Magnitude ramps up with episode trial (activations in a window rise steadily trial by trial; the top quartile is 99.9% within trials >= 90). It tracks the low value the model predicts near the episode end: (GO & value < 5.22) alone gives F1 0.84. The agent cannot see the trial index, so this is an internally kept clock. In trials ~86-92 it fires mainly when the agent is about to choose a2 (86% of mass is on a2 choices); from about trial 93 on it fires for both actions. The recorded predicate uses the agent own GO policy argmax (model_act), which it computes and does not depend on a future outcome. Reward, transition, stay/switch, and the good state have no effect (lift about 1x). It does not fire at D1 or D2. Simpler alternatives: GO & ep_trial >= 88 gives F1 0.79 and mass recall 0.98.",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 17,
+    "predicate": "(phase == GO) & (ep_trial >= 87) & ((model_act == 2) | (ep_trial >= 93))",
+    "split": "test",
+    "precision": 0.8163177805800756,
+    "recall": 0.935381325318614,
+    "f1": 0.8718031594683042,
+    "mass_recall": 0.9778291442688296,
+    "correlation": 0.7923698921302615,
+    "n_active": 34603,
+    "n_predicted": 39650,
+    "coverage_by_activation_quartile": [
+      0.8017570223095596,
+      0.9485608600161831,
+      0.991561669171194,
+      0.9996531791907515
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 17,
+    "predicate": "(phase == GO) & (ep_trial >= 87) & ((model_act == 2) | (ep_trial >= 93))",
+    "split": "dev",
+    "precision": 0.8114705244906806,
+    "recall": 0.939112713591472,
+    "f1": 0.8706381618149316,
+    "mass_recall": 0.9806509247546166,
+    "correlation": 0.7891097932391417,
+    "n_active": 31895,
+    "n_predicted": 36912,
+    "coverage_by_activation_quartile": [
+      0.808753448708302,
+      0.9530975670930524,
+      0.9946074742914472,
+      1.0
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 17,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The reported test scores reproduce exactly: P 0.816, R 0.935, F1 0.872, mass recall 0.978. GO-only holds: GO carries 0.999 of the activation mass. The trial claims hold: 0 activations in trials 0-69 and only 2 in trials 70-79. Top-quartile coverage for ep_trial>=90 is 0.999. The value predicate (GO & value<5.22) scores test F1 0.856. Reward, common transition, stay and core_pattern all have lift around 1x.",
+      "Small understatement: in trials 86-92, 96.5% of the dev mass is on model_act==2 choices, not the 86% the explanation gives.",
+      "The a1/a2 split is graded, not a step at trial 93. The share of GO steps that are active, by trial: a2 choices 0.20 at t86, 0.52 at t88, 0.85 at t90, 0.95 at t92; a1 choices 0.25 at t92, 0.54 at t94, 0.85 at t96, 0.98 at t98. So a1 onset lags a2 by about 6 trials, and the strength of the a2 preference matters too, not just the argmax. Most of the 7283 test false positives are this boundary: a1 choices around trials 93-95 and weak-a2 trials around 87-89. Scoring the choice logit as a continuous amount captures it (test F1 0.889 vs 0.872). This is a refinement, not a missing class.",
+      "in_rew==-1 (failed D1 fixation) has 21x lift, but all of those activations are late in the episode (0 active before trial 80). The late-trial clock already covers them, so there is no separate penalty feature.",
+      "The predicate's model_act is the agent's own computed choice. Swapping in the actual action gives the same F1 (0.872), and no future random outcome is involved. The label does not overclaim."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == GO) & (ep_trial - 0.4*np.clip(choice,-15,15) >= 91)",
+    "better_predicate_test_f1": 0.889
+  }
+}

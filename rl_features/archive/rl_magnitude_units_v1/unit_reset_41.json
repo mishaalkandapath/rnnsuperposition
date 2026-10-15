@@ -1,0 +1,73 @@
+{
+  "label": "D1 reset gate: high after reaching S1, low after rewarded S2",
+  "terms": "(phase == D1) * (prev_state == S1) ;; (phase == D1) * (prev_state == S2) * (prev_reward == 1) ;; (phase == D1) * last_is(\"a2 S1 r\") ;; (phase == D1) * last_is(\"a1 S1 u\") ;; (phase == D1) * (prev_state == S1) * ep_dec ;; (phase == D1) * (prev_state == S2) * (prev_reward == 1) * ep_dec",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r41 is near 1 at GO/D2 and varies almost only at D1 (beyond a timing drift downward late in the episode). At D1 its value is set by the previous trial outcome: reaching S1 raises it (~+0.07, most after a1 S1 unrewarded, less after rare a2 S1 rewarded), a rewarded S2 lowers it (~-0.11), unrewarded S2 is near baseline. Both effects grow later in the episode (ep_dec interaction). So it tracks last-trial evidence that S2 is good (low) vs S1 (high). The trial before adds nothing (+0.0004); GO/D2 terms add <0.01; the D1 policy logit adds ~0.03 (dev 0.758) but was not recorded. Test R^2 beyond timing 0.73 (all ceiling 0.80, last-trial table 0.71); observed variables only.",
+  "gate": "unit_reset",
+  "feature": 41,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 41,
+    "terms": [
+      "(phase == D1) * (prev_state == S1)",
+      "(phase == D1) * (prev_state == S2) * (prev_reward == 1)",
+      "(phase == D1) * last_is(\"a2 S1 r\")",
+      "(phase == D1) * last_is(\"a1 S1 u\")",
+      "(phase == D1) * (prev_state == S1) * ep_dec",
+      "(phase == D1) * (prev_state == S2) * (prev_reward == 1) * ep_dec"
+    ],
+    "weights": [
+      0.06730634735309964,
+      -0.1075371005767262,
+      -0.076402935616135,
+      0.04079751980094666,
+      0.01046408745932541,
+      -0.012620955932311414
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7287241688887149,
+    "r2": 0.8805828796116854,
+    "r2_timing_only": 0.559794472293677
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 41,
+    "terms": [
+      "(phase == D1) * (prev_state == S1)",
+      "(phase == D1) * (prev_state == S2) * (prev_reward == 1)",
+      "(phase == D1) * last_is(\"a2 S1 r\")",
+      "(phase == D1) * last_is(\"a1 S1 u\")",
+      "(phase == D1) * (prev_state == S1) * ep_dec",
+      "(phase == D1) * (prev_state == S2) * (prev_reward == 1) * ep_dec"
+    ],
+    "weights": [
+      0.06730634735309964,
+      -0.1075371005767262,
+      -0.076402935616135,
+      0.04079751980094666,
+      0.01046408745932541,
+      -0.012620955932311414
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7310448286751965,
+    "r2": 0.8801126517958193,
+    "r2_timing_only": 0.5542478413274354
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the rewarded-S2 drop depends on the choice that led there. In the residual table, a2 S2 r is -0.173 and a1 S2 r is -0.13, and misses under-predicts D1 after a1 S2 r by +0.037. Adding last_is('a1 S2 r') and last_is('a1 S1 r') raises test R^2 only from 0.7287 to 0.7312.",
+      "Minor: the '+0.07 for S1' figure is an average over S1 outcomes. After rare a2 S1 r the net effect at D1 is close to zero (+0.067 - 0.076, residual table +0.04), and that term is what lets the fit match the observed ordering a1 S1 u > a1 S1 r ~ a2 S1 u > a2 S1 r.",
+      "The worst-fit windows are all late in the episode (t93-99) during streaks of rewarded a2->S2. At D1 the actual value is about 0.26 against a predicted 0.39. Steeper late-episode scaling terms ((ep_trial/10)^3, exp(ep_trial/20), ep_dec>=8) recover only 0.003 to 0.005 of test R^2. So this is a small, concentrated pattern, not a large error class.",
+      "The claims check out on test. The two core terms alone score 0.676. Adding the a2 S1 r and a1 S1 u terms brings it to 0.696, and the ep_dec interactions to 0.729. The trial-before terms (tv state/reward -2, a 2- or 3-trial S2-reward streak) add 0.0006 or less. GO-phase terms add 0.003. value adds nothing. The D1 policy logit (model output) gives 0.754 on test, which matches the disclosed roughly +0.03.",
+      "Mean error by phase is about 0.001 or less. The largest error by phase x previous trial is under 0.04, and the remaining gap to the 'all observed' ceiling (0.77) is about 0.04."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_terms": null,
+    "better_terms_test_r2_beyond_timing": null
+  }
+}

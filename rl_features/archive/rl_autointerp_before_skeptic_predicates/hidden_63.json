@@ -1,0 +1,64 @@
+{
+  "label": "GO step, choosing a2 after a rewarded common-transition a2 trial (win-stay a2), before late episode",
+  "predicate": "(phase == GO) & (action == 2) & (prev_reward == 1) & (prev_common != 0) & (ep_trial < 85)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO (100% of mass), only when the agent picks a2 (policy logit strongly toward a2, choice < -6) and the previous trial was rewarded (prev_reward=1 holds 99.9% of mass). In practice that previous trial was a2 with a common transition (to S2) or is outside the window (prev_common=-1); it is almost silent after rare-rewarded trials and after unrewarded trials. It also stops late in the episode: never in trials 90-99, rare in 80-89; the ep_trial<85 cutoff raises precision from 0.77 to 0.90. It reads as a win-stay-on-a2 / strong a2-commitment feature, i.e. one side of a model-based repeat signal. The action at GO is the agent own upcoming choice, which is allowed, so no unobservable future variables are used. Magnitude: in the example windows it looks larger after runs of consecutive rewarded a2 trials and weaker right after an unrewarded trial two back, but this was not checked quantitatively. It never fires at D1 or D2, on a1 choices, or on a nonzero reward or action input.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 63,
+    "predicate": "(phase == GO) & (action == 2) & (prev_reward == 1) & (prev_common != 0) & (ep_trial < 85)",
+    "split": "test",
+    "precision": 0.8872275800002045,
+    "recall": 0.9758385638118378,
+    "f1": 0.9294258180980594,
+    "mass_recall": 0.9977588912635091,
+    "correlation": 0.855778768844314,
+    "n_active": 88902,
+    "n_predicted": 97781,
+    "coverage_by_activation_quartile": [
+      0.9043462611356069,
+      0.9992801223791955,
+      0.9997300337457817,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 63,
+    "predicate": "(phase == GO) & (action == 2) & (prev_reward == 1) & (prev_common != 0) & (ep_trial < 85)",
+    "split": "dev",
+    "precision": 0.8995735541627515,
+    "recall": 0.9793498055262034,
+    "f1": 0.9377680902020936,
+    "mass_recall": 0.9982528549796844,
+    "correlation": 0.8645252625096024,
+    "n_active": 88958,
+    "n_predicted": 96847,
+    "coverage_by_activation_quartile": [
+      0.9180755395683453,
+      0.9997302158273381,
+      0.9998201357974729,
+      0.9997751697468411
+    ]
+  },
+  "gate": "hidden",
+  "feature": 63,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The factual claims hold up. On dev the feature is active only at GO (88958 of 88958 active steps) and never at D1 or D2. It never fires when in_rew or in_action is nonzero. On a1 choices it fires 15 times out of about 525k steps. prev_reward==1 holds 99.9% of activation mass. When prev_common==0 (rare previous trial) it fires 49 times out of about 253k steps.",
+      "The ep_trial cutoff is real. Precision of the base predicate is about 0.94-0.96 for trials 10-79, 0.71 for 80-82, 0.54 for 82-84, 0.13 for 85-87, and 0.0 from trial 88 on. The explanation misses a smaller early-episode gap: precision is 0.002 for trials 0-2 and 0.60 for trials 3-5, so the feature is also nearly silent in the first trials of an episode.",
+      "'prev_common != 0' is broader than the label's 'rewarded common a2 trial'. It also matches trials where the previous choice was a1 with a common transition to S1, rewarded, and the agent then switches to a2. That gives 204 predicted steps with 0 active, a tiny and harmless class. prev_common==-1 (previous trial outside the window) carries about 23% of recall at precision 0.86, which is fine.",
+      "There is one partly systematic class of false positives: the first rewarded trial after a loss two trials back (tv('prev_reward',-1)==0) has precision 0.757, versus 0.974 after two wins in a row. This matches the explanation's unchecked note on magnitude, and here it is confirmed quantitatively. When good==1 (S1 is the good state, but the agent chooses a2 after an a2 win), precision is 0.64. That is a small set (5.5k steps).",
+      "Most remaining false positives are cases where the a2 commitment is weaker. Requiring choice < -8 (instead of the predicate's implied < -6) raises test F1 from 0.929 to 0.954 (precision 0.947, recall 0.962). This sharpens the predicate but does not refute it; the feature is best read as a strong a2 policy commitment after an a2->S2 win.",
+      "Test misses: 2148 missed steps hold only 0.2% of activation mass (mostly tiny activations at ep_trial >= 85). No systematic class of misses was found. The predicate uses no future variables: the GO action is the agent's own choice."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == GO) & (action == 2) & (prev_reward == 1) & (prev_common != 0) & (ep_trial < 85) & (choice < -8)",
+    "better_predicate_test_f1": 0.954
+  }
+}

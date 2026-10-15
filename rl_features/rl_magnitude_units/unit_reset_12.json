@@ -1,0 +1,112 @@
+{
+ "label": "Reset rises at D1 after unrewarded trials, more after two; tracks belief S1 good.",
+ "short_terms": "(phase == D1) * (prev_reward == 0) ;; (phase == D1) * (prev_reward == 0) * belief ;; (phase != D1) * belief",
+ "terms": "(phase == D1) * (prev_reward == 0) ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) ;; belief_lo ;; (prev_reward == 0) + (tv(\"reward\", -2) == 0) + (tv(\"reward\", -3) == 0) ;; (phase == D1) * (prev_state == 1) * (prev_reward == 1) ;; (phase == D2) * (action == 1) ;; (phase != D1) * (prev_action == 1) ;; (phase == D1) * (prev_action == 1) * (prev_reward == 0)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Raw reset gate r of unit 12 (high at GO, mid at D1, low at D2). Beyond timing, the dominant driver is omission of reward: at D1 it rises ~+0.17 when the previous trial was unrewarded and a further ~+0.10 when the trial before was also unrewarded. Across all phases it rises graded with the ideal observer log-odds that S1 is good (belief_lo), i.e. higher when S1/a1 is favoured. The free fit adds: a slow all-phase rise with the count of recent unrewarded trials (losing streaks keep the whole trial elevated), a stronger D1 unrewarded effect after an a1 choice, a dip at D1 after rewarded S1 outcomes, and a D2 boost when a1 was just chosen. Future reward, next choice and reversal timing add essentially nothing. Model outputs were not used.",
+ "full_test_scores": {
+  "gate": "unit_reset",
+  "feature": 12,
+  "terms": [
+   "(phase == D1) * (prev_reward == 0)",
+   "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+   "belief_lo",
+   "(prev_reward == 0) + (tv(\"reward\", -2) == 0) + (tv(\"reward\", -3) == 0)",
+   "(phase == D1) * (prev_state == 1) * (prev_reward == 1)",
+   "(phase == D2) * (action == 1)",
+   "(phase != D1) * (prev_action == 1)",
+   "(phase == D1) * (prev_action == 1) * (prev_reward == 0)"
+  ],
+  "weights": [
+   0.13638835367617302,
+   0.10059893196911032,
+   0.01968682675926306,
+   0.01621478363957845,
+   -0.10574676661284341,
+   0.05425256856394745,
+   0.027372925829862615,
+   0.09084348661719786
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7600170511931111,
+  "r2": 0.9673230798861195,
+  "r2_timing_only": 0.8638364922327244
+ },
+ "gate": "unit_reset",
+ "feature": 12,
+ "test_scores": {
+  "gate": "unit_reset",
+  "feature": 12,
+  "terms": [
+   "(phase == D1) * (prev_reward == 0)",
+   "(phase == D1) * (prev_reward == 0) * belief",
+   "(phase != D1) * belief"
+  ],
+  "weights": [
+   0.11757550213597844,
+   0.27792051626756475,
+   0.17392745205822935
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7161370258140707,
+  "r2": 0.9613482217095922,
+  "r2_timing_only": 0.8638364922327244
+ },
+ "dev_scores": {
+  "gate": "unit_reset",
+  "feature": 12,
+  "terms": [
+   "(phase == D1) * (prev_reward == 0)",
+   "(phase == D1) * (prev_reward == 0) * belief",
+   "(phase != D1) * belief"
+  ],
+  "weights": [
+   0.11757550213597844,
+   0.27792051626756475,
+   0.17392745205822935
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.7294563905870091,
+  "r2": 0.9632835281935427,
+  "r2_timing_only": 0.8642863090127227
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The 'more after two unrewarded trials' claim adds little. Dropping the tv('reward',-2) term only lowers test R^2 from 0.604 to 0.585, and putting prev_action==1 in its place scores 0.600.",
+   "belief_lo is the wrong shape and is wrongly applied to every phase. The D1 belief-decile residuals are not monotonic (they peak around deciles 4-6), while GO and D2 follow a sigmoid in belief. Switching belief_lo to (phase != D1)*belief and keeping the other two terms raises test R^2 from 0.552 to 0.651. With the raw belief probability, belief_lo's R^2 also falls when restricted to non-D1 phases (0.55).",
+   "The recorded short form leaves systematic errors. Misses show a phase-level bias: D1 is over-predicted by -0.046, and GO and D2 are under-predicted by +0.023. D1 after rewarded S1 outcomes is over-predicted (a2 S1 r -0.134, a1 S1 r -0.120). After a1 losses it is under-predicted (D2 after a1 S1 u +0.085, D1 after a1 S2 u +0.081).",
+   "At D1 the no-reward boost depends on belief. Raw residuals at D1 are a1 S2 u +0.325 and a1 S1 u +0.20, but a2 S1 u only +0.02. So unrewarded trials that leave S1 favoured raise the gate much more. The term (phase==D1)*(1-prev_reward)*belief captures this and raises test R^2 to 0.716. With that change the phase bias goes away (D1 -0.003, GO +0.001, D2 +0.001).",
+   "Residual misses with the better form: losing streaks keep every phase elevated, which shows up in the worst windows. D1 after a1 S2 r is under-predicted by +0.126. Adding a streak count term barely helps (0.717)."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Reset rises at D1 after no reward, mostly when S1 then looks good; otherwise tracks P(S1 good).",
+  "better_short_terms": "(phase == D1) * (prev_reward == 0) ;; (phase == D1) * (prev_reward == 0) * belief ;; (phase != D1) * belief",
+  "better_short_terms_test_r2_beyond_timing": 0.716
+ },
+ "final_label": "Reset rises at D1 after no reward, mostly when S1 then looks good; otherwise tracks P(S1 good).",
+ "original_short_terms": "(phase == D1) * (prev_reward == 0) ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) ;; belief_lo",
+ "original_test_scores": {
+  "gate": "unit_reset",
+  "feature": 12,
+  "terms": [
+   "(phase == D1) * (prev_reward == 0)",
+   "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+   "belief_lo"
+  ],
+  "weights": [
+   0.17066439092352853,
+   0.10507146716511832,
+   0.02254469247286355
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6035205611340371,
+  "r2": 0.9460139688464094,
+  "r2_timing_only": 0.8638364922327244
+ },
+ "terms_from": "skeptic"
+}

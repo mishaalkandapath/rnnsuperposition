@@ -1,0 +1,105 @@
+{
+  "label": "episode-end clock: late-episode (trial ~88+) D1/D2 steps",
+  "predicate": "((phase == D2) & (state == 2) & (ep_trial >= 87)) | ((phase == D2) & (state == 1) & (ep_trial >= 91)) | ((phase == D1) & (prev_state == 2) & (ep_trial >= 92)) | ((phase == D1) & (prev_state == 1) & (ep_trial >= 95))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "A time-in-episode unit. It never fires before episode trial ~80 and fires on 48% of steps in trials 90-99 (96% of activation mass). The activation ramps up roughly monotonically trial by trial toward the end of the episode, and the example windows show it rising across consecutive trials. Within the late episode it fires at D2 (73% of mass) and D1 (26%) and is almost silent at GO (1.4%; GO is where the policy emits a1/a2). D2 starts earlier (~trial 88) than D1 (~92). It matches the low-value regime (value < 5.22 holds 98% of mass, because the value head falls as the episode runs out), but ep_trial with a phase split scores better (dev F1 0.80 vs 0.75). Within the active range, magnitude is higher when the reached state is S2 than S1, and the largest values are at D2 steps that reach S2 via a rare transition. Reward, transition type, stay/switch and the good state change it little (core_pattern lift is about 1.0 for every pattern). Uses no future variables: the agent can track elapsed trials internally.",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 34,
+    "predicate": "((phase == D2) & (state == 2) & (ep_trial >= 87)) | ((phase == D2) & (state == 1) & (ep_trial >= 91)) | ((phase == D1) & (prev_state == 2) & (ep_trial >= 92)) | ((phase == D1) & (prev_state == 1) & (ep_trial >= 95))",
+    "split": "test",
+    "precision": 0.8162931691213814,
+    "recall": 0.8583181749912387,
+    "f1": 0.836778355337547,
+    "mass_recall": 0.9370746336224759,
+    "correlation": 0.763358069517431,
+    "n_active": 59923,
+    "n_predicted": 63008,
+    "coverage_by_activation_quartile": [
+      0.6591682798211067,
+      0.8327881983846205,
+      0.9480675522328282,
+      0.9932576769025367
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 34,
+    "predicate": "((phase == D2) & (state == 2) & (ep_trial >= 87)) | ((phase == D2) & (state == 1) & (ep_trial >= 91)) | ((phase == D1) & (prev_state == 2) & (ep_trial >= 92)) | ((phase == D1) & (prev_state == 1) & (ep_trial >= 95))",
+    "split": "dev",
+    "precision": 0.8177237951449559,
+    "recall": 0.8527455420322672,
+    "f1": 0.834867549382128,
+    "mass_recall": 0.9343478886777922,
+    "correlation": 0.7663222678834642,
+    "n_active": 56528,
+    "n_predicted": 58949,
+    "coverage_by_activation_quartile": [
+      0.6412397395980753,
+      0.8332153976790263,
+      0.9449476365694877,
+      0.9915793942824794
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 34,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The main claim holds. Dev: no activity at all in trials 0-79, 4.2% rate in trials 80-89 and 47.9% in trials 90-99, with 96.1% of the mass in 90-99. Test: P 0.718, R 0.908, F1 0.802, mass recall 0.966, which matches the reported scores. Per-trial precision rises monotonically. D2: 0.03 at trial 84, 0.33 at 88, 0.57 at 90, 0.79 at 92, 1.0 at 98. D1: 0.02 at 88, 0.10 at 90, 0.29 at 92, 0.54 at 94, 0.91 at 98.",
+      "There is a systematic gap the predicate misses. The reached state shifts the ONSET by about 3-4 trials; it is not just a magnitude effect. D2 at trials 88-91: S2 0.77 vs S1 0.21. Per trial at D2, S2 vs S1: 88 is 0.58 vs 0.05, 90 is 0.85 vs 0.25, 92 is 0.97 vs 0.60. D1 shows the same effect by prev_state: trials 92-95 give 0.71 for S2 vs 0.21 for S1, and trial 94 gives 0.79 vs 0.26. The explanation calls this a magnitude effect inside the active range. In fact it changes whether and when the unit fires, and a single ep_trial threshold does not capture it.",
+      "The claim that it 'peaks at D2 steps that reach S2 by a rare transition' does not hold for firing rate. At D2 after trial 88, S2 rare fires at 0.89 and S2 common at 0.92. In trials 88-91 the rates are 0.72 rare vs 0.78 common. I did not check magnitude separately.",
+      "'Almost silent at GO' holds for mass (1.4%), but GO is not silent at the very end of the episode: precision is 0.23 at trial 98 and 0.29 at trial 99.",
+      "There is a minor extra: d1_err steps fire at 6.2x lift, but they carry only 0.8% of the mass. Test misses (3.4% of the mass) and false positives look like noise at the edge of the ramp, apart from the state-dependent onset described above.",
+      "A state-split predicate improves the fit. Test: P 0.816, R 0.858, F1 0.837 vs 0.802. It uses only observed variables: at D2 the reached state is visible, and at D1 prev_state is."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "episode-end clock: late-episode (trial ~88+) D2/D1 steps, turning on ~3-4 trials earlier when the reached (or last reached) state is S2",
+    "better_predicate": "((phase == D2) & (state == 2) & (ep_trial >= 87)) | ((phase == D2) & (state == 1) & (ep_trial >= 91)) | ((phase == D1) & (prev_state == 2) & (ep_trial >= 92)) | ((phase == D1) & (prev_state == 1) & (ep_trial >= 95))",
+    "better_predicate_test_f1": 0.837
+  },
+  "final_label": "episode-end clock: late-episode (trial ~88+) D2/D1 steps, turning on ~3-4 trials earlier when the reached (or last reached) state is S2",
+  "original_predicate": "((phase == D2) & (ep_trial >= 88)) | ((phase == D1) & (ep_trial >= 92))",
+  "original_test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 34,
+    "predicate": "((phase == D2) & (ep_trial >= 88)) | ((phase == D1) & (ep_trial >= 92))",
+    "split": "test",
+    "precision": 0.7175412452028961,
+    "recall": 0.9079819101179848,
+    "f1": 0.8016058931860037,
+    "mass_recall": 0.9658566995587871,
+    "correlation": 0.7140872287918937,
+    "n_active": 59923,
+    "n_predicted": 75827,
+    "coverage_by_activation_quartile": [
+      0.7535545023696683,
+      0.8966023629931247,
+      0.9821106735197918,
+      0.9996662216288384
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 34,
+    "predicate": "((phase == D2) & (ep_trial >= 88)) | ((phase == D1) & (ep_trial >= 92))",
+    "split": "dev",
+    "precision": 0.7156251313890095,
+    "recall": 0.9033045570336824,
+    "f1": 0.7985861855944199,
+    "mass_recall": 0.9660031645140612,
+    "correlation": 0.7170612520940141,
+    "n_active": 56528,
+    "n_predicted": 71353,
+    "coverage_by_activation_quartile": [
+      0.7257288423436173,
+      0.9031984149448061,
+      0.9852816303424852,
+      0.9990093405038211
+    ]
+  },
+  "predicate_from": "skeptic"
+}

@@ -1,0 +1,106 @@
+{
+ "label": "Fires at D1 after unrewarded a1->S1, stronger if the trial before was rewarded.",
+ "short_terms": "(phase == D1) * last_is('a1 S1 u') ;; (phase == D1) * last_is('a1 S1 u') * (tv('reward', -2) == 0) ;; (phase == D1) * last_is('a1 S1 u') * belief_lo",
+ "terms": "(phase == D1) * last_is(\"a1 S1 u\") ;; (phase == D1) * last_is(\"a1 S1 u\") * belief_lo ;; (phase == D1) * last_is(\"a1 S1 u\") * (tv(\"reward\", -2) == 1) ;; (phase == D1) * last_is(\"a1 S1 u\") * (tv(\"state\", -2) == 1) ;; (phase == D1) * last_is(\"a2 S1 u\")",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Silent at GO and D2. At D1 it fires almost only when the previous trial was a common a1->S1 transition that went unrewarded (the indicator alone gives dev R^2 0.52 beyond timing). Its magnitude is roughly doubled when the trial before that was rewarded (a surprising omission after a reward), and it rises a little with the observer belief that S1 is good (belief_lo). Other D1 histories, including rare a2->S1 unrewarded, sit slightly below baseline. In the free fit, the trial-before state term and an a2 S1 u term add nothing (dev 0.636 vs short 0.635). The remaining error comes mostly from first-in-window trials whose history is unknown.",
+ "full_test_scores": {
+  "gate": "hidden",
+  "feature": 250,
+  "terms": [
+   "(phase == D1) * last_is(\"a1 S1 u\")",
+   "(phase == D1) * last_is(\"a1 S1 u\") * belief_lo",
+   "(phase == D1) * last_is(\"a1 S1 u\") * (tv(\"reward\", -2) == 1)",
+   "(phase == D1) * last_is(\"a1 S1 u\") * (tv(\"state\", -2) == 1)",
+   "(phase == D1) * last_is(\"a2 S1 u\")"
+  ],
+  "weights": [
+   0.723825351459545,
+   0.13052508273159788,
+   1.0040588434744087,
+   -0.15468923365247741,
+   0.022032546851352093
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6323035862311275,
+  "r2": 0.6487076706650372,
+  "r2_timing_only": 0.04461312055173072
+ },
+ "gate": "hidden",
+ "feature": 250,
+ "test_scores": {
+  "gate": "hidden",
+  "feature": 250,
+  "terms": [
+   "(phase == D1) * last_is('a1 S1 u')",
+   "(phase == D1) * last_is('a1 S1 u') * (tv('reward', -2) == 0)",
+   "(phase == D1) * last_is('a1 S1 u') * belief_lo"
+  ],
+  "weights": [
+   1.4550814282923312,
+   -1.1406663504046572,
+   0.18813416445360195
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6658236342479167,
+  "r2": 0.6807322847387536,
+  "r2_timing_only": 0.04461312055173072
+ },
+ "dev_scores": {
+  "gate": "hidden",
+  "feature": 250,
+  "terms": [
+   "(phase == D1) * last_is('a1 S1 u')",
+   "(phase == D1) * last_is('a1 S1 u') * (tv('reward', -2) == 0)",
+   "(phase == D1) * last_is('a1 S1 u') * belief_lo"
+  ],
+  "weights": [
+   1.4550814282923312,
+   -1.1406663504046572,
+   0.18813416445360195
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.6710997540645707,
+  "r2": 0.6852681005926151,
+  "r2_timing_only": 0.043077944462303286
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "better_short_terms": "(phase == D1) * last_is('a1 S1 u') ;; (phase == D1) * last_is('a1 S1 u') * (tv('reward', -2) == 0) ;; (phase == D1) * last_is('a1 S1 u') * belief_lo",
+  "better_short_terms_test_r2_beyond_timing": 0.6658,
+  "issues": [
+   "The core claims hold on test. last_is('a1 S1 u') alone gives 0.509. Adding the trial-before-rewarded term raises it to 0.620, and adding belief_lo on top gives 0.632. The feature is exactly 0 at GO and D2, and the baseline-residual table shows only the D1 a1 S1 u cell is far from zero (+1.15).",
+   "The way the reward-two-trials-back term is coded leaves a systematic error the explanation itself admits to (first-in-window misses). tv('reward', -2) == 1 puts windows where that trial is unknown in with the unrewarded ones. The worst dev misses are these unknown-history cases firing about 2.5 while predicted about 0.09. Flipping the term to the observed-only tv('reward', -2) == 0, which says the response is damped after two omissions in a row, lifts test R^2 from 0.632 to 0.666. That beats both the free fit (0.632) and the additive ceiling (0.61).",
+   "The recorded label leaves out the belief_lo term (+0.06 test on top of last_is alone, +0.011 on top of the reward term). It is a small effect, but it is in the short form.",
+   "Both 'roughly doubles' and the effect size are framed loosely. With the ==0 coding the weights are +1.46 base and -1.14 if the trial two back was unrewarded, so the response is cut by about 80% after back-to-back omissions, not merely boosted after a reward.",
+   "Rare-transition omissions (a1 S2 u, a2 S1 u) do not fire it, which matches the label. Residual misses after the revision are uniform small offsets in other D1 cells (about -0.07), not a structural error."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Fires at D1 after an unrewarded common a1->S1; damped if the trial before was also unrewarded.",
+  "upheld": false
+ },
+ "final_label": "Fires at D1 after an unrewarded common a1->S1; damped if the trial before was also unrewarded.",
+ "original_short_terms": "(phase == D1) * last_is(\"a1 S1 u\") ;; (phase == D1) * last_is(\"a1 S1 u\") * (tv(\"reward\", -2) == 1) ;; (phase == D1) * last_is(\"a1 S1 u\") * belief_lo",
+ "original_test_scores": {
+  "gate": "hidden",
+  "feature": 250,
+  "terms": [
+   "(phase == D1) * last_is(\"a1 S1 u\")",
+   "(phase == D1) * last_is(\"a1 S1 u\") * (tv(\"reward\", -2) == 1)",
+   "(phase == D1) * last_is(\"a1 S1 u\") * belief_lo"
+  ],
+  "weights": [
+   0.6852961275431875,
+   0.8832694875681893,
+   0.14492100766045934
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6315174608102296,
+  "r2": 0.6479566167523108,
+  "r2_timing_only": 0.04461312055173072
+ },
+ "terms_from": "skeptic"
+}

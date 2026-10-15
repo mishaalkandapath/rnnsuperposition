@@ -1,0 +1,106 @@
+{
+  "label": "D1 after a reward, when the agent is about to (re)choose a2 following a reward streak, before episode trial ~70",
+  "predicate": "(phase == D1) & (in_rew == 1) & (prev_state != 1) & (prev_action != 1) & (action == 2) & (tv('prev_reward', -1) != 0) & (ep_trial < 70)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires almost only at D1 (99.9% of mass; never at GO, a trace at D2) when the reward input is 1 (99% of mass) and the agent is about to choose a2 (the a2-choice gate: action==2 holds 100% of mass; that is the agent own upcoming choice, which it computes, and it fits better than prev_action: precision 0.75 vs 0.60). It is also suppressed if the reward before that was 0 (the trial before was unrewarded), so it responds to 2+ rewards in a row, and it shuts off completely after about episode trial 70 (none at trials 80-99), so it drifts with time in the episode. Uses only observed variables plus the agent choice. Active steps sit in a narrow mid band of the policy logit (choice -4.4 to -1.5, a moderate a2 preference) and of value (7.1 to 7.7). Does not fire after unrewarded trials, before a1 choices, or at GO/D2. Dev: P 0.75, R 0.89, F1 0.82, mass recall 0.99. Without the trial cutoff F1 is 0.66; the simplest D1 & reward & a2 gives F1 0.56 but mass recall 0.99.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 19,
+    "predicate": "(phase == D1) & (in_rew == 1) & (prev_state != 1) & (prev_action != 1) & (action == 2) & (tv('prev_reward', -1) != 0) & (ep_trial < 70)",
+    "split": "test",
+    "precision": 0.8313985184235,
+    "recall": 0.8868876573617953,
+    "f1": 0.8582471240585947,
+    "mass_recall": 0.9883417821501864,
+    "correlation": 0.8383547428566641,
+    "n_active": 58464,
+    "n_predicted": 62366,
+    "coverage_by_activation_quartile": [
+      0.5485084838533114,
+      0.9993158182813355,
+      0.9997947454844006,
+      0.9999315818281336
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 19,
+    "predicate": "(phase == D1) & (in_rew == 1) & (prev_state != 1) & (prev_action != 1) & (action == 2) & (tv('prev_reward', -1) != 0) & (ep_trial < 70)",
+    "split": "dev",
+    "precision": 0.8424012874489979,
+    "recall": 0.8936984789431932,
+    "f1": 0.8672920345095939,
+    "mass_recall": 0.9894287478239158,
+    "correlation": 0.8453568937291628,
+    "n_active": 57986,
+    "n_predicted": 61517,
+    "coverage_by_activation_quartile": [
+      0.5752914396081948,
+      0.9999310202110782,
+      0.9997930463576159,
+      0.9997930463576159
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 19,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Several factual claims hold up. 99.9% of activation mass is at D1, the unit is never active at GO, and D2 holds only 0.1% of mass. in_rew==1 holds 99.2% of mass. Steps before an a1 choice have zero activation. If the reward before was 0, the unit stays off (D1 & r1 & a2 & tv(prev_reward,-1)==0: precision 0.024). Activity is near zero from episode trial 70 on.",
+      "The label misses a systematic false-positive class: the previous reward has to come from a COMMON a2->S2 transition. Adding prev_common==0 to the original predicate (last trial was a2 -> S1, rare, rewarded) gives precision 0.000 on 5611 predicted steps, about 8% of all predictions. With prev_state==1 & prev_action==2 & action==2, precision is 0.0 on 7872 steps. With prev_common==1, precision is 0.933.",
+      "A second false-positive class: a switch from a1 to a2 after a reward. Adding prev_action==1 gives precision 0.006 on 1727 steps. The original false-positive list shows windows of the form 'a1 a1 a1 | r1 a2' that stay inactive.",
+      "The claim that the unit tracks the agent's upcoming a2 choice is overclaimed. Once the window holds the history (rel > -3), the condition (D1 & r1 & prev a2->S2 & ep<70 & tv(prev_reward,-1)!=0) has precision 0.933 and recall 0.676 whether or not action==2 is added: the counts are identical (42017 vs 42005 steps). The action term only helps at rel -3, where the previous trial is outside the window. There, the upcoming a2 choice stands in for the missing history. So the unit is mainly driven by observed history: the last trial was a2 -> S2 common and rewarded, and the trial before was also rewarded.",
+      "The 'reward streak' wording is fine. The trial before only needs a reward, not a particular state: tv(prev_state,-1)==1 still gives precision 0.82.",
+      "The ep_trial<70 cutoff is really a gradual decline. Activation mass falls steadily from trials 10-19 onward, and precision drops to 0.46 in trials 65-69, so the cutoff is a fitted threshold, not a sharp boundary.",
+      "Precision is lower when S1 is the good state (good==1: 0.40 vs 0.80 when S2 is good). This is consistent with the unit depending on S2 rewards, but it is a small class (about 4.8k steps)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 just after a reward that followed a common a2->S2 transition, when the trial before was also rewarded, before episode trial ~70. In other words, a run of rewards for a2 through S2. The upcoming a2 repeat is mostly a consequence of this history; it carries information only at the start of a window, where the history is outside the window.",
+    "better_predicate": "(phase == D1) & (in_rew == 1) & (prev_state != 1) & (prev_action != 1) & (action == 2) & (tv('prev_reward', -1) != 0) & (ep_trial < 70)",
+    "better_predicate_test_f1": 0.858
+  },
+  "final_label": "D1 just after a reward that followed a common a2->S2 transition, when the trial before was also rewarded, before episode trial ~70. In other words, a run of rewards for a2 through S2. The upcoming a2 repeat is mostly a consequence of this history; it carries information only at the start of a window, where the history is outside the window.",
+  "original_predicate": "(phase == D1) & (in_rew == 1) & (action == 2) & (tv(\"prev_reward\", -1) != 0) & (ep_trial < 70)",
+  "original_test_scores": {
+    "gate": "neuron_reset",
+    "feature": 19,
+    "predicate": "(phase == D1) & (in_rew == 1) & (action == 2) & (tv(\"prev_reward\", -1) != 0) & (ep_trial < 70)",
+    "split": "test",
+    "precision": 0.7344991150442478,
+    "recall": 0.8872810618500274,
+    "f1": 0.803693575750064,
+    "mass_recall": 0.9884174010607216,
+    "correlation": 0.7849058479783688,
+    "n_active": 58464,
+    "n_predicted": 70625,
+    "coverage_by_activation_quartile": [
+      0.5499452654625069,
+      0.9994526546250684,
+      0.9997947454844006,
+      0.9999315818281336
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 19,
+    "predicate": "(phase == D1) & (in_rew == 1) & (action == 2) & (tv(\"prev_reward\", -1) != 0) & (ep_trial < 70)",
+    "split": "dev",
+    "precision": 0.7527848377024181,
+    "recall": 0.8938881799054944,
+    "f1": 0.8172909390496764,
+    "mass_recall": 0.9894671146004568,
+    "correlation": 0.7962956224875046,
+    "n_active": 57986,
+    "n_predicted": 68855,
+    "coverage_by_activation_quartile": [
+      0.5760502172863351,
+      0.9999310202110782,
+      0.9997930463576159,
+      0.9997930463576159
+    ]
+  },
+  "predicate_from": "skeptic"
+}

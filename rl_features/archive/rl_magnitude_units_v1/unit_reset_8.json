@@ -1,0 +1,82 @@
+{
+  "label": "high on S1 at D2; raised after unrewarded trials at D1/GO",
+  "terms": "(phase == D2) * (state == S1) ;; (phase == D1) * (prev_reward == 0) ;; (phase == GO) * (prev_reward == 0) ;; (phase == D1) * (prev_state == S1) * (prev_reward == 0) ;; (phase == D2) * (prev_reward == 0) ;; (phase != D2) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) ;; (phase == GO) * (prev_state == S2) ;; (phase == D2) * (prev_action == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r of unit 8 (timing alone R^2 0.83: low at D1 ~0.14, high at GO ~0.61, mid at D2 ~0.37). Beyond timing, magnitude is driven by observed inputs only: at D2 it is ~+0.21 higher when the reached state shown is S1 than S2 (largest effect); at D1 it rises ~+0.13 after an unrewarded previous trial (a bit more if that trial reached S1), and at GO ~+0.07 after no reward; consecutive losses add a little more (+0.02), GO is higher after reaching S2 (+0.06), and at D2 the no-reward/prev-a1 effects are small negatives. No future, hidden-state or reversal terms needed. Dev R^2 beyond timing 0.86 vs all ceiling 0.93 (state-at-D2 plus prev-reward alone give 0.81).",
+  "gate": "unit_reset",
+  "feature": 8,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 8,
+    "terms": [
+      "(phase == D2) * (state == S1)",
+      "(phase == D1) * (prev_reward == 0)",
+      "(phase == GO) * (prev_reward == 0)",
+      "(phase == D1) * (prev_state == S1) * (prev_reward == 0)",
+      "(phase == D2) * (prev_reward == 0)",
+      "(phase != D2) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * (prev_state == S2)",
+      "(phase == D2) * (prev_action == 1)"
+    ],
+    "weights": [
+      0.20987646901846208,
+      0.13350759397206674,
+      0.06844638633095543,
+      0.04878331687602252,
+      -0.03156883072748141,
+      0.020195366552557305,
+      0.05604933355820106,
+      -0.021025137902178283
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8625537598716297,
+    "r2": 0.9761820319517815,
+    "r2_timing_only": 0.8267106613758711
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 8,
+    "terms": [
+      "(phase == D2) * (state == S1)",
+      "(phase == D1) * (prev_reward == 0)",
+      "(phase == GO) * (prev_reward == 0)",
+      "(phase == D1) * (prev_state == S1) * (prev_reward == 0)",
+      "(phase == D2) * (prev_reward == 0)",
+      "(phase != D2) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * (prev_state == S2)",
+      "(phase == D2) * (prev_action == 1)"
+    ],
+    "weights": [
+      0.20987646901846208,
+      0.13350759397206674,
+      0.06844638633095543,
+      0.04878331687602252,
+      -0.03156883072748141,
+      0.020195366552557305,
+      0.05604933355820106,
+      -0.021025137902178283
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8647149572113837,
+    "r2": 0.9767113853269181,
+    "r2_timing_only": 0.8278552144935165
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The headline claims check out on test. The 8 terms score 0.8626 beyond timing. The D2 S1 term alone scores 0.395, and adding the D1/GO prev_reward==0 terms brings it to 0.782. Fitted weights match the explanation: D2 S1 +0.21, D1 unrewarded +0.13, D1 unrewarded*S1 +0.05, GO unrewarded +0.07, GO prev S2 +0.06, two losses +0.02.",
+      "The two small D2 effects are attributed to the wrong cue. They are mostly a repeat-versus-switch effect, which the agent can observe at D2, and not 'no reward last trial' or 'a1 last'. Replacing (D2)*(prev_reward==0) and (D2)*(prev_action==1) with (D2)*(stay==1) (weight -0.038) and (D2)*(action==2) (weight -0.023) raises test R^2 from 0.863 to 0.894. Swapping only prev_action==1 for action==2 already gives 0.881.",
+      "The 'a1 as last choice -0.02' claim conflicts with the raw residuals. At D2, trials after a1 have a positive residual (+0.04 to +0.05) and trials after a2 a negative one (about -0.04). The negative fitted weight is an artefact of collinearity with the current state.",
+      "There is a systematic miss with the original terms: D2 is over-predicted after rewarded a2 trials (a2 S1 r -0.049, a2 S2 r -0.043), and the mean D2 error is -0.020. Once the stay and action terms are added, these errors shrink to about 0.01-0.04.",
+      "Smaller leftover errors: GO on the episode's first trial is under-predicted by about 0.03, D1 after a2 S1 r by +0.024, and D1/GO after a1 S2 u are over-predicted by about 0.025. These are small, and the gap to the 0.91 observed-only ceiling is small."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "high when S1 is shown at D2 (lower on repeat choices and after a2); raised after unrewarded trials at D1/GO, more at D1 if that trial reached S1 and at GO if it reached S2",
+    "better_terms": "(phase == D2) * (state == S1) ;; (phase == D1) * (prev_reward == 0) ;; (phase == GO) * (prev_reward == 0) ;; (phase == D1) * (prev_state == S1) * (prev_reward == 0) ;; (phase != D2) * (prev_reward == 0) * (tv('reward', -2) == 0) ;; (phase == GO) * (prev_state == S2) ;; (phase == D2) * (stay == 1) ;; (phase == D2) * (action == 2)",
+    "better_terms_test_r2_beyond_timing": 0.894
+  },
+  "final_label": "high when S1 is shown at D2 (lower on repeat choices and after a2); raised after unrewarded trials at D1/GO, more at D1 if that trial reached S1 and at GO if it reached S2"
+}

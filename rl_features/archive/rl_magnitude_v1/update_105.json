@@ -1,0 +1,70 @@
+{
+  "label": "D1 after no reward when a2-leaning policy logit in a band; scaled by value (quadratic)",
+  "terms": "(phase == D1) * (in_rew == 0) * (choice >= -4.2) * (choice < -1.5) ;; (phase == D1) * (in_rew == 0) * (choice >= -4.2) * (choice < -1.5) * value ;; (phase == D1) * (in_rew == 0) * (choice >= -4.2) * (choice < -1.5) * value**2 ;; (phase == D1) * (in_rew == 0) * (choice >= -4.2) * (choice < -1.5) * last_is(\"a2 S2 u\") ;; (phase == D1) * (in_rew == 0) * (choice >= -4.2) * (choice < -1.5) * last_is(\"a2 S1 u\")",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1, and only after an unrewarded previous trial. Its magnitude is set mostly by the models own state at D1: it is active when the policy logit(a1)-logit(a2) sits in a moderately a2-leaning band (about -4.2 to -1.5; weaker or no activation outside it), and within that band it rises with the value-head output (quadratic shape, larger at higher value). On top of that, a previous a2->S2 common unrewarded trial adds to it and a previous a2->S1 rare unrewarded trial lowers it. Observed history alone (last trial a2 S2 u, plus a boost if the trial before was rewarded, minus on episode trial 1) gives only about 0.33 test R^2 beyond timing; the policy and value gating (model outputs, not future variables) brings it to about 0.74 dev. GO and D2 are always zero. Hidden good state, since_rev and future variables add little (reference scores ~0).",
+  "gate": "update",
+  "feature": 105,
+  "test_scores": {
+    "gate": "update",
+    "feature": 105,
+    "terms": [
+      "(phase == D1) * (in_rew == 0) * (choice >= -4.2) * (choice < -1.5)",
+      "(phase == D1) * (in_rew == 0) * (choice >= -4.2) * (choice < -1.5) * value",
+      "(phase == D1) * (in_rew == 0) * (choice >= -4.2) * (choice < -1.5) * value**2",
+      "(phase == D1) * (in_rew == 0) * (choice >= -4.2) * (choice < -1.5) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * (in_rew == 0) * (choice >= -4.2) * (choice < -1.5) * last_is(\"a2 S1 u\")"
+    ],
+    "weights": [
+      1.7306063798804727,
+      -0.9307591667049263,
+      0.10434099801502653,
+      0.2540210605297436,
+      -0.4837469475868883
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7245993562641263,
+    "r2": 0.7377339430685761,
+    "r2_timing_only": 0.04769265106383214
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 105,
+    "terms": [
+      "(phase == D1) * (in_rew == 0) * (choice >= -4.2) * (choice < -1.5)",
+      "(phase == D1) * (in_rew == 0) * (choice >= -4.2) * (choice < -1.5) * value",
+      "(phase == D1) * (in_rew == 0) * (choice >= -4.2) * (choice < -1.5) * value**2",
+      "(phase == D1) * (in_rew == 0) * (choice >= -4.2) * (choice < -1.5) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * (in_rew == 0) * (choice >= -4.2) * (choice < -1.5) * last_is(\"a2 S1 u\")"
+    ],
+    "weights": [
+      1.7306063798804727,
+      -0.9307591667049263,
+      0.10434099801502653,
+      0.2540210605297436,
+      -0.4837469475868883
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7367703981944527,
+    "r2": 0.7486397608806354,
+    "r2_timing_only": 0.045091291423032365
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The quadratic value fit is not monotone. Its weights are -0.93*v + 0.10*v^2, so the curve bottoms out near v = 4.5. In practice the activation sits almost entirely at value of about 6 or more: splitting the band at value >= 7 gives test 0.61 versus 0.43 for the band alone. So 'higher value, stronger' holds over the range that matters, but 'quadratic shape' adds little. A hinge, band*max(value-6,0), gives about the same score (0.716 test with 6 terms).",
+      "The a2 S1 u penalty is a small effect. Dropping that term only moves test from 0.725 to 0.694, and the misses output still over-predicts D1 after a2 S1 u by -0.065, the largest systematic error left. It is modest, not a large error class.",
+      "The value-only gate is weak without the choice band (test 0.10). The real gate is the choice band: a binned choice table gives weights of about 0.51 and 0.42 for choice in [-4.2,-3) and [-3,-1.5), about 0.085 in [-1.5,0), and about 0 everywhere else. The label's band is right. There is a small leak in [-1.5,0), and adding it only reaches 0.730 test.",
+      "'choice' and 'value' at D1 are model readouts from the same hidden state this gate helps update. They are not the GO-time policy, so calling it a 'policy band' at D1 is somewhat loose and partly circular as an explanation. The explanation admits this with its medium confidence.",
+      "The claims check out. It is D1-only (GO and D2 are exactly zero), after no reward, with test 0.725 beyond timing. The observed-only version (last a2 S2 u, trial-before rewarded, ep_trial 1) gives 0.319 test. Hidden, future and trial-before variables add at most 0.003 (good state, next action, tv(reward,-2), tv(action/state,-2))."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after no reward, when the D1 policy readout moderately favours a2 (logit diff -4.2..-1.5) and value is high (6 or more); boosted after an a2->S2 common unrewarded trial",
+    "better_terms": "(phase == D1) * (in_rew == 0) * (choice >= -4.2) * (choice < -1.5) ;; ... * value ;; ... * value**2 ;; ... * last_is(\"a2 S2 u\") ;; ... * last_is(\"a2 S1 u\") ;; (phase == D1) * (in_rew == 0) * (choice >= -1.5) * (choice < 0) ;; same * value  (marginal gain only)",
+    "better_terms_test_r2_beyond_timing": 0.73
+  },
+  "final_label": "D1 after no reward, when the D1 policy readout moderately favours a2 (logit diff -4.2..-1.5) and value is high (6 or more); boosted after an a2->S2 common unrewarded trial"
+}

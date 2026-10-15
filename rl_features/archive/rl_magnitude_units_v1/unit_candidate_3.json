@@ -1,0 +1,77 @@
+{
+  "label": "D1 candidate: high after S2 / unrewarded, low after rewarded S1",
+  "terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_state == 2) ;; (phase == D1) * (prev_state == -1) ;; (phase == D1) * (tv(\"reward\", -2) == 1) ;; (phase == D1) * (tv(\"state\", -2) == 2) ;; (phase == D1) * (prev_reward == 1) * (tv(\"reward\", -2) == 1) ;; (phase == GO) * last_is(\"a2 S1 u\")",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw GRU candidate n of unit 3. Timing gives it a fixed sign pattern (about +0.97 at GO, -0.98 at D2, near 0 at D1, rising late in the episode), and timing alone gives R^2 0.85. Almost all of the variation beyond timing is at D1 and depends on the previous trial outcome, which is observed. Previous reward lowers it (weight about -0.6) and having reached S2 on the previous trial raises it (about +0.8). So it is highest after S2 unrewarded (+0.78 residual), lowest after S1 rewarded (-0.65), and in between after S2 rewarded or S1 unrewarded. The trial before that has the same signs but weaker (reward -0.12, S2 +0.12), and two rewards in a row push it lower still (-0.11). One term flags the window first trial, where the previous trial is not in the window (prev_state = -1, about +0.36). This is a data artifact of the window, not something the agent sees. GO has one small effect (about -0.18 after a2 S1 u). D2 has essentially no history dependence. Hidden good state, policy and value add almost nothing once the history is in (D1 value term only went from 0.756 to 0.763 on dev). Dev R^2 beyond timing 0.766, against an all-cue ceiling of 0.80 and an observed-only reference of 0.74. Uses only observed cues.",
+  "gate": "unit_candidate",
+  "feature": 3,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 3,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_state == 2)",
+      "(phase == D1) * (prev_state == -1)",
+      "(phase == D1) * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * (tv(\"state\", -2) == 2)",
+      "(phase == D1) * (prev_reward == 1) * (tv(\"reward\", -2) == 1)",
+      "(phase == GO) * last_is(\"a2 S1 u\")"
+    ],
+    "weights": [
+      -0.6041324928690298,
+      0.7963355384931659,
+      0.36417854252873155,
+      -0.11839940652069972,
+      0.11905391443149888,
+      -0.1124315073382999,
+      -0.1835690819131546
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7626356710079416,
+    "r2": 0.9650277209979736,
+    "r2_timing_only": 0.8526641338631956
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 3,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_state == 2)",
+      "(phase == D1) * (prev_state == -1)",
+      "(phase == D1) * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * (tv(\"state\", -2) == 2)",
+      "(phase == D1) * (prev_reward == 1) * (tv(\"reward\", -2) == 1)",
+      "(phase == GO) * last_is(\"a2 S1 u\")"
+    ],
+    "weights": [
+      -0.6041324928690298,
+      0.7963355384931659,
+      0.36417854252873155,
+      -0.11839940652069972,
+      0.11905391443149888,
+      -0.1124315073382999,
+      -0.1835690819131546
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7664499836055183,
+    "r2": 0.9658481214864353,
+    "r2_timing_only": 0.8537706010866645
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor omission: the label treats D1 as reward + state, but the residual table also depends on the previous choice. a1 S2 r is +0.296 vs a2 S2 r +0.142, and a1 S1 u is +0.141 vs a2 S1 u +0.069. Running misses on the claimed terms leaves D1 after a1 S2 r under-predicted by +0.196 and D1 after a1 S1 u by +0.164. Adding (phase==D1)*(prev_action==1)*(1-(prev_state==1)*(prev_reward==1)) (weight +0.15) roughly halves these errors and raises test R^2 from 0.763 to 0.772. Real, but small.",
+      "The worst-fit windows are runs of repeated a2 -> S1 rare unrewarded trials. In these runs GO falls to about -0.4 (residual down to -1.4) and D1 climbs well above the prediction. The single GO a2 S1 u term (-0.18) only captures the average. A two-back version of the term, |choice| at GO and exp(-|choice|) at GO all add less than 0.001, so this is a rare, unexplained regime and not a large error class.",
+      "The small additions the explanation implies all check out on test. D1 value adds about +0.005 and D1 choice about +0.001, so 'model cues add very little' holds. The remaining gap to the 0.80 ceiling is small.",
+      "All other claims replicate: test R^2 beyond timing is 0.7626, the weights match (-0.60 reward, +0.80 S2, the two-back terms about \u00b10.12, -0.11 for two rewards in a row, -0.18 at GO), D2 shows no history dependence, and no future variables are used. Without the two-back terms the score drops to 0.729, so those terms are justified."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 candidate: high after S2 / unrewarded (more so after a1), low after rewarded S1",
+    "better_terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_state == 2) ;; (phase == D1) * (prev_state == -1) ;; (phase == D1) * (tv(\"reward\", -2) == 1) ;; (phase == D1) * (tv(\"state\", -2) == 2) ;; (phase == D1) * (prev_reward == 1) * (tv(\"reward\", -2) == 1) ;; (phase == GO) * last_is(\"a2 S1 u\") ;; (phase == D1) * (prev_action == 1) * (1 - (prev_state==1)*(prev_reward==1))",
+    "better_terms_test_r2_beyond_timing": 0.7717
+  },
+  "final_label": "D1 candidate: high after S2 / unrewarded (more so after a1), low after rewarded S1"
+}

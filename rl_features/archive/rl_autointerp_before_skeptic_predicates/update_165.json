@@ -1,0 +1,65 @@
+{
+  "label": "D1 after a rare a1->S2 trial that went unrewarded (following a reward), late in the episode",
+  "predicate": "(phase == D1) & (prev_reward == 0) & (prev_action == 1) & (prev_common == 0) & (ep_trial >= 60) & (tv(\"prev_reward\", -1) == 1)",
+  "verdict": "partially_explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (100% of mass), almost only when the reward input is 0 and the previous trial was a1 with a rare transition to S2 (prev_common=0, 81% of mass; the remaining ~18% is at rel -3 where the previous trial falls outside the window, so prev_common is unknown). That is the rare-unrewarded case, where a model-based agent should stay with a1, and the agent does go on to pick a1 (98.7% of mass; choice logit is moderately positive, 2.8-8). It is strongly gated by position in the episode: it never fires before trial ~55 and mostly fires at trials 70-99, so it probably picks up a slow drift in the hidden state with time. It also fires more when the reward two trials back was 1 (requiring this cuts FPs and costs only a little recall), and only when value < 7.13. The mirror case (a2 rare to S1) and rewarded D1s do not activate it, and GO/D2 never do. The base predicate without the ep_trial condition gets F1 0.31; with ep_trial>=60 it gets 0.59; adding prior reward = 1 gives dev F1 0.68 (P 0.61, R 0.75, mass recall 0.79). The remaining FPs look similar on the surface, so magnitude probably depends on longer reward history that I did not capture. All variables are observed (the episode position is only implicit).",
+  "test_scores": {
+    "gate": "update",
+    "feature": 165,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (prev_action == 1) & (prev_common == 0) & (ep_trial >= 60) & (tv(\"prev_reward\", -1) == 1)",
+    "split": "test",
+    "precision": 0.6045253320216429,
+    "recall": 0.7437216338880485,
+    "f1": 0.6669380002713337,
+    "mass_recall": 0.7845190834824111,
+    "correlation": 0.5806977554022342,
+    "n_active": 6610,
+    "n_predicted": 8132,
+    "coverage_by_activation_quartile": [
+      0.6497277676950998,
+      0.7313974591651543,
+      0.7826876513317191,
+      0.8111380145278451
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 165,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (prev_action == 1) & (prev_common == 0) & (ep_trial >= 60) & (tv(\"prev_reward\", -1) == 1)",
+    "split": "dev",
+    "precision": 0.6144622093023255,
+    "recall": 0.75099925980755,
+    "f1": 0.6759043368196656,
+    "mass_recall": 0.79153554066966,
+    "correlation": 0.5894460955532763,
+    "n_active": 6755,
+    "n_predicted": 8256,
+    "coverage_by_activation_quartile": [
+      0.6358792184724689,
+      0.7501480165778567,
+      0.8034339846062759,
+      0.8145734597156398
+    ]
+  },
+  "gate": "update",
+  "feature": 165,
+  "final_verdict": "partially_explained",
+  "scorecard": {
+    "format": "top40",
+    "summary": "Weighted combination of 40 cues. Raise it: phase=D1 & value_bin=decile 0 (9 = highest) (+5.54), phase=D1 & value_bin=decile 1 (9 = highest) (+4.02), phase=D1 & before=a2 S1 r (+3.43), phase=D1 & value_bin=decile 2 (9 = highest) (+2.57), phase=D1 & before=a1 S1 r (+1.92), phase=D1 & choice_bin=decile 8 (9 = most a1) (+1.67). Lower it: in_rew=1 (-4.90), prev_state=1 (-4.43), ep_bucket=4 (-3.79), before=a1 S2 u (-3.50).",
+    "test_f1": 0.7065399664617104,
+    "test_precision": 0.5993046043620271,
+    "test_recall": 0.8605143721633888,
+    "full_test_f1": 0.7089814350225789,
+    "full_n_cues": 49,
+    "top40_test_f1": 0.7065399664617104,
+    "slot2_test_f1": 0.6777973052138254,
+    "slot2_slots": [
+      "last trial",
+      "trial before"
+    ],
+    "file": "scorecards/update_165.json"
+  }
+}

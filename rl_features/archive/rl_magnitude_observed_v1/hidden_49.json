@@ -1,0 +1,80 @@
+{
+  "label": "GO late in episode (trial >~80), scaled by previous trial; largest after a2 -> S1 rare unrewarded",
+  "terms": "(phase == GO) * 1/(1+np.exp(-(ep_trial-85)/4)) * last_is(\"a2 S1 u\") ;; (phase == GO) * 1/(1+np.exp(-(ep_trial-85)/4)) * last_is(\"a2 S2 u\") ;; (phase == GO) * 1/(1+np.exp(-(ep_trial-85)/4)) * last_is(\"a1 S1 u\") ;; (phase == GO) * 1/(1+np.exp(-(ep_trial-85)/4)) * last_is(\"a2 S1 r\") ;; (phase == GO) * 1/(1+np.exp(-(ep_trial-85)/4)) * (prev_reward == 1) ;; (phase == GO) * 1/(1+np.exp(-(ep_trial-85)/4)) * (prev_reward == 0) * (prev_action == -1) ;; (phase == GO) * 1/(1+np.exp(-(ep_trial-85)/4)) * np.clip(-belief_lo,-4,4)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO, and only late in the episode (gain is roughly a sigmoid of ep_trial centred at about 85). Within that late GO window the size is set by the previous trial: biggest after a2 -> S1 rare unrewarded (weight about +2.3 on the late gate), medium after a2 -> S1 rare rewarded (+0.5), a2 -> S2 common unrewarded (+0.4) and a1 -> S1 common unrewarded (+0.26). Any rewarded previous trial suppresses it (-0.4). On the window's first trial, where the previous choice is unknown, an unrewarded previous outcome raises it (+0.7). Graded ideal-observer belief that S2 is good adds very little (dev 0.781 -> 0.796). D1 and D2 are always 0. Observed-only, with no value or policy terms: dev R^2 beyond timing 0.796, test 0.786. That is far above the profile's additive ceiling 'all' = 0.17, because the late-episode x previous-trial interaction is multiplicative. Leaving out the model's value or policy costs essentially nothing. Choices and states on this trial (future) were not needed.",
+  "gate": "hidden",
+  "feature": 49,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 49,
+    "terms": [
+      "(phase == GO) * 1/(1+np.exp(-(ep_trial-85)/4)) * last_is(\"a2 S1 u\")",
+      "(phase == GO) * 1/(1+np.exp(-(ep_trial-85)/4)) * last_is(\"a2 S2 u\")",
+      "(phase == GO) * 1/(1+np.exp(-(ep_trial-85)/4)) * last_is(\"a1 S1 u\")",
+      "(phase == GO) * 1/(1+np.exp(-(ep_trial-85)/4)) * last_is(\"a2 S1 r\")",
+      "(phase == GO) * 1/(1+np.exp(-(ep_trial-85)/4)) * (prev_reward == 1)",
+      "(phase == GO) * 1/(1+np.exp(-(ep_trial-85)/4)) * (prev_reward == 0) * (prev_action == -1)",
+      "(phase == GO) * 1/(1+np.exp(-(ep_trial-85)/4)) * np.clip(-belief_lo,-4,4)"
+    ],
+    "weights": [
+      2.314031954395305,
+      0.41129695921586334,
+      0.25961553641615004,
+      0.48266778686224054,
+      -0.4092477668785636,
+      0.7279872523307249,
+      0.04184692347615775
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.785789237982617,
+    "r2": 0.8272436948489261,
+    "r2_timing_only": 0.19352182157376907
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 49,
+    "terms": [
+      "(phase == GO) * 1/(1+np.exp(-(ep_trial-85)/4)) * last_is(\"a2 S1 u\")",
+      "(phase == GO) * 1/(1+np.exp(-(ep_trial-85)/4)) * last_is(\"a2 S2 u\")",
+      "(phase == GO) * 1/(1+np.exp(-(ep_trial-85)/4)) * last_is(\"a1 S1 u\")",
+      "(phase == GO) * 1/(1+np.exp(-(ep_trial-85)/4)) * last_is(\"a2 S1 r\")",
+      "(phase == GO) * 1/(1+np.exp(-(ep_trial-85)/4)) * (prev_reward == 1)",
+      "(phase == GO) * 1/(1+np.exp(-(ep_trial-85)/4)) * (prev_reward == 0) * (prev_action == -1)",
+      "(phase == GO) * 1/(1+np.exp(-(ep_trial-85)/4)) * np.clip(-belief_lo,-4,4)"
+    ],
+    "weights": [
+      2.314031954395305,
+      0.41129695921586334,
+      0.25961553641615004,
+      0.48266778686224054,
+      -0.4092477668785636,
+      0.7279872523307249,
+      0.04184692347615775
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.796346644860107,
+    "r2": 0.8324105719225687,
+    "r2_timing_only": 0.17708486578916804
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claims hold up. The feature is exactly 0 at D1 and D2. At GO the timing baseline goes 0 up to decile 6, then 0.019 at decile 7, 0.155 at decile 8 and 0.41 at decile 9. Sweeping the sigmoid's centre and width (80-90, 2-6) puts the best fit at about 85-88 with width about 4, giving test 0.769-0.772 without the belief term. In the residual table, a2 S1 u is clearly the largest at GO (+0.346 vs at most +0.049 for the next).",
+      "The '+0.5 after a2->S1 rare rewarded' claim misleads. That term stacks on the general rewarded term (-0.41 to -0.45), so the net effect relative to unrewarded a1->S2 is about +0.07 to +0.09. It is only about +0.5 relative to other rewarded trials. The raw residual agrees: a2 S1 r is -0.003, against about -0.056 for the other rewarded patterns.",
+      "'Graded belief adds very little' is only true for an additive belief term. Making belief_lo multiply the window-first-trial term and the a2 S1 u term lifts dev from 0.785 to 0.838 and test from 0.774 to 0.824, on the same sigmoid gate (centre 87). The first-trial term (prev_action == -1, unrewarded) has weight 0.44 per unit of -belief_lo. So the flat '+0.7 on the window's first trial' is really strongly belief-dependent: it is large when the observer believes S2 is good.",
+      "Misses on the original terms show a systematic class: window-first trials (rel -3) where the actual value is about 3.0 but the prediction is about 1.0 (t91, t93, t95, t96 windows). These are partly fixed by the belief interaction.",
+      "Remaining errors follow the agent's upcoming choice. The feature reaches about 2.2 when the agent picks a2 after a1 S1 c u, where about 0.4 is predicted, and is 0 when it picks a1 after a2 S2 u, where about 0.77 is predicted. Conditioning on the future action as well (8 terms) only reaches test 0.794-0.808, below the 0.824 of the observed belief-interaction version. So there is no cheap future-variable fix, and the gap left from not using the model's own outputs is small.",
+      "Overall the gap is moderate (+0.04 test R^2), not a large unexplained class. The original 0.786 test score is reproduced."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO only, late in the episode (sigmoid at about trial 85-88). Largest after a2->S1 rare unrewarded and on unrewarded window-first trials when the observer believes S2 is good. Small after a2->S2 unrewarded, lowered after rewarded trials.",
+    "better_terms": "g=(phase == GO) * 1/(1+np.exp(-(ep_trial-87)/4)); B=np.clip(-belief_lo,-4,4): g*last_is(\"a2 S1 u\") ;; g*last_is(\"a2 S2 u\") ;; g*last_is(\"a2 S1 r\") ;; g*(prev_reward == 1) ;; g*(prev_reward == 0)*(prev_action == -1) ;; g*B ;; g*last_is(\"a2 S1 u\")*B ;; g*(prev_reward == 0)*(prev_action == -1)*B",
+    "better_terms_test_r2_beyond_timing": 0.8235
+  },
+  "final_label": "GO only, late in the episode (sigmoid at about trial 85-88). Largest after a2->S1 rare unrewarded and on unrewarded window-first trials when the observer believes S2 is good. Small after a2->S2 unrewarded, lowered after rewarded trials."
+}

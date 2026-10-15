@@ -1,0 +1,113 @@
+{
+ "label": "At D1, z drops after the last trial reached S2 (most after a1-rare-S2-rewarded), increasingly late in episode.",
+ "short_terms": "(phase == D1) * ((prev_state == S2) + 0 - (prev_state == S1)) * np.exp(ep_trial/25) ;; (phase == D1) * last_is(\"a1 S2 r\") * np.exp(ep_trial/25) ;; (phase == D1) * last_is(\"a1 S2 u\") * np.exp(ep_trial/25)",
+ "terms": "(phase == D1) * (prev_state == S2) * np.exp(ep_trial/10) ;; (phase == D1) * (prev_state == S2) * prev_reward * np.exp(ep_trial/10) ;; (phase == D1) * last_is(\"a1 S2 r\") * np.exp(ep_trial/10) ;; (phase == D1) * last_is(\"a1 S2 u\") * np.exp(ep_trial/10) ;; (phase == D1) * (prev_state == S1) * np.exp(ep_trial/10) ;; (phase == D1) * (tv(\"state\", -2) == S2) * np.exp(ep_trial/10) ;; (phase == D1) * (tv(\"state\", -2) == S2) * tv(\"reward\", -2) * np.exp(ep_trial/10) ;; (phase == D1) * belief_lo * np.exp(ep_trial/10)",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Update gate unit 39 sits near 1 (mean 0.987) and dips mainly at D1, with a dip that grows sharply late in the episode (timing baseline falls to ~0.88 in trials 90-99). Beyond timing, the D1 dip depends on the previous trial: lower after the last trial reached S2 (largest after a1 -> S2 rare rewarded, then a1 S2 u, a2 S2 r), slightly higher after reaching S1. These previous-trial effects scale with episode time (an exponential in ep_trial fits much better than additive tables, which is why scores exceed the additive all ceiling of 0.41). GO and D2 barely vary. Belief, choices being made and the trial before add little; the free fit (reward x S2, trial-before S2, belief_lo) adds only ~0.02 over the short form. All terms observed-only.",
+ "full_test_scores": {
+  "gate": "unit_update",
+  "feature": 39,
+  "terms": [
+   "(phase == D1) * (prev_state == S2) * np.exp(ep_trial/10)",
+   "(phase == D1) * (prev_state == S2) * prev_reward * np.exp(ep_trial/10)",
+   "(phase == D1) * last_is(\"a1 S2 r\") * np.exp(ep_trial/10)",
+   "(phase == D1) * last_is(\"a1 S2 u\") * np.exp(ep_trial/10)",
+   "(phase == D1) * (prev_state == S1) * np.exp(ep_trial/10)",
+   "(phase == D1) * (tv(\"state\", -2) == S2) * np.exp(ep_trial/10)",
+   "(phase == D1) * (tv(\"state\", -2) == S2) * tv(\"reward\", -2) * np.exp(ep_trial/10)",
+   "(phase == D1) * belief_lo * np.exp(ep_trial/10)"
+  ],
+  "weights": [
+   -2.5189252440439223e-06,
+   -3.4650653134403232e-06,
+   -8.086057188971923e-06,
+   -5.2881964676469574e-06,
+   5.232379573586644e-06,
+   -2.4337499080417645e-06,
+   3.038709388485005e-06,
+   -1.2066666954783544e-07
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5083686471717659,
+  "r2": 0.7937162242338736,
+  "r2_timing_only": 0.5804096411275915
+ },
+ "gate": "unit_update",
+ "feature": 39,
+ "test_scores": {
+  "gate": "unit_update",
+  "feature": 39,
+  "terms": [
+   "(phase == D1) * ((prev_state == S2) + 0 - (prev_state == S1)) * np.exp(ep_trial/25)",
+   "(phase == D1) * last_is(\"a1 S2 r\") * np.exp(ep_trial/25)",
+   "(phase == D1) * last_is(\"a1 S2 u\") * np.exp(ep_trial/25)"
+  ],
+  "weights": [
+   -0.0011059132992200045,
+   -0.0027660656872216236,
+   -0.0011274507932946649
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5215465221930542,
+  "r2": 0.7992455335432317,
+  "r2_timing_only": 0.5804096411275915
+ },
+ "dev_scores": {
+  "gate": "unit_update",
+  "feature": 39,
+  "terms": [
+   "(phase == D1) * ((prev_state == S2) + 0 - (prev_state == S1)) * np.exp(ep_trial/25)",
+   "(phase == D1) * last_is(\"a1 S2 r\") * np.exp(ep_trial/25)",
+   "(phase == D1) * last_is(\"a1 S2 u\") * np.exp(ep_trial/25)"
+  ],
+  "weights": [
+   -0.0011059132992200045,
+   -0.0027660656872216236,
+   -0.0011274507932946649
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.5250734118296438,
+  "r2": 0.8025580139769057,
+  "r2_timing_only": 0.5842684091793324
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The core claim holds up. The short form scores test R^2 beyond timing 0.482, dev 0.497. Its weights are S2 -1.1e-4, a1 S2 r -2.3e-4 and S1 +1.1e-4. Pure time scaling, (phase==D1)*exp(ep_trial/15) alone, gives only 0.002, so the gain is not hidden timing. The S2-vs-S1 contrast alone gives 0.42 and adding a1 S2 r brings it to 0.48.",
+   "One error pattern is not captured. Misses on the recorded short form show the dip still under-predicted at D1 after a1 S2 u (-0.024), about as much as after a1 S2 r (-0.025), which already has its own term. The profile residual for a1 S2 u is -0.036, against -0.005 for a2 S2 u. So a rare a1->S2 transition deepens the dip even without reward, and the label and short form leave this out ('then a1 S2 u' appears only in the explanation).",
+   "The S1 term is not an independent effect. Its weight is the S2 weight with the sign flipped, so together the two terms form one S2-vs-S1 contrast. It can be written as a single term, ((prev_state==S2)+0-(prev_state==S1)), which frees a slot for a1 S2 u.",
+   "The time constant is too short. With the same three terms, exp(ep_trial/10) gives test 0.486, /15 gives 0.511, /20 gives 0.520, /25 gives 0.522 and /40 gives 0.507. The effect is present earlier in the episode than /15 implies.",
+   "Reward adds little except after a1->S2. A (phase==D1)*prev_reward*exp term gets weight about 0 (test 0.489), and the a2 S2 r term is small and positive. The label's phrase 'most after a1-rare-S2-rewarded' is correct, but the rare transition matters regardless of reward.",
+   "Smaller systematic errors remain under the better form. At D1 after unrewarded trials (a2 S2 u +0.010, a2 S1 u +0.009) the value is under-predicted, i.e. actually higher than predicted. After a1 S2 r the dip is still under-predicted by -0.013, down from -0.025."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At D1, z dips after reaching S2 and rises after S1; deepest after rare a1->S2, especially when rewarded; grows late in the episode.",
+  "better_short_terms": "(phase == D1) * ((prev_state == S2) + 0 - (prev_state == S1)) * np.exp(ep_trial/25) ;; (phase == D1) * last_is(\"a1 S2 r\") * np.exp(ep_trial/25) ;; (phase == D1) * last_is(\"a1 S2 u\") * np.exp(ep_trial/25)",
+  "better_short_terms_test_r2_beyond_timing": 0.522
+ },
+ "final_label": "At D1, z dips after reaching S2 and rises after S1; deepest after rare a1->S2, especially when rewarded; grows late in the episode.",
+ "original_short_terms": "(phase == D1) * (prev_state == S2) * np.exp(ep_trial/15) ;; (phase == D1) * last_is(\"a1 S2 r\") * np.exp(ep_trial/15) ;; (phase == D1) * (prev_state == S1) * np.exp(ep_trial/15)",
+ "original_test_scores": {
+  "gate": "unit_update",
+  "feature": 39,
+  "terms": [
+   "(phase == D1) * (prev_state == S2) * np.exp(ep_trial/15)",
+   "(phase == D1) * last_is(\"a1 S2 r\") * np.exp(ep_trial/15)",
+   "(phase == D1) * (prev_state == S1) * np.exp(ep_trial/15)"
+  ],
+  "weights": [
+   -0.00011381746053268414,
+   -0.0002272091487163271,
+   0.00011280804753225028
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.48219033159180213,
+  "r2": 0.7827320554050015,
+  "r2_timing_only": 0.5804096411275915
+ },
+ "terms_from": "skeptic"
+}

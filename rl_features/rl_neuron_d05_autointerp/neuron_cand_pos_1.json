@@ -1,0 +1,103 @@
+{
+  "label": "D1 after a reward while leaning toward a2, before episode trial ~60",
+  "predicate": "(phase == D1) & (in_rew == 1) & (choice < -1.5 - 0.03*np.maximum(ep_trial-40,0)) & (ep_trial < 62)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1, and only when the reward input is 1 (the previous trial was rewarded): 100% of activation mass falls on D1 steps with in_rew==1. Within those steps it fires almost only when the agent leans toward a2. The upcoming choice is a2 in 99.9% of active steps (dev, D1 & in_rew==1 & action==2: P=0.44, R=1.0), and the D1 policy logit(a1)-logit(a2) is below -1.5. It also needs an episode-time condition: it is silent from episode trial ~65 on, its rate is highest at trials 10-50, and it never fires on the first trials of an episode. Dev scores: D1&rew&action==2&ep_trial<60 F1=0.85; replacing the upcoming action with the observed policy logit (choice<-1.5) gives F1=0.93, mass recall 0.995, and that is what I recorded, with no future variables. An observed-history version (prev_action!=1 instead of the choice) gives F1=0.76. Its value-head output is mid-range (7.1-7.75); adding value<7.75 to the action version gives F1=0.88. It never fires at GO or D2, after an unrewarded trial, or when the agent is going to choose a1. Magnitude was not cleanly tied to one variable: it varies along a2 reward streaks, sometimes rising and sometimes falling. In effect this is a time-gated unit that fires on rewarded a2 at D1.",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 1,
+    "predicate": "(phase == D1) & (in_rew == 1) & (choice < -1.5 - 0.03*np.maximum(ep_trial-40,0)) & (ep_trial < 62)",
+    "split": "test",
+    "precision": 0.8925097654730224,
+    "recall": 0.984684591875279,
+    "f1": 0.9363341741565238,
+    "mass_recall": 0.9968713986926864,
+    "correlation": 0.8411082247905081,
+    "n_active": 58242,
+    "n_predicted": 64257,
+    "coverage_by_activation_quartile": [
+      0.9421743012155759,
+      0.9965661699059131,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 1,
+    "predicate": "(phase == D1) & (in_rew == 1) & (choice < -1.5 - 0.03*np.maximum(ep_trial-40,0)) & (ep_trial < 62)",
+    "split": "dev",
+    "precision": 0.8946087987149697,
+    "recall": 0.9855174546454095,
+    "f1": 0.9378652998831041,
+    "mass_recall": 0.9967523508800287,
+    "correlation": 0.8429036502195333,
+    "n_active": 58208,
+    "n_predicted": 64123,
+    "coverage_by_activation_quartile": [
+      0.9463304013194063,
+      0.995739417262232,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 1,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Core claims hold on the test split. The recorded predicate gets P 0.892, R 0.970, F1 0.930, mass recall 0.995. The unit never fires off D1 ('phase != D1' recall 0) or at D1 after no reward ('D1 & in_rew==0' recall 0). Where it fires at D1 after a reward, the upcoming choice is almost never a1 ('D1 & in_rew==1 & action==1' recall 0.002).",
+      "The claim that it does not fire on the first trials of an episode is misleading. Restricted to ep_trial<3, the predicate has precision 1.0 (192 steps), and ep_trial<10 has precision 0.98. Early silence comes from the choice<-1.5 condition rarely holding that early, not from a separate episode-time gate. Only the late cutoff is a real gate: without ep_trial<60, F1 drops to 0.69.",
+      "The ep_trial<60 cutoff is soft, not sharp. Within ep_trial 50-59 precision is only 0.68, against 0.94 for ep_trial 10-49. A threshold that tightens with episode time, (choice < -1.5 - 0.03*max(ep_trial-40,0)) & ep_trial<62, gives test F1 0.936, only slightly better than 0.930. This is a graded effect, not a missing class.",
+      "Missed activations hold only 0.5% of activation mass (1720 steps) and look scattered across window positions. No systematic class of false positives was found: precision is roughly flat across prev_action, prev_common, the good state and window position. It is somewhat lower (0.71) when the reward two trials back was 0, which is a weak modulation."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a reward while strongly leaning toward a2 (policy logit < -1.5), only before episode trial ~60 (soft cutoff)",
+    "better_predicate": "(phase == D1) & (in_rew == 1) & (choice < -1.5 - 0.03*np.maximum(ep_trial-40,0)) & (ep_trial < 62)",
+    "better_predicate_test_f1": 0.936
+  },
+  "final_label": "D1 after a reward while strongly leaning toward a2 (policy logit < -1.5), only before episode trial ~60 (soft cutoff)",
+  "original_predicate": "(phase == D1) & (in_rew == 1) & (choice < -1.5) & (ep_trial < 60)",
+  "original_test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 1,
+    "predicate": "(phase == D1) & (in_rew == 1) & (choice < -1.5) & (ep_trial < 60)",
+    "split": "test",
+    "precision": 0.8923586990843069,
+    "recall": 0.9704680471137667,
+    "f1": 0.9297757891793192,
+    "mass_recall": 0.9954054327020516,
+    "correlation": 0.8462061198146722,
+    "n_active": 58242,
+    "n_predicted": 63340,
+    "coverage_by_activation_quartile": [
+      0.885310074857496,
+      0.9965661699059131,
+      1.0,
+      1.0
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 1,
+    "predicate": "(phase == D1) & (in_rew == 1) & (choice < -1.5) & (ep_trial < 60)",
+    "split": "dev",
+    "precision": 0.8980778395552026,
+    "recall": 0.9712410665200659,
+    "f1": 0.9332276861618714,
+    "mass_recall": 0.9952201177989567,
+    "correlation": 0.8498015258833412,
+    "n_active": 58208,
+    "n_predicted": 62950,
+    "coverage_by_activation_quartile": [
+      0.8892248488180319,
+      0.995739417262232,
+      1.0,
+      1.0
+    ]
+  },
+  "predicate_from": "skeptic"
+}

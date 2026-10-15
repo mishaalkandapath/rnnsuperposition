@@ -1,0 +1,69 @@
+{
+  "label": "late-episode GO after reward at S1, scaled by belief S1 is good",
+  "terms": "(phase == GO) * (prev_reward == 1) * (prev_state == 1) * 1/(1+np.exp(-(ep_trial-90)/4)) ;; (phase == GO) * (prev_reward == 1) * 1/(1+np.exp(-(ep_trial-90)/4)) * np.clip(belief_lo, -3, 3) ;; (phase == GO) * 1/(1+np.exp(-(ep_trial-90)/4)) * np.clip(belief_lo, -3, 3) ;; (phase == GO) * 1/(1+np.exp(-(ep_trial-90)/4)) * (tv(\"reward\", -2) == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Active only at GO, and only late in the episode (a sigmoid ramp centred near trial 90; timing alone gives R^2 0.26). Beyond timing, the magnitude is set by the observed previous outcome: it is large (about 2-3) when the last trial was rewarded at S1 (a1 S1 r or a2 S1 r; this is the model-based cue to choose a1). It grows further with the ideal observer belief that S1 is good (belief_lo), mostly on rewarded trials. Rewarded at S2 and all unrewarded patterns give about 0. A reward two trials back slightly lowers it once the other terms are in. D1 and D2 are always 0. The earlier firing label said it fires when choosing a1; the observed belief plus the last trial outcome stand in for that choice/policy. With 4 observed-only terms, test R^2 beyond timing is 0.72 (dev 0.72). That beats the additive all ceiling of 0.12 because the terms are interactions with the late-episode ramp. Dropping the trial-2-back term gives dev 0.69. Using a linear ramp in place of the sigmoid gives about 0.62.",
+  "gate": "update",
+  "feature": 151,
+  "test_scores": {
+    "gate": "update",
+    "feature": 151,
+    "terms": [
+      "(phase == GO) * (prev_reward == 1) * (prev_state == 1) * 1/(1+np.exp(-(ep_trial-90)/4))",
+      "(phase == GO) * (prev_reward == 1) * 1/(1+np.exp(-(ep_trial-90)/4)) * np.clip(belief_lo, -3, 3)",
+      "(phase == GO) * 1/(1+np.exp(-(ep_trial-90)/4)) * np.clip(belief_lo, -3, 3)",
+      "(phase == GO) * 1/(1+np.exp(-(ep_trial-90)/4)) * (tv(\"reward\", -2) == 1)"
+    ],
+    "weights": [
+      1.3805680261961446,
+      0.2633633731376928,
+      -0.024098464786411183,
+      -0.3775026055499707
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7220237529724316,
+    "r2": 0.7932975185939954,
+    "r2_timing_only": 0.25640235949546863
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 151,
+    "terms": [
+      "(phase == GO) * (prev_reward == 1) * (prev_state == 1) * 1/(1+np.exp(-(ep_trial-90)/4))",
+      "(phase == GO) * (prev_reward == 1) * 1/(1+np.exp(-(ep_trial-90)/4)) * np.clip(belief_lo, -3, 3)",
+      "(phase == GO) * 1/(1+np.exp(-(ep_trial-90)/4)) * np.clip(belief_lo, -3, 3)",
+      "(phase == GO) * 1/(1+np.exp(-(ep_trial-90)/4)) * (tv(\"reward\", -2) == 1)"
+    ],
+    "weights": [
+      1.3805680261961446,
+      0.2633633731376928,
+      -0.024098464786411183,
+      -0.3775026055499707
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7173019731276927,
+    "r2": 0.7901100211720822,
+    "r2_timing_only": 0.25754706833265706
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The claim that a1 S1 r and a2 S1 r both give large values is wrong. Splitting by previous trial (separate ramp terms per pattern, no belief) gives weights of a1 S1 r +1.96 and a2 S1 r +0.97, so after a2 S1 r it is about half. The profile residuals at GO agree: a1 S1 r +0.162, a2 S1 r +0.074. Even with the belief term in, a1 S1 r stays clearly higher (+1.25 vs +0.83).",
+      "The 'reward two trials back lowers it' claim is an artifact. Once a term for 'last trial unrewarded' (GO * prev_reward==0 * ramp, weight about -0.70) is added, the two-back weight drops from -0.38 to -0.03 / -0.06, and adding it gives no gain (dev 0.811 without it vs 0.812 with it). It was only making up for the recorded set's poor handling of unrewarded and S2-rewarded trials.",
+      "Systematic miss on the first trial of each window. There prev_state is -1, so the 'prev_state==1' term is zero even when prev_reward==1. Misses on the recorded terms show many worst-fit windows with first-trial GO actual about 2.7-2.9 vs predicted about 0.7. A ramp term for prev_reward==1 & prev_state==-1 gets weight about +0.41 and helps.",
+      "With the recorded terms, misses show over-prediction at GO after a2 S1 r (-0.065), a1 S2 r (-0.053), a2 S2 u (-0.050) and a2 S1 u (-0.047). This is a systematic pattern over previous-trial types, not scattered noise.",
+      "Belief adds real but modest value. Pattern terms alone score test 0.778; adding prev_reward==1 * ramp * belief_lo gives 0.822. So 'grows with belief_lo, mostly after rewarded trials' holds, but most of the effect comes from the previous trial's pattern. The belief term on unrewarded trials has weight about -0.02, which is negligible.",
+      "Confirmed: the feature is 0 at D1 and D2 and sits on a steep ramp near trial 90 (timing R^2 0.26). The scale-4 sigmoid beats scales 2 and 6. Observed-only terms are enough, and no future variables are needed.",
+      "The recorded test R^2 of 0.722 is reproduced but leaves a lot on the table: better observed-only terms reach test 0.822."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Late-episode GO (sigmoid ramp near trial 90) after a rewarded trial at S1: strongest after a1 S1 r, about half after a2 S1 r, near 0 after an unrewarded trial or a reward at S2; scaled up by belief_lo after rewarded trials",
+    "better_terms": "(phase == GO) * last_is('a1 S1 r') * 1/(1+np.exp(-(ep_trial-90)/4)) ;; (phase == GO) * last_is('a2 S1 r') * 1/(1+np.exp(-(ep_trial-90)/4)) ;; (phase == GO) * (prev_reward == 1)*(prev_state==-1) * 1/(1+np.exp(-(ep_trial-90)/4)) ;; (phase == GO) * (prev_reward == 0) * 1/(1+np.exp(-(ep_trial-90)/4)) ;; (phase == GO) * (prev_reward == 1)*(prev_state==2) * 1/(1+np.exp(-(ep_trial-90)/4)) ;; (phase == GO) * (prev_reward == 1) * 1/(1+np.exp(-(ep_trial-90)/4)) * np.clip(belief_lo, -3, 3)",
+    "better_terms_test_r2_beyond_timing": 0.822
+  },
+  "final_label": "Late-episode GO (sigmoid ramp near trial 90) after a rewarded trial at S1: strongest after a1 S1 r, about half after a2 S1 r, near 0 after an unrewarded trial or a reward at S2; scaled up by belief_lo after rewarded trials"
+}

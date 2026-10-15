@@ -1,0 +1,66 @@
+{
+  "label": "D2 after a1->S2 rare, grows late in episode and with belief S1 good",
+  "terms": "(phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 50, 0) ;; (phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 50, 0) * belief ;; (phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 70, 0) * belief ;; (phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 50, 0) * (prev_action == 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 of a trial where the agent chose a1 and landed in S2 (rare transition; observed at D2). Within those steps the magnitude ramps up with episode trial (from ~trial 50, steepening after ~70) and the ramp is scaled by the ideal-observer belief that S1 is good (an a1 rare-transition surprise when the agent expected S1 to pay); it is lower when the previous trial was a switch from a2. Zero at D1/GO and on all other choice x state combinations. Indicator alone gives 0.15 R^2 beyond timing; adding ep_trial and belief interactions gives dev 0.73 / test 0.73, far above the additive all ceiling (0.21) because the drive is multiplicative. Observed-only: no model value/policy needed; the earlier value/policy-based firing cues (low value, a1-leaning policy at D2) are well captured by belief x late-episode ramp, so little is lost. Previous reward adds nothing.",
+  "gate": "hidden",
+  "feature": 137,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 137,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 50, 0)",
+      "(phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 50, 0) * belief",
+      "(phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 70, 0) * belief",
+      "(phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 50, 0) * (prev_action == 2)"
+    ],
+    "weights": [
+      -0.005795017647687778,
+      0.007522486424883714,
+      0.043547842927551574,
+      -0.01648377459114963
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7284428406514447,
+    "r2": 0.7495449472755855,
+    "r2_timing_only": 0.07770778967773506
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 137,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 50, 0)",
+      "(phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 50, 0) * belief",
+      "(phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 70, 0) * belief",
+      "(phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 50, 0) * (prev_action == 2)"
+    ],
+    "weights": [
+      -0.005795017647687778,
+      0.007522486424883714,
+      0.043547842927551574,
+      -0.01648377459114963
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7315844075598104,
+    "r2": 0.7526337261722534,
+    "r2_timing_only": 0.07842062534848238
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Onset is overstated. The 'starts around trial 50' claim isn't supported: in the original fit the two ramp-from-50 terms get weights of -0.006 and +0.008, and almost all the effect sits in the ramp-from-70 x belief term (+0.044). Two terms, (B*max(t-70,0)*belief ;; B*max(t-70,0)*(prev_action==2)), give test 0.732, slightly above the original four-term 0.728. Ramps starting at 60 (0.680) or 80 (0.715) do worse, so the activation rises from about trial 70.",
+      "Belief plays only a modest role. B*max(t-70,0) alone scores test 0.658 and adding belief raises it to 0.682. 'Scaled by belief' is true but secondary; the late-episode ramp at D2 after a1->S2 does most of the work.",
+      "'Previous reward adds nothing' is only roughly true. Adding a ramp x last_is('a1 S2 r') term (weight -0.016, which lowers the activation after a rare rewarded a1 trial) and similar previous-trial terms brings test from 0.728 to 0.747. The profile residuals point the same way: D2 after a1 S2 r is -0.021 and after a1 S2 u is +0.042. The effect is small but real.",
+      "About 25% of the variance is left unexplained, and the misses are not systematic. On late a1->S2 D2 steps the activation is bimodal (0 versus about 1.5) and the model predicts about 1.2 for both. The by-phase and by-previous-trial errors are all small (|mean| <= 0.027), and none of prev_state, tv('state',-2), belief_cover, |belief_lo| or belief_lo adds more than 0.01."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after a1->S2 rare; ramps up from about trial 70, larger when the belief favours S1 and when this trial repeats a1",
+    "better_terms": "(phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 70, 0) * belief ;; (phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 70, 0) * (prev_action == 2) ;; (phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 70, 0) * last_is('a1 S2 r') ;; (phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 70, 0)",
+    "better_terms_test_r2_beyond_timing": 0.7467
+  },
+  "final_label": "D2 after a1->S2 rare; ramps up from about trial 70, larger when the belief favours S1 and when this trial repeats a1"
+}

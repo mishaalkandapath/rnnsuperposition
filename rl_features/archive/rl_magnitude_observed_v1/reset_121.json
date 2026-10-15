@@ -1,0 +1,73 @@
+{
+  "label": "GO-step non-reward run signal, decaying over the episode",
+  "terms": "(phase == GO) * (prev_reward==0) * (1 - ep_trial/100) ;; (phase == GO) * last_is(\"a1 S1 u\") * (1 - ep_trial/100) ;; (phase == GO) * (prev_reward==0) * (tv(\"reward\", -2) == 0) * (1 - ep_trial/100) ;; (phase == GO) * (prev_reward==0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0) * (1 - ep_trial/100) ;; (phase == GO) * (prev_reward == 1) * (1 - ep_trial/100)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Active only at GO; essentially zero at D1 and D2. Magnitude is set by how many recent trials went unrewarded: it rises after the last trial was unrewarded, and rises again when the trial before (and the one before that) were also unrewarded (stacked run-length terms, each about +0.5 at episode start). After a1->S1 unrewarded it gets an extra boost (about +0.9). After a rewarded trial it is suppressed below the timing baseline. All of these effects shrink linearly with episode trial (multiplied by 1 - ep_trial/100), so the drop in the timing baseline mostly comes from this non-reward response fading over the episode. Uses only observed quantities. Ideal-observer belief uncertainty adds nothing (dev +0.000), and a rare-rewarded term adds little. Test R^2 beyond timing 0.727, above the additive all ceiling (0.55) and all observed (0.52), because the reward x episode-time interaction matters. The earlier explanation used the model policy, which got 0.13 alone; the observed-only version gives up nothing here.",
+  "gate": "reset",
+  "feature": 121,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 121,
+    "terms": [
+      "(phase == GO) * (prev_reward==0) * (1 - ep_trial/100)",
+      "(phase == GO) * last_is(\"a1 S1 u\") * (1 - ep_trial/100)",
+      "(phase == GO) * (prev_reward==0) * (tv(\"reward\", -2) == 0) * (1 - ep_trial/100)",
+      "(phase == GO) * (prev_reward==0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0) * (1 - ep_trial/100)",
+      "(phase == GO) * (prev_reward == 1) * (1 - ep_trial/100)"
+    ],
+    "weights": [
+      0.7027914350937301,
+      0.9179455063269061,
+      0.5205475311075207,
+      0.5159954139985653,
+      -0.5520342225344086
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.72653272639713,
+    "r2": 0.8260217479556811,
+    "r2_timing_only": 0.36380595106612035
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 121,
+    "terms": [
+      "(phase == GO) * (prev_reward==0) * (1 - ep_trial/100)",
+      "(phase == GO) * last_is(\"a1 S1 u\") * (1 - ep_trial/100)",
+      "(phase == GO) * (prev_reward==0) * (tv(\"reward\", -2) == 0) * (1 - ep_trial/100)",
+      "(phase == GO) * (prev_reward==0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0) * (1 - ep_trial/100)",
+      "(phase == GO) * (prev_reward == 1) * (1 - ep_trial/100)"
+    ],
+    "weights": [
+      0.7027914350937301,
+      0.9179455063269061,
+      0.5205475311075207,
+      0.5159954139985653,
+      -0.5520342225344086
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7237202206144511,
+    "r2": 0.8242570654123402,
+    "r2_timing_only": 0.3638950524047936
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced: the claimed terms score test R^2 beyond timing 0.7265, matching the report. Fitted weights also match: +0.70 for prev unrewarded, +0.92 for a1 S1 u, +0.52 and +0.52 for longer unrewarded runs, -0.55 after reward.",
+      "The decay claim holds. Dropping the (1 - ep_trial/100) factor from every term cuts test R^2 to 0.576. Using a squared decay adds only about +0.007 (0.733), so the linear shape is a fair approximation.",
+      "'About zero at D1 and D2' holds. The timing baseline is 0 at D1 and at most 0.01 at D2, and the misses mean errors there are about 0.000.",
+      "Leftover systematic error from the a1/a2 asymmetry, which the terms capture only through a1 S1 u. Misses under-predict GO after a1 S1 r (+0.13) and a1 S2 u (+0.07), and over-predict after every a2 pattern (-0.06 to -0.11). Adding (GO)*(prev_action==1)*decay raises test R^2 to 0.751. Adding a1 S2 u and a1 S1 r terms as well gives 0.758. The label and explanation do not mention this general a1 > a2 bias.",
+      "Long unrewarded runs are under-predicted badly in the worst windows: actual about 3.2 vs predicted 1.2-2.0 around trials 12-21. Part of this comes from window truncation: tv('reward', -2) or -3 is -9 at the window's first trials, so the run-length terms cannot fire there. Adding a term for prev unrewarded with trial -2 outside the window gives test R^2 0.769. Adding a run-length -4 term gave nothing (0.727).",
+      "The belief terms add little, which supports the claim that the observed-only account loses little. Belief uncertainty gives +0.0002. Belief that the previous choice's common state is good, alone or gated on non-reward, adds about +0.01 on top of the prev_action term. The 'loses little or nothing' claim cannot be checked directly because the value/policy explanation was not rescored. The policy decile reference scores only 0.13, so the claim is plausible.",
+      "These are refinements worth about +0.04 at most, not a large systematic failure. The core claims (GO-only, scaled by the unrewarded run, a1 S1 u boost, negative after reward, linear decay over the episode) all check out."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO-step non-reward run signal (strongest after a1 trials), decaying over the episode",
+    "better_terms": "(phase == GO) * (prev_reward==0) * (1 - ep_trial/100) ;; (phase == GO) * last_is(\"a1 S1 u\") * (1 - ep_trial/100) ;; (phase == GO) * (prev_reward==0) * (tv(\"reward\", -2) == 0) * (1 - ep_trial/100) ;; (phase == GO) * (prev_reward==0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0) * (1 - ep_trial/100) ;; (phase == GO) * (prev_reward == 1) * (1 - ep_trial/100) ;; (phase == GO) * (prev_reward==0) * (tv('reward',-2)==-9) * (1 - ep_trial/100) ;; (phase == GO) * (prev_action==1) * (1 - ep_trial/100)",
+    "better_terms_test_r2_beyond_timing": 0.7692
+  },
+  "final_label": "GO-step non-reward run signal (strongest after a1 trials), decaying over the episode"
+}

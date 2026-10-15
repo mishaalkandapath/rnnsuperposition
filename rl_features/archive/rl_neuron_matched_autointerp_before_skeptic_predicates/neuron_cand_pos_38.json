@@ -1,0 +1,63 @@
+{
+  "label": "D1 after a1 -> rare S2 unrewarded (agent about to stay with a1)",
+  "predicate": "(phase == D1) & (prev_reward == 0) & (action == 1) & (prev_state != 1) & (prev_action != 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (never GO/D2), only when the reward input is 0, and essentially only when the upcoming choice is a1 (33160/33193 actives). The driving context is the previous trial being a1 -> rare S2, unrewarded (prev_common==0 rate 0.10 vs 0.003 after common): the model-based stay-with-a1 situation. Simplest core predicate D1 & prev_reward==0 & prev_action==1 & prev_common==0 gives dev P 0.94 / R 0.77; the missed ~20% are almost all on the window first trial (rel -3) where prev_action/prev_state are unknown (-1), so the recorded predicate allows prev unknown and requires the upcoming choice a1 (dev P 0.84 R 0.95 F1 0.89 mass 0.98). Does NOT fire after a2->S2 common unrewarded even though that also leads to choosing a1 (P 0.28 for that clause), nor after rewarded trials, nor after a1->S1 common unrewarded. Uses the agent own upcoming choice (action at D1), which is legitimate; no future random outcome. At D1 the policy logit for a1 is moderately positive (choice in [2.78, 8.07]) on every active step. Lowest-quartile activations are more often outside the canonical context; magnitude otherwise near-saturated (median 0.206 of max 0.241).",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 38,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (action == 1) & (prev_state != 1) & (prev_action != 2)",
+    "split": "test",
+    "precision": 0.8249960465974382,
+    "recall": 0.9398588800480409,
+    "f1": 0.878689629037012,
+    "mass_recall": 0.976059485555775,
+    "correlation": 0.867249009809244,
+    "n_active": 33305,
+    "n_predicted": 37942,
+    "coverage_by_activation_quartile": [
+      0.7696649453584724,
+      0.9907518616382417,
+      0.9991592601489311,
+      0.9998798943069902
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 38,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (action == 1) & (prev_state != 1) & (prev_action != 2)",
+    "split": "dev",
+    "precision": 0.8414552468722373,
+    "recall": 0.9462537281957039,
+    "f1": 0.8907827566647759,
+    "mass_recall": 0.9795302105381654,
+    "correlation": 0.8795108079837147,
+    "n_active": 33193,
+    "n_predicted": 37327,
+    "coverage_by_activation_quartile": [
+      0.7891312206289914,
+      0.9960231381055676,
+      0.9998794890335021,
+      1.0
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 38,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "All the factual claims check out on dev. Every activation is at D1 (phase != D1 has 0 activations). prev_reward == 1 has 0 activations. 33160 of 33193 activations come with action == 1, and D1 & action != 1 has P 0.0002. The D1 firing rate is 0.101 when prev_common == 0 and 0.003 when prev_common == 1. The simple predicate scores P 0.935 / R 0.766. The recorded predicate scores dev F1 0.891 and mass recall 0.980, and on test P 0.825 / R 0.940 / F1 0.879 / mass recall 0.976, matching the reported numbers.",
+      "The good state does not drive it. After a1 -> rare unrewarded, precision is 0.93 when good == S1 and 0.92 when good == S2.",
+      "The false positives are concentrated at rel -3, where the previous trial is unknown (-1). On test, the predicate scores P 0.934 / R 0.759 restricted to rel != -3 and P 0.555 restricted to rel == -3. This comes from the data window, not a gap in the explanation: at rel -3 the agent can see the previous trial but the dataset records it as unknown.",
+      "One small but systematic residual class is missed: after a2 -> S2 common unrewarded, when the agent then switches to a1. The unit fires on 28% of these steps (1750 activations, about 5% of active steps but only 2% of activation mass), and these are low-magnitude activations (the bottom quartile of activations has coverage 0.79). The explanation mentions this class, but 'does not fire after a2->S2 common unrewarded' overstates it. It should say it fires weakly and occasionally there. Test misses (2003 steps, 2.4% of mass) show the same pattern.",
+      "The label does not go beyond the predicate. It uses only the observed history plus the agent's own upcoming choice, and the 'about to stay with a1' wording is backed by action == 1 (only 125 steps follow a1-rare-unrewarded with a switch to a2, and the unit is silent on them)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

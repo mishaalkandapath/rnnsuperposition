@@ -1,0 +1,93 @@
+{
+  "label": "At D1, higher when S1 believed good or last rewarded; low after a2-S2-unrewarded, growing late in episode.",
+  "short_terms": "(phase == D1) * belief_lo * ep_dec ;; (phase == D1) * last_is(\"a2 S2 u\") * ep_dec ;; (phase == D1) * prev_reward * ep_dec",
+  "terms": "(phase == D1) * (prev_state == 1) * ep_dec ;; (phase == D1) * (prev_reward == 1) * ep_dec ;; (phase == D1) * belief_lo * ep_dec ;; (phase == GO) * (prev_reward == 0) ;; (phase == D2) * (state == 1) ;; (phase == D1) * last_is(\"a2 S2 u\") * ep_dec ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * ep_dec ;; (phase == D1) * belief_lo",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw reset gate of unit 4. Timing dominates (high at D1/D2, low at GO, D1 drifting down through the episode). Beyond timing, the variation is mostly at D1: the gate is higher when the ideal observer believes S1 is good (belief_lo) and when the previous trial was rewarded, and markedly lower after an a2->S2 unrewarded trial (and after consecutive losses). These D1 effects grow later in the episode (scaling by ep_dec improves fit), as the D1 baseline drops. The free fit adds a smaller D1 prev_state==S1 term, a loss-streak term, a GO term (higher after an unrewarded trial) and a D2 term (higher when S1 reached). Future variables were not needed.",
+  "full_test_scores": {
+    "gate": "unit_reset",
+    "feature": 4,
+    "terms": [
+      "(phase == D1) * (prev_state == 1) * ep_dec",
+      "(phase == D1) * (prev_reward == 1) * ep_dec",
+      "(phase == D1) * belief_lo * ep_dec",
+      "(phase == GO) * (prev_reward == 0)",
+      "(phase == D2) * (state == 1)",
+      "(phase == D1) * last_is(\"a2 S2 u\") * ep_dec",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * ep_dec",
+      "(phase == D1) * belief_lo"
+    ],
+    "weights": [
+      0.0029960807020106583,
+      0.00713760375899028,
+      0.003021690130701712,
+      0.05093046226600279,
+      0.024882647603331934,
+      -0.019420869778308023,
+      -0.008568966312674594,
+      0.0005035231973462699
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6265887628134739,
+    "r2": 0.9914067657467791,
+    "r2_timing_only": 0.9769872103529429
+  },
+  "gate": "unit_reset",
+  "feature": 4,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 4,
+    "terms": [
+      "(phase == D1) * belief_lo * ep_dec",
+      "(phase == D1) * last_is(\"a2 S2 u\") * ep_dec",
+      "(phase == D1) * prev_reward * ep_dec"
+    ],
+    "weights": [
+      0.0032484845989859726,
+      -0.02447300030688197,
+      0.006368790083048366
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5075230467147324,
+    "r2": 0.9886667314680225,
+    "r2_timing_only": 0.9769872103529429
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 4,
+    "terms": [
+      "(phase == D1) * belief_lo * ep_dec",
+      "(phase == D1) * last_is(\"a2 S2 u\") * ep_dec",
+      "(phase == D1) * prev_reward * ep_dec"
+    ],
+    "weights": [
+      0.0032484845989859726,
+      -0.02447300030688197,
+      0.006368790083048366
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5220508841465742,
+    "r2": 0.9891879990968173,
+    "r2_timing_only": 0.9773783431236674
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The short form only just clears the bar. Its test R^2 beyond timing is 0.5075 (dev about 0.52), against a threshold of 0.5 and an all-observed ceiling of 0.67. Many close variants land between 0.44 and 0.51: dropping prev_reward gives 0.44, replacing it with (prev_reward==0)*ep_dec gives 0.49, with a1-S2-u gives 0.50, with (prev_reward==0)*(prev_state==2) gives 0.505, and using ep_trial instead of ep_dec gives 0.51. So the description holds up, but its margin is thin.",
+      "The prev_reward*ep_dec term adds little, about 0.07 (0.44 without it, 0.51 with it). Belief_lo*ep_dec alone gives 0.22, and adding last_is('a2 S2 u')*ep_dec raises it to 0.44. The label's 'last rewarded' part is real but secondary.",
+      "A systematic miss remains at D1 after a1 S2 u: the short form over-predicts by 0.075 there, so the gate is lower than predicted. After a2 S1 u it over-predicts by 0.029. The low-gate pattern therefore covers unrewarded trials more broadly, not only a2-S2-u. These are rare-transition classes, so they carry little variance.",
+      "GO after unrewarded trials (a1 S1 u, a2 S1 u) is under-predicted by about 0.06. The short form ignores GO; this appears only in the free fit, where the explanation mentions it.",
+      "Every factual claim I checked holds: there is a positive belief_lo effect at D1 (residual by belief decile rises from -0.046 to +0.06); a2 S2 u is the most negative D1 cell at -0.126; a1 S1 r is the most positive at +0.095; scaling by ep_dec helps (0.447 without it, 0.508 with it); no future variables are used.",
+      "I found no short form that beats the recorded one by a meaningful margin (best alternative 0.5125 with ep_trial in place of ep_dec), so I propose no replacement."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "At D1, higher when S1 believed good or last rewarded; lower after a2-S2-unrewarded, more so late.",
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "At D1, higher when S1 believed good or last rewarded; lower after a2-S2-unrewarded, more so late."
+}

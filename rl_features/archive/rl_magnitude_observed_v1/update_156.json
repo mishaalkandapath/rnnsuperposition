@@ -1,0 +1,68 @@
+{
+  "label": "D1 after a2 that rarely reached S1; larger when belief favours S2, fades late in episode",
+  "terms": "(phase == D1) * (prev_action == 2) * (prev_state == 1) ;; (phase == D1) * (prev_action == 2) * (prev_state == 1) * np.tanh(-belief_lo) ;; (phase == D1) * (prev_action == 2) * (prev_state == 1) * np.maximum(ep_dec - 4, 0) ;; (phase == D1) * (1 - (prev_action == 2) * (prev_state == 1)) * (belief_lo < -1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Active only at D1 (zero at GO and D2). The magnitude is set by whether the previous trial was a2 that rarely led to S1 (+~2.1 over timing, whether or not it was rewarded; the apparent r/u gap, u +2.25 vs r +1.36, is mostly explained by belief). Within those trials it is graded by the ideal-observer belief: larger when the belief (after that trial) favours S2 as the good state (tanh(-belief_lo), weight ~+0.8), and it shrinks in the second half of the episode (about -0.4 per decile past decile 4). Other D1 steps get a small lift when belief strongly favours S2. Trial-before history, belief_cover and a separate reward split add almost nothing. Dev R^2 beyond timing 0.66; last-trial indicators alone 0.55. The profile ceilings are 0.62 all-observed and 0.73 all (including model policy); the earlier explanation from model policy scored test 0.57 on the policy decile alone, so using observed quantities only loses little here. Some whole windows sit at 0 or at about 3 regardless of history (bimodal), which no term captures.",
+  "gate": "update",
+  "feature": 156,
+  "test_scores": {
+    "gate": "update",
+    "feature": 156,
+    "terms": [
+      "(phase == D1) * (prev_action == 2) * (prev_state == 1)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 1) * np.tanh(-belief_lo)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 1) * np.maximum(ep_dec - 4, 0)",
+      "(phase == D1) * (1 - (prev_action == 2) * (prev_state == 1)) * (belief_lo < -1)"
+    ],
+    "weights": [
+      2.106529834409266,
+      0.8508198377593551,
+      -0.4234888504083922,
+      -0.1700156272823601
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.642427677882095,
+    "r2": 0.6796484426638869,
+    "r2_timing_only": 0.10409296939240953
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 156,
+    "terms": [
+      "(phase == D1) * (prev_action == 2) * (prev_state == 1)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 1) * np.tanh(-belief_lo)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 1) * np.maximum(ep_dec - 4, 0)",
+      "(phase == D1) * (1 - (prev_action == 2) * (prev_state == 1)) * (belief_lo < -1)"
+    ],
+    "weights": [
+      2.106529834409266,
+      0.8508198377593551,
+      -0.4234888504083922,
+      -0.1700156272823601
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6608517118696831,
+    "r2": 0.6969116493355132,
+    "r2_timing_only": 0.10632498741074048
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claim of a small negative term (-0.17) when belief strongly favours S2 on other D1 steps does not hold up. The term is mostly absorbing a missing D1 offset: the timing baseline puts about +0.35 on every D1 step, but the activation is about 0 on D1 steps that do not follow a2->S1 (misses shows over-prediction of -0.23 to -0.29 on D1 after a1 S2 r/u, a1 S1 r and a2 S2 u, and a D1 mean error of -0.12). Replacing the term with a plain (phase==D1) or non-a2S1 D1 offset (weight -0.26) raises test R^2 from 0.642 to 0.681. With that offset in the model, the belief_lo<-1 term flips to +0.05 and adds nothing (0.682).",
+      "The '+2.1 over timing' size depends on how the D1 baseline is handled: with the offset term the a2->S1 indicator weight is 2.05-2.31. The raw residuals are +1.36 for rewarded and +2.25 for unrewarded trials. The claim that belief accounts for the reward gap holds: a separate prev_reward==0 term gets +0.07 and adds nothing (0.681).",
+      "The other claims check out on test. The component is zero at GO and D2. The a2->S1 indicator alone scores 0.49 on test. Adding tanh(-belief_lo) gives 0.55 (weight +0.90); a sign-only belief_lo<0 version gives 0.676 vs 0.681. The late-episode fade is real but speeds up rather than being linear: per-decile weights are about 0 in deciles 0-4, then -0.21, -0.37, -0.82 and -1.98 for deciles 8 and up. A linear term past decile 4 still captures most of it (0.681 vs 0.684 for the per-decile version).",
+      "The 'trial before adds almost nothing' claim is slightly understated: a2S1 * (reward two trials back == 1) gets weight +0.39 and test R^2 0.687 (+0.006).",
+      "Remaining misses are whole windows. In some windows the activation stays 0 after a2 S1R even though about 3.36 is predicted. In others it is about 3.3-3.8 after a2 S2c, sometimes when the previous trial is outside the window, and 'D1 after ?' is under-predicted by +0.19. None of the observed-only variants I tried captured these: trial-before choice, state or reward, belief_cover, start_high, d1_err, the window's first trial. They look like hidden-state variation, not a missing observed cue.",
+      "With observed cues only, the fit (0.64-0.69) beats the policy-decile model-output reference (0.57) and the 'all observed' additive ceiling (0.62). The agent's own outputs lose nothing here."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a2 that rarely reached S1 (near 0 at other D1 steps); larger when belief favours S2, fades late in the episode",
+    "better_terms": "(phase == D1) * (prev_action == 2) * (prev_state == 1) ;; (phase == D1) * (prev_action == 2) * (prev_state == 1) * np.tanh(-belief_lo) ;; (phase == D1) * (prev_action == 2) * (prev_state == 1) * np.maximum(ep_dec - 4, 0) ;; (phase == D1) * (1 - (prev_action == 2) * (prev_state == 1)) ;; (phase == D1) * (prev_action == 2) * (prev_state == 1) * (tv('reward',-2)==1)",
+    "better_terms_test_r2_beyond_timing": 0.687
+  },
+  "final_label": "D1 after a2 that rarely reached S1 (near 0 at other D1 steps); larger when belief favours S2, fades late in the episode"
+}

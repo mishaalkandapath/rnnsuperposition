@@ -1,0 +1,78 @@
+{
+  "label": "D1 after a1->S2 rare loss, scaled by prior S1 wins, fading late episode",
+  "terms": "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 1) * (tv(\"state\", -2) == 1) ;; (phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 1) * (tv(\"state\", -2) == 2) ;; (phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 0) ;; (phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == -9) ;; (phase == D1) * last_is(\"a1 S2 u\") * np.clip(ep_trial - 50, 0, 40) ;; (phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -3) == 1) ;; (phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -3) == -9)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1, and almost only right after an a1 -> S2 (rare) trial that went unrewarded. That pattern alone gives test R^2 about 0.33 beyond timing. Its size grows with the reward history before that loss. If the trial before it was a rewarded S1 trial, that adds about 0.46; a rewarded S2 trial or a loss there adds about 0. A reward on trial -3 adds about 0.27, so the largest values (about 0.75 plus timing) follow two earlier wins, the last of them in S1. When those trials fall outside the window, the terms get weights of 0.32 and 0.19. It falls off linearly after episode trial 50, by about 0.014 per trial, and is almost silent by trial 85. The ideal-observer belief (graded or log-odds) and belief_cover add nothing once reward history is in the model (weight about 0). Nothing at GO or D2. Test R^2 beyond timing 0.57 (dev 0.56). That is above the additive all ceiling (0.41) and the all-observed ceiling (0.38), because the cues combine multiplicatively. So observed quantities lose nothing compared with the earlier value/policy-based account: policy decile alone gave 0.17. Remaining error comes from windows whose first trial has no previous-trial context.",
+  "gate": "update",
+  "feature": 24,
+  "test_scores": {
+    "gate": "update",
+    "feature": 24,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 1) * (tv(\"state\", -2) == 1)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 1) * (tv(\"state\", -2) == 2)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == -9)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * np.clip(ep_trial - 50, 0, 40)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -3) == 1)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -3) == -9)"
+    ],
+    "weights": [
+      0.4633896363363244,
+      -0.07343052146774179,
+      0.014756827249660771,
+      0.32356699832385655,
+      -0.013801183154033034,
+      0.27132451358323195,
+      0.18912664881693933
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5716930158528428,
+    "r2": 0.5900481795073524,
+    "r2_timing_only": 0.04285515841180676
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 24,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 1) * (tv(\"state\", -2) == 1)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 1) * (tv(\"state\", -2) == 2)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == -9)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * np.clip(ep_trial - 50, 0, 40)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -3) == 1)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -3) == -9)"
+    ],
+    "weights": [
+      0.4633896363363244,
+      -0.07343052146774179,
+      0.014756827249660771,
+      0.32356699832385655,
+      -0.013801183154033034,
+      0.27132451358323195,
+      0.18912664881693933
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5640265010532743,
+    "r2": 0.5833825993788504,
+    "r2_timing_only": 0.04439741950448517
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Every numeric claim reproduces on --split test. Test R^2 beyond timing is 0.5717. Weights: -2 rewarded S1 +0.463, -2 rewarded S2 -0.073, -2 loss +0.015, -2 outside window +0.324, late-episode slope -0.0138 per trial, -3 rewarded +0.271, -3 outside window +0.189. The profile confirms the activation is exactly 0 at GO and D2. The residual after a1 S2 u is +0.34; every other previous-trial pattern sits near -0.03.",
+      "The largest systematic error is at window edges, as the explanation says. In misses, the worst windows are D1 steps on the first trial of the window: actual about 1.1-1.2, predicted about 0.04. There is also an over-prediction of about 0.56 at the next D1, where the -9 terms guess but the real history was a loss (no firing). The 'outside window' terms carry 0.32 and 0.19, so they are guesses, not explanation.",
+      "'Belief adds nothing' is only true within the window. On the first window trial, adding (phase==D1)*(prev_action==-1)*(prev_reward==0)*belief raises test R^2 from 0.572 to 0.599, because the belief carries history from outside the window. On its own, last_is('a1 S2 u')*belief plus the late slope gets 0.453, against 0.33 for the pattern alone. So belief does track the 'prior S1 wins' scaling. It is just redundant with the explicit reward-history terms.",
+      "Small gain from an interaction: -2 rewarded S1 together with -3 rewarded adds about +0.11 on top of the two main effects. That is mild multiplicative stacking and does not change the label."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after an a1->S2 rare loss, scaled by prior S1 wins (belief that S1 is good), fading after episode trial ~50",
+    "better_terms": "(phase == D1) * last_is('a1 S2 u') * (tv('reward', -2) == 1) * (tv('state', -2) == 1) ;; (phase == D1) * last_is('a1 S2 u') * (tv('reward', -2) == -9) ;; (phase == D1) * last_is('a1 S2 u') * (tv('reward', -2) != 0) * belief ;; (phase == D1) * last_is('a1 S2 u') * np.clip(ep_trial - 50, 0, 40) ;; (phase == D1) * last_is('a1 S2 u') * (tv('reward', -3) == 1) ;; (phase == D1) * last_is('a1 S2 u') * (tv('reward', -3) == -9) ;; (phase == D1) * (prev_action == -1) * (prev_reward == 0) * belief ;; (phase == D1) * (prev_action == -1) * (prev_reward == 0) * belief * np.clip(ep_trial - 50, 0, 40)",
+    "better_terms_test_r2_beyond_timing": 0.607
+  },
+  "final_label": "D1 after an a1->S2 rare loss, scaled by prior S1 wins (belief that S1 is good), fading after episode trial ~50"
+}

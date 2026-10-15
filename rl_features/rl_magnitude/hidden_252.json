@@ -1,0 +1,112 @@
+{
+ "label": "At D2 after a1->S1, strong if last trial was rewarded a1->S1, fading over the episode",
+ "short_terms": "(in_state + in_action == 2) * (prev_reward == 1) ;; (in_state + in_action == 2) * (prev_reward == 1) * (prev_common == 1) ;; (in_state + in_action == 2) * (prev_reward == 1) * ep_trial",
+ "terms": "(phase == D2) * (action + state == 2) * last_is(\"a1 S1 r\") ;; (phase == D2) * (action + state == 2) * last_is(\"a1 S1 r\") * (tv(\"action\", -2) + tv(\"state\", -2) + 2*tv(\"reward\", -2) == 4) ;; (phase == D2) * (action + state == 2) * last_is(\"a1 S1 r\") * (tv(\"action\", -2) + tv(\"state\", -2) + 2*tv(\"reward\", -2) == 4) * (tv(\"action\", -3) + tv(\"state\", -3) + 2*tv(\"reward\", -3) == 4) ;; (phase == D2) * (action + state == 2) * (prev_reward == 1) ;; (phase == D2) * (action + state == 2) * ep_dec ;; (phase == D2) * (action + state == 2) * belief_lo ;; (phase == D2) * (action + state == 2) * last_is(\"a1 S1 r\") * ep_dec",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Silent at D1 and GO. It fires only at D2 once the agent has chosen a1 and reached S1 (in_state + in_action == 2 is that observed D2 input; the state is now visible, so this is not future information). Its magnitude is set mostly by the previous trial: largest (about 0.3 to 0.4) when the previous trial was also a1 -> S1 rewarded, smaller after any other rewarded trial, and near zero after an unrewarded trial. The a1-S1-rewarded boost shrinks with episode decile (weight about -0.028 per decile), which matches the timing baseline falling to zero after trial 60. The free fit adds a streak term for the trial before, the observer belief_lo and a plain episode-decile term; together they add almost nothing (dev 0.476 vs short 0.467). Belief alone is weaker than the last-trial pattern.",
+ "full_test_scores": {
+  "gate": "hidden",
+  "feature": 252,
+  "terms": [
+   "(phase == D2) * (action + state == 2) * last_is(\"a1 S1 r\")",
+   "(phase == D2) * (action + state == 2) * last_is(\"a1 S1 r\") * (tv(\"action\", -2) + tv(\"state\", -2) + 2*tv(\"reward\", -2) == 4)",
+   "(phase == D2) * (action + state == 2) * last_is(\"a1 S1 r\") * (tv(\"action\", -2) + tv(\"state\", -2) + 2*tv(\"reward\", -2) == 4) * (tv(\"action\", -3) + tv(\"state\", -3) + 2*tv(\"reward\", -3) == 4)",
+   "(phase == D2) * (action + state == 2) * (prev_reward == 1)",
+   "(phase == D2) * (action + state == 2) * ep_dec",
+   "(phase == D2) * (action + state == 2) * belief_lo",
+   "(phase == D2) * (action + state == 2) * last_is(\"a1 S1 r\") * ep_dec"
+  ],
+  "weights": [
+   0.1389208701000632,
+   0.011705141337137358,
+   -0.01226935649075234,
+   0.06369394969066444,
+   -0.0035230830472679667,
+   0.002136450709107018,
+   -0.024758263877125458
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.469920410011778,
+  "r2": 0.5405091638805557,
+  "r2_timing_only": 0.1331663304945323
+ },
+ "gate": "hidden",
+ "feature": 252,
+ "test_scores": {
+  "gate": "hidden",
+  "feature": 252,
+  "terms": [
+   "(in_state + in_action == 2) * (prev_reward == 1)",
+   "(in_state + in_action == 2) * (prev_reward == 1) * (prev_common == 1)",
+   "(in_state + in_action == 2) * (prev_reward == 1) * ep_trial"
+  ],
+  "weights": [
+   0.17444795293276003,
+   0.034002605920254135,
+   -0.0024788629544910115
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.4871701188174907,
+  "r2": 0.5554617922625125,
+  "r2_timing_only": 0.1331663304945323
+ },
+ "dev_scores": {
+  "gate": "hidden",
+  "feature": 252,
+  "terms": [
+   "(in_state + in_action == 2) * (prev_reward == 1)",
+   "(in_state + in_action == 2) * (prev_reward == 1) * (prev_common == 1)",
+   "(in_state + in_action == 2) * (prev_reward == 1) * ep_trial"
+  ],
+  "weights": [
+   0.17444795293276003,
+   0.034002605920254135,
+   -0.0024788629544910115
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.4959740198957008,
+  "r2": 0.567042600230057,
+  "r2_timing_only": 0.14100181962772995
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The label makes the previous trial being 'rewarded a1->S1' the condition, but what mainly matters is that the previous trial was rewarded at all. In the fitted short form, D2(a1,S1) after any rewarded trial gets +0.162 and the a1-S1-r term adds only +0.034. Scored alone on test: (in)*last_is('a1 S1 r') = 0.211, (in)*(prev_reward==1) = 0.246.",
+   "The fading belongs to rewarded trials in general, not to a1-S1-r trials in particular. (in)*(prev_reward==1) ;; (in)*(prev_reward==1)*ep_dec with no last_is scores 0.469 on test, above the recorded 3-term form (0.462). Swapping the recorded ep_dec term for (prev_reward==1)*ep_dec in the same 3-term structure gives 0.485.",
+   "Better short form: (in)*(prev_reward==1) ;; (in)*(prev_reward==1)*(prev_common==1) ;; (in)*(prev_reward==1)*ep_trial scores 0.487 on test. The extra boost comes from the previous rewarded trial being common, not from it being a1-S1 specifically. (prev_action==0) adds nothing: 0.469 -> 0.469.",
+   "Remaining systematic error, unchanged by any variant tried: at D2 the fit is too high after rare-rewarded previous trials (a1 S2 r -0.036, a2 S1 r -0.023) and after unrewarded ones (about -0.015).",
+   "The worst-fit dev windows include early-episode runs of a1-S1-rewarded trials (t1-t8) where the feature is exactly 0 throughout but the fit predicts about 0.2-0.23. Some episodes silence the feature in a way no observed variable here explains.",
+   "Belief terms did not help: multiplying the rewarded term by belief or belief_lo in place of ep_dec lowers test R^2 to about 0.26.",
+   "Checks that held up: silent at D1 and GO, fires only at D2 after a1->S1, no future variables used."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At D2 after a1->S1: strong if last trial rewarded (extra if common), fading over the episode",
+  "better_short_terms": "(in_state + in_action == 2) * (prev_reward == 1) ;; (in_state + in_action == 2) * (prev_reward == 1) * (prev_common == 1) ;; (in_state + in_action == 2) * (prev_reward == 1) * ep_trial",
+  "better_short_terms_test_r2_beyond_timing": 0.4872
+ },
+ "final_label": "At D2 after a1->S1: strong if last trial rewarded (extra if common), fading over the episode",
+ "original_short_terms": "(in_state + in_action == 2) * last_is(\"a1 S1 r\") ;; (in_state + in_action == 2) * last_is(\"a1 S1 r\") * ep_dec ;; (in_state + in_action == 2) * (prev_reward == 1)",
+ "original_test_scores": {
+  "gate": "hidden",
+  "feature": 252,
+  "terms": [
+   "(in_state + in_action == 2) * last_is(\"a1 S1 r\")",
+   "(in_state + in_action == 2) * last_is(\"a1 S1 r\") * ep_dec",
+   "(in_state + in_action == 2) * (prev_reward == 1)"
+  ],
+  "weights": [
+   0.16100093611539784,
+   -0.028225257290048867,
+   0.052205956099889816
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.4616937281069772,
+  "r2": 0.533377999017163,
+  "r2_timing_only": 0.1331663304945323
+ },
+ "terms_from": "skeptic"
+}

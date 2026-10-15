@@ -1,0 +1,85 @@
+{
+  "label": "high at D2 after rare a2->S1 and at D1 after unrewarded a2; low after a1->S2",
+  "terms": "(phase == D2) * (action == 2) * (state == 1) ;; (phase == D2) * (action == 1) * (state == 2) ;; (phase == D2) * (action == 2) ;; (phase == D1) * (prev_action == 2) * (prev_reward == 0) ;; (phase == D1) * (prev_action == 2) ;; (phase == D2) * (action == 1) * (state == 1) * (prev_reward == 1) ;; (phase != GO) * belief_lo ;; (phase == D2) * (prev_reward == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw candidate n of GRU unit 15 (timing alone R^2 0.71: about -0.6 at D1, +0.87 at GO, -0.28 at D2). Beyond timing, the magnitude is mostly set by observed inputs at D1 and D2. D2: the just-made choice x reached state dominates. a2 reaching S1 (rare) pushes it strongly up (about +1 relative to a2 S2); a1 reaching S2 (rare) pushes it down (about -0.5); a1 reaching S1 sits in between and goes up further when the previous trial was rewarded (rewarded a1-S1 streaks), and any previous reward adds about +0.2 at D2. D1: a previous unrewarded a2 trial (a2 S2 u, a2 S1 u) raises it strongly (+0.85); a previous a1 trial lowers it. The ideal-observer belief log-odds (S1 good) adds a small graded negative term at D1/D2 (higher when S2 looks good). GO is nearly flat beyond timing. All terms are observed at their step (no future, hidden, or model outputs). Dev R^2 beyond timing 0.76, against an all-cue ceiling of 0.94 and an all-observed reference of 0.83. The earlier model-based explanation (policy-decile reference 0.69) loses nothing here: observed choice/state/reward history matches or beats it.",
+  "gate": "unit_candidate",
+  "feature": 15,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 15,
+    "terms": [
+      "(phase == D2) * (action == 2) * (state == 1)",
+      "(phase == D2) * (action == 1) * (state == 2)",
+      "(phase == D2) * (action == 2)",
+      "(phase == D1) * (prev_action == 2) * (prev_reward == 0)",
+      "(phase == D1) * (prev_action == 2)",
+      "(phase == D2) * (action == 1) * (state == 1) * (prev_reward == 1)",
+      "(phase != GO) * belief_lo",
+      "(phase == D2) * (prev_reward == 1)"
+    ],
+    "weights": [
+      1.071168520597009,
+      -0.4885681497519123,
+      -0.45351887050564255,
+      0.8542263730532924,
+      -0.17962604725192952,
+      0.259299829029208,
+      -0.0930549935492451,
+      0.19357935498454057
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7514625930504153,
+    "r2": 0.926984977980576,
+    "r2_timing_only": 0.7062211965773229
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 15,
+    "terms": [
+      "(phase == D2) * (action == 2) * (state == 1)",
+      "(phase == D2) * (action == 1) * (state == 2)",
+      "(phase == D2) * (action == 2)",
+      "(phase == D1) * (prev_action == 2) * (prev_reward == 0)",
+      "(phase == D1) * (prev_action == 2)",
+      "(phase == D2) * (action == 1) * (state == 1) * (prev_reward == 1)",
+      "(phase != GO) * belief_lo",
+      "(phase == D2) * (prev_reward == 1)"
+    ],
+    "weights": [
+      1.071168520597009,
+      -0.4885681497519123,
+      -0.45351887050564255,
+      0.8542263730532924,
+      -0.17962604725192952,
+      0.259299829029208,
+      -0.0930549935492451,
+      0.19357935498454057
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7589523701421615,
+    "r2": 0.9287821280215227,
+    "r2_timing_only": 0.7045485490959646
+  },
+  "final_verdict": "partially_explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The scores reproduce: the claimed 8 terms give 0.7515 test R^2 beyond timing (0.926 total, 0.706 from timing alone). The fitted weights match the explanation: a2->S1 at D2 +1.07, a1->S2 at D2 -0.49, a2 at D2 -0.45, D1 after unrewarded a2 +0.85, D2 a1-S1 after a reward +0.26, D2 after any reward +0.19, belief_lo -0.09.",
+      "Gap to the observed-only reference: 0.75 against 0.83, with the ceiling over all cues at 0.94. None of the variants I tried closed it: interactions with belief, trial-before terms, ep_dec, belief_cover and rare-rewarded D1 terms all stayed between 0.74 and 0.76 on test.",
+      "A systematic error remains at D1 (misses): after 'a1 S2 r' the fit over-predicts by -0.32 and after 'a2 S1 r' it under-predicts by +0.25. With my best swap these are still -0.30 and +0.09. A signed rare-rewarded D1 term raises test R^2 by only 0.002.",
+      "The D2 response to the state reached is much more variable than the terms assume. Rewarded a1->S1 streaks reach raw values of about +0.70 to +0.76 at D2 where the fit predicts -0.17 to +0.02 (windows t25-t28 and t41-t45). The mean D2 residual for a1-S1 is only +0.04. Conversely, a2->S1 rare trials that come right after switching away from an unrewarded a1-S1 trial reach about -0.3 to -0.6 raw where the fit predicts +0.5 to +0.7 (windows t22-23 and t87-88). No observed-only term I tried fixes either case: belief_lo, belief > 0.9, two rewarded trials back, ep_dec and prev_action interactions all left test R^2 at or below 0.76. These are the largest misses (about 0.9 each), so the label's 'high after rare a2->S1' holds on average only.",
+      "The claim that observed quantities 'lose nothing compared with the model's policy' is unsupported. It compares an 8-term fit (0.75) with one single-table reference (policy decile alone, 0.69), not with the earlier policy- or value-based explanation. The observed-only run cannot test this, so the claim should be dropped or softened.",
+      "'GO is nearly flat beyond timing' slightly understates GO. The GO residual by belief decile runs from +0.11 to -0.18. Replacing the weakest D1 term, (phase == D1) * (prev_action == 2), with (phase == GO) * belief_lo raises test R^2 from 0.7515 to 0.7605.",
+      "The term (phase == D1) * (prev_action == 2) gets a negative weight (-0.18) because it overlaps with the belief term. The explanation's 'a previous a1 trial lowers it' is right in the raw residual table (a1 cells -0.2 to -0.4; a2-rewarded cells about +0.03), but that term's weight does not support it directly."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "high at D2 after rare a2->S1 and at D1 after unrewarded a2; low at D2 after rare a1->S2; graded by belief that S2 is good; large unexplained swings at D2 within streaks",
+    "better_terms": "(phase == D2) * (action == 2) * (state == 1) ;; (phase == D2) * (action == 1) * (state == 2) ;; (phase == D2) * (action == 2) ;; (phase == D1) * (prev_action == 2) * (prev_reward == 0) ;; (phase == GO) * belief_lo ;; (phase == D2) * (action == 1) * (state == 1) * (prev_reward == 1) ;; (phase != GO) * belief_lo ;; (phase == D2) * (prev_reward == 1)",
+    "better_terms_test_r2_beyond_timing": 0.7605
+  },
+  "final_label": "high at D2 after rare a2->S1 and at D1 after unrewarded a2; low at D2 after rare a1->S2; graded by belief that S2 is good; large unexplained swings at D2 within streaks"
+}

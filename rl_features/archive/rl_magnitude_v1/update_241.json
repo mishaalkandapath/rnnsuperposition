@@ -1,0 +1,62 @@
+{
+  "label": "D2 a2->S2 (common); larger the weaker the D2 policy preference for a2",
+  "terms": "(phase == D2) * (action == 2) * (state == 2) ;; (phase == D2) * (action == 2) * (state == 2) * choice ;; (phase == D2) * (action == 2) * (state == 2) * value",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 of trials where the agent chose a2 and reached S2 via the common transition (zero at D1/GO and on other choice/state combinations). Within those steps its magnitude rises linearly with the model policy logit(a1)-logit(a2) at that D2 step: large (~1.5-2.3) when the a2 preference is weak or reversed (e.g. after a2 S2 unrewarded, a1 S1 unrewarded, a1 S2 rewarded, or with no prior trial), small (~0.2-0.5) after repeated rewarded a2 S2 trials when a2 is strongly preferred; value adds a small positive slope. The timing decline over the episode is in the baseline. Dev R^2 beyond timing: indicator + choice 0.70, + value 0.72; observed-only previous-trial pattern terms (a2 S2 u, a1 S1 u, a1 S2 r, prev rewarded) reach only 0.45 dev, and add nothing once choice is in. Hidden good state and future reward add nothing. Choice/value are internal model quantities, not future variables.",
+  "gate": "update",
+  "feature": 241,
+  "test_scores": {
+    "gate": "update",
+    "feature": 241,
+    "terms": [
+      "(phase == D2) * (action == 2) * (state == 2)",
+      "(phase == D2) * (action == 2) * (state == 2) * choice",
+      "(phase == D2) * (action == 2) * (state == 2) * value"
+    ],
+    "weights": [
+      0.5597442683119277,
+      0.22588419766607942,
+      0.05752098114090313
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7357156365585232,
+    "r2": 0.7572231520372584,
+    "r2_timing_only": 0.08138020425675996
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 241,
+    "terms": [
+      "(phase == D2) * (action == 2) * (state == 2)",
+      "(phase == D2) * (action == 2) * (state == 2) * choice",
+      "(phase == D2) * (action == 2) * (state == 2) * value"
+    ],
+    "weights": [
+      0.5597442683119277,
+      0.22588419766607942,
+      0.05752098114090313
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7230867817530588,
+    "r2": 0.7438319278014723,
+    "r2_timing_only": 0.07491569445382595
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold up. On test, the indicator alone scores 0.107, indicator + choice 0.704, and adding value 0.736. The fitted choice weight is +0.226 and value is +0.058, which matches the sign of 'larger the weaker the a2 preference' and the small value slope. The profile residual is nonzero only in the D2 a2-S2 cell (code 8); all other cells sit at the -0.09 intercept offset.",
+      "There is a large systematic error the label leaves out: the feature fades over the episode and shuts off in the last ~10 trials. The worst-fit windows by misses are almost all late-episode a2-S2 D2 steps (t81-t99), with predicted 0.8-1.45 against actual 0 (or 0.02-0.35). The additive timing baseline cannot capture this because it adds a single offset to all D2 steps (D2 decile mean 0.17 -> 0.0002). Gain and slope both shrink with episode time.",
+      "Letting the a2-S2 indicator and the choice slope scale with episode time raises test R^2 beyond timing from 0.736 to 0.837 (adding B*ep_trial and B*choice*ep_trial). Adding an extra cutoff at ep_trial >= 90 raises it to 0.851. That is a gain of +0.11, larger than the gain value provides (+0.03).",
+      "The remaining 'over-predicted after a1 ...' D2 rows (about -0.05 to -0.07) look like intercept artifacts from the additive D2 baseline. Adding B*(prev_action==1) gives no gain (0.8508).",
+      "Minor point: 'choice' at D2 is the policy readout of the same hidden state this gate helps produce. It is not observed input, so the explanation leans on a model-internal correlate rather than on trial history. Observed history terms reach only ~0.45 on dev, per the original agent."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after a2->S2 (common): larger the weaker the D2 policy preference for a2; both the gain and the slope fade over the episode, and it is near zero in the last ~10 trials",
+    "better_terms": "(phase == D2) * (action == 2) * (state == 2) ;; (phase == D2) * (action == 2) * (state == 2) * choice ;; (phase == D2) * (action == 2) * (state == 2) * value ;; (phase == D2) * (action == 2) * (state == 2) * ep_trial ;; (phase == D2) * (action == 2) * (state == 2) * choice * ep_trial ;; (phase == D2) * (action == 2) * (state == 2)*(ep_trial>=90) ;; (phase == D2) * (action == 2) * (state == 2)*choice*(ep_trial>=90)",
+    "better_terms_test_r2_beyond_timing": 0.8508
+  },
+  "final_label": "D2 after a2->S2 (common): larger the weaker the D2 policy preference for a2; both the gain and the slope fade over the episode, and it is near zero in the last ~10 trials"
+}

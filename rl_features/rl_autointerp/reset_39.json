@@ -1,0 +1,105 @@
+{
+  "label": "D2 after choosing a1, early in the episode",
+  "predicate": "(phase == D2) & (((action == 1) & (ep_trial < 55)) | ((action == 2) & (state == 1) & (ep_trial < 25)) | ((action == 2) & (ep_trial < 4)))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (never D1/GO). 93% of mass comes from steps where the just-made choice (in_action) was a1, and it is mostly at S1. Its rate and magnitude drop steadily with the trial index in the episode (rate 0.26 for trials 0-9, 0.06 for 50-59, essentially 0 from trial 60 on), so it acts like an a1-at-D2 detector that is gated by time in the episode. In the examples magnitude is highest for a1 followed by common S1, lower for a1 followed by rare S2 (~0.65-0.7 of max), and lower again for a2 with S2 (~0.5). It does not fire when reward input is 1, which is never the case at D2 anyway. All variables are observed at D2. Dev scores: F1 0.84, mass recall 0.93. Cutting at ep_trial < 55 gives F1 0.86; I kept 60 as the simpler cut. Adding state==1 as an alternative to a1 raises recall but costs precision.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 39,
+    "predicate": "(phase == D2) & (((action == 1) & (ep_trial < 55)) | ((action == 2) & (state == 1) & (ep_trial < 25)) | ((action == 2) & (ep_trial < 4)))",
+    "split": "test",
+    "precision": 0.8797138851432806,
+    "recall": 0.9224063670411985,
+    "f1": 0.9005544306458911,
+    "mass_recall": 0.9793587126025516,
+    "correlation": 0.7827800315722108,
+    "n_active": 106800,
+    "n_predicted": 111983,
+    "coverage_by_activation_quartile": [
+      0.7497378277153558,
+      0.9455430711610487,
+      0.9944194756554308,
+      0.9999250936329588
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 39,
+    "predicate": "(phase == D2) & (((action == 1) & (ep_trial < 55)) | ((action == 2) & (state == 1) & (ep_trial < 25)) | ((action == 2) & (ep_trial < 4)))",
+    "split": "dev",
+    "precision": 0.8754918805076761,
+    "recall": 0.9294154564264491,
+    "f1": 0.9016481556353604,
+    "mass_recall": 0.9811935458351901,
+    "correlation": 0.7808832106951543,
+    "n_active": 101977,
+    "n_predicted": 108258,
+    "coverage_by_activation_quartile": [
+      0.7737987840753089,
+      0.9490468345493057,
+      0.994822311132031,
+      1.0
+    ]
+  },
+  "gate": "reset",
+  "feature": 39,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The main claims hold. Dev: the feature fires only at D2 (D1 and GO both 0/380619), 92.7% of its activation mass is at in_action = a1, and the firing rate falls with ep_trial (0.26 for trials 0-9, 0.061 for 50-59, 0.001 for 60-69, then 0). Test scores reproduce exactly: P 0.835, R 0.838, F1 0.836, mass recall 0.923.",
+      "There is a systematic miss class: a2 followed by a rare transition to S1, early in the episode. The predicate (D2 & action==2 & state==1 & ep_trial<20) has dev precision 0.92 and covers 8.2% of active steps. The explanation never mentions this case. Its own magnitude ordering (a2 reaching S2 at about 0.5) leaves it out.",
+      "There is a second miss class: on the first few trials (ep_trial < 4), a2 reaching S2 also fires reliably (precision 0.80). Together with the case above, this is most of the 17315 test-split misses. The test-split misses are dominated by a2 windows with good=S1 or low_first, which looks like a structured gap rather than scattered noise.",
+      "The label is time-gated in a coarse way. With a1 at D2, precision is 0.999 for trials 0-9, 0.72 for trials 40-49 and only 0.40 for trials 50-59. So the feature is a steadily decaying signal, not a step at 60. A cut at 50 gives dev P 0.93 and F1 0.84.",
+      "Some contingencies that are not in the label: given the predicate, rare a1 (reaching S2) has precision 0.61 and common a1 has 0.91. The firing rate is higher when S1 started good (start_high 0.112 vs 0.067) and when good=S1 (0.141 vs 0.030). These are secondary modulations.",
+      "No future variables are involved. The original and the improved predicate both use only phase, the agent's own choice, the reached state (observed at D2) and ep_trial."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 where a1 was chosen or S1 was reached, early in the episode (decays to zero by about trial 60)",
+    "better_predicate": "(phase == D2) & (((action == 1) & (ep_trial < 55)) | ((action == 2) & (state == 1) & (ep_trial < 25)) | ((action == 2) & (ep_trial < 4)))",
+    "better_predicate_test_f1": 0.901
+  },
+  "final_label": "D2 where a1 was chosen or S1 was reached, early in the episode (decays to zero by about trial 60)",
+  "original_predicate": "(phase == D2) & (action == 1) & (ep_trial < 60)",
+  "original_test_scores": {
+    "gate": "reset",
+    "feature": 39,
+    "predicate": "(phase == D2) & (action == 1) & (ep_trial < 60)",
+    "split": "test",
+    "precision": 0.8348104336144488,
+    "recall": 0.837874531835206,
+    "f1": 0.8363396762495795,
+    "mass_recall": 0.9226766233541731,
+    "correlation": 0.7508179951741589,
+    "n_active": 106800,
+    "n_predicted": 107192,
+    "coverage_by_activation_quartile": [
+      0.6467041198501873,
+      0.7847191011235956,
+      0.9332584269662921,
+      0.986816479400749
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "reset",
+    "feature": 39,
+    "predicate": "(phase == D2) & (action == 1) & (ep_trial < 60)",
+    "split": "dev",
+    "precision": 0.82986622041413,
+    "recall": 0.8461417770673779,
+    "f1": 0.8379249735377804,
+    "mass_recall": 0.9267967015486603,
+    "correlation": 0.7497168841776928,
+    "n_active": 101977,
+    "n_predicted": 103977,
+    "coverage_by_activation_quartile": [
+      0.6572269072367131,
+      0.805836667451165,
+      0.9336314426923982,
+      0.9878795010590727
+    ]
+  },
+  "predicate_from": "skeptic"
+}

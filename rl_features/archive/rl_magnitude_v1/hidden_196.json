@@ -1,0 +1,74 @@
+{
+  "label": "D1 after a1->S1 rewarded; larger with strong a1 policy, a1-rewarded streak, low value",
+  "terms": "(phase == D1) * last_is(\"a1 S1 r\") ;; (phase == D1) * last_is(\"a1 S1 r\") * (tv(\"action\", -2) == 1) * (tv(\"reward\", -2) == 1) ;; (phase == D1) * last_is(\"a1 S1 r\") * (ep_trial / 100.0) ** 3 ;; (phase == D1) * last_is(\"a1 S1 r\") * np.clip(choice, 0, 6) ;; (phase == D1) * last_is(\"a1 S1 r\") * value ;; (phase == D1) * (in_rew == 1) * (prev_action < 0) * (ep_trial / 100.0) ** 3",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Active only at D1 (zero at GO and D2). Magnitude is set by the previous trial having been a1 -> S1 (common) and rewarded; every other previous-trial pattern sits near zero. Within those steps it grows with the model D1 a1-preference logit (choice, clipped at 0..6, the largest graded effect), is larger when the trial before was also an a1 reward, and is somewhat larger when the value-head output is lower. Late-episode growth in the timing baseline mostly comes from longer a1-rewarded streaks / stronger a1 policy (with choice in the model the ep_trial^3 term turns negative). One extra term covers window-first trials where the previous trial is unknown (rewarded D1, late episode). Test R^2 beyond timing 0.49 (dev 0.50), above the additive all ceiling of 0.40. Using only observed history (last trial, trial-2 and trial-3 a1/reward/state, ep_trial) gives test 0.31, so the model policy term carries a lot of the graded part. No future variables used.",
+  "gate": "hidden",
+  "feature": 196,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 196,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S1 r\")",
+      "(phase == D1) * last_is(\"a1 S1 r\") * (tv(\"action\", -2) == 1) * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * last_is(\"a1 S1 r\") * (ep_trial / 100.0) ** 3",
+      "(phase == D1) * last_is(\"a1 S1 r\") * np.clip(choice, 0, 6)",
+      "(phase == D1) * last_is(\"a1 S1 r\") * value",
+      "(phase == D1) * (in_rew == 1) * (prev_action < 0) * (ep_trial / 100.0) ** 3"
+    ],
+    "weights": [
+      1.0274046167140354,
+      0.1073084178169233,
+      -0.25191419357193384,
+      0.14318835980966904,
+      -0.1895787099333848,
+      0.15034266708800562
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.48858791170570115,
+    "r2": 0.5449856460068377,
+    "r2_timing_only": 0.11027845370108214
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 196,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S1 r\")",
+      "(phase == D1) * last_is(\"a1 S1 r\") * (tv(\"action\", -2) == 1) * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * last_is(\"a1 S1 r\") * (ep_trial / 100.0) ** 3",
+      "(phase == D1) * last_is(\"a1 S1 r\") * np.clip(choice, 0, 6)",
+      "(phase == D1) * last_is(\"a1 S1 r\") * value",
+      "(phase == D1) * (in_rew == 1) * (prev_action < 0) * (ep_trial / 100.0) ** 3"
+    ],
+    "weights": [
+      1.0274046167140354,
+      0.1073084178169233,
+      -0.25191419357193384,
+      0.14318835980966904,
+      -0.1895787099333848,
+      0.15034266708800562
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5029650904842242,
+    "r2": 0.5611002183265181,
+    "r2_timing_only": 0.11696387261597119
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Large systematic error remains at D1 after every pattern other than a1 S1 r. The misses output on the claimed terms shows D1 after a2 S2 u -0.052, a2 S1 r -0.051, a2 S2 r -0.051, a2 S1 u -0.050 and a1 S2 u -0.049 (mean D1 error -0.030). The cause: the per-decile timing baseline (D1 0.025 to 0.156) stays switched on for those steps even though the feature is about 0 there. GO and D2 are under-predicted by +0.015 for the same reason. The explanation says activation 'stays near zero' after the other patterns, but the fit does not predict that. Adding (phase==D1)*(1-last_is('a1 S1 r'))*(prev_action>0)*ep_dec removes the error (per-cell errors become about 0.000).",
+      "The first-window D1 step, where the previous trial is unknown, is the worst-fit class. The top miss windows all start with a late-episode r1 step with actual about 1.05-1.13 but predicted about 0.18-0.27. The single term in_rew*(prev unknown)*ep_trial^3 is far too weak. Adding U*clip(choice,0,6) and U*value, with U = (phase==D1)*(in_rew==1)*(prev_action<0), raises test R^2 from 0.49 to 0.58.",
+      "The claim 'bigger when the trial before that was an a1 reward too' is not supported on its own. Added to last_is('a1 S1 r') it gains only about 0.001 test R^2 (0.2229 to 0.2237, weight +0.016), and requiring state S1 as well gives 0.2246. It gets weight 0.107 only as a correction once choice is in the fit: dropping it from the full set costs 0.019 (0.4886 to 0.4697). The raw examples actually show activation falling across consecutive a1 S1 r steps (1.14, 1.01, 0.93, 0.90), so 'larger with an a1-rewarded streak' in the label is misleading.",
+      "The 'low value' and 'strong a1 policy' parts check out. Value alone adds 0.08 test R^2 (weight -0.10) and choice alone adds 0.10 (0.22 to 0.32). The 'only at D1' claim also holds: GO and D2 are exactly 0 in the profile.",
+      "The reported test R^2 of 0.4886 reproduces exactly, but simple fixes for the gaps above reach 0.65, so the original terms leave a large structured remainder."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 only: about 0 unless the last trial was a1->S1 rewarded; on those steps it grows with the D1 a1-preference logit and is larger at low value (no clear growth with streak length). On a window's first D1, where the last trial is unknown, it is large when reward is shown and a1 preference is strong.",
+    "better_terms": "(phase == D1) * last_is('a1 S1 r') ;; (phase == D1) * last_is('a1 S1 r') * (tv('action', -2) == 1) * (tv('reward', -2) == 1) ;; (phase == D1) * last_is('a1 S1 r') * (ep_trial / 100.0) ** 3 ;; (phase == D1) * last_is('a1 S1 r') * np.clip(choice, 0, 6) ;; (phase == D1) * last_is('a1 S1 r') * value ;; (phase == D1) * (in_rew == 1) * (prev_action < 0) * np.clip(choice, 0, 6) ;; (phase == D1) * (in_rew == 1) * (prev_action < 0) * (ep_trial / 100.0) ** 3 ;; (phase == D1) * (1 - last_is('a1 S1 r')) * (prev_action > 0) * ep_dec",
+    "better_terms_test_r2_beyond_timing": 0.6457
+  },
+  "final_label": "D1 only: about 0 unless the last trial was a1->S1 rewarded; on those steps it grows with the D1 a1-preference logit and is larger at low value (no clear growth with streak length). On a window's first D1, where the last trial is unknown, it is large when reward is shown and a1 preference is strong."
+}

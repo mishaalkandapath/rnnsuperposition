@@ -1,0 +1,72 @@
+{
+  "label": "Late-episode (t>=90) D1 after a2->S2 rewarded; graded by S2 reward streak and S2 belief",
+  "terms": "(phase == D1) * (ep_trial >= 90) * (1 - (phase == D1) * (prev_reward == 1) * isin(prev_state, [2, -1]) * (prev_action != 1)) ;; (phase == D1) * (prev_reward == 1) * isin(prev_state, [2, -1]) * (prev_action != 1) * (ep_trial >= 90) ;; (phase == D1) * (prev_reward == 1) * isin(prev_state, [2, -1]) * (prev_action != 1) * (ep_trial >= 93) ;; (phase == D1) * (prev_reward == 1) * isin(prev_state, [2, -1]) * (prev_action != 1) * (ep_trial >= 90) * (tv(\"reward\", -2) == 1) * (tv(\"state\", -2) == 2) ;; (phase == D1) * (prev_reward == 1) * isin(prev_state, [2, -1]) * (prev_action != 1) * (ep_trial >= 90) * np.clip(-belief_lo, 0, 8)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Sparse feature (nonzero on 0.8% of steps), active only at D1 in the last ~10 trials of the episode, and only when the previous trial was a2 -> S2 rewarded (or the window-first trial, where the history is unknown but the reward was seen). It is zero at GO and D2. Fitted weights: every other late D1 (unrewarded, or rewarded via a1/S1) is pulled to zero (-0.056, offsetting the decile-9 timing baseline). On a2-S2-r D1s, t90-92 is little above zero (-0.062 relative to the baseline), it steps up from t>=93 (+0.10), adds +0.065 when the trial before was also rewarded at S2 (an S2 reward streak), and grows with the ideal-observer S2-good log-odds (+0.031 per unit of clip(-belief_lo)). Uses only observed quantities. Test R^2 beyond timing is 0.67, far above the profile all ceiling of 0.09 because the cues interact (late x a2 S2 r x streak). Without the late-other offset term, test R^2 is about 0.48. The earlier explanation used the policy leaning a2; here S2 belief plus the S2 reward streak stand in for it with no evident loss. The remaining misses are early onsets (t88-92) on long a2 S2 r streaks, and window-first trials whose earlier history is not visible.",
+  "gate": "hidden",
+  "feature": 62,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 62,
+    "terms": [
+      "(phase == D1) * (ep_trial >= 90) * (1 - (phase == D1) * (prev_reward == 1) * isin(prev_state, [2, -1]) * (prev_action != 1))",
+      "(phase == D1) * (prev_reward == 1) * isin(prev_state, [2, -1]) * (prev_action != 1) * (ep_trial >= 90)",
+      "(phase == D1) * (prev_reward == 1) * isin(prev_state, [2, -1]) * (prev_action != 1) * (ep_trial >= 93)",
+      "(phase == D1) * (prev_reward == 1) * isin(prev_state, [2, -1]) * (prev_action != 1) * (ep_trial >= 90) * (tv(\"reward\", -2) == 1) * (tv(\"state\", -2) == 2)",
+      "(phase == D1) * (prev_reward == 1) * isin(prev_state, [2, -1]) * (prev_action != 1) * (ep_trial >= 90) * np.clip(-belief_lo, 0, 8)"
+    ],
+    "weights": [
+      -0.055976005763942745,
+      -0.0619710648942351,
+      0.09968140374675467,
+      0.06482204765625237,
+      0.0307704368083518
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6702401257851831,
+    "r2": 0.7265898231414867,
+    "r2_timing_only": 0.1708810008812517
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 62,
+    "terms": [
+      "(phase == D1) * (ep_trial >= 90) * (1 - (phase == D1) * (prev_reward == 1) * isin(prev_state, [2, -1]) * (prev_action != 1))",
+      "(phase == D1) * (prev_reward == 1) * isin(prev_state, [2, -1]) * (prev_action != 1) * (ep_trial >= 90)",
+      "(phase == D1) * (prev_reward == 1) * isin(prev_state, [2, -1]) * (prev_action != 1) * (ep_trial >= 93)",
+      "(phase == D1) * (prev_reward == 1) * isin(prev_state, [2, -1]) * (prev_action != 1) * (ep_trial >= 90) * (tv(\"reward\", -2) == 1) * (tv(\"state\", -2) == 2)",
+      "(phase == D1) * (prev_reward == 1) * isin(prev_state, [2, -1]) * (prev_action != 1) * (ep_trial >= 90) * np.clip(-belief_lo, 0, 8)"
+    ],
+    "weights": [
+      -0.055976005763942745,
+      -0.0619710648942351,
+      0.09968140374675467,
+      0.06482204765625237,
+      0.0307704368083518
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6694624506942042,
+    "r2": 0.7356122534105178,
+    "r2_timing_only": 0.20012795174177123
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced: the claimed 5 terms score test R^2 beyond timing 0.670 (r2 0.727, timing only 0.171), with the same weights. GO and D2 have zero baseline and zero residual in every cell, so 'only at D1' holds. In the D1 residuals, only a2 S2 r (+0.014) and '?' (window-first, +0.0005) are positive. All other prev-trial cells sit at about -0.005, which includes a1 S2 r (rare rewarded), so the feature is specific to a2->S2 rewarded.",
+      "The 'steps up from trial 93' description is a simplification. Fitting a2S2r D1 separately for each ep_trial gives a smooth ramp: 88: +0.006, 89: +0.022, 90: -0.011 (relative to the decile baseline 0.056), 91: +0.021, 92: +0.068, 93: +0.107, 94: +0.132, ... 97: +0.181. Swapping the step for a linear ramp from 88 does not beat the step, though (0.651 vs 0.670), so the step at 93 is an adequate shape.",
+      "The 'S2 reward streak' term tv('reward',-2)==1 & tv('state',-2)==2 does not require that trial -2 was an a2 choice. Adding L*(tv('action',-2)==2) gets weight -0.085 while the streak term rises to +0.118 (test 0.682). So a rare a1->S2 reward two trials back counts at least as much as a2->S2: the term encodes 'S2 rewarded before', not a strict a2 streak. This is a small wording issue.",
+      "The belief part is small. Dropping clip(-belief_lo) costs 0.03 test R^2 (0.640 vs 0.670), and dropping both belief and streak gives 0.562. Most of the gain comes from the interaction late-episode x a2S2r.",
+      "Misses show the largest errors are a2S2r D1s at trials 90-92 (and some at 88-89) where activation is already about 0.3 but prediction is 0.02-0.16, often on window-first trials whose earlier history is not visible. The explanation already admits these misses. Adding onset-window interactions with streak/belief plus a window-first indicator reaches only 0.698 test, so this is a residual onset-timing gap, not a missed systematic class.",
+      "The claim that observed-only 'loses little or nothing' was not checked directly: the tool rejects model outputs, and the agent admits it did not score a model-output version. The profile's additive reference has policy decile 0.05 vs belief decile 0.03, which hints at a small loss at most. Treat the claim as unverified, not as shown."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Late-episode D1 (ramping from ~trial 90, strong from 93) after a2->S2 rewarded, graded by an earlier S2 reward and S2 belief",
+    "better_terms": "Z = (phase == D1) * (ep_trial >= 90) * (1 - A) with A = (phase == D1) * (prev_reward == 1) * isin(prev_state, [2, -1]) * (prev_action != 1); L = A*(ep_trial>=90); L3 = A*(ep_trial>=93); E = A*(ep_trial>=90)*(ep_trial<93); S2 = (tv('reward',-2)==1)*(tv('state',-2)==2); B = np.clip(-belief_lo,0,8). Terms: Z ;; L ;; L3 ;; L*S2 ;; L*B ;; E*S2 ;; E*B (small gain over the original)",
+    "better_terms_test_r2_beyond_timing": 0.698
+  },
+  "final_label": "Late-episode D1 (ramping from ~trial 90, strong from 93) after a2->S2 rewarded, graded by an earlier S2 reward and S2 belief"
+}

@@ -1,0 +1,68 @@
+{
+  "label": "D2 update gate set by this trial choice x reached state: low after a1, highest a2->S2",
+  "terms": "(phase == D2) ;; (phase == D2) * (action == 2) ;; (phase == D2) * (state == 2) ;; (phase == D2) * (action == 2) * (state == 2) ;; (phase == D2) * choice",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 32 sits near 1 at D1 and GO (residuals there < 0.02) and drops at D2 (mean ~0.7); all magnitude beyond timing is at D2 and is set by the choice just made and the state just reached (both observed at D2). Relative to timing: a1->S1 about -0.33, a1->S2 -0.14, a2->S1 +0.20, a2->S2 +0.26 (so z is lowest, i.e. strongest hidden-state rewrite, after a1 common, and close to 1 after a2). Within cells, the model policy logit at D2 (choice, more a1-leaning = lower z) adds graded variation. The 4 observed-only choice x state terms alone give test R^2 beyond timing 0.91 (dev 0.914); adding the policy term gives dev 0.96. Previous-trial history (prev action, prev reward x state) adds < 0.01; value, future reward and hidden good state are not needed (good-state and last-trial reference tables mostly proxy the current choice). Ceiling all = 0.98.",
+  "gate": "unit_update",
+  "feature": 32,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 32,
+    "terms": [
+      "(phase == D2)",
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * (state == 2)",
+      "(phase == D2) * (action == 2) * (state == 2)",
+      "(phase == D2) * choice"
+    ],
+    "weights": [
+      -0.31490770261226925,
+      0.33098795496949074,
+      0.2375072172455519,
+      -0.10850184964978475,
+      -0.0305773145265349
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.9572431954723654,
+    "r2": 0.9755761822345906,
+    "r2_timing_only": 0.42877354762038633
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 32,
+    "terms": [
+      "(phase == D2)",
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * (state == 2)",
+      "(phase == D2) * (action == 2) * (state == 2)",
+      "(phase == D2) * choice"
+    ],
+    "weights": [
+      -0.31490770261226925,
+      0.33098795496949074,
+      0.2375072172455519,
+      -0.10850184964978475,
+      -0.0305773145265349
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.9602884368289123,
+    "r2": 0.9774260663256362,
+    "r2_timing_only": 0.4315526292150863
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor overclaim: 'previous-trial history adds less than 0.01'. Adding (phase==D2)*last_is('a1 S2 r'), last_is('a2 S2 u') and last_is('a1 S1 u') to the 5 terms raises test R^2 beyond timing from 0.957 to 0.973 (+0.016). A single MB-switch term (phase==D2)*(prev_action>0)*(prev_common != prev_reward) gives 0.967, and with an extra x(action==1) term 0.973.",
+      "Systematic miss with the original terms: at D2 after an 'a1 S2 r' (rare-rewarded) trial, z is under-predicted by a mean of +0.139. Smaller under-predictions at D2 follow a2 S2 u (+0.053) and a1 S1 u (+0.048). All three are trials after which a model-based agent should switch, and z at D2 is higher after them. Fitted weights: +0.15, +0.08, +0.07. Adding these terms brings the remaining misses-by-history to |err| <= 0.02.",
+      "Checks that held up: the residual table by choice x state at D2 matches the stated values (-0.335 / -0.137 / +0.200 / +0.257). The 4 observed-only cell terms give test 0.909 and adding the policy term gives 0.957. The choice weight is negative, so a more a1-leaning policy logit does mean lower z. D1 and GO residuals are under 0.02. An invalid-trial term (action==0) adds nothing (0.9574). The 'policy logit' term is a model output, not a future variable, so 'uses future variables: false' is correct."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 update gate set by choice x reached state (low after a1->S1, highest after a2->S2), nudged up after switch-signalling previous trials",
+    "better_terms": "(phase == D2) ;; (phase == D2) * (action == 2) ;; (phase == D2) * (state == 2) ;; (phase == D2) * (action == 2) * (state == 2) ;; (phase == D2) * choice ;; (phase==D2)*last_is('a1 S2 r') ;; (phase==D2)*last_is('a2 S2 u') ;; (phase==D2)*last_is('a1 S1 u')",
+    "better_terms_test_r2_beyond_timing": 0.9726
+  },
+  "final_label": "D2 update gate set by choice x reached state (low after a1->S1, highest after a2->S2), nudged up after switch-signalling previous trials"
+}

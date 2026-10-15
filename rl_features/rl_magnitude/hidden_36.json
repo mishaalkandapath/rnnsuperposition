@@ -1,0 +1,85 @@
+{
+  "label": "Late-episode D1 after a rewarded S1 visit, strongest after rare a2->S1, growing with trial.",
+  "short_terms": "(phase == D1) * last_is(\"a2 S1 r\") * np.maximum(ep_trial - 70, 0) ;; (in_rew == 1) * (prev_state == 1) * np.maximum(ep_trial - 80, 0) ;; (phase == D1) * np.maximum(ep_trial - 80, 0)",
+  "terms": "(phase == D1) * last_is(\"a2 S1 r\") * np.maximum(ep_trial - 60, 0) ;; (phase == D1) * last_is(\"a2 S1 r\") * np.maximum(ep_trial - 80, 0) ;; (phase == D1) * last_is(\"a1 S1 r\") * np.maximum(ep_trial - 80, 0) ;; (phase == D1) * (in_rew == 0) * np.maximum(ep_trial - 80, 0) ;; (phase == D1) * (prev_state == 2) * np.maximum(ep_trial - 80, 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 and only late in the episode (from ~trial 70-80, ramping up to trial 99). Its magnitude is set by the previous trial: largest after a rare a2->S1 rewarded trial (ramp starting ~trial 70), moderate after a rewarded S1 visit in general (a1 S1 r), and near zero after unrewarded trials or S2 visits, where the late-episode timing baseline is cancelled (negative late-D1 ramp term). Belief, the trial before, and the current choice add little (profile reference scores ~0). The free fit just splits the ramps more finely (separate a1 S1 r, unrewarded and S2 ramps) and adds only ~0.02 dev R^2 over the short form.",
+  "full_test_scores": {
+    "gate": "hidden",
+    "feature": 36,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S1 r\") * np.maximum(ep_trial - 60, 0)",
+      "(phase == D1) * last_is(\"a2 S1 r\") * np.maximum(ep_trial - 80, 0)",
+      "(phase == D1) * last_is(\"a1 S1 r\") * np.maximum(ep_trial - 80, 0)",
+      "(phase == D1) * (in_rew == 0) * np.maximum(ep_trial - 80, 0)",
+      "(phase == D1) * (prev_state == 2) * np.maximum(ep_trial - 80, 0)"
+    ],
+    "weights": [
+      0.025623342745477503,
+      0.0790486126459085,
+      0.04150612298176066,
+      -0.015113582868582422,
+      -0.01779614340093253
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8026233608841542,
+    "r2": 0.8431704296283401,
+    "r2_timing_only": 0.20542992790746473
+  },
+  "gate": "hidden",
+  "feature": 36,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 36,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S1 r\") * np.maximum(ep_trial - 70, 0)",
+      "(in_rew == 1) * (prev_state == 1) * np.maximum(ep_trial - 80, 0)",
+      "(phase == D1) * np.maximum(ep_trial - 80, 0)"
+    ],
+    "weights": [
+      0.05817337436835997,
+      0.06095597302442945,
+      -0.019607491554428154
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7855178653042243,
+    "r2": 0.8295789147722166,
+    "r2_timing_only": 0.20542992790746473
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 36,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S1 r\") * np.maximum(ep_trial - 70, 0)",
+      "(in_rew == 1) * (prev_state == 1) * np.maximum(ep_trial - 80, 0)",
+      "(phase == D1) * np.maximum(ep_trial - 80, 0)"
+    ],
+    "weights": [
+      0.05817337436835997,
+      0.06095597302442945,
+      -0.019607491554428154
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7684076215263979,
+    "r2": 0.8152852348246675,
+    "r2_timing_only": 0.20241431780801455
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the worst-fit windows are mostly the first cell of a window (previous trial '?'). There the feature fires at about 3 but the prediction is about 0.05, because the previous trial falls outside the window. This is a data limitation, not a systematic model error, and the mean error for D1 after '?' is only +0.022.",
+      "The third term, a negative late-D1 ramp, is partly a fitted correction: it cancels the per-decile timing baseline so that non-S1-rewarded D1 steps come out near zero. Dropping it lowers test R^2 from 0.79 to 0.68. Its meaning ('near zero otherwise') is real, but the label does not state it outright.",
+      "The checks support every claim. The feature is D1-only: the GO and D2 baselines and residuals are all 0. Splitting a1 S1 r and a2 S1 r into separate ramps gives test R^2 0.778, about the same as the recorded 0.786. Swapping the rewarded-S1 term for any reward at all drops it to 0.62. Using belief_lo in its place gives 0.65. Using rare transition (prev_common == 0) in place of a2 S1 r gives 0.61. Without the a2 S1 r term (S1-rewarded ramps only) it falls to 0.58. A plain linear ep_trial in place of the ramps gives 0.39. The ramp onsets are robust: 60, 70 and 75 give 0.78 to 0.786, and moving the other two onsets to 85 gives 0.786.",
+      "Systematic errors in misses are small (|mean error| <= 0.013 by phase x previous trial), so no large error class remains."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Late-episode D1 after rewarded S1 visit, strongest after rare a2->S1, growing with trial; else ~0.",
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "Late-episode D1 after rewarded S1 visit, strongest after rare a2->S1, growing with trial; else ~0."
+}

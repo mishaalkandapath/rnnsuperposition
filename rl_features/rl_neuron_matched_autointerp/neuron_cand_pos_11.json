@@ -1,0 +1,104 @@
+{
+  "label": "S2 shown at D2, early in the episode (rare a1->S2 strongest, lasts longer)",
+  "predicate": "(phase == D2) & (in_state == 2) & (((in_action==1)&(ep_trial<30)) | ((in_action==2)&(prev_reward==0)&(ep_trial<22)) | ((in_action==2)&(prev_reward==1)&(ep_trial<15)))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires almost only at D2 (98.6% of mass) when the reached state shown is S2 (96% of mass; S1 is shown in only 2.4%). It never fires at D1 and almost never at GO. It depends strongly on how far into the episode the agent is: the rate is 56% on trial 0 and falls steadily, and it is silent from about trial 40 on. That looks like a slow drift in the hidden state across the episode. The strongest activations (max) are rare transitions a1->S2 (S2 reached after choosing a1), and these keep firing later in the episode (up to about trial 35) than common a2->S2 does (up to about 20). Within early S2 D2 steps, which are hit is also modulated by the higher value bins, but that did not help as a predicate. Plain (D2 & S2) has recall 0.94 but precision 0.15, so the episode-time gate is essential. All variables are observed: the state input, the action input and the trial index, which the agent can only track implicitly. Reward and other future variables play no role.",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 11,
+    "predicate": "(phase == D2) & (in_state == 2) & (((in_action==1)&(ep_trial<30)) | ((in_action==2)&(prev_reward==0)&(ep_trial<22)) | ((in_action==2)&(prev_reward==1)&(ep_trial<15)))",
+    "split": "test",
+    "precision": 0.8643162699893773,
+    "recall": 0.8817327124154293,
+    "f1": 0.8729376286716735,
+    "mass_recall": 0.9466856829096465,
+    "correlation": 0.7649932804147686,
+    "n_active": 34143,
+    "n_predicted": 34831,
+    "coverage_by_activation_quartile": [
+      0.7230552952202437,
+      0.9215089034676663,
+      0.886012183692596,
+      0.9963678968951377
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 11,
+    "predicate": "(phase == D2) & (in_state == 2) & (((in_action==1)&(ep_trial<30)) | ((in_action==2)&(prev_reward==0)&(ep_trial<22)) | ((in_action==2)&(prev_reward==1)&(ep_trial<15)))",
+    "split": "dev",
+    "precision": 0.873694587350975,
+    "recall": 0.876692426584235,
+    "f1": 0.8751909398096003,
+    "mass_recall": 0.9455969188708869,
+    "correlation": 0.769594210050592,
+    "n_active": 32350,
+    "n_predicted": 32461,
+    "coverage_by_activation_quartile": [
+      0.7067260138476755,
+      0.9154302670623146,
+      0.8893285519970323,
+      0.9953011005317176
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 11,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The factual claims check out on dev. Activation mass by phase is D1 0, GO 1.4%, D2 98.6%. S2 holds 96.2% of the mass. The ep_bucket 0 rate is 0.556. Nothing fires at ep_trial 50 or later, and only 23 steps fire in trials 40-49. Test scores reproduce exactly: P 0.746, R 0.902, F1 0.817, MR 0.955.",
+      "The a1->S2 vs a2->S2 claim holds. D2&S2&a1 has precision 1.00 up to trial 20, 0.93 at trials 20-24, 0.62 at 25-29 and 0.31 at 30-34. D2&S2&a2 is at 0.89-0.94 early and decays sooner.",
+      "There is a systematic gap: the previous trial's outcome (an observed input, the reward shown at D1) controls how long common a2->S2 keeps firing. Within D2&S2&a2 at ep_trial 15-29, precision is 0.39 when prev_reward==0 but only 0.04 when prev_reward==1. At ep_trial 10-19, a2->S2 has precision 0.83 after an unrewarded trial vs 0.46 after a rewarded one. At ep_trial 20-29 it is 0.20 vs 0.00.",
+      "Most false positives of the original predicate sit in one block: a2->S2 after a rewarded trial at ep_trial 15-19 (precision 0.12, about 5000 predicted steps). The misses output shows the same pattern: in runs of rewarded a2->S2c trials, activation falls to zero within the same window.",
+      "Minor and not systematic enough to matter: D2&S1 fires very early in the episode (precision 0.29 at ep_trial < 5, 2.4% of the mass). GO firing is real but small (520 steps, 1.4% of the mass)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "S2 shown at D2 early in the episode. Rare a1->S2 fires until about trial 30. Common a2->S2 fires until about trial 22 if the previous trial was unrewarded, but only until about trial 15 if it was rewarded.",
+    "better_predicate": "(phase == D2) & (in_state == 2) & (((in_action==1)&(ep_trial<30)) | ((in_action==2)&(prev_reward==0)&(ep_trial<22)) | ((in_action==2)&(prev_reward==1)&(ep_trial<15)))",
+    "better_predicate_test_f1": 0.873
+  },
+  "final_label": "S2 shown at D2 early in the episode. Rare a1->S2 fires until about trial 30. Common a2->S2 fires until about trial 22 if the previous trial was unrewarded, but only until about trial 15 if it was rewarded.",
+  "original_predicate": "(phase == D2) & (in_state == 2) & ((ep_trial < 20) | ((in_action == 1) & (ep_trial < 35)))",
+  "original_test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 11,
+    "predicate": "(phase == D2) & (in_state == 2) & ((ep_trial < 20) | ((in_action == 1) & (ep_trial < 35)))",
+    "split": "test",
+    "precision": 0.7463211229363136,
+    "recall": 0.9016489470755352,
+    "f1": 0.8166648981324278,
+    "mass_recall": 0.9550699840260627,
+    "correlation": 0.7072196569564697,
+    "n_active": 34143,
+    "n_predicted": 41249,
+    "coverage_by_activation_quartile": [
+      0.764058106841612,
+      0.9455248359887535,
+      0.8987816307403936,
+      0.9982425307557118
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 11,
+    "predicate": "(phase == D2) & (in_state == 2) & ((ep_trial < 20) | ((in_action == 1) & (ep_trial < 35)))",
+    "split": "dev",
+    "precision": 0.7467106110152689,
+    "recall": 0.8964451313755796,
+    "f1": 0.8147555031115231,
+    "mass_recall": 0.9529543461392169,
+    "correlation": 0.7069855092005005,
+    "n_active": 32350,
+    "n_predicted": 38837,
+    "coverage_by_activation_quartile": [
+      0.7476508407517309,
+      0.9411473788328387,
+      0.8992209719302584,
+      0.9977742055150242
+    ]
+  },
+  "predicate_from": "skeptic"
+}

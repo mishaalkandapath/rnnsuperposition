@@ -1,0 +1,85 @@
+{
+  "label": "Late-episode dips at D2 after S1 / a1 / S1-belief; D1 dip after a1->S2",
+  "terms": "(phase == D2) * (state == S1) * (ep_trial/100)**4 ;; (phase == D2) * (action == 1) * (ep_trial/100)**4 ;; (phase == D2) * np.clip(belief_lo,-4,4) * (ep_trial/100)**4 ;; (phase == D1) * (prev_action==1)*(prev_state==2) * (ep_trial/100)**4 ;; (phase == D2) * last_is(\"a1 S2 u\") * (ep_trial/100)**4 ;; (phase != D2) * np.clip(belief_lo,-4,4) * (ep_trial/100)**4 ;; (phase == D2) * (prev_action==2) * (prev_reward==1) * (ep_trial/100)**4 ;; (phase == D2) * (prev_action==1) * (prev_state==1) * (ep_trial/100)**4",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 34 sits near 1 (mean 0.989) and dips mainly late in the episode (trials 80-99), most at D2. Every deviation scales with episode time, so each term is multiplied by (ep_trial/100)^4; this beats the unscaled version (dev 0.43 -> 0.54). At D2 it is lower when the reached state is S1, when the choice just made was a1, and when the ideal-observer belief favours S1 (graded log-odds). It is lower still if the previous trial was a1->S2 unrewarded, and also after a previous a1->S1; it is higher after a rewarded a2 trial. At D1 it dips sharply after a previous a1->S2 trial (rewarded or not), with a weak negative belief-in-S1 slope at D1/GO. Only observed terms are used: state and action are known at D2, the belief comes from past inputs. A streak-of-a1 term added little (0.55). Test R^2 beyond timing 0.57 (dev 0.57), above the additive all-cue ceiling of 0.54 and the all-observed ceiling of 0.52 because of the episode-time interaction. No loss relative to the model-output policy-decile reference (0.38). Remaining misses are whole-window offsets in late-episode a1 runs that the terms under-predict.",
+  "gate": "unit_update",
+  "feature": 34,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 34,
+    "terms": [
+      "(phase == D2) * (state == S1) * (ep_trial/100)**4",
+      "(phase == D2) * (action == 1) * (ep_trial/100)**4",
+      "(phase == D2) * np.clip(belief_lo,-4,4) * (ep_trial/100)**4",
+      "(phase == D1) * (prev_action==1)*(prev_state==2) * (ep_trial/100)**4",
+      "(phase == D2) * last_is(\"a1 S2 u\") * (ep_trial/100)**4",
+      "(phase != D2) * np.clip(belief_lo,-4,4) * (ep_trial/100)**4",
+      "(phase == D2) * (prev_action==2) * (prev_reward==1) * (ep_trial/100)**4",
+      "(phase == D2) * (prev_action==1) * (prev_state==1) * (ep_trial/100)**4"
+    ],
+    "weights": [
+      -0.02352151191590902,
+      -0.033310782835067596,
+      -0.010026607600824928,
+      -0.09720944990720898,
+      -0.12424682724394137,
+      -0.003423196706722659,
+      0.0433153222319827,
+      0.02213214816954123
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5735133380490177,
+    "r2": 0.696635226515807,
+    "r2_timing_only": 0.28868871983841815
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 34,
+    "terms": [
+      "(phase == D2) * (state == S1) * (ep_trial/100)**4",
+      "(phase == D2) * (action == 1) * (ep_trial/100)**4",
+      "(phase == D2) * np.clip(belief_lo,-4,4) * (ep_trial/100)**4",
+      "(phase == D1) * (prev_action==1)*(prev_state==2) * (ep_trial/100)**4",
+      "(phase == D2) * last_is(\"a1 S2 u\") * (ep_trial/100)**4",
+      "(phase != D2) * np.clip(belief_lo,-4,4) * (ep_trial/100)**4",
+      "(phase == D2) * (prev_action==2) * (prev_reward==1) * (ep_trial/100)**4",
+      "(phase == D2) * (prev_action==1) * (prev_state==1) * (ep_trial/100)**4"
+    ],
+    "weights": [
+      -0.02352151191590902,
+      -0.033310782835067596,
+      -0.010026607600824928,
+      -0.09720944990720898,
+      -0.12424682724394137,
+      -0.003423196706722659,
+      0.0433153222319827,
+      0.02213214816954123
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5690952833002183,
+    "r2": 0.6944373386229225,
+    "r2_timing_only": 0.29088114022671974
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "better_terms": "(phase == D2) * (state == S1) * (ep_trial/100)**4 ;; (phase == D2) * (action == 1) * (ep_trial/100)**4 ;; (phase == D2) * np.clip(belief_lo,-4,4) * (ep_trial/100)**4 ;; (phase == D1) * (prev_action==1)*(prev_state==2) * (ep_trial/100)**4 ;; (phase == D2) * last_is('a1 S2 u') * (ep_trial/100)**4 ;; (phase != D2) * np.clip(belief_lo,-4,4) * (ep_trial/100)**4 ;; (phase == D2) * (prev_action==2) * (ep_trial/100)**4 ;; (phase == D2) * (prev_action==1) * (prev_state==1) * (ep_trial/100)**4",
+    "better_terms_test_r2_beyond_timing": 0.5826,
+    "issues": [
+      "I reproduced the headline score. The 8 terms reach a test R^2 beyond timing of 0.5735, above the 'all observed' ceiling (0.52) and the 'all' ceiling (0.54). Without the (ep_trial/100)^4 scaling they reach only 0.436 on test, so the 'grows late in the episode' claim holds. Exponent 4 is the best of the shapes I tried: ^6 gives 0.572, ^8 gives 0.555 and exp((t-99)/8) gives 0.525.",
+      "One claim has the wrong sign. The explanation says D2 is lower when the previous trial was a1->S1. In the fit, the weight on (phase==D2)*(prev_action==1)*(prev_state==1)*E is +0.022, so with state, action and belief held fixed the gate is HIGHER after a1->S1. The raw dip in the residual table (-0.013) comes from the S1/a1/belief terms, not from the previous trial. Dropping the term costs only 0.004 on test (0.5695).",
+      "One claim is too narrow. The explanation says D2 is higher 'after a rewarded a2 trial'. The residual table shows the rise after every a2 outcome: a2 S2 r +0.020, a2 S1 u +0.018, a2 S1 r +0.016; the one weak cell is a2 S2 u at +0.005. Replacing prev_action==2 & prev_reward==1 with plain prev_action==2 raises test R^2 from 0.5735 to 0.5826. So the effect is about the previous choice being a2, not about reward.",
+      "A systematic error remains after the a1->S2 previous trial at D2. Misses show it under-predicted after a1 S2 r (+0.016) and over-predicted after a1 S2 u (-0.016). D1 after a1 S2 is over-predicted by about 0.010. So scaling the a1->S2 terms by episode time doesn't capture the reward-split pattern well. These errors are moderate relative to the residual spread, not dominant.",
+      "The worst misses are as described: whole-window offsets during late-episode a1 runs. In those windows the GO and D1 cells sit around 0.90 against a prediction of 0.98, and D2 cells sit 0.10 to 0.20 below prediction. Adding terms for the run of recent a1 choices or for a previous unrewarded a1 trial at D1/GO gains less than 0.01 (best 0.582). Some slow internal state is likely still missing.",
+      "The claim that 'going observed-only loses nothing' is supported only by comparing against the additive policy-decile reference (0.38). That reference has no episode-time interaction, so it is not a like-for-like comparison. The real cost of dropping model outputs is unknown, and the claim is overstated.",
+      "The other claims check out: the D2 dips with S1, a1 and S1-leaning belief; the D1 dip after a1->S2 regardless of reward (residuals -0.027 and -0.030); and the weak belief slope at D1/GO. No future variables are used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Late-episode (ep^4) dips at D2 with S1 reached/a1 chosen/S1 belief; higher at D2 after any a2 trial; D1 dip after a1->S2",
+    "upheld": false
+  },
+  "final_label": "Late-episode (ep^4) dips at D2 with S1 reached/a1 chosen/S1 belief; higher at D2 after any a2 trial; D1 dip after a1->S2"
+}

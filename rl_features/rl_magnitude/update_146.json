@@ -1,0 +1,73 @@
+{
+  "label": "At GO after an unrewarded a1-to-S2 rare trial, strongest early in the episode, fading by trial 40.",
+  "short_terms": "(phase == GO) * last_is(\"a1 S2 u\") * np.maximum(40 - ep_trial, 0)",
+  "terms": "(phase == GO) * last_is(\"a1 S2 u\") * np.maximum(40 - ep_trial, 0) ;; (phase == GO) * last_is(\"a1 S2 u\") * belief_lo ;; (phase == GO) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Sparse feature (about 1% of steps), active only at GO. Its magnitude is driven by the previous trial being a1 -> S2 (rare) unrewarded, the case where a model-based agent should repeat a1, scaled by a ramp that falls linearly with episode trial and reaches zero around trial 40. A single ramp-gated term gives dev R^2 beyond timing 0.60, well above the additive-table ceiling (0.23) because the effect is an interaction between last-trial pattern and episode time. Other last-trial patterns, D1 and D2 contribute nothing. The free fit adds a small positive belief_lo term (stronger when the observer believes S1 is good) and a negative term when the trial before was also unrewarded, together only about +0.01 dev R^2. Remaining misses are mostly GO steps on the first trial of a window, where the previous trial is not available, so firing there cannot be predicted.",
+  "full_test_scores": {
+    "gate": "update",
+    "feature": 146,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S2 u\") * np.maximum(40 - ep_trial, 0)",
+      "(phase == GO) * last_is(\"a1 S2 u\") * belief_lo",
+      "(phase == GO) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 0)"
+    ],
+    "weights": [
+      0.011286652755478636,
+      0.0022519469971981902,
+      -0.04144214937096417
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6061876117832894,
+    "r2": 0.6373289167130547,
+    "r2_timing_only": 0.07907649901716274
+  },
+  "gate": "update",
+  "feature": 146,
+  "test_scores": {
+    "gate": "update",
+    "feature": 146,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S2 u\") * np.maximum(40 - ep_trial, 0)"
+    ],
+    "weights": [
+      0.011181942046671054
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5969844022925674,
+    "r2": 0.6288534648085805,
+    "r2_timing_only": 0.07907649901716274
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 146,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S2 u\") * np.maximum(40 - ep_trial, 0)"
+    ],
+    "weights": [
+      0.011181942046671054
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5953702929099136,
+    "r2": 0.6290795327899172,
+    "r2_timing_only": 0.08330886064304355
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Short form reproduces: test R^2 beyond timing 0.597. Its pieces check out. With no ramp, the bare (GO)*last_is('a1 S2 u') term scores 0.158, and a hard (ep_trial<40) cutoff scores 0.414, so the graded early-episode ramp is real. Ramp endpoints of 30/35/40/50 score 0.574/0.599/0.597/0.560, and exp(-ep_trial/15) scores 0.562. A linear fade reaching zero around trial 35-40 is right.",
+      "The 'a1' part of the label is supported. In the profile residual at GO, a2 S2 u is -0.0015 while a1 S2 u is +0.071. All other previous-trial patterns and the D1/D2 phases are about 0.",
+      "The free fit's belief_lo claim is negligible. Adding (GO)*last_is*belief_lo gives 0.5970 on test, belief gives 0.5971, and (belief_lo>0) gives 0.5971. The label rightly leaves it out. The tv('reward',-2)==0 term adds only about 0.008 (0.605).",
+      "misses shows the claimed window-first GO under-predictions (the previous trial is outside the window). Adding (GO)*(prev_action==-1)*(prev_reward==0) gives only 0.604. So these cannot be fixed from observed data, and they are not a structural error.",
+      "There is also an over-prediction class the explanation does not mention. Some GO steps after a1 S2 u early in the episode (e.g. after a run of unrewarded trials) show 0 activation where the ramp predicts about 0.3-0.4. I tried belief thresholds, belief_cover, tv('reward',-2), tv('action'/'state',-2), the previous trial's stay and prev_reward, and the future choice (action==2). None moves test R^2 above about 0.605. About 40% of the variance is left unexplained, but no observed-variable class captures it."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  }
+}

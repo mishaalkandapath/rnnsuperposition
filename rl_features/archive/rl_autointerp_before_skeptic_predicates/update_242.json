@@ -1,0 +1,63 @@
+{
+  "label": "GO step after an unrewarded trial, agent confidently choosing a2 (mid/late episode)",
+  "predicate": "(phase == GO) & (prev_reward == 0) & (choice < -4.44) & (ep_trial >= 35) & (ep_trial < 92)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO (never D1/D2), only when the previous trial was unrewarded (never after a reward), and almost only when the agent is about to choose a2: 99.9% of mass has action==2, and the policy logit(a1)-logit(a2) is strongly negative (68% of mass in the lowest choice bin < -8.9). It also depends on position in the episode: silent in trials 0-29, rising from trial ~35, peaking at 50-80, dropping off after ~90. The first predicate I scored used the upcoming action (action==2), which is FUTURE at GO. The recorded predicate swaps it for the policy logit computed at that step (choice < -4.44), which is observed and scores better (dev F1 0.89, mass recall 0.99). Without the episode-position window, F1 is about 0.61-0.84. Remaining false positives are similar GO-after-no-reward a2 steps where it stays silent. It does not respond to the transition type or the hidden good state beyond their correlation with choosing a2. Magnitude was not analyzed beyond the fact that the firing rate is higher when the a2 logit margin is larger.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 242,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (choice < -4.44) & (ep_trial >= 35) & (ep_trial < 92)",
+    "split": "test",
+    "precision": 0.7990441122680387,
+    "recall": 0.9672068242864311,
+    "f1": 0.8751201794680055,
+    "mass_recall": 0.9915581378440562,
+    "correlation": 0.7577969194072154,
+    "n_active": 33879,
+    "n_predicted": 41009,
+    "coverage_by_activation_quartile": [
+      0.8906729634002362,
+      0.9800472255017709,
+      0.9983471074380166,
+      0.9997638446097532
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 242,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (choice < -4.44) & (ep_trial >= 35) & (ep_trial < 92)",
+    "split": "dev",
+    "precision": 0.8190246182611406,
+    "recall": 0.9715368265409852,
+    "f1": 0.8887855602992774,
+    "mass_recall": 0.9929113363400717,
+    "correlation": 0.7699649933928678,
+    "n_active": 32463,
+    "n_predicted": 38508,
+    "coverage_by_activation_quartile": [
+      0.9036471168063085,
+      0.9849679645145392,
+      0.997658945293248,
+      0.9998767714109673
+    ]
+  },
+  "gate": "update",
+  "feature": 242,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Every factual claim held up. All activation is at GO, with 0 active steps at D1 or D2. Nothing fires when prev_reward==1 (0 of 740466 steps). Activation mass is 1.000 on action==2 and 1.000 on model_act==2. The feature is silent in trials 0-29: in trials 25-34 the predicate has precision 0.010, and at trials >=92 it has precision 0.091. Dev F1 reproduces at 0.889 with mass recall 0.993.",
+      "There is a systematic but graded false-positive class: runs of consecutive losses. Inside the predicate, precision is 0.914 when the trial two back was rewarded (tv('prev_reward',-1)==1). It drops to 0.66 after 2 losses in a row and to 0.36 after 3 or more. This group accounts for about half of the false positives on dev (about 3.9k of 7.0k). So the feature responds most to the first loss after a reward, and its response fades over a losing streak.",
+      "There is a smaller false-positive class: GO after an unrewarded a1 trial where the agent confidently switches to a2 (prev_action==1). Here precision is 0.20, but there are only 829 predicted steps. 82% of activation mass has prev_action==2, and the remaining ~18% has prev_action==-1 (the first trial of the window, where the previous action is unknown). So in practice the feature is 'stay on a2 after a loss', not 'choose a2'.",
+      "Removing both false-positive classes gives only a small gain: test F1 goes from 0.875 to 0.885. Neither class is one where the feature is fully silent, so the current label is acceptable. It would be more precise to say 'staying with a2 after a loss, strongest on the first loss after a reward'.",
+      "The episode-position window (35-92) is real. Whether it stands in for some other variable is not explained here. Tested against the value head only: there is no firing when value >= 8.10, which is not enough to explain the window. The label states the window honestly."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == GO) & (prev_reward == 0) & (choice < -4.44) & (ep_trial >= 35) & (ep_trial < 92) & (prev_action != 1) & ~((tv('prev_reward',-1)==0) & (tv('prev_reward',-2)==0))",
+    "better_predicate_test_f1": 0.885
+  }
+}

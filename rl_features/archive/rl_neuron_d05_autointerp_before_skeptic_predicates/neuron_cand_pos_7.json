@@ -1,0 +1,65 @@
+{
+  "label": "D2 after a2 led to S2 (common) following a rewarded trial, early in the episode",
+  "predicate": "(phase == D2) & (state == S2) & (action == 2) & (prev_reward == 1) & (ep_trial < 60)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 and essentially only when the reached state is S2 (state==S2 has recall 0.9998). It is gated by episode time: it fires through about trial 55 and is silent from trial 60 on, so slow drift in the hidden state across the episode controls it. Inside that window it is strongest when the previous trial was rewarded and the agent chose a2, i.e. the common a2->S2 transition while S2 is believed good. It scales with value: 90% of the mass is in the top value bin, and value>8.1 & S2 at D2 gives F1 0.81. The very largest activations are rare a1->S2 transitions after a run of rewarded a2/S2 trials, which the predicate misses (about 5% of mass). Weak activations also occur on S2 after an unrewarded trial. It never fires at D1 or GO or on S1. All variables are observed at D2.",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 7,
+    "predicate": "(phase == D2) & (state == S2) & (action == 2) & (prev_reward == 1) & (ep_trial < 60)",
+    "split": "test",
+    "precision": 0.880154236287213,
+    "recall": 0.861246133451171,
+    "f1": 0.8705975329003882,
+    "mass_recall": 0.9257655347167737,
+    "correlation": 0.82973771325198,
+    "n_active": 58838,
+    "n_predicted": 57574,
+    "coverage_by_activation_quartile": [
+      0.5993201903467029,
+      0.9339225016995242,
+      0.9655992929498947,
+      0.946155415052009
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 7,
+    "predicate": "(phase == D2) & (state == S2) & (action == 2) & (prev_reward == 1) & (ep_trial < 60)",
+    "split": "dev",
+    "precision": 0.893815971660283,
+    "recall": 0.8631611850102455,
+    "f1": 0.8782211542708729,
+    "mass_recall": 0.9273009477957634,
+    "correlation": 0.8389156251848416,
+    "n_active": 57586,
+    "n_predicted": 55611,
+    "coverage_by_activation_quartile": [
+      0.6022782524136973,
+      0.9353337500868236,
+      0.968463462072798,
+      0.9465823839955543
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 7,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most factual claims check out on the dev profile. Activations happen only at D2 (none at D1 or GO). Only 11 of 57,586 active steps are on S1. Firing drops to 0.003 in trials 60-69 and is zero from trial 70 on. The top activations are rare a1->S2 transitions (0.8-1.0 of max). action==1 holds 5.4% of the activation mass, matching the claimed ~5%. 90% of the mass is in the top value bin (>8.10). The reported test scores reproduce exactly: P 0.880, R 0.861, F1 0.871, mass recall 0.926.",
+      "There is a systematic false-positive class. When the previous trial was a rewarded a1 and the agent now switches to a2 (prev_action==1, i.e. stay==0), the predicate is true on 2,480 test steps but the unit is active on only 13.7% of them. That is about 2,140 of the 6,900 test false positives (~31%). Excluding this class (prev_action!=1) raises precision from 0.880 to 0.914 and test F1 from 0.871 to 0.884, with recall unchanged. So the unit tracks rewarded a2 choices the agent repeats (an a2/S2 streak), not just any a2->S2 after a reward.",
+      "The good-state dependence is real but not in the label. Inside the predicate, precision is 0.92 when good==S2 and 0.58 when good==S1. The explanation's 'while S2 is believed good' gestures at this, but the label leaves it out.",
+      "The description of the top activations is a bit loose. Several of the strongest a1->S2 rare windows follow a2->S1 rare rewarded trials, or come in good=S1 contexts, rather than a 'run of rewarded a2/S2 trials'.",
+      "Misses are as described: rare a1->S2 transitions (precision only 0.13-0.20 as a class, so they can't be added without losing precision) and weak S2 activations after unrewarded trials (precision 0.12). These are scattered and low precision, so they are not a fixable systematic gap.",
+      "No future variables are involved. Both the original and the improved predicate use only variables observed at D2."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after a2 reached S2, when the agent repeated a2 after a rewarded trial (an a2/S2 reward streak, mostly while S2 is good), early in the episode (before trial ~60)",
+    "better_predicate": "(phase == D2) & (state == S2) & (action == 2) & (prev_reward == 1) & (prev_action != 1) & (ep_trial < 60)",
+    "better_predicate_test_f1": 0.884
+  },
+  "final_label": "D2 after a2 reached S2, when the agent repeated a2 after a rewarded trial (an a2/S2 reward streak, mostly while S2 is good), early in the episode (before trial ~60)"
+}

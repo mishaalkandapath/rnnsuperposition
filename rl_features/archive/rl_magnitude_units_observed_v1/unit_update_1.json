@@ -1,0 +1,85 @@
+{
+  "label": "D2 update gate dips when S1 is reached, deeper late in episode; raised by last reward and staying",
+  "terms": "(phase == D2) * (state == S1) ;; (phase == D2) * (action == 1) ;; (phase == D2) * (state == S1) * (ep_trial/100.)**3 ;; (phase == D2) * (action == 1) * (ep_trial/100.)**3 ;; (phase == D2) * np.clip(belief_lo, -4, 4) ;; (phase == D2) * (prev_reward == 1) ;; (phase == D2) * (prev_action == action) ;; (phase == D2) * (state == S1) * np.clip(belief_lo, -4, 4)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw z of unit 1 sits near 1 at D1 and GO (residual variance there is tiny, ~0.005); all of the magnitude variation beyond timing is at D2. At D2, z drops when the reached state is S1 (fitted -0.16, with a further -0.16 x (ep_trial/100)^3, so the dip deepens to about 0.2 late in the episode) and slightly when a1 was chosen (net small; the a1 effect partly reverses late). It rises when the previous trial was rewarded (+0.10) and when the current choice repeats the previous one (+0.05). The ideal-observer belief that S1 is good lowers it a little more (graded log-odds, stronger when S1 was reached). All terms are observable at D2 (choice and state reached are inputs by then); no future, hidden or model-output variables. Test R^2 beyond timing 0.87 (dev 0.87), against an all-cue ceiling of 0.93 and all-observed 0.90; the this-choice-x-state table alone gives 0.85, belief decile 0.36, and the model policy decile 0.38, so dropping the model value / policy loses essentially nothing: the reached state and choice at D2 carry the explanation. Remaining misses: D2 after unrewarded a2 trials is under-predicted.",
+  "gate": "unit_update",
+  "feature": 1,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 1,
+    "terms": [
+      "(phase == D2) * (state == S1)",
+      "(phase == D2) * (action == 1)",
+      "(phase == D2) * (state == S1) * (ep_trial/100.)**3",
+      "(phase == D2) * (action == 1) * (ep_trial/100.)**3",
+      "(phase == D2) * np.clip(belief_lo, -4, 4)",
+      "(phase == D2) * (prev_reward == 1)",
+      "(phase == D2) * (prev_action == action)",
+      "(phase == D2) * (state == S1) * np.clip(belief_lo, -4, 4)"
+    ],
+    "weights": [
+      -0.16422038854314366,
+      -0.034008337502319005,
+      -0.15663921868744976,
+      0.06339934143256279,
+      -0.008113586619605692,
+      0.09621225915785488,
+      0.04874811343389947,
+      -0.015630705835385894
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8717626233544992,
+    "r2": 0.9458861164307429,
+    "r2_timing_only": 0.5780178526355123
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 1,
+    "terms": [
+      "(phase == D2) * (state == S1)",
+      "(phase == D2) * (action == 1)",
+      "(phase == D2) * (state == S1) * (ep_trial/100.)**3",
+      "(phase == D2) * (action == 1) * (ep_trial/100.)**3",
+      "(phase == D2) * np.clip(belief_lo, -4, 4)",
+      "(phase == D2) * (prev_reward == 1)",
+      "(phase == D2) * (prev_action == action)",
+      "(phase == D2) * (state == S1) * np.clip(belief_lo, -4, 4)"
+    ],
+    "weights": [
+      -0.16422038854314366,
+      -0.034008337502319005,
+      -0.15663921868744976,
+      0.06339934143256279,
+      -0.008113586619605692,
+      0.09621225915785488,
+      0.04874811343389947,
+      -0.015630705835385894
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8744511219522239,
+    "r2": 0.9472641241019006,
+    "r2_timing_only": 0.5799574100691577
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I reproduced the claimed score: the 8 terms give test R^2 beyond timing 0.872. Fitted weights: S1 -0.164, a1 -0.034, S1*ep^3 -0.157, a1*ep^3 +0.063, belief_lo -0.008, prev_reward +0.096, stay +0.049, S1*belief_lo -0.016. The core claims hold: z is flat at D1/GO (residuals of 0.007 or less) and dips at D2 when S1 is reached.",
+      "Most of the score comes from trial history, not from the choice and state. The four choice/state/time terms alone reach only 0.49. Adding prev_reward and stay brings it to 0.83, and the belief terms add about 0.04 on top (0.87). Without prev_reward, the state + belief terms reach 0.69. The phrase 'the D2 choice and reached state carry the explanation' overstates their share.",
+      "The stay term is miscoded. (prev_action == action) counts the window's first trial (prev_action = -1) as a switch. This leaves a systematic under-prediction at 'D2 after ?' of +0.042, the second largest miss. Using (stay != 0) instead lifts the score from 0.81-0.83 to 0.874 with fewer terms.",
+      "Reward and staying do not add up; their interaction is missing. With the interaction term, prev_reward is +0.186 after a switch but only about +0.07 after a stay, and staying is +0.10 when the last trial was unrewarded but about -0.01 when it was rewarded. So the low cell is lose-switch (the profile shows D2 after a1 S2 u at -0.185), not 'reward + stay' adding together.",
+      "There is a small arithmetic slip. The S1 dip at trial 100 is about -0.32 for the state terms alone (-0.164 - 0.157), or about -0.29 including the common-a1 terms. That is not 'about 0.2', unless 0.2 refers to the absolute z level.",
+      "The belief terms have small weights: their contribution is at most about 0.03-0.06 within the \u00b14 clip. They are better framed as stronger when S1 is reached than as a main effect.",
+      "Leftover systematic misses in the original fit: D2 after a2 S2 u +0.054, after ? +0.042, after a1 S2 r +0.038, after a2 S1 u +0.036. With the better terms these all fall to 0.027 or less."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 update gate dips when S1 is reached (more with S1-good belief, deeper late in episode); held high unless the agent switched after an unrewarded trial",
+    "better_terms": "(phase == D2) * (state == S1) ;; (phase == D2) * (action == 1) ;; (phase == D2) * (state == S1) * (ep_trial/100.)**3 ;; (phase == D2) * (prev_reward == 1) ;; (phase == D2) * (stay != 0) ;; (phase == D2) * (stay != 0) * (prev_reward == 1) ;; (phase == D2) * (state == S1) * np.clip(belief_lo, -4, 4) ;; (phase == D2) * (common == 1) * (prev_reward == 1)",
+    "better_terms_test_r2_beyond_timing": 0.911
+  },
+  "final_label": "D2 update gate dips when S1 is reached (more with S1-good belief, deeper late in episode); held high unless the agent switched after an unrewarded trial"
+}

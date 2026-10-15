@@ -1,0 +1,64 @@
+{
+  "label": "D2 after choosing a1 when the previous trial was rewarded (fades late in episode)",
+  "predicate": "(phase == D2) & (action == 1) & (prev_reward == 1) & (ep_trial < 85)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (never D1/GO), almost exclusively when this trial chose a1 (97% of mass), and mostly when the previous trial was rewarded (97% of mass). Uses only observed variables: the choice is known at D2 and prev_reward was shown at D1. Reached state and transition type barely matter: it fires about equally on S1-common and S2-rare after a1. Rate drops steadily through the episode and is near zero after trial ~85, so the ep_trial < 85 clause lifts precision from 0.73 to 0.84 (dev F1 0.79 to 0.84). Magnitude builds over streaks of consecutive rewarded a1 trials: low on the first rewarded a1 after an unrewarded or a2 trial, close to max after several in a row. It is high when value is high and good = S1. It does not fire after a2, after unrewarded trials (small residual), or in any non-D2 phase. Reads as an a1-is-paying-off / stay-on-a1 confidence signal.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 207,
+    "predicate": "(phase == D2) & (action == 1) & (prev_reward == 1) & (ep_trial < 85)",
+    "split": "test",
+    "precision": 0.8266773637606228,
+    "recall": 0.8249614517850788,
+    "f1": 0.8258185164296951,
+    "mass_recall": 0.9258434874807328,
+    "correlation": 0.7597437105935274,
+    "n_active": 101172,
+    "n_predicted": 100962,
+    "coverage_by_activation_quartile": [
+      0.620606491914759,
+      0.7209504606017475,
+      0.9595540268058356,
+      0.9987348278179734
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 207,
+    "predicate": "(phase == D2) & (action == 1) & (prev_reward == 1) & (ep_trial < 85)",
+    "split": "dev",
+    "precision": 0.8351951675650808,
+    "recall": 0.8365924026286263,
+    "f1": 0.8358932012111202,
+    "mass_recall": 0.9321913286223671,
+    "correlation": 0.7672359333358311,
+    "n_active": 99824,
+    "n_predicted": 99991,
+    "coverage_by_activation_quartile": [
+      0.6325132232729604,
+      0.7469546401666933,
+      0.9691857669498317,
+      0.99771598012502
+    ]
+  },
+  "gate": "hidden",
+  "feature": 207,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The factual claims hold up. The feature fires only at D2, with 0 activations at D1 and at GO on dev. 96.8% of the activation mass comes after choosing a1 and 96.5% when the previous trial was rewarded. The predicate (phase == D2) & (action == 1) & (prev_reward == 0) has precision 0.11 and mass recall 0.03. The predicate (phase == D2) & (action == 2) has precision 0.04 and mass recall 0.03. Firing at D2 with ep_trial >= 85 has precision 0.02 on test. The ep_trial < 85 clause raises dev F1 from 0.785 to 0.836. The test scores reproduce: P 0.827, R 0.825, F1 0.826, mass recall 0.926.",
+      "Small systematic refinement: 'previous trial was rewarded' should really be 'S1 paid off last trial'. With the base predicate plus prev_state == 2 (the reward was earned in S2, for example a1 that went rare to S2 and was rewarded), precision drops to 0.37 on test (n = 5993). With prev_state == 1 it is 0.85. Switching to a1 after a2 went rare to S1 and was rewarded gives 0.64. Adding prev_state != 2 raises test F1 only from 0.826 to 0.828, because this class is about 6% of the predicted steps.",
+      "The explanation says the reached state and the transition type 'barely matter'. That is true for the current trial, but the PREVIOUS trial's reached state matters, as shown above.",
+      "Magnitude depends on reward history, as claimed. Requiring the trial before the previous one to be rewarded too raises precision to 0.94. The first rewarded a1 after an unrewarded a1 has precision 0.56. Most false positives and missed activations in the test misses output are these low-magnitude first-in-a-run cases, plus weak firing (about 0.1 to 0.3 of max) in long rewarded a2 runs. Both are graded intensity, not a separate firing class.",
+      "The predicate uses no future variables."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after choosing a1 when the previous trial's reward came from S1 (strongest over runs of rewarded a1; fades late in the episode)",
+    "better_predicate": "(phase == D2) & (action == 1) & (prev_reward == 1) & (prev_state != 2) & (ep_trial < 85)",
+    "better_predicate_test_f1": 0.828
+  },
+  "final_label": "D2 after choosing a1 when the previous trial's reward came from S1 (strongest over runs of rewarded a1; fades late in the episode)"
+}

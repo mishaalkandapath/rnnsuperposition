@@ -1,0 +1,91 @@
+{
+  "label": "Fires at D1 in final ~10 trials, ramping up toward episode end, steeper after reaching S1.",
+  "short_terms": "(phase == D1) * (ep_dec == 9) ;; (phase == D1) * (prev_state == 1) * np.maximum(ep_trial - 90, 0) ;; (phase == D1) * np.maximum(ep_trial - 90, 0)",
+  "terms": "(phase == D1) * (ep_dec == 9) ;; (phase == D1) * (ep_dec == 9) * (ep_trial - 90) ;; (phase == D1) * (ep_dec == 9) * (prev_state == 1) * (ep_trial - 90) ;; (phase == D1) * (ep_dec == 9) * (prev_action == 2) * (ep_trial - 90) ;; (phase == D1) * (ep_dec == 9) * (prev_state == 1) ;; (phase == D1) * (ep_dec == 9) * (tv(\"state\", -2) == 1) ;; (phase == D1) * (ep_dec == 9) * belief_lo ;; (phase == D1) * (ep_dec == 9) * (prev_reward == 0)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Sparse feature active essentially only at D1 in the last episode decile (trials 90-99); GO/D2 are zero. Its magnitude ramps with ep_trial within that decile (a within-decile clock the per-decile baseline cannot capture), and the ramp is much steeper when the previous trial reached S1 (a1 S1 and especially a2 S1, rare, are highest in the residual table; S2 outcomes lower it). The free fit adds a smaller extra slope for previous choice a2, a negative effect of the trial-before reaching S1, unrewarded previous trial (+), and a weak negative belief_lo term; these lift dev R2 from 0.58 to 0.67. Belief alone, choice and reward alone explain little. Large residual misses remain in windows where it fires strongly after S2 common trials, suggesting dependence on longer history.",
+  "full_test_scores": {
+    "gate": "hidden",
+    "feature": 50,
+    "terms": [
+      "(phase == D1) * (ep_dec == 9)",
+      "(phase == D1) * (ep_dec == 9) * (ep_trial - 90)",
+      "(phase == D1) * (ep_dec == 9) * (prev_state == 1) * (ep_trial - 90)",
+      "(phase == D1) * (ep_dec == 9) * (prev_action == 2) * (ep_trial - 90)",
+      "(phase == D1) * (ep_dec == 9) * (prev_state == 1)",
+      "(phase == D1) * (ep_dec == 9) * (tv(\"state\", -2) == 1)",
+      "(phase == D1) * (ep_dec == 9) * belief_lo",
+      "(phase == D1) * (ep_dec == 9) * (prev_reward == 0)"
+    ],
+    "weights": [
+      -0.4899875610486136,
+      0.03733029112405255,
+      0.16720842069042888,
+      0.01335397647300955,
+      0.031188060367531693,
+      -0.1385103852170863,
+      -0.04048795457488615,
+      0.21051942104388338
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6704672664320376,
+    "r2": 0.7641466013718815,
+    "r2_timing_only": 0.2842793003461177
+  },
+  "gate": "hidden",
+  "feature": 50,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 50,
+    "terms": [
+      "(phase == D1) * (ep_dec == 9)",
+      "(phase == D1) * (prev_state == 1) * np.maximum(ep_trial - 90, 0)",
+      "(phase == D1) * np.maximum(ep_trial - 90, 0)"
+    ],
+    "weights": [
+      -0.44709704785915527,
+      0.1482835469211163,
+      0.05205170886466625
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6438257754986756,
+    "r2": 0.7450787348412332,
+    "r2_timing_only": 0.2842793003461177
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 50,
+    "terms": [
+      "(phase == D1) * (ep_dec == 9)",
+      "(phase == D1) * (prev_state == 1) * np.maximum(ep_trial - 90, 0)",
+      "(phase == D1) * np.maximum(ep_trial - 90, 0)"
+    ],
+    "weights": [
+      -0.44709704785915527,
+      0.1482835469211163,
+      0.05205170886466625
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5813660192537995,
+    "r2": 0.7001752065396367,
+    "r2_timing_only": 0.2838020627806276
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims hold up. Removing the S1 slope term drops test R^2 beyond timing from 0.644 to 0.261. With only the ramp term it is 0.079. The D1-only and last-tenth claims match the profile: GO and D2 residuals are about 0.",
+      "No 3-term short-form variant beat the recorded one by a meaningful margin. Starting the S1 ramp at trial 92 gives 0.647, a negligible gain. Replacing the ramp with a step at trial 93 gives 0.487, and capping the ramp gives 0.517, so the linear ramp is the right shape. Swapping the general-ramp term for a prev_reward==0 ramp gives 0.644 (the same), a prev_action==2 ramp 0.643, a last_is('a2 S1 u') ramp 0.628, a tv('state',-2)==1 ramp 0.622, a prev_common==0 ramp 0.620, a belief_lo ramp 0.627 and a since_rev term 0.618. Reward, choice, rarity and belief add nothing on top of 'previous trial reached S1'.",
+      "Small issue in the explanation: the 'boost after an unrewarded trial' from the free fit adds nothing on test (0.6437 vs 0.6438). In the profile, a2 S1 u is the highest D1 cell (+0.087), but the effect is fully absorbed by prev_state==1.",
+      "The misses show no large systematic class. Mean error by (phase, previous trial) is at most +0.05 (D1 after a2 S1 u). The largest misses are under-predicted peaks: actual 2.5-3.0 vs predicted 1.0-1.7 at trials 93-99. Some are after S2 trials, so part of the magnitude depends on longer history that no simple term tested here captures.",
+      "The fitted (phase==D1)*(ep_dec==9) weight is -0.447, which offsets the per-decile baseline so the ramp can start near zero. That is a reasonable intercept for the ramp, not curve fitting."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  }
+}

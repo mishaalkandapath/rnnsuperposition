@@ -1,0 +1,83 @@
+{
+  "label": "GO after a1 -> S2 unrewarded; larger when belief favours S1, early episode",
+  "terms": "(phase == GO) * last_is(\"a1 S2 u\") ;; (phase == GO) * last_is(\"a1 S2 u\") * belief_lo ;; (phase == GO) * last_is(\"a1 S2 u\") * ep_dec ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * belief_lo ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * ep_dec ;; (phase == GO) ;; (phase == GO) * ep_dec",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO (zero at D1 and D2). Magnitude is set mainly by the previous trial being a1 -> S2 (rare) unrewarded (weight ~+1.27; residual +0.69 vs about -0.08 for every other pattern; a2 S2 u adds only ~+0.02-0.04). Within those trials it grows with the ideal-observer log-odds that S1 is good (belief_lo, ~+0.13 per unit) and shrinks with episode decile (~-0.21 per decile). On a window first trial, where the previous pattern is unknown but prev_reward = 0 is visible, it fires partly (+0.37) with the same belief/ep_dec modulation, presumably reflecting the a1 S2 u trials that fall outside the window. Generic GO and GO*ep_dec terms soak up the timing baseline offset, which is otherwise spread over all GO steps. Belief deciles on their own score just 0.09 and the hidden good state / trials since reversal ~0. Only observed quantities are used (no value/policy and no future variables). Dev R^2 beyond timing 0.75 vs the profile ceilings of all observed 0.44 and all 0.51; these terms go past the additive ceiling because they use interactions. Leaving out the model value/policy costs little here, since belief_lo times the a1 S2 u pattern stands in for the graded part.",
+  "gate": "hidden",
+  "feature": 125,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 125,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S2 u\")",
+      "(phase == GO) * last_is(\"a1 S2 u\") * belief_lo",
+      "(phase == GO) * last_is(\"a1 S2 u\") * ep_dec",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0)",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0) * belief_lo",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0) * ep_dec",
+      "(phase == GO)",
+      "(phase == GO) * ep_dec"
+    ],
+    "weights": [
+      1.4169542069829535,
+      0.12861428467060196,
+      -0.23217389031683766,
+      0.5099061633587795,
+      0.1020946720980644,
+      -0.0653669140221039,
+      -0.16389092922855072,
+      0.020534119001655048
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7485255673803604,
+    "r2": 0.7706661749138679,
+    "r2_timing_only": 0.08804317521612892
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 125,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S2 u\")",
+      "(phase == GO) * last_is(\"a1 S2 u\") * belief_lo",
+      "(phase == GO) * last_is(\"a1 S2 u\") * ep_dec",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0)",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0) * belief_lo",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0) * ep_dec",
+      "(phase == GO)",
+      "(phase == GO) * ep_dec"
+    ],
+    "weights": [
+      1.4169542069829535,
+      0.12861428467060196,
+      -0.23217389031683766,
+      0.5099061633587795,
+      0.1020946720980644,
+      -0.0653669140221039,
+      -0.16389092922855072,
+      0.020534119001655048
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7532478536621252,
+    "r2": 0.7749305256549343,
+    "r2_timing_only": 0.08787227310727908
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold up. I reproduced the scores (dev 0.753, test 0.7485). GO is the only phase where it fires: the D1 and D2 residuals are all 0. The a1 S2 u residual is +0.689 and every other pattern sits near -0.08. The weights are +1.42 for a1 S2 u, +0.129 for belief_lo and -0.232 for ep_dec.",
+      "The explanation misreads the a2 S2 u case. Its mean residual is only +0.019 because it is bimodal by belief, and misses ranks 'GO after a2 S2 u' as the most under-predicted cell (+0.084). Several worst-fit windows fire strongly after a2 S2 u when the agent goes on to choose a1 (actual 1.81 vs predicted 0.05; 1.74 vs 0.03), and it builds up over repeated a2 S2 u trials (0.42 -> 0.88 -> 1.36). Adding (GO)*last_is('a2 S2 u')*max(belief_lo,0) to the 8-term set raises test R^2 beyond timing to 0.80. So a2 S2 u when belief favours S1 is a real secondary driver. The label leaves it out and the explanation dismisses it.",
+      "The label gets the ranking of modulators wrong. Episode position matters much more than belief. Test R^2 is 0.43 with no modulators, 0.457 adding only the belief_lo terms, and 0.717 adding only the ep_dec terms. Yet the label leads with 'larger when belief favours S1'.",
+      "The effect of episode position fits better as a decay to zero than as a straight line. Using max(1.5 - 0.2*ep_dec, 0) as the gain raises test from 0.749 to 0.755.",
+      "Minor point: the window-first ep_dec term is not redundant. Dropping it lowers test R^2 to 0.729. The explanation's account of the window-first case is plausible."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after an unrewarded trial that ended in S2: strongly after a1 -> S2 (rare) unrewarded, and also after a2 -> S2 unrewarded when belief favours S1. Larger when belief favours S1 and decays to zero over the episode (early/mid only).",
+    "better_terms": "(phase == GO) * last_is(\"a1 S2 u\") * np.maximum(1.5 - 0.2*ep_dec, 0) ;; (phase == GO) * last_is(\"a1 S2 u\") * np.maximum(1.5 - 0.2*ep_dec, 0) * belief_lo ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * np.maximum(1.5 - 0.2*ep_dec, 0) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * belief_lo ;; (phase == GO) ;; (phase == GO) * ep_dec ;; (phase == GO) * last_is(\"a2 S2 u\") * np.maximum(belief_lo,0) * np.maximum(1.5 - 0.2*ep_dec, 0)",
+    "better_terms_test_r2_beyond_timing": 0.798
+  },
+  "final_label": "GO after an unrewarded trial that ended in S2: strongly after a1 -> S2 (rare) unrewarded, and also after a2 -> S2 unrewarded when belief favours S1. Larger when belief favours S1 and decays to zero over the episode (early/mid only)."
+}

@@ -1,0 +1,105 @@
+{
+  "label": "end-of-episode clock (last ~8 trials), off at D2 when S2 is reached",
+  "predicate": "(value<4.2)&~((phase==D2)&(in_state==2)&(in_action==1))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "A timing unit. It never fires before episode trial ~88 (zero activations across trials 0-79, 0.6% in 80-89) and fires on 52% of steps in trials 90-99. Every activation falls in the lowest value-head bin (value < 5.22), the agent own late-episode drop in expected future reward. Within a window its magnitude climbs trial by trial toward the episode end. By phase it is strongest at D1/GO; at D2 it is suppressed when S2 is reached and strong when S1 is reached (rare S1 arrivals near the end give the top activations). It does not depend on reward, transition type, stay/switch or the good state. The simpler ep_trial >= 93 scores F1 0.78 on dev; adding the D2-S2 exclusion gives 0.80. value < 5.22 has recall 1.0 but precision 0.50. Only observed variables are used: the agent can count trials in its fixed-length episode.",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 11,
+    "predicate": "(value<4.2)&~((phase==D2)&(in_state==2)&(in_action==1))",
+    "split": "test",
+    "precision": 0.8416402811027879,
+    "recall": 0.9139579349904398,
+    "f1": 0.876309631976328,
+    "mass_recall": 0.9773972209083913,
+    "correlation": 0.814303187525146,
+    "n_active": 59622,
+    "n_predicted": 64745,
+    "coverage_by_activation_quartile": [
+      0.6797262847175634,
+      0.9774587414463974,
+      0.9987923515598792,
+      0.9998658168399865
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 11,
+    "predicate": "(value<4.2)&~((phase==D2)&(in_state==2)&(in_action==1))",
+    "split": "dev",
+    "precision": 0.8490032217443211,
+    "recall": 0.9135124672262401,
+    "f1": 0.8800773038584119,
+    "mass_recall": 0.9770720718392713,
+    "correlation": 0.816179357603215,
+    "n_active": 56829,
+    "n_predicted": 61147,
+    "coverage_by_activation_quartile": [
+      0.6801801801801802,
+      0.9757161962412895,
+      0.9985922432603646,
+      0.9995776729781094
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 11,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claim holds. The unit never fires in trials 0-79 and fires on 52% of steps in trials 90-99. Every activation falls in the value < 5.22 bin. Dev F1 is 0.78 for ep_trial>=93 and 0.80 for the full predicate; test F1 is 0.823, as reported.",
+      "It is a smooth ramp, not a switch at trial 93. GO precision by trial is 0.12 at trial 90, 0.24 at 91, 0.40 at 92, 0.59 at 93, 0.77 at 94, 0.89 at 95 and 0.97 at 96. D1 follows the same curve slightly lower. D2 lags well behind: 0.18 at trial 93, 0.39 at 95, 0.63 at 97 and 0.76 at 99.",
+      "'Off at D2 when S2 is reached' is only half right. The real D2 split is by state and action together (trials >= 93). S1 reached via a2 (rare) gives precision 0.95. S1 via a1 (common) gives 0.45. S2 via a2 (common) gives 0.37, close to S1 common. S2 via a1 (rare) gives 0.000. So the near-total suppression applies only to rare transitions into S2. Common S2 steps fire as often as common S1, and misses --split test shows strong activations on them (e.g. 0.64, 0.61).",
+      "'No real dependence on reward, stay/switch or the good state' is false inside the ramp (trials 93-95). Precision is 0.70 when good=S2 vs 0.44 when good=S1. At D1 it is 0.79 when the upcoming action is a2 vs 0.50 for a1, and 0.72 after a rewarded trial vs 0.56 after an unrewarded one. At GO it is 0.82 when choice < -4 (favouring a2) vs 0.67 when choice > 4. So the unit has a secondary a2 / S2-good / previous-reward modulation on top of the clock.",
+      "The value head tracks the unit better than trial count. With the threshold tightened, value < 4.3 alone gets dev F1 0.861 and test F1 0.857, against 0.823 for the claimed predicate on test. The explanation tested only the loose cutoff value < 5.22 (F1 0.67) and so missed this. It also points to the fine-grained ramp coming from the agent's own late-episode value, not a hard trial cutoff.",
+      "Systematic errors that remain under the claimed predicate on test: misses on common-S2 D2 steps and on the trial 90-92 ramp onset; false positives on early-ramp steps, mostly in episodes where good=S1 or the agent picks a1. This is structure, not scattered noise."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "late-episode / low-value ramp (rises over roughly trials 90-99, tracks the value head dropping below ~4.3); weaker at D2 and silent after a rare transition into S2; slightly stronger when a2 / S2 is favoured",
+    "better_predicate": "(value<4.2)&~((phase==D2)&(in_state==2)&(in_action==1))",
+    "better_predicate_test_f1": 0.876
+  },
+  "final_label": "late-episode / low-value ramp (rises over roughly trials 90-99, tracks the value head dropping below ~4.3); weaker at D2 and silent after a rare transition into S2; slightly stronger when a2 / S2 is favoured",
+  "original_predicate": "(ep_trial >= 93) & ~((phase == D2) & (in_state == 2))",
+  "original_test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 11,
+    "predicate": "(ep_trial >= 93) & ~((phase == D2) & (in_state == 2))",
+    "split": "test",
+    "precision": 0.807980332217316,
+    "recall": 0.8378618630706786,
+    "f1": 0.8226498365569086,
+    "mass_recall": 0.9122889945665646,
+    "correlation": 0.7757199430768698,
+    "n_active": 59622,
+    "n_predicted": 61827,
+    "coverage_by_activation_quartile": [
+      0.6286059304977861,
+      0.8152421843552932,
+      0.9266018114726602,
+      0.9810130828581013
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 11,
+    "predicate": "(ep_trial >= 93) & ~((phase == D2) & (in_state == 2))",
+    "split": "dev",
+    "precision": 0.7946674044230803,
+    "recall": 0.8087068222210491,
+    "f1": 0.8016256475554236,
+    "mass_recall": 0.8871148564061362,
+    "correlation": 0.7589655730934981,
+    "n_active": 56829,
+    "n_predicted": 57833,
+    "coverage_by_activation_quartile": [
+      0.610571509009009,
+      0.7607517420989653,
+      0.8849158865348068,
+      0.978602097557542
+    ]
+  },
+  "predicate_from": "skeptic"
+}

@@ -1,0 +1,110 @@
+{
+ "label": "Fires at GO, stronger when evidence favors S2 being good and the last choice was a2.",
+ "short_terms": "(phase == GO) * np.tanh(belief_lo) ;; (phase == GO) * (prev_action == 1) * (belief_lo < 0) ;; (phase == GO) * (prev_action == 2) * (belief_lo > 0)",
+ "terms": "(phase == GO) * np.tanh(belief_lo) ;; (phase == GO) * (belief_lo < 0) ;; (phase == GO) * (prev_action == 2) ;; (phase == GO) * last_is(\"a2 S2 u\") ;; (phase == GO) * last_is(\"a1 S2 r\") ;; (phase == GO) * last_is(\"a2 S1 r\") ;; (phase == GO) * (tv(\"action\", -2) == 2) ;; (phase == GO) * np.tanh(belief_lo / 2)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Active only at GO (D1/D2 essentially zero). Its magnitude at GO follows the ideal observer belief in a saturating way: high when S2 is believed good (negative tanh(belief_lo) weight), near zero when S1 is believed good. Having chosen a2 on the last trial adds to that. The free fit also adds last-trial pattern corrections (a1 S2 r lowers it, a2 S1 r raises it, which looks like a mismatch between belief and the agents own learned update) and a sharper belief-sign step, but gains only about 0.03 on dev. Future variables (upcoming choice) were not used; observed belief plus the last choice do the job. Reward alone, value and time since reversal add nothing.",
+ "full_test_scores": {
+  "gate": "hidden",
+  "feature": 119,
+  "terms": [
+   "(phase == GO) * np.tanh(belief_lo)",
+   "(phase == GO) * (belief_lo < 0)",
+   "(phase == GO) * (prev_action == 2)",
+   "(phase == GO) * last_is(\"a2 S2 u\")",
+   "(phase == GO) * last_is(\"a1 S2 r\")",
+   "(phase == GO) * last_is(\"a2 S1 r\")",
+   "(phase == GO) * (tv(\"action\", -2) == 2)",
+   "(phase == GO) * np.tanh(belief_lo / 2)"
+  ],
+  "weights": [
+   -0.4524617097335627,
+   -0.46932659547427036,
+   0.5686144503612098,
+   0.04597487107050167,
+   -0.7661044976177274,
+   0.850970665606292,
+   0.05571422797962363,
+   -1.6282985644096273
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7724315616159465,
+  "r2": 0.8706491567739902,
+  "r2_timing_only": 0.4315958568573024
+ },
+ "gate": "hidden",
+ "feature": 119,
+ "test_scores": {
+  "gate": "hidden",
+  "feature": 119,
+  "terms": [
+   "(phase == GO) * np.tanh(belief_lo)",
+   "(phase == GO) * (prev_action == 1) * (belief_lo < 0)",
+   "(phase == GO) * (prev_action == 2) * (belief_lo > 0)"
+  ],
+  "weights": [
+   -1.988047982646574,
+   -2.951451159135909,
+   1.2445813384777766
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.8122629894346721,
+  "r2": 0.8932895053734432,
+  "r2_timing_only": 0.4315958568573024
+ },
+ "dev_scores": {
+  "gate": "hidden",
+  "feature": 119,
+  "terms": [
+   "(phase == GO) * np.tanh(belief_lo)",
+   "(phase == GO) * (prev_action == 1) * (belief_lo < 0)",
+   "(phase == GO) * (prev_action == 2) * (belief_lo > 0)"
+  ],
+  "weights": [
+   -1.988047982646574,
+   -2.951451159135909,
+   1.2445813384777766
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.828303149777174,
+  "r2": 0.9024834777873814,
+  "r2_timing_only": 0.4320424510638198
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The basic claims check out. The feature is GO-only (D1/D2 residuals about 1e-5). tanh(belief_lo) alone gives test R^2 beyond timing 0.715. Adding the additive (prev_action == 2) term raises that only to 0.739 (+0.025), so 'and the last choice was a2' is a minor additive effect.",
+   "Misses on the recorded short form leave a large systematic error class at GO after the last trial: a1 S1 u is over-predicted by 1.30, a1 S2 r by 0.75 and a1 S2 u by 0.38, while a2 S1 r is under-predicted by 0.64. The worst windows are runs of a1 trials where the ideal observer favors S2: the prediction is 3-4 but the activation is 0.",
+   "The previous choice does not act additively. It matters when it conflicts with the belief. After a1 with belief favoring S2 the feature is strongly suppressed (weight -2.95). After a2 with belief favoring S1 it stays raised (+1.24). Short form tanh(belief_lo) ;; GO*(prev_action==1)*(belief_lo<0) ;; GO*(prev_action==2)*(belief_lo>0) scores test 0.812, against 0.739 for the recorded form and 0.772 for the recorded free fit. It cuts the worst systematic cell from 1.30 to 0.52.",
+   "Additive alternatives score lower: adding last_is('a1 S1 u') gives 0.771, (prev a1 and unrewarded) 0.768, prev_action*tanh 0.745, a belief_cover interaction 0.740, and tv(action,-2) 0.739. The interaction with the conflict between belief and the last choice is what the recorded label leaves out.",
+   "Remaining under-prediction after a2 S1 r (+0.52) is modest. No future variables are needed."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Fires at GO, graded by belief S2 is good, but held back toward the last choice when they conflict.",
+  "better_short_terms": "(phase == GO) * np.tanh(belief_lo) ;; (phase == GO) * (prev_action == 1) * (belief_lo < 0) ;; (phase == GO) * (prev_action == 2) * (belief_lo > 0)",
+  "better_short_terms_test_r2_beyond_timing": 0.8122629894346721
+ },
+ "final_label": "Fires at GO, graded by belief S2 is good, but held back toward the last choice when they conflict.",
+ "original_short_terms": "(phase == GO) * np.tanh(belief_lo) ;; (phase == GO) * (prev_action == 2)",
+ "original_test_scores": {
+  "gate": "hidden",
+  "feature": 119,
+  "terms": [
+   "(phase == GO) * np.tanh(belief_lo)",
+   "(phase == GO) * (prev_action == 2)"
+  ],
+  "weights": [
+   -1.6526232848147007,
+   0.538408459800831
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7392303056184909,
+  "r2": 0.8517774253074952,
+  "r2_timing_only": 0.4315958568573024
+ },
+ "terms_from": "skeptic"
+}

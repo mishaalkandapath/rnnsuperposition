@@ -1,0 +1,64 @@
+{
+  "label": "D2 after choosing a1 and landing in S2 (a1 rare transition)",
+  "predicate": "(phase == D2) & (action == 1) & (state == 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2, and only when the D2 inputs show last action a1 together with state S2, i.e. a rare transition after choosing a1. Recall is about 99.9% and it carries essentially all activation mass. It never fires at D1 or GO, on a1->S1, on a2->S2, or on a2->S1 (rare after a2), apart from 42 tiny activations. The roughly 27% false positives are a1->S2 steps where it stays silent: mostly early in the episode (requiring ep_trial >= 10 raises F1 from 0.84 to 0.86 and removes only low-quartile activations) and steps where the model value is high (requiring value < 7.6 gives precision 0.87, recall 0.85). Those refinements were not recorded because the gain is small. Every variable is observed at D2 (current inputs).",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 1,
+    "predicate": "(phase == D2) & (action == 1) & (state == 2)",
+    "split": "test",
+    "precision": 0.707218426038274,
+    "recall": 0.9987073889256298,
+    "f1": 0.8280597684533231,
+    "mass_recall": 0.9994860471490682,
+    "correlation": 0.7391436121074487,
+    "n_active": 33266,
+    "n_predicted": 46977,
+    "coverage_by_activation_quartile": [
+      0.9966334014668751,
+      0.9983167007334376,
+      0.9998797498797499,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 1,
+    "predicate": "(phase == D2) & (action == 1) & (state == 2)",
+    "split": "dev",
+    "precision": 0.72647477290139,
+    "recall": 0.9987361198880563,
+    "f1": 0.8411222058898068,
+    "mass_recall": 0.9994968322737946,
+    "correlation": 0.7524706656743569,
+    "n_active": 33231,
+    "n_predicted": 45685,
+    "coverage_by_activation_quartile": [
+      0.9960279248916707,
+      0.999037072701011,
+      0.9998796340876264,
+      1.0
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 1,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold on the test split. The unit never fires at D1 or GO (phase != D2: 0 active). It almost never fires at D2 outside a1->S2 (complement predicate recall 0.0013, mass 0.0005; 43 small misses). The recorded scores reproduce: P 0.707, R 0.999, F1 0.828, mass recall 0.999. It uses no future variables at D2.",
+      "Missed systematic class: when the agent switches into a1 (prev_action == 2) and lands in S2, the unit is mostly silent. Precision on that subset is 0.27 (897 of 3337 predicted steps active), against 0.74 when it repeats a1 (prev_action == 1). The explanation calls the false positives 'mostly early in the episode or high value' and never mentions this class. Excluding switch trials raises test F1 from 0.828 to 0.841.",
+      "Second systematic class: when the hidden good state is S2, precision on a1->S2 drops to 0.54 (vs 0.74 when S1 is good). That is a rare transition into the good state. It is likely what the 'value high' false positives reflect, so silence is tied to whether S2 is currently good, not just noise.",
+      "The ep_trial claim is weak. ep_trial >= 3 gives the same F1 gain as ep_trial >= 10 (0.843), and most of the early-trial effect is the first-window-trial boundary, not episode position.",
+      "Taken together, the 'rare after a1' label is correct as a necessary condition. But it overstates sufficiency: about 29% of a1->S2 D2 steps are silent, and they cluster in switch-into-a1 trials and S2-good contexts. These are not scattered noise."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after a rare a1->S2 transition, mainly when a1 was a repeated choice and S2 is not the expected good state (low value). Silent on switch-into-a1 trials.",
+    "better_predicate": "(phase == D2) & (action == 1) & (state == 2) & (prev_action != 2) & (value < 7.6)",
+    "better_predicate_test_f1": 0.852
+  },
+  "final_label": "D2 after a rare a1->S2 transition, mainly when a1 was a repeated choice and S2 is not the expected good state (low value). Silent on switch-into-a1 trials."
+}

@@ -1,0 +1,104 @@
+{
+  "label": "GO step, choosing a2 after a rewarded visit to S2 (episode trials < 70)",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (action == 2) & (prev_state != 1) & (prev_action != 1) & (ep_trial < 70)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at the GO step (never D1 or D2), and only when the agent is about to choose a2 (model_act == 2, policy logit strongly favouring a2; ~0 activations with a1) right after the previous trial was rewarded. Holding prev_state != 1 (the reward came from S2, or the previous trial is outside the window) raises precision from 0.82 to 0.90. A rewarded visit to S1 followed by an a2 choice is mostly silent. The feature also goes silent late in the episode: it is active through about trial 65, falls off near 70, and is zero for trials 80-99, so ep_trial < 70 is part of the predicate. action at GO is the agent own upcoming choice (equivalent to model_act == 2, same F1), so no future random outcome is used. Excluding a prev_action == 1 trial would add about 1 point of F1, but I left that clause out for simplicity. It does not fire after unrewarded trials or on a1 choices. Magnitude: in the example windows it tends to be higher during streaks of rewarded a2/S2 trials and where the a2 logit is most extreme (the choice bin below -8.9 holds 63% of the mass), but I did not check this beyond those tables.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 99,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (action == 2) & (prev_state != 1) & (prev_action != 1) & (ep_trial < 70)",
+    "split": "test",
+    "precision": 0.9263130192864394,
+    "recall": 0.9656672545561434,
+    "f1": 0.9455808420002303,
+    "mass_recall": 0.9947174102644156,
+    "correlation": 0.8888605862904748,
+    "n_active": 76545,
+    "n_predicted": 79797,
+    "coverage_by_activation_quartile": [
+      0.8671160578983121,
+      0.9961329431438127,
+      0.9996864548494984,
+      0.9997387123745819
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 99,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (action == 2) & (prev_state != 1) & (prev_action != 1) & (ep_trial < 70)",
+    "split": "dev",
+    "precision": 0.9346561926137523,
+    "recall": 0.9700226319202722,
+    "f1": 0.9520110668753613,
+    "mass_recall": 0.9954212198161202,
+    "correlation": 0.8910395696223854,
+    "n_active": 75557,
+    "n_predicted": 78416,
+    "coverage_by_activation_quartile": [
+      0.8842244573848597,
+      0.9963470803112923,
+      0.9998411774048388,
+      0.9996823548096776
+    ]
+  },
+  "gate": "update",
+  "feature": 99,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold up. Activation appears only at GO (D1 and D2 are 0/380619 steps each). 75530 of 75557 activations are on action==2, with only 27 on a1. On prev_reward==0 it is active on 205 of 401340 steps. If the previous trial was a rewarded visit to S1, a following a2 choice is silent: precision 0.008, mass recall 0.00003. The late-episode cutoff is real: trials 70-79 have 1408 activations and trials 80-99 have none. Dev precision/recall/F1 reproduce at 0.905/0.977/0.940, and the test F1 of 0.932 reproduces.",
+      "The label overclaims with 'after a rewarded visit to S2'. When S2 was reached by a rare transition from a1 (prev_action==1, prev_state==2, rewarded) and the agent then switches to a2, the predicate is true but the feature is mostly silent: dev precision 0.173, recall 0.007, mass 0.003, 3219 predicted steps. That is a systematic false-positive class, not noise. The feature tracks a2 being repeated after a rewarded a2 -> S2 (common) trial, not any rewarded S2 visit. The other agent noticed this clause but left it out. Adding it raises test F1 from 0.932 to 0.946 (precision 0.893 -> 0.926).",
+      "The magnitude claim was not tested, and it misses the main magnitude trend: magnitude falls steadily over the episode, not just at trial 70. Each bin of trials 0-9 to 20-29 holds about 10-21% of the activation mass. Trials 50-59 have almost as many active steps as 10-19 (11520 vs 11587) but only half the mass (0.106 vs 0.210). Trials 60-69 hold 0.045 of the mass from 9564 active steps. Within trials 60-69 the predicate covers 13% of active steps but only 4.5% of the mass, almost all in the lowest activation quartile.",
+      "Remaining false positives show the feature lags the evidence. The first rewarded a2/S2c trial after a run of unrewarded trials, or when good==S1, is often silent: with good==1 precision is 0.62, against 0.93 when good==2. This suggests the feature integrates evidence over trials rather than responding to a single previous reward. Adding good != 1 or a two-trials-back reward clause lowers test F1 (0.916 and 0.892), so I did not add one. It is a minor systematic gap.",
+      "Future variables: the predicate uses only the agent's own upcoming action plus observed history, so uses_future=false is correct."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step, choosing a2 again after a rewarded a2 -> S2 trial (stay after a rewarded a2 choice), before about episode trial 70, with magnitude falling over the episode",
+    "better_predicate": "(phase == GO) & (prev_reward == 1) & (action == 2) & (prev_state != 1) & (prev_action != 1) & (ep_trial < 70)",
+    "better_predicate_test_f1": 0.9456
+  },
+  "final_label": "GO step, choosing a2 again after a rewarded a2 -> S2 trial (stay after a rewarded a2 choice), before about episode trial 70, with magnitude falling over the episode",
+  "original_predicate": "(phase == GO) & (prev_reward == 1) & (action == 2) & (prev_state != 1) & (ep_trial < 70)",
+  "original_test_scores": {
+    "gate": "update",
+    "feature": 99,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (action == 2) & (prev_state != 1) & (ep_trial < 70)",
+    "split": "test",
+    "precision": 0.8930020951810835,
+    "recall": 0.9744333398654387,
+    "f1": 0.9319422752545761,
+    "mass_recall": 0.9978351202076334,
+    "correlation": 0.8702427822100006,
+    "n_active": 76545,
+    "n_predicted": 83525,
+    "coverage_by_activation_quartile": [
+      0.898782463291007,
+      0.9995296822742475,
+      0.9996864548494984,
+      0.9997387123745819
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "update",
+    "feature": 99,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (action == 2) & (prev_state != 1) & (ep_trial < 70)",
+    "split": "dev",
+    "precision": 0.9046364917008636,
+    "recall": 0.977407784851172,
+    "f1": 0.9396152475952975,
+    "mass_recall": 0.9981617773352338,
+    "correlation": 0.8745458920581243,
+    "n_active": 75557,
+    "n_predicted": 81635,
+    "coverage_by_activation_quartile": [
+      0.9103758602435151,
+      0.9996823548096776,
+      0.9998941182698925,
+      0.9996823548096776
+    ]
+  },
+  "predicate_from": "skeptic"
+}

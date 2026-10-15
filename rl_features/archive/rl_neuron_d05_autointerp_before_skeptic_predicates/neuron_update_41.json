@@ -1,0 +1,66 @@
+{
+  "label": "D2 after a common a2->S2 transition, previous trial rewarded and a2 repeated (mid-episode)",
+  "predicate": "(phase == D2) & (in_state == 2) & (in_action == 2) & (prev_reward == 1) & (prev_action != 1) & (ep_trial >= 10) & (ep_trial < 90)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (never at D1 or GO), and essentially only when the agent chose a2 and reached S2 via the common transition (in_action == 2 & in_state == 2; 12 of 58690 active steps are not). Within that, it needs the previous trial to have been rewarded (prev_reward == 0 holds 0.1% of the mass) and the previous choice not to have been a1, so it is a rewarded-stay-on-a2 / S2-is-good signal. It also has a strong episode-clock dependence: silent on episode trials 0-9 and 90-99, highest around trials 50-70, which the GRU must track internally. All predicate variables are observed by D2. Dev: P 0.74, R 0.98, F1 0.84, mass recall 1.00; the base conjunction without the clock and prev_action terms gets F1 0.75. From the example windows, magnitude seems to grow over runs of consecutive rewarded a2->S2 common trials, and it co-occurs with high value (24.7% firing rate in the top value bin vs about 2% in the middle bins). I did not quantify the magnitude effect. Never fires on a1, S1, rare transitions, or reward-input steps. The remaining false positives are qualifying D2 steps where it stays silent, usually early in a streak.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 41,
+    "predicate": "(phase == D2) & (in_state == 2) & (in_action == 2) & (prev_reward == 1) & (prev_action != 1) & (ep_trial >= 10) & (ep_trial < 90)",
+    "split": "test",
+    "precision": 0.7104883163194837,
+    "recall": 0.9799113327791632,
+    "f1": 0.8237289369290679,
+    "mass_recall": 0.9982183678424186,
+    "correlation": 0.7393398811896472,
+    "n_active": 57744,
+    "n_predicted": 79641,
+    "coverage_by_activation_quartile": [
+      0.9204765863119978,
+      0.9995151011360488,
+      0.9996536436686063,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 41,
+    "predicate": "(phase == D2) & (in_state == 2) & (in_action == 2) & (prev_reward == 1) & (prev_action != 1) & (ep_trial >= 10) & (ep_trial < 90)",
+    "split": "dev",
+    "precision": 0.7371343946686413,
+    "recall": 0.9837962174135287,
+    "f1": 0.8427882264503465,
+    "mass_recall": 0.998658091218053,
+    "correlation": 0.754543945234977,
+    "n_active": 58690,
+    "n_predicted": 78329,
+    "coverage_by_activation_quartile": [
+      0.9355278402508008,
+      1.0,
+      0.9998636859323882,
+      0.9997955288985824
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 41,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The factual claims hold on dev. The unit fires only at D2 (D1 and GO have 0 active steps). 58678 of 58690 active steps have in_action==2 and 58687 have in_state==2. Only 9 active steps follow a rare transition. prev_reward==0 carries 0.1% of the activation mass. Trials 0-9 have 214 active steps (0.3%), trials 90-99 have none, and the peak is at trials 50-70. Reported test scores reproduce: P 0.710, R 0.980, F1 0.824.",
+      "The clock is a soft ramp, not a 10-90 window. Precision of the predicate climbs steadily: 0.34 at ep_trial 10-11, 0.49 at 12-13, 0.62 at 18-19, 0.78 at 26-27, 0.85-0.89 at 50-71. It then falls off sharply: 0.67 at 82-83, 0.42 at 84-85, 0.10 at 86-87, 0.006 at 88-89. Narrowing the window to ep_trial 13-85 alone raises test F1 from 0.824 to 0.849, so the hard cutoff at 90 includes about 4000 dead steps.",
+      "The condition is an a2 choice streak, not just the previous choice. If trial t-2 was a1 (with t-1 a2 and rewarded), precision is 0.024 (n=1069). If t-3 was a1, precision is 0.37. The label only conditions on the previous choice.",
+      "Reward history beyond one trial matters. With an a2 choice at t-2, precision is 0.87 if the t-2 reward was 1 and 0.58 if it was 0. If both t-2 and t-3 were unrewarded, precision is 0.42. This is a systematic false-positive class, which partly matches the stated 'early in a streak'.",
+      "The 'S2-is-good signal' reading overclaims. When the previous trial was a2 to S1 (rare) and rewarded, which is evidence that S1 is good, the predicate still has precision 0.55. With good==1 it has precision 0.41. Conversely, a previous a1 to S2 rare rewarded trial (evidence that S2 is good) gives precision 0.001. So the unit tracks a rewarded a2 choice streak, not model-based belief that S2 is good.",
+      "prev_action != 1 mostly serves to admit rel -3 steps, where prev_action is -1 (unknown in the window). That accounts for 24% of the mass; prev_action==2 alone gives recall 0.75. This is a window artifact, not a flaw, but it should be stated.",
+      "The magnitude claim (activation grows over runs of rewarded common a2 to S2 trials) was not measured. It is consistent with the history effects above."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after a common a2->S2 transition, during a rewarded streak of a2 choices (no a1 in the last 2-3 trials); gated by a soft episode-clock ramp that rises from about trial 12, peaks at 50-70 and is gone by about trial 87",
+    "better_predicate": "(phase == D2) & (in_state == 2) & (in_action == 2) & (prev_reward == 1) & (prev_action != 1) & (tv('action',-2) != 1) & ~((tv('reward',-2) == 0) & (tv('reward',-3) == 0)) & (ep_trial >= 13) & (ep_trial < 86)",
+    "better_predicate_test_f1": 0.859
+  },
+  "final_label": "D2 after a common a2->S2 transition, during a rewarded streak of a2 choices (no a1 in the last 2-3 trials); gated by a soft episode-clock ramp that rises from about trial 12, peaks at 50-70 and is gone by about trial 87"
+}

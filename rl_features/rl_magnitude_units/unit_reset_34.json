@@ -1,0 +1,113 @@
+{
+ "label": "Higher when S1 is reached at D2, after reaching S2 at GO, and after no reward at D1.",
+ "short_terms": "(phase == D2) * ((state == S1) * 1 - (state == S2)) ;; (phase == GO) * ((prev_state == S2) * 1 - (prev_state == S1)) ;; (phase == D2) * ((prev_reward == 1) * 1 - (prev_reward == 0))",
+ "terms": "(phase == D2) * (state == S1) ;; (phase == GO) * (prev_state == S2) ;; (phase == GO) * (prev_action == 2) ;; (phase == GO) * belief_lo ;; (phase == D2) * belief_lo ;; (phase == D2) * (action == 2) ;; (phase == D1) * (prev_reward == 0) ;; (phase == D2) * (state == S1) * prev_reward",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Raw reset gate r34, which sits on top of a strong timing profile (GO high, D2 middle, D1 low). Beyond timing, the main driver is the state reached, shown at D2: S1 raises it by about 0.14 and S2 lowers it. At GO it is higher when the previous trial reached S2 (about +0.1; this matches the GO belief deciles, higher when S2 looks good). At D1 it is slightly higher after an unrewarded trial. The free fit adds: a lower value at D2 for the a2 choice given the state, a D2 boost when S1 was reached after a reward on the previous trial, and small graded belief_lo terms. No future variables are used. The full-fit dev R2 beyond timing is 0.79; the short form scores 0.64 on dev.",
+ "full_test_scores": {
+  "gate": "unit_reset",
+  "feature": 34,
+  "terms": [
+   "(phase == D2) * (state == S1)",
+   "(phase == GO) * (prev_state == S2)",
+   "(phase == GO) * (prev_action == 2)",
+   "(phase == GO) * belief_lo",
+   "(phase == D2) * belief_lo",
+   "(phase == D2) * (action == 2)",
+   "(phase == D1) * (prev_reward == 0)",
+   "(phase == D2) * (state == S1) * prev_reward"
+  ],
+  "weights": [
+   0.12269407647898793,
+   0.09211588397464571,
+   -0.015206158585439633,
+   -0.012385856629700959,
+   -0.014007261951788244,
+   -0.07765088495087026,
+   0.04579186122178492,
+   0.06958506691017863
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7823832717575993,
+  "r2": 0.9475109845966216,
+  "r2_timing_only": 0.7588006407994908
+ },
+ "gate": "unit_reset",
+ "feature": 34,
+ "test_scores": {
+  "gate": "unit_reset",
+  "feature": 34,
+  "terms": [
+   "(phase == D2) * ((state == S1) * 1 - (state == S2))",
+   "(phase == GO) * ((prev_state == S2) * 1 - (prev_state == S1))",
+   "(phase == D2) * ((prev_reward == 1) * 1 - (prev_reward == 0))"
+  ],
+  "weights": [
+   0.09722680749180286,
+   0.06606488047024865,
+   0.02373224716185928
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.8253443294825474,
+  "r2": 0.9578731641904552,
+  "r2_timing_only": 0.7588006407994908
+ },
+ "dev_scores": {
+  "gate": "unit_reset",
+  "feature": 34,
+  "terms": [
+   "(phase == D2) * ((state == S1) * 1 - (state == S2))",
+   "(phase == GO) * ((prev_state == S2) * 1 - (prev_state == S1))",
+   "(phase == D2) * ((prev_reward == 1) * 1 - (prev_reward == 0))"
+  ],
+  "weights": [
+   0.09722680749180286,
+   0.06606488047024865,
+   0.02373224716185928
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.8237283088612544,
+  "r2": 0.957225947474436,
+  "r2_timing_only": 0.7573402044920758
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The recorded short form uses one-sided indicators such as (phase==D2)*(state==S1). The fit has no phase-specific offset for these terms, so each term also has to shift its whole phase's mean. Misses on the recorded form show a phase-level bias: mean error D1 +0.024, D2 -0.025. Using signed versions of the same two main terms instead, e.g. (phase==D2)*((state==S1)*1-(state==S2)), raises test R2 beyond timing from 0.563 to 0.792 with only two terms. That is already above the free fit's 0.78.",
+   "Part of the D1 term's contribution (prev_reward==0) is an offset correction. It adds 0.075 to the one-sided form (0.563 -> 0.638), but only 0.010 once the first two terms are signed (0.792 -> 0.802). Alone it scores 0.008. The claim that D1 is higher after no reward is a weak effect and does not deserve a place in the label.",
+   "The recorded form's third term only works as a fitted correction, which shows it was fitting noise rather than describing the gate. Other examples: (phase==D2)*(prev_reward==0) scores 0.673 but its complement (phase==D2)*(prev_reward==1) scores 0.574, which should not happen if the term were a real effect.",
+   "A better third term, signed, is at D2: the gate is lower after an unrewarded previous trial (weight -0.024 on the +/-1 coding). Test R2 0.825. GO*belief_lo as the third term does almost as well (0.825). D2 action (0.801) and D2 common (0.793) add little.",
+   "Misses on the improved form leave no phase bias (D1 +0.002, D2 -0.002). The remaining errors are small (about 0.04 or less) and are at GO by previous choice: GO after a2 is higher than predicted, after a1 lower. This matches the free fit's GO*(prev_action==2) term.",
+   "The core claims hold: at D2, S1 is higher than S2, and at GO the gate is higher when the previous trial reached S2. No future variables are used."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "D2: higher for S1 than S2 reached, lower after no reward; GO: higher after S2 than S1",
+  "better_short_terms": "(phase == D2) * ((state == S1) * 1 - (state == S2)) ;; (phase == GO) * ((prev_state == S2) * 1 - (prev_state == S1)) ;; (phase == D2) * ((prev_reward == 1) * 1 - (prev_reward == 0))",
+  "better_short_terms_test_r2_beyond_timing": 0.8253443294825474
+ },
+ "final_label": "D2: higher for S1 than S2 reached, lower after no reward; GO: higher after S2 than S1",
+ "original_short_terms": "(phase == D2) * (state == S1) ;; (phase == GO) * (prev_state == S2) ;; (phase == D1) * (prev_reward == 0)",
+ "original_test_scores": {
+  "gate": "unit_reset",
+  "feature": 34,
+  "terms": [
+   "(phase == D2) * (state == S1)",
+   "(phase == GO) * (prev_state == S2)",
+   "(phase == D1) * (prev_reward == 0)"
+  ],
+  "weights": [
+   0.14729249084406143,
+   0.11086865967025891,
+   0.06385170631997394
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6383061486711019,
+  "r2": 0.9127596748327056,
+  "r2_timing_only": 0.7588006407994908
+ },
+ "terms_from": "skeptic"
+}

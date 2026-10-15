@@ -1,0 +1,64 @@
+{
+  "label": "GO step, choosing a2 after a rewarded trial (before trial ~80 of the episode)",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (action == 2) & (ep_trial < 80)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO steps, only when the previous trial was rewarded (in_rew=0 at GO; prev_reward=1 holds 99% of mass), and only when the agent is about to choose a2 (model_act=2, choice logit strongly negative; a1 choices essentially never). action at GO is the agent own upcoming choice, which is legitimate (no future random outcome used). Almost all firing is on reward-driven stays of a2 (prev_action=2, prev_common=1, good=S2). Never fires at D1 or D2, after unrewarded trials, or for a1 choices, and it shuts off late in the episode (none after trial ~85), which removes most false positives. Magnitude: lowest quartile is partly on GO steps after unrewarded trials (about 0.1-0.2 of max) and on long streaks late in the episode; strong activations (~0.8-1.0) are rewarded a2 repeats. Adding prev_action != 1 gives slightly higher dev F1 (0.887 vs 0.871); I recorded the simpler version.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 3,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (action == 2) & (ep_trial < 80)",
+    "split": "test",
+    "precision": 0.8024951545829178,
+    "recall": 0.9212606929923097,
+    "f1": 0.8577864936893448,
+    "mass_recall": 0.987060632128046,
+    "correlation": 0.8460280885427066,
+    "n_active": 92584,
+    "n_predicted": 106286,
+    "coverage_by_activation_quartile": [
+      0.6856908321092198,
+      0.9997839799533397,
+      0.9996111639160115,
+      0.9999567959906679
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 3,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (action == 2) & (ep_trial < 80)",
+    "split": "dev",
+    "precision": 0.820525183949391,
+    "recall": 0.9273880629550508,
+    "f1": 0.8706899639284709,
+    "mass_recall": 0.9880547413117167,
+    "correlation": 0.8570604978644338,
+    "n_active": 91748,
+    "n_predicted": 103697,
+    "coverage_by_activation_quartile": [
+      0.7101190216680473,
+      0.9996512185551729,
+      0.9998692069581898,
+      0.9999128046387932
+    ]
+  },
+  "gate": "reset",
+  "feature": 3,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The predicate misses one systematic false-positive class: GO steps where the agent picks a2 after a RARE-rewarded trial. On dev, (phase==GO)&(prev_reward==1)&(action==2)&(prev_common==0) covers 17,201 steps with precision 0.028 and recall 0.005. On test it is 19,578 steps at precision 0.027. These steps make up most of the predicate's roughly 18.6k dev false positives. The feature is silent after rare-rewarded trials whichever action came before (prev_action==2 gives precision 0.022, prev_action==1 gives 0.041). By prev_common, the profile shows 474 active steps on prev_common=0 versus 69,979 on prev_common=1.",
+      "The explanation says nearly all firing is on a common previous transition, but the recorded predicate leaves that condition out. The label ('choosing a2 after a rewarded trial') therefore covers cases where the feature does not fire. The feature is really about a common-rewarded (win-stay, model-based) repeat of a2, not any rewarded trial.",
+      "Adding (prev_common != 0) raises dev F1 from 0.871 to 0.927 and test F1 from 0.858 to 0.920. Recall barely changes (test 0.921 to 0.915, mass recall 0.987 to 0.986), while precision rises from 0.802 to 0.924. prev_common is shown at the previous trial's D2, so this predicate uses only observed variables.",
+      "The other claims hold. Firing is GO-only: 100% of mass is at GO, and D1/D2 have 0 active steps. It is a2 choices only: 18 of 91,748 active steps are on a1, and (phase==GO)&(action==1) scores F1 0. About 99% of mass is on prev_reward=1, and prev_reward=0 with a2 has mass recall 0.01. Firing switches off late: 947 active steps at trials 80-89, none at 90+, and GO steps at ep_trial>=80 score F1 0.011. The prev_action != 1 refinement adds almost nothing once prev_common is included (dev F1 0.928 vs 0.927).",
+      "The steps still left over look like scattered noise: weak activations of about 0.05-0.2 on GO a2 after unrewarded trials, and some GO a2 steps after common-rewarded trials that stay unexpectedly silent. They do not form a further systematic class."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step, repeating/choosing a2 after a COMMON-rewarded previous trial (model-based win-stay toward S2), before trial ~80; silent after rare-rewarded trials",
+    "better_predicate": "(phase == GO) & (prev_reward == 1) & (action == 2) & (prev_common != 0) & (ep_trial < 80)",
+    "better_predicate_test_f1": 0.92
+  },
+  "final_label": "GO step, repeating/choosing a2 after a COMMON-rewarded previous trial (model-based win-stay toward S2), before trial ~80; silent after rare-rewarded trials"
+}

@@ -1,0 +1,64 @@
+{
+  "label": "end-of-episode (last ~9 trials) timer, suppressed by S1 / upcoming a2",
+  "predicate": "(ep_trial >= 91) & (in_state != 1) & (model_act != 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "An end-of-episode clock. The unit never fires before episode trial ~80, and 98% of its activation mass falls on trials 90-99. It tracks the model value collapsing near the episode end: value < 5.22 alone gives mass recall 0.99. Within the end zone it fires at D1 (60% of mass, larger after a reward), at D2 when S2 is shown (never when S1 is shown), and at GO only when the agent is about to choose a1 (model_act==1); it is silent at GO when the agent picks a2. Magnitude rises over successive trials toward the episode end (a ramp across the window in the examples) and is larger at D1 after a reward. It does not fire on choice, transition, reward pattern, or good-state structure: lifts on those are ~1x. Predicate uses ep_trial (observable through elapsed time) and the agent own policy argmax, so no future variable. Dev scores: P 0.79, R 0.86, F1 0.83, mass recall 0.96. ep_trial>=90 alone gives F1 0.65 with mass recall 0.98.",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 2,
+    "predicate": "(ep_trial >= 91) & (in_state != 1) & (model_act != 2)",
+    "split": "test",
+    "precision": 0.7877033863543138,
+    "recall": 0.8736435937184067,
+    "f1": 0.8284506794704845,
+    "mass_recall": 0.9596495697475372,
+    "correlation": 0.7311540404494027,
+    "n_active": 59348,
+    "n_predicted": 65823,
+    "coverage_by_activation_quartile": [
+      0.6470310709712206,
+      0.8764575048864326,
+      0.9754667385590079,
+      0.9956190604569657
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 2,
+    "predicate": "(ep_trial >= 91) & (in_state != 1) & (model_act != 2)",
+    "split": "dev",
+    "precision": 0.7944630332668425,
+    "recall": 0.8648757508362083,
+    "f1": 0.8281754383022965,
+    "mass_recall": 0.9577361387649921,
+    "correlation": 0.7366710327511014,
+    "n_active": 57103,
+    "n_predicted": 62164,
+    "coverage_by_activation_quartile": [
+      0.6159288316054917,
+      0.8741944522275147,
+      0.974852899971981,
+      0.9945359019264448
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 2,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Main claims check out. On dev, ep_trial bins 0-79 have 1 active step in total, trials 80-89 hold 1.6% of the mass and 90-99 hold 98.4%. value<5.22 gives mass recall 0.995. D2 with S1 shown is essentially silent (P 0.016, MR 0.0005) and D2 with S2 shown fires (P 0.78). GO with model_act==2 is silent (P 0.086, MR 0.009). D1 fires more after a reward than after none (P 0.905 vs 0.849). The predicate uses no future variable, and its test score reproduces: P 0.788, R 0.874, F1 0.828, MR 0.96.",
+      "The GO claim overstates things. The unit does not fire whenever the agent is about to choose a1. At GO with ep_trial>=93 and model_act==1, it fires when the previous trial reached S1 and was rewarded (P 0.92, n 5277). It is mostly silent when the previous trial reached S2 (P 0.19, n 2363) or reached S1 without reward (P 0.43). Over ep_trial>=91, GO & a1 & not(prev S1 rewarded) has P 0.33 on 6636 predicted steps. That is a systematic false-positive class, about a third of all false positives, not scattered noise. Test misses show the same windows, e.g. GO a1 after an S2R trial predicted but inactive.",
+      "The 'end-of-episode timer' is a graded ramp whose onset depends on phase, not a sharp start at trial 91. Precision of D1 by ep_trial is 0.17 at 88, 0.41 at 90, 0.59 at 91, 0.87 at 93 and 0.99 from 95. For D2 with S2 shown it is 0.14 at 90, 0.29 at 91, 0.68 at 93 and 0.97 at 95. For GO with a1 it peaks at only 0.83 at trial 99. So D1 turns on about 2 trials before D2. The missed activations (4% of mass) are the weak early edge of this ramp, at ep_trial 86-90.",
+      "The label 'suppressed by S1' is partly misleading. S1 suppresses only the D2 response to the state shown at that step. At GO, an S1-rewarded previous trial is what enables firing.",
+      "Fixing these gives only modest test gains. (ep_trial>=91)&(in_state!=1)&(model_act!=2) restricted at GO to prev_state==1 & prev_reward==1 reaches test F1 0.836. Using value<4.8 as the clock (allowed: it is the agent's own value output) plus the GO restriction reaches test F1 0.851 (P 0.876, R 0.827, MR 0.935). The core explanation is sound; the gap is a refinement within the GO sub-claim."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "end-of-episode ramp (from about trial 89, tracks falling value): at D1 (more after reward), at D2 when S2 is shown, and at GO only when choosing a1 again after a rewarded S1 trial",
+    "better_predicate": "(value<4.8)&(in_state!=1)&(model_act!=2)&~((phase==GO)&~((prev_state==1)&(prev_reward==1)))",
+    "better_predicate_test_f1": 0.851
+  },
+  "final_label": "end-of-episode ramp (from about trial 89, tracks falling value): at D1 (more after reward), at D2 when S2 is shown, and at GO only when choosing a1 again after a rewarded S1 trial"
+}

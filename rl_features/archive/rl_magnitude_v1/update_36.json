@@ -1,0 +1,63 @@
+{
+  "label": "D1 after a2->S1 rewarded (rare), growing over episode, collapses at end",
+  "terms": "(phase == D1) * last_is(\"a2 S1 r\") * table(ep_dec, {0:0, 1:0.1, 2:0.3, 3:0.5, 4:0.7, 5:0.85, 6:1, 7:1, 8:0.6, 9:0.1}) ;; (phase == D1) * last_is(\"a2 S1 r\") * (tv(\"reward\", -2) == 1) ;; (phase == D1) * (prev_action >= 1) * (1 - last_is(\"a2 S1 r\")) * table(ep_dec, {0:0, 1:0.1, 2:0.3, 3:0.5, 4:0.7, 5:0.85, 6:1, 7:1, 8:0.6, 9:0.1})",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 and essentially only when the previous trial was a2 -> S1 (rare) rewarded; residual after that pattern is +0.51 versus about -0.04 after every other pattern, including the other rare-rewarded case a1 S2 r. Magnitude after a2 S1 r grows with episode time (near 0 in trials 0-9, peaking at about 1 in trials 60-79, down to about 0.6 in 80-89 and near 0 in 90-99). That interaction (fitted weight +0.97) carries almost all of the fit. A rewarded trial before that adds a little (+0.05). After other patterns it is near zero, so the per-decile timing baseline is removed for them (-0.05). GO and D2 are always 0. Policy, value, hidden good state and future variables add essentially nothing. Test R^2 beyond timing 0.71, above the additive all ceiling of 0.48 because the pattern x episode-time interaction is not additive. Misses left over: D1 firing on the first window trial where the previous trial is outside the window.",
+  "gate": "update",
+  "feature": 36,
+  "test_scores": {
+    "gate": "update",
+    "feature": 36,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S1 r\") * table(ep_dec, {0:0, 1:0.1, 2:0.3, 3:0.5, 4:0.7, 5:0.85, 6:1, 7:1, 8:0.6, 9:0.1})",
+      "(phase == D1) * last_is(\"a2 S1 r\") * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * (prev_action >= 1) * (1 - last_is(\"a2 S1 r\")) * table(ep_dec, {0:0, 1:0.1, 2:0.3, 3:0.5, 4:0.7, 5:0.85, 6:1, 7:1, 8:0.6, 9:0.1})"
+    ],
+    "weights": [
+      0.9604909441023847,
+      0.04538395865973457,
+      -0.04765296191825855
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7067630221321876,
+    "r2": 0.7313526643326725,
+    "r2_timing_only": 0.08385587104082648
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 36,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S1 r\") * table(ep_dec, {0:0, 1:0.1, 2:0.3, 3:0.5, 4:0.7, 5:0.85, 6:1, 7:1, 8:0.6, 9:0.1})",
+      "(phase == D1) * last_is(\"a2 S1 r\") * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * (prev_action >= 1) * (1 - last_is(\"a2 S1 r\")) * table(ep_dec, {0:0, 1:0.1, 2:0.3, 3:0.5, 4:0.7, 5:0.85, 6:1, 7:1, 8:0.6, 9:0.1})"
+    ],
+    "weights": [
+      0.9604909441023847,
+      0.04538395865973457,
+      -0.04765296191825855
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7098434500683526,
+    "r2": 0.7338949465868226,
+    "r2_timing_only": 0.08289144782061952
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claim holds. The original 3 terms reproduce test R^2 beyond timing 0.707 (weights +0.96, +0.045, -0.048). The D1-only claim and the episode-time shape after a2 S1 r both check out.",
+      "It overclaims that the feature is 'almost only' a2->S1 rewarded (rare). The worst dev misses include D1 activations of 0.91 (t75), 0.89 (t57), 0.78 (t49) and 0.58 (t72) after a COMMON a1 S1 r trial that followed a2 trials. Adding the term (D1) * last_is('a1 S1 r') * (tv('action',-2)==2) * ep_dec-shape gets weight +0.48 (about half the a2 S1 r peak) and raises test R^2 from 0.707 to 0.734. The same pattern preceded by an a1 trial gets weight about 0.01, so it adds nothing.",
+      "a2 S1 r is not uniform. When the trial two back was a1 (the agent had just switched to a2), the response is much weaker. The split term gets weight -0.42 on top of the base, or about 0.63 against 1.05 when it is fitted separately, and test R^2 rises to 0.746. Using tv('stay',-1)==0 instead gives the same result.",
+      "Taken together, the variable behind the magnitude is better described as 'S1 just paid a reward while the agent had been choosing a2', i.e. evidence against an S2 belief. The rare transition label is too narrow. a1 S2 r, the other rare-rewarded pattern, really is near zero, so the effect is specific to S1 and is not about rare transitions in general.",
+      "The rewarded-two-back term (+0.04 to +0.05) is minor but holds. A term for the window's first trial (trial==0 with in_rew==1, times ep_dec) adds nothing (weight 0.002), so the stated leftover from first-trial D1 steps cannot be captured with observed cues. In misses it is a small over-prediction (-0.011).",
+      "After the fix, misses show only small systematic errors (largest D1 after a2 S1 r -0.023, D1 after a1 S1 r +0.010). No large error class remains."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after S1 was rewarded while the agent had been on a2 (a2 S1 r after a2: full; a2 S1 r just after switching from a1: ~0.6; a1 S1 r after a2: ~0.5), growing over the episode, peaking trials 60-79, collapsing at end",
+    "better_terms": "(phase == D1) * last_is(\"a2 S1 r\") * (tv(\"action\", -2) != 1) * table(ep_dec, {0:0, 1:0.1, 2:0.3, 3:0.5, 4:0.7, 5:0.85, 6:1, 7:1, 8:0.6, 9:0.1}) ;; (phase == D1) * last_is(\"a2 S1 r\") * (tv(\"action\", -2) == 1) * table(ep_dec, {0:0, 1:0.1, 2:0.3, 3:0.5, 4:0.7, 5:0.85, 6:1, 7:1, 8:0.6, 9:0.1}) ;; (phase == D1) * last_is(\"a1 S1 r\") * (tv(\"action\", -2) == 2) * table(ep_dec, {0:0, 1:0.1, 2:0.3, 3:0.5, 4:0.7, 5:0.85, 6:1, 7:1, 8:0.6, 9:0.1}) ;; (phase == D1) * last_is(\"a2 S1 r\") * (tv(\"reward\", -2) == 1) ;; (phase == D1) * (prev_action >= 1) * table(ep_dec, {0:0, 1:0.1, 2:0.3, 3:0.5, 4:0.7, 5:0.85, 6:1, 7:1, 8:0.6, 9:0.1})",
+    "better_terms_test_r2_beyond_timing": 0.7462
+  },
+  "final_label": "D1 after S1 was rewarded while the agent had been on a2 (a2 S1 r after a2: full; a2 S1 r just after switching from a1: ~0.6; a1 S1 r after a2: ~0.5), growing over the episode, peaking trials 60-79, collapsing at end"
+}

@@ -1,0 +1,70 @@
+{
+  "label": "D1 after unrewarded S1 visit, ramping up over episode trials 70-99",
+  "terms": "(phase == D1) * last_is(\"a1 S1 u\") * np.clip(ep_trial - 70, 0, 30) ;; (phase == D1) * last_is(\"a1 S1 u\") * (ep_trial >= 90) ;; (phase == D1) * last_is(\"a2 S1 u\") * np.clip(ep_trial - 70, 0, 30) ;; (phase == D1) * last_is(\"a2 S1 u\") * (ep_trial >= 90) ;; (phase == D1) * (prev_state == -1) * (in_rew == 0) * np.clip(ep_trial - 70, 0, 30)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Sparse feature (nonzero on 1.1% of steps), active only at D1. Its magnitude is set by the previous trial having reached S1 and gone unrewarded, gated by how late the episode is: near zero before trial ~70, then rising roughly linearly, with a step up at trial >= 90. After a1 S1 u (common) it is strongest (fitted about 1.1 at trials 90+), about twice the value after a2 S1 u (rare, about 0.5). Unrewarded S2 visits and rewarded trials of any kind leave it at about 0. On a window first trial, where the previous trial is unknown, an unrewarded D1 late in the episode gives a small extra contribution. All terms are observed. Timing alone gives R^2 0.12. These 5 terms give R^2 beyond timing of 0.71 on dev and 0.70 on test. That is far above the profile additive ceiling (all = 0.13), because the effect is an interaction between last trial and episode time. Value, policy, the hidden good state and future variables were not needed.",
+  "gate": "update",
+  "feature": 181,
+  "test_scores": {
+    "gate": "update",
+    "feature": 181,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S1 u\") * np.clip(ep_trial - 70, 0, 30)",
+      "(phase == D1) * last_is(\"a1 S1 u\") * (ep_trial >= 90)",
+      "(phase == D1) * last_is(\"a2 S1 u\") * np.clip(ep_trial - 70, 0, 30)",
+      "(phase == D1) * last_is(\"a2 S1 u\") * (ep_trial >= 90)",
+      "(phase == D1) * (prev_state == -1) * (in_rew == 0) * np.clip(ep_trial - 70, 0, 30)"
+    ],
+    "weights": [
+      0.03232444590784675,
+      0.3315661053972688,
+      0.003247418927031226,
+      0.40547497172526203,
+      0.006664280880941997
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6952366851279969,
+    "r2": 0.7304818588333152,
+    "r2_timing_only": 0.11564769112752593
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 181,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S1 u\") * np.clip(ep_trial - 70, 0, 30)",
+      "(phase == D1) * last_is(\"a1 S1 u\") * (ep_trial >= 90)",
+      "(phase == D1) * last_is(\"a2 S1 u\") * np.clip(ep_trial - 70, 0, 30)",
+      "(phase == D1) * last_is(\"a2 S1 u\") * (ep_trial >= 90)",
+      "(phase == D1) * (prev_state == -1) * (in_rew == 0) * np.clip(ep_trial - 70, 0, 30)"
+    ],
+    "weights": [
+      0.03232444590784675,
+      0.3315661053972688,
+      0.003247418927031226,
+      0.40547497172526203,
+      0.006664280880941997
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.71367908520154,
+    "r2": 0.7464995029034919,
+    "r2_timing_only": 0.11462808340443453
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The 'ramps roughly linearly from trial 70' wording is too smooth. Splitting by decile on test gives a1 S1 u weights of 0.08 / 0.45 / 1.12 for deciles 7 / 8 / 9 and a2 S1 u weights of ~0 / ~0 / 0.48. So after a2 S1 u there is no ramp at all (clip weight 0.003), only a step at trial 90, and a1 S1 u is mostly a step at decile 9 with a small rise in decile 8. The decile model scores 0.674 on test.",
+      "The first-window-trial term (prev unknown, in_rew==0) has a small weight because the previous trial is unknown, not because the activation there is small. The worst misses are all first-trial cells with actual ~1.2-1.6 against predicted ~0.3. Per-decile indicators (0.014 / 0.066 / 0.177) add nothing (test 0.6957). These errors are not observable from the available variables, so this is an irreducible gap rather than a label error.",
+      "The claim that value was not needed is not quite right. Within late a1 S1 u and a2 S1 u, a lower model value raises the activation: weights of -0.23 and -0.35 per unit value at trials 90+. Adding these terms raises test R^2 beyond timing from 0.695 to 0.766-0.769. This is a moderate effect, not a large systematic gap.",
+      "The remaining checks hold. Misses on the original terms show no systematic phase or previous-trial error class: GO and D2 are off by +0.005 and D1 by -0.010, and no D1 previous-trial pattern is over-predicted by more than 0.015. Only D1 activity, a1 S1 u being about 2x a2 S1 u at trials 90+ (about 1.1 vs about 0.5 fitted), near zero after S2-unrewarded or rewarded trials, and no future variables all check out. Test 0.695 is confirmed.",
+      "Trial-before history (two consecutive unrewarded S1 visits, the earlier choice), the hidden good state and the policy logit add nothing: test 0.695, 0.694 and 0.701."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after an unrewarded S1 visit, late in the episode: rises from trial ~80 after a1 S1 u, steps up at 90+ after both a1 S1 u and a2 S1 u (a1 about 2x), stronger when value is low",
+    "better_terms": "(phase == D1) * last_is('a1 S1 u') * np.clip(ep_trial-70,0,30) ;; (phase == D1) * last_is('a1 S1 u') * (ep_trial>=90) ;; (phase == D1) * last_is('a1 S1 u') * np.clip(ep_trial-70,0,30) * value ;; (phase == D1) * last_is('a2 S1 u') * np.clip(ep_trial-70,0,30) ;; (phase == D1) * last_is('a2 S1 u') * (ep_trial>=90) ;; (phase == D1) * last_is('a2 S1 u') * np.clip(ep_trial-70,0,30) * value ;; (phase == D1) * (prev_state == -1) * (in_rew == 0) * (ep_dec==9) ;; (phase == D1) * (prev_state == -1) * (in_rew == 0) * (ep_dec==9) * choice",
+    "better_terms_test_r2_beyond_timing": 0.7685
+  },
+  "final_label": "D1 after an unrewarded S1 visit, late in the episode: rises from trial ~80 after a1 S1 u, steps up at 90+ after both a1 S1 u and a2 S1 u (a1 about 2x), stronger when value is low"
+}

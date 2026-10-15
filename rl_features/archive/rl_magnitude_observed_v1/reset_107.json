@@ -1,0 +1,79 @@
+{
+  "label": "GO-only; grows with recent unrewarded a2 trials and S2-leaning belief",
+  "terms": "(phase == GO) * (prev_action == 2) * (prev_reward == 0) ;; (phase == GO) * (tv(\"action\", -2) == 2) * (tv(\"reward\", -2) == 0) ;; (phase == GO) * (prev_reward == 1) ;; (phase == GO) * np.clip(-belief_lo, -4, 4) ;; (phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) ;; (phase == GO) * last_is(\"a2 S1 r\") ;; (phase == GO) * last_is(\"a1 S1 u\")",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Active only at GO (timing baseline rises over the episode; D1/D2 are zero). Beyond timing the magnitude behaves like an accumulator of unrewarded a2 choices: +1.06 if the last trial was a2 unrewarded (either state), +0.46 more if the trial before was also a2 unrewarded, +0.66 for two unrewarded trials in a row (any choice); a reward on the last trial lowers it (-0.44), most after a2 S1 rewarded (extra -0.49), and a1 S1 unrewarded also lowers it (-0.31). Ideal-observer belief that S2 is good (-belief_lo, clipped) adds a graded positive term (+0.13 per log-odds unit). Observed-only, 7 terms: dev R^2 beyond timing 0.655, test 0.644, against an all-observed ceiling of 0.67 and an all ceiling of 0.68, so leaving out the model value/policy and the future choice costs little (the earlier firing label leaned on the upcoming a2 choice; trial history plus belief recovers this). Residual misses: under-predicted on the first trial of a window (history unknown; adding prev_action == -1 gives dev 0.668), and the longest no-reward a2 streaks, where activation saturates near 5. Future variables not used.",
+  "gate": "reset",
+  "feature": 107,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 107,
+    "terms": [
+      "(phase == GO) * (prev_action == 2) * (prev_reward == 0)",
+      "(phase == GO) * (tv(\"action\", -2) == 2) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == GO) * np.clip(-belief_lo, -4, 4)",
+      "(phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * last_is(\"a2 S1 r\")",
+      "(phase == GO) * last_is(\"a1 S1 u\")"
+    ],
+    "weights": [
+      1.0617421469770931,
+      0.4633688845115034,
+      -0.4413522071347105,
+      0.13284498664035232,
+      0.6578548325597885,
+      -0.4902788901670217,
+      -0.30548945805134586
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.643996585033624,
+    "r2": 0.7699419498803525,
+    "r2_timing_only": 0.35377572110824784
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 107,
+    "terms": [
+      "(phase == GO) * (prev_action == 2) * (prev_reward == 0)",
+      "(phase == GO) * (tv(\"action\", -2) == 2) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == GO) * np.clip(-belief_lo, -4, 4)",
+      "(phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * last_is(\"a2 S1 r\")",
+      "(phase == GO) * last_is(\"a1 S1 u\")"
+    ],
+    "weights": [
+      1.0617421469770931,
+      0.4633688845115034,
+      -0.4413522071347105,
+      0.13284498664035232,
+      0.6578548325597885,
+      -0.4902788901670217,
+      -0.30548945805134586
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6546066875540071,
+    "r2": 0.7733263171232854,
+    "r2_timing_only": 0.3437230116835044
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I could not refute it. The 7 terms reproduce test R^2 beyond timing 0.644, against an all-observed ceiling of 0.67 and an 'all' ceiling of 0.68. The fitted weights match the explanation: +1.06, +0.46, -0.44, +0.13, +0.66, -0.49, -0.31.",
+      "The belief term is needed. Dropping it lowers test R^2 from 0.644 to 0.523, and belief alone scores 0.187. The S2-leaning part of the label holds up.",
+      "Calling it a 'counter of unrewarded a2' overstates things slightly. The +0.66 two-unrewarded-in-a-row term applies to either choice. Going back a third trial (a three-trial a2 unrewarded streak) adds nothing on test (0.659 with or without it), so the count only reaches back two trials.",
+      "Systematic misses are small. GO on the first trial of a window (history unknown) is under-predicted by +0.24, and GO after a1 S2 r by +0.17. A prev_action == -1 term raises test R^2 to 0.659, and adding belief x prev_reward==0 gives 0.661. The 'saturates near 5' misses are long a2 streaks that the additive terms under-predict, as the explanation already says.",
+      "The profile confirms the feature is GO-only: the D1 and D2 residuals are about 0. No future variables are used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO-only; grows with the last 1-2 unrewarded trials (most when a2 was chosen) and with S2-leaning belief",
+    "better_terms": "(phase == GO) * (prev_action == 2) * (prev_reward == 0) ;; (phase == GO) * (tv('action', -2) == 2) * (tv('reward', -2) == 0) ;; (phase == GO) * (prev_reward == 1) ;; (phase == GO) * np.clip(-belief_lo, -4, 4) ;; (phase == GO) * (prev_reward == 0) * (tv('reward', -2) == 0) ;; (phase == GO) * last_is('a2 S1 r') ;; (phase == GO) * (prev_action == -1) ;; (phase == GO) * np.clip(-belief_lo, -4, 4) * (prev_reward == 0)",
+    "better_terms_test_r2_beyond_timing": 0.6612
+  },
+  "final_label": "GO-only; grows with the last 1-2 unrewarded trials (most when a2 was chosen) and with S2-leaning belief"
+}

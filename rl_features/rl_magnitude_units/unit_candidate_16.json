@@ -1,0 +1,112 @@
+{
+ "label": "At D1, rises after unrewarded or a2 trials; falls after reward when S1 is believed good.",
+ "short_terms": "(phase == D1) * prev_reward ;; (phase == D1) * ((prev_action == 2) + (belief_lo < 0)) ;; (phase == D1) * (prev_state == 2)",
+ "terms": "(phase == D1) * prev_reward ;; (phase == D1) * (prev_action == 2) ;; (phase == D1) * belief_lo ;; (phase == D1) * (prev_state == 2) ;; (phase == D1) * prev_reward * (prev_state == 2) ;; (phase == D1) * tv(\"reward\", -2) ;; (phase == D1) * tv(\"action\", -2) ;; (phase == D1) * prev_reward * (prev_action == 2)",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Raw candidate n of unit 16 is pinned by timing (about +0.93 at GO, -0.93 at D2); almost all variance beyond timing is at D1, where the previous trial outcome drives it: unrewarded trials raise it (~+0.46), a previous a2 choice raises it (~+0.45), and after a reward it falls further the more the ideal observer believes S1 is good (a1 S1 r is the lowest cell, about -0.65; a2 S2 u the highest, about +0.73). GO and D2 residuals are tiny (D2 slightly tracks belief, ~0.05). The free fit adds a reward x reached-state interaction (unrewarded S2 visits raise it extra) and the trial before (earlier reward lowers, earlier a2 raises), reaching ~0.80 vs ~0.65 on dev; so it carries a short reward/choice history, not just the last trial. No future or model-output variables used.",
+ "full_test_scores": {
+  "gate": "unit_candidate",
+  "feature": 16,
+  "terms": [
+   "(phase == D1) * prev_reward",
+   "(phase == D1) * (prev_action == 2)",
+   "(phase == D1) * belief_lo",
+   "(phase == D1) * (prev_state == 2)",
+   "(phase == D1) * prev_reward * (prev_state == 2)",
+   "(phase == D1) * tv(\"reward\", -2)",
+   "(phase == D1) * tv(\"action\", -2)",
+   "(phase == D1) * prev_reward * (prev_action == 2)"
+  ],
+  "weights": [
+   -0.48358499055181614,
+   0.01666497199877126,
+   -0.08469255572223387,
+   0.4781684368656907,
+   -0.375250773744021,
+   -0.2588357638674068,
+   0.23187247112945772,
+   -0.02084817117315689
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7934997856433745,
+  "r2": 0.9728848930401532,
+  "r2_timing_only": 0.8686921122850797
+ },
+ "gate": "unit_candidate",
+ "feature": 16,
+ "test_scores": {
+  "gate": "unit_candidate",
+  "feature": 16,
+  "terms": [
+   "(phase == D1) * prev_reward",
+   "(phase == D1) * ((prev_action == 2) + (belief_lo < 0))",
+   "(phase == D1) * (prev_state == 2)"
+  ],
+  "weights": [
+   -0.607594988013321,
+   0.5247548453469882,
+   0.2284106469773328
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.752957524341535,
+  "r2": 0.9675613743454223,
+  "r2_timing_only": 0.8686921122850797
+ },
+ "dev_scores": {
+  "gate": "unit_candidate",
+  "feature": 16,
+  "terms": [
+   "(phase == D1) * prev_reward",
+   "(phase == D1) * ((prev_action == 2) + (belief_lo < 0))",
+   "(phase == D1) * (prev_state == 2)"
+  ],
+  "weights": [
+   -0.607594988013321,
+   0.5247548453469882,
+   0.2284106469773328
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.7606693916086549,
+  "r2": 0.9687342764627478,
+  "r2_timing_only": 0.8693617847403472
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The recorded short form's weights check out on test (prev_reward -0.46, prev_action==2 +0.45, belief_lo*prev_reward -0.064; test R^2 0.636). But its belief term adds only 0.056 over the two-term form (0.579). Belief in the form of a threshold does much better: swapping the third term for (phase == D1)*(belief_lo < 0) gives 0.670.",
+   "There is a large systematic miss. Runs of unrewarded trials push the D1 value to about +0.7..+0.9 while the short form predicts about -0.16 (the worst-fit windows are all r0 streaks after a1). Misses on the short form also under-predict D1 after a1 S2 u by +0.28, after a2 S2 u by +0.25 and after a1 S2 r by +0.20, and over-predict D1 after a2 S1 r by -0.18. The short form leaves out the state reached (S2) and the belief favouring S2 as such, not just within rewarded trials.",
+   "The label's 'falls after reward when S1 is believed good' is a small graded correction (weight -0.064 per log-odds unit). The bigger belief effect is a step: the value is higher whenever the observer leans toward S2, whatever the reward. The profile shows this: the D1 residual is about +0.25 for belief deciles 0-4 and about -0.3 for deciles 6-9.",
+   "A better short form passes --short: (phase == D1) * prev_reward ;; (phase == D1) * ((prev_action == 2) + (belief_lo < 0)) ;; (phase == D1) * (prev_state == 2). Its test R^2 beyond timing is 0.753 (all-observed ceiling 0.79), with weights -0.61, +0.52 and +0.23. Its misses leave no D1 cell error above 0.18; the largest are a1 S1 u at -0.18 and the first trial at +0.15.",
+   "Other claims hold up. GO and D2 residuals are tiny (about 0.05 or less). Two-trials-back terms add little in short-form variants (tv('reward',-2) as a third term gives 0.625)."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At D1, higher after unrewarded trials, a2 choices, S2 visits, and when S2 is believed good.",
+  "better_short_terms": "(phase == D1) * prev_reward ;; (phase == D1) * ((prev_action == 2) + (belief_lo < 0)) ;; (phase == D1) * (prev_state == 2)",
+  "better_short_terms_test_r2_beyond_timing": 0.752957524341535
+ },
+ "final_label": "At D1, higher after unrewarded trials, a2 choices, S2 visits, and when S2 is believed good.",
+ "original_short_terms": "(phase == D1) * prev_reward ;; (phase == D1) * (prev_action == 2) ;; (phase == D1) * belief_lo * prev_reward",
+ "original_test_scores": {
+  "gate": "unit_candidate",
+  "feature": 16,
+  "terms": [
+   "(phase == D1) * prev_reward",
+   "(phase == D1) * (prev_action == 2)",
+   "(phase == D1) * belief_lo * prev_reward"
+  ],
+  "weights": [
+   -0.4578835296485942,
+   0.44850317249439714,
+   -0.06366704137279731
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6359090242002335,
+  "r2": 0.9521919830316685,
+  "r2_timing_only": 0.8686921122850797
+ },
+ "terms_from": "skeptic"
+}

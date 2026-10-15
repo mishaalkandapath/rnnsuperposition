@@ -1,0 +1,105 @@
+{
+  "label": "D1 after an unrewarded trial, policy leaning a1",
+  "predicate": "(phase == D1) & (prev_reward == 0) & (prev_state != 1) & (choice > 5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (never GO/D2), almost only when the reward input is 0 (previous trial unrewarded; 99.8% of mass) and the model policy at that step leans strongly toward a1 (choice logit > ~5); 99% of mass is on trials where the agent then chooses a1. The upcoming-action version (D1 & prev_reward==0 & action==1) has recall 0.98 but precision 0.54; thresholding the model own a1-a2 logit (observed/computed, not future) gives F1 0.89. Magnitude rises with the a1 logit: choice > 6 has precision ~1.0 and covers the top activation quartiles. Does not fire after rewarded trials, or when the agent leans to a2 (good state S2 gets little activation). Context such as previous transition (rare vs common) only matters through its effect on the a1 preference.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 205,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (prev_state != 1) & (choice > 5)",
+    "split": "test",
+    "precision": 0.9276352742932035,
+    "recall": 0.8977712007731337,
+    "f1": 0.9124589459467756,
+    "mass_recall": 0.9648455425835194,
+    "correlation": 0.8457509956009132,
+    "n_active": 33112,
+    "n_predicted": 32046,
+    "coverage_by_activation_quartile": [
+      0.6731094467262624,
+      0.9509543367963276,
+      0.9725779173713457,
+      0.9944431021985987
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 205,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (prev_state != 1) & (choice > 5)",
+    "split": "dev",
+    "precision": 0.9305251982764005,
+    "recall": 0.9101765316718587,
+    "f1": 0.9202383893280632,
+    "mass_recall": 0.9694243645246975,
+    "correlation": 0.8475294089056521,
+    "n_active": 32742,
+    "n_predicted": 32026,
+    "coverage_by_activation_quartile": [
+      0.7146347422428536,
+      0.9561446371854385,
+      0.9722663408674405,
+      0.9976786805131338
+    ]
+  },
+  "gate": "hidden",
+  "feature": 205,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The phase claims hold: the feature fires only at D1 (0 activations at GO and D2), and 99.8% of its mass comes when in_rew == 0. Note that prev_reward == 0 and in_rew == 0 give identical scores at D1.",
+      "The claim that the previous transition 'matters only through its effect on the a1 preference' is false. The feature depends on the state reached on the previous trial. When the previous trial reached S1 and went unrewarded (D1 & prev_reward==0 & prev_state==1), it never fires: 0 of 51338 steps. That includes 2374 steps where choice > 5, so the original predicate scores all of them as false positives (dev). After a1 then common S1 then unrewarded: precision 0 and recall 0. After a2 then rare S1 then unrewarded: also 0.",
+      "The mass sits where S2 was just unrewarded. a1 then rare S2 then r0 holds 75% of the mass (prev_common==0 has lift 3.3x), a2 then common S2 then r0 holds about 7%, and the rest (about 18%) is at rel -3, where the window does not show the previous state. Within a window, D1 & prev_reward==0 & prev_state==2 & choice>5 has test precision 0.94.",
+      "The label 'D1 after an unrewarded trial, policy leaning a1' overclaims. It is really D1 after S2 went unrewarded, and the a1 lean is the model-based reading of that outcome (S2 is bad, so switch to or stay with a1).",
+      "A better observed-only predicate adds prev_state != 1 (this keeps the rel -3 rows, where the previous state is unknown). Test F1 rises from 0.877 to 0.912, and test precision from 0.856 to 0.928 with recall unchanged. It uses no future variables: prev_state was shown at the previous D2, and choice is the agent's own logit.",
+      "The remaining misses are mostly weak activations at D1 after S2 went unrewarded with choice below 5. The remaining false positives are mostly at rel -3, where the previous state is unknown. Both look like scattered threshold effects."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after an unrewarded visit to S2 (seen as reward input 0), with the policy leaning a1. Silent after an unrewarded S1 visit, even when a1 is preferred.",
+    "better_predicate": "(phase == D1) & (prev_reward == 0) & (prev_state != 1) & (choice > 5)",
+    "better_predicate_test_f1": 0.912
+  },
+  "final_label": "D1 after an unrewarded visit to S2 (seen as reward input 0), with the policy leaning a1. Silent after an unrewarded S1 visit, even when a1 is preferred.",
+  "original_predicate": "(phase == D1) & (prev_reward == 0) & (choice > 5)",
+  "original_test_scores": {
+    "gate": "hidden",
+    "feature": 205,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (choice > 5)",
+    "split": "test",
+    "precision": 0.8564143931318602,
+    "recall": 0.8977712007731337,
+    "f1": 0.8766052813942173,
+    "mass_recall": 0.9648455425835194,
+    "correlation": 0.8116273447826525,
+    "n_active": 33112,
+    "n_predicted": 34711,
+    "coverage_by_activation_quartile": [
+      0.6731094467262624,
+      0.9509543367963276,
+      0.9725779173713457,
+      0.9944431021985987
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "hidden",
+    "feature": 205,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (choice > 5)",
+    "split": "dev",
+    "precision": 0.8663081395348837,
+    "recall": 0.9101765316718587,
+    "f1": 0.8877006940514133,
+    "mass_recall": 0.9694243645246975,
+    "correlation": 0.8168299946764461,
+    "n_active": 32742,
+    "n_predicted": 34400,
+    "coverage_by_activation_quartile": [
+      0.7146347422428536,
+      0.9561446371854385,
+      0.9722663408674405,
+      0.9976786805131338
+    ]
+  },
+  "predicate_from": "skeptic"
+}

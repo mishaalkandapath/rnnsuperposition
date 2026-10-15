@@ -1,0 +1,112 @@
+{
+ "label": "At D1, fires after an a1 trial that reached S1, more when S1 believed good.",
+ "short_terms": "(phase == D1) * (prev_state == 2) ;; (phase == D1) * (prev_action == 1) * (prev_state == 1) ;; (phase == D1) * (prev_state == 1) * belief_lo",
+ "terms": "(phase == D1) * last_is(\"a1 S1 r\") ;; (phase == D1) * last_is(\"a1 S1 u\") ;; (phase == D1) * last_is(\"a2 S1 u\") ;; (phase == D1) * belief_lo ;; (phase == D1) * (prev_action == 1) * (tv(\"action\", -2) == 1) ;; (phase == D1) * (tv(\"state\", -2) == 1) ;; (phase == D1) * (prev_state == 1) * belief_lo ;; (phase == D1) * (tv(\"action\", -2) == 1)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "D1-only feature (zero at GO and D2). Its magnitude is set mainly by the previous trial being a1 -> S1 (common): high after a1 S1, near zero after any trial that reached S2. It rises with the ideal observer log-odds that S1 is good, and drops if the trial before that was also a1 (weaker after repeated a1 choices). The free fit adds that a1 S1 unrewarded drives it more than a1 S1 rewarded, plus a smaller, inconsistent response after a2 S1 unrewarded (strong in runs of rare a2 -> S1 trials), and effects of the state two trials back. Uses no future variables and no model outputs.",
+ "full_test_scores": {
+  "gate": "update",
+  "feature": 18,
+  "terms": [
+   "(phase == D1) * last_is(\"a1 S1 r\")",
+   "(phase == D1) * last_is(\"a1 S1 u\")",
+   "(phase == D1) * last_is(\"a2 S1 u\")",
+   "(phase == D1) * belief_lo",
+   "(phase == D1) * (prev_action == 1) * (tv(\"action\", -2) == 1)",
+   "(phase == D1) * (tv(\"state\", -2) == 1)",
+   "(phase == D1) * (prev_state == 1) * belief_lo",
+   "(phase == D1) * (tv(\"action\", -2) == 1)"
+  ],
+  "weights": [
+   1.32104066788023,
+   2.2612859214717718,
+   0.3290458430161494,
+   0.1733706737249542,
+   -0.39832272869297924,
+   -0.4337313093479852,
+   0.08522153061202734,
+   -0.024304345177190705
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6147244148966227,
+  "r2": 0.7164016990201856,
+  "r2_timing_only": 0.2639079351375998
+ },
+ "gate": "update",
+ "feature": 18,
+ "test_scores": {
+  "gate": "update",
+  "feature": 18,
+  "terms": [
+   "(phase == D1) * (prev_state == 2)",
+   "(phase == D1) * (prev_action == 1) * (prev_state == 1)",
+   "(phase == D1) * (prev_state == 1) * belief_lo"
+  ],
+  "weights": [
+   -0.8895993866637993,
+   1.244379298225646,
+   0.1339312814776411
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6736851949028355,
+  "r2": 0.7598022613208565,
+  "r2_timing_only": 0.2639079351375998
+ },
+ "dev_scores": {
+  "gate": "update",
+  "feature": 18,
+  "terms": [
+   "(phase == D1) * (prev_state == 2)",
+   "(phase == D1) * (prev_action == 1) * (prev_state == 1)",
+   "(phase == D1) * (prev_state == 1) * belief_lo"
+  ],
+  "weights": [
+   -0.8895993866637993,
+   1.244379298225646,
+   0.1339312814776411
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.6747188437342574,
+  "r2": 0.7607498200303067,
+  "r2_timing_only": 0.2644818940134518
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The recorded short form leaves a large systematic error class. Misses show it over-predicts at D1 after every trial that reached S2: a2 S2 u -0.88, a1 S2 u -0.83, a1 S2 r -0.30, a2 S2 r -0.28. It under-predicts after a1 S1 u by +0.51. The profile shows the feature is exactly zero after S2 (residual -0.90 against a timing baseline of about 0.9), and nothing in the short form encodes that zero. Adding (phase == D1) * (prev_state == 2) fixes it: those miss cells drop to about 0.",
+   "The claim 'weaker after repeated a1 choices' (term 3, weight -0.71) does not hold up. If tv('action', -2) == 1 is replaced by tv('action', -2) > 0 (any choice two trials back, i.e. not at the window edge), test R^2 is 0.588, versus 0.584 for the recorded term. Replacing term 3 with (phase == D1) * belief_cover gives 0.619. So this term is mostly picking up how much history is available (window position, belief_cover), not a repeated-a1 effect. Once the prev_state == 2 term is present, belief_cover gets about 0 weight.",
+   "In the recorded fit, belief_lo is applied to all D1 steps, and it mainly helps push predictions down after S2 trials. It is not a modulation of the a1->S1 response: restricting belief_lo to prev a1 S1 lowers test R^2 to 0.508. So the label's 'more when S1 believed good' does not describe what that term does. With the prev_state == 2 term present, a belief_lo term restricted to trials whose previous state was S1 adds only modestly (0.659 -> 0.674).",
+   "The two terms (phase == D1) * (prev_state == 2) and (phase == D1) * (prev_action == 1) * (prev_state == 1) alone reach test R^2 0.659. That beats both the recorded 3-term short form (0.584) and the 8-term free fit (0.615).",
+   "The remaining error is moderate: D1 after a2 S1 r is over-predicted by about -0.34 to -0.37, and after a1 S1 u it is under-predicted by about +0.40. The variant with last_is('a2 S1 u') as the third term reaches 0.677."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At D1, zero after S2; fires after reaching S1, most after a1, more when S1 believed good.",
+  "better_short_terms": "(phase == D1) * (prev_state == 2) ;; (phase == D1) * (prev_action == 1) * (prev_state == 1) ;; (phase == D1) * (prev_state == 1) * belief_lo",
+  "better_short_terms_test_r2_beyond_timing": 0.6737
+ },
+ "final_label": "At D1, zero after S2; fires after reaching S1, most after a1, more when S1 believed good.",
+ "original_short_terms": "(phase == D1) * (prev_action == 1) * (prev_state == 1) ;; (phase == D1) * belief_lo ;; (phase == D1) * (prev_action == 1) * (tv(\"action\", -2) == 1)",
+ "original_test_scores": {
+  "gate": "update",
+  "feature": 18,
+  "terms": [
+   "(phase == D1) * (prev_action == 1) * (prev_state == 1)",
+   "(phase == D1) * belief_lo",
+   "(phase == D1) * (prev_action == 1) * (tv(\"action\", -2) == 1)"
+  ],
+  "weights": [
+   1.734884298522166,
+   0.16657603212105163,
+   -0.7134499025582405
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5837387570717758,
+  "r2": 0.6935934021707744,
+  "r2_timing_only": 0.2639079351375998
+ },
+ "terms_from": "skeptic"
+}

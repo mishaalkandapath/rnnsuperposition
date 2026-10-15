@@ -1,0 +1,112 @@
+{
+ "label": "Fires at D2 on rare a2->S1, stronger after switching from a1 and when S1 believed good.",
+ "short_terms": "(phase == D2) * (state - action == -1) ;; (phase == D2) * (state - action == -1) * (prev_action == 1) ;; (phase == D2) * (state - action == -1) * (belief_lo - prev_reward)",
+ "terms": "(phase == D2) * (action == 2) * (state == 1) * (prev_reward == 0) * (belief > 0.5) ;; (phase == D2) * (action == 2) * (state == 1) * (prev_reward == 0) ;; (phase == D2) * (action == 2) * (state == 1) ;; (phase == D2) * (action == 2) * (state == 1) * belief_lo ;; (phase == D2) * (action == 2) * (state == 1) * (prev_state == 1) ;; (phase == D2) * (action == 2) * (state == 1) * (prev_action == 1) ;; (phase == D2) * (action == 2) * (state == 1) * (belief_cover < 3) ;; (phase == D2) * (action == 2) * (state == 1) * (tv(\"reward\", -2) == 1)",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Silent at D1 and GO; active only at D2, almost exclusively when the agent chose a2 and reached S1 through the rare transition (observed at D2). Within those steps the magnitude is larger when the previous trial was an a1 choice (i.e. the agent just switched to a2) and when the ideal observer log-odds favour S1 being good (belief_lo > 0); an unrewarded previous trial also raises it. The free fit adds prev-reward x belief interactions, previous-state and low-belief-cover terms, gaining about 0.07 dev R^2 over the 3-term short form. Hidden good state, since_rev and future reward add nothing. Some large activations on a2->S1 remain under-predicted.",
+ "full_test_scores": {
+  "gate": "update",
+  "feature": 209,
+  "terms": [
+   "(phase == D2) * (action == 2) * (state == 1) * (prev_reward == 0) * (belief > 0.5)",
+   "(phase == D2) * (action == 2) * (state == 1) * (prev_reward == 0)",
+   "(phase == D2) * (action == 2) * (state == 1)",
+   "(phase == D2) * (action == 2) * (state == 1) * belief_lo",
+   "(phase == D2) * (action == 2) * (state == 1) * (prev_state == 1)",
+   "(phase == D2) * (action == 2) * (state == 1) * (prev_action == 1)",
+   "(phase == D2) * (action == 2) * (state == 1) * (belief_cover < 3)",
+   "(phase == D2) * (action == 2) * (state == 1) * (tv(\"reward\", -2) == 1)"
+  ],
+  "weights": [
+   0.30635248325787695,
+   0.16199333247253742,
+   0.2629915058385423,
+   0.07052808253037308,
+   -0.0680753447978395,
+   0.4388003884310528,
+   -0.10213830013919133,
+   -0.059197216665798906
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5374610798526555,
+  "r2": 0.5507305557473402,
+  "r2_timing_only": 0.028688344519111286
+ },
+ "gate": "update",
+ "feature": 209,
+ "test_scores": {
+  "gate": "update",
+  "feature": 209,
+  "terms": [
+   "(phase == D2) * (state - action == -1)",
+   "(phase == D2) * (state - action == -1) * (prev_action == 1)",
+   "(phase == D2) * (state - action == -1) * (belief_lo - prev_reward)"
+  ],
+  "weights": [
+   0.4558620445093669,
+   0.3902361311097921,
+   0.11165357995353833
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5024602033289278,
+  "r2": 0.5167337964277962,
+  "r2_timing_only": 0.028688344519111286
+ },
+ "dev_scores": {
+  "gate": "update",
+  "feature": 209,
+  "terms": [
+   "(phase == D2) * (state - action == -1)",
+   "(phase == D2) * (state - action == -1) * (prev_action == 1)",
+   "(phase == D2) * (state - action == -1) * (belief_lo - prev_reward)"
+  ],
+  "weights": [
+   0.4558620445093669,
+   0.3902361311097921,
+   0.11165357995353833
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.49272048094778553,
+  "r2": 0.5066876744034721,
+  "r2_timing_only": 0.027533525267849246
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": true,
+  "issues": [
+   "All three label claims hold on the test split. Rare a2->S1 at D2 alone scores 0.152. Adding prev_action==1 gives 0.282 (weight +0.64). Adding belief_lo instead gives 0.422 (weight +0.13, positive, so the feature is higher when S1 is believed good). The full short form scores 0.475, matching the reported figure.",
+   "The belief term does most of the work (0.152 -> 0.422), and the label lists it second. The coding also matters: a belief_lo>0 step function scores only 0.421, so the effect is graded, not a threshold.",
+   "Misses show one systematic error class. On D2 the model over-predicts after rewarded previous trials (a1 S2 r -0.051, a2 S1 r -0.048). The worst-fit windows are almost all r0 (previous trial unrewarded). The explanation mentions this, but the label and short form leave it out.",
+   "Adding the previous reward to the belief term, as (belief_lo - prev_reward), raises test R^2 to 0.502 (from 0.475). Adding prev_reward==0 as a separate term instead of prev_action does worse (0.457). The gain is modest, so the original stays upheld, but the improved form is reported as better.",
+   "There are no future or hidden variables. stay==0 can stand in for prev_action==1 with the same score (0.475)."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "D2 rare a2->S1; stronger after switching from a1, S1 believed good, previous trial unrewarded.",
+  "better_short_terms": "(phase == D2) * (state - action == -1) ;; (phase == D2) * (state - action == -1) * (prev_action == 1) ;; (phase == D2) * (state - action == -1) * (belief_lo - prev_reward)",
+  "better_short_terms_test_r2_beyond_timing": 0.5025
+ },
+ "final_label": "D2 rare a2->S1; stronger after switching from a1, S1 believed good, previous trial unrewarded.",
+ "original_short_terms": "(phase == D2) * (state - action == -1) ;; (phase == D2) * (state - action == -1) * (prev_action == 1) ;; (phase == D2) * (state - action == -1) * belief_lo",
+ "original_test_scores": {
+  "gate": "update",
+  "feature": 209,
+  "terms": [
+   "(phase == D2) * (state - action == -1)",
+   "(phase == D2) * (state - action == -1) * (prev_action == 1)",
+   "(phase == D2) * (state - action == -1) * belief_lo"
+  ],
+  "weights": [
+   0.3961249380943327,
+   0.4019496124169805,
+   0.11725710988099612
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.47505714145628897,
+  "r2": 0.4901168830350381,
+  "r2_timing_only": 0.028688344519111286
+ },
+ "terms_from": "skeptic"
+}

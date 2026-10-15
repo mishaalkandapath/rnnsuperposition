@@ -1,0 +1,63 @@
+{
+  "label": "D2 after choosing a2 and reaching S2 (common), early in the episode (trial < ~45)",
+  "predicate": "(phase == D2) & (action == 2) & (state == 2) & (ep_trial < 45)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (100% of mass), and only when the input shows last action a2 and reached state S2, i.e. a common a2->S2 transition. It essentially never fires on a1, on S1, on rare transitions, or at D1/GO. It is also gated by time in the episode: the rate is about 13% per D2 step in trials 0-39, then drops to near zero after trial ~60 and is exactly zero after trial 70, so it looks like a slow hidden-state drift over the episode. Without the episode-time term, a2-S2-common at D2 has recall ~1.0 but precision 0.43. Magnitude: the strongest activations are in early trials (the top windows have the good state still unknown/early), and the lowest quartile is the one the ep_trial cutoff misses most, so activations fade toward the cutoff. Reward, stay/switch and the good state change magnitude only a little. All variables are observed at D2 (action and state are inputs); ep_trial is the position in the episode.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 253,
+    "predicate": "(phase == D2) & (action == 2) & (state == 2) & (ep_trial < 45)",
+    "split": "test",
+    "precision": 0.9379453990924644,
+    "recall": 0.9072645636656689,
+    "f1": 0.9223499118527025,
+    "mass_recall": 0.9562505658533443,
+    "correlation": 0.794776755697191,
+    "n_active": 69488,
+    "n_predicted": 67215,
+    "coverage_by_activation_quartile": [
+      0.7795302786092563,
+      0.9057679023716325,
+      0.9508404328804974,
+      0.9929196408012895
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 253,
+    "predicate": "(phase == D2) & (action == 2) & (state == 2) & (ep_trial < 45)",
+    "split": "dev",
+    "precision": 0.9337292609351433,
+    "recall": 0.9196131528046422,
+    "f1": 0.9266174487226462,
+    "mass_recall": 0.96238544453405,
+    "correlation": 0.7864359622377212,
+    "n_active": 64625,
+    "n_predicted": 63648,
+    "coverage_by_activation_quartile": [
+      0.8070186296961069,
+      0.9237435008665511,
+      0.9563010646199555,
+      0.9913963852438722
+    ]
+  },
+  "gate": "hidden",
+  "feature": 253,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims check out. The feature has 100% of its activation mass at D2 and fires on only 7 GO steps (dev). Firing requires in_action == a2 and in_state == S2 (rate 0.000 elsewhere). Without the time gate, test recall is 0.9996 and precision 0.438, as reported.",
+      "The episode-time gate is a soft fade, not a sharp cutoff. Per D2 step the rate is about 0.13 in trials 0-39, 0.057 in trials 40-49, 0.019 in 50-59, 0.004 in 60-69 and 0 from 70 on. On test, cutoffs of 40, 45 and 50 give F1 0.908, 0.922 and 0.910, so 45 is a tuned threshold. The label's '~45' is fair.",
+      "The misses on test are not systematic. They are 6444 steps holding 4.4% of the activation mass, mostly weak activations (0.01-0.27 of max) at a2->S2 D2 steps just past the cutoff. Within trials 0-44 the false positives are spread across good state, start_high, prev_reward and prev_action, with precision 0.91-0.98 in every subgroup. Precision falls only for ep_trial >= 35 (0.75), which matches the fading boundary.",
+      "I tried the model's value output as an observed alternative to ep_trial (value > 7.9 to 8.2). It scores worse (F1 0.60-0.82), so ep_trial is the better gate.",
+      "Minor point: '(common)' in the label is redundant, because action == 2 & state == 2 is always a common transition. It is not wrong."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

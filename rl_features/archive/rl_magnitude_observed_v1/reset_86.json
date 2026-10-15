@@ -1,0 +1,63 @@
+{
+  "label": "GO after a rewarded S2 visit, growing linearly with episode trial",
+  "terms": "(phase == GO) * ((prev_state == 2) & (prev_reward == 1)) * ep_trial ;; (phase == GO) * (prev_state > 0) * ep_trial ;; (phase == GO) * (prev_state < 0) * ep_trial * (belief < 0.5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires almost only at GO (tiny at late D1, zero at D2). Magnitude is set by the previous trial outcome times episode position: after a rewarded S2 visit (a1 S2 r or a2 S2 r) the GO activation grows by about 0.017 per episode trial (about 1.7 by trial 100); after any other observed previous outcome (S1 visits, unrewarded S2) the timing baseline is cancelled (about -0.005 per trial), i.e. near zero. On the window first trial where the previous trial is unknown, the ideal-observer belief that S2 is good (belief < 0.5) stands in for it. Two terms (rewarded-S2 x ep_trial plus a gate on known previous trial) give dev R2 beyond timing 0.68; the belief term for the first trial raises it to 0.71. Graded belief log-odds and splitting a1 vs a2 add under 0.01. Test R2 beyond timing 0.71, above the profile all ceiling 0.47 (the additive tables miss the multiplicative ep_trial scaling). No model outputs needed; the earlier value/policy-based description loses nothing from going observed-only. Remaining error: some first-window-trial GO spikes and slight over-prediction after a2 S2 r vs under after a1 S2 r.",
+  "gate": "reset",
+  "feature": 86,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 86,
+    "terms": [
+      "(phase == GO) * ((prev_state == 2) & (prev_reward == 1)) * ep_trial",
+      "(phase == GO) * (prev_state > 0) * ep_trial",
+      "(phase == GO) * (prev_state < 0) * ep_trial * (belief < 0.5)"
+    ],
+    "weights": [
+      0.016924542080822516,
+      -0.0053694402874404495,
+      0.005263949564294492
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7095275351656587,
+    "r2": 0.786724729299263,
+    "r2_timing_only": 0.2657642409501032
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 86,
+    "terms": [
+      "(phase == GO) * ((prev_state == 2) & (prev_reward == 1)) * ep_trial",
+      "(phase == GO) * (prev_state > 0) * ep_trial",
+      "(phase == GO) * (prev_state < 0) * ep_trial * (belief < 0.5)"
+    ],
+    "weights": [
+      0.016924542080822516,
+      -0.0053694402874404495,
+      0.005263949564294492
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7117975908026958,
+    "r2": 0.7904036217954745,
+    "r2_timing_only": 0.2727459191327053
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The reported scores reproduce: test R^2 beyond timing is 0.6792 with the two main terms and 0.7095 with the belief<0.5 first-trial term. The core story also holds: activity is almost only at GO, the residual at GO is +0.67 after a1 S2 r and +0.49 after a2 S2 r versus about -0.25 for every other known previous outcome, and D2 is exactly 0.",
+      "'Growing linearly with episode trial' is wrong. Replacing ep_trial with ep_trial**2 in the S2-rewarded term raises test R^2 from 0.7095 to 0.7524. Keeping both the linear and squared terms gives 0.809 together with the fix below. So the growth speeds up late in the episode, and the stated 'about 0.017 per trial, about 1.7 by trial 100' comes from a mis-specified linear fit.",
+      "On the first trial of a window, 'belief < 0.5 takes its place' mixes two cases with opposite effects. prev_reward is observed there (it is the reward input at D1) even though prev_state is not. Splitting the first-trial belief<0.5 term by prev_reward raises test R^2 from 0.7095 to 0.766. With the squared form, the unrewarded first-trial case gets weight -0.0055, the same suppression as other known outcomes. So the rule is: belief leaning S2 AND the last trial was rewarded, i.e. a probable rewarded S2 visit. Belief alone is not it.",
+      "Misses on the original terms show systematic errors in exactly these places: GO after an unknown previous trial is over-predicted by -0.095, and the worst dev windows are big first-trial GO spikes (about 3.0 actual vs 0.5 predicted). GO after a2 S2 r is over-predicted by -0.095 and GO after a1 S2 r is under-predicted by +0.088. After the improved terms, a1 S2 r is still under-predicted by +0.19 unless it gets its own term; adding last_is('a1 S2 r')*ep_trial**2 brings that to +0.04 and test R^2 to 0.821.",
+      "Net effect: the label's mechanism (GO after a rewarded S2 visit, growing over the episode) is right, but two specific claims are off: linear growth, and belief alone standing in on the first trial. Together these leave about 0.11 of test R^2 unexplained, which is a systematic gap, not noise. The claim that the observed-only version loses nothing is fine, since none of these terms uses model outputs."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after a rewarded S2 visit (stronger after a1 S2 r than a2 S2 r), growing faster than linearly over the episode (about ep_trial^2). Suppressed at GO after any other known outcome. On the first trial of a window it fires if the last trial was rewarded and belief leans S2.",
+    "better_terms": "(phase == GO) * ((prev_state == 2) & (prev_reward == 1)) * ep_trial**2 ;; (phase == GO) * last_is('a1 S2 r') * ep_trial**2 ;; (phase == GO) * (prev_state > 0) * ep_trial ;; (phase == GO) * (prev_state < 0) * (belief < 0.5) * (prev_reward==1) * ep_trial**2 ;; (phase == GO) * (prev_state < 0) * ep_trial * (belief < 0.5) * (prev_reward==0)",
+    "better_terms_test_r2_beyond_timing": 0.821
+  },
+  "final_label": "GO after a rewarded S2 visit (stronger after a1 S2 r than a2 S2 r), growing faster than linearly over the episode (about ep_trial^2). Suppressed at GO after any other known outcome. On the first trial of a window it fires if the last trial was rewarded and belief leans S2."
+}

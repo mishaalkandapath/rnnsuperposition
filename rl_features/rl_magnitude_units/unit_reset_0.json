@@ -1,0 +1,113 @@
+{
+ "label": "Higher when S1 is believed good, after choosing a1 (D2), and after an S1 reward (D1).",
+ "short_terms": "(phase == D2) * (belief_lo + 2*(action == 1)) ;; (phase == D1) * belief_lo ;; (phase == D1) * (prev_state == 1) * prev_reward",
+ "terms": "(phase == D1) * belief_lo ;; (phase == GO) * belief_lo ;; (phase == D2) * belief_lo ;; (phase == D2) * (action == 1) ;; (phase == D2) * (state == 1) ;; (phase == D1) * (prev_action == 1) ;; (phase == D1) * (prev_state == 1) ;; (phase == D1) * prev_reward * (prev_state==1)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Raw reset gate r of unit 0. Timing (rising strongly late in the episode, D2 > D1 > GO) explains 0.84 of the variance. Beyond timing it is an S1/a1-side signal: at D2 it rises with the ideal-observer log-odds that S1 is good and when the choice just made was a1 (the state reached adds little); at D1 it rises after a rewarded visit to S1 (lower after S2 or unrewarded outcomes). GO is barely modulated. The free fit adds small belief terms at D1/GO, the reached state at D2 and prev_action at D1 for ~0.03 more dev R^2. Remaining misses are late-episode runs of a1/S1 where the effect seems to grow with time (multiplicative), which additive terms do not capture. No future variables are used.",
+ "full_test_scores": {
+  "gate": "unit_reset",
+  "feature": 0,
+  "terms": [
+   "(phase == D1) * belief_lo",
+   "(phase == GO) * belief_lo",
+   "(phase == D2) * belief_lo",
+   "(phase == D2) * (action == 1)",
+   "(phase == D2) * (state == 1)",
+   "(phase == D1) * (prev_action == 1)",
+   "(phase == D1) * (prev_state == 1)",
+   "(phase == D1) * prev_reward * (prev_state==1)"
+  ],
+  "weights": [
+   0.006464170558663096,
+   0.0026341182869628957,
+   0.022689498676844153,
+   0.041116594761565275,
+   0.009524708447763243,
+   0.008052568509936162,
+   0.002710496078828306,
+   0.04651151045683028
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6780553524731892,
+  "r2": 0.9487504595078142,
+  "r2_timing_only": 0.8408125717079431
+ },
+ "gate": "unit_reset",
+ "feature": 0,
+ "test_scores": {
+  "gate": "unit_reset",
+  "feature": 0,
+  "terms": [
+   "(phase == D2) * (belief_lo + 2*(action == 1))",
+   "(phase == D1) * belief_lo",
+   "(phase == D1) * (prev_state == 1) * prev_reward"
+  ],
+  "weights": [
+   0.022757400980642106,
+   0.007067050560010222,
+   0.052519428326601884
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6707810860366383,
+  "r2": 0.9475924877410685,
+  "r2_timing_only": 0.8408125717079431
+ },
+ "dev_scores": {
+  "gate": "unit_reset",
+  "feature": 0,
+  "terms": [
+   "(phase == D2) * (belief_lo + 2*(action == 1))",
+   "(phase == D1) * belief_lo",
+   "(phase == D1) * (prev_state == 1) * prev_reward"
+  ],
+  "weights": [
+   0.022757400980642106,
+   0.007067050560010222,
+   0.052519428326601884
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.6789648170067515,
+  "r2": 0.9492931763914654,
+  "r2_timing_only": 0.8420521291910831
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": true,
+  "issues": [
+   "The short form's main claims hold up on test. Dropping each term costs R^2 beyond timing: D2 belief_lo 0.649->0.499, D2 a1 0.649->0.606, D1 S1-reward 0.649->0.551. Swapping in_action/in_rew gives the same 0.649, so the form uses only observed inputs.",
+   "The label says 'higher when S1 is believed good' with no phase, but the short form uses belief only at D2. A D1 belief term also helps: added inside a recombined form, test R^2 rises to 0.671 (dev 0.679). GO effects are tiny (about +-0.01).",
+   "The explanation says the late-episode effect 'grows with episode time'. Simple multiplicative scaling does not support this: multiplying the terms by ep_trial or ep_dec drops test R^2 to 0.48-0.50. Late-decile interaction terms add only about 0.03 (0.680 in a free fit), so the late-run misses are not mainly a time-scaling effect.",
+   "'After an S1 reward (D1)' is incomplete. D1 residuals also rise after a1 S2 r (+0.034), and the lowest are after a2 S2 u (-0.069) and a2 S1 u (-0.035). On short-form misses, D1 after a2 S2 u is over-predicted by 0.055 and D1 after a1 S2 r is under-predicted by 0.048. This is a modest systematic D1 error: the D1 effect looks partly like belief or the previous choice, not only an S1 reward.",
+   "The belief effect saturates: residuals flatten at belief deciles 0-3 and 7-9. Raw belief does much worse than belief_lo (0.484), and tanh or clipped belief_lo does not help (0.617 / 0.647), so linear log-odds works as the shape.",
+   "There is a sizable gap to the additive observed ceiling (0.81 vs 0.65-0.67). Free fits with observed-only terms reach only about 0.68-0.70, so the rest seems to be scattered interactions, not one missing variable. Adding the future upcoming choice at D1/GO reaches 0.707."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Tracks S1-good log-odds (strongest at D2, plus a1 choice); higher at D1 after S1 reward.",
+  "better_short_terms": "(phase == D2) * (belief_lo + 2*(action == 1)) ;; (phase == D1) * belief_lo ;; (phase == D1) * (prev_state == 1) * prev_reward",
+  "better_short_terms_test_r2_beyond_timing": 0.6707810860366383
+ },
+ "final_label": "Tracks S1-good log-odds (strongest at D2, plus a1 choice); higher at D1 after S1 reward.",
+ "original_short_terms": "(phase == D2) * belief_lo ;; (phase == D2) * (action == 1) ;; (phase == D1) * (prev_state == 1) * prev_reward",
+ "original_test_scores": {
+  "gate": "unit_reset",
+  "feature": 0,
+  "terms": [
+   "(phase == D2) * belief_lo",
+   "(phase == D2) * (action == 1)",
+   "(phase == D1) * (prev_state == 1) * prev_reward"
+  ],
+  "weights": [
+   0.021787437716471524,
+   0.05129770805805797,
+   0.07432097760506885
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6488401213876296,
+  "r2": 0.9440997620043459,
+  "r2_timing_only": 0.8408125717079431
+ },
+ "terms_from": "skeptic"
+}

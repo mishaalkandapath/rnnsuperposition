@@ -1,0 +1,83 @@
+{
+  "label": "D1: high after reaching S1, low after S2; GO: high when belief favours S2 / after a2 / unrewarded",
+  "terms": "(phase == D1) * table(prev_state, {1: 1, 2: -1}) ;; (phase == D1) * table(prev_action, {1: -1, 2: 1}) ;; (phase == D1) * (prev_reward == 1) ;; (phase == GO) * np.tanh(belief_lo / 2) ;; (phase == GO) * table(prev_action, {1: -1, 2: 1}) ;; (phase == GO) * (prev_reward == 1) ;; (phase == GO) * (prev_reward == 1) * table(prev_state, {1: -1, 2: 1}) ;; (phase == D2) * np.tanh(belief_lo / 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r of unit 17 (always on; timing alone R^2 0.64, D2 near-saturated ~0.97). Beyond timing, D1 is dominated by the previous trial reached state: about +0.25 if it was S1 and -0.25 if S2 (a 0.5 swing), with a small extra +0.04 after choosing a2; the previous reward adds almost nothing at D1. At GO it tracks the inferred good state: lower when the ideal-observer belief favours S1 (tanh(belief_lo/2) weight -0.09), higher after an a2 choice (+0.07 per side), and lower after a rewarded trial (-0.11, slightly less so if that reward came from S2). D2 shows a small belief effect of the same sign. All terms are observed-only (no model value/policy, no future vars). Test R^2 beyond timing 0.716 (dev 0.723), vs observed-only ceiling 0.81 and all-cue ceiling 0.85; the earlier policy-based explanation (policy decile alone 0.44) is matched here by belief plus last-trial cues, so little is lost. Residual misses: GO after unrewarded trials is under-predicted and D1 after a1 S1 u over-predicted (sigmoid saturation / pattern interactions).",
+  "gate": "unit_reset",
+  "feature": 17,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 17,
+    "terms": [
+      "(phase == D1) * table(prev_state, {1: 1, 2: -1})",
+      "(phase == D1) * table(prev_action, {1: -1, 2: 1})",
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == GO) * np.tanh(belief_lo / 2)",
+      "(phase == GO) * table(prev_action, {1: -1, 2: 1})",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == GO) * (prev_reward == 1) * table(prev_state, {1: -1, 2: 1})",
+      "(phase == D2) * np.tanh(belief_lo / 2)"
+    ],
+    "weights": [
+      0.25481900155802933,
+      0.035603619010491465,
+      0.0018388211826528742,
+      -0.09231042305621197,
+      0.07104040100508215,
+      -0.11049933327857174,
+      0.027784260331396127,
+      -0.030195108786794794
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7155582436132617,
+    "r2": 0.8989467043123042,
+    "r2_timing_only": 0.6447311499852371
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 17,
+    "terms": [
+      "(phase == D1) * table(prev_state, {1: 1, 2: -1})",
+      "(phase == D1) * table(prev_action, {1: -1, 2: 1})",
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == GO) * np.tanh(belief_lo / 2)",
+      "(phase == GO) * table(prev_action, {1: -1, 2: 1})",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == GO) * (prev_reward == 1) * table(prev_state, {1: -1, 2: 1})",
+      "(phase == D2) * np.tanh(belief_lo / 2)"
+    ],
+    "weights": [
+      0.25481900155802933,
+      0.035603619010491465,
+      0.0018388211826528742,
+      -0.09231042305621197,
+      0.07104040100508215,
+      -0.11049933327857174,
+      0.027784260331396127,
+      -0.030195108786794794
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7230441331570248,
+    "r2": 0.9011566225219398,
+    "r2_timing_only": 0.6431078402318119
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The 8 terms (test R^2 beyond timing 0.716) score below the plain phase x last-trial lookup table in the profile (0.75). They are underfitting, not close to the ceiling.",
+      "The GO reward effect is mis-specified. The terms only have (phase==GO)*(prev_reward==1), and the intercept is shared across phases, so GO cannot get its own offset after unrewarded trials. Misses on the original terms show GO mean error +0.045 and systematic under-prediction at GO after unrewarded trials: a2 S2 u +0.156, a1 S2 u +0.149, a1 S1 u +0.112, a2 S1 u +0.081. Replacing that term with (phase==GO)*table(prev_reward,{0:1,1:-1}) gives weight +0.127 per side, about a 0.25 swing, not the -0.11 claimed. Test R^2 rises to 0.784 and those misses shrink to at most +0.063.",
+      "The explanation says these GO-unrewarded misses are 'likely interactions or saturation'. They are not. They disappear with one main-effect reward contrast at GO.",
+      "The claim that the previous reward 'adds almost nothing at D1' is too strong. The profile residuals at D1 are a1 S1 r +0.246 vs a1 S1 u +0.156, and a2 S1 r +0.319 vs a2 S1 u +0.263. A D1 reward contrast table(prev_reward,{0:-1,1:1}) fits +0.028 per side and raises test R^2 to 0.790. The original D1 rewarded indicator got weight +0.002 only because of the same shared-intercept problem.",
+      "The core claims do hold: at D1 the gate tracks the previous state (+/-0.25), at GO it is lower when belief favours S1 (about -0.10 on tanh(belief_lo/2)), a2 raises it at GO (+0.06), and the D2 belief effect is small (-0.03). No future variables are used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1: high if the previous trial reached S1, low if S2 (+/-0.25), slightly higher after a reward; GO: high after unrewarded trials and low after rewarded ones (about 0.25 swing, smaller drop when the reward came from S2), lower when belief favours S1, higher after a2",
+    "better_terms": "(phase == D1) * table(prev_state, {1: 1, 2: -1}) ;; (phase == D1) * table(prev_action, {1: -1, 2: 1}) ;; (phase == D1) * table(prev_reward, {0: -1, 1: 1}) ;; (phase == GO) * np.tanh(belief_lo / 2) ;; (phase == GO) * table(prev_action, {1: -1, 2: 1}) ;; (phase == GO) * table(prev_reward, {0: 1, 1: -1}) ;; (phase == GO) * (prev_reward == 1) * (prev_state == 2) ;; (phase == D2) * np.tanh(belief_lo / 2)",
+    "better_terms_test_r2_beyond_timing": 0.7904
+  },
+  "final_label": "D1: high if the previous trial reached S1, low if S2 (+/-0.25), slightly higher after a reward; GO: high after unrewarded trials and low after rewarded ones (about 0.25 swing, smaller drop when the reward came from S2), lower when belief favours S1, higher after a2"
+}

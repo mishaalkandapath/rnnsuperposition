@@ -1,0 +1,105 @@
+{
+  "label": "D2 after choosing a2, when the previous trial was rewarded (first ~55 trials of the episode)",
+  "predicate": "(phase == D2) & (action == 2) & (prev_reward == 1) & (prev_common != 0) & (ep_trial < 55)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (100% of mass), and only when the last-action input is a2 (this trial chose a2; a1 trials essentially never) and the previous trial was rewarded (99.8% of mass; prev_reward==0 almost silent). Uses only observed variables: action is known at D2 and prev_reward was seen at D1. It also has a strong episode-time dependence: rate is about 10% through trial ~50, falls off at trials 50-59 and is zero after trial 60, so the unit is gated by some slowly drifting hidden-state component (ep_trial is not an input). Without the ep_trial term, F1 is 0.60 (precision 0.43, recall 0.99). Magnitude: the largest activations are on rare a2->S1 transitions after a reward (S1R cells near max), and common a2->S2 cells are weaker (0.2-0.8). It never fires at D1/GO, on a1 choices, or after unrewarded trials. The remaining false positives are mostly a2/S2c after reward where it is weakly or not active, often after a recent rewarded/unrewarded mix.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 13,
+    "predicate": "(phase == D2) & (action == 2) & (prev_reward == 1) & (prev_common != 0) & (ep_trial < 55)",
+    "split": "test",
+    "precision": 0.9005614250813014,
+    "recall": 0.947776188530173,
+    "f1": 0.9235657692786327,
+    "mass_recall": 0.9872612869496048,
+    "correlation": 0.8561921985690867,
+    "n_active": 58728,
+    "n_predicted": 61807,
+    "coverage_by_activation_quartile": [
+      0.8052717613404169,
+      0.986037324615175,
+      0.9997956681651001,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 13,
+    "predicate": "(phase == D2) & (action == 2) & (prev_reward == 1) & (prev_common != 0) & (ep_trial < 55)",
+    "split": "dev",
+    "precision": 0.9074126291695003,
+    "recall": 0.9499227309822715,
+    "f1": 0.9281812012215812,
+    "mass_recall": 0.9880177583640747,
+    "correlation": 0.8601041277626361,
+    "n_active": 57591,
+    "n_predicted": 60289,
+    "coverage_by_activation_quartile": [
+      0.8133074038060841,
+      0.9868731768301153,
+      0.9995138213640783,
+      1.0
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 13,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The basic claims hold on dev. 100% of activation mass is at D2, with 0 active steps at D1 or GO. Only 2 of 57591 active steps have action==1. prev_reward==1 carries 99.8% of the mass. Firing collapses after trial 55: the rate is about 0.10 through trials 0-49, 0.025 for trials 50-59, and 0 from trial 60 on. Original predicate: dev P0.817 R0.976 F0.890; test P0.802 R0.976 F0.880, mass recall 0.996.",
+      "Systematic false-positive class the label misses: when the PREVIOUS trial's transition was rare, the unit is largely silent. Within the predicate, adding prev_common==0 gives P0.178 over 8540 predicted steps, carrying only 0.8% of the mass. Adding prev_common==1 gives P0.918, and adding prev_common==-1 (first trial of the window) gives P0.875. The profile shows the same thing: prev_common==0 has rate 0.007 and lift 0.1x.",
+      "This one condition explains the odd drop in firing at rel +1 (rate 0.077 vs about 0.165 at other positions). Half of all core trials are rare by construction, so the rel +1 trial often follows a rare transition. Predicate & (rel==1) has P0.535, while predicate & (rel==1) & (prev_common!=0) has P0.911.",
+      "In the top windows, the trial after a rewarded rare a2->S1 has the unit silent even though a2 is chosen again with prev_reward==1. One example: '[-1] r1 a2 S1R:1.00 | [+0] r0 a2 S2c' (inactive), where the r1 a2 S1R in the window still has prev_reward=1. So the unit needs the reward to have followed a common transition (in practice a2->S2), not just any reward.",
+      "The explanation says most remaining false positives are rewarded common a2->S2 trials. In fact the largest structured FP class is trials whose previous transition was rare (about 7000 of roughly 12600 dev FPs). Smaller classes are prev_action==1 (P0.08) and good==1 (P0.43).",
+      "The magnitude claim is roughly right. Rare current transitions hold a larger share of mass than of active steps (34.5% of mass vs 28.3% of recall within the predicate)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after choosing a2, when the previous trial was rewarded after a COMMON transition (in practice a2->S2 rewarded, then a2 again), in the first ~55 trials of the episode",
+    "better_predicate": "(phase == D2) & (action == 2) & (prev_reward == 1) & (prev_common != 0) & (ep_trial < 55)",
+    "better_predicate_test_f1": 0.924
+  },
+  "final_label": "D2 after choosing a2, when the previous trial was rewarded after a COMMON transition (in practice a2->S2 rewarded, then a2 again), in the first ~55 trials of the episode",
+  "original_predicate": "(phase == D2) & (action == 2) & (prev_reward == 1) & (ep_trial < 55)",
+  "original_test_scores": {
+    "gate": "neuron_reset",
+    "feature": 13,
+    "predicate": "(phase == D2) & (action == 2) & (prev_reward == 1) & (ep_trial < 55)",
+    "split": "test",
+    "precision": 0.8019732698901406,
+    "recall": 0.9757696499114562,
+    "f1": 0.8803760859712866,
+    "mass_recall": 0.9962177706644086,
+    "correlation": 0.8004395658617424,
+    "n_active": 58728,
+    "n_predicted": 71455,
+    "coverage_by_activation_quartile": [
+      0.9031467102574581,
+      0.9999318893883667,
+      1.0,
+      1.0
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 13,
+    "predicate": "(phase == D2) & (action == 2) & (prev_reward == 1) & (ep_trial < 55)",
+    "split": "dev",
+    "precision": 0.816908570515335,
+    "recall": 0.97631574377941,
+    "f1": 0.8895269735801297,
+    "mass_recall": 0.9964031022183301,
+    "correlation": 0.8089587751157647,
+    "n_active": 57591,
+    "n_predicted": 68829,
+    "coverage_by_activation_quartile": [
+      0.9052646200861231,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "predicate_from": "skeptic"
+}

@@ -1,0 +1,71 @@
+{
+  "label": "D1 reward after a2 S2 win that followed an unrewarded rare a2 trial; S2 belief",
+  "terms": "(phase == D1) * last_is(\"a2 S2 r\") * (tv(\"prev_reward\", -1) == 0) * (tv(\"state\", -2) != 2) * (tv(\"action\", -2) != 1) ;; (phase == D1) * last_is(\"a2 S2 r\") * (tv(\"prev_reward\", -1) == 0) * (tv(\"state\", -2) != 2) * (tv(\"action\", -2) != 1) * belief_lo ;; (phase == D1) * last_is(\"a2 S2 r\") * (tv(\"prev_reward\", -1) == 0) * (tv(\"action\", -2) == 1) ;; (phase == D1) * (prev_action == -1) * (in_rew == 1) * (belief < 0.3) ;; (phase == D1) * (prev_action == -1) * (in_rew == 1) * np.clip(-belief_lo, 0, None)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (GO and D2 are always 0). Its magnitude is set by a two-trial history: the last trial was a2 -> S2 rewarded (common win), and the trial before was unrewarded, specifically a2 -> S1 unrewarded (rare loss), or outside the window. That sequence gives about +0.7. If the unrewarded trial before was an a1 trial, the gain is small (+0.08). It is near 0 after an a2 S2 win when the trial before was rewarded or was a2 S2 unrewarded. Within the main pattern, magnitude grows as the ideal-observer belief says S2 is good (belief_lo weight -0.24 per log-odds unit). On the window first trial (history unseen), rewarded D1s with belief < 0.3 fire a little. Scores: dev R^2 beyond timing 0.53 from observed-only terms, versus profile ceilings of 0.30 (all observed) and 0.39 (all additive), so the previous-trial x trial-before interaction carries most of it. Model-value / policy terms were not needed here. Big first-trial activations (history before the window) stay mostly unexplained.",
+  "gate": "hidden",
+  "feature": 164,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 164,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S2 r\") * (tv(\"prev_reward\", -1) == 0) * (tv(\"state\", -2) != 2) * (tv(\"action\", -2) != 1)",
+      "(phase == D1) * last_is(\"a2 S2 r\") * (tv(\"prev_reward\", -1) == 0) * (tv(\"state\", -2) != 2) * (tv(\"action\", -2) != 1) * belief_lo",
+      "(phase == D1) * last_is(\"a2 S2 r\") * (tv(\"prev_reward\", -1) == 0) * (tv(\"action\", -2) == 1)",
+      "(phase == D1) * (prev_action == -1) * (in_rew == 1) * (belief < 0.3)",
+      "(phase == D1) * (prev_action == -1) * (in_rew == 1) * np.clip(-belief_lo, 0, None)"
+    ],
+    "weights": [
+      -0.19464904538318414,
+      -0.24481618372949301,
+      0.07985570816189869,
+      0.01312439926897465,
+      0.04226611938461858
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5241024775394727,
+    "r2": 0.5463055885867544,
+    "r2_timing_only": 0.0466552356324218
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 164,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S2 r\") * (tv(\"prev_reward\", -1) == 0) * (tv(\"state\", -2) != 2) * (tv(\"action\", -2) != 1)",
+      "(phase == D1) * last_is(\"a2 S2 r\") * (tv(\"prev_reward\", -1) == 0) * (tv(\"state\", -2) != 2) * (tv(\"action\", -2) != 1) * belief_lo",
+      "(phase == D1) * last_is(\"a2 S2 r\") * (tv(\"prev_reward\", -1) == 0) * (tv(\"action\", -2) == 1)",
+      "(phase == D1) * (prev_action == -1) * (in_rew == 1) * (belief < 0.3)",
+      "(phase == D1) * (prev_action == -1) * (in_rew == 1) * np.clip(-belief_lo, 0, None)"
+    ],
+    "weights": [
+      -0.19464904538318414,
+      -0.24481618372949301,
+      0.07985570816189869,
+      0.01312439926897465,
+      0.04226611938461858
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5329311412306981,
+    "r2": 0.5555609844643705,
+    "r2_timing_only": 0.048450764397568014
+  },
+  "final_verdict": "partially_explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The reported test R^2 reproduces exactly (0.524 beyond timing, against 0.047 for timing alone), and the terms are all observed-only. But the largest remaining errors are all one kind: the D1 step of the window's first trial when in_rew = 1. In misses, 7 of the 8 worst windows have actual about 1.2-1.4 there while the prediction is 0.06-0.20 (e.g. [-3 t45] 1.395 vs 0.186). The explanation admits these are 'mostly unexplained', but it is a large error class and roughly half the variance is still unexplained, so the 'explained' verdict is an overclaim.",
+      "That first-trial class can't be recovered from within-window variables. The first-trial D1 rewarded term alone scores test 0.004. Adding belief_cover gives 0.023. A belief-decile table didn't run because the expression needs int, which the tool doesn't allow; I swapped in clip(-belief_lo) plus (belief_cover == 0) and (ep_trial < 5): 0.525. Even FUTURE terms (this trial's action x state x reward) only lift it to 0.528 from the claimed 0.524. So the gap is real but probably needs history from before the window.",
+      "The claim 'stays near 0 after an a2 S2 win when the trial before was rewarded' is only partly true. When the trial before was a2 -> S1 rewarded (rare win), the fitted extra is +0.148 (test). Before a2 S2 rewarded or any a1 rewarded trial it is about 0 (-0.011 / -0.018 / -0.033).",
+      "The '+0.7' figure combines two cases that differ. If the unrewarded trial before was a2 -> S1 (rare loss), the effect is +0.684. If that trial is outside the window, it is only +0.403 (test, split-out indicator terms).",
+      "Claims that check out: zero at GO and D2 (the residual table and timing baseline are exactly 0 there). Firing after a2 S2 r following a2 S1 u. A small +0.08 when the trial before was an a1 trial (any outcome). A larger response with stronger belief that S2 is good (belief_lo weight -0.245). The interaction beats the additive 'all observed' ceiling of 0.30. Going observed-only costs nothing here: the five observed terms already reach 0.524 against the 0.39 'all' ceiling, though I didn't score a model-output version directly."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "D1 after an a2->S2 win that followed an unrewarded a2->S1 trial (weaker if that trial is outside the window), larger with S2 belief; large first-window-trial rewarded D1 firing unexplained",
+    "better_terms": "(phase == D1) * last_is('a2 S2 r') * (tv('prev_reward', -1) == 0) * (tv('state', -2) != 2) * (tv('action', -2) != 1) ;; (phase == D1) * last_is('a2 S2 r') * (tv('prev_reward', -1) == 0) * (tv('state', -2) != 2) * (tv('action', -2) != 1) * belief_lo ;; (phase == D1) * last_is('a2 S2 r') * (tv('prev_reward', -1) == 0) * (tv('action', -2) == 1) ;; (phase == D1) * (prev_action == -1) * (in_rew == 1) * np.clip(-belief_lo,0,None) ;; (phase == D1) * last_is('a2 S2 r') * (tv('prev_reward', -1) == 1) * (tv('action', -2) == 2) * (tv('state', -2) == 1) ;; (phase == D1) * (prev_action == -1) * (in_rew == 1) * (belief < 0.3) ;; (phase == D1) * last_is('a2 S2 r') * (tv('prev_reward', -1) == 0) * (tv('state', -2) == -9) * belief_lo",
+    "better_terms_test_r2_beyond_timing": 0.5299
+  },
+  "final_label": "D1 after an a2->S2 win that followed an unrewarded a2->S1 trial (weaker if that trial is outside the window), larger with S2 belief; large first-window-trial rewarded D1 firing unexplained"
+}

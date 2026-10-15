@@ -1,0 +1,84 @@
+{
+  "label": "D1 after a1-S1-rewarded, larger after recent doubt, early in episode",
+  "terms": "(phase == D1) * last_is(\"a1 S1 r\") * (100 - ep_trial) ;; (phase == D1) * last_is(\"a1 S1 r\") * (tv(\"prev_reward\", -1) != 1) ;; (phase == D1) * last_is(\"a1 S1 r\") * (tv(\"prev_reward\", -2) != 1) ;; (phase == D1) * last_is(\"a1 S1 r\") * (tv(\"prev_action\", -1) == 2) ;; (phase == D1) * last_is(\"a1 S1 r\") * (tv(\"prev_state\", -1) == 2) ;; (phase == D1) * (1 - last_is(\"a1 S1 r\")) ;; (phase == D1) * (prev_action == -1) * (prev_reward == 1) * belief * (100 - ep_trial) ;; (phase == D1) * last_is(\"a1 S1 r\")",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Active only at D1, and essentially only when the previous trial was a1 -> S1 (common) and rewarded; zero at GO and D2. Its size is set by the history before that trial. It is largest (~1.7) when the a1-S1 reward follows a trial that was unrewarded (+0.44) or that reached S2 (+0.36), smaller when the reward two trials back was also missing (+0.21 more), and it shrinks over a run of consecutive a1-S1 rewards (roughly 1.75 -> 1.35 -> 0.95 -> 0.65). It is strongly reduced (-0.47) if the trial before was an a2 choice (i.e. right after switching to a1). Within a1-S1-r it also falls with episode trial, on top of the timing baseline. On the first trial of a window, where the previous choice is unknown, a rewarded D1 is fit by belief x (100 - ep_trial). All other D1 histories sit below the timing baseline. Ideal-observer belief adds little once trial history is in the model. Test R^2 beyond timing 0.52 (dev 0.52), above the 0.47 all-cue additive ceiling and well above the 0.29 all-observed ceiling. The earlier policy-based explanation (policy decile reference 0.22) is not needed: observed history alone gives no loss. Remaining error is mostly windows that start inside a reward run, where the run length cannot be seen.",
+  "gate": "update",
+  "feature": 21,
+  "test_scores": {
+    "gate": "update",
+    "feature": 21,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S1 r\") * (100 - ep_trial)",
+      "(phase == D1) * last_is(\"a1 S1 r\") * (tv(\"prev_reward\", -1) != 1)",
+      "(phase == D1) * last_is(\"a1 S1 r\") * (tv(\"prev_reward\", -2) != 1)",
+      "(phase == D1) * last_is(\"a1 S1 r\") * (tv(\"prev_action\", -1) == 2)",
+      "(phase == D1) * last_is(\"a1 S1 r\") * (tv(\"prev_state\", -1) == 2)",
+      "(phase == D1) * (1 - last_is(\"a1 S1 r\"))",
+      "(phase == D1) * (prev_action == -1) * (prev_reward == 1) * belief * (100 - ep_trial)",
+      "(phase == D1) * last_is(\"a1 S1 r\")"
+    ],
+    "weights": [
+      0.005826319085086009,
+      0.4433982281641359,
+      0.21433272550956547,
+      -0.4710215877341433,
+      0.3582292377632194,
+      -0.09164363974739458,
+      0.006284774058280679,
+      -0.3182875563351864
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.517171776520567,
+    "r2": 0.5639101178206403,
+    "r2_timing_only": 0.09680117902648722
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 21,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S1 r\") * (100 - ep_trial)",
+      "(phase == D1) * last_is(\"a1 S1 r\") * (tv(\"prev_reward\", -1) != 1)",
+      "(phase == D1) * last_is(\"a1 S1 r\") * (tv(\"prev_reward\", -2) != 1)",
+      "(phase == D1) * last_is(\"a1 S1 r\") * (tv(\"prev_action\", -1) == 2)",
+      "(phase == D1) * last_is(\"a1 S1 r\") * (tv(\"prev_state\", -1) == 2)",
+      "(phase == D1) * (1 - last_is(\"a1 S1 r\"))",
+      "(phase == D1) * (prev_action == -1) * (prev_reward == 1) * belief * (100 - ep_trial)",
+      "(phase == D1) * last_is(\"a1 S1 r\")"
+    ],
+    "weights": [
+      0.005826319085086009,
+      0.4433982281641359,
+      0.21433272550956547,
+      -0.4710215877341433,
+      0.3582292377632194,
+      -0.09164363974739458,
+      0.006284774058280679,
+      -0.3182875563351864
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5218552296326304,
+    "r2": 0.5696444369476816,
+    "r2_timing_only": 0.09994715047982972
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The scores reproduce. On the test split the 8 terms give R^2 beyond timing 0.517; timing alone gives 0.097. The feature is zero at GO and D2. At D1 the residual is +0.238 after a1 S1 r and between -0.08 and -0.09 after every other previous trial. The ep_trial term is real: dropping it lowers the score from 0.517 to 0.454 (weight 0.006 per trial, about -0.58 across the episode). The first-trial belief x (100 - ep_trial) term adds about 0.07 (0.451 without it, and 0.480 if a plain first-trial indicator replaces it).",
+      "One factual claim is wrong: 'peaks when the a1-S1 reward follows a trial that reached S2 (+0.36)'. The S2 effect only appears when that S2 trial was unrewarded. Splitting the S2 term by reward inside the full term set gives S2 unrewarded +0.445 and S2 rewarded -0.139. So after a1 S2 r -> a1 S1 r the feature is lower, not higher. A standalone table of the trial-before pattern within a1-S1-r D1s agrees (relative to a1 S1 r): a1 S1 u +0.10, a1 S2 r -0.24, a1 S2 u +0.75, a2 S2 r -0.31, a2 S2 u +0.26, a2 S1 r -0.22, a2 S1 u 0.00. The boost is therefore strongest after a rare-unrewarded trial (evidence that S1 is good) and is negative after trials that favour S2, rather than being an additive 'unrewarded' plus 'reached S2' effect.",
+      "The 'unrewarded trial before (+0.44)' claim is mostly true but blurred. With the S2 split, a1 S1 u before gives about +0.39, while a1 S2 u gives about +0.84.",
+      "The run-length decay (1.75 -> 1.35 -> 0.95 -> 0.65) is only partly captured. The terms see two trials back, so beyond the third trial in a run the model's prediction stops falling. An explicit run-length product of consecutive a1-S1-r trials scored worse (0.40), so this costs little.",
+      "There is no large systematic error class. In misses, the mean error by phase x previous trial is at most 0.015 (largest: D1 after a2 S1 r, +0.015). The worst windows are the first one or two trials of a window inside a reward run, where the history is unobservable, as the explanation itself says. The ideal-observer belief does not fix this: belief, belief_lo, belief_cover and belief*(1-belief) interactions on the first trial each add less than 0.001.",
+      "Belief adds little within a1-S1-r D1s: adding belief_lo terms leaves the history-free score at 0.175. This is consistent with 'belief adds little' once trial history is included. 'Loses nothing vs the policy' holds: 0.52 vs the policy-decile reference 0.22."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a1-S1-rewarded; larger after recent evidence that S1 is good (especially a preceding rare-unrewarded a1 S2 trial or a missed reward), smaller after an a2 choice or a rewarded S2 trial and over long reward runs, and early in the episode",
+    "better_terms": "(phase == D1) * last_is('a1 S1 r') * (100 - ep_trial) ;; (phase == D1) * last_is('a1 S1 r') * (tv('prev_reward', -1) != 1) ;; (phase == D1) * last_is('a1 S1 r') * (tv('prev_reward', -2) != 1) ;; (phase == D1) * last_is('a1 S1 r') * (tv('prev_action', -1) == 2) ;; (phase == D1) * last_is('a1 S1 r') * (tv('prev_state', -1) == 2) * (tv('prev_reward', -1) != 1) ;; (phase == D1) * (1 - last_is('a1 S1 r')) ;; (phase == D1) * (prev_action == -1) * (prev_reward == 1) * belief * (100 - ep_trial) ;; (phase == D1) * last_is('a1 S1 r')",
+    "better_terms_test_r2_beyond_timing": 0.5238
+  },
+  "final_label": "D1 after a1-S1-rewarded; larger after recent evidence that S1 is good (especially a preceding rare-unrewarded a1 S2 trial or a missed reward), smaller after an a2 choice or a rewarded S2 trial and over long reward runs, and early in the episode"
+}

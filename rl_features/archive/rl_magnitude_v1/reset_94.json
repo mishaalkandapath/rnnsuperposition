@@ -1,0 +1,79 @@
+{
+  "label": "D1 after a1 reached S2 (rare), largest if unrewarded and preceded by reward/S1",
+  "terms": "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (prev_reward == 0) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * (tv(\"reward\", -2) == 1) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * (tv(\"state\", -2) == 1) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * (tv(\"reward\", -3) == 1) ;; (phase == D1) * last_is(\"a2 S2 u\") ;; (phase == D1) * ((prev_state == 1) + last_is(\"a2 S2 r\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Active only at D1 (zero at GO and D2). The magnitude is set by the previous trial: it is large after a1 led rarely to S2, about +1 more when that trial was unrewarded (a1 S2 u is the peak at around +1.8 over timing; a1 S2 r is around +0.8). The response is surprise-like and habituates: it adds about +0.8 if the trial before that was rewarded, +0.46 if that trial reached S1, and +0.23 if the trial three back was rewarded, so repeated a1-S2 outcomes in a row give small activations. Small positive after a2 S2 u (+0.11); after any S1 outcome or a2 S2 r it sits about 0.25 below the D1 timing mean. Policy/value, the hidden good state and future variables add little. Uses only observed history. Test R^2 beyond timing 0.61 (dev 0.62), against an all-cue ceiling of 0.62 (all observed 0.58).",
+  "gate": "reset",
+  "feature": 94,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 94,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (prev_reward == 0)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (tv(\"state\", -2) == 1)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (tv(\"reward\", -3) == 1)",
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * ((prev_state == 1) + last_is(\"a2 S2 r\"))"
+    ],
+    "weights": [
+      1.020416681035722,
+      -0.05733072759270031,
+      0.8116934371752138,
+      0.46184485674061126,
+      0.23107950257447624,
+      0.11482736845272536,
+      -0.24674195501575258
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6063968027491842,
+    "r2": 0.6376541427399165,
+    "r2_timing_only": 0.07941332847155269
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 94,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (prev_reward == 0)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (tv(\"state\", -2) == 1)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (tv(\"reward\", -3) == 1)",
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * ((prev_state == 1) + last_is(\"a2 S2 r\"))"
+    ],
+    "weights": [
+      1.020416681035722,
+      -0.05733072759270031,
+      0.8116934371752138,
+      0.46184485674061126,
+      0.23107950257447624,
+      0.11482736845272536,
+      -0.24674195501575258
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6158745793123139,
+    "r2": 0.6467304824505553,
+    "r2_timing_only": 0.08032767808754016
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims check out. Test R^2 beyond timing for the stated terms reproduces at 0.606. The timing baseline is exactly 0 at GO and D2, so 'only at D1' holds. Residuals by previous trial match the stated numbers: a1 S2 u +1.77, a1 S2 r +0.84, a2 S2 u +0.11, and about -0.25 after S1 outcomes and after a2 S2 r. The fitted weights match too: +1.02 for unrewarded, +0.81 if the trial before was rewarded, +0.46 if it reached S1, +0.23 if the trial three back was rewarded.",
+      "Misses found no systematic error. The mean error by phase is at most 0.008 in absolute size, and the largest error for any (phase, previous trial) cell is 0.04 ('D1 after ?').",
+      "The single largest misses are at the D1 of a window's first trial, where the previous trial is not in the window (prev_action == -1). Actual values reach about 4.1 against a prediction of 0.33. This is a gap in the data window, not in the explanation. Adding (phase==D1)*(prev_action==-1)*(in_rew==0) raises test R^2 by only 0.014.",
+      "Minor omissions. A1->S2 activation is much smaller when the trial before was an a2 choice (weight -0.83; adds about +0.006 R^2). It also grows slightly later in the episode (A12*ep_dec adds about +0.008). The stated term (phase==D1)*(prev_action==1)*(prev_state==2) has weight about 0 and can be dropped.",
+      "Model policy and value really do add little (choice and value terms: +0.001). Future variables (this trial's reward, hidden good state) add about 0.004, so the 'observed history only' claim is fine.",
+      "My best 8-term set reaches a test R^2 of 0.626 against 0.606 for the original. The original is already about 98% of the additive ceiling (0.62), so this is not a large systematic gap."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a1 reached S2 (rare), largest if unrewarded and preceded by reward/S1; weaker if the trial before was an a2 choice",
+    "better_terms": "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (prev_reward == 0) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * (tv('reward', -2) == 1) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * (tv('state', -2) == 1) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * (tv('reward', -3) == 1) ;; (phase == D1) * last_is('a2 S2 u') ;; (phase == D1) * ((prev_state == 1) + last_is('a2 S2 r')) ;; (phase == D1) * (prev_action == -1) * (in_rew == 0) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * (tv('action', -2) == 2)",
+    "better_terms_test_r2_beyond_timing": 0.6258
+  },
+  "final_label": "D1 after a1 reached S2 (rare), largest if unrewarded and preceded by reward/S1; weaker if the trial before was an a2 choice"
+}

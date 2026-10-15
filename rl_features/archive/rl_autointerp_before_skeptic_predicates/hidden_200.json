@@ -1,0 +1,81 @@
+{
+  "label": "D2: state S2 reached after a rewarded previous trial (strongest when S2 is unexpected)",
+  "predicate": "(phase == D2) & (state == S2) & (prev_reward == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (DELAY_2) and only when the shown state is S2. It never fires at D1 or GO, and never when S1 is shown. Within S2 D2 steps it mostly needs the previous trial to have been rewarded (prev_reward==1, which the agent saw at this trial D1). With that condition, dev F1 is 0.80 and mass recall 0.95; the S2-only predicate has recall 1.0 but precision 0.54. All variables are observed by D2. Magnitude: largest when S2 is surprising. That covers rare transitions (a1 -> S2): the a1 subset has precision 0.98, holds 60% of the mass, and covers 77% of the top quartile. It also covers S2 reached while S1 is the good state. Activations are weak or zero on routine common a2 -> S2 trials late in S2-good blocks, and those cases make up most of the false positives. It is weaker late in the episode.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 200,
+    "predicate": "(phase == D2) & (state == S2) & (prev_reward == 1)",
+    "split": "test",
+    "precision": 0.731962340095769,
+    "recall": 0.8790909596043786,
+    "f1": 0.7988084268457393,
+    "mass_recall": 0.9458225808323694,
+    "correlation": 0.5963146589911972,
+    "n_active": 107982,
+    "n_predicted": 129687,
+    "coverage_by_activation_quartile": [
+      0.7265891243147133,
+      0.9487331456512076,
+      0.8557140211150213,
+      0.9853306167808854
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 200,
+    "predicate": "(phase == D2) & (state == S2) & (prev_reward == 1)",
+    "split": "dev",
+    "precision": 0.7356973434535105,
+    "recall": 0.8797817824253541,
+    "f1": 0.8013141238169872,
+    "mass_recall": 0.9482188836609947,
+    "correlation": 0.5948843661959096,
+    "n_active": 105766,
+    "n_predicted": 126480,
+    "coverage_by_activation_quartile": [
+      0.7140155812722184,
+      0.9528779971257847,
+      0.8681214780076396,
+      0.9841155780794978
+    ]
+  },
+  "gate": "hidden",
+  "feature": 200,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The structural claims hold. All activation is at D2 (D1 and GO have 0 active steps) and only when S2 is shown (in_state=S1 has 0 active). The predicate reproduces its reported scores: test P 0.732, R 0.879, F1 0.799, mass recall 0.946.",
+      "The magnitude story ('strongest when S2 is unexpected', rare a1->S2, S2 while S1 is good) is confounded. The real driver is that the previous trial was rewarded AT S1. Test scores for D2 & S2 & prev_reward==1 & prev_state==1: P 0.996, mass 0.644, 83% of the top quartile.",
+      "That prev_state==1 subset fires just as reliably when the transition is COMMON (a2->S2), so surprise is not required. Dev scores: action==2 gives P 0.998 and action==1 gives P 0.995, with similar mass per step.",
+      "Truly surprising rare a1->S2 transitions after a rewarded S2 trial give almost nothing. Test: P 0.64, mass recall 0.005, top-quartile coverage 0.00. Dev, restricted to S2-good blocks: mass 0.001.",
+      "Whether S2 is good matters little once prev_state==1. With good==2 the subset still has P 0.993. So 'S2 reached while S1 is good' is also a correlate of a rewarded S1 trial just before, not the cause. The a1 subset's P 0.98 comes mostly from a1 choices following rewarded S1 trials.",
+      "There is a systematic false-positive class: common a2->S2 after a rewarded S2 trial (prev_state==2). It is about 65k dev steps at P 0.61, its activations are weak (mass 0.14, top-quartile coverage 0.00), and it gets much worse late in the episode. In this class, P is 0.074 at ep_trial>=80 versus 0.755 at ep_trial<80 (dev). On test it is P 0.415 at ep_trial>=50 versus 0.82 at ep_trial<50. The explanation mentions the late-episode drop but treats it as general. In fact it is concentrated in this prev-S2 class: when prev_state==1, activation stays near 100% precision."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "D2: S2 shown after a rewarded previous trial. Strongest when that reward came from S1 (S2 follows a rewarded S1 visit). Weak after a rewarded S2 visit, especially late in the episode.",
+    "better_predicate": "(phase == D2) & (state == S2) & (prev_reward == 1) & ((ep_trial<80) | (prev_state==1))",
+    "better_predicate_test_f1": 0.845
+  },
+  "final_label": "D2: S2 shown after a rewarded previous trial. Strongest when that reward came from S1 (S2 follows a rewarded S1 visit). Weak after a rewarded S2 visit, especially late in the episode.",
+  "scorecard": {
+    "format": "top40",
+    "summary": "Weighted combination of 40 cues. Raise it: phase=D2 & last=a2 S1 r (+9.10), phase=D2 & last=a1 S1 r (+5.61), stay=0 (+3.81), phase=D2 & before=a2 S1 r (+2.84), phase=D2 & this=a1 S2 (+2.49), phase=D2 & value_bin=decile 9 (9 = highest) (+2.24). Lower it: in_state=1 (-8.71), state=1 (-8.61), value_bin=decile 2 (9 = highest) (-3.56), last=a2 S2 u (-3.38).",
+    "test_f1": 0.8909205769838205,
+    "test_precision": 0.8464347043230356,
+    "test_recall": 0.9403419088366579,
+    "full_test_f1": 0.8925221656455322,
+    "full_n_cues": 98,
+    "top40_test_f1": 0.8909205769838205,
+    "slot2_test_f1": 0.8287535609805949,
+    "slot2_slots": [
+      "this trial",
+      "last trial"
+    ],
+    "file": "scorecards/hidden_200.json"
+  }
+}

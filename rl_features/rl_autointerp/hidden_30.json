@@ -1,0 +1,121 @@
+{
+  "label": "GO after a1 was chosen, transitioned rarely to S2 and was rewarded",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (prev_common == 0) & (prev_action == 1) & (ep_trial >= 15)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires almost only at GO (no mass at D1 or D2), on the trial after one where the agent chose a1, landed rarely in S2, and was rewarded. All variables are observed history. It is specific to the a1 to S2 rare-rewarded case: after the mirror case (a2 to S1 rare rewarded) it is nearly silent, and requiring prev_action == 1 lifts precision from 0.34 to 0.82. Most missed activations are on the first GO of the window (rel -3), where the previous trial is outside the window and the predicate cannot be evaluated, so the true coverage is probably higher. It fires whether the agent goes on to stay with a1 or switch to a2. Adding model_act == 1 raises precision to 0.93 but cuts recall to 0.56, so I kept the simpler predicate. I did not check what modulates magnitude beyond this.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 30,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (prev_common == 0) & (prev_action == 1) & (ep_trial >= 15)",
+    "split": "test",
+    "precision": 0.8738305265971665,
+    "recall": 0.8096928665785997,
+    "f1": 0.8405399614313264,
+    "mass_recall": 0.8875648852435085,
+    "correlation": 0.6966207780835248,
+    "n_active": 12112,
+    "n_predicted": 11223,
+    "coverage_by_activation_quartile": [
+      0.6638044914134742,
+      0.7691545574636723,
+      0.8893659180977543,
+      0.9164464993394981
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 30,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (prev_common == 0) & (prev_action == 1) & (ep_trial >= 15)",
+    "split": "dev",
+    "precision": 0.8884520884520885,
+    "recall": 0.8216687874931831,
+    "f1": 0.8537564338669311,
+    "mass_recall": 0.8895991987278118,
+    "correlation": 0.7075390827460696,
+    "n_active": 11002,
+    "n_predicted": 10175,
+    "coverage_by_activation_quartile": [
+      0.6655761541257724,
+      0.822246455834242,
+      0.8912727272727273,
+      0.9076363636363637
+    ]
+  },
+  "gate": "hidden",
+  "feature": 30,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most of the factual claims check out. The feature puts 100% of its mass at GO (19 of 11002 dev activations are at D1, none at D2). The mirror case (prev a2, rare, rewarded) gives precision 0.0. Remaining misses outside rel -3 hold only 1.9% of the mass. Test scores reproduce exactly (P 0.806, R 0.834, F1 0.820). Adding choice>0 gives precision 0.93 at recall 0.56, matching the model_act claim.",
+      "Systematic false-positive class the explanation does not mention: how reliably the feature fires depends strongly on how far into the episode the trial is. Dev precision of the predicate by episode trial: under 10: 0.14 (684 predicted); 10-19: 0.47; 20-29: 0.72; 30-49: 0.85; 50 and later: 0.97. Most false positives are early-episode GO steps.",
+      "'It fires whether the agent goes on to stay with a1 or switch to a2' is only true late in the episode. At trial 50 and later: precision 0.93 when the agent switches to a2, 1.00 when it stays with a1. Before trial 30: precision 0.15 when it switches, 0.74 when it stays. Early on, the feature mostly fires only when the agent is about to repeat a1. On test, splitting by the upcoming action gives precision 0.68 (switch) vs 0.92 (stay).",
+      "Smaller weak spots: when the previous a1 trial was itself a switch (tv('stay',-1)==0), precision is 0.44. When the good state is S2, precision is 0.73 vs 0.85 when it is S1.",
+      "The rel -3 explanation for the misses is right: about 9.8% of active steps are rel -3 GO steps, where the previous trial falls outside the window. That accounts for most of the recall gap.",
+      "The F1 gain from gating on episode time is small (test 0.820 -> 0.841) because a strict cut also drops some true early activations. The gating is still a clear structural pattern that the label and explanation leave out."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "GO after a rare-transition, rewarded a1 trial (a1 -> S2, reward), observed history only; nearly silent early in an episode (before ~trial 15-20), where it fires mainly when the agent will repeat a1",
+    "better_predicate": "(phase == GO) & (prev_reward == 1) & (prev_common == 0) & (prev_action == 1) & (ep_trial >= 15)",
+    "better_predicate_test_f1": 0.841
+  },
+  "final_label": "GO after a rare-transition, rewarded a1 trial (a1 -> S2, reward), observed history only; nearly silent early in an episode (before ~trial 15-20), where it fires mainly when the agent will repeat a1",
+  "scorecard": {
+    "format": "slot2",
+    "summary": "Graded preference over last trial (GO: a1 S2 r, a2 S2 r, ?; D1: a2 S2 u) and policy (model) (GO: decile 7 (9 , decile 6 (9 , decile 4 (9 ; D1: decile 3 (9 ); timing cues that raise it most: phase=D1 & ep_dec=9, phase=GO & ep_dec=8, phase=GO & ep_dec=9.",
+    "test_f1": 0.8610277238212962,
+    "test_precision": 0.9252371916508539,
+    "test_recall": 0.8051519154557464,
+    "full_test_f1": 0.8547615914374699,
+    "full_n_cues": 84,
+    "top40_test_f1": 0.8592573014404652,
+    "slot2_test_f1": 0.8610277238212962,
+    "slot2_slots": [
+      "last trial",
+      "policy (model)"
+    ],
+    "file": "scorecards/hidden_30.json"
+  },
+  "original_predicate": "(phase == GO) & (prev_reward == 1) & (prev_common == 0) & (prev_action == 1)",
+  "original_test_scores": {
+    "gate": "hidden",
+    "feature": 30,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (prev_common == 0) & (prev_action == 1)",
+    "split": "test",
+    "precision": 0.8061916540333519,
+    "recall": 0.834214002642008,
+    "f1": 0.8199634814363969,
+    "mass_recall": 0.8883568544109235,
+    "correlation": 0.6593429634913431,
+    "n_active": 12112,
+    "n_predicted": 12533,
+    "coverage_by_activation_quartile": [
+      0.761889035667107,
+      0.7691545574636723,
+      0.8893659180977543,
+      0.9164464993394981
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "hidden",
+    "feature": 30,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (prev_common == 0) & (prev_action == 1)",
+    "split": "dev",
+    "precision": 0.8157160300017443,
+    "recall": 0.8501181603344846,
+    "f1": 0.8325618657646431,
+    "mass_recall": 0.8904877098440719,
+    "correlation": 0.6667148704600949,
+    "n_active": 11002,
+    "n_predicted": 11466,
+    "coverage_by_activation_quartile": [
+      0.7793529625590694,
+      0.822246455834242,
+      0.8912727272727273,
+      0.9076363636363637
+    ]
+  },
+  "predicate_from": "skeptic"
+}

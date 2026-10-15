@@ -1,0 +1,64 @@
+{
+  "label": "late-episode dip deepened by S1 belief/a1-S1-reward (D1/GO) and S2 after rewards (D2)",
+  "terms": "(phase != D2) * belief_lo * np.exp((ep_trial-99)/20) ;; (phase == D2) * (state == 1) * np.exp((ep_trial-99)/20) ;; (phase == GO) * last_is(\"a1 S1 r\") * np.exp((ep_trial-99)/20) ;; (phase == D1) * (prev_action == 1) * np.exp((ep_trial-99)/20) ;; (phase == D2) * ((tv(\"reward\",-1)==1)*1.0+(tv(\"reward\",-2)==1)+(tv(\"reward\",-3)==1)) * np.exp((ep_trial-99)/20) ;; (phase == D2) * (state == 2) * ((tv(\"reward\",-1)==1)*1.0+(tv(\"reward\",-2)==1)+(tv(\"reward\",-3)==1)) * np.exp((ep_trial-99)/20) ;; (phase != D2) * (prev_reward == 0) * np.exp((ep_trial-99)/20)",
+  "verdict": "partially_explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw candidate n of GRU unit 2 sits near +1 for most of the episode and falls steeply in the last ~20 trials. Timing alone gives R^2 0.77. Beyond timing, every effect is history-dependent and grows with episode time: each term is scaled by exp((ep_trial-99)/20), and these interactions are what take the fit past the additive ceiling (all 0.27, all observed 0.25). At D1/GO it is lower when the ideal-observer belief favours S1 (belief_lo, negative weight), and especially lower at GO after an a1->S1 rewarded trial and at D1 after an a1 choice; it is higher after an unrewarded trial. At D2 it is higher when S1 is reached and lower when S2 is reached after a run of rewards (count of rewarded trials among the last 3). So late in the episode the unit is pushed down by a1/S1-favouring evidence before the choice and by rewarded history plus S2 at D2. Examples include late a1-S1-rewarded streaks where the unit keeps falling. Biggest remaining misses: some late-episode a2/S2 windows where the unit falls much lower than predicted, which suggests a slow episode-level integration that observed window cues do not capture. Observed-only, no future terms. Test R^2 beyond timing 0.41 (dev 0.38). The earlier model-based version used policy/value; here the policy decile alone was worth 0.16 vs 0.12 for belief, so dropping model outputs costs little once time interactions are included.",
+  "gate": "unit_candidate",
+  "feature": 2,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 2,
+    "terms": [
+      "(phase != D2) * belief_lo * np.exp((ep_trial-99)/20)",
+      "(phase == D2) * (state == 1) * np.exp((ep_trial-99)/20)",
+      "(phase == GO) * last_is(\"a1 S1 r\") * np.exp((ep_trial-99)/20)",
+      "(phase == D1) * (prev_action == 1) * np.exp((ep_trial-99)/20)",
+      "(phase == D2) * ((tv(\"reward\",-1)==1)*1.0+(tv(\"reward\",-2)==1)+(tv(\"reward\",-3)==1)) * np.exp((ep_trial-99)/20)",
+      "(phase == D2) * (state == 2) * ((tv(\"reward\",-1)==1)*1.0+(tv(\"reward\",-2)==1)+(tv(\"reward\",-3)==1)) * np.exp((ep_trial-99)/20)",
+      "(phase != D2) * (prev_reward == 0) * np.exp((ep_trial-99)/20)"
+    ],
+    "weights": [
+      -0.02052959482757132,
+      0.19744650738776495,
+      -0.26612968627727146,
+      -0.057255804551294025,
+      -0.012656019782868117,
+      -0.08686557770898876,
+      0.06504136986912691
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.41195985454896333,
+    "r2": 0.8619552498681684,
+    "r2_timing_only": 0.7652460445095141
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 2,
+    "terms": [
+      "(phase != D2) * belief_lo * np.exp((ep_trial-99)/20)",
+      "(phase == D2) * (state == 1) * np.exp((ep_trial-99)/20)",
+      "(phase == GO) * last_is(\"a1 S1 r\") * np.exp((ep_trial-99)/20)",
+      "(phase == D1) * (prev_action == 1) * np.exp((ep_trial-99)/20)",
+      "(phase == D2) * ((tv(\"reward\",-1)==1)*1.0+(tv(\"reward\",-2)==1)+(tv(\"reward\",-3)==1)) * np.exp((ep_trial-99)/20)",
+      "(phase == D2) * (state == 2) * ((tv(\"reward\",-1)==1)*1.0+(tv(\"reward\",-2)==1)+(tv(\"reward\",-3)==1)) * np.exp((ep_trial-99)/20)",
+      "(phase != D2) * (prev_reward == 0) * np.exp((ep_trial-99)/20)"
+    ],
+    "weights": [
+      -0.02052959482757132,
+      0.19744650738776495,
+      -0.26612968627727146,
+      -0.057255804551294025,
+      -0.012656019782868117,
+      -0.08686557770898876,
+      0.06504136986912691
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.39241005911083016,
+    "r2": 0.8593490918912201,
+    "r2_timing_only": 0.7685101436950288
+  },
+  "final_verdict": "partially_explained",
+  "observed_only": true
+}

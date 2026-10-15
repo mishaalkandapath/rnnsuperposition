@@ -1,0 +1,63 @@
+{
+  "label": "D2 after a2 rare-transitions to S1, late in the episode (trial >= ~80)",
+  "predicate": "(phase == D2) & (action == 2) & (state == 1) & (ep_trial >= 80)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2, only when the agent chose a2 and landed in S1 (a rare a2->S1 transition; in_action=2, in_state=1 account for 100% of mass), and only late in the episode: zero activations before ep_trial 60, onset around 70-79, most mass at 80-99. Without the time condition precision is 0.20 (recall 1.0). The time gating also shows up as a low model value (value < 6.5 gives a similar F1 of 0.88, because value falls as the episode nears its end). Magnitude increases with episode trial: within a window, successive a2->S1 events go from about 0.4 to 1.0 of max, and coverage of the top quartile is 0.99 at the >=80 cutoff. Also enriched when S2 is good, i.e. a rare unexpected outcome, but requiring good==2 hurts recall. Never fires at D1/GO, after a1, or on S2. All variables are observed at D2 (the agent knows its choice, the reached state and, implicitly, elapsed time), so uses_future is false.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 43,
+    "predicate": "(phase == D2) & (action == 2) & (state == 1) & (ep_trial >= 80)",
+    "split": "test",
+    "precision": 0.8508502024291498,
+    "recall": 0.9076617431113414,
+    "f1": 0.8783382789317508,
+    "mass_recall": 0.961666507342092,
+    "correlation": 0.7703408943008873,
+    "n_active": 11577,
+    "n_predicted": 12350,
+    "coverage_by_activation_quartile": [
+      0.7502590673575129,
+      0.9136143745680718,
+      0.9733932273669661,
+      0.9934346924671734
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 43,
+    "predicate": "(phase == D2) & (action == 2) & (state == 1) & (ep_trial >= 80)",
+    "split": "dev",
+    "precision": 0.858095655989469,
+    "recall": 0.8968996514401028,
+    "f1": 0.8770686639458223,
+    "mass_recall": 0.9569809878365573,
+    "correlation": 0.7650954783566931,
+    "n_active": 10902,
+    "n_predicted": 11395,
+    "coverage_by_activation_quartile": [
+      0.7325752017608217,
+      0.8928833455612619,
+      0.9739449541284404,
+      0.9882568807339449
+    ]
+  },
+  "gate": "hidden",
+  "feature": 43,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor caveat, not a refutation: when the a2->S1 rare event follows an a1 choice on the previous trial (a switch to a2), the feature often stays silent. That subset is small (765 predicted steps, precision 0.39), and adding prev_action!=1 barely changes F1 (test 0.881 vs 0.878). The label could mention that the feature mostly fires while the agent keeps choosing a2.",
+      "The magnitude depends on context in ways the binary predicate does not capture. Activation is higher when prev_reward==0 (precision 0.95), when good==2, and when an earlier a2->S1 event is in the window (top windows rise from about 0.4 to 1.0). These are graded effects, not systematic misses.",
+      "Every factual claim checks out. Mass is 100% at D2, with zero activations at D1 or GO and none on reaching S2 (all F1 = 0). action==1 gives 3 active steps out of 175k. Nothing fires before trial 60, 20 steps fire in trials 60-69, and all ep_bucket mass is in trials 50-99. Without the time condition precision is 0.200 and recall 1.0. value<6.5 gives F1 0.878. Adding good==2 gives F1 0.75. Test scores reproduce: P 0.851, R 0.908, F1 0.878, mass recall 0.962.",
+      "The test-split misses are low-magnitude a2->S1 events before trial 80 (activation about 0.02-0.4, 3.8% of mass). The false positives are a2->S1 events at trial 80 or later, mostly after a reward on the previous trial, after a switch from a1, or with good=S1. Neither forms a new, separate class of counterexamples.",
+      "The predicate uses no future variables. The agent's action, the reached state and ep_trial are all observable at D2."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

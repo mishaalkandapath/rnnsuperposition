@@ -1,0 +1,83 @@
+{
+  "label": "D2 after choosing a2, largest when switching to a2 from a1 (not after a1 S2 r)",
+  "terms": "(phase == D2) * (action == 2) ;; (phase == D2) * (action == 2) * (prev_action == 1) ;; (phase == D2) * (action == 2) * last_is(\"a1 S2 r\") ;; (phase == D2) * (action == 2) * np.clip(belief_lo, -3, 3) ;; (phase == D2) * (action == 2) * (state == 2) ;; (phase == D2) * (action == 2) * last_is(\"a2 S1 r\") ;; (phase == D2) * (action == 2) * (tv(\"action\", -2) == 1) ;; (phase == D2) * (action == 2) * belief_cover",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 and only after the agent chose a2 (zero at D1/GO and after a1). Its magnitude is set mostly by whether the a2 choice is a switch from a1: switching to a2 after a1 adds about +1.0, except after a1 S2 r (the model-based switch), where that boost is almost cancelled (-0.84). Smaller increases come from a1 two trials back (+0.2), reaching S2 (common) (+0.11), a previous a2 S1 r (+0.1), and a graded belief_lo term (ideal-observer belief still leaning toward S1 raises it). belief_cover adds very little. All terms are observed at D2 (action and state are known by then), so no future variables are used. Test R^2 beyond timing 0.536 (dev 0.532), against the all ceiling of 0.55 and all observed of 0.42; timing alone gives 0.05. The earlier explanation used the model policy (weak a2 preference); the observed proxies (a switch from a1 plus belief leaning toward S1) seem to capture about as much, so little appears lost, though no model-based version was scored here for a direct comparison.",
+  "gate": "reset",
+  "feature": 97,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 97,
+    "terms": [
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * (action == 2) * (prev_action == 1)",
+      "(phase == D2) * (action == 2) * last_is(\"a1 S2 r\")",
+      "(phase == D2) * (action == 2) * np.clip(belief_lo, -3, 3)",
+      "(phase == D2) * (action == 2) * (state == 2)",
+      "(phase == D2) * (action == 2) * last_is(\"a2 S1 r\")",
+      "(phase == D2) * (action == 2) * (tv(\"action\", -2) == 1)",
+      "(phase == D2) * (action == 2) * belief_cover"
+    ],
+    "weights": [
+      0.020864243143672682,
+      0.9814515306604206,
+      -0.8443426527903197,
+      0.07915905568260174,
+      0.11112622002028315,
+      0.09635902702526544,
+      0.19506874313040465,
+      0.012100100346445927
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5361072472354442,
+    "r2": 0.560280626899311,
+    "r2_timing_only": 0.05210984547571862
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 97,
+    "terms": [
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * (action == 2) * (prev_action == 1)",
+      "(phase == D2) * (action == 2) * last_is(\"a1 S2 r\")",
+      "(phase == D2) * (action == 2) * np.clip(belief_lo, -3, 3)",
+      "(phase == D2) * (action == 2) * (state == 2)",
+      "(phase == D2) * (action == 2) * last_is(\"a2 S1 r\")",
+      "(phase == D2) * (action == 2) * (tv(\"action\", -2) == 1)",
+      "(phase == D2) * (action == 2) * belief_cover"
+    ],
+    "weights": [
+      0.020864243143672682,
+      0.9814515306604206,
+      -0.8443426527903197,
+      0.07915905568260174,
+      0.11112622002028315,
+      0.09635902702526544,
+      0.19506874313040465,
+      0.012100100346445927
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5317922600630272,
+    "r2": 0.553748891166268,
+    "r2_timing_only": 0.04689506223497397
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced: the 8 terms give a test R^2 beyond timing of 0.536 (timing alone 0.052). That is above 'all observed' (0.42) and 97% of the 'all' ceiling (0.55). Fitted weights match the explanation: switch +0.98, a1 S2 r -0.84, two trials back a1 +0.195, S2 +0.11, a2 S1 r +0.10, belief_lo +0.079 per unit, belief_cover +0.012.",
+      "The belief effect is understated. The explanation lists it last, after the 'smaller' items, and the label leaves it out. Dropping belief_lo from the 8 terms lowers test R^2 from 0.536 to 0.454. That is the largest unique contribution after the switch / a1 S2 r pair, bigger than two-back a1, S2 and a2 S1 r combined. A compact model (a2 + switch + a1 S2 r + belief_lo) already reaches 0.504.",
+      "Binned check of the belief effect within a2 trials (test): on a2 repeats the weight rises from -0.05 at belief_lo < -2 (strong S2 belief) to 0.03 at -2..0 and 0.40 at >= 0. On switches from a1 it is 0.85 to 0.97 whatever the belief. So the feature is also large when the agent repeats a2 against an S1-favouring belief, which the 'switching' label does not convey. Adding a switch x belief interaction does not improve the fit (0.533).",
+      "Misses show no large systematic error class. Mean D2 errors by previous trial are all within +/-0.06 (a1 S2 u -0.058, a1 S1 r -0.057, a2 S1 u +0.042). The worst-fit windows are isolated large spikes (actual 2-2.8 vs predicted 0.1-0.4), mostly on a2 S2c trials. Some of these fall on the window's first trial, but a prev_action == -1 term adds nothing (0.4023 vs 0.4027).",
+      "The factual claims check out: the feature is zero at D1 and GO (residual 0 everywhere in the profile), near zero after a1 at D2, and switch plus a1 S2 r gives about +0.14. No future variables are used. belief_cover is negligible (+0.012)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after choosing a2: large on a switch from a1 (except after a1 S2 r), and on a2 repeats it grows the more the observed evidence favours S1 (a2 chosen against the belief)",
+    "better_terms": "(phase == D2) * (action == 2) ;; (phase == D2) * (action == 2) * (prev_action == 1) ;; (phase == D2) * (action == 2) * last_is(\"a1 S2 r\") ;; (phase == D2) * (action == 2) * np.clip(belief_lo, -3, 3) ;; (phase == D2) * (action == 2) * (tv(\"action\", -2) == 1)",
+    "better_terms_test_r2_beyond_timing": 0.509
+  },
+  "final_label": "D2 after choosing a2: large on a switch from a1 (except after a1 S2 r), and on a2 repeats it grows the more the observed evidence favours S1 (a2 chosen against the belief)"
+}

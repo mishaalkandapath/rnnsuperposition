@@ -1,0 +1,86 @@
+{
+  "label": "Fires at D1 after a rare a2->S1 reward, strongest early in the episode.",
+  "short_terms": "(phase == D1) * last_is(\"a2 S1 r\") ;; (phase == D1) * last_is(\"a2 S1 r\") * ep_dec",
+  "terms": "(phase == D1) * last_is(\"a2 S1 r\") ;; (phase == D1) * last_is(\"a2 S1 r\") * ep_dec ;; (phase == D1) * last_is(\"a2 S1 r\") * (ep_dec == 0) ;; (phase == D1) * last_is(\"a1 S1 r\") * (tv(\"state\", -2) == 1) * (tv(\"action\", -2) == 2) ;; (phase == D1) * last_is(\"a2 S1 r\") * belief_cover ;; (phase == D1) * last_is(\"a2 S1 r\") * (tv(\"reward\", -2) == 1) ;; (phase == D1) * last_is(\"a1 S1 r\") * (ep_dec == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Candidate feature that is active only at D1. Its magnitude is set by the previous trial being a2 -> S1 (rare) and rewarded (about +1.0 early on), and it shrinks roughly linearly with episode decile (about -0.13 per decile). It is near zero at GO and D2 and after every other previous-trial pattern. The free fit adds small effects: weaker firing after a1 S1 r when the trial before that was a2 -> S1, slightly more if the trial before was also rewarded, and some extra in the first decile. Together these add only about 0.015 dev R^2. Belief, belief_cover and the current choice/state contribute almost nothing. Misses are mostly D1 steps where the window does not show the previous trial.",
+  "full_test_scores": {
+    "gate": "hidden",
+    "feature": 120,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S1 r\")",
+      "(phase == D1) * last_is(\"a2 S1 r\") * ep_dec",
+      "(phase == D1) * last_is(\"a2 S1 r\") * (ep_dec == 0)",
+      "(phase == D1) * last_is(\"a1 S1 r\") * (tv(\"state\", -2) == 1) * (tv(\"action\", -2) == 2)",
+      "(phase == D1) * last_is(\"a2 S1 r\") * belief_cover",
+      "(phase == D1) * last_is(\"a2 S1 r\") * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * last_is(\"a1 S1 r\") * (ep_dec == 0)"
+    ],
+    "weights": [
+      1.0369033552023845,
+      -0.1349192681696794,
+      -0.11069125170577397,
+      0.18694222094889992,
+      -0.000583206216504014,
+      0.0931978310317065,
+      0.09559181589421134
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6994067173423445,
+    "r2": 0.7239618561618786,
+    "r2_timing_only": 0.0816889140117607
+  },
+  "gate": "hidden",
+  "feature": 120,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 120,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S1 r\")",
+      "(phase == D1) * last_is(\"a2 S1 r\") * ep_dec"
+    ],
+    "weights": [
+      1.052188427688441,
+      -0.1308076875807562
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6840051099190463,
+    "r2": 0.7098183893230252,
+    "r2_timing_only": 0.0816889140117607
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 120,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S1 r\")",
+      "(phase == D1) * last_is(\"a2 S1 r\") * ep_dec"
+    ],
+    "weights": [
+      1.052188427688441,
+      -0.1308076875807562
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6756979969574259,
+    "r2": 0.7022823730020313,
+    "r2_timing_only": 0.0819741345881092
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Claims hold. Short form test R^2 beyond timing is 0.684 (weights +1.05 and -0.131 per decile). The a2 S1 r term alone gives 0.384, so the episode-decile decline accounts for about 0.3. The single term a2 S1 r * (9 - ep_dec) gives 0.674, so the decline is close to linear and reaches zero by about decile 8. This matches the D1 timing baseline, which also falls to 0 by decile 8.",
+      "Specific to a2->S1, not to rare-rewarded trials in general. Adding D1*last_is('a1 S2 r') gets weight -0.026 and moves R^2 only from 0.684 to 0.685. The label's 'rare a2->S1' wording is accurate. A reader should not generalize it to 'any rare rewarded trial'.",
+      "Only at D1: the GO and D2 residuals are exactly 0 in the profile.",
+      "Belief and belief_cover add nothing. A2 S1 r * belief_lo gets weight about 0 (R^2 0.684). Belief_cover cannot replace ep_dec: swapping it in gives R^2 0.394.",
+      "Misses: the worst-fit windows are D1 cells at the window's first trial, where the previous trial is not in the window ('?'). Nothing observed in the window can fix these. A smaller pattern is some residual firing (~0.5-0.7) during early-episode runs of a1 S1 r. Adding D1*last_is('a1 S1 r')*(ep_trial<5) or *(tv('action',-2)==2) adds only about 0.005 R^2. The systematic errors by phase x previous trial are all at most |0.027|, which is intercept-level. No large error class remains.",
+      "No future variables are used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  }
+}

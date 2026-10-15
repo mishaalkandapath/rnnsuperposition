@@ -1,0 +1,64 @@
+{
+  "label": "D2 after choosing a1 and landing in S2 (rare), when the policy is not strongly committed to a1",
+  "predicate": "(phase == D2) & (action == 1) & (state == 2) & (choice < 1.5)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 and only on the rare a1->S2 transition (in_action=a1, in_state=S2): that conjunction covers 99.99% of activations and mass but only 37% of such steps are active. The gate is the model own a1-vs-a2 logit at that D2 step: active when the logit is below ~1.5 (not strongly preferring a1). Adding choice<1.5 gives dev P 0.78 / R 0.86 / F1 0.82 / mass 0.93. The choice logit is the model own readout at that step, so it is observed, not future. Magnitude is largest when the recent history favoured a2 / S2 was good (top windows: a2 run, then a switch to a1 that rarely lands in S2, often rewarded at the next D1), meaning a rare transition into the state the agent already believes is good. Never fires at D1 or GO, on common transitions, or on a2->S1 rare transitions. A strong a1 preference (S1 believed good) suppresses it.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 108,
+    "predicate": "(phase == D2) & (action == 1) & (state == 2) & (choice < 1.5)",
+    "split": "test",
+    "precision": 0.7903818099501987,
+    "recall": 0.8500784504679976,
+    "f1": 0.8191439445284395,
+    "mass_recall": 0.920768951986845,
+    "correlation": 0.657179796399399,
+    "n_active": 18483,
+    "n_predicted": 19879,
+    "coverage_by_activation_quartile": [
+      0.7481064704609391,
+      0.8394286950876434,
+      0.8338022073144341,
+      0.979004329004329
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 108,
+    "predicate": "(phase == D2) & (action == 1) & (state == 2) & (choice < 1.5)",
+    "split": "dev",
+    "precision": 0.7835848754733081,
+    "recall": 0.8600444860688363,
+    "f1": 0.8200362773824473,
+    "mass_recall": 0.9283737940276547,
+    "correlation": 0.6497046705266872,
+    "n_active": 17084,
+    "n_predicted": 18751,
+    "coverage_by_activation_quartile": [
+      0.761180051510185,
+      0.8499180519784594,
+      0.8506204635916648,
+      0.9784593771950363
+    ]
+  },
+  "gate": "hidden",
+  "feature": 108,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Factual claims hold. On the dev split, 0 of 17084 active steps fall at D1 or GO and 0 have in_action=a2 (so a2 rare transitions never fire). Exactly 1 active step has state S1 / common. (phase==D2)&(action==1)&(state==2) has recall 1.0, mass recall 1.0 and precision 0.374.",
+      "Test scores reproduce: P 0.79, R 0.85, F1 0.819, mass recall 0.921. The threshold of 1.5 is close to optimal: a cutoff of 1.7 gives test F1 0.806, and on dev a cutoff of 1.0 gives coverage 0.75 / 0.92 in the low and top activation quartiles.",
+      "The suppression claim is supported. Within the base conjunction, steps with choice>=1.5 have precision only 0.089 and hold 7% of the mass. On test, the false positives are mostly long runs of rewarded a1 choices, i.e. a strongly committed a1 policy.",
+      "The missed activations are weak (mostly relative activation 0.00-0.15) and scattered. They hold 7.9% of the mass and form no systematic class.",
+      "Caveat on circularity: 'choice' at D2 is the policy readout of the same hidden state that this candidate feature feeds into, so 'not strongly committed to a1' is partly a downstream correlate of the feature rather than an independent cause. Observed-history proxies do much worse: excluding a previous rewarded a1 gives test F1 0.43-0.48. So the label is best read as a description of the agent's belief state, not as an observed-history predicate.",
+      "The magnitude claim is weakly supported but overstated in emphasis. good==2 covers 19% of the top activation quartile vs 11% of the bottom quartile, and precision is higher there (0.54 vs 0.36). But most activation mass (77%) falls on good==S1 trials, because a1 is chosen more often when S1 is good."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

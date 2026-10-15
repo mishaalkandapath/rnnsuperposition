@@ -1,0 +1,57 @@
+{
+  "label": "GO late episode (trial>75) after a2 S2 unrewarded, graded by a2 preference",
+  "terms": "(phase == GO) * last_is(\"a2 S2 u\") * np.clip(ep_trial - 75, 0, None) * (choice < 0) ;; (phase == GO) * last_is(\"a2 S2 u\") * np.clip(ep_trial - 75, 0, None) * np.clip(-choice, 0, None)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO, in the last ~25 trials of the episode, after the previous trial was a2 -> S2 (common) unrewarded. Magnitude ramps linearly with episode trial beyond ~75 (to ~1.9 at trial 97-99) and is gated by the policy favouring a2 (choice logit < 0), increasing further with stronger a2 preference. Zero at D1/D2 and after any other previous-trial pattern. Recorded terms use only observed/model-internal quantities (policy logit); the future-choice version (action == 2 instead of choice < 0) scores similarly (dev 0.69 vs 0.70 for the observed pair; 0.72 combined). The trial before (another a2 S2 u) adds nothing. Additive tables reach only 0.12 because the effect is a three-way interaction (phase x last trial x late episode). Misses: windows whose first trial has unknown previous trial, and some consecutive a2 S2 u repeats where it fades.",
+  "gate": "update",
+  "feature": 75,
+  "test_scores": {
+    "gate": "update",
+    "feature": 75,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 u\") * np.clip(ep_trial - 75, 0, None) * (choice < 0)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * np.clip(ep_trial - 75, 0, None) * np.clip(-choice, 0, None)"
+    ],
+    "weights": [
+      0.0264710223565056,
+      0.005745830451430719
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7243429169785629,
+    "r2": 0.7502824534534802,
+    "r2_timing_only": 0.0941007435419321
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 75,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 u\") * np.clip(ep_trial - 75, 0, None) * (choice < 0)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * np.clip(ep_trial - 75, 0, None) * np.clip(-choice, 0, None)"
+    ],
+    "weights": [
+      0.0264710223565056,
+      0.005745830451430719
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7216328438819952,
+    "r2": 0.7450995474907112,
+    "r2_timing_only": 0.08430126576702868
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The onset is later than the label says. With a ramp starting at trial 80 instead of 75, test R^2 is 0.765 versus 0.724; ramp 85 gives 0.744, ramp 88 gives 0.673 and ramp 90 gives 0.590. 'Late episode (trial>75)' should read 'from about trial 80'.",
+      "The fit is held back by the timing baseline, not by a missing behavioural driver. The baseline spreads mass over all late-GO steps (decile 9 adds +0.148). Adding one term that cancels the ramp on late-GO steps after any other known previous trial raises test R^2 to 0.82. This is a modelling artifact, not a gap in the explanation.",
+      "Window-boundary misses are confirmed as systematic. The worst dev misses are first-trial GO steps (actual about 2.0, predicted 0.14) where prev_action is unknown. A proxy term (prev unknown, prev_reward == 0, late, choice < 0) adds about 0.03 on test. This is a data limitation the explanation already notes.",
+      "The other claims hold on test. Without the choice gating the term scores 0.571, so the policy logit term is needed. The a2-S2 specificity matters: prev a2 unrewarded alone scores 0.275 and any unrewarded trial scores 0.135. Adding late-ramp terms for a1 S2 u, a2 S1 u or a2 S2 r adds at most 0.016, with a small negative weight that only corrects the baseline. A two-back a2 S2 u term adds 0.000. Misses show no other systematic class: each phase/previous-trial cell has a mean error of 0.017 or less."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO, late episode (from about trial 80), after an unrewarded a2 -> S2 trial, graded by trial number and by the policy's a2 preference",
+    "better_terms": "(phase == GO) * last_is(\"a2 S2 u\") * np.clip(ep_trial - 80, 0, None) * (choice < 0) ;; (phase == GO) * last_is(\"a2 S2 u\") * np.clip(ep_trial - 80, 0, None) * np.clip(-choice, 0, None) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * np.clip(ep_trial - 80, 0, None) * (choice < 0) ;; (phase == GO) * (1 - last_is(\"a2 S2 u\")) * (prev_action != -1) * np.clip(ep_trial - 80, 0, None)",
+    "better_terms_test_r2_beyond_timing": 0.8513
+  },
+  "final_label": "GO, late episode (from about trial 80), after an unrewarded a2 -> S2 trial, graded by trial number and by the policy's a2 preference"
+}

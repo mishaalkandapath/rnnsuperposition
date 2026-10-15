@@ -1,0 +1,91 @@
+{
+  "label": "At GO after a rewarded a1-to-S1 trial, fading over the episode.",
+  "short_terms": "(phase == GO) ;; (phase == GO) * last_is(\"a1 S1 r\") ;; (phase == GO) * last_is(\"a1 S1 r\") * ep_trial",
+  "terms": "(phase == GO) ;; (phase == GO) * last_is(\"a1 S1 r\") ;; (phase == GO) * last_is(\"a1 S1 r\") * ep_trial ;; (phase == GO) * last_is(\"a1 S1 r\") * (tv(\"reward\", -2) == 1) ;; (phase == GO) * last_is(\"a1 S1 r\") * (tv(\"action\", -2) == 1) ;; (phase == GO) * last_is(\"a1 S1 r\") * belief_lo ;; (phase == GO) * last_is(\"a1 S1 r\") * (ep_trial < 3) ;; (phase == GO) * last_is(\"a2 S1 r\")",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO. Magnitude is large (~0.9 above other GO steps) when the previous trial was a1 -> S1 (common) rewarded, and is near zero after every other pattern, including rare-rewarded a2 -> S1. Within a1 S1 r, it decays linearly with episode trial (~-0.011/trial) so it is strongest early-mid episode. The free fit adds: a further boost if the trial before was also rewarded, a reduction if the trial before was also a1, a small positive belief_lo effect, and near-zero in the first 3 trials; these add ~0.04 R^2 on dev. Silent at D1 and D2. Observed-only terms.",
+  "full_test_scores": {
+    "gate": "hidden",
+    "feature": 106,
+    "terms": [
+      "(phase == GO)",
+      "(phase == GO) * last_is(\"a1 S1 r\")",
+      "(phase == GO) * last_is(\"a1 S1 r\") * ep_trial",
+      "(phase == GO) * last_is(\"a1 S1 r\") * (tv(\"reward\", -2) == 1)",
+      "(phase == GO) * last_is(\"a1 S1 r\") * (tv(\"action\", -2) == 1)",
+      "(phase == GO) * last_is(\"a1 S1 r\") * belief_lo",
+      "(phase == GO) * last_is(\"a1 S1 r\") * (ep_trial < 3)",
+      "(phase == GO) * last_is(\"a2 S1 r\")"
+    ],
+    "weights": [
+      -0.11332725090064989,
+      0.9061889565805984,
+      -0.011343539466421552,
+      0.39485047119995087,
+      -0.2415058021409243,
+      0.05797877404032062,
+      -0.7566166143442401,
+      -0.03818985644867154
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5312470696992972,
+    "r2": 0.6169706066180054,
+    "r2_timing_only": 0.18287573554733183
+  },
+  "gate": "hidden",
+  "feature": 106,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 106,
+    "terms": [
+      "(phase == GO)",
+      "(phase == GO) * last_is(\"a1 S1 r\")",
+      "(phase == GO) * last_is(\"a1 S1 r\") * ep_trial"
+    ],
+    "weights": [
+      -0.11540521270811055,
+      1.11710861606388,
+      -0.011056117339563928
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.4921722649924416,
+    "r2": 0.5850416355632844,
+    "r2_timing_only": 0.18287573554733183
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 106,
+    "terms": [
+      "(phase == GO)",
+      "(phase == GO) * last_is(\"a1 S1 r\")",
+      "(phase == GO) * last_is(\"a1 S1 r\") * ep_trial"
+    ],
+    "weights": [
+      -0.11540521270811055,
+      1.11710861606388,
+      -0.011056117339563928
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5032408966278523,
+    "r2": 0.5985163571463148,
+    "r2_timing_only": 0.191794090680381
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims check out. Short form test R^2 beyond timing is 0.492. Dropping the ep_trial term gives 0.363, so the fade is real: within a1 S1 r trials it adds about 0.13, and its fitted slope is -0.011 per trial. The label's main claim is confirmed: on the dev split, the GO residual after a1 S1 r is +0.44, against roughly -0.15 to -0.17 after every other pattern, including a2 S1 r at -0.15.",
+      "Misses show only one systematic error. At GO steps whose previous trial falls outside the window ('?'), the form under-predicts by +0.14. Most of this comes from the windowing: last_is cannot fire there. Adding a (prev_action == -1) term did not help on test (0.439, with that term replacing the plain (phase == GO) term). Every other cell is off by about 0.05 or less.",
+      "Worst-fit windows show some dependence on longer history. An a1 S1 r trial that follows unrewarded trials gets a weaker response (for example 0.54 or 0.18 actual vs 1.1 predicted), and trials that follow a long rewarded a1 streak get a stronger one. Adding a 'trial before was also rewarded' term to the short form gives only 0.388 vs 0.363 without the fade, or 0.462 when it replaces (phase == GO). So the effect is small and the 3-term limit does not cover it.",
+      "Belief variants add almost nothing: last_is * belief instead of last_is gives 0.498 vs 0.492, and last_is * belief_lo as the third term gives 0.365. The free fit's belief_lo effect is a minor detail, not a missing main driver.",
+      "The (phase == GO) term looks redundant with the per-phase timing baseline but helps on test (0.49 vs 0.43 without it). It corrects the baseline downward for GO steps outside the a1 S1 r pattern, so it is a legitimate offset, not curve fitting."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  }
+}

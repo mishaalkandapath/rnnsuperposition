@@ -1,0 +1,104 @@
+{
+  "label": "GO after an unrewarded trial with a confident a2 choice, early-to-mid episode",
+  "predicate": "(phase == GO) & (prev_reward == 0) & (prev_common != 1) & (choice < -8.9) & (ep_trial < 60)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO steps (never D1/D2) when the previous trial was unrewarded (reward input 0 at D1; ~0 activation after rewarded trials) and the policy strongly favours a2 (choice logit < -8.9 holds 96% of mass; fires essentially never when the agent picks a1). It is also restricted to the first ~60 trials of the episode: rate falls through trials 40-59 and is zero after trial ~65, so the trial-count condition is a large part of the precision (F1 0.40 -> 0.84). Magnitude increases with how negative the choice logit is (top quartile 100% covered, weak activations come from moderately negative logits). Previous-trial rare transition is enriched (3.3x) because a2 after rare-unrewarded is a confident stay, but adding prev_common did not help. All variables are observed or the agent own policy output; no future variables.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 17,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (prev_common != 1) & (choice < -8.9) & (ep_trial < 60)",
+    "split": "test",
+    "precision": 0.8396332036039879,
+    "recall": 0.8261120436424675,
+    "f1": 0.8328177467544485,
+    "mass_recall": 0.9543697220593291,
+    "correlation": 0.8212054853232994,
+    "n_active": 19064,
+    "n_predicted": 18757,
+    "coverage_by_activation_quartile": [
+      0.41838019303399077,
+      0.8982375157364666,
+      0.9892992026856903,
+      0.9985312631137222
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 17,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (prev_common != 1) & (choice < -8.9) & (ep_trial < 60)",
+    "split": "dev",
+    "precision": 0.838584107541392,
+    "recall": 0.8452082025528354,
+    "f1": 0.8418831253419483,
+    "mass_recall": 0.9590647986119428,
+    "correlation": 0.8193037160695964,
+    "n_active": 19116,
+    "n_predicted": 19267,
+    "coverage_by_activation_quartile": [
+      0.4793889935132873,
+      0.9139987445072191,
+      0.9882820673781125,
+      0.9991630048127224
+    ]
+  },
+  "gate": "reset",
+  "feature": 17,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The factual claims check out. All activation is at GO (D1 and D2 have 0 active steps). After rewarded trials there are only 251 of 19116 active steps (0.1% of mass). Only 24 active steps have action==a1. The choice < -8.9 bin holds 96.1% of the mass. The firing rate falls over trials 40-59 and is zero from trial 70 on. The predicate reproduces: dev F1 0.837, test F1 0.829, mass recall 0.96.",
+      "The label leaves out the rare transition. Of active steps where prev_common is known, 13781 follow a rare transition and only 1723 a common one (78.5% vs 2.2% of mass; the other 19% are window-first trials where prev_common is -1). Inside the predicate, prev_common==1 holds only 227 predicted steps, at precision 0.03. So 'confident a2 after an unrewarded trial' is almost always 'stay on a2 after a2 led to the rare S1 and was unrewarded', the model-based stay case. Adding prev_common!=1 'did not improve' F1 (test 0.833 vs 0.829) only because choice < -8.9 already screens out the common-unrewarded trials. Calling the rare lift a mere 'fits' undersells it.",
+      "There is a systematic class of false positives: a second unrewarded trial in a row. Within the predicate, precision is 0.95 when the trial two back was rewarded (11853 predicted steps) but 0.44 when it was also unrewarded (3933 predicted). That class makes up about 2/3 of all false positives, and the test-split misses output shows many windows with r0 then r0 where the second GO is inactive. Excluding it raises precision to 0.93 but lowers recall to 0.75, so test F1 is about the same (0.828).",
+      "Precision falls steadily with episode trial: 0.96 for trials 0-9, 0.94 for 10-29, 0.82 for 30-44, 0.71 for 45-54, 0.54 for 55-59 and 0.11 for 60-64. The ep_trial < 60 cutoff stands in for a gradual within-episode decline, not a sharp boundary.",
+      "Missed activations are weak: coverage of the lowest activation quartile is only 0.48. They are mostly GO steps with moderately negative logits (-8.9 to -4.4), plus a few at trials 60-65. This looks like noise rather than a missed class."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step, staying confidently on a2 after an a2 trial that hit the rare S1 and went unrewarded (one rewarded trial before that), with firing fading over the first ~60 trials of the episode",
+    "better_predicate": "(phase == GO) & (prev_reward == 0) & (prev_common != 1) & (choice < -8.9) & (ep_trial < 60)",
+    "better_predicate_test_f1": 0.833
+  },
+  "final_label": "GO step, staying confidently on a2 after an a2 trial that hit the rare S1 and went unrewarded (one rewarded trial before that), with firing fading over the first ~60 trials of the episode",
+  "original_predicate": "(phase == GO) & (prev_reward == 0) & (choice < -8.9) & (ep_trial < 60)",
+  "original_test_scores": {
+    "gate": "reset",
+    "feature": 17,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (choice < -8.9) & (ep_trial < 60)",
+    "split": "test",
+    "precision": 0.83,
+    "recall": 0.8272135963071758,
+    "f1": 0.828604455653636,
+    "mass_recall": 0.9555529038896606,
+    "correlation": 0.8168727509782896,
+    "n_active": 19064,
+    "n_predicted": 19000,
+    "coverage_by_activation_quartile": [
+      0.419639110365086,
+      0.8992866135123794,
+      0.9899286613512379,
+      1.0
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "reset",
+    "feature": 17,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (choice < -8.9) & (ep_trial < 60)",
+    "split": "dev",
+    "precision": 0.8291782086795937,
+    "recall": 0.8455743879472694,
+    "f1": 0.8372960372960373,
+    "mass_recall": 0.9595231867473544,
+    "correlation": 0.8148263370506412,
+    "n_active": 19116,
+    "n_predicted": 19494,
+    "coverage_by_activation_quartile": [
+      0.4795982423101067,
+      0.914417242100858,
+      0.9887005649717514,
+      0.9995815024063611
+    ]
+  },
+  "predicate_from": "skeptic"
+}

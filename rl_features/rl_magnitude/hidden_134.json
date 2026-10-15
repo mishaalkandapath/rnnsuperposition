@@ -1,0 +1,111 @@
+{
+ "label": "At GO after an a2 choice rewarded in S2, growing with episode time.",
+ "short_terms": "(phase == GO) * last_is('a2 S2 r') * np.where(ep_trial < 92, ep_trial, 0) ;; (phase == GO) * (1 - last_is('a2 S2 r')) * ep_dec ;; (phase == GO) * (prev_action == -1) * (belief_lo < 0)",
+ "terms": "(phase == GO) * last_is(\"a2 S2 r\") * ep_dec ;; (phase == GO) * (1 - last_is(\"a2 S2 r\")) * ep_dec ;; (phase == GO) * last_is(\"a1 S2 r\") * ep_dec ;; (phase == GO) * last_is(\"a2 S2 r\") * np.clip(-belief_lo,-5,5) ;; (phase == GO) * last_is(\"a2 S2 r\") * (tv(\"state\", -2) == 2) * (tv(\"reward\", -2) == 1) ;; (phase == GO) * last_is(\"a2 S2 r\") * (tv(\"action\", -2) == 2) ;; (phase == GO) * (prev_action == -1) * (belief_lo < 0) ;; (phase == GO) * last_is(\"a2 S2 r\") * belief_cover",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "GO-only feature (zero at D1 and D2). Its magnitude is set by the previous trial being a2 -> S2 rewarded (the win-stay-a2 cue); that response grows over the episode (term x ep_dec) while GO activation after any other outcome stays near zero, so the second term cancels the timing ramp everywhere else. On the window first trial, where the previous trial is unlabeled, it fires when the ideal observer favours S2 (belief_lo < 0), which stands in for the same history. The weaker responses after a1 -> S2 rewarded and after two S2 rewards in a row, plus graded belief and belief_cover, add only a little in the free fit (dev 0.60 vs 0.58 short). No future variables are used.",
+ "full_test_scores": {
+  "gate": "hidden",
+  "feature": 134,
+  "terms": [
+   "(phase == GO) * last_is(\"a2 S2 r\") * ep_dec",
+   "(phase == GO) * (1 - last_is(\"a2 S2 r\")) * ep_dec",
+   "(phase == GO) * last_is(\"a1 S2 r\") * ep_dec",
+   "(phase == GO) * last_is(\"a2 S2 r\") * np.clip(-belief_lo,-5,5)",
+   "(phase == GO) * last_is(\"a2 S2 r\") * (tv(\"state\", -2) == 2) * (tv(\"reward\", -2) == 1)",
+   "(phase == GO) * last_is(\"a2 S2 r\") * (tv(\"action\", -2) == 2)",
+   "(phase == GO) * (prev_action == -1) * (belief_lo < 0)",
+   "(phase == GO) * last_is(\"a2 S2 r\") * belief_cover"
+  ],
+  "weights": [
+   0.04036174861826324,
+   -0.018723679622518957,
+   0.023048336279565564,
+   -0.003257163343888064,
+   0.06136536698676049,
+   -0.023935650378995508,
+   0.22171402698273607,
+   0.008010303901662222
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6018841988883317,
+  "r2": 0.6923811248251448,
+  "r2_timing_only": 0.22731307243801002
+ },
+ "gate": "hidden",
+ "feature": 134,
+ "test_scores": {
+  "gate": "hidden",
+  "feature": 134,
+  "terms": [
+   "(phase == GO) * last_is('a2 S2 r') * np.where(ep_trial < 92, ep_trial, 0)",
+   "(phase == GO) * (1 - last_is('a2 S2 r')) * ep_dec",
+   "(phase == GO) * (prev_action == -1) * (belief_lo < 0)"
+  ],
+  "weights": [
+   0.005526672898063129,
+   -0.0176182106977363,
+   0.2170806836510505
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6448064191574314,
+  "r2": 0.7255465633290143,
+  "r2_timing_only": 0.22731307243801002
+ },
+ "dev_scores": {
+  "gate": "hidden",
+  "feature": 134,
+  "terms": [
+   "(phase == GO) * last_is('a2 S2 r') * np.where(ep_trial < 92, ep_trial, 0)",
+   "(phase == GO) * (1 - last_is('a2 S2 r')) * ep_dec",
+   "(phase == GO) * (prev_action == -1) * (belief_lo < 0)"
+  ],
+  "weights": [
+   0.005526672898063129,
+   -0.0176182106977363,
+   0.2170806836510505
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.655321990582269,
+  "r2": 0.7347019545898587,
+  "r2_timing_only": 0.2303017942504868
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "'Growing with episode time' is wrong at the end of the episode. The response after a2 -> S2 rewarded collapses in the last trials (around trial 92 onward), which matches the timing baseline's drop in decile 9 (GO mean 0.058 vs 0.18-0.20 in deciles 6-8). Adding a single last_is('a2 S2 r')*(ep_dec==9) term to the recorded form raises test R^2 beyond timing from 0.582 to 0.643. Swapping the linear ep_dec for np.where(ep_trial < 92, ep_trial, 0) gives 0.645 in 3 short-form terms. The recorded linear term is therefore a misfit to an inverted-U-shaped time course.",
+   "The label leaves out the third term (on a window's first trial, the feature fires when belief_lo < 0). That term is worth about 0.09 test R^2 (0.491 without it vs 0.582 with it), so a reader of the label alone cannot predict it.",
+   "There is a systematic under-prediction at GO after a1 -> S2 rewarded (rare, rewarded): +0.10 mean residual in misses. The largest misses are GO activations of about 1.0-1.2 after a1 S2 r late in the episode, where the agent goes on to choose a2. The explanation calls this a 'weaker effect'. Adding last_is('a1 S2 r')*ep_dec as a 4th term gains only about 0.01 (0.594), so the effect is real but heterogeneous. Pooling all S2-rewarded trials, (prev_state + prev_reward == 3), does worse (0.556) because the a1 S2 r effect is much smaller on average.",
+   "Checks that held up: the feature is zero at D1 and D2. Scaling by episode time beats a constant a2-S2-r term (0.582 vs 0.523). No future variables are used."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "GO after a2->S2 rewarded (or on a window's first trial when belief favours S2), growing until ~trial 92",
+  "better_short_terms": "(phase == GO) * last_is('a2 S2 r') * np.where(ep_trial < 92, ep_trial, 0) ;; (phase == GO) * (1 - last_is('a2 S2 r')) * ep_dec ;; (phase == GO) * (prev_action == -1) * (belief_lo < 0)",
+  "better_short_terms_test_r2_beyond_timing": 0.6448
+ },
+ "final_label": "GO after a2->S2 rewarded (or on a window's first trial when belief favours S2), growing until ~trial 92",
+ "original_short_terms": "(phase == GO) * last_is(\"a2 S2 r\") * ep_dec ;; (phase == GO) * (1 - last_is(\"a2 S2 r\")) * ep_dec ;; (phase == GO) * (prev_action == -1) * (belief_lo < 0)",
+ "original_test_scores": {
+  "gate": "hidden",
+  "feature": 134,
+  "terms": [
+   "(phase == GO) * last_is(\"a2 S2 r\") * ep_dec",
+   "(phase == GO) * (1 - last_is(\"a2 S2 r\")) * ep_dec",
+   "(phase == GO) * (prev_action == -1) * (belief_lo < 0)"
+  ],
+  "weights": [
+   0.04763212090059469,
+   -0.017887496337510175,
+   0.21663744670778193
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5817167812000076,
+  "r2": 0.6767980248146943,
+  "r2_timing_only": 0.22731307243801002
+ },
+ "terms_from": "skeptic"
+}

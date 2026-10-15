@@ -1,0 +1,79 @@
+{
+  "label": "D1 update gate dips after a1->S2 rare trials and steeply in the last ~10 trials",
+  "terms": "(phase == D1) * (prev_state == 2) * (prev_action == 1) ;; (phase == D1) * (prev_state == 1) ;; (phase == D1) * (prev_reward == 0) * np.maximum(ep_trial - 85, 0)**3 ;; (phase == D1) * (prev_reward == 1) * np.maximum(ep_trial - 85, 0)**3 ;; (phase == D1) * (prev_state == 2) * (prev_action == 1) * np.maximum(ep_trial - 80, 0) ;; (phase == D1) * value * np.maximum(ep_trial - 85, 0)**2 ;; (phase != D1) * np.maximum(ep_trial - 85, 0)**3",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 47 sits near 1 (mean 0.997). Nearly all its variance is at D1. (1) Whether the previous trial was a1 then rare S2 matters: z drops about 0.013-0.02 at D1 after that, whichever the reward. After any S1 outcome it goes up slightly (+0.004), and after a2->S2 it is near baseline. So it tracks the last choice x reached state (an a1/S2 mismatch), not reward. (2) A steep within-decile collapse in the last ~10-15 episode trials (z down to ~0.8 at D1) that the decile baseline misses. The cubic ramp terms capture it with about the same weight after rewarded and unrewarded trials. The a1->S2 dip deepens late in the episode, and at D1 higher model value softens the late dip. GO/D2 get only a small late ramp. Previous-trial table alone gives 0.30 and the additive all-cue ceiling is 0.34, so a large part of this score comes from the within-decile episode-time interactions. Test R^2 beyond timing 0.63 (dev 0.63). Uses no future variables. Value is a model-internal quantity.",
+  "gate": "unit_update",
+  "feature": 47,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 47,
+    "terms": [
+      "(phase == D1) * (prev_state == 2) * (prev_action == 1)",
+      "(phase == D1) * (prev_state == 1)",
+      "(phase == D1) * (prev_reward == 0) * np.maximum(ep_trial - 85, 0)**3",
+      "(phase == D1) * (prev_reward == 1) * np.maximum(ep_trial - 85, 0)**3",
+      "(phase == D1) * (prev_state == 2) * (prev_action == 1) * np.maximum(ep_trial - 80, 0)",
+      "(phase == D1) * value * np.maximum(ep_trial - 85, 0)**2",
+      "(phase != D1) * np.maximum(ep_trial - 85, 0)**3"
+    ],
+    "weights": [
+      -0.012845242106695694,
+      0.004126042123086197,
+      -2.9231109432813958e-05,
+      -2.7865608711285128e-05,
+      -0.004751204852284063,
+      9.960362624735594e-05,
+      -8.616432235908158e-07
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6254745258260463,
+    "r2": 0.7548096130151595,
+    "r2_timing_only": 0.34533054787360506
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 47,
+    "terms": [
+      "(phase == D1) * (prev_state == 2) * (prev_action == 1)",
+      "(phase == D1) * (prev_state == 1)",
+      "(phase == D1) * (prev_reward == 0) * np.maximum(ep_trial - 85, 0)**3",
+      "(phase == D1) * (prev_reward == 1) * np.maximum(ep_trial - 85, 0)**3",
+      "(phase == D1) * (prev_state == 2) * (prev_action == 1) * np.maximum(ep_trial - 80, 0)",
+      "(phase == D1) * value * np.maximum(ep_trial - 85, 0)**2",
+      "(phase != D1) * np.maximum(ep_trial - 85, 0)**3"
+    ],
+    "weights": [
+      -0.012845242106695694,
+      0.004126042123086197,
+      -2.9231109432813958e-05,
+      -2.7865608711285128e-05,
+      -0.004751204852284063,
+      9.960362624735594e-05,
+      -8.616432235908158e-07
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6310061853785356,
+    "r2": 0.763938787099216,
+    "r2_timing_only": 0.36025699199605987
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The late-episode collapse is mostly a growth of the previous-trial effect, not a separate collapse that applies whatever the history. Per-decile fits of the a1->S2 dip: about -0.010 in deciles 0-5, -0.019 in decile 7, -0.031 in decile 8 and -0.073 in decile 9. The prev-trial table plus an a1S2*ramp(ep_trial-80) term scores 0.550 test. Adding a generic D1 late cubic on top gives only 0.553.",
+      "The rise after S1 outcomes also grows sharply late in the episode: +0.002 in deciles 0-5, +0.004 in decile 7, +0.007 in decile 8, +0.021 in decile 9. The explanation calls it a flat +0.004, and the terms have no S1 x time interaction. Adding (phase==D1)*(prev_state==1)*ramp(ep_trial-80) to the original terms raises test R^2 from 0.625 to 0.682, a systematic gap.",
+      "The claim that the late dip is 'about equal after rewarded and unrewarded trials' only holds once the value*late^2 term is in the model. Without value, the late cubic weight after unrewarded trials is about 4x larger (-5.1e-6 vs -1.3e-6). The two reward-split cubics and value*late^2 work only together: removing both cubics leaves 0.554, and value*late^2 with a single cubic gives 0.624. The value terms on their own score 0.04. So (2) is really 'late D1 dip deeper at low model value', not a reward-blind collapse.",
+      "Adding a late term for rare previous transitions (prev_common==0)*late^2 to the original terms gives 0.653, with a positive weight: rare outcomes soften the late dip. The explanation does not mention this.",
+      "The worst-fit windows that remain are isolated, sharp late D1 dips (z about 0.80-0.85 at t92-t99) that no previous-trial pattern predicts. Errors by phase x previous trial are small (|mean| <= 0.002), so this residual is scattered rather than a missed category.",
+      "The other claims check out on test: a1->S2 dip whatever the reward (-0.0206/-0.0204), a near-baseline value after a2->S2, no future variables used, and only a small late ramp at GO/D2."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 update gate: the previous trial's choice x state sets z (lower after a1->S2, higher after S1), and both effects grow about 7-10x in the last ~15 trials. There is an extra late dip at low model value.",
+    "better_terms": "(phase == D1) * (prev_state == 2) * (prev_action == 1) ;; (phase == D1) * (prev_state == 1) ;; (phase == D1) * (prev_state == 2) * (prev_action == 1) * np.maximum(ep_trial - 80, 0) ;; (phase == D1) * (prev_state == 1) * np.maximum(ep_trial - 80, 0) ;; (phase == D1) * np.maximum(ep_trial - 85, 0)**3 ;; (phase == D1) * value * np.maximum(ep_trial - 85, 0)**2 ;; (phase == D1) * (prev_common == 0) * np.maximum(ep_trial - 85, 0)**2 ;; (phase != D1) * np.maximum(ep_trial - 85, 0)**3",
+    "better_terms_test_r2_beyond_timing": 0.6834
+  },
+  "final_label": "D1 update gate: the previous trial's choice x state sets z (lower after a1->S2, higher after S1), and both effects grow about 7-10x in the last ~15 trials. There is an extra late dip at low model value."
+}

@@ -1,0 +1,63 @@
+{
+  "label": "GO step with a strongly committed a1 choice (policy logit a1-a2 > 9)",
+  "predicate": "(phase == GO) & (choice > 9)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at the GO step, and only when the agent picks a1 (99.98% of mass on action==1; essentially never for a2, never at D1 or D2). Within a1 GO steps it tracks how confident the policy is: (phase==GO)&(choice>9) gives dev P=0.84 R=0.94 F1=0.89 with mass recall 0.98, while (phase==GO)&(action==1) has recall ~1.0 but precision 0.45. The predicate uses the model's own policy logit, which is computed at that step, so no future variable is needed. Correlates are a1 being good (good==S1 holds 85% of mass) and repeated a1 choices. In the example windows (not measured directly) the largest activations show up on a1 GO steps right after an unrewarded trial (D1 r0) in a run of a1 choices, and they shrink over the following rewarded a1 trials (1.0 -> 0.5 -> 0.37). Weak or missing activations are mostly near-threshold a1 choices (choice 8-9) and the last trial of the window.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 194,
+    "predicate": "(phase == GO) & (choice > 9)",
+    "split": "test",
+    "precision": 0.8349860215667256,
+    "recall": 0.9442415639718692,
+    "f1": 0.8862593108460002,
+    "mass_recall": 0.979435941371246,
+    "correlation": 0.7392365797930747,
+    "n_active": 77495,
+    "n_predicted": 87635,
+    "coverage_by_activation_quartile": [
+      0.8277072365025292,
+      0.9843604831217095,
+      0.9767729947352122,
+      0.988127806741341
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 194,
+    "predicate": "(phase == GO) & (choice > 9)",
+    "split": "dev",
+    "precision": 0.8419289191711359,
+    "recall": 0.9424454093512051,
+    "f1": 0.8893560417112045,
+    "mass_recall": 0.9799946971554222,
+    "correlation": 0.7409401051923732,
+    "n_active": 79455,
+    "n_predicted": 88941,
+    "coverage_by_activation_quartile": [
+      0.8157470801449859,
+      0.9858034635521546,
+      0.9795106725734998,
+      0.9887227508432764
+    ]
+  },
+  "gate": "hidden",
+  "feature": 194,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "All factual claims hold on test. Off-GO firing is zero (phase != GO: recall 0). Firing on a2 at GO is negligible (F1 0.0001, mass 0.0001). (phase==GO)&(action==1) has recall 0.9997 and precision 0.43. good==S1 holds 85% of the activation mass on dev.",
+      "The 14.5k false positives and 4.3k misses are not systematic. They are boundary noise around the logit threshold. A threshold of choice>10 gives precision 0.97 but recall 0.60, choice>8 gives precision 0.66, and choice>9.3 gives F1 0.887 versus 0.886, which is a negligible difference. Precision is flat across rel (0.81-0.84), prev_reward (0.77 after r0, 0.86 after r1) and good state (0.81-0.84).",
+      "One minor omission. The feature essentially never fires on a1 choices that switch from a2: (GO)&(action==1)&(prev_action==2) has 13038 steps and precision 0.006. The predicate already handles this because choice>9 is almost never true on switch trials, so it is not a counterexample. Adding prev_action != 2 changes nothing (F1 0.886).",
+      "The claim that activations are larger right after an unrewarded trial is consistent with the data. With prev_reward==0, the predicate covers 25% of active steps but 44% of activation mass. The predicate does not capture this magnitude modulation, but that is fine for a binary label.",
+      "The predicate uses no future variable; choice is the agent's own current policy logit."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

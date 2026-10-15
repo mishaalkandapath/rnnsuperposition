@@ -1,0 +1,64 @@
+{
+  "label": "D2 after a rare a2->S1 transition, previous trial rewarded, late in episode",
+  "predicate": "(phase == D2) & (action == 2) & (state == 1) & (ep_trial >= 65) & (prev_reward == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2. Nearly all activation mass (99%) falls on steps where the agent chose a2 and the rare transition took it to S1 (in_action=2, in_state=1); it almost never fires on a1 trials or common a2->S2 trials. It is also strongly gated by time in the episode: there is no activity before ep_trial ~60, and the firing rate rises through trials 60-99. That matches the model value being low (all activations have value < 7.13), so the feature may be reading a late-episode drop in value. Activation is strongest when the previous trial was rewarded (98% of mass has prev_reward=1); activations with prev_reward=0 are rare and weak (<0.2 of max). Everything in the predicate is observed at D2 (this trial choice and reached state are inputs at D2), so no future variable is used. Swapping ep_trial>=65 for value<7.13 gives a similar dev F1 (0.86). Misses are mostly low-magnitude rare-a2 activations at ep_trial 60-64 or after an unrewarded trial. False positives are mostly late rare a2->S1 steps where the feature stays silent, often in windows where the agent had been choosing a1.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 35,
+    "predicate": "(phase == D2) & (action == 2) & (state == 1) & (ep_trial >= 65) & (prev_reward == 1)",
+    "split": "test",
+    "precision": 0.8257552639609399,
+    "recall": 0.85000785299199,
+    "f1": 0.8377060599024843,
+    "mass_recall": 0.9738670959162963,
+    "correlation": 0.7766417971608861,
+    "n_active": 12734,
+    "n_predicted": 13108,
+    "coverage_by_activation_quartile": [
+      0.5210427135678392,
+      0.8790829145728644,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 35,
+    "predicate": "(phase == D2) & (action == 2) & (state == 1) & (ep_trial >= 65) & (prev_reward == 1)",
+    "split": "dev",
+    "precision": 0.83256033330713,
+    "recall": 0.8604273295962304,
+    "f1": 0.846264482620855,
+    "mass_recall": 0.9762296635840635,
+    "correlation": 0.7831109921609284,
+    "n_active": 12309,
+    "n_predicted": 12721,
+    "coverage_by_activation_quartile": [
+      0.5435347628330085,
+      0.8986025349366266,
+      0.9996750081247969,
+      1.0
+    ]
+  },
+  "gate": "reset",
+  "feature": 35,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Every factual claim held up when scored. The feature fires only at D2 (D1 and GO have 0 active steps). 100% of activation mass has in_action=2 and 99.3% has in_state=1. prev_reward=1 carries 98.4% of the mass. There is essentially no firing before ep_trial 60 (one active step in trials 50-59), and the firing rate rises from 0.008 in trials 60-69 to 0.043 in trials 90-99.",
+      "On the test split the predicate scores P 0.826, R 0.850, F1 0.838, mass recall 0.974, which matches the reported numbers. Swapping ep_trial>=65 for value<7.13 gives dev F1 0.856 and test F1 0.848, so the alternative works as claimed and is slightly better.",
+      "False positives are concentrated, not scattered, but the classes are small. Restricted to switch trials (prev_action==1) the predicate has test precision 0.41. With good==S1 it has precision 0.59, and at ep_trial 65-74 precision 0.65. Adding prev_action!=1 only moves dev F1 from 0.846 to 0.848. Adding good!=1 lowers it to 0.828.",
+      "The explanation says the false positives are 'often in windows where the agent had been choosing a1'. That is only partly true: most of the sampled test false positives were in all-a2 windows. Precision is lower after switches, but those trials are a minority of the false positives.",
+      "The misses are mostly weak activations: weak firing on common a2->S2 steps (0.04-0.09 of max) and low-magnitude rare steps after an unrewarded trial. Together they hold 2.6% of the activation mass on test. That is noise, not a missing class.",
+      "The predicate uses no future variable. action, state, prev_reward and ep_trial are all observed at D2."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == D2) & (action == 2) & (state == 1) & (value < 7.13) & (prev_reward == 1)",
+    "better_predicate_test_f1": 0.848
+  }
+}

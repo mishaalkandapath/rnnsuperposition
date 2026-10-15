@@ -1,0 +1,64 @@
+{
+  "label": "D2 rare a2->S1 after a rewarded common a2->S2 trial (episode trials 3-49 only)",
+  "predicate": "(phase == D2) & (action == 2) & (state == 1) & (prev_reward == 1) & (prev_state != 1) & (prev_action != 1) & (ep_trial >= 3) & (ep_trial < 50)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (100% of mass), only when the agent chose a2 and landed in S1 by a rare transition (in_action=2, in_state=1; never on a1 or S2 inputs). Within that it requires the previous trial to have been rewarded (prev_reward=1; never after an unrewarded trial) and essentially requires the previous trial to have been a2 reaching S2 (prev_action=1 or prev_state=1 kill it), i.e. a surprising rare transition right after a rewarded common a2 trial. All variables are observed at D2 (this trial choice and reached state are inputs). A strong, unexplained episode-time dependence: it is silent on episode trials 0-2 and after ~trial 50 (0 activations after trial 59), peaking on trials 10-39, suggesting it rides a slowly drifting hidden-state component; cutting at trial 45 instead of 50 raises dev F1 from 0.885 to 0.915. The value head sits in a narrow band (7.1-7.5) and the a1-a2 logit is strongly negative (-8.9 to -4.4) whenever it fires. Remaining false positives are same-condition D2 steps where it stays silent; misses (0.2% of mass) are weak activations outside the trial range or after an S1 trial. Magnitude modulation was not characterized.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 26,
+    "predicate": "(phase == D2) & (action == 2) & (state == 1) & (prev_reward == 1) & (prev_state != 1) & (prev_action != 1) & (ep_trial >= 3) & (ep_trial < 50)",
+    "split": "test",
+    "precision": 0.7939103660622648,
+    "recall": 0.9894261106847446,
+    "f1": 0.8809505732290639,
+    "mass_recall": 0.9969405686729924,
+    "correlation": 0.7711518785514276,
+    "n_active": 11727,
+    "n_predicted": 14615,
+    "coverage_by_activation_quartile": [
+      0.9621418826739427,
+      0.9962482946793997,
+      0.9993178717598908,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 26,
+    "predicate": "(phase == D2) & (action == 2) & (state == 1) & (prev_reward == 1) & (prev_state != 1) & (prev_action != 1) & (ep_trial >= 3) & (ep_trial < 50)",
+    "split": "dev",
+    "precision": 0.7985917456776352,
+    "recall": 0.9922044174967518,
+    "f1": 0.8849318243269342,
+    "mass_recall": 0.9975011303692539,
+    "correlation": 0.7780683558446685,
+    "n_active": 11545,
+    "n_predicted": 14344,
+    "coverage_by_activation_quartile": [
+      0.9715968133010046,
+      0.9975744975744976,
+      1.0,
+      0.9996534996534997
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 26,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Value-band claim is slightly wrong. Active steps have value 7.1-7.6, not 7.1-7.5: 28% of active steps (25.6% of activation mass) have 7.5 < value <= 7.6, and none are below 7.1 or above 7.6. The choice-logit range (-8.9 to -4.4) checks out (recall 1.0 inside it, 0 outside). Both are only descriptive correlates: the value band has precision 0.04 and the choice range 0.09.",
+      "'Previous trial must be a2->S2' is checked directly for only about 82% of activation mass. 18.2% of the mass is at rel -3, where prev_state and prev_action are -1 because the previous trial is outside the window, and the predicate's != tests let these steps through. Among known previous trials it is exact: D2 & prev_state==1 never fires, and D2 & prev_action==1 holds 0.05% of the mass.",
+      "Most of the precision comes from episode position, which is left unexplained. Without the ep_trial cut, dev precision is 0.38 (F1 0.55); with it, 0.79. By bucket, precision is 0.72 for trials 3-9, 0.94 for 10-29, 0.84 for 30-44, 0.22 for 45-49 and 0.025 for 50-59. The explanation states this openly, so it is a known limitation, not an overclaim.",
+      "False positives (test: 3012 steps, about 20% of predicate-true steps) show no systematic observed-variable class. Precision inside the predicate stays at 0.65-0.91 across good state, start_high, since_rev, and the two-back trial's reward, transition and state. next_stay==0 cases rarely fire (precision 0.13), but they hold only 0.2% of recall. Most false positives sit at the edges of the trial range (3-9 and 45-49).",
+      "Confirmed claims: 100% of activation mass is at D2 and none at D1 or GO; it fires only on action==2 and state==1, i.e. rare transitions (common==0 holds all the mass); prev_reward==1 holds all the mass; it is silent on episode trials 0-2 and after trial 59 (trials 50 and later hold 0.2% of the mass). The reported test scores reproduce exactly (P 0.794, R 0.989, F1 0.881, mass recall 0.997). Misses are scattered (124 steps, 0.3% of mass).",
+      "Small gain from a tighter trial window: ep_trial 4-45 gives test F1 0.909 (P 0.857, R 0.967), against 0.881 for 3-49. This is a cutoff refinement, not a new mechanism."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == D2) & (action == 2) & (state == 1) & (prev_reward == 1) & (prev_state != 1) & (prev_action != 1) & (ep_trial >= 4) & (ep_trial < 46)",
+    "better_predicate_test_f1": 0.909
+  }
+}

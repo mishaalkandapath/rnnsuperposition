@@ -1,0 +1,104 @@
+{
+  "label": "GO step, confident a1 choice (not late in episode)",
+  "predicate": "(phase == GO) & (choice > 5 + 0.06*ep_trial)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO steps (100% of mass), and only when the agent is about to choose a1: 99.8% of mass is on GO steps with action a1, and almost none on a2 choices. Within GO, it tracks a strongly a1-favoring policy (logit(a1)-logit(a2) > ~6) and a high value estimate. It fades over the episode: rare after trial ~80, near zero in trials 90-99 (value also falls late). Magnitude is larger when the previous trial was rewarded (r1 GO steps reach ~1.0 of max, r0 GO steps ~0.35), and it also rises with since_rev (an established a1 preference). It never fires at D1 or D2, on a2 choices, or on GO steps with a weak or a2-leaning policy. Uses the agent own policy logit, which it computes itself, plus episode position; no future variables. GO & action==1 alone gets recall 0.998 but precision 0.60 (F1 0.75); adding choice>6 and ep_trial<80 gives dev F1 0.87.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 91,
+    "predicate": "(phase == GO) & (choice > 5 + 0.06*ep_trial)",
+    "split": "test",
+    "precision": 0.9270104982170959,
+    "recall": 0.8686116399746145,
+    "f1": 0.8968614186734507,
+    "mass_recall": 0.9477479914521901,
+    "correlation": 0.7896755840589986,
+    "n_active": 107148,
+    "n_predicted": 100398,
+    "coverage_by_activation_quartile": [
+      0.6575577705603465,
+      0.8656064508903573,
+      0.9514689961548513,
+      0.9998133422929033
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 91,
+    "predicate": "(phase == GO) & (choice > 5 + 0.06*ep_trial)",
+    "split": "dev",
+    "precision": 0.9245754942602041,
+    "recall": 0.8821940992460042,
+    "f1": 0.9028877265539473,
+    "mass_recall": 0.9546343648262907,
+    "correlation": 0.7864189355887825,
+    "n_active": 105173,
+    "n_predicted": 100352,
+    "coverage_by_activation_quartile": [
+      0.6852894196394614,
+      0.884303807096946,
+      0.9591906591107899,
+      1.0
+    ]
+  },
+  "gate": "reset",
+  "feature": 91,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold. The feature fires only at GO (D1 and D2 have 0 active steps), and 99.9% of its mass is on a1 choices. (GO & model_act==1) has recall 0.999 and precision 0.60. Choice > 8.07 has an 0.78 firing rate, and below choice 2.78 there is essentially nothing. The reported test score reproduces: P 0.849, R 0.893, F1 0.871.",
+      "The magnitude claim is wrong as stated. Using mass_recall/recall as a proxy for mean activation within predicate hits (dev): on a GO step after a reward that followed no reward, P 0.97 and mean activation 1.8x the average. After two rewards in a row it is 1.36x. After three or more rewards in a row, precision falls to 0.80 and mean activation to 0.70x, about the same as after no reward (0.63x). So the top magnitude belongs to the first reward after a non-reward, and it decays across a streak of rewards: the top windows go 1.00 -> 0.80 -> 0.62, and some low-quartile r1 steps are at 0.01-0.18. 'Rewarded GO steps reach ~1.0 vs ~0.35 unrewarded' overgeneralises.",
+      "Fading over the episode is gradual, not a cliff at trial 80. Precision of GO&choice>6 by trial bin: 0-9: 0.99, 10-39: 0.95, 40-59: 0.88, 60-69: 0.74, 70-79: 0.49, 80-89: 0.26. Much of the predicate's false-positive mass is in trials 60-79, which the ep_trial<80 cutoff lets in. The data fit better as a choice threshold that rises with trial number.",
+      "A better predicate uses only observed variables: (phase == GO) & (choice > 5 + 0.06*ep_trial). Dev F1 is 0.903 (P 0.925, R 0.882). Test F1 is 0.897 (P 0.927, R 0.869, mass recall 0.948), against 0.871 for the original. That is a modest gain, so the original is a reasonable approximation.",
+      "The since-reversal claim is weak. The firing rate climbs from 0.07 to 0.18 over trials 0-19 after a reversal, but the capped since_rev=20 bin (39% of mass) is only at 0.093. That is probably confounded with episode position. 'With a high value estimate' does check out: within the predicate, value > 7.6 gives P 0.94."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step with a confident a1 choice; the confidence needed rises over the episode; strongest on the first reward after a non-reward",
+    "better_predicate": "(phase == GO) & (choice > 5 + 0.06*ep_trial)",
+    "better_predicate_test_f1": 0.897
+  },
+  "final_label": "GO step with a confident a1 choice; the confidence needed rises over the episode; strongest on the first reward after a non-reward",
+  "original_predicate": "(phase == GO) & (choice > 6) & (ep_trial < 80)",
+  "original_test_scores": {
+    "gate": "reset",
+    "feature": 91,
+    "predicate": "(phase == GO) & (choice > 6) & (ep_trial < 80)",
+    "split": "test",
+    "precision": 0.8492868617479209,
+    "recall": 0.8930637996042856,
+    "f1": 0.8706253781520251,
+    "mass_recall": 0.9512828730019258,
+    "correlation": 0.7437636916843435,
+    "n_active": 107148,
+    "n_predicted": 112671,
+    "coverage_by_activation_quartile": [
+      0.7512226079814835,
+      0.8781498488072572,
+      0.9455332810691753,
+      0.9973494605592265
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "reset",
+    "feature": 91,
+    "predicate": "(phase == GO) & (choice > 6) & (ep_trial < 80)",
+    "split": "dev",
+    "precision": 0.843965671374933,
+    "recall": 0.8976258165118424,
+    "f1": 0.8699690830426708,
+    "mass_recall": 0.9528006738463389,
+    "correlation": 0.7387240753428199,
+    "n_active": 105173,
+    "n_predicted": 111860,
+    "coverage_by_activation_quartile": [
+      0.7617327146877615,
+      0.8879549690031567,
+      0.9443958468033317,
+      0.9964249039668353
+    ]
+  },
+  "predicate_from": "skeptic"
+}

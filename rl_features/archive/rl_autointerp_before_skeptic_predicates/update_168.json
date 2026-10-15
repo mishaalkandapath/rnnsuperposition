@@ -1,0 +1,65 @@
+{
+  "label": "GO step, strongly committed to a2 after a common-rewarded a2 trial (mid/late episode)",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (prev_common != 0) & (choice < -6) & (ep_trial >= 30) & (ep_trial < 90)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO steps (never D1/D2) when the previous trial was rewarded and the policy strongly prefers a2 (choice logit < -6; 80% of mass in the bottom choice-logit bin). In practice this is a win-stay on a2: previous trial a2 -> S2 common, rewarded (prev rare trials and prev a1 trials almost never activate; prev_common=-1 is only the first trial of a window, where the previous trial is unknown). Good state is mostly S2. Zero activation on unrewarded previous trials, on a1 choices, and in episode trials < 30; it also mostly drops out at trials >= 90, so the episode-time gate (30-89) is an empirical restriction that raises precision from ~0.57 to ~0.87. The equivalent predicate using the agent own upcoming action (action == 2) instead of the choice logit scores nearly the same (dev F1 0.914 vs 0.920); I recorded the choice-logit version because it is observable at this step. Magnitude was not checked in detail beyond the example windows, which hint at a drift across consecutive trials in a window.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 168,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (prev_common != 0) & (choice < -6) & (ep_trial >= 30) & (ep_trial < 90)",
+    "split": "test",
+    "precision": 0.866407281317307,
+    "recall": 0.9653949772396495,
+    "f1": 0.9132265600398387,
+    "mass_recall": 0.9837180816501458,
+    "correlation": 0.7967780445310763,
+    "n_active": 64586,
+    "n_predicted": 71965,
+    "coverage_by_activation_quartile": [
+      0.9192419644516009,
+      0.9539233294110361,
+      0.9892852718939675,
+      0.9991329121763904
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 168,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (prev_common != 0) & (choice < -6) & (ep_trial >= 30) & (ep_trial < 90)",
+    "split": "dev",
+    "precision": 0.8736948935756093,
+    "recall": 0.9714338712669264,
+    "f1": 0.9199756991970487,
+    "mass_recall": 0.987023999079172,
+    "correlation": 0.8006421337109525,
+    "n_active": 64692,
+    "n_predicted": 71929,
+    "coverage_by_activation_quartile": [
+      0.9313670933036542,
+      0.961973659803376,
+      0.9934458665677364,
+      0.9989488653929388
+    ]
+  },
+  "gate": "update",
+  "feature": 168,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most of the factual claims hold up. All activation is at GO, with none at D1 or D2. Every active step has prev_reward == 1; prev_reward == 0 gives 0 of 401k steps. Only 9 active steps have action == 1. prev_action == 1 / prev_common == 0 accounts for just 517 active steps (0.5% of mass). good == S2 holds 82% of the mass. The lowest choice-logit bin holds 80% of the mass. Nothing fires before ep_trial 30 (2 steps in 20-29).",
+      "Systematic false-positive class: the window's lower edge is wrong. Inside the predicate's other conditions, precision by ep_trial is 0.007 at 30-31, 0.08 at 32-33, 0.44 at 34-35, 0.91 at 36-39 and 0.96 at 40-44. The feature really turns on at about trial 35, not 30. Trials 30-34 make up roughly 5.9k of the 9.1k dev false positives (about 65%).",
+      "The upper edge is graded too. Precision is 0.81 at 87-88, 0.64 at 89, 0.41 at 90-91 and 0.07 at 92-94, so the cutoff sits at about 90-91. Here the original edge is about right.",
+      "Test misses (1.6% of mass) cluster at the ends of windows, where activation decays across consecutive trials, consistent with crossing the late-episode cutoff. This is not a separate behavioral class. Within each window, magnitude ramps up or decays smoothly across consecutive win-stay-a2 trials (for example 1.00 > 0.87 > 0.82 > 0.78). This fits a slowly drifting, time-in-episode-like gating signal more than a discrete event. The explanation did not characterize this.",
+      "Reward history beyond one trial back is not a clean gate. Requiring tv('prev_reward', -1) != 0 raises precision to 0.96 but cuts recall to 0.78, so the original's reliance on prev_reward alone is reasonable.",
+      "Moving the lower bound to 35 (upper bound 91) raises test F1 from 0.913 to 0.950 and precision from 0.866 to 0.932. Recall stays at 0.968 and mass recall at 0.989. The semantic label is otherwise correct. The predicate uses no future variables (choice is the observable policy logit)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step, strongly committed to a2 after a rewarded (common, a2/S2) trial, only in episode trials ~35-90",
+    "better_predicate": "(phase == GO) & (prev_reward == 1) & (prev_common != 0) & (choice < -6) & (ep_trial >= 35) & (ep_trial < 91)",
+    "better_predicate_test_f1": 0.95
+  },
+  "final_label": "GO step, strongly committed to a2 after a rewarded (common, a2/S2) trial, only in episode trials ~35-90"
+}

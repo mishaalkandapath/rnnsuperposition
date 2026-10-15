@@ -1,0 +1,88 @@
+{
+  "label": "Fires at GO after a2 reached rare S1 and was rewarded, stronger mid-episode and when S2 believed good.",
+  "short_terms": "(phase == GO) * last_is(\"a2 S1 r\") * (ep_trial > 9) ;; (phase == GO) * last_is(\"a2 S1 r\") * belief_lo ;; (phase == GO) * last_is(\"a2 S1 r\") * (tv(\"reward\", -2) == 1)",
+  "terms": "(phase == GO) * last_is(\"a2 S1 r\") ;; (phase == GO) * last_is(\"a2 S1 r\") * belief_lo ;; (phase == GO) * last_is(\"a2 S1 r\") * (tv(\"reward\", -2) == 1) ;; (phase == GO) * last_is(\"a2 S1 r\") * (tv(\"action\", -2) == 2) ;; (phase == GO) * last_is(\"a2 S1 r\") * (ep_trial > 9) ;; (phase == GO) * last_is(\"a2 S1 r\") * belief_cover",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Active only at GO, almost only when the previous trial was a2 -> rare S1 -> rewarded (that indicator alone gives dev R^2 0.36 beyond timing). Within those steps, magnitude is larger after the first ~10 trials of the episode, larger when the ideal observer believes S2 is good (negative belief_lo; a model-based agent would stick with a2 here), and larger when the trial before was also rewarded. Silent at D1 and D2. The free fit (also a2-before-last and belief_cover) adds very little (test 0.473 vs 0.472). A future stay term adds nothing (dev 0.487), so it was not used. The rest of the unexplained variance is mostly GO firing on a window first trial, where the previous trial is not in the window and so cannot be scored.",
+  "full_test_scores": {
+    "gate": "update",
+    "feature": 40,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S1 r\")",
+      "(phase == GO) * last_is(\"a2 S1 r\") * belief_lo",
+      "(phase == GO) * last_is(\"a2 S1 r\") * (tv(\"reward\", -2) == 1)",
+      "(phase == GO) * last_is(\"a2 S1 r\") * (tv(\"action\", -2) == 2)",
+      "(phase == GO) * last_is(\"a2 S1 r\") * (ep_trial > 9)",
+      "(phase == GO) * last_is(\"a2 S1 r\") * belief_cover"
+    ],
+    "weights": [
+      0.009027295169274996,
+      -0.029594336115935004,
+      0.03405483300444632,
+      0.00575187496360662,
+      0.08687658841817757,
+      0.001108913483698686
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.47314269901154493,
+    "r2": 0.4887683594953912,
+    "r2_timing_only": 0.029658240389818125
+  },
+  "gate": "update",
+  "feature": 40,
+  "test_scores": {
+    "gate": "update",
+    "feature": 40,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S1 r\") * (ep_trial > 9)",
+      "(phase == GO) * last_is(\"a2 S1 r\") * belief_lo",
+      "(phase == GO) * last_is(\"a2 S1 r\") * (tv(\"reward\", -2) == 1)"
+    ],
+    "weights": [
+      0.10603437865813957,
+      -0.028894216144372133,
+      0.037611487295351784
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.47242921813454697,
+    "r2": 0.48807603920575693,
+    "r2_timing_only": 0.029658240389818125
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 40,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S1 r\") * (ep_trial > 9)",
+      "(phase == GO) * last_is(\"a2 S1 r\") * belief_lo",
+      "(phase == GO) * last_is(\"a2 S1 r\") * (tv(\"reward\", -2) == 1)"
+    ],
+    "weights": [
+      0.10603437865813957,
+      -0.028894216144372133,
+      0.037611487295351784
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.4855879847963206,
+    "r2": 0.5001911842675801,
+    "r2_timing_only": 0.02838813837868348
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the label says 'stronger mid-episode', but the (ep_trial > 9) term actually gates the feature. When the plain indicator and the ep_trial>9 version are fitted together, the plain indicator gets weight 0.0016 and the ep_trial>9 version 0.117, so the feature is close to silent after a2-S1-rewarded trials in the first ~10 trials. That term adds only about +0.016 test R^2 (0.456 without it vs 0.472 with it).",
+      "Most of the magnitude claim rests on the belief term: indicator alone 0.336 test, plus belief_lo 0.449. Its weight is negative (-0.029 to -0.035), which confirms 'stronger when S2 is believed good'. The previous trial's reward adds less (0.336 to 0.385 when it is the only addition).",
+      "belief_cover adds nothing (0.3367 vs 0.3363), as claimed. Variants for the third term all score lower on test than reward two trials back (0.472): state two back == S2 0.471, since_rev 0.467, action two back == a2 0.467, raw belief in place of belief_lo 0.458.",
+      "misses: no systematic class by phase x previous trial (all within about \u00b10.004). The worst windows are GO firing on a window's first trial, where the previous trial is outside the window, as the explanation says. A second group is high-amplitude firing (~0.37) predicted at only ~0.17-0.19, which is a scale shortfall rather than a missed condition.",
+      "The profile confirms the feature is silent at D1 and D2 (residual exactly 0), and GO residual is +0.109 only after a2 S1 r."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Fires at GO after a2 reached rare S1 and was rewarded (not early in episode); stronger when S2 believed good.",
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "Fires at GO after a2 reached rare S1 and was rewarded (not early in episode); stronger when S2 believed good."
+}

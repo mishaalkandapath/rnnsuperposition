@@ -1,0 +1,121 @@
+{
+  "label": "D2 of a trial where the agent broke fixation at D1 (late episode, a2, after no reward)",
+  "predicate": "(phase == D2) & (d1_err == 1) & (ep_trial >= 70)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2, and only when the GO choice was a2 and the previous trial was unrewarded (in_rew 0). Almost all activation comes from late in the episode (trials 80-99) and from steps with low model value. The dominant driver is a fixation break at this trial's D1 (d1_err, which the agent sees as the in_action input at GO): D2 & d1_err has dev precision 0.88 and mass recall 0.89, and it covers every top-quartile activation and 75% of the third quartile. The rest is a low-magnitude tail (about 11% of mass, roughly half of the active steps) on ordinary late-episode a2 D2 steps after an unrewarded trial, mostly where the previous trial was a rare a2->S1 transition, so recall by count is only about 0.45. It never fires at D1 or GO, after a rewarded trial, or after an a1 choice. Adding action==2 or a previous-trial d1_err clause did not help. Every variable used is observed by D2.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 2,
+    "predicate": "(phase == D2) & (d1_err == 1) & (ep_trial >= 70)",
+    "split": "test",
+    "precision": 0.9760191846522782,
+    "recall": 0.39399806389157793,
+    "f1": 0.5613793103448276,
+    "mass_recall": 0.8455344477664453,
+    "correlation": 0.9353936158954905,
+    "n_active": 1033,
+    "n_predicted": 417,
+    "coverage_by_activation_quartile": [
+      0.0,
+      0.01937984496124031,
+      0.5658914728682171,
+      0.9922480620155039
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 2,
+    "predicate": "(phase == D2) & (d1_err == 1) & (ep_trial >= 70)",
+    "split": "dev",
+    "precision": 0.974937343358396,
+    "recall": 0.42606790799561883,
+    "f1": 0.5929878048780488,
+    "mass_recall": 0.8777369062927518,
+    "correlation": 0.9460789454229619,
+    "n_active": 913,
+    "n_predicted": 399,
+    "coverage_by_activation_quartile": [
+      0.0,
+      0.017543859649122806,
+      0.6885964912280702,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 2,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most of the factual claims hold up. The feature is active only at D2 (0 active steps at D1 and GO). It never fires when in_rew/prev_reward is 1 or when action is 1, and every activation falls in ep_trial >= 50. Dev scores reproduce: precision 0.881, mass recall 0.893, quartile coverage [0, 0.04, 0.75, 1.0]. Test scores reproduce: P 0.903, R 0.404, F1 0.558, mass recall 0.857.",
+      "A systematic class of activations is left unexplained, and the explanation admits it. Of the 913 active steps on dev, 505 (55%) are missed by the predicate; on test 616 of 1033 are missed, holding 14.3% of the mass. These misses are not scattered noise. They are a coherent weak mode: late-episode D2 steps with action a2 and an unrewarded previous trial, mostly after a rare a2->S1 transition on the previous trial. On dev, D2 & d1_err==0 & prev_common==0 & prev_action==2 covers about 374 of the 505 missed steps and 0.074 of the 0.107 missed mass.",
+      "No predicate separates this weak mode. It fires on only about 10% of qualifying steps. Examples: D2 & ~d1_err & a2 & prev_reward 0 & prev rare a2 & ep_trial>=90 gives P 0.11, R 0.32, F1 0.16; adding value < 5 gives F1 0.17. The predicate therefore explains the strong mode only, and count recall stays at about 0.40.",
+      "The label says 'late episode', but the predicate does not encode it, and the qualifier matters. Fixation breaks early in the episode almost never activate the feature. D2 & d1_err & ep_trial<60 has precision 0.026 on dev (1 of 38 steps). D2 & d1_err & ep_trial<70 has precision 0.22 on test. Adding ep_trial>=70 raises test precision from 0.903 to 0.976 at about the same F1 (0.561), so the 'late' condition belongs in the predicate.",
+      "The phrase 'a2, after no reward' in the label is redundant once d1_err is conditioned on: adding action==2 & prev_reward==0 changes precision only from 0.881 to 0.895, and recall not at all. It is a true description of the context, though, not an overclaim.",
+      "Checked whether the feature tracks the previous trial's fixation break, tv('d1_err',-1)==1, instead: P 0.17, mass recall 0.13. It does not; the current trial's d1_err is the right variable. No future variables are used; d1_err is observed at GO."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "Strong mode: D2 after a fixation break at this trial's D1, late in the episode (trial >= 70); these trials are always a2 after no reward. Weak, unexplained mode (about half of active steps, about 11-14% of mass): sparse low activations at late a2 D2 steps after an unrewarded, mostly rare a2->S1, previous trial.",
+    "better_predicate": "(phase == D2) & (d1_err == 1) & (ep_trial >= 70)",
+    "better_predicate_test_f1": 0.561
+  },
+  "final_label": "Strong mode: D2 after a fixation break at this trial's D1, late in the episode (trial >= 70); these trials are always a2 after no reward. Weak, unexplained mode (about half of active steps, about 11-14% of mass): sparse low activations at late a2 D2 steps after an unrewarded, mostly rare a2->S1, previous trial.",
+  "scorecard": {
+    "format": "top40",
+    "summary": "Weighted combination of 32 cues. Raise it: phase=D2 & value_bin=decile 0 (9 = highest) (+4.38), phase=D2 & last=a2 S1 u (+4.10), phase=D2 & before=a2 S1 u (+3.05), phase=D2 & value_bin=decile 1 (9 = highest) (+2.55), phase=D2 & before=a1 S1 u (+1.67), phase=D2 & before=? (+1.22). Lower it: action=1 (-4.24), prev_state=2 (-3.44), ep_bucket=4 (-2.54), choice_bin=decile 1 (9 = most a1) (-2.25).",
+    "test_f1": 0.5868725868725869,
+    "test_precision": 0.6820512820512821,
+    "test_recall": 0.5150048402710552,
+    "full_test_f1": 0.579841449603624,
+    "full_n_cues": 32,
+    "top40_test_f1": 0.5868725868725869,
+    "slot2_test_f1": 0.47657841140529533,
+    "slot2_slots": [
+      "last trial",
+      "trial before"
+    ],
+    "file": "scorecards/hidden_2.json"
+  },
+  "original_predicate": "(phase == D2) & (d1_err == 1)",
+  "original_test_scores": {
+    "gate": "hidden",
+    "feature": 2,
+    "predicate": "(phase == D2) & (d1_err == 1)",
+    "split": "test",
+    "precision": 0.9025974025974026,
+    "recall": 0.4036786060019361,
+    "f1": 0.5578595317725753,
+    "mass_recall": 0.8566945084099589,
+    "correlation": 0.9003833143575335,
+    "n_active": 1033,
+    "n_predicted": 462,
+    "coverage_by_activation_quartile": [
+      0.003861003861003861,
+      0.023255813953488372,
+      0.5891472868217055,
+      1.0
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "hidden",
+    "feature": 2,
+    "predicate": "(phase == D2) & (d1_err == 1)",
+    "split": "dev",
+    "precision": 0.8812095032397408,
+    "recall": 0.44687842278203727,
+    "f1": 0.5930232558139535,
+    "mass_recall": 0.8927473957921942,
+    "correlation": 0.8932549016547965,
+    "n_active": 913,
+    "n_predicted": 463,
+    "coverage_by_activation_quartile": [
+      0.0,
+      0.039473684210526314,
+      0.75,
+      1.0
+    ]
+  },
+  "predicate_from": "skeptic"
+}

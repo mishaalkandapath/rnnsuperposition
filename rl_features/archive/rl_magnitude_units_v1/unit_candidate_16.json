@@ -1,0 +1,82 @@
+{
+  "label": "D1: high after unrewarded / a2 / S2 history, low after reward",
+  "terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_state == 2) ;; (phase == D1) * (prev_action == 2) ;; (phase == D1) * (prev_reward == 1) * (prev_state == 2) ;; (phase == D1) * ((tv(\"reward\", -2) == 1) + 0.5*(tv(\"reward\", -3) == 1)) ;; (phase == D1) * (tv(\"action\", -2) == 2) ;; (phase == D1) * (prev_action == -1) ;; (phase == D2) * (action == 1) * (state == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw candidate n of unit 16 sits near +0.93 at GO and -0.93 at D2 (timing R^2 0.87); nearly all residual magnitude is at D1, set by the observed trial history. At D1 it is lowered by a rewarded previous trial (about -0.59) and raised by the previous choice being a2 (+0.43) and the previous state being S2 (+0.34): highest after a2 S2 u / a2 S1 u, lowest after a1 S1 r. Rewards two and three trials back lower it further (decaying), a2 two trials back raises it, and it is high on the window first trial (history unknown). A small D2 bump for a1->S1. GO is essentially unaffected. All terms observed (no future/hidden/model cues). Test R^2 beyond timing 0.754 vs all-cue ceiling 0.82 (all observed 0.78); last trial alone gives 0.66.",
+  "gate": "unit_candidate",
+  "feature": 16,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 16,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_state == 2)",
+      "(phase == D1) * (prev_action == 2)",
+      "(phase == D1) * (prev_reward == 1) * (prev_state == 2)",
+      "(phase == D1) * ((tv(\"reward\", -2) == 1) + 0.5*(tv(\"reward\", -3) == 1))",
+      "(phase == D1) * (tv(\"action\", -2) == 2)",
+      "(phase == D1) * (prev_action == -1)",
+      "(phase == D2) * (action == 1) * (state == 1)"
+    ],
+    "weights": [
+      -0.5863898727409596,
+      0.34295587182190157,
+      0.4331380380483414,
+      -0.04035705906583042,
+      -0.13112400360596949,
+      0.14155433827268757,
+      0.376050387848586,
+      0.09391662127876933
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.754089274182638,
+    "r2": 0.9677099820264793,
+    "r2_timing_only": 0.8686921122850797
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 16,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_state == 2)",
+      "(phase == D1) * (prev_action == 2)",
+      "(phase == D1) * (prev_reward == 1) * (prev_state == 2)",
+      "(phase == D1) * ((tv(\"reward\", -2) == 1) + 0.5*(tv(\"reward\", -3) == 1))",
+      "(phase == D1) * (tv(\"action\", -2) == 2)",
+      "(phase == D1) * (prev_action == -1)",
+      "(phase == D2) * (action == 1) * (state == 1)"
+    ],
+    "weights": [
+      -0.5863898727409596,
+      0.34295587182190157,
+      0.4331380380483414,
+      -0.04035705906583042,
+      -0.13112400360596949,
+      0.14155433827268757,
+      0.376050387848586,
+      0.09391662127876933
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7587341045890811,
+    "r2": 0.9684814540204955,
+    "r2_timing_only": 0.8693617847403472
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claim that the reward three trials back lowers it further (weighted less) is not supported. The 0.5 weight on tv('reward',-3) was fixed by hand, not fitted. Given its own term, it fits to +0.005 and adds nothing (test 0.7573 without it, 0.7574 with it). Only the reward two trials back matters (about -0.17).",
+      "The term (prev_reward==1)*(prev_state==2) fits to only -0.02 to -0.07. Reward, choice and state act at D1 almost additively. The term can be dropped.",
+      "Small but systematic misses remain at D1 after rare transitions. With the original terms, D1 is under-predicted by +0.134 after a1 S2 r and +0.133 after a2 S1 u, which is the model-based 'evidence for a2' pattern. Adding last_is('a1 S2 r')+last_is('a2 S1 u') gains less than 0.01, so the gap is small.",
+      "Runs of unrewarded trials push it higher than the additive terms predict (worst-fit windows show r0 r0 r0 runs where the actual value is well above the prediction). A term for prev_reward==0 AND reward two back ==0 (weight about +0.11 to +0.16) lifts test R^2 from 0.757 to 0.764.",
+      "Core claims check out on test. Previous reward: about -0.59. Previous a2: about +0.43. Previous S2: about +0.33. Window's first trial: about +0.37. a2 two trials back: about +0.14. D2 a1->S1 bump: about +0.09. GO residuals are all under 0.08. Only observed variables are used. The test score of 0.754 is close to the 0.78 observed-only ceiling."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1: high after unrewarded / a2 / S2 history (esp. repeated losses), low after reward; only the reward 2 trials back carries over, not 3",
+    "better_terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_state == 2) ;; (phase == D1) * (prev_action == 2) ;; (phase == D1) * (prev_action == -1) ;; (phase == D2) * (action == 1) * (state == 1) ;; (phase == D1) * (tv('reward', -2) == 1) ;; (phase == D1) * (tv('action', -2) == 2) ;; (phase == D1)*(prev_reward==0)*(tv('reward', -2) == 0)",
+    "better_terms_test_r2_beyond_timing": 0.764
+  },
+  "final_label": "D1: high after unrewarded / a2 / S2 history (esp. repeated losses), low after reward; only the reward 2 trials back carries over, not 3"
+}

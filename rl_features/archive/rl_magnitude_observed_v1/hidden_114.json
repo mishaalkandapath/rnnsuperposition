@@ -1,0 +1,71 @@
+{
+  "label": "D1 after unrewarded a1->S1; larger if belief favours S1 and trial before was a1 rare/unrewarded",
+  "terms": "(phase == D1) * last_is(\"a1 S1 u\") ;; (phase == D1) * last_is(\"a1 S1 u\") * belief_lo ;; (phase == D1) * last_is(\"a1 S1 u\") * (tv(\"action\", -2) == 1) ;; (phase == D1) * last_is(\"a1 S1 u\") * (tv(\"reward\", -2) == 1) ;; (phase == D1) * last_is(\"a1 S1 u\") * (tv(\"state\", -2) == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Sparse feature (nonzero on 1.8% of steps), active only at D1 and almost only after a previous trial of a1 -> S1 (common) that went unrewarded (residual +0.89 there, about -0.07 after every other pattern; zero at GO and D2). That one indicator gives R^2 0.44 beyond timing (dev). Within those D1 steps the magnitude is graded by: the ideal-observer belief log-odds that S1 is good (higher belief_lo gives higher activation, i.e. a surprising omission at the state believed good), and the trial before: higher if it was also an a1 choice (+0.63), lower if it was rewarded (-0.46) or reached S1 (-0.59), so it is largest after a1 -> S2 rare unrewarded followed by a1 -> S1 unrewarded. Five observed-only terms: dev 0.548, test 0.545 beyond timing (all ceiling 0.55, all observed 0.50). Future, hidden good state and since-reversal add nothing (reference 0.00). The earlier policy-based description is not needed: observed history plus belief matches the all ceiling, so dropping model outputs loses essentially nothing. Remaining misses are mostly D1 on the first trial of a window, where the previous trial is outside the window and cannot be scored.",
+  "gate": "hidden",
+  "feature": 114,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 114,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S1 u\")",
+      "(phase == D1) * last_is(\"a1 S1 u\") * belief_lo",
+      "(phase == D1) * last_is(\"a1 S1 u\") * (tv(\"action\", -2) == 1)",
+      "(phase == D1) * last_is(\"a1 S1 u\") * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * last_is(\"a1 S1 u\") * (tv(\"state\", -2) == 1)"
+    ],
+    "weights": [
+      0.9551830687448594,
+      0.2859805807393852,
+      0.6309629323276434,
+      -0.4626225034946224,
+      -0.5857253933317275
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5451011656924549,
+    "r2": 0.5590045491245668,
+    "r2_timing_only": 0.030563682259761582
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 114,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S1 u\")",
+      "(phase == D1) * last_is(\"a1 S1 u\") * belief_lo",
+      "(phase == D1) * last_is(\"a1 S1 u\") * (tv(\"action\", -2) == 1)",
+      "(phase == D1) * last_is(\"a1 S1 u\") * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * last_is(\"a1 S1 u\") * (tv(\"state\", -2) == 1)"
+    ],
+    "weights": [
+      0.9551830687448594,
+      0.2859805807393852,
+      0.6309629323276434,
+      -0.4626225034946224,
+      -0.5857253933317275
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5482483024551716,
+    "r2": 0.5611060823339061,
+    "r2_timing_only": 0.028462051052854265
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Each claim held when I re-scored it on test. The single indicator (D1 x last_is a1 S1 u) gives 0.433 beyond timing, adding belief_lo gives 0.476, and the full five terms give 0.545, matching the reported score. In the profile, GO and D2 are exactly zero, and the residual is +0.89 after a1 S1 u versus about -0.07 after every other pattern.",
+      "The '-0.46 if the trial before was rewarded' weight only holds once belief_lo is in the model. With trial-history terms alone (no belief), the tv(reward,-2)==1 weight is +0.002, the state==S1 weight is -0.95 and the a1 weight is +0.84 (test 0.496). The explanation reads as if the reward effect stands independently; it does not.",
+      "Small leftover structure 1: the history goes back further than the trial before. Adding (a1 S1 u) x tv(reward,-3)==1 (weight -0.46 to -0.69) and tv(action,-3)==1 (+0.41) raises test from 0.545 to 0.585. That is modest, so not a large systematic gap.",
+      "Small leftover structure 2: on a window's first trial, the D1 reward input is still observable. The term (phase==D1)*(prev_action==-1)*(in_rew==0) gets weight +0.13 and adds about 0.01 on test. The misses report confirms the claim that the worst windows are first-trial D1 firings of about 2.4 that the terms predict at about 0.06.",
+      "There are occasional strong firings after a2 S1 u (for example 1.6 and 0.7 in the worst-fit windows), but terms for that pattern get weights of about 0.01 and add nothing, so they are not systematic. In misses, the mean error by phase x previous trial is at most 0.05 in every cell."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after unrewarded a1->S1; graded by S1 belief and the 1-2 trials before",
+    "better_terms": "(phase == D1) * last_is(\"a1 S1 u\") ;; (phase == D1) * last_is(\"a1 S1 u\") * belief_lo ;; (phase == D1) * last_is(\"a1 S1 u\") * (tv('action', -2) == 1) ;; (phase == D1) * last_is(\"a1 S1 u\") * (tv('reward', -2) == 1) ;; (phase == D1) * last_is(\"a1 S1 u\") * (tv('state', -2) == 1) ;; (phase == D1) * last_is(\"a1 S1 u\") * (tv('reward', -3) == 1) ;; (phase == D1) * last_is(\"a1 S1 u\") * (tv('action', -3) == 1) ;; (phase == D1) * (prev_action == -1) * (in_rew == 0)",
+    "better_terms_test_r2_beyond_timing": 0.5848
+  },
+  "final_label": "D1 after unrewarded a1->S1; graded by S1 belief and the 1-2 trials before"
+}

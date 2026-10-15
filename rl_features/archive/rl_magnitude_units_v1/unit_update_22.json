@@ -1,0 +1,77 @@
+{
+  "label": "GO-phase update gate raised after unrewarded a2 trials (esp. a2 S1 u), graded by a2 preference",
+  "terms": "(phase == GO) * choice ;; (phase == GO) * last_is(\"a2 S1 u\") ;; (phase == GO) * last_is(\"a2 S1 u\") * choice ;; (phase == GO) * (prev_action == 2) * (prev_reward == 0) ;; (phase == GO) * (prev_action == 1) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D1) * last_is(\"a2 S1 u\")",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 22. Timing dominates (D2 ~0.98 saturated, D1 ~0.25, GO ~0.15-0.2; timing R^2 0.94). Beyond timing the variation is mostly at GO: z rises when the previous trial was an unrewarded a2 trial, most strongly after a2 S1 u (rare unrewarded; residual ~+0.3), less after a2 S2 u, and falls after a1 trials. It is graded by the policy: higher the more the model prefers a2 at GO (negative choice logit), and the a2 S1 u bump scales with that preference; streaks of unrewarded a2 trials push it up further (0.6 -> 0.9 in examples, only a small additive gain when scored). At D1 it is raised after a2 S1 u and lowered after a1 S2 (either reward). D2 barely varies. Remaining misses: long a1 S1 r streaks give higher D1 values than predicted. 7 terms, observed and model-output cues only (no future); dev R^2 beyond timing 0.66, test 0.647 (all ceiling 0.82, all observed 0.72, last-trial table alone 0.55, policy decile alone 0.56).",
+  "gate": "unit_update",
+  "feature": 22,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 22,
+    "terms": [
+      "(phase == GO) * choice",
+      "(phase == GO) * last_is(\"a2 S1 u\")",
+      "(phase == GO) * last_is(\"a2 S1 u\") * choice",
+      "(phase == GO) * (prev_action == 2) * (prev_reward == 0)",
+      "(phase == GO) * (prev_action == 1)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D1) * last_is(\"a2 S1 u\")"
+    ],
+    "weights": [
+      -0.009075473395408786,
+      -0.2855548311678307,
+      -0.043450274742091746,
+      0.06266832908450333,
+      -0.036473204456866457,
+      -0.0834749268002991,
+      0.10945052213789241
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6472305748615579,
+    "r2": 0.9773147453452588,
+    "r2_timing_only": 0.9356938185733115
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 22,
+    "terms": [
+      "(phase == GO) * choice",
+      "(phase == GO) * last_is(\"a2 S1 u\")",
+      "(phase == GO) * last_is(\"a2 S1 u\") * choice",
+      "(phase == GO) * (prev_action == 2) * (prev_reward == 0)",
+      "(phase == GO) * (prev_action == 1)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D1) * last_is(\"a2 S1 u\")"
+    ],
+    "weights": [
+      -0.009075473395408786,
+      -0.2855548311678307,
+      -0.043450274742091746,
+      0.06266832908450333,
+      -0.036473204456866457,
+      -0.0834749268002991,
+      0.10945052213789241
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6559025607230808,
+    "r2": 0.9777020955836294,
+    "r2_timing_only": 0.935198865579392
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The streak claim ('streaks of unrewarded a2 push it from 0.6 to 0.9') comes from the examples only. Adding a GO term for 2-back unrewarded a2 gives test 0.6474 (vs 0.6472), and a 3-back version gives 0.6472. The worst-fit dev windows are still a2 S1 u streaks at GO with actual 0.85-0.90 vs predicted about 0.60. That error is real but no streak or history term recovers it. It is unexplained, not 'pushed higher by streaks' as a usable cue.",
+      "The 'remaining misses are long a1 S1 r streaks at D1' claim rests on a single worst-fit window. The systematic phase x previous-trial errors are all small (|err| <= 0.045, e.g. D1 after a2 S1 r +0.045, GO after a1 S2 r -0.042). Adding a D1 term for a1 S1 r gives 0.648, no gain.",
+      "Every claim checks out on test. GO*choice alone gives 0.46, and dropping it from the set gives 0.52, so 'graded by a2 preference' holds. Dropping the GO a2-unrewarded term gives 0.635, and dropping the D1 terms gives 0.59. The last-trial residual table matches the narrative: GO a2 S1 u +0.315, a2 S2 u +0.099, a1 trials negative; D1 a2 S1 u +0.104, a1 S2 r/u -0.105/-0.082.",
+      "Gap remains to all-observed (0.72) and the ceiling (0.82), but none of the probes closes it: D1 value 0.648, D1 choice 0.672, GO value 0.658, GO action/model_act 0.658, sigmoid(choice) 0.659, ep_trial==0 0.657, 2-back action 0.655, hidden good-state interaction 0.648. The gap seems spread out rather than one missing class."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO-phase update gate raised after unrewarded a2 trials (most after rare a2 S1 u), graded by a2 policy preference",
+    "better_terms": "(phase == GO) * choice ;; (phase == GO) * last_is('a2 S1 u') ;; (phase == GO) * last_is('a2 S1 u') * choice ;; (phase == GO) * (prev_action == 2) * (prev_reward == 0) ;; (phase == GO) * (prev_action == 1) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D1) * last_is('a2 S1 u') ;; (phase == D1) * choice",
+    "better_terms_test_r2_beyond_timing": 0.6716
+  },
+  "final_label": "GO-phase update gate raised after unrewarded a2 trials (most after rare a2 S1 u), graded by a2 policy preference"
+}

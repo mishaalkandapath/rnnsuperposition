@@ -1,0 +1,104 @@
+{
+  "label": "GO, late in episode (trial ~86+), choosing a2 after a rewarded a2 trial",
+  "predicate": "(phase == GO) & (ep_trial >= 86) & (prev_reward == 1) & (choice < -6) & (prev_state != 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO, only in the last ~15 trials of the episode (none before trial 78; 89% of mass in trials 90-99), only when the previous trial was rewarded (in_rew=0 at GO, prev_reward=1), and only when the agent picks a2 (model_act=2; 15515 of 15522 activations have action=2), almost always after a previous a2 choice (a rewarded stay on a2). It coincides with the model value head being at its lowest (97% of mass in the bottom value bin, since value falls late in the episode) and a strongly negative a1-minus-a2 logit. It is silent at D1 and D2, on a1 choices, and after unrewarded trials. Magnitude grows over a run of consecutive rewarded a2 trials and with episode position (e.g. 0.09 -> 0.86 -> 0.98 -> 1.0 across a streak) and drops to near zero on the GO right after an unrewarded trial. It fires more when S2 is the good state and in episodes that started with S1 good (a correlate of reversal parity late in the episode); adding good != 1 raises precision but lowers mass recall, so it was left out. Uses only observed variables: the agent own GO choice, the previous choice and reward, and trial position. Dev F1 0.87, mass recall 0.98.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 96,
+    "predicate": "(phase == GO) & (ep_trial >= 86) & (prev_reward == 1) & (choice < -6) & (prev_state != 1)",
+    "split": "test",
+    "precision": 0.8919521714887554,
+    "recall": 0.93124191461837,
+    "f1": 0.9111736970349039,
+    "mass_recall": 0.9854686903641129,
+    "correlation": 0.8210539532685903,
+    "n_active": 15460,
+    "n_predicted": 16141,
+    "coverage_by_activation_quartile": [
+      0.7557567917205692,
+      0.9733505821474774,
+      0.9958602846054334,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 96,
+    "predicate": "(phase == GO) & (ep_trial >= 86) & (prev_reward == 1) & (choice < -6) & (prev_state != 1)",
+    "split": "dev",
+    "precision": 0.9213432644150508,
+    "recall": 0.9244298415152686,
+    "f1": 0.9228839722150759,
+    "mass_recall": 0.9855072103734077,
+    "correlation": 0.842933077726666,
+    "n_active": 15522,
+    "n_predicted": 15574,
+    "coverage_by_activation_quartile": [
+      0.7258438546766297,
+      0.9737181138881732,
+      0.9981958762886598,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 96,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The label says the feature marks a GO a2 choice 'after a rewarded a2 trial'. What actually matters is that the previous reward was collected in state S2. One class of false positives in the recorded predicate is systematic: a rewarded a2 trial that went rare to S1, followed by staying on a2. That is GO & ep_trial>=86 & prev_reward==1 & model_act==2 & prev_action==2 & prev_state==1, with precision 0.080 on dev (1922 predicted steps) and 0.077 on test (2472 steps), carrying 0.1-0.2% of the mass. The feature is essentially silent there.",
+      "The opposite case is a1 that went rare to S2, was rewarded, and was followed by a switch to a2. The recorded predicate excludes it with prev_action != 1, but the feature fires there at precision 0.36. So 'almost always after an earlier a2 choice, so it marks a rewarded stay on a2' is the wrong framing. The feature follows the rewarded state (S2), not repeating the a2 action.",
+      "Replacing prev_action != 1 with prev_state != 1 gives dev P 0.883 / R 0.938 / F1 0.910 / mass 0.989 (was 0.824 / 0.925 / 0.872 / 0.981), and test P 0.853 / R 0.948 / F1 0.898 / mass 0.991 (was 0.778 / 0.930 / 0.847 / 0.978). Using choice < -6 instead of model_act==2 brings test F1 to 0.911.",
+      "Claims that held up: the feature fires only at GO (0 activations at D1/D2), 3 activations in trials 70-79 and 89% of mass in trials 90-99, 15515 of 15522 activations are on a2, and it is essentially silent after unrewarded trials (prev_reward==0: precision 0.009, mass 0.0004). It is concentrated in the lowest value bin (97% of mass). Activation ramps up over consecutive rewarded trials and is higher in start_high==1 episodes and when good==S2.",
+      "Most remaining false positives are in episodes that started with S2 good (start_high==0; precision 0.60 vs 0.87 for start_high==1). This is a secondary episode-level modulation that the explanation already mentions."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO late in episode (trial ~86+), choosing a2 after the previous trial was rewarded in S2 (not after a rewarded rare a2->S1 trial)",
+    "better_predicate": "(phase == GO) & (ep_trial >= 86) & (prev_reward == 1) & (choice < -6) & (prev_state != 1)",
+    "better_predicate_test_f1": 0.911
+  },
+  "final_label": "GO late in episode (trial ~86+), choosing a2 after the previous trial was rewarded in S2 (not after a rewarded rare a2->S1 trial)",
+  "original_predicate": "(phase == GO) & (ep_trial >= 86) & (prev_reward == 1) & (model_act == 2) & (prev_action != 1)",
+  "original_test_scores": {
+    "gate": "hidden",
+    "feature": 96,
+    "predicate": "(phase == GO) & (ep_trial >= 86) & (prev_reward == 1) & (model_act == 2) & (prev_action != 1)",
+    "split": "test",
+    "precision": 0.7784518715129192,
+    "recall": 0.9295601552393273,
+    "f1": 0.8473217181097256,
+    "mass_recall": 0.9783321035088166,
+    "correlation": 0.7613046193270955,
+    "n_active": 15460,
+    "n_predicted": 18461,
+    "coverage_by_activation_quartile": [
+      0.7821474773609315,
+      0.9513583441138421,
+      0.9865459249676585,
+      0.9981888745148771
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "hidden",
+    "feature": 96,
+    "predicate": "(phase == GO) & (ep_trial >= 86) & (prev_reward == 1) & (model_act == 2) & (prev_action != 1)",
+    "split": "dev",
+    "precision": 0.8243026059005855,
+    "recall": 0.9252029377657518,
+    "f1": 0.8718431277319086,
+    "mass_recall": 0.9810997636782859,
+    "correlation": 0.7926831863012227,
+    "n_active": 15522,
+    "n_predicted": 17422,
+    "coverage_by_activation_quartile": [
+      0.7492914197371812,
+      0.9603195052821438,
+      0.9917525773195877,
+      0.9994845360824742
+    ]
+  },
+  "predicate_from": "skeptic"
+}

@@ -1,0 +1,109 @@
+{
+ "label": "At GO late in the episode after an unrewarded trial, strongest after a1 reached S2 unrewarded.",
+ "short_terms": "(phase == GO) * last_is('a1 S2 u') * np.maximum(ep_trial - 60, 0) ;; (phase == GO) * last_is('a2 S2 u') * np.maximum(ep_trial - 85, 0)",
+ "terms": "(phase == GO) * (prev_reward == 0) * (ep_trial >= 90) ;; (phase == GO) * last_is(\"a1 S2 u\") * (ep_trial >= 80) ;; (phase == GO) * (prev_reward == 0) * (ep_trial >= 80) ;; (phase == GO) * (prev_reward == 0) * belief_lo * (ep_trial >= 80) ;; (phase == GO) * last_is(\"a1 S2 u\") * ep_trial ;; (phase == GO) * (prev_reward == 0) * ep_trial ;; (phase == GO) * (prev_reward == 0) * belief_lo * ep_trial ;; (phase == GO) * (tv(\"reward\", -2) == 0) * (prev_reward == 0) * ep_trial",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "GO-only feature (zero at D1/D2). Magnitude is gated by the previous trial being unrewarded and by being late in the episode (ramps from ~trial 70, near-saturating ~4 after trial 90); a1->S2 unrewarded (rare-unrewarded after a1, i.e. evidence for staying with a1 under model-based logic) gives the largest boost and starts earlier. Rewarded previous trials give ~0. The free fit adds S1-belief (belief_lo) scaling within unrewarded trials, a two-unrewarded-in-a-row term and linear time ramps. Interactions of reward x episode time go far beyond the additive all ceiling (0.28). Not explained: firing is bimodal (some late unrewarded GO steps stay near 0), likely tracking an internal state not captured by observed history.",
+ "full_test_scores": {
+  "gate": "update",
+  "feature": 150,
+  "terms": [
+   "(phase == GO) * (prev_reward == 0) * (ep_trial >= 90)",
+   "(phase == GO) * last_is(\"a1 S2 u\") * (ep_trial >= 80)",
+   "(phase == GO) * (prev_reward == 0) * (ep_trial >= 80)",
+   "(phase == GO) * (prev_reward == 0) * belief_lo * (ep_trial >= 80)",
+   "(phase == GO) * last_is(\"a1 S2 u\") * ep_trial",
+   "(phase == GO) * (prev_reward == 0) * ep_trial",
+   "(phase == GO) * (prev_reward == 0) * belief_lo * ep_trial",
+   "(phase == GO) * (tv(\"reward\", -2) == 0) * (prev_reward == 0) * ep_trial"
+  ],
+  "weights": [
+   0.3136214876255275,
+   1.1626891465635025,
+   0.021135272352913844,
+   0.18153688385838168,
+   0.008241331732714378,
+   0.0005459634790940096,
+   0.0005612398949609016,
+   0.00018778700590145673
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6714086015664037,
+  "r2": 0.7064126289790575,
+  "r2_timing_only": 0.10652752196046211
+ },
+ "gate": "update",
+ "feature": 150,
+ "test_scores": {
+  "gate": "update",
+  "feature": 150,
+  "terms": [
+   "(phase == GO) * last_is('a1 S2 u') * np.maximum(ep_trial - 60, 0)",
+   "(phase == GO) * last_is('a2 S2 u') * np.maximum(ep_trial - 85, 0)"
+  ],
+  "weights": [
+   0.09942026884073263,
+   0.0725144623201346
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6478752501013942,
+  "r2": 0.6853862271290402,
+  "r2_timing_only": 0.10652752196046211
+ },
+ "dev_scores": {
+  "gate": "update",
+  "feature": 150,
+  "terms": [
+   "(phase == GO) * last_is('a1 S2 u') * np.maximum(ep_trial - 60, 0)",
+   "(phase == GO) * last_is('a2 S2 u') * np.maximum(ep_trial - 85, 0)"
+  ],
+  "weights": [
+   0.09942026884073263,
+   0.0725144623201346
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.6576697994182528,
+  "r2": 0.6928910872862699,
+  "r2_timing_only": 0.1028868846749803
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The label's lead claim, 'after an unrewarded trial', overstates the generic unrewarded effect. The single term (phase==GO)*last_is('a1 S2 u')*(ep_trial>=70) scores test R^2 beyond timing 0.520. That is 95% of the recorded 0.546. The two prev_reward==0 terms add only 0.026, and on the profile GO after a1 S1 u, a2 S1 u and similar sits about -0.09 below timing.",
+   "The third short term, prev_reward==0 & ep_trial>=75, gets weight -0.010. It is dead weight and disguised curve fitting.",
+   "Step thresholds stand in for a ramp that grows with episode time. A single ramp (phase==GO)*last_is('a1 S2 u')*np.maximum(ep_trial-60,0) scores test 0.616, which beats the whole recorded 3-term short form (0.546). Stacking thresholds at 60/80/90 also gives 0.602.",
+   "Misses show a systematic under-prediction: S2 reached unrewarded after a2 (common unrewarded). The worst dev windows are runs of a2 S2c r0 late in the episode that fire 1.6 to 4.0 while the short form predicts 0.80. Adding a ramp term for last_is('a2 S2 u') raises test R^2 to 0.648. The common factor is an unrewarded visit to S2, which in both cases favours a1 next. 'Any unrewarded trial' is not the common factor.",
+   "The explanation's claim that after a rewarded trial the feature stays near 0 holds: residuals are about -0.08 to -0.10. The claim that it fires only at GO also holds: D1 and D2 are exactly 0.",
+   "A residual remains: some late GO steps fire about 0.4 after a1 S1 u, and firing within a pattern is bimodal. Adding belief_lo or belief_cover to a1 S2 u adds less than 0.01."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At GO after S2 went unrewarded (mostly a1 S2 rare), ramping up from trial 60 onward.",
+  "better_short_terms": "(phase == GO) * last_is('a1 S2 u') * np.maximum(ep_trial - 60, 0) ;; (phase == GO) * last_is('a2 S2 u') * np.maximum(ep_trial - 85, 0)",
+  "better_short_terms_test_r2_beyond_timing": 0.648
+ },
+ "final_label": "At GO after S2 went unrewarded (mostly a1 S2 rare), ramping up from trial 60 onward.",
+ "original_short_terms": "(phase == GO) * (prev_reward == 0) * (ep_trial >= 90) ;; (phase == GO) * last_is(\"a1 S2 u\") * (ep_trial >= 70) ;; (phase == GO) * (prev_reward == 0) * (ep_trial >= 75)",
+ "original_test_scores": {
+  "gate": "update",
+  "feature": 150,
+  "terms": [
+   "(phase == GO) * (prev_reward == 0) * (ep_trial >= 90)",
+   "(phase == GO) * last_is(\"a1 S2 u\") * (ep_trial >= 70)",
+   "(phase == GO) * (prev_reward == 0) * (ep_trial >= 75)"
+  ],
+  "weights": [
+   0.39001522836439595,
+   2.211428105891725,
+   -0.010209059835799582
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5456320829717257,
+  "r2": 0.5940347712310846,
+  "r2_timing_only": 0.10652752196046211
+ },
+ "terms_from": "skeptic"
+}

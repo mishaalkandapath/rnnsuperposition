@@ -1,0 +1,91 @@
+{
+  "label": "Update gate high when observer believes S2 is good, low when S1; strongest at GO.",
+  "short_terms": "(phase == GO) * np.tanh(belief_lo) ;; (phase == D1) * np.tanh(belief_lo) ;; (phase != D2) * (prev_action == 1)",
+  "terms": "(phase == GO) * np.tanh(belief_lo) ;; (phase == D1) * np.tanh(belief_lo) ;; (phase == GO) * (belief_lo > 0) ;; (phase == D1) * (belief_lo > 0) ;; (phase == D1) * (prev_action == 1) ;; (phase == GO) * (prev_action == 1) ;; (phase == D1) * (prev_state == 1) ;; (phase == GO)*(prev_reward==1)*(prev_action==prev_state)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 15 is a graded, saturating readout of the ideal observer belief about which state is good: near 1 when S2 is believed good (a2-favoured), dropping toward ~0.1-0.3 when S1 is believed good, with the swing about twice as large at GO as at D1 and almost none at D2 (saturated near 1). A smaller extra drop at D1/GO when the previous choice was a1 captures part of the last-trial pattern table. The free fit adds belief sign steps, previous state and a common-rewarded term at GO for a modest gain. Not driven by future reward or time since reversal.",
+  "full_test_scores": {
+    "gate": "unit_update",
+    "feature": 15,
+    "terms": [
+      "(phase == GO) * np.tanh(belief_lo)",
+      "(phase == D1) * np.tanh(belief_lo)",
+      "(phase == GO) * (belief_lo > 0)",
+      "(phase == D1) * (belief_lo > 0)",
+      "(phase == D1) * (prev_action == 1)",
+      "(phase == GO) * (prev_action == 1)",
+      "(phase == D1) * (prev_state == 1)",
+      "(phase == GO)*(prev_reward==1)*(prev_action==prev_state)"
+    ],
+    "weights": [
+      -0.480445175315845,
+      -0.17423180582316164,
+      0.28677291203917743,
+      0.06631766028256796,
+      -0.2626768892807988,
+      -0.1984049725032192,
+      0.16321138665638862,
+      -0.11298966703002142
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6841642655105521,
+    "r2": 0.7564829148730255,
+    "r2_timing_only": 0.22897551310771525
+  },
+  "gate": "unit_update",
+  "feature": 15,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 15,
+    "terms": [
+      "(phase == GO) * np.tanh(belief_lo)",
+      "(phase == D1) * np.tanh(belief_lo)",
+      "(phase != D2) * (prev_action == 1)"
+    ],
+    "weights": [
+      -0.34622007983864306,
+      -0.15612863429425003,
+      -0.13754133905971258
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6369798382422708,
+    "r2": 0.7201025660491926,
+    "r2_timing_only": 0.22897551310771525
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 15,
+    "terms": [
+      "(phase == GO) * np.tanh(belief_lo)",
+      "(phase == D1) * np.tanh(belief_lo)",
+      "(phase != D2) * (prev_action == 1)"
+    ],
+    "weights": [
+      -0.34622007983864306,
+      -0.15612863429425003,
+      -0.13754133905971258
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6560482034706803,
+    "r2": 0.7352382522479263,
+    "r2_timing_only": 0.23023589228584118
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The label leaves out the third short-form term: an extra drop at D1 and GO after an a1 choice (weight -0.14). It is worth about 0.03 test R^2 (0.606 without it, 0.637 with it). It also says nothing about D2, where the gate stays pinned near 1 (D2 residuals are only \u00b10.06 across belief deciles).",
+      "Misses show some systematic leftover error, but well below the size of the main effect. GO after a1 S2 r is under-predicted by +0.275 and GO after a2 S2 u by +0.23; D1 after a1 S2 u is over-predicted by -0.22 and D1 after a1 S2 r by -0.15. The worst-fit windows are lags after the observer's belief flips, where the gate stays low for several trials after the switch to a2 and the observer's belief does not capture that.",
+      "No variant I tried beat the recorded short form on test: two-back action 0.636; a single belief term scaled up at GO 0.636; a1-unrewarded 0.636; D1-only prev a1 0.617; D1 last_is('a1 S2 u') 0.628; belief sign instead of tanh at GO 0.550; scaled by belief_cover 0.561.",
+      "The claims check out. The GO belief swing is about twice the D1 swing (weights -0.35 vs -0.16). Dropping the prev-a1 term gives 0.606, so belief carries most of the fit. Future reward and since_rev reference scores are 0. The form uses no future variables."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "High when observer believes S2 good, low for S1 (biggest swing at GO); lower after a1.",
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "High when observer believes S2 good, low for S1 (biggest swing at GO); lower after a1."
+}

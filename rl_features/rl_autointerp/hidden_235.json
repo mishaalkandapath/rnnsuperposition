@@ -1,0 +1,61 @@
+{
+  "label": "GO step after a rare-rewarded a1 trial (a1 -> S2, rewarded)",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (prev_common == 0) & (prev_action == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO, and only when the reward input at the preceding D1 was 1 (in_rew=0 at GO, but prev_reward==1 accounts for 100% of the mass). It never fires at D1 or D2. The trigger is that the previous trial was a1 with a rare transition to S2 that was rewarded. Adding prev_action==1 lifts precision from 0.35 to 0.86, so the feature is asymmetric: it is nearly silent after a2 -> S1 rare-rewarded trials. It uses only observed history. Dev: P 0.86, R 0.74, F1 0.79, mass recall 0.90. Magnitude depends on the upcoming choice of the agent: adding action==1 (the agent stays on a1 despite the model-based cue to switch) gives precision 0.996 and covers about 90% of the top activation quartile. When the agent switches to a2 the feature is usually silent or weak (bottom quartiles). Most misses are weak activations at the first trial of the window (rel -3), where the previous trial is not in the window, plus a few weak firings after other rewarded trials.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 235,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (prev_common == 0) & (prev_action == 1)",
+    "split": "test",
+    "precision": 0.8528684273517912,
+    "recall": 0.7371215778222192,
+    "f1": 0.7907819782496117,
+    "mass_recall": 0.8897043083563889,
+    "correlation": 0.7829309815748979,
+    "n_active": 14501,
+    "n_predicted": 12533,
+    "coverage_by_activation_quartile": [
+      0.2848869277440706,
+      0.856551724137931,
+      0.8973793103448275,
+      0.9097931034482759
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 235,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (prev_common == 0) & (prev_action == 1)",
+    "split": "dev",
+    "precision": 0.8593232164660736,
+    "recall": 0.737389612333483,
+    "f1": 0.7937006605445464,
+    "mass_recall": 0.8955208107514743,
+    "correlation": 0.7940925572945536,
+    "n_active": 13362,
+    "n_predicted": 11466,
+    "coverage_by_activation_quartile": [
+      0.267883867105657,
+      0.8659084106554924,
+      0.9035928143712575,
+      0.9122754491017964
+    ]
+  },
+  "gate": "hidden",
+  "feature": 235,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: a1 rare-rewarded trials where the agent then switches to a2 (predicate & action==2) still fire at 70% precision on test, but they carry only 19% of the mass, so 'silent or weak' is better put as 'usually active but weak'. With action==1 the test precision is 0.993 (the claim said 0.996 on dev), so the claim about choice-dependent magnitude holds.",
+      "Misses are not systematic in a way that can be fixed. Weak firings at rel -3 GO (prev trial not in the window) hold about 9.6% of the mass and cannot be predicted from in-window history. The remaining misses at rel > -3 are 14% of active steps but only 1.4% of the mass: very weak firings scattered across common-rewarded histories. The lowest activation quartile has 0.27 coverage, which fits this.",
+      "Verified: no activation at D1 or D2 (GO share = 1.000); prev_reward==1 carries about 100% of the mass; the a2 -> S1 rare-rewarded counterpart has 0 mass recall, so the asymmetry is real; a1 common-rewarded gives 0.002 mass recall, so the rare transition is required. Dev/test scores match the reported ones (test P 0.853, R 0.737, F1 0.791, mass recall 0.89)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

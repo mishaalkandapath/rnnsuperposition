@@ -1,0 +1,87 @@
+{
+  "label": "At D1, update gate is high if last trial reached S2, low if S1, strongest after rare a1->S2.",
+  "short_terms": "(phase == D1) * (prev_state == S2) ;; (phase == D1) * (prev_state == S1) ;; (phase == D1) * (prev_state == S2) * (prev_action == 2)",
+  "terms": "(phase == D1) * (prev_state == S2) ;; (phase == D1) * (prev_state == S2) * (prev_action == 2) ;; (phase == D1) * (prev_state == S2) * (prev_reward == 1) ;; (phase == D1) * belief_lo ;; (phase == GO) * belief_lo ;; (phase == D1) * (prev_state == S1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw z of GRU unit 5 is active almost only at D1 (GO/D2 near 0). Its D1 magnitude is set by the previous trial reached state: roughly +0.4-0.55 above timing after S2, -0.37 after S1, near baseline when the previous trial is unknown (window start). Within S2, the rare a1->S2 transition gives a larger value than common a2->S2. Reward matters little (slightly lower after rewarded S2); belief_lo adds almost nothing. Short form (dev 0.78) nearly matches the free fit (dev 0.79), close to the all ceiling 0.83.",
+  "full_test_scores": {
+    "gate": "unit_update",
+    "feature": 5,
+    "terms": [
+      "(phase == D1) * (prev_state == S2)",
+      "(phase == D1) * (prev_state == S2) * (prev_action == 2)",
+      "(phase == D1) * (prev_state == S2) * (prev_reward == 1)",
+      "(phase == D1) * belief_lo",
+      "(phase == GO) * belief_lo",
+      "(phase == D1) * (prev_state == S1)"
+    ],
+    "weights": [
+      0.6083797528273625,
+      -0.23775017897085837,
+      -0.12329046597015358,
+      -0.006702412961628637,
+      0.0031072085031497577,
+      -0.36534377557951436
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7897555452217371,
+    "r2": 0.8755265246105599,
+    "r2_timing_only": 0.4079583429645377
+  },
+  "gate": "unit_update",
+  "feature": 5,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 5,
+    "terms": [
+      "(phase == D1) * (prev_state == S2)",
+      "(phase == D1) * (prev_state == S1)",
+      "(phase == D1) * (prev_state == S2) * (prev_action == 2)"
+    ],
+    "weights": [
+      0.5549407079694271,
+      -0.3733165427159319,
+      -0.25953841109846204
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.782108379507356,
+    "r2": 0.870999083949393,
+    "r2_timing_only": 0.4079583429645377
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 5,
+    "terms": [
+      "(phase == D1) * (prev_state == S2)",
+      "(phase == D1) * (prev_state == S1)",
+      "(phase == D1) * (prev_state == S2) * (prev_action == 2)"
+    ],
+    "weights": [
+      0.5549407079694271,
+      -0.3733165427159319,
+      -0.25953841109846204
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7833828106832108,
+    "r2": 0.8712639100192203,
+    "r2_timing_only": 0.40569771777201313
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Claims check out. On test the short form scores 0.782. The S2/S1 terms alone score 0.749, so the a1-vs-a2-within-S2 term adds 0.033. Its fitted weight is -0.26 on (prev_action==2), meaning rare a1->S2 sits higher than common a2->S2, which matches the D1 residual table (a1 S2: +0.53/+0.56; a2 S2: +0.26/+0.39; S1 cells: -0.36 to -0.39).",
+      "Reward is a minor modulator: swapping the third term for prev_reward==1 within S2 gives 0.767, and last_is('a2 S2 r') gives 0.780. Both are a bit worse than the choice term. The leftover reward effect inside a2->S2 shows in misses (D1 after a2 S2 u is under-predicted by +0.091, a2 S2 r over-predicted by -0.035). This is small and the label leaves it out, as it should.",
+      "The 'only at D1' claim holds: GO and D2 baselines are about 0.01 and 0.003, and their residuals are at most 0.03.",
+      "The largest single misses are D1 steps on the window's first trial (prev_state = -1). There the unit sits at about 0.95 while the prediction is about 0.35, because the agent saw a previous trial that this window does not contain. This is a data-window artifact, not an error in the interpretation. Adding (D1)*(prev_state==-1)*belief_lo as a 4th term recovers only +0.014 (0.796), so this miss class is not worth replacing a term for.",
+      "The short form is close to the observed-only ceiling (0.81). It uses no future variables, and its terms are natural categorical descriptions rather than fitted corrections."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  }
+}

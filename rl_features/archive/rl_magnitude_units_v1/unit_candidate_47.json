@@ -1,0 +1,76 @@
+{
+  "label": "D1 rises with run of unrewarded trials, more after S1 loss",
+  "terms": "(phase == D1) * (prev_reward == 0) ;; (phase == D1) * (prev_reward == 0) * (prev_state == 1) ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0) ;; (phase == D2) * table(action*3+state, {4: 0.3, 5: 1, 7: -0.3, 8: -0.3}) ;; (phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0) ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * ep_trial",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw candidate n of unit 47 sits near -0.95 at D1, +0.98 at GO and -0.97 at D2; timing sets the level. Beyond timing, the main effect is at D1: the value goes up (toward 0, sometimes above 0) after an unrewarded trial. It is larger when that unrewarded trial reached S1 (a2 S1 u and a1 S1 u are the biggest single-trial cells, about +0.13 to +0.16), and it climbs further over a run of unrewarded trials. The two-loss step grows with trial-in-episode (it is small early and larger late), and a third straight loss adds about +0.09. Rewarded previous trials lower it slightly. At D2 there is a small state x choice effect: higher after a1 reaching S2 (rare), lower after a2 choices. The GO term is tiny. Policy, value and the hidden good state add little once reward history is in. All terms are observed only (no future variables). Dev R^2 beyond timing 0.50, test 0.50; the additive ceiling over all cues is 0.60, so this reaches about 83% of it. The heavy tail (long late-episode loss streaks where D1 climbs to about 0) is still under-predicted.",
+  "gate": "unit_candidate",
+  "feature": 47,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 47,
+    "terms": [
+      "(phase == D1) * (prev_reward == 0)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 1)",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0)",
+      "(phase == D2) * table(action*3+state, {4: 0.3, 5: 1, 7: -0.3, 8: -0.3})",
+      "(phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0)",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * ep_trial"
+    ],
+    "weights": [
+      0.03945599453926891,
+      0.10207617269717613,
+      -0.030683897490605218,
+      0.09049465814300184,
+      0.0723701292837691,
+      0.01017910837596605,
+      0.001754860221597263
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.4996476589151103,
+    "r2": 0.9976468381212823,
+    "r2_timing_only": 0.9952969903695954
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 47,
+    "terms": [
+      "(phase == D1) * (prev_reward == 0)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 1)",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0)",
+      "(phase == D2) * table(action*3+state, {4: 0.3, 5: 1, 7: -0.3, 8: -0.3})",
+      "(phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0)",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * ep_trial"
+    ],
+    "weights": [
+      0.03945599453926891,
+      0.10207617269717613,
+      -0.030683897490605218,
+      0.09049465814300184,
+      0.0723701292837691,
+      0.01017910837596605,
+      0.001754860221597263
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.500839731370474,
+    "r2": 0.9977915799489326,
+    "r2_timing_only": 0.9955757295004054
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced test R^2 beyond timing of 0.4996 with the 'all' ceiling at 0.60. The main claims hold: D1 rises after a loss (+0.039), with an extra +0.10 when the lost trial reached S1 (profile: a1 S1 u +0.128, a2 S1 u +0.164 vs about +0.03 for S2 losses). A third straight loss adds +0.09. The two-loss step grows with ep_trial: -0.031 + 0.00175*ep_trial. The D2 a1->S2 cell is the highest (+0.077 residual). The GO term is tiny (+0.01).",
+      "Some terms are fragile. Removing the GO term and the L2*ep_trial term drops test R^2 to 0.48, so the late-episode growth claim is supported but adds only about 0.02. Adding a 4-loss term or a count of S1 losses changes test R^2 by only -0.01 to +0.03. The best variant I found reached 0.534: the L1/L2/L3 streak terms, the S1-loss term, S1-loss x second loss, the D2 table and L2*ep_trial.",
+      "Large leftover errors cluster in late-episode loss streaks, mostly under an a2-committed policy. In those windows D1 is about 0 while the model predicts -0.6 to -0.87. The explanation says so. The profile shows a D1 residual of +0.245 in policy decile 1 (strongly a2), but adding prev_action==2 or choice interactions did not improve test R^2 (0.525-0.531). This gap looks non-additive, not a missing simple term.",
+      "Mean error by (phase, previous trial) is small: at most |0.041|, with D1 after rewarded trials over-predicted by about 0.03-0.04. I found no large systematic error class that additive terms fix."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_terms": "(phase == D1) * (prev_reward == 0) ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0) ;; (phase == D1) * ((prev_reward == 0) * (prev_state == 1)) ;; (phase == D1) * ((prev_reward == 0) * (prev_state == 1)) * (tv(\"reward\", -2) == 0) ;; (phase == D2) * table(action*3+state, {4: 0.3, 5: 1, 7: -0.3, 8: -0.3}) ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * ep_trial",
+    "better_terms_test_r2_beyond_timing": 0.534
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "label": "D1 reward after unrewarded streak, scaled by mid-late-episode envelope",
+  "terms": "(phase == D1) * (prev_reward == 1) * table(ep_dec, {3: 0.03, 4: 0.16, 5: 0.4, 6: 0.72, 7: 1.0, 8: 0.95, 9: 0.2}) ;; (phase == D1) * (prev_reward == 1) * (tv(\"prev_reward\", -1) == 0) * table(ep_dec, {3: 0.03, 4: 0.16, 5: 0.4, 6: 0.72, 7: 1.0, 8: 0.95, 9: 0.2}) ;; (phase == D1) * (prev_reward == 1) * (tv(\"prev_reward\", -1) < -1) * table(ep_dec, {3: 0.03, 4: 0.16, 5: 0.4, 6: 0.72, 7: 1.0, 8: 0.95, 9: 0.2}) ;; (phase == D1) * (prev_reward == 1) * (tv(\"prev_reward\", -1) == 0) * (tv(\"prev_reward\", -2) == 0) * table(ep_dec, {3: 0.03, 4: 0.16, 5: 0.4, 6: 0.72, 7: 1.0, 8: 0.95, 9: 0.2}) ;; (phase == D1) * (prev_reward == 0) * table(ep_dec, {3: 0.03, 4: 0.16, 5: 0.4, 6: 0.72, 7: 1.0, 8: 0.95, 9: 0.2}) ;; (phase == D1) * (prev_reward == 1) * (prev_action == 1) * (prev_state == 2) * table(ep_dec, {3: 0.03, 4: 0.16, 5: 0.4, 6: 0.72, 7: 1.0, 8: 0.95, 9: 0.2}) ;; (phase == D1) * (prev_reward == 1) * (prev_action == 2) * (prev_state == 1) * table(ep_dec, {3: 0.03, 4: 0.16, 5: 0.4, 6: 0.72, 7: 1.0, 8: 0.95, 9: 0.2}) ;; (phase == D1) * (prev_reward == 1) * belief_lo * table(ep_dec, {3: 0.03, 4: 0.16, 5: 0.4, 6: 0.72, 7: 1.0, 8: 0.95, 9: 0.2})",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1, only when the previous trial was rewarded, with a timing envelope peaking around episode trials 60-89 and falling off in the last decade. Its magnitude is set mainly by reward surprise in the history: a reward after an unrewarded trial (weight +0.23 on the envelope) and even more after two unrewarded trials (+0.17 more); a reward that follows another reward gives little. Trials where the previous reward is unknown (first trial of the window) sit in between. A rare-transition reward a2->S1 gives much less (-0.15), a1->S2 slightly more; belief_lo (S1 good) adds a small positive amount, and unrewarded D1s sit below the timing baseline. GO and D2 are always zero. Making every term multiply the timing-envelope shape (instead of a linear ep_trial) was the key step (0.38 -> 0.47 dev). Test R^2 beyond timing 0.468 using observed quantities only, above the profile's additive 'all' ceiling of 0.23 and 'all observed' of 0.17. The earlier explanation used the model's policy/value; from observed inputs alone nothing is lost here, since the reward-history x envelope interaction does the work. Remaining error: big activations at the window's first trial, where the earlier reward history is not in the window.",
+  "gate": "update",
+  "feature": 145,
+  "test_scores": {
+    "gate": "update",
+    "feature": 145,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1) * table(ep_dec, {3: 0.03, 4: 0.16, 5: 0.4, 6: 0.72, 7: 1.0, 8: 0.95, 9: 0.2})",
+      "(phase == D1) * (prev_reward == 1) * (tv(\"prev_reward\", -1) == 0) * table(ep_dec, {3: 0.03, 4: 0.16, 5: 0.4, 6: 0.72, 7: 1.0, 8: 0.95, 9: 0.2})",
+      "(phase == D1) * (prev_reward == 1) * (tv(\"prev_reward\", -1) < -1) * table(ep_dec, {3: 0.03, 4: 0.16, 5: 0.4, 6: 0.72, 7: 1.0, 8: 0.95, 9: 0.2})",
+      "(phase == D1) * (prev_reward == 1) * (tv(\"prev_reward\", -1) == 0) * (tv(\"prev_reward\", -2) == 0) * table(ep_dec, {3: 0.03, 4: 0.16, 5: 0.4, 6: 0.72, 7: 1.0, 8: 0.95, 9: 0.2})",
+      "(phase == D1) * (prev_reward == 0) * table(ep_dec, {3: 0.03, 4: 0.16, 5: 0.4, 6: 0.72, 7: 1.0, 8: 0.95, 9: 0.2})",
+      "(phase == D1) * (prev_reward == 1) * (prev_action == 1) * (prev_state == 2) * table(ep_dec, {3: 0.03, 4: 0.16, 5: 0.4, 6: 0.72, 7: 1.0, 8: 0.95, 9: 0.2})",
+      "(phase == D1) * (prev_reward == 1) * (prev_action == 2) * (prev_state == 1) * table(ep_dec, {3: 0.03, 4: 0.16, 5: 0.4, 6: 0.72, 7: 1.0, 8: 0.95, 9: 0.2})",
+      "(phase == D1) * (prev_reward == 1) * belief_lo * table(ep_dec, {3: 0.03, 4: 0.16, 5: 0.4, 6: 0.72, 7: 1.0, 8: 0.95, 9: 0.2})"
+    ],
+    "weights": [
+      -0.021980251854360984,
+      0.22434472704778466,
+      0.06442457403205483,
+      0.16649421900861047,
+      -0.08471311161906635,
+      0.018011228957088364,
+      -0.1541900858198182,
+      0.025753537076998925
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.4679208970036368,
+    "r2": 0.546685195495017,
+    "r2_timing_only": 0.1480311819198029
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 145,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1) * table(ep_dec, {3: 0.03, 4: 0.16, 5: 0.4, 6: 0.72, 7: 1.0, 8: 0.95, 9: 0.2})",
+      "(phase == D1) * (prev_reward == 1) * (tv(\"prev_reward\", -1) == 0) * table(ep_dec, {3: 0.03, 4: 0.16, 5: 0.4, 6: 0.72, 7: 1.0, 8: 0.95, 9: 0.2})",
+      "(phase == D1) * (prev_reward == 1) * (tv(\"prev_reward\", -1) < -1) * table(ep_dec, {3: 0.03, 4: 0.16, 5: 0.4, 6: 0.72, 7: 1.0, 8: 0.95, 9: 0.2})",
+      "(phase == D1) * (prev_reward == 1) * (tv(\"prev_reward\", -1) == 0) * (tv(\"prev_reward\", -2) == 0) * table(ep_dec, {3: 0.03, 4: 0.16, 5: 0.4, 6: 0.72, 7: 1.0, 8: 0.95, 9: 0.2})",
+      "(phase == D1) * (prev_reward == 0) * table(ep_dec, {3: 0.03, 4: 0.16, 5: 0.4, 6: 0.72, 7: 1.0, 8: 0.95, 9: 0.2})",
+      "(phase == D1) * (prev_reward == 1) * (prev_action == 1) * (prev_state == 2) * table(ep_dec, {3: 0.03, 4: 0.16, 5: 0.4, 6: 0.72, 7: 1.0, 8: 0.95, 9: 0.2})",
+      "(phase == D1) * (prev_reward == 1) * (prev_action == 2) * (prev_state == 1) * table(ep_dec, {3: 0.03, 4: 0.16, 5: 0.4, 6: 0.72, 7: 1.0, 8: 0.95, 9: 0.2})",
+      "(phase == D1) * (prev_reward == 1) * belief_lo * table(ep_dec, {3: 0.03, 4: 0.16, 5: 0.4, 6: 0.72, 7: 1.0, 8: 0.95, 9: 0.2})"
+    ],
+    "weights": [
+      -0.021980251854360984,
+      0.22434472704778466,
+      0.06442457403205483,
+      0.16649421900861047,
+      -0.08471311161906635,
+      0.018011228957088364,
+      -0.1541900858198182,
+      0.025753537076998925
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.4716359869572696,
+    "r2": 0.5495751596571692,
+    "r2_timing_only": 0.1475103731063463
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The explanation calls belief_lo's contribution small, but it is not. Dropping the R*belief_lo*TM term cuts test R^2 beyond timing from 0.468 to 0.375. With weight 0.026 and |belief_lo| up to about 3.7, it shifts activation by about \u00b10.1\u00d7TM, which is comparable to the +0.22 'reward after an unrewarded trial' effect. The label leaves this S1-belief asymmetry out entirely. The profile's residual by belief decile on D1 also rises steadily (-0.032 at decile 0 to +0.031 at decile 8).",
+      "The rare a1->S2 reward term is negligible (weight +0.018). When prev_action and prev_state are coded separately (prev_action==1: +0.099, prev_state==1: -0.094; test 0.460), the a1/a2 asymmetry looks more like a general boost after a1 than a rare-transition effect. The a2->S1 suppression is robust: dropping both rare terms costs 0.03 (0.468 -> 0.435).",
+      "The timing-envelope claim checks out. Swapping TM for a linear ep_trial gives a test score of 0.351 against 0.468. GO and D2 are exactly 0, as claimed. Note that TM is a hand-tuned table, which is partly fitting timing shape.",
+      "Misses show no systematic error by phase x previous trial (all cell mean errors are under 0.001). The worst misses are D1 rewards on the window's first trial, e.g. actual 0.75 vs predicted 0.06, where the earlier reward history is outside the window. Belief-based proxies (|belief_lo|, belief_cover) do not recover these (test 0.436-0.455). This matches the stated remaining error.",
+      "Small gains remain available. Adding a belief_lo x (reward after an unrewarded trial) interaction gives test 0.492, and an ideal-observer surprise term on the reached state, np.where(prev_state==1, 1-belief, belief), gives 0.498. Neither changes the qualitative story.",
+      "About 50% of the magnitude variance beyond timing is still unexplained, though nothing above shows a structured error class that the observed variables could capture."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 reward after an unrewarded streak, larger when the observer believes S1 is good, smaller after rare a2->S1 rewards, scaled by a mid-to-late-episode envelope",
+    "better_terms": "(phase == D1) * (prev_reward == 1) * TM ;; (phase == D1) * (prev_reward == 1) * (tv('prev_reward', -1) == 0) * TM ;; (phase == D1) * (prev_reward == 1) * (tv('prev_reward', -1) == 0) * (tv('prev_reward', -2) == 0) * TM ;; (phase == D1) * (prev_reward == 0) * TM ;; (phase == D1) * (prev_reward == 1) * np.where(prev_state == 1, 1 - belief, belief) * TM ;; (phase == D1) * (prev_reward == 1) * belief_lo * TM ;; (phase == D1) * (prev_reward == 1) * belief_lo * (tv('prev_reward', -1) == 0) * TM ;; (phase == D1) * (prev_reward == 1) * (prev_action == 2) * (prev_state == 1) * TM   [TM = table(ep_dec, {3: 0.03, 4: 0.16, 5: 0.4, 6: 0.72, 7: 1.0, 8: 0.95, 9: 0.2})]",
+    "better_terms_test_r2_beyond_timing": 0.4984
+  },
+  "final_label": "D1 reward after an unrewarded streak, larger when the observer believes S1 is good, smaller after rare a2->S1 rewards, scaled by a mid-to-late-episode envelope"
+}

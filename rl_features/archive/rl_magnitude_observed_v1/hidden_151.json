@@ -1,0 +1,72 @@
+{
+  "label": "Late-episode GO after rewarded common a1->S1, ramping with trial >85",
+  "terms": "(phase == GO) * last_is(\"a1 S1 r\") * np.clip(ep_trial - 85, 0, 15) ;; (phase == GO) * (prev_reward == 1) * (prev_action == -1) * np.clip(ep_trial - 85, 0, 15) ;; (phase == GO) * np.clip(ep_trial - 85, 0, 15) * belief ;; (phase == GO) * np.clip(ep_trial - 85, 0, 15) * (prev_reward != 1) ;; (phase == GO) * (prev_reward == 1) * (prev_action == -1) * np.clip(ep_trial - 85, 0, 15) * belief",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Active only at GO in the last ~15 trials of the episode. Magnitude grows roughly linearly with episode trial after ~85 and is gated by the previous trial being a1 -> S1 (common) rewarded; other previous patterns (including rare-rewarded a1 S2 r) give ~0, and prev-unrewarded trials are pushed slightly down. When the previous choice is unknown (first trial of the window) the observed proxy is prev_reward == 1 times the ideal-observer belief that S1 is good. Observed-only: no value/policy terms needed; dev R^2 beyond timing 0.70 (vs 0.66 with a ramp from 80). The profile all ceiling (0.10) is far below because its cues are not multiplied by the within-decile ramp. Using the future choice (action == 1) instead did not help (0.60 dev).",
+  "gate": "hidden",
+  "feature": 151,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 151,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S1 r\") * np.clip(ep_trial - 85, 0, 15)",
+      "(phase == GO) * (prev_reward == 1) * (prev_action == -1) * np.clip(ep_trial - 85, 0, 15)",
+      "(phase == GO) * np.clip(ep_trial - 85, 0, 15) * belief",
+      "(phase == GO) * np.clip(ep_trial - 85, 0, 15) * (prev_reward != 1)",
+      "(phase == GO) * (prev_reward == 1) * (prev_action == -1) * np.clip(ep_trial - 85, 0, 15) * belief"
+    ],
+    "weights": [
+      0.1211894187967825,
+      -0.05257093113366698,
+      -0.016265241430141485,
+      -0.019879836531750728,
+      0.17014049487871008
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7179317782960983,
+    "r2": 0.7726015120601736,
+    "r2_timing_only": 0.193817415637357
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 151,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S1 r\") * np.clip(ep_trial - 85, 0, 15)",
+      "(phase == GO) * (prev_reward == 1) * (prev_action == -1) * np.clip(ep_trial - 85, 0, 15)",
+      "(phase == GO) * np.clip(ep_trial - 85, 0, 15) * belief",
+      "(phase == GO) * np.clip(ep_trial - 85, 0, 15) * (prev_reward != 1)",
+      "(phase == GO) * (prev_reward == 1) * (prev_action == -1) * np.clip(ep_trial - 85, 0, 15) * belief"
+    ],
+    "weights": [
+      0.1211894187967825,
+      -0.05257093113366698,
+      -0.016265241430141485,
+      -0.019879836531750728,
+      0.17014049487871008
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6983849334468435,
+    "r2": 0.7588915869547662,
+    "r2_timing_only": 0.2006088561801308
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most of the factual claims check out. The feature is exactly 0 at D1 and D2 (timing baseline and residuals are all +0). It is GO-only and late in the episode (GO decile means: 0.0003 / 0.056 / 0.313 for deciles 7 / 8 / 9). After a1 S1 r the GO residual is +0.10; after every other pattern it is about -0.035, which is roughly zero activation, including a1 S2 r. The ramp start of 85 does beat 80 and 88 (dev 0.698 vs 0.676 / 0.668; test 0.718 vs 0.695 / 0.682). The reported test R^2 of 0.718 reproduces.",
+      "The explanation leaves out that the size scales with belief after a common-rewarded a1. Three plain observed-only terms ((GO * last_is a1 S1 r * ramp * belief), (GO * first-trial rewarded * ramp * belief), (GO * ramp)) give test 0.778 (dev 0.764). The submitted five terms give 0.718. On the main pattern the submitted terms carry no belief at all; belief appears only in the first-trial stand-in.",
+      "Much of the submitted 0.72 comes from two small negative ramp terms, ramp*belief (-0.016) and ramp*(prev_reward!=1) (-0.020). They cancel the flat decile-9 timing baseline (about 0.31) on steps where the feature is really zero. The explanation calls the unrewarded term 'pushed slightly lower' as if it were a behavioural effect, but it is mostly a timing correction. A single (GO * ramp) term does the same job (weight -0.03).",
+      "The statement that the future choice 'gave a worse fit (0.60)' is misleading. Used as a multiplier rather than a replacement, the upcoming choice clearly helps: GO * a1S1r * ramp * (action==1) plus the first-trial version plus GO*ramp gives test 0.805, and with belief added 0.807. After a1 S1 r the feature fires mainly when the agent is about to choose a1 again; the earlier firing label also said 'choosing a1 again'. Going observed-only therefore loses about 0.03 R^2 against the best observed set (0.778 vs 0.807), not 'nothing measurable'. The claim about value and policy also could not be tested in this run.",
+      "Checking each previous-trial pattern separately (8 ramp x last_is terms, test 0.669) confirms that only a1 S1 r has a positive weight (0.105); the others are about -0.03. Worst-fit windows do show scattered exceptions, such as 1.4 after a2 S1 r at t99 and 0.72 at an a2 GO after a1 S1 u, and zero activation in some long a1 S1 r runs. But misses shows no systematic phase x previous-trial error larger than 0.006 with the improved terms, so no big error class remains.",
+      "Weighing these: the core description (GO-only, late-episode ramp, gated by a common-rewarded a1) is right, but the belief scaling is missing, the future-choice comparison is wrong, and the 'loses nothing' claim is unsupported. Since the evidence is mixed, the verdict is not upheld, though the feature is still well explained once the terms are revised."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Late-episode GO (ramp from trial 85) after a common-rewarded a1->S1, scaled by belief that S1 is good (stronger when the agent then repeats a1)",
+    "better_terms": "(phase == GO) * last_is('a1 S1 r') * np.clip(ep_trial - 85, 0, 15) * belief ;; (phase == GO) * (prev_reward == 1) * (prev_action == -1) * np.clip(ep_trial - 85, 0, 15) * belief ;; (phase == GO) * np.clip(ep_trial - 85, 0, 15)    [observed-only, test 0.778, recorded value; adding the future choice by multiplying the first two terms by (action == 1) gives test 0.807]",
+    "better_terms_test_r2_beyond_timing": 0.778
+  },
+  "final_label": "Late-episode GO (ramp from trial 85) after a common-rewarded a1->S1, scaled by belief that S1 is good (stronger when the agent then repeats a1)"
+}

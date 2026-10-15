@@ -1,0 +1,64 @@
+{
+  "label": "D2: chose a2, reached S2 (common), after an unrewarded previous trial",
+  "predicate": "(phase == D2) & (state == 2) & (action == 2) & (prev_reward == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (zero at D1/GO), and almost only when the state input is S2 (99.99% of activations) with the a2 action input, i.e. a common a2->S2 transition. It is gated by the previous trial being unrewarded (prev_reward 0 holds 94% of mass; rate 0.11 vs 0.01 after reward). Predicate (D2 & a2 & S2 & prev_reward==0) dev P 0.80 / R 0.85 / F1 0.82 / mass recall 0.94. Magnitude is largest when the previous trial was also a rare transition (prev_common==0: precision 0.98, 79% of the top activation quartile), i.e. a2 -> S1 rare unrewarded followed by a2 -> S2 common; after a common unrewarded previous trial it fires weakly. It does not fire on S1, on rare a1->S2 transitions (rarely, weakly), or (mostly) after a rewarded previous trial. Uses only observed variables at D2.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 98,
+    "predicate": "(phase == D2) & (state == 2) & (action == 2) & (prev_reward == 0)",
+    "split": "test",
+    "precision": 0.7831528641133614,
+    "recall": 0.8481026401983316,
+    "f1": 0.8143347378480518,
+    "mass_recall": 0.9326802983071055,
+    "correlation": 0.7033330118370384,
+    "n_active": 55261,
+    "n_predicted": 59844,
+    "coverage_by_activation_quartile": [
+      0.713303416328894,
+      0.8202678248280855,
+      0.8588490770901195,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 98,
+    "predicate": "(phase == D2) & (state == 2) & (action == 2) & (prev_reward == 0)",
+    "split": "dev",
+    "precision": 0.8001309424217073,
+    "recall": 0.8493272330649988,
+    "f1": 0.823995430155356,
+    "mass_recall": 0.936084582917865,
+    "correlation": 0.7191213582599449,
+    "n_active": 51801,
+    "n_predicted": 54986,
+    "coverage_by_activation_quartile": [
+      0.7040382982009111,
+      0.8098069498069498,
+      0.8834749034749034,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 98,
+  "final_verdict": "explained",
+  "skeptic": {
+    "revised_verdict": "explained",
+    "upheld": false,
+    "issues": [
+      "Factual claims that hold on dev: the feature is active only at D2, with 0 activations at D1 and GO. 99.8% of the mass has in_action = a2 and 100% has in_state = S2. a1->S2 rare gives precision 0.009. The original predicate scores P 0.80 / R 0.85 / F1 0.82 on dev and F1 0.814 on test, which reproduces the reported numbers.",
+      "Systematic miss: the claim that it 'seldom fires after a rewarded previous trial' is only true when that rewarded trial reached S2. When the previous trial was a2->S1 rare AND rewarded and the agent stays on a2 and reaches S2, the feature fires at a 0.63 rate on dev (0.61 test, about 9-10k steps). That class holds about 11% of activations, so most of the predicate's 15% recall gap is one coherent class, not scattered noise. By contrast, previous reward 1 with previous state S2 gives precision 0.012.",
+      "The feature's structure is set more by the previous REACHED STATE than by the previous reward. With prev_state == 1 (the previous trial landed in S1), precision is 0.86 on dev and that subset holds every top-quartile activation the predicate covers (0.79-0.80). With prev_state == 2 and prev unrewarded, precision is 0.59 with almost no top-quartile coverage (0.03 and 0.00 in the top two quartiles). Calling it 'after an unrewarded previous trial' blends a strong case (the previous trial was in S1) with a weak one (S2 unrewarded twice in a row).",
+      "No future variables are involved. The rel imbalance (rate 0.23 at rel +1 vs 0.085 at rel 0) comes from the window sampling: within the predicate, precision is about 0.8 at every rel.",
+      "Improved observed-only predicate: (phase==D2)&(state==2)&(action==2)&~((prev_reward==1)&(prev_state!=1)). It scores dev P 0.774 / R 0.960 / F1 0.857 / mass recall 0.993 and test P 0.757 / R 0.961 / F1 0.847 / mass recall 0.992, with top-quartile coverage 1.0. The original scores F1 0.814 and mass recall 0.933 on test."
+    ],
+    "revised_label": "D2: chose a2 and reached S2 (common), unless the previous trial was rewarded at S2. Strongest when the previous trial went a2 -> S1 rare, whether rewarded or not; weak after an unrewarded S2 visit.",
+    "better_predicate": "(phase == D2) & (state == 2) & (action == 2) & ~((prev_reward == 1) & (prev_state != 1))",
+    "better_predicate_test_f1": 0.847
+  },
+  "final_label": "D2: chose a2 and reached S2 (common), unless the previous trial was rewarded at S2. Strongest when the previous trial went a2 -> S1 rare, whether rewarded or not; weak after an unrewarded S2 visit."
+}

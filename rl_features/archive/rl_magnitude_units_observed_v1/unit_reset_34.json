@@ -1,0 +1,82 @@
+{
+  "label": "Reset unit tracks the last seen state: high for S1 at D2, high after S2 at GO",
+  "terms": "(phase == D2) * (state == S1) ;; (phase == D2) * (action == 2) ;; (phase == D2) * (state == S1) * (prev_reward == 1) ;; (phase == D2) * (prev_action == 1) ;; (phase == GO) * (prev_state == 2) ;; (phase == GO) * (prev_state == 1) * (prev_reward == 0) ;; (phase == GO) * belief_lo ;; (phase == D1) * (prev_state == 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r of unit 34. The timing baseline (GO about 0.4, D2 about 0.2, D1 about 0.06) explains R^2 0.76. Beyond timing, the main driver is the state that was observed. At D2 it is much higher when the state just reached is S1 (+0.125), higher still when the previous trial was also rewarded (+0.07), and lower when this choice was a2 (-0.05) or the previous choice was a1 (-0.06). At GO the sign flips relative to state: it is higher after the previous trial reached S2 (+0.07), lower after an unrewarded S1 trial (-0.057), and falls a little as the ideal-observer belief that S1 is good rises (belief_lo, about -0.013 per log-odds unit). At D1 the effect is small: slightly higher after S2 (+0.025). The profile shows that the upcoming choice at GO (future: a2 high, a1 low) and the model policy (ref 0.38) track this. Previous-state and belief terms that the agent can observe replace them almost fully. Since no model outputs are used, observed-only terms lose very little. Recent reward alone, a marginal prev_reward term and the two-trial reward history added nothing. Some error remains after unrewarded streaks: D1 is under-predicted and GO / D2 after S1-unrewarded is over-predicted. 8 terms: dev R^2 beyond timing 0.797, test 0.792. Ceiling: all observed 0.91, all 0.93.",
+  "gate": "unit_reset",
+  "feature": 34,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 34,
+    "terms": [
+      "(phase == D2) * (state == S1)",
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * (state == S1) * (prev_reward == 1)",
+      "(phase == D2) * (prev_action == 1)",
+      "(phase == GO) * (prev_state == 2)",
+      "(phase == GO) * (prev_state == 1) * (prev_reward == 0)",
+      "(phase == GO) * belief_lo",
+      "(phase == D1) * (prev_state == 2)"
+    ],
+    "weights": [
+      0.12535041370125308,
+      -0.05297637703196342,
+      0.06879820454112681,
+      -0.0637307171507314,
+      0.07166565193887173,
+      -0.05659448655066503,
+      -0.013462120334822376,
+      0.024911006408889012
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7923287665866033,
+    "r2": 0.9499098315763094,
+    "r2_timing_only": 0.7588006407994908
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 34,
+    "terms": [
+      "(phase == D2) * (state == S1)",
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * (state == S1) * (prev_reward == 1)",
+      "(phase == D2) * (prev_action == 1)",
+      "(phase == GO) * (prev_state == 2)",
+      "(phase == GO) * (prev_state == 1) * (prev_reward == 0)",
+      "(phase == GO) * belief_lo",
+      "(phase == D1) * (prev_state == 2)"
+    ],
+    "weights": [
+      0.12535041370125308,
+      -0.05297637703196342,
+      0.06879820454112681,
+      -0.0637307171507314,
+      0.07166565193887173,
+      -0.05659448655066503,
+      -0.013462120334822376,
+      0.024911006408889012
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7966031176884023,
+    "r2": 0.9506437541313184,
+    "r2_timing_only": 0.7573402044920758
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The D1 claim is mis-attributed. Swapping (phase == D1) * (prev_state == 2) for (phase == D1) * (prev_reward == 0) (equivalently in_rew == 0) raises test R^2 beyond timing from 0.792 to 0.808, and that term's weight goes up to +0.041. At D1 the unit tracks the reward that was not received, not the previous state. The misses output for the original terms agrees: D1 is under-predicted after a2 S1 u (+0.049) and after a1 S1 u (+0.020), so the error follows the unrewarded trials rather than S2.",
+      "The D2 claim 'lower when this choice was a2' only holds after controlling for the previous choice. In the raw residual table, a2-S1 at D2 (+0.128) is higher than a1-S1 (+0.090), and a2-S2 (-0.090) is higher than a1-S2 (-0.107). The negative weights on action==2 and prev_action==1 only come out together: with both terms the score is 0.792, with action==2 alone 0.740, with prev_action==1 alone 0.726. Read as a marginal statement, the claim points the wrong way.",
+      "The core state claims hold. Dropping D2*(state==S1) cuts the score to 0.665. GO*prev_state==2 beats GO*prev_action==2 (0.792 vs 0.744). Dropping the GO unrewarded-S1 term or the belief_lo term costs 0.022 and 0.065. The S1 x prev_reward term at D2 adds 0.032.",
+      "A gap remains: 0.79 to 0.81 against an all-observed ceiling of 0.91. The worst-fit windows are dominated by the first D1 of the episode (about 0.24 actual vs 0.045 predicted). Moderate systematic misses remain after the improved terms: GO after a2 S2 u is under-predicted by +0.037, D2 after a1 S2 r by +0.028, and D2 after a2 S2 u is over-predicted by -0.026."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Reset unit tracks the last seen state: high at D2 when S1 is reached (more so after a reward), high at GO after S2, and slightly high at D1 after no reward",
+    "better_terms": "(phase == D2) * (state == S1) ;; (phase == D2) * (action == 2) ;; (phase == D2) * (state == S1) * (prev_reward == 1) ;; (phase == D2) * (prev_action == 1) ;; (phase == GO) * (prev_state == 2) ;; (phase == GO) * (prev_state == 1) * (prev_reward == 0) ;; (phase == GO) * belief_lo ;; (phase == D1) * (prev_reward == 0)",
+    "better_terms_test_r2_beyond_timing": 0.8083
+  },
+  "final_label": "Reset unit tracks the last seen state: high at D2 when S1 is reached (more so after a reward), high at GO after S2, and slightly high at D1 after no reward"
+}

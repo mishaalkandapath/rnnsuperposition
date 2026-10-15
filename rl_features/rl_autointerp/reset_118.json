@@ -1,0 +1,105 @@
+{
+  "label": "D1 before an upcoming a1 choice, unless the last trial ended in S2",
+  "predicate": "(phase == D1) & (((prev_action==1) & (prev_state==1)) | ((prev_state==-1) & (action==1)))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (never at GO or D2), when the agent is about to choose a1 and the previous trial did not end in S2 (in practice: the last trial was a1 to S1 via a common transition, or it is the first trial of the window). The upcoming choice is the agent own policy output, so this counts as observed and not future; the model policy logit at D1 (choice > 0 with prev_state != 2) gives a similar dev F1 of 0.91. Without the upcoming-choice term, the purely past predicate D1 & prev_action==1 & prev_state==1 has precision 0.96 but recall 0.76, because it misses window-first trials where the history is unknown. Activity is much higher when the previous reward was shown (in_rew=1: 41% active, 78% of mass). From the example windows (not measured with a score), magnitude appears to build over consecutive rewarded a1 to S1 trials and peaks on the D1 right after such a run. It does not fire after a2 choices, after rare a1 to S2 transitions, before upcoming a2 choices, or outside D1. Dev F1 0.90, mass recall 0.95.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 118,
+    "predicate": "(phase == D1) & (((prev_action==1) & (prev_state==1)) | ((prev_state==-1) & (action==1)))",
+    "split": "test",
+    "precision": 0.8938425421787275,
+    "recall": 0.9544984331936421,
+    "f1": 0.9231752337898976,
+    "mass_recall": 0.982962138007169,
+    "correlation": 0.8473703977003877,
+    "n_active": 132435,
+    "n_predicted": 141422,
+    "coverage_by_activation_quartile": [
+      0.8534235404270742,
+      0.9739043764535322,
+      0.9912712555498505,
+      0.999395916394829
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 118,
+    "predicate": "(phase == D1) & (((prev_action==1) & (prev_state==1)) | ((prev_state==-1) & (action==1)))",
+    "split": "dev",
+    "precision": 0.8995751899321464,
+    "recall": 0.9591278337288123,
+    "f1": 0.9283974816981704,
+    "mass_recall": 0.9850417982380614,
+    "correlation": 0.8529589096146746,
+    "n_active": 129379,
+    "n_predicted": 137944,
+    "coverage_by_activation_quartile": [
+      0.8656670273612614,
+      0.979842324934302,
+      0.9919616633173597,
+      0.9990415533020035
+    ]
+  },
+  "gate": "reset",
+  "feature": 118,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Phase claims check out. The feature fires only at D1 (34% of D1 steps active, 0 at GO and 0 at D2), and almost never after the previous trial reached S2 (D1 & prev_action==1 & prev_state==2 has precision 0.006).",
+      "The claim that it does not fire before an upcoming a2 choice is false. After a common a1->S1 trial it fires before an upcoming a2 at about the same rate as before a1: D1 & action==2 & prev_action==1 & prev_state==1 has precision 0.890 on dev (n=6846) and 0.889 on test (n=8145). The predicate's action==1 term wrongly excludes these steps, so the upcoming choice is not what drives the feature.",
+      "'Unless the last trial ended in S2' is the wrong condition. The predicate counts rare a2->S1 trials as positives, but the feature mostly stays silent there: D1 & action==1 & prev_action==2 & prev_state==1 has precision 0.254 on dev (n=4347) and 0.230 on test (n=5354). What matters is that the previous trial was a common a1->S1 trial, not just that it did not end in S2.",
+      "The upcoming-action term only helps on the window's first trial (rel -3), where prev_* is unknown in the variables even though the GRU has seen that history. There, action==1 is just a proxy for the unseen previous trial, with precision 0.739. Using only the past, D1 & prev_action==1 & prev_state==1 already has precision 0.950 on test.",
+      "A better predicate that drops the false action conditioning beats the original on test: F1 0.923 vs 0.888, mass recall 0.983 vs 0.946. The same predicate with the policy logit (choice>0) in place of action on first trials scores test F1 0.919.",
+      "The claim that magnitude builds over a run of rewarded trials was never scored. The feature also fires after unrewarded common a1->S1 trials: precision 0.987 with action==1, and 0.959 for D1 & prev_action==1 & prev_state==1 & prev_reward==0. So reward raises how often it fires but is not required."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 right after a common a1->S1 trial (rewarded or not), whatever the upcoming choice; on the window's first trial, where that history is unknown, the upcoming a1 choice stands in for it",
+    "better_predicate": "(phase == D1) & (((prev_action==1) & (prev_state==1)) | ((prev_state==-1) & (action==1)))",
+    "better_predicate_test_f1": 0.923
+  },
+  "final_label": "D1 right after a common a1->S1 trial (rewarded or not), whatever the upcoming choice; on the window's first trial, where that history is unknown, the upcoming a1 choice stands in for it",
+  "original_predicate": "(phase == D1) & (action == 1) & (prev_state != 2)",
+  "original_test_scores": {
+    "gate": "reset",
+    "feature": 118,
+    "predicate": "(phase == D1) & (action == 1) & (prev_state != 2)",
+    "split": "test",
+    "precision": 0.8684781903037561,
+    "recall": 0.9091101294974894,
+    "f1": 0.8883297794633042,
+    "mass_recall": 0.9456312523346803,
+    "correlation": 0.8201072965375836,
+    "n_active": 132435,
+    "n_predicted": 138631,
+    "coverage_by_activation_quartile": [
+      0.7914162312362197,
+      0.908514301247395,
+      0.9433386692440122,
+      0.9931738552615682
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "reset",
+    "feature": 118,
+    "predicate": "(phase == D1) & (action == 1) & (prev_state != 2)",
+    "split": "dev",
+    "precision": 0.8793118724158299,
+    "recall": 0.9205048732792802,
+    "f1": 0.8994369739331393,
+    "mass_recall": 0.9527581367084161,
+    "correlation": 0.8298018843965692,
+    "n_active": 129379,
+    "n_predicted": 135440,
+    "coverage_by_activation_quartile": [
+      0.8154583397743083,
+      0.9215643839851599,
+      0.9517081465450611,
+      0.9932908731140242
+    ]
+  },
+  "predicate_from": "skeptic"
+}

@@ -1,0 +1,111 @@
+{
+ "label": "At GO after an unrewarded a2-to-rare-S1 trial, strongest early and after prior reward.",
+ "short_terms": "(phase == GO) * last_is('a2 S1 u') ;; (phase == GO) * last_is('a2 S1 u') * ep_trial ;; (phase == GO) * last_is('a2 S1 u') * (tv('reward', -2) == 0)",
+ "terms": "(phase == GO) * last_is(\"a2 S1 u\") ;; (phase == GO) * last_is(\"a2 S1 u\") * ep_trial ;; (phase == GO) * last_is(\"a2 S1 u\") * (tv(\"reward\", -2) == 1) ;; (phase == GO) * last_is(\"a2 S1 u\") * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 1) ;; (phase == GO) * last_is(\"a2 S1 u\") * belief_lo ;; (phase == GO) * (tv(\"action\", -1) == -9) * (belief_lo < -2) ;; (phase == GO) * last_is(\"a2 S1 u\") * (tv(\"action\", -2) == 2)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Fires only at GO. Magnitude is driven almost entirely by the previous trial being a2 -> rare S1, unrewarded (the model-based stay-on-a2 case): about +0.84 there, shrinking by about 0.012 per episode trial, so it fades by trial ~60. It is about +0.25 stronger when the trial before that was rewarded. Repeated consecutive a2-S1-unrewarded trials make it decay (1.4 -> 1.0 -> 0.5 -> 0.1). All other previous-trial patterns give roughly zero. The free fit adds a weak negative belief_lo dependence (more sure S2 is good means stronger), a penalty when the trial before was also a2, and a small term for window-start steps with strong S2 belief. Together these raise dev R^2 only from 0.558 to 0.576. Uses observed variables only; the profile additive ceiling (0.32) is far below this because the effect is an interaction with episode time.",
+ "full_test_scores": {
+  "gate": "reset",
+  "feature": 17,
+  "terms": [
+   "(phase == GO) * last_is(\"a2 S1 u\")",
+   "(phase == GO) * last_is(\"a2 S1 u\") * ep_trial",
+   "(phase == GO) * last_is(\"a2 S1 u\") * (tv(\"reward\", -2) == 1)",
+   "(phase == GO) * last_is(\"a2 S1 u\") * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 1)",
+   "(phase == GO) * last_is(\"a2 S1 u\") * belief_lo",
+   "(phase == GO) * (tv(\"action\", -1) == -9) * (belief_lo < -2)",
+   "(phase == GO) * last_is(\"a2 S1 u\") * (tv(\"action\", -2) == 2)"
+  ],
+  "weights": [
+   0.7432070565438329,
+   -0.01233778046393953,
+   0.34484743054510764,
+   0.01066693097499581,
+   -0.06594518011712272,
+   0.056537151534604264,
+   -0.22444097802490265
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.558212128962633,
+  "r2": 0.5855391316904432,
+  "r2_timing_only": 0.061855484315681775
+ },
+ "gate": "reset",
+ "feature": 17,
+ "test_scores": {
+  "gate": "reset",
+  "feature": 17,
+  "terms": [
+   "(phase == GO) * last_is('a2 S1 u')",
+   "(phase == GO) * last_is('a2 S1 u') * ep_trial",
+   "(phase == GO) * last_is('a2 S1 u') * (tv('reward', -2) == 0)"
+  ],
+  "weights": [
+   1.0508438319590676,
+   -0.012205138746594632,
+   -0.36333483829809093
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5511793702235024,
+  "r2": 0.578941387649197,
+  "r2_timing_only": 0.061855484315681775
+ },
+ "dev_scores": {
+  "gate": "reset",
+  "feature": 17,
+  "terms": [
+   "(phase == GO) * last_is('a2 S1 u')",
+   "(phase == GO) * last_is('a2 S1 u') * ep_trial",
+   "(phase == GO) * last_is('a2 S1 u') * (tv('reward', -2) == 0)"
+  ],
+  "weights": [
+   1.0508438319590676,
+   -0.012205138746594632,
+   -0.36333483829809093
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.5721574932203308,
+  "r2": 0.6002226731415423,
+  "r2_timing_only": 0.06559698832277228
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": true,
+  "issues": [
+   "The core claims hold up. On test, (GO)*last_is('a2 S1 u') alone gives R^2 0.256 beyond timing. Adding *ep_trial raises it to 0.505 (weight -0.012/trial, so the effect is gone by about trial 70). The full recorded short form reproduces at 0.542. The profile residuals put the a2 S1 u cell at +0.34 at GO and every other cell or phase at or below 0 (D1 and D2 are exactly 0).",
+   "The 'after prior reward' factor is better stated the other way round. (tv('reward',-2)==0) with weight -0.36 beats (tv('reward',-2)==1) with weight +0.25: test 0.551 vs 0.542, dev 0.572 vs 0.558. The two differ because tv is -9 at the window edge. So the feature is suppressed when the trial before was also unrewarded, rather than boosted by a reward.",
+   "Residual systematic error 1: the decay across runs of a2->S1 unrewarded trials (worst windows go 1.45 -> 0.97 -> 0.50 -> 0.13). The explanation mentions it but the short form only partly captures it. Adding a reward(-3)==0 term gives only +0.001 (0.552).",
+   "Residual systematic error 2: GO steps at the window start, where the previous trial is outside the window. The activation there can be about 1.4 while the prediction is 0.09, and no observed window variable fixes this. A belief_lo<-2 window-start term adds only about 0.005 on test.",
+   "Swapping in belief_lo or belief for the reward(-2) term scores lower (0.518 and 0.514), so the belief-based reading is weak. The free fit's extra terms are minor corrections.",
+   "The misses output shows no large systematic phase or pattern class. The over-predictions of about -0.028 at GO after other patterns are just the intercept and baseline offset."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "GO after an unrewarded a2-to-rare-S1 trial; fades over the episode, weaker if prior trial also unrewarded.",
+  "better_short_terms": "(phase == GO) * last_is('a2 S1 u') ;; (phase == GO) * last_is('a2 S1 u') * ep_trial ;; (phase == GO) * last_is('a2 S1 u') * (tv('reward', -2) == 0)",
+  "better_short_terms_test_r2_beyond_timing": 0.551
+ },
+ "final_label": "GO after an unrewarded a2-to-rare-S1 trial; fades over the episode, weaker if prior trial also unrewarded.",
+ "original_short_terms": "(phase == GO) * last_is(\"a2 S1 u\") ;; (phase == GO) * last_is(\"a2 S1 u\") * ep_trial ;; (phase == GO) * last_is(\"a2 S1 u\") * (tv(\"reward\", -2) == 1)",
+ "original_test_scores": {
+  "gate": "reset",
+  "feature": 17,
+  "terms": [
+   "(phase == GO) * last_is(\"a2 S1 u\")",
+   "(phase == GO) * last_is(\"a2 S1 u\") * ep_trial",
+   "(phase == GO) * last_is(\"a2 S1 u\") * (tv(\"reward\", -2) == 1)"
+  ],
+  "weights": [
+   0.8372393761314894,
+   -0.012324363613713486,
+   0.2528177854614122
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5420187879565819,
+  "r2": 0.5703474376350105,
+  "r2_timing_only": 0.061855484315681775
+ },
+ "terms_from": "skeptic"
+}

@@ -1,0 +1,64 @@
+{
+  "label": "D1 after reward when about to choose a1 (early in episode)",
+  "predicate": "(phase == D1) & (in_rew == 1) & (action == 1) & (ep_trial < 40) & (prev_common != 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": true,
+  "explanation": "Fires only at D1 (never GO or D2), and only when the reward input is 1 and the agent is about to choose a1 (the upcoming choice, which the agent computes itself, so it is a legitimate variable; at D1 action is marked FUTURE only for that reason). Almost no activity when the previous transition was rare (prev_common==0 holds 0.6% of mass), so in practice it means rewarded after a1 led to S1, and it is about to repeat a1. Strongly gated by episode time: active in trials 0-39, fading through trials 30-39, and silent from trial ~45 on, so the unit is tied to some slow clock or drift in the hidden state. Magnitude grows over runs of consecutive rewarded a1 trials (e.g. 0.79 -> 0.94 -> 0.98 -> 1.0) and is reset by an unrewarded trial. It is more active when S1 is good and in episodes that start with S1 good. Never fires on unrewarded D1, on any trial heading to a2, or on GO/D2. Dev: the simpler (phase==D1)&(in_rew==1)&(action==1)&(ep_trial<40) gets F1 0.85 and adding prev_common!=0 gets F1 0.89; a version with only observed history (prev_action!=2, prev_common!=0, no upcoming choice) gets F1 0.78.",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 33,
+    "predicate": "(phase == D1) & (in_rew == 1) & (action == 1) & (ep_trial < 40) & (prev_common != 0)",
+    "split": "test",
+    "precision": 0.8127658503435604,
+    "recall": 0.9778046934140803,
+    "f1": 0.8876793666501731,
+    "mass_recall": 0.9910917512876145,
+    "correlation": 0.7968561291025102,
+    "n_active": 33025,
+    "n_predicted": 39731,
+    "coverage_by_activation_quartile": [
+      0.9379920067821242,
+      0.9795300387596899,
+      0.9947916666666666,
+      0.9989098837209303
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 33,
+    "predicate": "(phase == D1) & (in_rew == 1) & (action == 1) & (ep_trial < 40) & (prev_common != 0)",
+    "split": "dev",
+    "precision": 0.8182747699443876,
+    "recall": 0.9802527410151466,
+    "f1": 0.891969771108574,
+    "mass_recall": 0.9926468037618994,
+    "correlation": 0.7984666065406174,
+    "n_active": 33473,
+    "n_predicted": 40099,
+    "coverage_by_activation_quartile": [
+      0.9430039431234317,
+      0.9808795411089866,
+      0.9972514340344169,
+      0.9998804971319312
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 33,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Every factual claim I tested holds. The unit never fires outside D1 (phase != D1: recall 0). It never fires on unrewarded D1 steps (recall 0). D1 steps where the agent goes on to choose a2 hold 0.1% of activation mass. After a rare previous transition it is nearly silent (precision 0.097, 0.6% of mass). It is effectively silent from trial 40 on (D1 & ep_trial >= 40: precision 0.001). Reported test scores reproduce: P 0.813, R 0.978, F1 0.888, mass recall 0.991.",
+      "Almost all false positives fall in a graded fade with episode position, not in a separate class. Precision of the predicate by ep_trial (dev): 0.98 for trials 0-4, 0.99 for 5-14, 0.94 for 15-24, 0.85 for 25-29, 0.52 for 30-39. The explanation already mentions this fade. Moving the cutoff to ep_trial < 36 lifts test F1 only slightly, from 0.888 to 0.901.",
+      "Smaller graded effect: precision is 0.67 when the trial two back was unrewarded and 0.88 when it was rewarded. This fits the claim that magnitude builds over runs of rewards; it is not a separate class of counterexamples.",
+      "prev_common != 0 also includes prev_common == -1 (the window's first trial, where the previous trial is outside the window). That subset has precision 0.80, the same as prev_common == 1 (0.825), so including it is harmless. In effect the predicate means the previous trial was a1 -> S1 (common).",
+      "The future-variable concern is resolved. Replacing the upcoming choice (action == 1) with the model's own current policy logit at D1 (choice > 0), which is observed and internal to the agent, gives the same F1 (0.883 on dev). So the unit tracks the agent's present preference for a1. The observed-history-only version reaches F1 0.79 at most.",
+      "Small caveat: steps with good == 2 and action == 1 are rare in this data, so it is hard to separate 'about to choose a1' from 'S1 is good' using this predicate."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == D1) & (in_rew == 1) & (action == 1) & (prev_common != 0) & (ep_trial < 36)",
+    "better_predicate_test_f1": 0.901
+  }
+}

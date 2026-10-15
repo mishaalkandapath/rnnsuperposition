@@ -1,0 +1,104 @@
+{
+  "label": "D1 after a1 -> S2 (rare) unrewarded",
+  "predicate": "(phase == D1) & (prev_reward == 0) & (prev_action == 1) & (prev_common == 0) & ((((tv('state',-2)==1) & (tv('reward',-2)==1)) | ((tv('state',-2)==2) & (tv('reward',-2)==0))) | (tv('reward',-2)==-9)) & (tv('action',-2)!=2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (never GO/D2), only when the reward input is 0, and essentially only when the previous trial was choice a1 followed by a rare transition to S2 that went unrewarded. That is the rare-unrewarded case after a1, where a model-based agent should repeat a1, and the agent does stay with a1 almost every time (choice logit is in the a1-favoring bin [2.78, 8.07) on every active step). The predicate uses only observed history (dev F1 0.805, mass recall 0.82). Almost all misses are D1 of the window first trial (rel -3), where the previous trial is outside the window, so they are probably the same condition and not a different meaning. Adding the upcoming choice and the rel -3 case pushes dev recall to 0.999 (F1 0.83), but I kept the simpler predicate. Does not fire after a2, after common transitions, after rewarded trials, or at GO/D2. False positives (precision 0.79) are D1 steps that meet the condition but where the feature stays silent; I did not find what decides magnitude among the active steps (coverage is flat across activation quartiles).",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 9,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (prev_action == 1) & (prev_common == 0) & ((((tv('state',-2)==1) & (tv('reward',-2)==1)) | ((tv('state',-2)==2) & (tv('reward',-2)==0))) | (tv('reward',-2)==-9)) & (tv('action',-2)!=2)",
+    "split": "test",
+    "precision": 0.8563746173574915,
+    "recall": 0.8013780822978361,
+    "f1": 0.827964085028096,
+    "mass_recall": 0.8161839197268019,
+    "correlation": 0.7530359890231079,
+    "n_active": 25833,
+    "n_predicted": 24174,
+    "coverage_by_activation_quartile": [
+      0.7425298033751355,
+      0.8261071539176216,
+      0.8163518117064107,
+      0.8205326726540725
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 9,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (prev_action == 1) & (prev_common == 0) & ((((tv('state',-2)==1) & (tv('reward',-2)==1)) | ((tv('state',-2)==2) & (tv('reward',-2)==0))) | (tv('reward',-2)==-9)) & (tv('action',-2)!=2)",
+    "split": "dev",
+    "precision": 0.8665738389712507,
+    "recall": 0.8025487370097854,
+    "f1": 0.8333333333333335,
+    "mass_recall": 0.8162717423192168,
+    "correlation": 0.759808821899868,
+    "n_active": 26366,
+    "n_predicted": 24418,
+    "coverage_by_activation_quartile": [
+      0.7527305825242718,
+      0.8162924757281553,
+      0.8194507661963283,
+      0.8217265968745259
+    ]
+  },
+  "gate": "hidden",
+  "feature": 9,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The basic factual claims hold on dev. The feature fires only at D1 (0 active steps at GO or D2). It needs in_rew 0 (0 active steps with in_rew 1). After prev_action a2 it fires on only 18 steps, and after a common transition on only 18 steps. 4793 active steps (18% of activation mass) are at D1 of rel -3, where prev_action and prev_common are -1 because the previous trial is outside the window. The predicate also never fires correctly when action == 2: precision 0.0 on 125 such steps.",
+      "The explanation says 'I did not find what separates [the false positives]'. That is wrong: the false positives are systematic and depend on the trial two back, tv(.,-2). Within the predicate: two-back trial was a2: precision 0.04 (n=992). Two-back was a1 rare-rewarded: precision 0.00 (n=324). Two-back was a1 common-unrewarded: precision 0.24 (n=1449). Two-back was a1 common-rewarded: precision 0.90 (n=14785). Two-back was a1 rare-unrewarded: precision 0.86 (n=3705). So about 2.8k of the 5.6k dev false positives fall in classes where the earlier trial gave evidence against S1 being good, or where the agent had just switched from a2 to a1.",
+      "The pattern goes back further. With the refined predicate, a three-back a2 cuts precision to 0.57 (n=567). A three-back a1 whose outcome went against S1 gives 0.68. A three-back a1 consistent with S1 good gives 0.91. So the feature scales with an accumulated run of a1 choices whose outcomes all say S1 is good, not just with the single last trial.",
+      "The label overclaims by presenting a single-trial condition. It is better described as 'D1 after a1 -> S2 rare-unrewarded, when the earlier trials also chose a1 and showed S1 as good'.",
+      "Recall is capped near 0.82 by the window-boundary rel -3 D1 steps, where the history cannot be checked. That part is an artifact of the windows, not a different meaning, and is acceptable."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after an a1 -> S2 rare-unrewarded trial, within a run of a1 choices whose outcomes consistently show S1 as good (silent if the trial before was a2, or gave evidence against S1)",
+    "better_predicate": "(phase == D1) & (prev_reward == 0) & (prev_action == 1) & (prev_common == 0) & ((((tv('state',-2)==1) & (tv('reward',-2)==1)) | ((tv('state',-2)==2) & (tv('reward',-2)==0))) | (tv('reward',-2)==-9)) & (tv('action',-2)!=2)",
+    "better_predicate_test_f1": 0.828
+  },
+  "final_label": "D1 after an a1 -> S2 rare-unrewarded trial, within a run of a1 choices whose outcomes consistently show S1 as good (silent if the trial before was a2, or gave evidence against S1)",
+  "original_predicate": "(phase == D1) & (prev_reward == 0) & (prev_action == 1) & (prev_common == 0)",
+  "original_test_scores": {
+    "gate": "hidden",
+    "feature": 9,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (prev_action == 1) & (prev_common == 0)",
+    "split": "test",
+    "precision": 0.775985597237021,
+    "recall": 0.8175589362443386,
+    "f1": 0.7962299717247879,
+    "mass_recall": 0.8194384341294151,
+    "correlation": 0.7112394731386623,
+    "n_active": 25833,
+    "n_predicted": 27217,
+    "coverage_by_activation_quartile": [
+      0.8067812354853693,
+      0.8265716940229173,
+      0.8163518117064107,
+      0.8205326726540725
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "hidden",
+    "feature": 9,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (prev_action == 1) & (prev_common == 0)",
+    "split": "dev",
+    "precision": 0.7929220468675275,
+    "recall": 0.8174922248350148,
+    "f1": 0.805019701581729,
+    "mass_recall": 0.8193388822964957,
+    "correlation": 0.7216079628243531,
+    "n_active": 26366,
+    "n_predicted": 27183,
+    "coverage_by_activation_quartile": [
+      0.8123483009708737,
+      0.8164441747572816,
+      0.8194507661963283,
+      0.8217265968745259
+    ]
+  },
+  "predicate_from": "skeptic"
+}

@@ -1,0 +1,109 @@
+{
+ "label": "Fires at D1 in the last ~15 trials of an episode after an a1 -> S2 rare transition.",
+ "short_terms": "(phase == D1) * (prev_state - prev_action == 1) * np.maximum(ep_trial - 85, 0) ;; (phase == D1) * (prev_state - prev_action == 1) * (ep_dec >= 8) ;; (phase == D1) * (ep_dec == 9) * (prev_action >= 0)",
+ "terms": "(phase == D1) * (prev_state - prev_action == 1) * np.maximum(ep_trial - 85, 0) ;; (phase == D1) * (prev_state - prev_action == 1) * (ep_dec == 8) ;; (phase == D1) * (ep_dec == 9) * (prev_reward == 1) ;; (phase == D1) * (prev_action == -1) * (ep_dec == 9) ;; (phase == D1) * (ep_dec == 9) * belief_lo ;; (phase == D1) * (prev_state - prev_action == 1) * (ep_dec == 9) * (prev_reward == 1) ;; (phase == D1) * (ep_dec == 9) * (tv(\"state\", -2) - tv(\"action\", -2) == 1)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Active only at D1, and only late in the episode (trials 80-99). Its magnitude is driven by the previous trial being a1 -> S2 (a rare transition), for both rewarded and unrewarded outcomes, and it grows roughly linearly with episode trial beyond ~85 (with a smaller step in decile 8). In the last decile, D1 after a rewarded trial that was not a1 -> S2 is pushed lower (the prev_reward term). GO and D2 are always zero. Belief, the trial before, and window-start cases add only about 0.01 in the free fit (dev 0.725 vs 0.714 for the short form). The remaining misses are sporadic late-D1 firing after other patterns (often at window start, where the previous trial is unknown). All terms are observed-only.",
+ "full_test_scores": {
+  "gate": "reset",
+  "feature": 74,
+  "terms": [
+   "(phase == D1) * (prev_state - prev_action == 1) * np.maximum(ep_trial - 85, 0)",
+   "(phase == D1) * (prev_state - prev_action == 1) * (ep_dec == 8)",
+   "(phase == D1) * (ep_dec == 9) * (prev_reward == 1)",
+   "(phase == D1) * (prev_action == -1) * (ep_dec == 9)",
+   "(phase == D1) * (ep_dec == 9) * belief_lo",
+   "(phase == D1) * (prev_state - prev_action == 1) * (ep_dec == 9) * (prev_reward == 1)",
+   "(phase == D1) * (ep_dec == 9) * (tv(\"state\", -2) - tv(\"action\", -2) == 1)"
+  ],
+  "weights": [
+   0.2919384105180674,
+   0.16730550931320676,
+   -0.34281892375216233,
+   0.09617537930641365,
+   0.02224439834114043,
+   0.563838031490341,
+   -0.3118487243481475
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7386517096445708,
+  "r2": 0.7688122875788395,
+  "r2_timing_only": 0.11540376978648215
+ },
+ "gate": "reset",
+ "feature": 74,
+ "test_scores": {
+  "gate": "reset",
+  "feature": 74,
+  "terms": [
+   "(phase == D1) * (prev_state - prev_action == 1) * np.maximum(ep_trial - 85, 0)",
+   "(phase == D1) * (prev_state - prev_action == 1) * (ep_dec >= 8)",
+   "(phase == D1) * (ep_dec == 9) * (prev_action >= 0)"
+  ],
+  "weights": [
+   0.31777109858235514,
+   0.1442781896539022,
+   -0.3328374425168035
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7370538401881588,
+  "r2": 0.7673988182813241,
+  "r2_timing_only": 0.11540376978648215
+ },
+ "dev_scores": {
+  "gate": "reset",
+  "feature": 74,
+  "terms": [
+   "(phase == D1) * (prev_state - prev_action == 1) * np.maximum(ep_trial - 85, 0)",
+   "(phase == D1) * (prev_state - prev_action == 1) * (ep_dec >= 8)",
+   "(phase == D1) * (ep_dec == 9) * (prev_action >= 0)"
+  ],
+  "weights": [
+   0.31777109858235514,
+   0.1442781896539022,
+   -0.3328374425168035
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.725510827796482,
+  "r2": 0.7579811317421534,
+  "r2_timing_only": 0.11829356941481306
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The label's main claim checks out. The profile shows the feature is zero at GO and D2. At D1 the residual is +0.32 after a1 S2 r and +0.285 after a1 S2 u, and -0.02 to -0.05 after every other previous-trial pattern. The first two short-form terms alone (rare a1->S2 x ramp past trial 85, plus a decile-8 step) score test 0.676.",
+   "The third short-form term, (phase==D1)*(ep_dec==9)*(prev_reward==1), weight -0.325, is a fitted correction to the baseline and does not show a reward effect. The decile-9 D1 timing baseline (+0.42) is the average over all D1 steps, so D1 after any non-a1->S2 trial has to be pulled toward zero. The reward term only does this for rewarded trials. Misses on the recorded short form show exactly this leftover: D1 after a2 S1 u is over-predicted by -0.045 and after a1 S1 u by -0.040. Replacing the term with (phase==D1)*(ep_dec==9)*(prev_action>=0) ('previous trial known') does better: test 0.737 vs 0.729. Adding prev_reward on top of that gains only +0.006 (0.743).",
+   "So the explanation's statement that 'D1 after a rewarded trial that was not a1->S2 is pushed lower' is wrong as a description. Rewarded and unrewarded non-rare previous trials both sit near zero. The term only fixes the baseline.",
+   "After the fix, misses are small and scattered (largest cell +0.020, D1 after a1 S2 r). The remaining big misses are late-D1 activations at the start of a window, where the previous trial is unknown; belief_lo there adds about 0.005. No large systematic error class is left."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Fires at D1 late in the episode (rising past trial ~85) after an a1 -> S2 rare transition.",
+  "better_short_terms": "(phase == D1) * (prev_state - prev_action == 1) * np.maximum(ep_trial - 85, 0) ;; (phase == D1) * (prev_state - prev_action == 1) * (ep_dec >= 8) ;; (phase == D1) * (ep_dec == 9) * (prev_action >= 0)",
+  "better_short_terms_test_r2_beyond_timing": 0.7370538401881588
+ },
+ "final_label": "Fires at D1 late in the episode (rising past trial ~85) after an a1 -> S2 rare transition.",
+ "original_short_terms": "(phase == D1) * (prev_state - prev_action == 1) * np.maximum(ep_trial - 85, 0) ;; (phase == D1) * (prev_state - prev_action == 1) * (ep_dec == 8) ;; (phase == D1) * (ep_dec == 9) * (prev_reward == 1)",
+ "original_test_scores": {
+  "gate": "reset",
+  "feature": 74,
+  "terms": [
+   "(phase == D1) * (prev_state - prev_action == 1) * np.maximum(ep_trial - 85, 0)",
+   "(phase == D1) * (prev_state - prev_action == 1) * (ep_dec == 8)",
+   "(phase == D1) * (ep_dec == 9) * (prev_reward == 1)"
+  ],
+  "weights": [
+   0.3092596013305896,
+   0.15071523215263052,
+   -0.32471003975666096
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7291452422647391,
+  "r2": 0.7604029023719926,
+  "r2_timing_only": 0.11540376978648215
+ },
+ "terms_from": "skeptic"
+}

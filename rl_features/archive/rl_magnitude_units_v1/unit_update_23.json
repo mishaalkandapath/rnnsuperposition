@@ -1,0 +1,84 @@
+{
+  "label": "late-episode z, up at D1 after reaching S2 (esp. a1 rare / unrewarded), up at D2 in S1",
+  "terms": "(phase == D1)*np.exp((ep_trial-99)/10)*(prev_state==2) ;; (phase == D1)*np.exp((ep_trial-99)/10)*(prev_state==2)*(prev_action==1) ;; (phase == D1)*np.exp((ep_trial-99)/10)*(prev_state==2)*(prev_reward==0) ;; (phase == D1)*np.exp((ep_trial-99)/10)*(prev_state==1) ;; (phase == D2)*np.exp((ep_trial-99)/10)*(state==1) ;; (phase == D2)*np.exp((ep_trial-99)/10)*(state==2) ;; (phase == D1)*np.exp((ep_trial-99)/10)*(tv(\"state\",-2)==2) ;; (phase == D2)*np.exp((ep_trial-99)/10)*(state==1)*(prev_state==1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 23 sits near 0 (mean 0.01) for most of the episode and rises steeply over the last ~20 trials (timing alone R^2 0.47). Beyond timing, the state effects are multiplicative with that late-episode ramp: every term is scaled by exp((ep_trial-99)/10). Purely additive history tables only get 0.23 (the all ceiling); with the scaling, the gain is much larger. At D1 z is higher when the previous trial reached S2 and lower when it reached S1. The S2 boost is larger when the previous choice was a1 (a rare transition) and when that trial went unrewarded, so a1 S2 u gives the biggest D1 values. Reaching S2 two trials back slightly lowers D1 z. At D2 z is higher when the state just reached is S1 (more so if the previous trial also reached S1) and lower in S2. GO stays near 0. Value, policy and the hidden good state add little. All terms use only observed quantities (at D2 the reached state is already shown). Test R^2 beyond timing is 0.557 (dev 0.538). The ramp form was tuned and is an approximation; the remaining error is concentrated at D1 after a1 S2 trials.",
+  "gate": "unit_update",
+  "feature": 23,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 23,
+    "terms": [
+      "(phase == D1)*np.exp((ep_trial-99)/10)*(prev_state==2)",
+      "(phase == D1)*np.exp((ep_trial-99)/10)*(prev_state==2)*(prev_action==1)",
+      "(phase == D1)*np.exp((ep_trial-99)/10)*(prev_state==2)*(prev_reward==0)",
+      "(phase == D1)*np.exp((ep_trial-99)/10)*(prev_state==1)",
+      "(phase == D2)*np.exp((ep_trial-99)/10)*(state==1)",
+      "(phase == D2)*np.exp((ep_trial-99)/10)*(state==2)",
+      "(phase == D1)*np.exp((ep_trial-99)/10)*(tv(\"state\",-2)==2)",
+      "(phase == D2)*np.exp((ep_trial-99)/10)*(state==1)*(prev_state==1)"
+    ],
+    "weights": [
+      0.08347372812138712,
+      0.07753272211805155,
+      0.04757314479259794,
+      -0.0764261487855527,
+      0.044947846955870764,
+      -0.02731600854321049,
+      -0.031975474520726584,
+      0.026495685095885634
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.556938438076052,
+    "r2": 0.7662595957427647,
+    "r2_timing_only": 0.4724426031401995
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 23,
+    "terms": [
+      "(phase == D1)*np.exp((ep_trial-99)/10)*(prev_state==2)",
+      "(phase == D1)*np.exp((ep_trial-99)/10)*(prev_state==2)*(prev_action==1)",
+      "(phase == D1)*np.exp((ep_trial-99)/10)*(prev_state==2)*(prev_reward==0)",
+      "(phase == D1)*np.exp((ep_trial-99)/10)*(prev_state==1)",
+      "(phase == D2)*np.exp((ep_trial-99)/10)*(state==1)",
+      "(phase == D2)*np.exp((ep_trial-99)/10)*(state==2)",
+      "(phase == D1)*np.exp((ep_trial-99)/10)*(tv(\"state\",-2)==2)",
+      "(phase == D2)*np.exp((ep_trial-99)/10)*(state==1)*(prev_state==1)"
+    ],
+    "weights": [
+      0.08347372812138712,
+      0.07753272211805155,
+      0.04757314479259794,
+      -0.0764261487855527,
+      0.044947846955870764,
+      -0.02731600854321049,
+      -0.031975474520726584,
+      0.026495685095885634
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5377055429932992,
+    "r2": 0.761687011102222,
+    "r2_timing_only": 0.48449957535544563
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced: test R^2 beyond timing is 0.557 for the 8 claimed terms. The D1 claims hold. A per-pattern D1 x ramp table gives weights a1 S2 u +0.204 > a1 S2 r +0.148 > a2 S2 u +0.107 > a2 S2 r +0.064, and every S1 pattern is about -0.085. So the ordering 'S2 up, a1 (rare) larger, unrewarded larger, S1 down' is right.",
+      "The single exp((ep_trial-99)/10) ramp has the wrong shape. Adding pure-timing steeper ramps (phase==D1/D2)*exp((ep_trial-99)/3) to the 6 core terms raises test R^2 from 0.542 to 0.601, with no new history information. Pure within-decile timing terms alone reach only 0.07-0.08, so the state x ramp interaction is real. But part of the gap is timing shape, not history.",
+      "D2 'higher in S1, lower in S2' depends on how the ramp is written. With the steeper ramp added, the S1 weight falls to about 0.01 and S2 stays at -0.07. The more robust statement is 'lower in S2 at D2'. With R*value added at D2, both state weights turn positive (0.17 / 0.09) and value takes a negative weight, so lower value means higher z.",
+      "'Value adds little' is only true additively. (phase==D2)*ramp*value adds about +0.04 (0.557 -> 0.594-0.601). Most of that is matched by the steeper timing ramp, so it is ambiguous rather than a clear omission.",
+      "The S2 boost at D1 is mostly an S1 -> S2 change. (phase==D1)*ramp*(prev_state==2)*(tv('state',-2)==1) gets weight +0.097, and the plain prev_state==2 weight drops to about 0.015. This is the same thing as the author's negative 'S2 two trials back' term, just written in a different form, so it is consistent with the label. The worst-fit windows show the D1 value shrinking over repeated a1 S2R trials (0.24, 0.13, 0.14, 0.15 while the prediction rises).",
+      "A systematic error remains, as the author admits: D1 after a1 S2 u is still under-predicted by +0.009 in every term set tried, about a third of its +0.028 timing residual. GO after a1 S2 r is under-predicted by +0.003. Worst windows also show large late values at D2 after rare transitions in S1 (actual 0.41 vs predicted 0.14), so D2 is under-fit for late a2 -> S1 rare trials.",
+      "'GO stays near 0' is broadly true (GO baseline is about 10x smaller, and GO x ramp terms add about 0). But late-episode a2 windows show GO z of 0.10-0.16."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "late-episode z (steep end ramp): up at D1 after reaching S2, especially right after an S1 trial and after a1-rare / unrewarded; down at D1 after S1; lower at D2 in S2",
+    "better_terms": "(phase == D1)*np.exp((ep_trial-99)/10)*(prev_state==2) ;; (phase == D1)*np.exp((ep_trial-99)/10)*(prev_state==2)*(prev_action==1) ;; (phase == D1)*np.exp((ep_trial-99)/10)*(prev_state==2)*(prev_reward==0) ;; (phase == D1)*np.exp((ep_trial-99)/10)*(prev_state==1) ;; (phase==D1)*np.exp((ep_trial-99)/10)*(prev_state==2)*(tv('state',-2)==1) ;; (phase == D2)*np.exp((ep_trial-99)/10)*(state==2) ;; (phase==D2)*np.exp((ep_trial-99)/3) ;; (phase==D1)*np.exp((ep_trial-99)/3)",
+    "better_terms_test_r2_beyond_timing": 0.631
+  },
+  "final_label": "late-episode z (steep end ramp): up at D1 after reaching S2, especially right after an S1 trial and after a1-rare / unrewarded; down at D1 after S1; lower at D2 in S2"
+}

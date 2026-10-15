@@ -1,0 +1,65 @@
+{
+  "label": "D1 after a1 rare to S2, scaled by value and a1 policy logit",
+  "terms": "(phase == D1) * last_is(\"a1 S2 r\") ;; (phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * value ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * choice",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 and is exactly zero at GO and D2. At D1 it is large (about +2.4 to +2.7 above timing) only when the previous trial was a1 that went rare to S2. Rewarded and unrewarded cases are similar, unrewarded slightly higher. After every other previous-trial pattern it is about 0. Those two indicators alone give test R^2 beyond timing 0.67. Within the a1->S2 cases the magnitude grows with the model value output and with the a1-minus-a2 policy logit at that D1 step; adding both gives test R^2 0.74 (all-cues ceiling 0.79). The trial before (tv -2 action, state, reward) adds nothing (<0.01). An end-of-episode (trial >= 90) drop is visible but adds little once value and choice are included. Uses no future or hidden variables; value and choice are the model's own outputs.",
+  "gate": "reset",
+  "feature": 18,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 18,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * value",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * choice"
+    ],
+    "weights": [
+      -1.722704404585396,
+      -3.5032026260476474,
+      0.48726292339583593,
+      0.501043852912885
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.736644919730912,
+    "r2": 0.7612167552999853,
+    "r2_timing_only": 0.09330306270897304
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 18,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * value",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * choice"
+    ],
+    "weights": [
+      -1.722704404585396,
+      -3.5032026260476474,
+      0.48726292339583593,
+      0.501043852912885
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7396089085885729,
+    "r2": 0.7639927700987682,
+    "r2_timing_only": 0.09364322480475351
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims hold up. The claimed terms score test R^2 beyond timing 0.7366. The two indicators alone score 0.674, with weights +2.43 (rewarded) and +2.70 (unrewarded), so unrewarded is slightly higher as stated. The profile confirms the feature is exactly 0 at GO and D2, and the D1 residual is about -0.37 after every non-a1->S2 previous trial, which makes the raw activation about 0.",
+      "Value and choice each add something on their own: indicators + value score 0.718, indicators + choice score 0.707, both together 0.737. A late-episode term (ep_trial >= 90) scores 0.706 alone with the indicators but adds only 0.0001 once value and choice are in. Trial-before terms (tv -2 action, reward, state) add 0.0015. Nonlinear value/choice terms add nothing. All of these match the explanation.",
+      "One systematic miss remains and the explanation does not mention it. The worst-fit windows are all D1 on the window's first trial, where prev_action = -1 because the previous trial is outside the window. There the activation is often about 3.9 but the prediction is about 0.33. This looks like a window-edge artifact, not something wrong with the label (it is almost certainly a hidden a1->S2 previous trial). Adding (phase==D1)*(prev_action==-1) times an indicator, value and choice raises test R^2 from 0.737 to 0.767-0.771.",
+      "Minor: in the full fit the indicator weights turn negative (-1.72 and -3.50), with value and choice carrying the magnitude. So the '+2.4 to +2.7' figure only describes the indicator-only fit. That is not an overclaim, because the explanation presents it that way."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a1 rare to S2 (rewarded or not), scaled by value and a1 policy logit",
+    "better_terms": "(phase == D1) * last_is('a1 S2 r') ;; (phase == D1) * last_is('a1 S2 u') ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * value ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * choice ;; (phase == D1) * (prev_action == -1) * (choice>0) ;; (phase == D1) * (prev_action == -1) * choice ;; (phase == D1) * (prev_action == -1) * value",
+    "better_terms_test_r2_beyond_timing": 0.7708
+  },
+  "final_label": "D1 after a1 rare to S2 (rewarded or not), scaled by value and a1 policy logit"
+}

@@ -1,0 +1,82 @@
+{
+  "label": "Reset r2 lowered by a1 choices/policy and unrewarded trials, growing late in episode",
+  "terms": "(phase == D1) * (prev_reward == 0) * (1 + ep_trial / 50) ;; (phase == GO) * (prev_action == 1) * (1 + ep_trial / 50) ;; (phase == D2) * (action == 1) * (1 + ep_trial / 50) ;; (phase == D1) * last_is(\"a1 S2 u\") * (1 + ep_trial / 50) ;; (phase == D1) * (prev_action == 1) * (prev_state == S2) * (1 + ep_trial / 50) ;; (phase == D1) * choice * (1 + ep_trial / 50) ;; (phase == GO) * choice * (1 + ep_trial / 50) ;; (phase == D2) * choice * (1 + ep_trial / 50)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate of unit 2 sits near 0.93-0.97 and dips with history; all effects scale up roughly linearly with episode trial (x(1+ep_trial/50) beat unscaled: 0.60 vs 0.57 dev on a 5-term core). D1: lowered after an unrewarded trial (about -0.02 x scale), with an extra strong dip after a1 -> S2 rare unrewarded (about -0.02 more) and after any a1 -> S2 trial; GO: lowered when the previous choice was a1; D2: lowered when this trial chose a1 (~-0.024 x scale). The model policy logit (a1 - a2) adds a graded negative effect at all phases, strongest at D2 (more a1-leaning policy = lower r), which captures the progressive drop during runs of a1 choices late in the episode. Value and hidden good state / time since reversal add little. Dev R^2 beyond timing 0.695 with 8 terms (0.575 without the policy and ep scaling); profile ceiling all = 0.75, all observed = 0.72. No future variables used (action at D2 is observed).",
+  "gate": "unit_reset",
+  "feature": 2,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 2,
+    "terms": [
+      "(phase == D1) * (prev_reward == 0) * (1 + ep_trial / 50)",
+      "(phase == GO) * (prev_action == 1) * (1 + ep_trial / 50)",
+      "(phase == D2) * (action == 1) * (1 + ep_trial / 50)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (1 + ep_trial / 50)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == S2) * (1 + ep_trial / 50)",
+      "(phase == D1) * choice * (1 + ep_trial / 50)",
+      "(phase == GO) * choice * (1 + ep_trial / 50)",
+      "(phase == D2) * choice * (1 + ep_trial / 50)"
+    ],
+    "weights": [
+      -0.017892471116522472,
+      -0.011782294252035938,
+      -0.023963644979819048,
+      -0.020604310282311196,
+      -0.022728493383315947,
+      -0.0013783094130296193,
+      -0.0003802316601722734,
+      -0.0023568633961565865
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6905023085019244,
+    "r2": 0.8238287230578364,
+    "r2_timing_only": 0.4307832278507996
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 2,
+    "terms": [
+      "(phase == D1) * (prev_reward == 0) * (1 + ep_trial / 50)",
+      "(phase == GO) * (prev_action == 1) * (1 + ep_trial / 50)",
+      "(phase == D2) * (action == 1) * (1 + ep_trial / 50)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (1 + ep_trial / 50)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == S2) * (1 + ep_trial / 50)",
+      "(phase == D1) * choice * (1 + ep_trial / 50)",
+      "(phase == GO) * choice * (1 + ep_trial / 50)",
+      "(phase == D2) * choice * (1 + ep_trial / 50)"
+    ],
+    "weights": [
+      -0.017892471116522472,
+      -0.011782294252035938,
+      -0.023963644979819048,
+      -0.020604310282311196,
+      -0.022728493383315947,
+      -0.0013783094130296193,
+      -0.0003802316601722734,
+      -0.0023568633961565865
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6951412267248006,
+    "r2": 0.826406419137037,
+    "r2_timing_only": 0.43057705376824396
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The GO claim ('lower when the previous choice was a1') names the wrong variable. Scored alone at GO, upcoming choice (model_act==1, the agent's own argmax, which it has already computed) explains slightly more than prev_action==1 (test 0.031 vs 0.023). With both in the fit, the prev_action weight shrinks from -0.009 to -0.002 and model_act keeps -0.008. The profile shows the same thing: the GO residual is -0.030 after a1 S1 r (a trial after which the agent stays on a1) but +0.010 after a1 S2 u (one after which it switches). So GO tracks the choice about to be made, not the previous one.",
+      "Swapping the GO prev_action term for (phase==GO)*(model_act==1) raises test R^2 from 0.690 to 0.705 (model_act and the future 'action' score the same). The GO policy-logit term then gets almost no weight (-0.0001 in the improved set).",
+      "'Every effect grows roughly linearly with episode position' is only roughly true. A scale that steepens after trial 80, (1 + ep_trial/50 + max(ep_trial-80,0)/10), beats the linear one on test (0.709 vs 0.690). The timing baseline itself falls steeply in the last decile (D2 goes from 0.916 to 0.820). The worst-fit windows are all at trials 92-99 during runs of a1, where actual values fall 0.10-0.20 below the prediction (for example D2 0.54 predicted as 0.76).",
+      "Smaller remaining errors are spread out. D1 after a2 S1 r and after a1 S1 r is under-predicted by about 0.02, and GO after a1 S2 u by +0.027 under the original terms. D1 looks more like 'lower after S2 / unrewarded, higher after S1 rewarded' than a pure prev_reward effect.",
+      "The claims that do check out on test: unscaled terms score 0.643 vs 0.690 scaled; the 5-term core without policy terms scores 0.612; the policy terms alone score 0.351, with the largest weight at D2; the D2 action==1 term carries weight -0.024 scaled. No future variables are used in the original terms."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Reset r2 lowered for a1 choices (the upcoming choice at GO, the made choice and the policy at D2) and after a1->S2 / unrewarded trials at D1; effects grow over the episode, steeply after trial ~80",
+    "better_terms": "s = (1 + ep_trial/50 + np.maximum(ep_trial-80,0)/10): (phase == D1) * (prev_reward == 0) * s ;; (phase == D2) * (action == 1) * s ;; (phase == D1) * last_is('a1 S2 u') * s ;; (phase == D1) * (prev_action == 1) * (prev_state == S2) * s ;; (phase == D1) * choice * s ;; (phase == D2) * choice * s ;; (phase == GO) * (model_act == 1) * s ;; (phase == GO) * choice * s   [model_act at GO is the agent's own computed choice, so it is not a future variable; the future 'action' scores the same. A variant that replaces the D1 a1*S2 term with separate prev_state==S2 and prev_action==1 terms (dropping GO*choice) reaches 0.727 on test but over-predicts D1 after a1 S2 r by 0.053.]",
+    "better_terms_test_r2_beyond_timing": 0.7205
+  },
+  "final_label": "Reset r2 lowered for a1 choices (the upcoming choice at GO, the made choice and the policy at D2) and after a1->S2 / unrewarded trials at D1; effects grow over the episode, steeply after trial ~80"
+}

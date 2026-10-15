@@ -1,0 +1,105 @@
+{
+  "label": "D1 after a reward, when the agent is about to choose a2 (episode trials < ~78)",
+  "predicate": "(phase == D1) & (in_rew == 1) & (prev_common != 0) & (choice < -1.52) & (ep_trial < 78)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (never GO or D2), and essentially only when the reward input is 1 (previous trial rewarded) and the policy logit already favours a2 (choice < -1.52; all activation mass is in the [-4.44,-1.52] choice bin), i.e. the agent is set to stay with a2 after a reward (prev_action is 2 and the previous transition common in ~all non-first trials). The upcoming choice is the agents own computation and no unobservable future outcome is used; the version using the future variable action==2 instead of the choice logit is clearly worse (F1 0.71, or 0.82 with the episode cutoff). It is silent after unrewarded trials, before a1 choices, and late in episodes (almost no activity from episode trial ~80 on; adding ep_trial < 78 raises dev F1 from 0.79 to 0.90). Activation is concentrated at mid-range value (7.1-7.7). Magnitude often sits near max (~1.0) on runs of rewarded a2 trials, with weaker (0.3-0.7) activations in some windows; I did not pin down the magnitude modulator. Dev: P 0.85, R 0.96, F1 0.90, mass recall 0.997.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 230,
+    "predicate": "(phase == D1) & (in_rew == 1) & (prev_common != 0) & (choice < -1.52) & (ep_trial < 78)",
+    "split": "test",
+    "precision": 0.928157835459978,
+    "recall": 0.9556219475594118,
+    "f1": 0.9416896883171005,
+    "mass_recall": 0.9970485762545794,
+    "correlation": 0.8940724082004284,
+    "n_active": 73302,
+    "n_predicted": 75471,
+    "coverage_by_activation_quartile": [
+      0.8229291716686674,
+      0.9995634617483357,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 230,
+    "predicate": "(phase == D1) & (in_rew == 1) & (prev_common != 0) & (choice < -1.52) & (ep_trial < 78)",
+    "split": "dev",
+    "precision": 0.9295656504757661,
+    "recall": 0.9600021657033798,
+    "f1": 0.9445387775757939,
+    "mass_recall": 0.9973053922562335,
+    "correlation": 0.8945988998073949,
+    "n_active": 73879,
+    "n_predicted": 76298,
+    "coverage_by_activation_quartile": [
+      0.8401732539252842,
+      0.9998375744450461,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 230,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Systematic false-positive class: the feature is silent at D1 after a rewarded RARE transition, even when choice < -1.52 and ep_trial < 78. Adding (prev_common == 0) to the original predicate gives 6928 predicted dev steps at precision 0.014. That is about 57% of the 12208 dev false positives.",
+      "So the label 'D1 after a reward, when the agent is about to choose a2' overclaims. The feature needs the previous trial to be a common (or unknown, at the start of the window) rewarded a2 trial. The explanation notes that active cases mostly follow common transitions, but it presents this as incidental. In fact a rare-rewarded previous trial is an exclusion: the feature is off there despite reward == 1 and an a2-leaning logit.",
+      "The low rel +1 precision (0.57, against about 0.90 for the other rels) comes mostly from this same rare-prev class. With prev_common != 0 added, rel +1 precision rises to 0.94.",
+      "Adding (prev_common != 0) to the predicate raises test precision from 0.845 to 0.928 at the same recall (0.956). Test F1 goes from 0.898 to 0.942.",
+      "The other claims check out. The feature has zero activity at GO and D2. There are essentially no activations with in_rew == 0 or with the choice logit favouring a1. Almost no activity from trial 80 on. Without the ep_trial cutoff, test F1 drops to 0.83.",
+      "The observed-only stand-in for the choice logit (prev_action != 1) is much worse: test F1 0.77. So the upcoming-choice term is doing real work, and it is legitimate (the agent's own computation)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a common-transition rewarded trial (not rare-rewarded) when the agent is about to choose a2, i.e. the model-based 'stay with a2' signal; episode trials < ~78",
+    "better_predicate": "(phase == D1) & (in_rew == 1) & (prev_common != 0) & (choice < -1.52) & (ep_trial < 78)",
+    "better_predicate_test_f1": 0.942
+  },
+  "final_label": "D1 after a common-transition rewarded trial (not rare-rewarded) when the agent is about to choose a2, i.e. the model-based 'stay with a2' signal; episode trials < ~78",
+  "original_predicate": "(phase == D1) & (in_rew == 1) & (choice < -1.52) & (ep_trial < 78)",
+  "original_test_scores": {
+    "gate": "hidden",
+    "feature": 230,
+    "predicate": "(phase == D1) & (in_rew == 1) & (choice < -1.52) & (ep_trial < 78)",
+    "split": "test",
+    "precision": 0.8450415959355173,
+    "recall": 0.9575454967122315,
+    "f1": 0.8977827235343399,
+    "mass_recall": 0.9972043983622346,
+    "correlation": 0.8494545023827386,
+    "n_active": 73302,
+    "n_predicted": 83061,
+    "coverage_by_activation_quartile": [
+      0.8301866201025865,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "hidden",
+    "feature": 230,
+    "predicate": "(phase == D1) & (in_rew == 1) & (choice < -1.52) & (ep_trial < 78)",
+    "split": "dev",
+    "precision": 0.8533150698099151,
+    "recall": 0.9612745164390423,
+    "f1": 0.904083256420865,
+    "mass_recall": 0.9974057368741132,
+    "correlation": 0.8538427306793313,
+    "n_active": 73879,
+    "n_predicted": 83226,
+    "coverage_by_activation_quartile": [
+      0.845100162425555,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "predicate_from": "skeptic"
+}

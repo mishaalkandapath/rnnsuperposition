@@ -1,0 +1,113 @@
+{
+ "label": "At D1: raised after reaching S2, lowered by last reward, raised if the trial before was unrewarded.",
+ "short_terms": "(phase == D1) * (prev_state == S2) * (prev_reward == 0) ;; (phase == D1) * (prev_reward == 1) * (prev_state == S1) ;; (phase == D1) * (tv('reward', -2) == 0)",
+ "terms": "(phase == D1) * (prev_state == S2) ;; (phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 1) * (prev_state == S2) ;; (phase == D1) * belief_lo ;; (phase == D1) * (tv(\"reward\", -2) == 1) ;; (phase == D1) * (tv(\"state\", -2) == S2) ;; (phase == D1) * last_is(\"a1 S1 u\") * belief_lo ;; (phase == GO) * belief_lo",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Raw candidate n of unit 3 is ~+0.95 at GO and ~-0.98 at D2 (timing); all graded information is at D1, where it reads the last outcome as evidence against staying/for S2: after S1 rewarded it is strongly negative (-0.65 residual), after S2 unrewarded strongly positive (+0.78), S1 unrewarded and S2 rewarded intermediate. The short form (S2 reached last trial up, last reward down, trial-before unrewarded up) gives dev R^2 0.68 beyond timing vs 0.71 for the 8-term free fit. Within the intervention-relevant situation (D1 after a1 -> S1 unrewarded) the first two terms are constant and the graded variation is driven mainly by the trial before: if it was also unrewarded the unit is ~0.49 higher (consecutive losses -> higher, pushing GO toward a2). That single term captures roughly 70% of what an 8-term within-situation fit (trial -2 and -3 reward/state, belief_lo, ep_trial) captures, but my rough estimate is that even that fit explains only ~40% of the within-situation variance; the observer belief_lo adds little beyond trial history. GO and D2 show only tiny belief-correlated shifts. Observed-only; no future variables used.",
+ "full_test_scores": {
+  "gate": "unit_candidate",
+  "feature": 3,
+  "terms": [
+   "(phase == D1) * (prev_state == S2)",
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D1) * (prev_reward == 1) * (prev_state == S2)",
+   "(phase == D1) * belief_lo",
+   "(phase == D1) * (tv(\"reward\", -2) == 1)",
+   "(phase == D1) * (tv(\"state\", -2) == S2)",
+   "(phase == D1) * last_is(\"a1 S1 u\") * belief_lo",
+   "(phase == GO) * belief_lo"
+  ],
+  "weights": [
+   0.9251683773901015,
+   -0.40778902932385214,
+   -0.3958342358641711,
+   -0.0392986283001471,
+   -0.22999697691882967,
+   0.05846096731881539,
+   0.0408735184479619,
+   0.010101819131736476
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7040991486909471,
+  "r2": 0.9564031917817629,
+  "r2_timing_only": 0.8526641338631956
+ },
+ "gate": "unit_candidate",
+ "feature": 3,
+ "test_scores": {
+  "gate": "unit_candidate",
+  "feature": 3,
+  "terms": [
+   "(phase == D1) * (prev_state == S2) * (prev_reward == 0)",
+   "(phase == D1) * (prev_reward == 1) * (prev_state == S1)",
+   "(phase == D1) * (tv('reward', -2) == 0)"
+  ],
+  "weights": [
+   0.6829799080394625,
+   -0.7490035556859629,
+   0.32363421585423047
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6984301188515694,
+  "r2": 0.9555679403602229,
+  "r2_timing_only": 0.8526641338631956
+ },
+ "dev_scores": {
+  "gate": "unit_candidate",
+  "feature": 3,
+  "terms": [
+   "(phase == D1) * (prev_state == S2) * (prev_reward == 0)",
+   "(phase == D1) * (prev_reward == 1) * (prev_state == S1)",
+   "(phase == D1) * (tv('reward', -2) == 0)"
+  ],
+  "weights": [
+   0.6829799080394625,
+   -0.7490035556859629,
+   0.32363421585423047
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.7011750599340667,
+  "r2": 0.9563030086338451,
+  "r2_timing_only": 0.8537706010866645
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The label's claims are basically right. Recorded short-form weights on dev: prev_state==S2 +0.68, prev_reward==1 -0.58, reward two trials back ==0 +0.23. Test R^2 beyond timing is 0.672; dropping the trial-before term gives 0.644, so that term adds about 0.03.",
+   "The additive form misses an interaction. In the profile, the reward effect is about -0.8 after S1 but about -0.5 to -0.64 after S2. Misses on the recorded short form: D1 after a2 S1 r is over-predicted by 0.176, D1 after a1 S1 r by 0.155, and D1 after the first trial of the episode ('?') is under-predicted by 0.345.",
+   "A better short form exists: 'raised after an S2 loss, lowered after an S1 win, raised if the trial before was unrewarded'. It passes --short and scores 0.698 on test (dev weights +0.68, -0.75, +0.32), against 0.672 for the recorded form. Its misses are smaller: largest D1 cell error is +0.18 after a1 S2 r, and the S1-rewarded cells drop to about -0.03.",
+   "The label says all variation is at D1, but both forms leave a GO error of about -0.18 after a2 S1 u. It is a small class, but the label does not mention it.",
+   "belief_lo adds little: the 3-term form with belief_lo in place of the trial-before term scores 0.651 on test. This agrees with the claim that observer belief adds little beyond trial history. The unit is high after S2 losses even though those are evidence that S1 is good, so it is not a belief readout.",
+   "The figures quoted for the situation 'D1 after a1 S1 u' (trial before unrewarded about 0.49 higher, R^2 0.0037 -> 0.0126) were not verified here; the tool cannot score restricted fits directly."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At D1: high after an S2 loss, low after an S1 win, higher if trial before unrewarded.",
+  "better_short_terms": "(phase == D1) * (prev_state == S2) * (prev_reward == 0) ;; (phase == D1) * (prev_reward == 1) * (prev_state == S1) ;; (phase == D1) * (tv('reward', -2) == 0)",
+  "better_short_terms_test_r2_beyond_timing": 0.6984
+ },
+ "final_label": "At D1: high after an S2 loss, low after an S1 win, higher if trial before unrewarded.",
+ "original_short_terms": "(phase == D1) * (prev_state == S2) ;; (phase == D1) * (prev_reward == 1) ;; (phase == D1) * (tv(\"reward\", -2) == 0)",
+ "original_test_scores": {
+  "gate": "unit_candidate",
+  "feature": 3,
+  "terms": [
+   "(phase == D1) * (prev_state == S2)",
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D1) * (tv(\"reward\", -2) == 0)"
+  ],
+  "weights": [
+   0.6831151599312791,
+   -0.579414674693661,
+   0.23345067453123505
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6719103816145562,
+  "r2": 0.951660631904687,
+  "r2_timing_only": 0.8526641338631956
+ },
+ "terms_from": "skeptic"
+}

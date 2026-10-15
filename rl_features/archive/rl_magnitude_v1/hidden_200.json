@@ -1,0 +1,74 @@
+{
+  "label": "D2 S2 shown; boosted by recent rewarded S1 visit and a1 (rare) choice",
+  "terms": "(phase == D2) * (state == S2) ;; (phase == D2) * (state == S2) * (action == 1) ;; (phase == D2) * (state == S2) * (prev_state == 1) * (prev_reward == 1) ;; (phase == D2) * (state == S2) * (prev_reward == 1) ;; (phase == D2) * (state == S2) * (prev_state == -1) ;; (phase == D2) * (state == S2) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 and only when S2 is the reached state (zero at D1/GO and at D2 with S1). Magnitude within D2-S2: largest when the previous trial was rewarded at S1 (weight ~+1.0, plus ~+0.25 for any previous reward), higher when S2 was reached via a1 (rare transition, ~+0.27), and further raised if the trial two back was a rewarded S1 visit (~+0.36); i.e. S2 appears while recent evidence says S1 is good (an S2 surprise). Window-start trials (unknown previous trial) get a positive offset reflecting unseen history. Model value adds nothing. state/action are observed at D2, so no future variables. Dev R2 beyond timing 0.69; profile all ceiling 0.60.",
+  "gate": "hidden",
+  "feature": 200,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 200,
+    "terms": [
+      "(phase == D2) * (state == S2)",
+      "(phase == D2) * (state == S2) * (action == 1)",
+      "(phase == D2) * (state == S2) * (prev_state == 1) * (prev_reward == 1)",
+      "(phase == D2) * (state == S2) * (prev_reward == 1)",
+      "(phase == D2) * (state == S2) * (prev_state == -1)",
+      "(phase == D2) * (state == S2) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 1)"
+    ],
+    "weights": [
+      -0.24615476230947841,
+      0.26350818586670915,
+      1.024649615732101,
+      0.24693327807334775,
+      0.20101658154002297,
+      0.35713436125293174
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6870308765353902,
+    "r2": 0.7179683337809757,
+    "r2_timing_only": 0.09885146784802179
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 200,
+    "terms": [
+      "(phase == D2) * (state == S2)",
+      "(phase == D2) * (state == S2) * (action == 1)",
+      "(phase == D2) * (state == S2) * (prev_state == 1) * (prev_reward == 1)",
+      "(phase == D2) * (state == S2) * (prev_reward == 1)",
+      "(phase == D2) * (state == S2) * (prev_state == -1)",
+      "(phase == D2) * (state == S2) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 1)"
+    ],
+    "weights": [
+      -0.24615476230947841,
+      0.26350818586670915,
+      1.024649615732101,
+      0.24693327807334775,
+      0.20101658154002297,
+      0.35713436125293174
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6902438061477458,
+    "r2": 0.721219146957604,
+    "r2_timing_only": 0.09999910066247986
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The term set leaves a large systematic error. The explanation says the feature is 0 at D2 when S1 is reached, but no term encodes that. The timing baseline gives every D2 step a mean of about +0.2, so the fit predicts about +0.17 on every D2-S1 step (misses: S1c cells show 0/0.167 throughout) and about -0.04 on every D1/GO step. Adding the single term (phase == D2) * (state == S1) raises test R^2 beyond timing from 0.687 to 0.752. After that, the per-phase mean errors drop to 0.000 and the worst previous-trial cells shrink from -0.218 to -0.098.",
+      "The qualitative claims hold. The feature is nonzero only at D2-S2 (the profile shows D1/GO residuals of 0). The prev S1-rewarded weight is about +1.0, any previous reward is about +0.25, a1 to S2 (rare) is about +0.26 (profile: a1 S2 residual +0.861 vs a2 S2 -0.01), the trial two back being rewarded at S1 adds about +0.36, and the window-start offset is about +0.2. Adding value leaves R^2 unchanged (0.7522 vs 0.7519). No future variables are used.",
+      "Splitting the previous rewarded S1 trial by choice (a2 S1 r vs a1 S1 r) gives nearly equal weights (0.99 vs 1.06) and no gain, so the label is right not to split on the previous choice.",
+      "A remaining limitation: the worst misses are window-start trials. For example, a [-3] S2 rare cell is actual 2.57 vs predicted 0.62, because the driving history lies outside the window. The prev_state == -1 offset only partly covers this. Adding the trial three back (rewarded S1) adds nothing (0.7522).",
+      "Minor: a small over-prediction remains for D2 after a1 S2 u (-0.098)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 S2 shown (zero at D2 S1 and at D1/GO); boosted when the previous trial (and the one before) was rewarded at S1, and by reaching S2 via a1 (rare)",
+    "better_terms": "(phase == D2) * (state == S2) ;; (phase == D2) * (state == S1) ;; (phase == D2) * (state == S2) * (action == 1) ;; (phase == D2) * (state == S2) * (prev_state == 1) * (prev_reward == 1) ;; (phase == D2) * (state == S2) * (prev_reward == 1) ;; (phase == D2) * (state == S2) * (prev_state == -1) ;; (phase == D2) * (state == S2) * (tv('state', -2) == 1) * (tv('reward', -2) == 1)",
+    "better_terms_test_r2_beyond_timing": 0.752
+  },
+  "final_label": "D2 S2 shown (zero at D2 S1 and at D1/GO); boosted when the previous trial (and the one before) was rewarded at S1, and by reaching S2 via a1 (rare)"
+}

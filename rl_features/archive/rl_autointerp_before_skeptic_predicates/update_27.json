@@ -1,0 +1,63 @@
+{
+  "label": "D1 after a reward in S1, when the agent is about to choose a1 (win-stay on a1)",
+  "predicate": "(phase == D1) & (in_rew == 1) & (action == 1) & (prev_state != 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": true,
+  "explanation": "Fires only at D1 (never at GO or D2), and only when the reward input is 1. It is restricted to rewards earned in S1 (prev a1 common or prev a2 rare; almost never after a reward in S2) and to trials where the agent then chooses a1, so it reads as the a1 / S1 win-stay signal. The only FUTURE variable used is action, which is the agent's own upcoming choice and so a legitimate thing for it to compute. The model's own policy logit (choice > 0) in place of action gives nearly the same score (dev F1 0.81). Dev: P 0.69, R 0.99, F1 0.815, mass recall 0.99. Magnitude grows with a run of consecutive rewards on a1/S1: the first reward after a loss is weak or silent, and activation climbs toward its max over 3-4 rewarded trials in a row. Adding the requirement that the previous trial was also rewarded raises dev F1 to 0.84 (P 0.81), and most of the remaining false positives are first rewards after an unrewarded trial. Activity also drops at the very start (trials 0-2) and end (trials 90-99) of an episode. Does not fire after an unrewarded trial, after a reward in S2, or before an a2 choice.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 27,
+    "predicate": "(phase == D1) & (in_rew == 1) & (action == 1) & (prev_state != 2)",
+    "split": "test",
+    "precision": 0.6814352291751504,
+    "recall": 0.9833244100863161,
+    "f1": 0.8050073763656966,
+    "mass_recall": 0.9896386650736011,
+    "correlation": 0.6998982081591578,
+    "n_active": 76579,
+    "n_predicted": 110505,
+    "coverage_by_activation_quartile": [
+      0.9671977017498041,
+      0.9782710890571951,
+      0.9915904936014626,
+      0.9962390305056414
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 27,
+    "predicate": "(phase == D1) & (in_rew == 1) & (action == 1) & (prev_state != 2)",
+    "split": "dev",
+    "precision": 0.6948528070623426,
+    "recall": 0.9860744422011699,
+    "f1": 0.8152364647977745,
+    "mass_recall": 0.9914456142005729,
+    "correlation": 0.7087222669985445,
+    "n_active": 77268,
+    "n_predicted": 109652,
+    "coverage_by_activation_quartile": [
+      0.9707511518351711,
+      0.9844178702697106,
+      0.9929595692912978,
+      0.9961691774085003
+    ]
+  },
+  "gate": "update",
+  "feature": 27,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The explanation says the feature fires on rewards earned in S1 'via a1 common or a2 rare'. The a2-rare half is false. (phase==D1)&(in_rew==1)&(prev_action==2)&(prev_state==1) has P 0.10, recall 0.02 and mass 0.012. So a reward reached in S1 after choosing a2 almost never activates it. What the feature needs is the a1 -> S1 (common) -> reward sequence. Rewarded a1-rare (S2) trials give exactly 0 activations (P 0.0). So the S1 / model-based framing in the label is wrong: it is a common-rewarded-a1 signal, not a reward-in-S1 signal.",
+      "The predicate gets its recall from prev_state != 2, which also lets in prev_state == -1. That is each window's first trial, where the history is unknown, and it holds 23% of the activation mass. On those rows, action==1 is the only thing pinning the predicate down. When the previous trial is known, action==1 adds almost nothing: a1-common-rewarded with and without action==1 predicts 79918 vs 80174 steps. The future-variable dependence is therefore mostly a stand-in for the hidden history at the window's start.",
+      "There is a systematic false-positive class the explanation names only vaguely. Near the end of the episode the feature shuts off. Precision of the base predicate by ep_trial: 80-81 is 0.77, 85-86 is 0.61, 88-89 is 0.41, 90-91 is 0.20, 92-93 is 0.03. Over ep_trial >= 90 it is 0.05 across about 7.5k predicted steps, which is a large share of the roughly 34k false positives. Adding ep_trial < 90 raises dev F1 from 0.825 to 0.864.",
+      "The claims that check out: D1 only (0 activations at GO and D2), in_rew==1 required (0 activations at in_rew 0 or -1), and essentially silent after an S2 reward or before an a2 choice. Requiring the reward two trials back to not be 0 (no recent loss) raises precision as described. The originally reported test F1 of 0.805 is reproduced."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a common, rewarded a1 trial (a1 -> S1 -> reward), i.e. a1 win-stay. Stronger after a run of a1 rewards, and silenced in the last ~10 trials of the episode. Does not fire after a reward reached in S1 by a rare a2 transition.",
+    "better_predicate": "(phase == D1) & (in_rew == 1) & (((prev_action == 1) & (prev_state == 1)) | ((prev_action == -1) & (action == 1))) & (ep_trial < 90) & (tv('reward',-2) != 0)",
+    "better_predicate_test_f1": 0.864
+  },
+  "final_label": "D1 after a common, rewarded a1 trial (a1 -> S1 -> reward), i.e. a1 win-stay. Stronger after a run of a1 rewards, and silenced in the last ~10 trials of the episode. Does not fire after a reward reached in S1 by a rare a2 transition."
+}

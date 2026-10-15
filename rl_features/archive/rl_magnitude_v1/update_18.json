@@ -1,0 +1,75 @@
+{
+  "label": "D1 only: high after a1->S1 (common a1) trials, scaled by D1 a1 policy lean",
+  "terms": "(phase == D1) * (prev_action == 1) * (prev_state == 1) ;; (phase == D1) * (prev_state == 1) ;; (phase == D1) * (prev_action == 1) ;; (phase == D1) * (prev_action == -1) ;; (phase == D1) * (choice > 0) ;; (phase == D1) * np.clip(choice, -3, 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (zero at GO and D2), roughly on/off (about 0 or 2.5-3.5). Beyond timing, the main driver is the previous trial: high after a1 that reached S1 (common a1, rewarded or not; residual about +1.6), low after any trial that reached S2 (about -0.9), in between after a2->S1 rare (-0.3 to -0.66). Reward on the previous trial barely matters. The second driver is the model policy logit at D1 (choice, a1 minus a2): it rises with a1 lean, peaking around policy deciles 6-8, so the feature also fires in a persistent a1-leaning state even after other trial types. Prev-trial terms alone score dev R^2 about 0.50-0.54 beyond timing (observed-only). Adding the clipped D1 policy logit and a sign indicator gives dev 0.80 / test 0.79 beyond timing (all ceiling 0.84). No future variables used; value, hidden good state and time since reversal add little.",
+  "gate": "update",
+  "feature": 18,
+  "test_scores": {
+    "gate": "update",
+    "feature": 18,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 1)",
+      "(phase == D1) * (prev_state == 1)",
+      "(phase == D1) * (prev_action == 1)",
+      "(phase == D1) * (prev_action == -1)",
+      "(phase == D1) * (choice > 0)",
+      "(phase == D1) * np.clip(choice, -3, 3)"
+    ],
+    "weights": [
+      2.058000195139954,
+      0.411951227957893,
+      -1.2594562553495183,
+      0.35482541504502724,
+      -0.6644243485312679,
+      0.3933459535090239
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7912085538408078,
+    "r2": 0.8463102732710736,
+    "r2_timing_only": 0.2639079351375998
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 18,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 1)",
+      "(phase == D1) * (prev_state == 1)",
+      "(phase == D1) * (prev_action == 1)",
+      "(phase == D1) * (prev_action == -1)",
+      "(phase == D1) * (choice > 0)",
+      "(phase == D1) * np.clip(choice, -3, 3)"
+    ],
+    "weights": [
+      2.058000195139954,
+      0.411951227957893,
+      -1.2594562553495183,
+      0.35482541504502724,
+      -0.6644243485312679,
+      0.3933459535090239
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.797219879589867,
+    "r2": 0.8508515499042147,
+    "r2_timing_only": 0.2644818940134518
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The main claims hold up. Timing alone gives R^2 0.26. Activity is D1-only: GO/D2 baseline 0 and residual 0. Previous-trial residuals: a1 S1 r +1.56, a1 S1 u +1.67, any S2 about -0.90, a2 S1 r -0.34, a2 S1 u -0.66. The proposed terms reproduce test R^2 beyond timing 0.791. Previous-trial terms alone score 0.534 test. Policy terms alone score 0.474 test.",
+      "'The previous trial's reward barely matters' is only partly true. Once the policy logit is in the model, misses on the proposed terms still show reward-dependent errors in opposite directions: under-predicted after a1 S2 r (+0.34) and a1 S1 u (+0.22); over-predicted after a2 S2 u (-0.32) and a2 S1 r (-0.11, -0.30 with an extra choice term). The pattern matches 'last trial suggests S2 is good' (a1 S2 r, a1 S1 u) versus 'suggests S1 is good' (a2 S1 r, a2 S2 u). One contrast term, (phase==D1)*(last_is('a1 S2 r') - last_is('a2 S2 u') + last_is('a1 S1 u') - last_is('a2 S1 r')), plus a prev_state==1 x clipped-choice interaction removes this error class. Remaining per-cell errors drop below 0.08, and test R^2 beyond timing rises from 0.791 to 0.824 (dev 0.827), against a 0.84 ceiling.",
+      "Even without the policy, reward matters somewhat. A full 8-cell previous-trial table scores 0.633 test, versus 0.534 for the reward-blind previous-trial terms. Most of the difference is a2 S1 r versus a2 S1 u, with fitted weights -0.31 versus -0.62.",
+      "Policy shape: the fitted weights are +0.39 on clip(choice) and -0.66 on (choice>0). So the fitted curve drops by 0.66 just above zero, then rises; it is not a smooth monotone 'lean'. The residual peak is at decile 7 (+1.39), with decile 8 lower (+0.62). 'Peaking at deciles 6 to 8' fits better than 'rises as the policy leans toward a1'. The policy logit at D1 is a model output, possibly downstream of this gate, and the label correctly says it is not an observed cue.",
+      "Observed-only checks: adding the trial before plus prev_reward to the previous-trial terms reaches only 0.588 test. Adding the future upcoming action reaches 0.592. So the policy-logit term is doing real work, and no observed-only cue replaces it.",
+      "Value (+0.005), early-episode trials (+0.001) and a quadratic in choice (+0.003) add little, as claimed."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 only: high after a1->S1 (common a1) trials, scaled by D1 a1 policy lean (peak at moderate a1 lean); with policy held fixed, slightly higher after trials implying S2 is good (a1 S2 r, a1 S1 u) and lower after trials implying S1 is good (a2 S1 r, a2 S2 u)",
+    "better_terms": "(phase == D1) * (prev_action == 1) * (prev_state == 1) ;; (phase == D1) * (prev_state == 1) ;; (phase == D1) * (prev_action == 1) ;; (phase == D1) * (prev_action == -1) ;; (phase == D1) * (choice > 0) ;; (phase == D1) * np.clip(choice, -3, 3) ;; (phase == D1) * (last_is('a1 S2 r') - last_is('a2 S2 u') + last_is('a1 S1 u') - last_is('a2 S1 r')) ;; (phase == D1) * (prev_state==1) * np.clip(choice,-3,3)",
+    "better_terms_test_r2_beyond_timing": 0.8245
+  },
+  "final_label": "D1 only: high after a1->S1 (common a1) trials, scaled by D1 a1 policy lean (peak at moderate a1 lean); with policy held fixed, slightly higher after trials implying S2 is good (a1 S2 r, a1 S1 u) and lower after trials implying S1 is good (a2 S1 r, a2 S2 u)"
+}

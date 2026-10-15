@@ -1,0 +1,79 @@
+{
+  "label": "D2/GO update gate high for a2 choices, low for a1, growing late in episode",
+  "terms": "(phase == D2) * (action == 2) ;; (phase == D2) * (action == 2) * ep_dec ;; (phase == D2) * (state == 2) ;; (phase == D2) * choice ;; (phase == D2) * choice * ep_dec ;; (phase == GO) * (prev_action == 2) * (prev_reward == 0) * ep_dec ;; (phase == GO) * choice * ep_dec",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 7. Timing alone gives R^2 0.72 (near 0 at D1, small at GO, large at D2, rising steeply over the episode). Beyond timing, magnitude follows the choice side: at D2 it is higher after an a2 choice and lower after a1, and the gap widens later in the episode. Reaching S2 adds a smaller amount. A graded term on the model policy logit at D2 (more a2-leaning means higher) captures most of the rest. At GO it is raised late in the episode after an unrewarded a2 trial and when the policy leans a2. D1 barely varies. Value and trials since reversal add essentially nothing. Observed-only terms (action, state, previous trial, no policy logit) reach dev R^2 beyond timing 0.47. Adding the model policy logit gives dev 0.66 and test 0.655 (all ceiling 0.88). No future variables are used.",
+  "gate": "unit_update",
+  "feature": 7,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 7,
+    "terms": [
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * (action == 2) * ep_dec",
+      "(phase == D2) * (state == 2)",
+      "(phase == D2) * choice",
+      "(phase == D2) * choice * ep_dec",
+      "(phase == GO) * (prev_action == 2) * (prev_reward == 0) * ep_dec",
+      "(phase == GO) * choice * ep_dec"
+    ],
+    "weights": [
+      -0.042493008675232556,
+      -0.0016123692640094406,
+      0.05382463747719036,
+      -0.031305585537232554,
+      -0.0026282885903772895,
+      0.011605589124125598,
+      -0.0004437580641269702
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6554322309461393,
+    "r2": 0.9029442852542796,
+    "r2_timing_only": 0.7183261945473802
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 7,
+    "terms": [
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * (action == 2) * ep_dec",
+      "(phase == D2) * (state == 2)",
+      "(phase == D2) * choice",
+      "(phase == D2) * choice * ep_dec",
+      "(phase == GO) * (prev_action == 2) * (prev_reward == 0) * ep_dec",
+      "(phase == GO) * choice * ep_dec"
+    ],
+    "weights": [
+      -0.042493008675232556,
+      -0.0016123692640094406,
+      0.05382463747719036,
+      -0.031305585537232554,
+      -0.0026282885903772895,
+      0.011605589124125598,
+      -0.0004437580641269702
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6614547110754315,
+    "r2": 0.9013033678081354,
+    "r2_timing_only": 0.7084684518712787
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The term set has no phase-level offset, so it leaves a large systematic error. misses on the original terms shows mean error (actual - predicted) of D1 +0.031, GO +0.020, D2 -0.051. Every D2-after-a1 cell is over-predicted by about 0.07 to 0.12, and every D1 cell is under-predicted by about 0.03. All seven terms are D2- or GO-only and not centred, so the single global intercept (-0.025 to -0.029) drags D1 and GO down. Adding one '(phase == D2)' term raises test R^2 beyond timing from 0.655 to 0.887, which sits at the 'all' ceiling of 0.88. The phase mean errors then drop to +0.004 / -0.004 / 0.000.",
+      "The scores reported in the explanation are understated for the same reason. It gives observed-only dev 0.47, but three observed-only terms, '(phase==D2)*(action==2) ;; (phase==D2)*(state==2) ;; (phase==D2)', reach test 0.6825 with no policy logit. That alone beats the full claimed model (0.655). Adding prev_action / prev_state at D2 gives observed-only test 0.723.",
+      "The fitted weights in the original fit contradict the explanation's wording. The '(phase==D2)*(action==2)' weight is negative (-0.042), and so is 'action==2 * ep_dec' (-0.0016). The 'a2 higher' effect is carried entirely by the choice logit and the state==2 term, because the missing D2 offset distorts the action coefficient. Once the offset is added, action==2 is positive (+0.085 with choice in the model, +0.29 observed-only).",
+      "'Reaching S2 adds a smaller amount' depends on the model. Observed-only, state==2 is indeed smaller than action==2 (+0.04 vs +0.29). With the policy logit in the model, state==2 (+0.11 to +0.13) is larger than action==2 (+0.07 to +0.085).",
+      "The GO-phase claims add almost nothing to the score. '(phase==GO)*choice*ep_dec' gets weight -0.0005 throughout. The a2-unrewarded GO term adds about 0.013 (0.874 -> 0.887). Calling these effects 'raised late in the episode' is technically true, but they are tiny in absolute size: GO residuals are up to 0.07, against D2 effects of 0.15 to 0.25.",
+      "The core qualitative story checks out. The D2 residual is +0.10 to +0.16 for a2 versus -0.15 to -0.18 for a1, it is graded by the policy logit (D2 residual goes from +0.195 to -0.286 across policy deciles), the gap widens with ep_dec (choice*ep_dec has a consistent negative weight), and D1 barely varies. So the verdict 'explained' is right in substance. The terms and scores as recorded, however, carry a systematic phase-offset error and should be replaced."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 update gate higher after an a2 choice / S2 reached, graded by policy lean toward a2, gap widening late in episode; GO/D1 nearly flat",
+    "better_terms": "(phase == D2) * choice ;; (phase == D2) * choice * ep_dec ;; (phase == D2) * (state == 2) ;; (phase == D2) ;; (phase == D2)*(state == 2)*ep_dec ;; (phase==D2)*(action==2) ;; (phase==GO)*choice*ep_dec ;; (phase==GO)*(prev_action==2)*(prev_reward==0)*ep_dec   [test 0.887; the 5-term subset without the last 3 GO/state*ep_dec terms gets 0.874; observed-only '(phase==D2)*(action==2) ;; (phase==D2)*(state==2) ;; (phase==D2)' gets 0.683]",
+    "better_terms_test_r2_beyond_timing": 0.8872
+  },
+  "final_label": "D2 update gate higher after an a2 choice / S2 reached, graded by policy lean toward a2, gap widening late in episode; GO/D1 nearly flat"
+}

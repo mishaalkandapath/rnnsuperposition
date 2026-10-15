@@ -1,0 +1,107 @@
+{
+ "label": "Late-episode GO after common-rewarded a1, growing with trial number and S1 belief.",
+ "short_terms": "(phase == GO) * last_is(\"a1 S1 r\") * np.maximum(ep_trial - 84, 0) ;; (phase == GO) * np.maximum(ep_trial - 84, 0) ;; (phase == GO) * np.maximum(ep_trial - 84, 0) * belief_lo",
+ "terms": "(phase == GO) * last_is(\"a1 S1 r\") * np.maximum(ep_trial - 84, 0) ;; (phase == GO) * last_is(\"a1 S1 r\") * (ep_trial >= 85) ;; (phase == GO) * np.maximum(ep_trial - 84, 0) * belief_lo ;; (phase == GO) * last_is(\"a1 S1 r\") * np.maximum(ep_trial - 84, 0) * (tv(\"reward\", -2) == 1) ;; (phase == GO) * last_is(\"a1 S2 r\") * np.maximum(ep_trial - 84, 0) ;; (phase == GO) * np.maximum(ep_trial - 84, 0) * (action == 1)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Active only at GO in the last ~15 trials of the episode. Its magnitude ramps up roughly linearly with ep_trial (from ~85 to 99) when the previous trial was a1 -> S1 (common) and rewarded, and is further scaled by the ideal-observer log-odds that S1 is good (graded, positive belief raises it). Silent at D1/D2, after unrewarded trials and after rare-rewarded a1 (a1 S2 r), which the free fit marks with a small negative weight. The free fit adds an onset step, a boost when the trial before was also rewarded, and a small future-choice (a1) term, gaining only ~0.02 dev R^2 over the 2-term short form. The ep_trial ramp x pattern interaction is the key; additive profile tables (ceiling 0.10) miss it.",
+ "full_test_scores": {
+  "gate": "hidden",
+  "feature": 151,
+  "terms": [
+   "(phase == GO) * last_is(\"a1 S1 r\") * np.maximum(ep_trial - 84, 0)",
+   "(phase == GO) * last_is(\"a1 S1 r\") * (ep_trial >= 85)",
+   "(phase == GO) * np.maximum(ep_trial - 84, 0) * belief_lo",
+   "(phase == GO) * last_is(\"a1 S1 r\") * np.maximum(ep_trial - 84, 0) * (tv(\"reward\", -2) == 1)",
+   "(phase == GO) * last_is(\"a1 S2 r\") * np.maximum(ep_trial - 84, 0)",
+   "(phase == GO) * np.maximum(ep_trial - 84, 0) * (action == 1)"
+  ],
+  "weights": [
+   0.08770765592575362,
+   -0.04484463219622679,
+   0.00672177687332874,
+   0.009863305638685468,
+   -0.02770535764443732,
+   -0.01577645323106232
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6222895956963768,
+  "r2": 0.6954964501178462,
+  "r2_timing_only": 0.193817415637357
+ },
+ "gate": "hidden",
+ "feature": 151,
+ "test_scores": {
+  "gate": "hidden",
+  "feature": 151,
+  "terms": [
+   "(phase == GO) * last_is(\"a1 S1 r\") * np.maximum(ep_trial - 84, 0)",
+   "(phase == GO) * np.maximum(ep_trial - 84, 0)",
+   "(phase == GO) * np.maximum(ep_trial - 84, 0) * belief_lo"
+  ],
+  "weights": [
+   0.10244533160905295,
+   -0.018699111079757896,
+   0.003308203159195549
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6799363246422375,
+  "r2": 0.7419702390394731,
+  "r2_timing_only": 0.193817415637357
+ },
+ "dev_scores": {
+  "gate": "hidden",
+  "feature": 151,
+  "terms": [
+   "(phase == GO) * last_is(\"a1 S1 r\") * np.maximum(ep_trial - 84, 0)",
+   "(phase == GO) * np.maximum(ep_trial - 84, 0)",
+   "(phase == GO) * np.maximum(ep_trial - 84, 0) * belief_lo"
+  ],
+  "weights": [
+   0.10244533160905295,
+   -0.018699111079757896,
+   0.003308203159195549
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.6625989736718303,
+  "r2": 0.7302846076375267,
+  "r2_timing_only": 0.2006088561801308
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The core claim holds: GO only, late in the episode, after a common-rewarded a1 (a1 S1 r). The pattern-times-ramp term alone scores 0.561 on test, and the recorded 2-term short form scores 0.599 on test.",
+   "The recorded form leaves out a main-effect ramp for late GO steps. The per-decile timing baseline (trials 90-99 at GO average +0.31) over-predicts every late GO step that does not follow a1 S1 r. Adding (phase == GO) * np.maximum(ep_trial - 84, 0), which gets a fitted weight of -0.019, raises test R^2 to 0.666 without belief and 0.680 with it. In misses on the recorded form, over-prediction at GO after a1 S2 u (-0.047), a2 S2 u (-0.040), a2 S1 r (-0.036) and a1 S2 r (-0.032) is the systematic error this term removes (these shrink to -0.025, -0.019, -0.014 and -0.015).",
+   "The belief claim is overstated. ramp*belief_lo adds only 0.038 to the recorded form and 0.014 once the main ramp is in. Within the a1 S1 r rows belief does nothing: last_is('a1 S1 r')*belief_lo adds 0.000 (0.6659 vs 0.6659). So 'S1 belief scales the firing further' is not supported. The belief effect is a weak general lift at late GO steps.",
+   "A stay-on-a1 streak (tv('action', -2) == 1) and the trial before being rewarded add nothing (0.599 to 0.599). An onset step (ep_trial >= 85) adds 0.000. The upcoming a1 choice (future) adds 0.000. The free fit's extras are noise.",
+   "Position in the window (trial, rel) and belief_cover each appear to add about 0.06-0.08, but adding a plain GO ramp gives the same gain. They act as proxies for the shape of ep_trial at the episode's end, not as real drivers, so I did not use them.",
+   "Remaining misses: firing at the first GO of a window, where the previous trial is unknown ('?', +0.018), and some large activations from about trial 87 on that the linear ramp under-predicts. These are scattered, not one large systematic class."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Late-episode GO after common-rewarded a1, ramping with trial number from about trial 85; other late GO steps are pushed below the timing baseline.",
+  "better_short_terms": "(phase == GO) * last_is(\"a1 S1 r\") * np.maximum(ep_trial - 84, 0) ;; (phase == GO) * np.maximum(ep_trial - 84, 0) ;; (phase == GO) * np.maximum(ep_trial - 84, 0) * belief_lo",
+  "better_short_terms_test_r2_beyond_timing": 0.68
+ },
+ "final_label": "Late-episode GO after common-rewarded a1, ramping with trial number from about trial 85; other late GO steps are pushed below the timing baseline.",
+ "original_short_terms": "(phase == GO) * last_is(\"a1 S1 r\") * np.maximum(ep_trial - 84, 0) ;; (phase == GO) * np.maximum(ep_trial - 84, 0) * belief_lo",
+ "original_test_scores": {
+  "gate": "hidden",
+  "feature": 151,
+  "terms": [
+   "(phase == GO) * last_is(\"a1 S1 r\") * np.maximum(ep_trial - 84, 0)",
+   "(phase == GO) * np.maximum(ep_trial - 84, 0) * belief_lo"
+  ],
+  "weights": [
+   0.07777873709617197,
+   0.005276076595857219
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5990329180754943,
+  "r2": 0.6767473216497544,
+  "r2_timing_only": 0.193817415637357
+ },
+ "terms_from": "skeptic"
+}

@@ -1,0 +1,83 @@
+{
+  "label": "update gate dips after rewarded trials (esp. S2-rewarded) at D1/GO, rises after unrewarded",
+  "terms": "(phase == D1) * table(prev_action*100+prev_state*10+prev_reward, {111: 0.06, 110: 0.19, 121: -0.12, 120: 0.05, 221: -0.13, 220: 0.03, 211: -0.05, 210: 0.10}) ;; (phase == GO) * table(prev_action*100+prev_state*10+prev_reward, {111: -0.06, 110: 0.07, 121: -0.10, 120: 0.0, 221: 0.0, 220: 0.07, 211: 0.0, 210: 0.12}) ;; (phase == D1) * table(prev_action*100+prev_state*10+prev_reward, {111: 0.06, 110: 0.19, 121: -0.12, 120: 0.05, 221: -0.13, 220: 0.03, 211: -0.05, 210: 0.10}) * ep_dec ;; (phase == GO) * table(prev_action*100+prev_state*10+prev_reward, {111: -0.06, 110: 0.07, 121: -0.10, 120: 0.0, 221: 0.0, 220: 0.07, 211: 0.0, 210: 0.12}) * ep_dec ;; (phase != D2) * isin((tv(\"action\", -2)*100+tv(\"state\", -2)*10+tv(\"reward\", -2)), [121, 221]) ;; (phase != D2) * isin((tv(\"action\", -2)*100+tv(\"state\", -2)*10+tv(\"reward\", -2)), [110, 210]) ;; (phase == D1) * belief_lo * ep_dec ;; (phase == GO) * belief_lo * ep_dec",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 27. Timing (falls over the episode, near 1 at D2) gives R^2 0.89; beyond timing the magnitude is set mainly by the previous trial's choice/state/reward at D1 and GO (D2 hardly varies). At D1 a rewarded previous trial lowers z, most after reaching S2 (a1 S2 r, a2 S2 r about -0.12/-0.13), while unrewarded trials raise it, most after reaching S1 (a1 S1 u +0.19, a2 S1 u +0.10); at GO unrewarded trials (a2 S1 u, a1 S1 u, a2 S2 u) raise it and a1 S1 r / a1 S2 r lower it. The last-trial tables alone score 0.58 dev; letting them grow with episode decade, adding the trial before (rewarded S2 / unrewarded S1) and the ideal-observer belief log-odds (D1 positive, GO negative, scaled with time) brings test R^2 beyond timing to 0.60 (ceiling all 0.67, all observed 0.64). Belief itself adds only ~0.01 beyond the last-trial pattern; the earlier model-policy cue (policy decile reference 0.36) is not needed, so observed-only loses little. Residual misses are long reward streaks late in the episode where z falls further than predicted.",
+  "gate": "unit_update",
+  "feature": 27,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 27,
+    "terms": [
+      "(phase == D1) * table(prev_action*100+prev_state*10+prev_reward, {111: 0.06, 110: 0.19, 121: -0.12, 120: 0.05, 221: -0.13, 220: 0.03, 211: -0.05, 210: 0.10})",
+      "(phase == GO) * table(prev_action*100+prev_state*10+prev_reward, {111: -0.06, 110: 0.07, 121: -0.10, 120: 0.0, 221: 0.0, 220: 0.07, 211: 0.0, 210: 0.12})",
+      "(phase == D1) * table(prev_action*100+prev_state*10+prev_reward, {111: 0.06, 110: 0.19, 121: -0.12, 120: 0.05, 221: -0.13, 220: 0.03, 211: -0.05, 210: 0.10}) * ep_dec",
+      "(phase == GO) * table(prev_action*100+prev_state*10+prev_reward, {111: -0.06, 110: 0.07, 121: -0.10, 120: 0.0, 221: 0.0, 220: 0.07, 211: 0.0, 210: 0.12}) * ep_dec",
+      "(phase != D2) * isin((tv(\"action\", -2)*100+tv(\"state\", -2)*10+tv(\"reward\", -2)), [121, 221])",
+      "(phase != D2) * isin((tv(\"action\", -2)*100+tv(\"state\", -2)*10+tv(\"reward\", -2)), [110, 210])",
+      "(phase == D1) * belief_lo * ep_dec",
+      "(phase == GO) * belief_lo * ep_dec"
+    ],
+    "weights": [
+      0.8553522033462025,
+      0.45345951356739533,
+      0.0201831382813886,
+      0.10586890675870873,
+      -0.0026337778247591728,
+      0.01388572294867855,
+      0.0007555635183987511,
+      -0.00043785250085653417
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6045265341721344,
+    "r2": 0.958255392838824,
+    "r2_timing_only": 0.8944439747081645
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 27,
+    "terms": [
+      "(phase == D1) * table(prev_action*100+prev_state*10+prev_reward, {111: 0.06, 110: 0.19, 121: -0.12, 120: 0.05, 221: -0.13, 220: 0.03, 211: -0.05, 210: 0.10})",
+      "(phase == GO) * table(prev_action*100+prev_state*10+prev_reward, {111: -0.06, 110: 0.07, 121: -0.10, 120: 0.0, 221: 0.0, 220: 0.07, 211: 0.0, 210: 0.12})",
+      "(phase == D1) * table(prev_action*100+prev_state*10+prev_reward, {111: 0.06, 110: 0.19, 121: -0.12, 120: 0.05, 221: -0.13, 220: 0.03, 211: -0.05, 210: 0.10}) * ep_dec",
+      "(phase == GO) * table(prev_action*100+prev_state*10+prev_reward, {111: -0.06, 110: 0.07, 121: -0.10, 120: 0.0, 221: 0.0, 220: 0.07, 211: 0.0, 210: 0.12}) * ep_dec",
+      "(phase != D2) * isin((tv(\"action\", -2)*100+tv(\"state\", -2)*10+tv(\"reward\", -2)), [121, 221])",
+      "(phase != D2) * isin((tv(\"action\", -2)*100+tv(\"state\", -2)*10+tv(\"reward\", -2)), [110, 210])",
+      "(phase == D1) * belief_lo * ep_dec",
+      "(phase == GO) * belief_lo * ep_dec"
+    ],
+    "weights": [
+      0.8553522033462025,
+      0.45345951356739533,
+      0.0201831382813886,
+      0.10586890675870873,
+      -0.0026337778247591728,
+      0.01388572294867855,
+      0.0007555635183987511,
+      -0.00043785250085653417
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6048100329667458,
+    "r2": 0.9586940817055103,
+    "r2_timing_only": 0.8954783224772154
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor overclaim in the label. 'z dips after rewarded trials' does not hold for every pattern. At D1, a1 S1 r has residual +0.058, so z goes up. At GO, a2 S1 r (-0.002) and a2 S2 r (-0.007) are about zero, so the GO dip after reward only shows up after a1 choices (a1 S1 r -0.064, a1 S2 r -0.096). The D1 pattern fits two additive effects better: reaching S1 raises z and a reward lowers it. The explanation text gets the tables right; the label simplifies them.",
+      "'D2 barely varies' holds only for most of the episode. Late in the episode (deciles 8-9, D2 baseline falls to 0.82), D2 errors are common among the worst-fit windows: actual 0.55-0.75 against predicted 0.82, mostly after reaching S1. Adding (phase==D2)*(state==S1)*late and (phase==D2)*(prev_reward==1)*late raises test R^2 from 0.596 to 0.612. The gain is small but real.",
+      "The trial-before terms add almost nothing. On test, tables+decile score 0.596, adding the two trial-before terms gives 0.598, and their fitted weights are -0.003 and +0.014. Belief x decile adds about 0.006 (0.596 -> 0.602), which matches the claim. These two components are close to negligible.",
+      "The residual misses are framed as 'long reward streaks late in the episode', but a reward-streak count x ep_dec term at D1/GO adds only 0.003 (0.599). The late-episode error is better described as general late-episode drift (including at D2) than as reward streaks.",
+      "Checks that passed: the reported score reproduces exactly (test 0.6045); the last-trial tables alone score 0.577 on test; the misses tool's mean error per phase is at most 0.002 and per (phase, previous trial) at most 0.014, so no large systematic class remains; no future variables are used; the belief weight signs (positive at D1, negative at GO) match."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "At D1/GO, z goes up after reaching S1 and down after a reward. The most extreme cases are S1 unrewarded (+) and S2 rewarded (-), and the effect grows over the episode. Late in the episode z also dips at D2 after reaching S1.",
+    "better_terms": "D1 table ;; GO table ;; D1 table * ep_dec ;; GO table * ep_dec ;; (phase==D2)*(state==S1)*table(ep_dec,{7:0.3,8:1.0,9:3.0}) ;; (phase==D2)*(prev_reward==1)*table(ep_dec,{7:0.3,8:1.0,9:3.0}) ;; (phase != D2)*belief_lo*ep_dec*np.where(phase==D1,1,-1)  (tables as in the original terms)",
+    "better_terms_test_r2_beyond_timing": 0.6187
+  },
+  "final_label": "At D1/GO, z goes up after reaching S1 and down after a reward. The most extreme cases are S1 unrewarded (+) and S2 rewarded (-), and the effect grows over the episode. Late in the episode z also dips at D2 after reaching S1."
+}

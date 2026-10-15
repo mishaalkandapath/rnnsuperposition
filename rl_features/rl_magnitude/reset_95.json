@@ -1,0 +1,112 @@
+{
+ "label": "Fires at D1 after a2 reached S2, most if rewarded, graded by belief S2 good.",
+ "short_terms": "(phase == D1) * last_is(\"a2 S2 r\") ;; (phase == D1) * (prev_state == 1) ;; (phase == D1) * (prev_action == -1) * (-belief_lo)",
+ "terms": "(phase == D1) * last_is(\"a2 S2 r\") ;; (phase == D1) * last_is(\"a2 S2 u\") ;; (phase == D1) * (-belief_lo) ;; (phase == D1) * (prev_action == 2) * (-belief_lo) ;; (phase == D1) * (tv(\"action\", -2) == 2) * (prev_action == 2) ;; (phase == D1) * last_is(\"a2 S2 r\") * (tv(\"reward\", -2) == 1) ;; (phase == D1) * (prev_action == 2) * (prev_state == 1) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * (prev_reward == 0)",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "D1-only feature (zero at GO/D2), timing baseline decays toward episode end. Beyond timing it is high when the previous trial was a2 -> S2 (common), strongest when rewarded (+0.93) and weaker when unrewarded (+0.48), and it rises graded with the observer belief that S2 is good (negative belief_lo). After any other previous trial (a1, or a2 rare to S1) it is near zero; a2 S1 u is the most suppressed and the short form over-predicts it. The free fit adds an explicit a2->S1 suppression, a bonus for a2 S2 r preceded by another reward (two rewarded S2 trials in a row), and a belief x a2 interaction. It does not depend on future reward. Observed-only: no model outputs used. Short form test 0.465 is 81% of the free fit 0.573.",
+ "full_test_scores": {
+  "gate": "reset",
+  "feature": 95,
+  "terms": [
+   "(phase == D1) * last_is(\"a2 S2 r\")",
+   "(phase == D1) * last_is(\"a2 S2 u\")",
+   "(phase == D1) * (-belief_lo)",
+   "(phase == D1) * (prev_action == 2) * (-belief_lo)",
+   "(phase == D1) * (tv(\"action\", -2) == 2) * (prev_action == 2)",
+   "(phase == D1) * last_is(\"a2 S2 r\") * (tv(\"reward\", -2) == 1)",
+   "(phase == D1) * (prev_action == 2) * (prev_state == 1)",
+   "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (prev_reward == 0)"
+  ],
+  "weights": [
+   0.8871498137071123,
+   0.42623979311985205,
+   0.22193457272736902,
+   -0.1319086947796275,
+   -0.06537441829471663,
+   0.3782051025734844,
+   -0.7980210951486353,
+   0.06750147212562901
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5727462876973979,
+  "r2": 0.6905341628265189,
+  "r2_timing_only": 0.2756860191906253
+ },
+ "gate": "reset",
+ "feature": 95,
+ "test_scores": {
+  "gate": "reset",
+  "feature": 95,
+  "terms": [
+   "(phase == D1) * last_is(\"a2 S2 r\")",
+   "(phase == D1) * (prev_state == 1)",
+   "(phase == D1) * (prev_action == -1) * (-belief_lo)"
+  ],
+  "weights": [
+   1.3083124964086126,
+   -0.6819962033497728,
+   0.27647117343258426
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5555858640366633,
+  "r2": 0.678104628052437,
+  "r2_timing_only": 0.2756860191906253
+ },
+ "dev_scores": {
+  "gate": "reset",
+  "feature": 95,
+  "terms": [
+   "(phase == D1) * last_is(\"a2 S2 r\")",
+   "(phase == D1) * (prev_state == 1)",
+   "(phase == D1) * (prev_action == -1) * (-belief_lo)"
+  ],
+  "weights": [
+   1.3083124964086126,
+   -0.6819962033497728,
+   0.27647117343258426
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.5695068422763377,
+  "r2": 0.689436648137664,
+  "r2_timing_only": 0.2785870198157956
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The label says the feature is 'graded by belief S2 good', but the belief grading is not inside the a2->S2 case. Restricting the belief term to a2 trials, (phase == D1) * (prev_action == 2) * (-belief_lo), adds nothing over the two last_is terms: test 0.367 vs 0.367 without any belief term. The S2-good side alone, np.maximum(-belief_lo, 0), also adds nothing (0.368). Only the S1-good side carries the gain: np.maximum(belief_lo, 0) scores 0.504, above the recorded 0.465.",
+   "The belief term is really standing in for history. Swapping it for a plain (phase == D1) * (prev_state == 1) indicator scores 0.500 on test, better than the recorded 0.465 with no belief at all. (prev_action == 1) scores 0.490. abs(belief_lo) (0.459) and belief_cover (0.464) do about as well as -belief_lo. So the term acts as a fitted correction for 'previous trial was not a2->S2' and for window-first trials whose previous trial is unknown. It is not a graded readout of belief.",
+   "Misses on the recorded short form show a large systematic error. It over-predicts D1 after 'a2 S1 u' by -1.07, after 'a1 S1 u' by -0.58, after 'a2 S1 r' by -0.55 and after 'a1 S2 r' by -0.45. It also predicts a constant -0.08 at GO and D2, where the feature is exactly 0. These are history classes where the feature is off, and the belief term pushes them up whenever belief leans to S2.",
+   "The window-first D1 steps (previous trial '?', residual +0.08) are where belief really helps: it predicts whether the unseen previous trial was a2->S2. Limiting the belief term to those steps, (phase == D1) * (prev_action == -1) * (-belief_lo), next to a prev-S1 penalty gives the best short form (test 0.556, 97% of the free fit's 0.573).",
+   "Remaining errors for the better form: it over-predicts after a1 reached S2 by a rare transition (-0.6 to -0.67) and under-predicts after 'a2 S2 u' (+0.33). These are smaller than the recorded form's errors and confined to less common cases."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "D1 only: high after a2 reached S2 (largest if rewarded), off after S1 reached.",
+  "better_short_terms": "(phase == D1) * last_is(\"a2 S2 r\") ;; (phase == D1) * (prev_state == 1) ;; (phase == D1) * (prev_action == -1) * (-belief_lo)",
+  "better_short_terms_test_r2_beyond_timing": 0.5555858640366633
+ },
+ "final_label": "D1 only: high after a2 reached S2 (largest if rewarded), off after S1 reached.",
+ "original_short_terms": "(phase == D1) * last_is(\"a2 S2 r\") ;; (phase == D1) * last_is(\"a2 S2 u\") ;; (phase == D1) * (-belief_lo)",
+ "original_test_scores": {
+  "gate": "reset",
+  "feature": 95,
+  "terms": [
+   "(phase == D1) * last_is(\"a2 S2 r\")",
+   "(phase == D1) * last_is(\"a2 S2 u\")",
+   "(phase == D1) * (-belief_lo)"
+  ],
+  "weights": [
+   0.93067757107309,
+   0.4745210999503403,
+   0.14409342954564647
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.4650247461442142,
+  "r2": 0.61250994424521,
+  "r2_timing_only": 0.2756860191906253
+ },
+ "terms_from": "skeptic"
+}

@@ -1,0 +1,80 @@
+{
+  "label": "D1 after unrewarded S2 visit; larger after repeated S2 losses and early in the episode",
+  "terms": "(phase == D1) * (prev_state == 2) * (prev_reward == 0) ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv(\"state\", -2) == 2) * (tv(\"reward\", -2) == 0) ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * belief ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv(\"reward\", -2) != 1) * (tv(\"reward\", -3) != 1) ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * np.exp(-ep_trial / 2) ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * (100 - ep_trial) ;; (phase == D1) * (prev_state == -1) * (in_rew == 0) * belief",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Silent at GO and D2. At D1 it fires almost only when the previous trial reached S2 and was not rewarded, whichever action was chosen (a1 rare or a2 common); after any S1 visit or any reward it is near zero. Magnitude beyond that gate: (1) much larger when the trial before was also an unrewarded S2 visit (weight about +0.35), and a little larger when neither of the two earlier trials was rewarded; (2) strongly larger in the first few trials of the episode (exp(-ep_trial/2) term, about +0.56) and declining linearly over the episode (the S2-loss indicator alone gets a negative weight that the (100 - ep_trial) term offsets); (3) larger when the ideal-observer belief favours S1 (about +0.10 per unit belief). On a window's first trial (previous trial not visible), an unrewarded D1 scaled by belief stands in. Observed-only terms; dev R^2 beyond timing 0.497, test 0.506, above the additive 'all' ceiling 0.33 (all observed 0.29) because the terms are interactions. Adding the future upcoming choice (action == 1) or prev_action did not help (0.47-0.48 dev with fewer other terms), so swapping the model's value/policy for belief and history loses little or nothing here; the earlier model-based pass reported only firing F1 (0.58), not magnitude R^2. Leftover misses: some large firings before the agent switches to a1, and a slight over-prediction at D1 after a2 S2 u.",
+  "gate": "update",
+  "feature": 11,
+  "test_scores": {
+    "gate": "update",
+    "feature": 11,
+    "terms": [
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0)",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv(\"state\", -2) == 2) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * belief",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv(\"reward\", -2) != 1) * (tv(\"reward\", -3) != 1)",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * np.exp(-ep_trial / 2)",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * (100 - ep_trial)",
+      "(phase == D1) * (prev_state == -1) * (in_rew == 0) * belief"
+    ],
+    "weights": [
+      -0.2015219489266969,
+      0.3470312885236259,
+      0.10147866308589942,
+      0.09207768986298384,
+      0.5635117393470888,
+      0.0036163680502186587,
+      0.14623539539592806
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5064313020255181,
+    "r2": 0.5403765378048462,
+    "r2_timing_only": 0.06877509841818019
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 11,
+    "terms": [
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0)",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv(\"state\", -2) == 2) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * belief",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv(\"reward\", -2) != 1) * (tv(\"reward\", -3) != 1)",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * np.exp(-ep_trial / 2)",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * (100 - ep_trial)",
+      "(phase == D1) * (prev_state == -1) * (in_rew == 0) * belief"
+    ],
+    "weights": [
+      -0.2015219489266969,
+      0.3470312885236259,
+      0.10147866308589942,
+      0.09207768986298384,
+      0.5635117393470888,
+      0.0036163680502186587,
+      0.14623539539592806
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.4973451945447227,
+    "r2": 0.5308643925465849,
+    "r2_timing_only": 0.06668432816732417
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claims hold up. On test the terms give R^2 beyond timing of 0.506, against 0.07 for timing alone. Activation is exactly 0 at GO and D2. At D1 the residual is positive only after S2 u (a1 S2 u +0.131, a2 S2 u +0.149); every other previous-trial pattern sits near -0.03. So the claim that the action doesn't matter is roughly right.",
+      "The explanation gives too much weight to the early-episode exp term and to belief. Dropping both terms leaves test R^2 at 0.496, against 0.506 with them; dropping only the exp term gives 0.503. Most of the score comes from three things: the base S2-u gate, the repeated-S2-loss term (+0.35 to +0.39), and the linear (100 - ep_trial) decline, which is worth about +0.4 at trial 0. With those three plus the first-trial stand-in, test R^2 is 0.47. The early-trial boost itself is real ((ep_trial<3) weight +0.49) but it covers very few rows.",
+      "The explanation says D1 after a2 S2 u is 'slightly over-predicted'. Misses shows the opposite: it is the most under-predicted cell, at +0.020 (+0.016 with my extended terms). The leftover per-cell errors are small (|err| <= 0.025, mostly intercept offsets in cells where the feature is silent), so no large systematic error class remains.",
+      "One driver is missing: an S2 loss right after the agent switched action (choice two trials back differs from the previous choice) adds about +0.15 to +0.19. Adding it, plus a flag for 'two trials back not in the window', only takes test R^2 from 0.506 to 0.511.",
+      "The worst misses are activations near 1.0 mid-episode that are predicted at 0.1-0.3. They fall on the window's first trial or second trial, where the earlier loss streak is cut off by the window edge, so most of the unexplained variance comes from the limited window, not a wrong mechanism.",
+      "All terms are observed-only, so nothing needed an observed-only replacement for a future variable."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after unrewarded S2 visit; bigger after repeated S2 losses (or a loss right after switching), declining over the episode",
+    "better_terms": "(phase == D1) * (prev_state == 2) * (prev_reward == 0) ;; X * (100 - ep_trial) ;; X*(tv('state',-2)==2)*(tv('reward',-2)==0) ;; (phase == D1) * (prev_state == -1) * (in_rew == 0)*belief ;; X*(tv('action',-2)!=prev_action)*(tv('action',-2)>0) ;; X*(tv('action',-2)==-9) ;; X*belief ;; X*(tv('reward',-2)!=1)*(tv('reward',-3)!=1)   [X = (phase == D1) * (prev_state == 2) * (prev_reward == 0)]",
+    "better_terms_test_r2_beyond_timing": 0.511
+  },
+  "final_label": "D1 after unrewarded S2 visit; bigger after repeated S2 losses (or a loss right after switching), declining over the episode"
+}

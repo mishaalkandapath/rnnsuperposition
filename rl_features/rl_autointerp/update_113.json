@@ -1,0 +1,105 @@
+{
+  "label": "Late-episode D1 after a common, unrewarded a2 -> S2 trial (mild a2 preference)",
+  "predicate": "(phase == D1) & (prev_reward == 0) & (prev_common != 0) & (prev_action != 1) & (choice < -1.52) & (choice > -4.44) & (value < 4.3)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (never GO/D2), and almost only in the last 10 trials of an episode (trials 90-99 hold 99.5% of the mass; there the value head is in its lowest bin, below 5.22). Every activation has no reward shown at D1 (prev_reward 0), and the previous trial was a common transition after choosing a2 (prev_action 2, prev_common 1, or unknown at the window start). It never fires after a1, after a rare transition, or after a reward. Among such steps it is picked out by the model policy logit at D1 being moderately a2-leaning (choice between -4.44 and -1.52), so the agent is about to stay on a2. Without the choice term (D1, late episode, common-unrewarded a2) dev F1 is about 0.56-0.60 (precision 0.41-0.43, recall 0.88-0.99); adding the choice band raises dev F1 to 0.83 (P 0.73, R 0.98, mass recall 0.99). Every predicate variable is observed or internal to the model (choice is the model logit); no future reward or transition is used. Magnitude is fairly uniform (median 0.187 of max 0.284) and I did not find what modulates it.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 113,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (prev_common != 0) & (prev_action != 1) & (choice < -1.52) & (choice > -4.44) & (value < 4.3)",
+    "split": "test",
+    "precision": 0.906108026249369,
+    "recall": 0.9467299578059072,
+    "f1": 0.9259736909981945,
+    "mass_recall": 0.9888424381491228,
+    "correlation": 0.8759433332665703,
+    "n_active": 1896,
+    "n_predicted": 1981,
+    "coverage_by_activation_quartile": [
+      0.7869198312236287,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 113,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (prev_common != 0) & (prev_action != 1) & (choice < -1.52) & (choice > -4.44) & (value < 4.3)",
+    "split": "dev",
+    "precision": 0.9137254901960784,
+    "recall": 0.9748953974895398,
+    "f1": 0.9433198380566801,
+    "mass_recall": 0.9956988050620297,
+    "correlation": 0.8829192466748816,
+    "n_active": 1673,
+    "n_predicted": 1785,
+    "coverage_by_activation_quartile": [
+      0.9045346062052506,
+      0.9952153110047847,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 113,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The factual claims check out on dev. All activation is at D1 (GO and D2 have 0 active steps). prev_reward is always 0. prev_action is 2 (89.7% of mass) or -1 (unknown, 10.3%), never 1. prev_common is 1 or -1, never 0. Trials 90-99 hold 99.5% of the mass. All activation falls in value bin <5.22. Choice in [-4.44,-1.52) holds 99.7% of the mass. Re-scoring the original predicate reproduces dev P 0.727 / R 0.975 / F1 0.833 and test F1 0.80.",
+      "Systematic false positives: the ep_trial >= 90 cutoff is a poor proxy, because the feature ramps up over the last trials. With the other terms held fixed, precision by ep_trial is 90: 0.22, 91: 0.31, 92: 0.52, 93: 0.74, then 94-99: 0.91-0.98. Most of the 613 dev false positives come from trials 90-92. This is a systematic class, not scattered noise.",
+      "The real gate is the value estimate, not the trial index. Replacing ep_trial >= 90 with value < 4.3 (an internal variable the model can observe) raises dev F1 from 0.833 to 0.943 (P 0.914, R 0.975, mass 0.996) and test F1 from 0.80 to 0.926 (P 0.906, R 0.947, mass 0.989). value < 4.2 gives dev F1 0.941. Trial-index cutoffs of 92 and 93 give dev F1 0.875 and 0.863, both worse than the value threshold.",
+      "The original explanation names 'value head is in its lowest bin (<5.22)' only as a side observation. Used as a predicate, it is too loose (dev F1 0.75 with the choice band). The tighter threshold, about 4.3, is what fixes the false positives.",
+      "The label slightly overclaims by saying 'after a common, unrewarded a2 -> S2 trial'. About 10% of the mass is at the window's first trial, where the previous trial is unknown (prev_action = -1). The explanation mentions this but the label does not.",
+      "Remaining test misses and false positives under the improved predicate (101 missed steps holding 1.1% of the mass, 186 false positives) look scattered and low-activation, with no remaining phase, transition or reward pattern."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 with no reward shown after a common a2 -> S2 trial (or with the previous trial unknown), when the value estimate is very low (end of episode, value < ~4.3) and the policy leans moderately toward a2",
+    "better_predicate": "(phase == D1) & (prev_reward == 0) & (prev_common != 0) & (prev_action != 1) & (choice < -1.52) & (choice > -4.44) & (value < 4.3)",
+    "better_predicate_test_f1": 0.926
+  },
+  "final_label": "D1 with no reward shown after a common a2 -> S2 trial (or with the previous trial unknown), when the value estimate is very low (end of episode, value < ~4.3) and the policy leans moderately toward a2",
+  "original_predicate": "(phase == D1) & (prev_reward == 0) & (prev_common != 0) & (prev_action != 1) & (ep_trial >= 90) & (choice < -1.52) & (choice > -4.44)",
+  "original_test_scores": {
+    "gate": "update",
+    "feature": 113,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (prev_common != 0) & (prev_action != 1) & (ep_trial >= 90) & (choice < -1.52) & (choice > -4.44)",
+    "split": "test",
+    "precision": 0.6911256242796773,
+    "recall": 0.9488396624472574,
+    "f1": 0.7997332740609023,
+    "mass_recall": 0.9821994862897645,
+    "correlation": 0.7588058501729923,
+    "n_active": 1896,
+    "n_predicted": 2603,
+    "coverage_by_activation_quartile": [
+      0.8143459915611815,
+      0.9831223628691983,
+      0.9978902953586498,
+      1.0
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "update",
+    "feature": 113,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (prev_common != 0) & (prev_action != 1) & (ep_trial >= 90) & (choice < -1.52) & (choice > -4.44)",
+    "split": "dev",
+    "precision": 0.7269487750556793,
+    "recall": 0.9754931261207412,
+    "f1": 0.8330781010719757,
+    "mass_recall": 0.9911623786455346,
+    "correlation": 0.7835314432101143,
+    "n_active": 1673,
+    "n_predicted": 2245,
+    "coverage_by_activation_quartile": [
+      0.9116945107398569,
+      0.9952153110047847,
+      0.9952153110047847,
+      1.0
+    ]
+  },
+  "predicate_from": "skeptic"
+}

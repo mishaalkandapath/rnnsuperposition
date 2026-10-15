@@ -1,0 +1,109 @@
+{
+ "label": "Late in the episode, D2 arrival at S1 after choosing a2, strongest when coming from S2.",
+ "short_terms": "(in_state == 1) * (in_action == 2) * np.maximum(ep_trial - 75, 0) ;; (in_state == 1) * (prev_reward + (prev_state == 2)) * np.maximum(ep_trial - 75, 0) ;; (in_state > 0) * np.maximum(ep_trial - 75, 0)",
+ "terms": "(in_action == 2) * (in_state == 1) * np.maximum(ep_trial - 70, 0) ;; (in_state > 0) * np.maximum(ep_trial - 70, 0) ;; (in_action == 2) * (in_state == 1) * (prev_reward == 1) * np.maximum(ep_trial - 70, 0) ;; (in_action == 2) * (in_state == 1) * last_is(\"a2 S1 u\") * np.maximum(ep_trial - 70, 0) ;; (in_action == 2) * (in_state == 1) * (prev_state == 2) * np.maximum(ep_trial - 70, 0) ;; (in_action == 2) * (in_state == 1) * belief_lo * np.maximum(ep_trial - 70, 0)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Fires only at D2 and only in the last ~30 trials of the episode. Its size grows roughly linearly with ep_trial past ~70, on rare a2 -> S1 arrivals (observed at D2 as in_action = 2 and in_state = 1). Arriving at S1 when the previous trial reached S2 adds a lot; other D2 arrivals sit below the D2 timing mean (the negative third term). The free fit (dev 0.81 vs short 0.705) adds that a2 -> S1 fires more when the previous trial was rewarded and less after a2 S1 unrewarded, so it is suppressed on repeated a2 -> S1 trials. The belief log-odds adds nothing. Nothing happens at D1/GO. All terms are observed at D2.",
+ "full_test_scores": {
+  "gate": "hidden",
+  "feature": 69,
+  "terms": [
+   "(in_action == 2) * (in_state == 1) * np.maximum(ep_trial - 70, 0)",
+   "(in_state > 0) * np.maximum(ep_trial - 70, 0)",
+   "(in_action == 2) * (in_state == 1) * (prev_reward == 1) * np.maximum(ep_trial - 70, 0)",
+   "(in_action == 2) * (in_state == 1) * last_is(\"a2 S1 u\") * np.maximum(ep_trial - 70, 0)",
+   "(in_action == 2) * (in_state == 1) * (prev_state == 2) * np.maximum(ep_trial - 70, 0)",
+   "(in_action == 2) * (in_state == 1) * belief_lo * np.maximum(ep_trial - 70, 0)"
+  ],
+  "weights": [
+   0.01768038596777272,
+   -0.006964677242145469,
+   0.031615470636172996,
+   -0.018222028046525285,
+   0.021451566938498864,
+   0.0007976878062014907
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.8129385619861795,
+  "r2": 0.8479389939992932,
+  "r2_timing_only": 0.1871066125907136
+ },
+ "gate": "hidden",
+ "feature": 69,
+ "test_scores": {
+  "gate": "hidden",
+  "feature": 69,
+  "terms": [
+   "(in_state == 1) * (in_action == 2) * np.maximum(ep_trial - 75, 0)",
+   "(in_state == 1) * (prev_reward + (prev_state == 2)) * np.maximum(ep_trial - 75, 0)",
+   "(in_state > 0) * np.maximum(ep_trial - 75, 0)"
+  ],
+  "weights": [
+   0.042857008159132695,
+   0.0222387789736699,
+   -0.01666372470906933
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7951833152377304,
+  "r2": 0.8335058713256587,
+  "r2_timing_only": 0.1871066125907136
+ },
+ "dev_scores": {
+  "gate": "hidden",
+  "feature": 69,
+  "terms": [
+   "(in_state == 1) * (in_action == 2) * np.maximum(ep_trial - 75, 0)",
+   "(in_state == 1) * (prev_reward + (prev_state == 2)) * np.maximum(ep_trial - 75, 0)",
+   "(in_state > 0) * np.maximum(ep_trial - 75, 0)"
+  ],
+  "weights": [
+   0.042857008159132695,
+   0.0222387789736699,
+   -0.01666372470906933
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.7952159306533143,
+  "r2": 0.8329150456041624,
+  "r2_timing_only": 0.18409202957592374
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The recorded short form leaves out the previous trial's reward, and that causes a systematic error. In a free fit with one weight per previous trial for late a2->S1 arrivals (test 0.646), the weight after an unrewarded S1 trial is about zero (a2 S1 u -0.010, a1 S1 u -0.006). After a rewarded S1 trial it is about 0.03, after S2 unrewarded 0.037-0.048, and after S2 rewarded 0.056-0.061. So the feature is about silent when the previous trial was S1 unrewarded. It fires after S1 rewarded, more after S2, and most after S2 rewarded.",
+   "Misses on the recorded short form confirm this. The largest over-predictions are at D2 after a2 S1 u (-0.043), a1 S2 u (-0.033) and a2 S2 u (-0.028). The worst-fit windows are repeated a2->S1 arrivals after an unrewarded S1 trial: actual 0, predicted about 0.9-1.1.",
+   "The label says it is 'strongest when coming from S2' but says nothing about reward. A reader would predict firing after a2 S1 u, where it actually stays near zero.",
+   "The term (in_state==1)*(prev_state==2) is not limited to a2 choices. a1->S1 arrivals barely fire whatever the previous trial: an all-a1 fit gives test 0.012 beyond timing, with weights of 0.017 or less.",
+   "The ramp starting at trial 70 was a fitted choice. Starting it at 75 scores better: the recorded terms reach 0.715 and the revised terms 0.795 on test.",
+   "Checks that held up: the feature fires only at D2 (timing is zero at D1 and GO), only late in the episode, and on a2->S1 rare arrivals (this choice x state code 7 has residual +0.166). Belief adds little. The negative third term is a reasonable correction to the baseline, not curve fitting."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Late-episode D2 rare a2->S1 arrivals, silent after an unrewarded S1 trial, strongest after rewarded S2.",
+  "better_short_terms": "(in_state == 1) * (in_action == 2) * np.maximum(ep_trial - 75, 0) ;; (in_state == 1) * (prev_reward + (prev_state == 2)) * np.maximum(ep_trial - 75, 0) ;; (in_state > 0) * np.maximum(ep_trial - 75, 0)",
+  "better_short_terms_test_r2_beyond_timing": 0.795
+ },
+ "final_label": "Late-episode D2 rare a2->S1 arrivals, silent after an unrewarded S1 trial, strongest after rewarded S2.",
+ "original_short_terms": "(in_state == 1) * (in_action == 2) * np.maximum(ep_trial - 70, 0) ;; (in_state == 1) * (prev_state == 2) * np.maximum(ep_trial - 70, 0) ;; (in_state > 0) * np.maximum(ep_trial - 70, 0)",
+ "original_test_scores": {
+  "gate": "hidden",
+  "feature": 69,
+  "terms": [
+   "(in_state == 1) * (in_action == 2) * np.maximum(ep_trial - 70, 0)",
+   "(in_state == 1) * (prev_state == 2) * np.maximum(ep_trial - 70, 0)",
+   "(in_state > 0) * np.maximum(ep_trial - 70, 0)"
+  ],
+  "weights": [
+   0.036108925452376754,
+   0.0208527992506669,
+   -0.008791019319291394
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6979254096380085,
+  "r2": 0.7544455629903681,
+  "r2_timing_only": 0.1871066125907136
+ },
+ "terms_from": "skeptic"
+}

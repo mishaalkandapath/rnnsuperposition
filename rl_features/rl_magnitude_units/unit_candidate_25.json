@@ -1,0 +1,92 @@
+{
+  "label": "At D2, high after a1 reaches S2 (rare), low after a2 reaches S1; S2 after no reward raises it.",
+  "short_terms": "(phase == D2) * (action == 1) * (state == 2) ;; (phase == D2) * (action == 2) * (state == 1) ;; (phase == D2) * (state == 2) * (prev_reward == 0)",
+  "terms": "(phase == D2) * (action == 1) * (state == 2) ;; (phase == D2) * (action == 2) * (state == 1) ;; (phase == D2) * (action == 1) * (state == 1) ;; (phase == D2) * (state == 2) * (prev_reward == 0) ;; (phase == D2) * (action == 2) * (state == 2) * belief_lo ;; (phase == D2) * (action == 1) * (state == 1) * belief_lo ;; (phase != D2) * belief_lo ;; (phase != D2) * (prev_action == 1) * (prev_reward == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw candidate n of unit 25 sits near -1 at D1/GO and rises at D2; its magnitude beyond timing is almost entirely set at D2 by the just-made choice x reached state (both observed at D2): a1->S2 (rare) drives it strongly up (~+0.86), a2->S1 (rare) pushes it down (~-0.4), and reaching S2 after an unrewarded previous trial adds ~+0.2. So it is an S2-reached / rare-a1 detector modulated by previous loss. The free fit adds a smaller a1->S1 decrement, belief log-odds slopes within common transitions at D2 (higher when belief favors S1, i.e. S2 surprising), and small D1/GO effects (belief_lo, after a1 unrewarded), raising dev R2 from 0.76 to 0.84. No future variables used.",
+  "full_test_scores": {
+    "gate": "unit_candidate",
+    "feature": 25,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 2)",
+      "(phase == D2) * (action == 2) * (state == 1)",
+      "(phase == D2) * (action == 1) * (state == 1)",
+      "(phase == D2) * (state == 2) * (prev_reward == 0)",
+      "(phase == D2) * (action == 2) * (state == 2) * belief_lo",
+      "(phase == D2) * (action == 1) * (state == 1) * belief_lo",
+      "(phase != D2) * belief_lo",
+      "(phase != D2) * (prev_action == 1) * (prev_reward == 0)"
+    ],
+    "weights": [
+      0.8130392243921669,
+      -0.42222533496861425,
+      -0.19233645390163673,
+      0.26601802720975093,
+      0.05741584060805996,
+      0.025781460654427532,
+      0.007070354210716048,
+      0.05023097858306651
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8301391377598847,
+    "r2": 0.9082142969862625,
+    "r2_timing_only": 0.45964183977831696
+  },
+  "gate": "unit_candidate",
+  "feature": 25,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 25,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 2)",
+      "(phase == D2) * (action == 2) * (state == 1)",
+      "(phase == D2) * (state == 2) * (prev_reward == 0)"
+    ],
+    "weights": [
+      0.8554318767898264,
+      -0.3972551631266055,
+      0.2146113068134979
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7470076167585535,
+    "r2": 0.863293501241553,
+    "r2_timing_only": 0.45964183977831696
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 25,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 2)",
+      "(phase == D2) * (action == 2) * (state == 1)",
+      "(phase == D2) * (state == 2) * (prev_reward == 0)"
+    ],
+    "weights": [
+      0.8554318767898264,
+      -0.3972551631266055,
+      0.2146113068134979
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7588273168460695,
+    "r2": 0.8691788210634765,
+    "r2_timing_only": 0.4575622030417694
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I reproduced the short form's test R^2 beyond timing at 0.747 (weights +0.855 / -0.397 / +0.215). That is about 89% of the observed-only additive ceiling (0.84) and 90% of the free fit (0.83).",
+      "Every term is needed. Dropping the S2-after-loss term gives 0.696. Swapping it for D2*belief_lo gives 0.696, D2*S2*belief_lo 0.717, D2*S2*belief 0.741, D2*prev_reward==0 without the state 0.715, D2*S1*prev_reward==0 0.698, and D2*a1*prev_reward==0 0.697. So the specific claim 'S2 after no reward' holds up. Writing it as S2*(1-prev_reward) or (state!=1)*(prev_reward==0) scores the same (0.747).",
+      "The profile supports the choice x state claims. The D2 residual is a1S2 +0.90, a2S1 -0.43, a1S1 -0.13 and a2S2 about 0.",
+      "Minor omission: a1->S1 (common) at D2 is also somewhat low (-0.13). Adding it instead of the reward term gives only 0.726, and the label does not mention it.",
+      "Misses show modest systematic errors, none large. At D1/GO the prediction is about 0.03 too low, worst after a1 S2 u (+0.10 to +0.12). At D2 it is too high after a1 S2 r (-0.156) and a2 S2 r (-0.11).",
+      "The worst single windows are common a2->S2 at D2 during long unrewarded streaks: actual about +0.5 to +0.7, predicted about -0.2. The S2-after-loss term captures the direction of this but underestimates its size when losses repeat. That leaves some unexplained graded variance, which looks like accumulated losses or belief."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  }
+}

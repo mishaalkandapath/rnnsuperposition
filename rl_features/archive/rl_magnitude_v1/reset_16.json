@@ -1,0 +1,67 @@
+{
+  "label": "D1 only: last two trials reached S1, the earlier one unrewarded (stronger after more misses)",
+  "terms": "(phase==D1)*(prev_state==1)*(tv(\"state\",-2)==1)*(tv(\"reward\",-2)==0) ;; (phase==D1)*(prev_state==1)*(tv(\"state\",-2)==1)*(tv(\"reward\",-2)==0)*(tv(\"reward\",-3)==0) ;; (phase==D1)*(prev_state==1)*(tv(\"state\",-2)==1)*(tv(\"reward\",-2)==0)*(prev_reward==0) ;; (phase==D1)*(prev_state==1)*(tv(\"state\",-2)==-9)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (zero at GO and D2). Magnitude is driven by a two-trial conjunction: the previous trial reached S1 AND the trial before also reached S1 and was unrewarded (weight ~1.7). It grows further if the trial three back was also unrewarded (+0.8) and slightly if the last trial was unrewarded too (+0.2). The S1 visits are often a2 rare transitions, but the choice itself adds nothing once states are included. Reaching S2 on the last trial gives near zero activation. The fourth term is a small catch-all for windows where the trial two back is outside the window. Most of the remaining error is at window starts, where history is unknown but activation is already about 3.5. Model value/policy, the hidden good state and trials since reversal add nothing. Test R^2 beyond timing 0.55, above the additive all ceiling of 0.42 because the cue is an interaction. All terms are observed at D1.",
+  "gate": "reset",
+  "feature": 16,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 16,
+    "terms": [
+      "(phase==D1)*(prev_state==1)*(tv(\"state\",-2)==1)*(tv(\"reward\",-2)==0)",
+      "(phase==D1)*(prev_state==1)*(tv(\"state\",-2)==1)*(tv(\"reward\",-2)==0)*(tv(\"reward\",-3)==0)",
+      "(phase==D1)*(prev_state==1)*(tv(\"state\",-2)==1)*(tv(\"reward\",-2)==0)*(prev_reward==0)",
+      "(phase==D1)*(prev_state==1)*(tv(\"state\",-2)==-9)"
+    ],
+    "weights": [
+      1.667416786028613,
+      0.8021355574425777,
+      0.21347088519189336,
+      0.1512641095090053
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5528458234451046,
+    "r2": 0.5766681439271722,
+    "r2_timing_only": 0.05327540640592243
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 16,
+    "terms": [
+      "(phase==D1)*(prev_state==1)*(tv(\"state\",-2)==1)*(tv(\"reward\",-2)==0)",
+      "(phase==D1)*(prev_state==1)*(tv(\"state\",-2)==1)*(tv(\"reward\",-2)==0)*(tv(\"reward\",-3)==0)",
+      "(phase==D1)*(prev_state==1)*(tv(\"state\",-2)==1)*(tv(\"reward\",-2)==0)*(prev_reward==0)",
+      "(phase==D1)*(prev_state==1)*(tv(\"state\",-2)==-9)"
+    ],
+    "weights": [
+      1.667416786028613,
+      0.8021355574425777,
+      0.21347088519189336,
+      0.1512641095090053
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5497739743913793,
+    "r2": 0.5730350958633281,
+    "r2_timing_only": 0.051665430581237626
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claim holds. The single term (D1)*(prev_state==1)*(tv('state',-2)==1)*(tv('reward',-2)==0) alone scores test R^2 0.526. Without the reward condition, 'two S1 in a row' scores only 0.078. With the earlier S1 visit rewarded instead, it scores 0.006. So the 'earlier one unrewarded' part is essential.",
+      "The 'catch-all' fourth term is badly specified. The reward of the trial two back is still observable when its state falls outside the window, as tv('prev_reward',-1). Replacing the term with (D1)*(prev_state==1)*(tv('state',-2)==-9)*(tv('prev_reward',-1)==0), with the old catch-all kept alongside, raises test R^2 from 0.553 to 0.607. The new term's weight is 0.82, against 0.15 for the old catch-all. So part of the 'window-start' error put down to unknown history is actually explainable.",
+      "The explanation says activation is near zero after S2, but no term encodes this. misses shows systematic over-prediction at D1 after every S2 pattern (-0.11 each), because the timing baseline gives D1 about 0.1-0.19. Adding (D1)*(prev_state==2) fixes this.",
+      "'Model's value adds nothing' is slightly wrong. Letting value scale the core conjunction (K*value) adds about +0.02 test R^2 (0.6135 vs 0.6081 without it). The choice claim checks out: adding prev_action==2 or tv('action',-2)==2 to the conjunction adds about 0.003. Choice at D1 adds at most 0.009.",
+      "The rest of the error sits on window-first trials (prev_state==-1), where activation is about 3-3.6 and prediction about 0.1. Neither prev_reward, value nor the upcoming action/state predicts it (each adds 0.000-0.002). It is really unobservable inside the window, as the agent said.",
+      "The extra terms are real but secondary: trial three back unrewarded (+0.8, stable on test), last trial unrewarded (+0.2)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 only: last trial reached S1 and the trial before reached S1 unrewarded (that reward is still readable via prev_reward when its state is outside the window); off after S2",
+    "better_terms": "K=(phase==D1)*(prev_state==1)*(tv('state',-2)==1)*(tv('reward',-2)==0); terms: K ;; K*(tv('reward',-3)==0) ;; K*(prev_reward==0) ;; (phase==D1)*(prev_state==1)*(tv('state',-2)==-9)*(tv('prev_reward',-1)==0) ;; (phase==D1)*(prev_state==1)*(tv('state',-2)==-9) ;; K*value ;; (phase==D1)*(prev_state==2) ;; (phase==D1)*value",
+    "better_terms_test_r2_beyond_timing": 0.6379
+  },
+  "final_label": "D1 only: last trial reached S1 and the trial before reached S1 unrewarded (that reward is still readable via prev_reward when its state is outside the window); off after S2"
+}

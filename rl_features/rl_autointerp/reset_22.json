@@ -1,0 +1,105 @@
+{
+  "label": "late-episode D2 after a1 -> S1 (common), following a rewarded trial",
+  "predicate": "(phase == D2) & (action == 1) & (state == 1) & (ep_trial >= 72) & (prev_state != 2) & ((prev_reward == 1) | (ep_trial >= 80))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2, almost exclusively when the agent chose a1 and reached S1 through the common transition (99% of mass). Its activity also depends on time: it is silent before episode trial ~65, and both rate and magnitude rise toward the end of the episode (60% of mass is in trials 90-99). This matches the model value being low (all mass at value < 7.5). It is much weaker after an unrewarded previous trial (prev_reward 0 rate 0.007 vs 0.028), and adding prev_reward == 1 raises dev F1 from 0.74 to 0.83. It never fires at D1/GO, after a2 or S2, or on rare transitions. Every variable in the predicate is observed at D2: the action, the state, the previous reward, and episode time, which the agent can track implicitly. Its correlation with good == S1 follows from the a1/S1 condition. Residual false positives are late a1->S1c steps with low activation; misses are tiny activations just before trial 70 or after unrewarded trials.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 22,
+    "predicate": "(phase == D2) & (action == 1) & (state == 1) & (ep_trial >= 72) & (prev_state != 2) & ((prev_reward == 1) | (ep_trial >= 80))",
+    "split": "test",
+    "precision": 0.8333651606003896,
+    "recall": 0.930847660082761,
+    "f1": 0.8794131871674997,
+    "mass_recall": 0.9787705249554189,
+    "correlation": 0.7729898134185442,
+    "n_active": 23441,
+    "n_predicted": 26183,
+    "coverage_by_activation_quartile": [
+      0.8130011943354376,
+      0.918259385665529,
+      0.9921501706484641,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 22,
+    "predicate": "(phase == D2) & (action == 1) & (state == 1) & (ep_trial >= 72) & (prev_state != 2) & ((prev_reward == 1) | (ep_trial >= 80))",
+    "split": "dev",
+    "precision": 0.8458312683466128,
+    "recall": 0.9342681488967493,
+    "f1": 0.8878528982172513,
+    "mass_recall": 0.9821935479263891,
+    "correlation": 0.7798823467223283,
+    "n_active": 23748,
+    "n_predicted": 26231,
+    "coverage_by_activation_quartile": [
+      0.8032676435910392,
+      0.9390264443321543,
+      0.9947785076638033,
+      1.0
+    ]
+  },
+  "gate": "reset",
+  "feature": 22,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most of the factual claims hold. On dev the feature is active only at D2 (D1 and GO rates are 0). 99.1% of mass is at action==1 and 100% at state==1, it is silent before trial 60, 60% of mass is in trials 90-99, and all mass is at value < 7.73. Original predicate: dev F1 0.830, test F1 0.818, which matches the report.",
+      "The claim 'never fires after a2 or S2, or on rare transitions' is slightly overstated. About 0.9% of mass comes from a2->S1 rare steps, and one top window shows a2 S1R firing at 0.42 of max. This is minor.",
+      "Systematic false-positive class the explanation misses: the predicate is true but the feature is completely silent when the previous trial reached S2. With prev_state==2 inside the predicate: 1186 dev steps, precision 0.0. Example: a1 S2R rewarded, then a1 S1c. The prev_reward==1 condition does not cover this case, because the previous S2 visit was rewarded. Adding prev_state != 2 raises dev precision from 0.80 to 0.84 with no loss of recall.",
+      "The prev_reward==1 condition is overstated. It mainly matters early (trials 70-79). After an unrewarded S1 trial, late a1->S1c steps (ep_trial >= 80, prev_state==1, prev_reward==0) still fire with precision 0.72. These are not 'tiny activations', as the explanation claims: they make up 6.7% of active steps and 6.4% of mass.",
+      "The trial-70 cutoff is soft. Within the predicate, precision is 0.54 for trials 70-79 and 0.95 for trials 80 and later. Activation also seems to build over consecutive a1->S1c trials (for example 0.76 -> 0.81 -> 0.85).",
+      "The improved predicate below uses only variables observed at D2: GO action, reached state, previous state and reward, and episode time. Test F1 is 0.879 (precision 0.833, recall 0.931, mass recall 0.979), versus 0.818 for the original."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "late-episode D2 of a1 -> S1 (common) when the previous trial also ended in S1 (rewarded, or any outcome after ~trial 80); silent if the previous trial reached S2",
+    "better_predicate": "(phase == D2) & (action == 1) & (state == 1) & (ep_trial >= 72) & (prev_state != 2) & ((prev_reward == 1) | (ep_trial >= 80))",
+    "better_predicate_test_f1": 0.879
+  },
+  "final_label": "late-episode D2 of a1 -> S1 (common) when the previous trial also ended in S1 (rewarded, or any outcome after ~trial 80); silent if the previous trial reached S2",
+  "original_predicate": "(phase == D2) & (action == 1) & (state == 1) & (ep_trial >= 70) & (prev_reward == 1)",
+  "original_test_scores": {
+    "gate": "reset",
+    "feature": 22,
+    "predicate": "(phase == D2) & (action == 1) & (state == 1) & (ep_trial >= 70) & (prev_reward == 1)",
+    "split": "test",
+    "precision": 0.7859952793076318,
+    "recall": 0.8523527153278444,
+    "f1": 0.8178301713022657,
+    "mass_recall": 0.9041365994629705,
+    "correlation": 0.7235945387067334,
+    "n_active": 23441,
+    "n_predicted": 25420,
+    "coverage_by_activation_quartile": [
+      0.7481658420064835,
+      0.8240614334470989,
+      0.8774744027303755,
+      0.9597269624573379
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "reset",
+    "feature": 22,
+    "predicate": "(phase == D2) & (action == 1) & (state == 1) & (ep_trial >= 70) & (prev_reward == 1)",
+    "split": "dev",
+    "precision": 0.801230793352148,
+    "recall": 0.8607461680983661,
+    "f1": 0.8299228583028827,
+    "mass_recall": 0.9079429442541757,
+    "correlation": 0.7298663359060501,
+    "n_active": 23748,
+    "n_predicted": 25512,
+    "coverage_by_activation_quartile": [
+      0.7655381505811015,
+      0.8404918308910224,
+      0.8750210544045814,
+      0.9619336365167593
+    ]
+  },
+  "predicate_from": "skeptic"
+}

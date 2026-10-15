@@ -1,0 +1,82 @@
+{
+  "label": "D1 reward-gated reset: up after reward (esp. rare S1), down after loss late; a2-history drift",
+  "terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 1) * (prev_common == 0) * (prev_state == S1) ;; (phase == D1) * (prev_reward == 0) * (prev_common == 0) * (prev_state == S1) ;; (phase == D1) * (prev_reward == 0) * ep_trial ;; (phase == D2) * (state == S2) ;; (phase == GO) * (prev_action == 2) ;; ((tv(\"action\", -1) == 2) + (tv(\"action\", -2) == 2) + (tv(\"action\", -3) == 2) + (phase == D2) * (action == 2)) * ep_trial * (phase != D1) ;; (phase == D1) * (prev_action == 1) * (prev_state == S2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r of unit 24 (timing alone R^2 0.71; rises strongly late in the episode, highest at D1). Beyond timing, the magnitude is mainly set at D1 by the previous outcome shown: higher after a rewarded trial (+0.11), especially after a rare-rewarded a2->S1 trial (+0.12 more), and lower after unrewarded trials, with the loss-related drop growing with the trial index in the episode (-0.0019 per trial), so late in the episode reward vs no reward splits D1 widely. After a1->S2 (rare) trials D1 is lower (-0.06); after a rare a2->S1 loss it is a bit higher (+0.06). At GO it is higher after a previous a2 choice (+0.04), at D2 higher when S2 is reached (+0.05), and at GO/D2 it drifts up with the number of recent a2 choices times episode trial (an episode-level a2-preference build-up seen in the worst windows). All terms use only observed variables (the action at D2 is already made). Dev R^2 beyond timing 0.80, test 0.80, matching the all ceiling 0.80 (last-trial table alone 0.73). The hidden good state, since-reversal and value add little.",
+  "gate": "unit_reset",
+  "feature": 24,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 24,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_reward == 1) * (prev_common == 0) * (prev_state == S1)",
+      "(phase == D1) * (prev_reward == 0) * (prev_common == 0) * (prev_state == S1)",
+      "(phase == D1) * (prev_reward == 0) * ep_trial",
+      "(phase == D2) * (state == S2)",
+      "(phase == GO) * (prev_action == 2)",
+      "((tv(\"action\", -1) == 2) + (tv(\"action\", -2) == 2) + (tv(\"action\", -3) == 2) + (phase == D2) * (action == 2)) * ep_trial * (phase != D1)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == S2)"
+    ],
+    "weights": [
+      0.11079241443847951,
+      0.12317253280737966,
+      0.06381009802224831,
+      -0.001874533137444676,
+      0.05170474853917127,
+      0.0428569370096075,
+      0.00030432172980368935,
+      -0.0639690925668989
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8047595578739762,
+    "r2": 0.943955060434579,
+    "r2_timing_only": 0.7129440040437673
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 24,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_reward == 1) * (prev_common == 0) * (prev_state == S1)",
+      "(phase == D1) * (prev_reward == 0) * (prev_common == 0) * (prev_state == S1)",
+      "(phase == D1) * (prev_reward == 0) * ep_trial",
+      "(phase == D2) * (state == S2)",
+      "(phase == GO) * (prev_action == 2)",
+      "((tv(\"action\", -1) == 2) + (tv(\"action\", -2) == 2) + (tv(\"action\", -3) == 2) + (phase == D2) * (action == 2)) * ep_trial * (phase != D1)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == S2)"
+    ],
+    "weights": [
+      0.11079241443847951,
+      0.12317253280737966,
+      0.06381009802224831,
+      -0.001874533137444676,
+      0.05170474853917127,
+      0.0428569370096075,
+      0.00030432172980368935,
+      -0.0639690925668989
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8031493694400643,
+    "r2": 0.9447790328538475,
+    "r2_timing_only": 0.7194778244343025
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The score reproduces (test 0.8048). But the term set has no D1 constant, so the fit has to use the win indicator and the loss x ep_trial term to stand in for one. Adding a single (phase == D1) term and replacing the loss x ep_trial term with a plain D1 loss indicator raises test R^2 beyond timing from 0.805 to 0.847. That is well above the claimed 'all' ceiling of 0.80, so 'same as the ceiling' does not mean nothing is left to explain.",
+      "The claim that the loss drop grows with episode trial ('-0.0019 per trial', 'late in the episode a win and a loss give very different D1 values') does not hold up. Once a D1 constant is in, the loss x ep_trial weight falls to -0.0005 and test R^2 drops slightly (0.8437 vs 0.8469 with plain loss/win indicators). A win x ep_trial or win x late-ramp term adds nothing either (0.841-0.843). The win-loss gap at D1 is a roughly constant +0.24, not '+0.11'.",
+      "The 'x ep_trial' build-up in the recent-a2-count term is not supported. Without the ep_trial factor it scores the same (test 0.80486 vs 0.80476). So 'creeps up with recent a2 choices times episode trial; a build-up across the episode' overclaims.",
+      "The a1->S2 effect at D1 shrinks from -0.064 to -0.042 once a D1 constant is in. A plain (phase == D1)*(prev_state == S2) term does slightly better (test 0.850), so the a1-specific claim is not needed.",
+      "The parts that hold up: rare a2->S1 rewarded gives an extra boost (dropping it costs 0.26 of R^2), the gate is higher at D2 when S2 is reached and at GO after an a2 choice, and the rare a2->S1 loss is less negative. The worst-fit windows are late-episode (t87-99) under-predictions across all phases. After the fix, misses show only small residual cells (at most about 0.04, e.g. GO after a1 S2 r +0.038, GO after a2 S1 r -0.034). Adding the model's policy logit (choice x ep_trial at GO/D2, a model output) gives only +0.01."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 set by last outcome: about +0.24 after reward vs loss (flat over the episode), extra boost after rare a2->S1 reward; slightly higher with S2 / a2 at D2 / GO",
+    "better_terms": "(phase == D1) ;; (phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 1) * (prev_common == 0) * (prev_state == S1) ;; (phase == D1) * (prev_reward == 0) * (prev_common == 0) * (prev_state == S1) ;; (phase == D2) * (state == S2) ;; (phase == GO) * (prev_action == 2) ;; ((tv('action', -1) == 2) + (tv('action', -2) == 2) + (tv('action', -3) == 2) + (phase == D2) * (action == 2)) * (phase != D1) ;; (phase == D1) * (prev_state == S2)",
+    "better_terms_test_r2_beyond_timing": 0.8496
+  },
+  "final_label": "D1 set by last outcome: about +0.24 after reward vs loss (flat over the episode), extra boost after rare a2->S1 reward; slightly higher with S2 / a2 at D2 / GO"
+}

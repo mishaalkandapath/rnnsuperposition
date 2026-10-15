@@ -1,0 +1,64 @@
+{
+  "label": "GO step, confidently choosing a2, after an unrewarded trial or late in the episode",
+  "predicate": "(phase == GO) & (choice < -6) & ((ep_trial >= 85) | (prev_reward == 0))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Almost entirely a GO-phase unit (96% of mass at GO, essentially never at D2, a little at D1). It fires only when the agent is about to choose a2: 99.9% of mass has action == 2, and it is gated by a strongly a2-favoring policy logit (choice < -6). It never fires for a1 choices. Within a2 GO steps it fires mostly (1) after an unrewarded previous trial (prev_reward == 0; rate 0.097 vs 0.026 after reward), or (2) in the last ~15 trials of the episode (ep_trial 80-99 hold ~65% of mass), plus a small burst on the episode first trial. The largest activations are a2 GO steps after no reward, late in the episode, with low model value (value < 5.2 holds 55% of mass). Predicate uses only observed quantities: the model own policy logit at GO, the reward seen at D1, and trial position. The bare GO & a2 predicate has recall 0.98 but precision 0.28; adding the unrewarded-or-late condition raises F1 to 0.80 on dev. The ep_trial >= 85 cutoff is a fitted approximation of a smooth increase late in the episode.",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 23,
+    "predicate": "(phase == GO) & (choice < -6) & ((ep_trial >= 85) | (prev_reward == 0))",
+    "split": "test",
+    "precision": 0.6919390420163806,
+    "recall": 0.9295544352091566,
+    "f1": 0.7933365313331299,
+    "mass_recall": 0.9452034054167952,
+    "correlation": 0.5779529287951546,
+    "n_active": 58712,
+    "n_predicted": 78874,
+    "coverage_by_activation_quartile": [
+      0.8141436162964981,
+      0.9493118953535904,
+      0.9933914702275515,
+      0.9613707589589863
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 23,
+    "predicate": "(phase == GO) & (choice < -6) & ((ep_trial >= 85) | (prev_reward == 0))",
+    "split": "dev",
+    "precision": 0.7049524564183836,
+    "recall": 0.9245037929959472,
+    "f1": 0.7999370588499753,
+    "mass_recall": 0.9467262591419391,
+    "correlation": 0.584515053656346,
+    "n_active": 57738,
+    "n_predicted": 75720,
+    "coverage_by_activation_quartile": [
+      0.8002078281953585,
+      0.9434014547973675,
+      0.9918248579742275,
+      0.9625883331023971
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 23,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The verdict contradicts its own numbers. Test F1 is 0.793, under the 0.8 bar. Dev F1 is 0.7999, also just under. So 'explained' is not earned; at best this is partially_explained.",
+      "The 'small burst on the episode's first trial' is listed as a case 'among a2 GO steps', but it does not happen at GO. (ep_trial==0)&(phase==GO) has precision 0.0 (0 of 525 steps active). (ep_trial==0)&(phase==D1) has precision 1.0 and holds 3.9% of the mass. The burst is entirely at the first D1, and the predicate misses it. Adding it lifts dev F1 to 0.805 and mass recall to 0.986.",
+      "The 'unrewarded' branch hides a structure the predicate misses: rare vs common transition, and episode position. Among GO, choice<-6, trial<85, prev_reward==0 steps: after a rare previous transition precision is 0.66 (the profile shows rate 0.084 for prev_common==0 vs 0.038 for common). After a common one it is 0.53, falling to 0.30 for trials 40-84 (test). Unrewarded steps early in the episode (trial<40) have precision 0.87, but mid-episode (40-84) only 0.41. Most false positives are mid-episode GO a2 steps after a common-unrewarded trial, often while S1 is the good state.",
+      "The label and explanation never say the unit fires on a2 REPEATS, not on switches to a2. (GO)&(action==2)&(prev_action==1) has precision 0.004 and 0.04% of the mass; stay==0 has rate 0.001. In model-based terms it fires on a2 stays after rare-unrewarded trials (precision 0.69) and almost never after rare-rewarded ones (precision 0.037). That reads as 'staying with a2 despite no reward', not just 'unrewarded'.",
+      "The late-episode branch fires regardless of reward: trial>=85 & prev_reward==1 has precision 0.84. The value claim holds (value<5.2 holds 54% of the mass, precision 0.92), but value looks like a stand-in for time left in the episode. Unrewarded mid-episode steps with value<5.2 are essentially absent (20 steps)."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "GO step, confidently repeating a2: late in the episode (any reward), or after an unrewarded trial when early in the episode or after a rare transition; also the episode's first D1",
+    "better_predicate": "(phase == GO) & (choice < -6) & ((ep_trial >= 85) | ((prev_reward == 0) & ((ep_trial < 40) | (prev_common == 0))))",
+    "better_predicate_test_f1": 0.808
+  },
+  "final_label": "GO step, confidently repeating a2: late in the episode (any reward), or after an unrewarded trial when early in the episode or after a rare transition; also the episode's first D1"
+}

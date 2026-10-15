@@ -1,0 +1,91 @@
+{
+  "label": "Dips at D1 after unrewarded trials, more late in episode and after S1; at GO tracks S2 belief.",
+  "short_terms": "(phase == D1) * (prev_reward == 0) * ep_trial ;; (phase == D1) * (prev_reward == 0) * (prev_state == 1) ;; (phase == GO) * belief_lo",
+  "terms": "(phase == D1) * (prev_reward == 0) * ep_trial ;; (phase == D1) * (prev_reward == 0) * (tv(\"prev_reward\", -1) == 0) * ep_trial ;; (phase == D1) * (prev_reward == 0) * (prev_state == 1) ;; (phase == GO) * belief_lo ;; (phase == GO) * (prev_state == 2) * (prev_reward == 1) ;; (phase == GO) * (prev_state == 1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 0) ;; (phase == D1) * (prev_reward == 0) * (tv(\"prev_reward\", -1) == 0) * (tv(\"prev_reward\", -2) == 0)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw candidate n of unit 37 is ~+0.9 at D1/D2 and ~-0.8 at GO (timing R^2 0.99). Beyond timing, the main driver is the D1 drop after an unrewarded trial: larger later in the episode (graded with ep_trial), larger when the unrewarded state was S1, and it deepens over consecutive unrewarded trials (runs of losses late in an episode push D1 from +0.9 to about -0.3). At GO it is graded by the observer belief: higher when S2 is believed good (negative weight on belief_lo), plus higher after S2-rewarded and lower after S1-rewarded trials. D2 effects are small (weak belief term). The free fit adds the loss-streak terms and GO last-reward-by-state indicators; future/hidden variables were not needed.",
+  "full_test_scores": {
+    "gate": "unit_candidate",
+    "feature": 37,
+    "terms": [
+      "(phase == D1) * (prev_reward == 0) * ep_trial",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"prev_reward\", -1) == 0) * ep_trial",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 1)",
+      "(phase == GO) * belief_lo",
+      "(phase == GO) * (prev_state == 2) * (prev_reward == 1)",
+      "(phase == GO) * (prev_state == 1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_reward == 0)",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"prev_reward\", -1) == 0) * (tv(\"prev_reward\", -2) == 0)"
+    ],
+    "weights": [
+      -0.0010006559319979378,
+      -0.0012890534151621755,
+      -0.13411639631534447,
+      -0.015868143043890132,
+      0.06846213503520068,
+      -0.07523752292255899,
+      -0.005237005779218893,
+      -0.09910481010223127
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5970581532439714,
+    "r2": 0.9943308708694267,
+    "r2_timing_only": 0.9859306518391825
+  },
+  "gate": "unit_candidate",
+  "feature": 37,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 37,
+    "terms": [
+      "(phase == D1) * (prev_reward == 0) * ep_trial",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 1)",
+      "(phase == GO) * belief_lo"
+    ],
+    "weights": [
+      -0.0015192495770545232,
+      -0.14097331366745136,
+      -0.028737272132256422
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5103733369832211,
+    "r2": 0.9931112720091977,
+    "r2_timing_only": 0.9859306518391825
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 37,
+    "terms": [
+      "(phase == D1) * (prev_reward == 0) * ep_trial",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 1)",
+      "(phase == GO) * belief_lo"
+    ],
+    "weights": [
+      -0.0015192495770545232,
+      -0.14097331366745136,
+      -0.028737272132256422
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5124350192724718,
+    "r2": 0.9933436402784244,
+    "r2_timing_only": 0.9863477485367321
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Each claim holds up on test (--short). The full short form scores 0.510. Dropping the GO belief_lo term gives 0.287. Dropping the prev_state==1 term gives 0.437. Dropping the ep_trial grading gives 0.443. Replacing ep_trial with a plain D1-unrewarded indicator gives 0.493, so the 'late in episode' grading is real but small (+0.017).",
+      "The profile backs the 'more after S1' claim. At D1 the residual is -0.234 after a1 S1 u and -0.177 after a2 S1 u, against -0.072 after a1 S2 u and -0.025 after a2 S2 u. It also backs the GO belief sign: residual is about +0.09 in belief deciles 0-2 (S2 believed good) and about -0.095 in deciles 7-9. The fitted weight on belief_lo is negative (-0.029).",
+      "No observed-only alternative beats the short form. Swapping in a GO S2-rewarded indicator gives 0.416, a 2-back loss term instead of S1 gives 0.475, a D1 belief_lo term gives 0.449, |belief_lo| gives 0.442, applying belief_lo at all phases except D1 gives 0.467, and at D1+GO gives 0.474. Clipping belief_lo to +/-3 gives 0.512, which is the same score.",
+      "One systematic error class remains: losing streaks. All of the worst dev windows are runs of 3-5 unrewarded trials where D1 falls to about -0.1 to -0.3 while the short form predicts +0.45 to +0.6. The explanation mentions this but the label and short form do not. A 2-back loss term within 3 factors scores worse than ep_trial (0.475), so ep_trial is partly standing in for streak depth.",
+      "A second residual error class: GO after S2-rewarded trials is under-predicted (+0.17 after a1 S2 r) and GO after S1 trials is over-predicted (-0.05 to -0.09). The S2 belief only partly captures last-reward-by-state at GO. The free fit adds this and reaches 0.597."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  }
+}

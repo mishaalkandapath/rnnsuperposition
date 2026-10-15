@@ -1,0 +1,81 @@
+{
+  "label": "D1 after a2->S2 unrewarded; larger with higher value and a2-leaning policy",
+  "terms": "(phase == D1) * last_is(\"a2 S2 u\") ;; (phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 0) ;; (phase == D1) * last_is(\"a2 S2 u\") * (tv(\"action\", -2) == 1) ;; (phase == D1) * last_is(\"a2 S2 u\") * value ;; (phase == D1) * last_is(\"a2 S2 u\") * choice ;; (phase == D1) * (prev_action == -1) * (in_rew == 0) ;; (phase == D1) * (prev_action == -1) * (in_rew == 0) * value ;; (phase == D1) * (prev_action != -1) * (1 - last_is(\"a2 S2 u\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1, essentially only after an unrewarded common a2->S2 trial (residual +0.58 there, about -0.07 after every other pattern; zero at GO/D2). Within those D1 steps, magnitude goes up with the model value output (graded, strongest single modifier) and with a more a2-leaning policy logit (choice), and goes down somewhat when the trial before was also unrewarded. Whether the trial before was a1 adds little once value is in. At the first trial of a window the previous trial is unknown; there an unrewarded D1 (in_rew = 0) scaled by value covers those cases (they are mostly the same a2 S2 u events). Hidden good state, trials since reversal and future reward/choice add nothing. Observed-history-only terms (no value/choice) reach dev R^2 0.55; the full 8 terms reach dev 0.717 and test 0.718 beyond timing, above the 0.56 additive all ceiling. No future variables used.",
+  "gate": "hidden",
+  "feature": 212,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 212,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"action\", -2) == 1)",
+      "(phase == D1) * last_is(\"a2 S2 u\") * value",
+      "(phase == D1) * last_is(\"a2 S2 u\") * choice",
+      "(phase == D1) * (prev_action == -1) * (in_rew == 0)",
+      "(phase == D1) * (prev_action == -1) * (in_rew == 0) * value",
+      "(phase == D1) * (prev_action != -1) * (1 - last_is(\"a2 S2 u\"))"
+    ],
+    "weights": [
+      -1.1300473803442317,
+      -0.1480112038813341,
+      -0.031862520296453034,
+      0.2554338378637894,
+      -0.07005264165246601,
+      -0.25973479720085973,
+      0.05443514838092534,
+      -0.0601247820069274
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7179896425158161,
+    "r2": 0.7395390071354568,
+    "r2_timing_only": 0.07641338003285714
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 212,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"action\", -2) == 1)",
+      "(phase == D1) * last_is(\"a2 S2 u\") * value",
+      "(phase == D1) * last_is(\"a2 S2 u\") * choice",
+      "(phase == D1) * (prev_action == -1) * (in_rew == 0)",
+      "(phase == D1) * (prev_action == -1) * (in_rew == 0) * value",
+      "(phase == D1) * (prev_action != -1) * (1 - last_is(\"a2 S2 u\"))"
+    ],
+    "weights": [
+      -1.1300473803442317,
+      -0.1480112038813341,
+      -0.031862520296453034,
+      0.2554338378637894,
+      -0.07005264165246601,
+      -0.25973479720085973,
+      0.05443514838092534,
+      -0.0601247820069274
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7168526287745953,
+    "r2": 0.7367396019795637,
+    "r2_timing_only": 0.07023541528533905
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims check out on the test split. The 8 terms score 0.718 (timing alone 0.076). L = (phase==D1)*last_is('a2 S2 u') alone scores 0.457. Adding L*value gives 0.588 (the strongest modifier, as claimed). L*choice gives 0.524, with a negative weight, so activation is larger when the policy leans a2. L*(reward_-2==0) gives 0.493, with weight -0.148, so activation drops when the trial before was also unrewarded. Dropping the tv('action',-2)==1 term leaves 0.7178, so it does add nothing. Observed-only terms give test 0.546, matching the dev 0.55 claim. GO and D2 are exactly 0.",
+      "Minor overclaim: the value effect is not purely graded-linear. Adding L*value^2 lifts test R^2 from 0.718 to 0.759, so the effect saturates or curves rather than scaling linearly.",
+      "Minor overclaim: 'about -0.07 after every other pattern' is not quite true. After a1 S2 u the residual is -0.042, and misses lists D1 after a1 S2 u as the most under-predicted cell (+0.023). The feature responds weakly to S2-unrewarded outcomes after a1 as well.",
+      "Remaining systematic miss: on the window's first trial (previous trial unknown), unrewarded D1s where the feature actually fires at about 1.44 are predicted at about 0.24. These are all the worst-fit windows, and the D1 '?' cell is over-predicted on average (-0.045). A first-trial term gated on an a2-leaning policy, F*(choice<0)*value, recovers part of this (test 0.769). The rest is an observability limit of the 5-trial window, not a wrong label."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a2->S2 unrewarded (weakly after a1->S2 unrewarded); larger with higher value (saturating) and a2-leaning policy, smaller if the trial before was also unrewarded",
+    "better_terms": "(phase == D1) * last_is('a2 S2 u') ;; (phase == D1) * last_is('a2 S2 u') * (tv('reward', -2) == 0) ;; (phase == D1) * last_is('a2 S2 u') * value ;; (phase == D1) * last_is('a2 S2 u') * choice ;; (phase == D1) * (prev_action == -1) * (in_rew == 0) ;; (phase == D1) * last_is('a2 S2 u') * value * value ;; (phase == D1) * (prev_action != -1) * (1 - last_is('a2 S2 u')) ;; (phase == D1) * (prev_action == -1) * (in_rew == 0) * (choice < 0) * value",
+    "better_terms_test_r2_beyond_timing": 0.769
+  },
+  "final_label": "D1 after a2->S2 unrewarded (weakly after a1->S2 unrewarded); larger with higher value (saturating) and a2-leaning policy, smaller if the trial before was also unrewarded"
+}

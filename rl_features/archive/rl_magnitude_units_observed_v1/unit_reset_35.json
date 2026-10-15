@@ -1,0 +1,83 @@
+{
+  "label": "D1 tracks last outcome x state (S1 reward up, S2 no-reward down); GO/D2 higher after a2",
+  "terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 1) * (prev_state == 1) ;; (phase == D1) * (prev_reward == 0) * (prev_state == 2) ;; (phase == D1) * (prev_reward == 0) * (prev_state == 1) ;; (phase == GO) * (prev_action == 2) ;; (phase == GO) * belief_lo ;; (phase == GO) * (prev_reward == 0) ;; (phase == D2) * (action == 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r35 (timing alone R^2 0.79: high at D2, lowest at GO, declining late in the episode). Beyond timing, the magnitude is set mostly at D1 by the previous trial outcome and the state it came from: a reward in S1 raises it most (about +0.15), a reward in S2 a little (+0.085), no reward in S1 lowers it slightly, and no reward in S2 lowers it strongly (about -0.17). At GO it is higher after an a2 choice on the previous trial and after an unrewarded trial, and it falls slightly as the ideal-observer belief favours S1 (belief_lo). At D2 it is higher when this trial chose a2 (which is already observed at D2). Observed-only, 8 terms: test R^2 beyond timing 0.747 (dev 0.753), against the all-observed reference of 0.77 and the all ceiling of 0.81, so dropping model value/policy loses very little; the policy-decile reference by itself is only 0.32, and the last-trial table alone is 0.70. Leftover misses: a1 vs a2 asymmetries after S2 rewards at D1 and after S1 non-rewards at GO, at most about 0.05.",
+  "gate": "unit_reset",
+  "feature": 35,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 35,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_reward == 1) * (prev_state == 1)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 2)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 1)",
+      "(phase == GO) * (prev_action == 2)",
+      "(phase == GO) * belief_lo",
+      "(phase == GO) * (prev_reward == 0)",
+      "(phase == D2) * (action == 2)"
+    ],
+    "weights": [
+      0.08520824399431286,
+      0.06750256794310854,
+      -0.16856700213144613,
+      -0.017811907437377168,
+      0.04259249423313409,
+      -0.010658613105376689,
+      0.0561536371801832,
+      0.05976807192799753
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7473537257408942,
+    "r2": 0.9481585434234177,
+    "r2_timing_only": 0.7948061702924007
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 35,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_reward == 1) * (prev_state == 1)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 2)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 1)",
+      "(phase == GO) * (prev_action == 2)",
+      "(phase == GO) * belief_lo",
+      "(phase == GO) * (prev_reward == 0)",
+      "(phase == D2) * (action == 2)"
+    ],
+    "weights": [
+      0.08520824399431286,
+      0.06750256794310854,
+      -0.16856700213144613,
+      -0.017811907437377168,
+      0.04259249423313409,
+      -0.010658613105376689,
+      0.0561536371801832,
+      0.05976807192799753
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7530260384142604,
+    "r2": 0.9501049427596546,
+    "r2_timing_only": 0.7979744224047534
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The reported score reproduces exactly: test R^2 beyond timing is 0.747 with the 8 claimed terms. The individual weights also match: D1 rew +0.085, rew*S1 +0.068, unrew*S2 -0.169, unrew*S1 -0.018, GO prev a2 +0.043, GO belief_lo -0.011, GO unrew +0.056, D2 a2 +0.060.",
+      "The explanation leaves out reward history beyond the last trial. Adding (phase == D1) * (tv('prev_reward', -1) == 0) (the trial two back was unrewarded, weight about -0.06) lifts test R^2 from 0.745 to 0.781 against the same 7 base terms. That is above the 'all observed' last-trial reference of 0.77. The worst-fit windows are streaks of r0 trials with D1 well below prediction, e.g. t92-96 actual 0.30-0.47 vs predicted 0.54-0.56. So 'most of the magnitude is set at D1 by the previous trial's outcome' is incomplete: repeated losses push it down further.",
+      "The claim 'a reward in S2 raises it by about 0.085' hides a choice x state interaction. The raw D1 residual after a1 S2 r (rare) is -0.008, but after a2 S2 r (common) it is +0.038. Misses still over-predict D1 after a1 S2 r by -0.055 with the claimed terms, and by -0.045 with the improved ones. The explanation mentions this only as an 'a1 vs a2 difference'.",
+      "The GO effects are mis-shaped. With the claimed terms, misses over-predict GO after a1 S1 u by -0.058, the largest error class. Replacing GO prev_action==2 with GO last_is('a1 S1 u') (weight -0.093) fixes it and raises GO prev_reward==0 to +0.083. So the GO pattern is 'higher after a loss, except after a common a1 loss in S1', not a separate +0.04 for a prev a2 choice.",
+      "The minor claims check out. Dropping GO belief_lo costs 0.026, which supports its inclusion. D2 action==2 does better than D2 belief_lo (0.745 vs 0.713 when swapped) and is observed at D2, so no future variables are involved. D1 unrewarded-in-S1 is indeed small and can be dropped (0.745 without it)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 tracks the outcome x state of the last two trials (S1 reward up, S2 no-reward down, a loss two trials back lowers it further); GO is higher after a loss except a common a1-S1 loss and falls with belief that S1 is good; D2 is higher after choosing a2",
+    "better_terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 1) * (prev_state == 1) ;; (phase == D1) * (prev_reward == 0) * (prev_state == 2) ;; (phase == GO) * belief_lo ;; (phase == GO) * (prev_reward == 0) ;; (phase == D2) * (action == 2) ;; (phase == GO) * last_is('a1 S1 u') ;; (phase == D1) * (tv('prev_reward', -1) == 0)",
+    "better_terms_test_r2_beyond_timing": 0.784
+  },
+  "final_label": "D1 tracks the outcome x state of the last two trials (S1 reward up, S2 no-reward down, a loss two trials back lowers it further); GO is higher after a loss except a common a1-S1 loss and falls with belief that S1 is good; D2 is higher after choosing a2"
+}

@@ -1,0 +1,84 @@
+{
+  "label": "GO after a rewarded rare a1->S2 trial late in episode, stronger later and when belief still favors S1",
+  "short_terms": "(phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 80) ;; (phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 90) ;; (phase == GO) * last_is(\"a1 S2 r\") * np.where(ep_trial >= 80, belief_lo, 0)",
+  "terms": "(phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 80) ;; (phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 80) * belief_lo ;; (phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 80) * belief_lo**2 ;; (phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 90) ;; (phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 80) * (tv(\"reward\", -2) == 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Extremely sparse feature (nonzero on 0.1% of steps), active only at GO. Its magnitude is driven by the previous trial being a1 -> S2 (rare) rewarded, which is the model-based switch cue, and only late in the episode: it starts around trial 80 and is roughly twice as large from trial 90 on. Within those late a1-S2-rewarded GO steps it is larger when the ideal observer still leans toward S1 being good (positive belief_lo), i.e. when the evidence for switching to a2 is not yet decisive. It is near zero at D1 and D2 and after every other previous-trial pattern, and it does not depend on future variables. The free fit adds a belief_lo^2 term and a small negative term for the trial before also being rewarded, worth about 0.02 dev R^2. Short form dev R^2 beyond timing 0.46 vs free fit 0.48. Note: the third short term uses np.where to restrict belief_lo to trials >= 80. The remaining large misses are windows whose first trial has no previous trial in the window, so last_is cannot see the cue.",
+  "full_test_scores": {
+    "gate": "update",
+    "feature": 67,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 80)",
+      "(phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 80) * belief_lo",
+      "(phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 80) * belief_lo**2",
+      "(phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 90)",
+      "(phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 80) * (tv(\"reward\", -2) == 1)"
+    ],
+    "weights": [
+      0.028310801797733227,
+      0.1691966542025902,
+      0.05682459884459133,
+      0.18363871059584597,
+      -0.08597407616277042
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.4685487140753736,
+    "r2": 0.47540827760198967,
+    "r2_timing_only": 0.012907229144589971
+  },
+  "gate": "update",
+  "feature": 67,
+  "test_scores": {
+    "gate": "update",
+    "feature": 67,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 80)",
+      "(phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 90)",
+      "(phase == GO) * last_is(\"a1 S2 r\") * np.where(ep_trial >= 80, belief_lo, 0)"
+    ],
+    "weights": [
+      0.0756817137772716,
+      0.17962130214059313,
+      0.14135508729945162
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.4504204169888433,
+    "r2": 0.45751396659995647,
+    "r2_timing_only": 0.012907229144589971
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 67,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 80)",
+      "(phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 90)",
+      "(phase == GO) * last_is(\"a1 S2 r\") * np.where(ep_trial >= 80, belief_lo, 0)"
+    ],
+    "weights": [
+      0.0756817137772716,
+      0.17962130214059313,
+      0.14135508729945162
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.4628506898448672,
+    "r2": 0.4699652676767606,
+    "r2_timing_only": 0.013245065566292347
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The third term uses np.where(ep_trial >= 80, belief_lo, 0), which packs a fourth condition into one factor. It is still a description rather than a fitted correction: belief_lo alone without the late restriction scores test 0.363 against 0.450, and the binary form np.where(ep_trial >= 80, belief_lo > 0, 0) scores test 0.433. So 'fires more when belief still favors S1' holds even as a yes/no condition. The weight is positive (+0.14).",
+      "The claims check out. The timing-only short form (>= 80 and >= 90) scores test 0.345, with weights 0.16 for trials 80-89 and 0.35 from trial 90 on, so 'about twice as large from 90 on' is right. Adding a >= 70 term gets weight about 0.01, so onset is at about trial 80. Residual tables show nothing at D1 or D2, and every other previous-trial pattern at GO is about -0.002.",
+      "Misses show no systematic class beyond the known one: the worst under-predictions are firings on a window's first trial, where last_is cannot see the previous trial. Mean error by phase and by previous trial is |0.002| or less. There are some scattered over-predictions, e.g. a1 S2 r at t90 predicted 0.44 at t91 GO but actually 0.",
+      "Variants that did not help: belief instead of belief_lo (0.453) and belief_lo shapes for trials >= 90 (0.454) are no meaningful improvement. belief_cover adds nothing (0.350). A linear ramp in ep_trial does slightly worse (0.442)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  }
+}

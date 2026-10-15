@@ -1,0 +1,111 @@
+{
+ "label": "Fires at D1 after a rewarded rare a1->S2, stronger if prior trial unrewarded and belief favoured S1.",
+ "short_terms": "(phase == D1) * last_is('a1 S2 r') * (tv('reward', -2) == 0) ;; (phase == D1) * last_is('a1 S2 r') * belief_lo ;; (phase == D1) * last_is('a1 S2 r') * (tv('reward', -3) == 0)",
+ "terms": "(phase == D1) * last_is(\"a1 S2 r\") ;; (phase == D1) * last_is(\"a1 S2 r\") * belief_lo ;; (phase == D1) * last_is(\"a1 S2 r\") * (tv(\"reward\", -2) == 0) ;; (phase == D1) * last_is(\"a1 S2 r\") * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 2) ;; (phase == D1) * last_is(\"a1 S2 r\") * (tv(\"action\", -2) == 1) ;; (phase == D1) * last_is(\"a1 S2 r\") * (tv(\"reward\", -3) == 0) ;; (phase == D1) * last_is(\"a1 S2 r\") * (tv(\"action\", -2) == -9)",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Sparse D1-only feature (silent at GO and D2). Nearly all activation comes at D1 right after the previous trial was a1 -> S2 (rare) and rewarded; that indicator alone gives about 0.32 dev R^2 beyond timing. Its magnitude within that case is graded: higher when the trial before was unrewarded, and higher when the ideal observer had believed S1 good beforehand (belief_lo > 0), so the rare reward is surprising evidence for S2. Short form dev 0.47. The free fit adds more history from the trial before (it was also a1 -> S2, or reward two trials back was 0, or that history is outside the window), reaching 0.56 dev. The biggest misses are window-start D1 steps where the previous trial is not in the window, so the pattern cannot be seen. Hidden good state, since_rev and the current choice add almost nothing.",
+ "full_test_scores": {
+  "gate": "update",
+  "feature": 8,
+  "terms": [
+   "(phase == D1) * last_is(\"a1 S2 r\")",
+   "(phase == D1) * last_is(\"a1 S2 r\") * belief_lo",
+   "(phase == D1) * last_is(\"a1 S2 r\") * (tv(\"reward\", -2) == 0)",
+   "(phase == D1) * last_is(\"a1 S2 r\") * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 2)",
+   "(phase == D1) * last_is(\"a1 S2 r\") * (tv(\"action\", -2) == 1)",
+   "(phase == D1) * last_is(\"a1 S2 r\") * (tv(\"reward\", -3) == 0)",
+   "(phase == D1) * last_is(\"a1 S2 r\") * (tv(\"action\", -2) == -9)"
+  ],
+  "weights": [
+   -0.18241201837419457,
+   0.12004568969513248,
+   0.36659998269935357,
+   0.2607241912363119,
+   0.15618474732020965,
+   0.29626935433712637,
+   0.3965799419210407
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5424880984697662,
+  "r2": 0.5483436834137527,
+  "r2_timing_only": 0.012798759823299477
+ },
+ "gate": "update",
+ "feature": 8,
+ "test_scores": {
+  "gate": "update",
+  "feature": 8,
+  "terms": [
+   "(phase == D1) * last_is('a1 S2 r') * (tv('reward', -2) == 0)",
+   "(phase == D1) * last_is('a1 S2 r') * belief_lo",
+   "(phase == D1) * last_is('a1 S2 r') * (tv('reward', -3) == 0)"
+  ],
+  "weights": [
+   0.44542874639093155,
+   0.14569939325316095,
+   0.2418872339858333
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.49213987040772467,
+  "r2": 0.49863985023020596,
+  "r2_timing_only": 0.012798759823299477
+ },
+ "dev_scores": {
+  "gate": "update",
+  "feature": 8,
+  "terms": [
+   "(phase == D1) * last_is('a1 S2 r') * (tv('reward', -2) == 0)",
+   "(phase == D1) * last_is('a1 S2 r') * belief_lo",
+   "(phase == D1) * last_is('a1 S2 r') * (tv('reward', -3) == 0)"
+  ],
+  "weights": [
+   0.44542874639093155,
+   0.14569939325316095,
+   0.2418872339858333
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.5081960964237942,
+  "r2": 0.5147321786975119,
+  "r2_timing_only": 0.013290017070197724
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": true,
+  "issues": [
+   "The core claims hold up. The residual is exactly 0 at GO and D2 in every cell. At D1 the a1 S2 r cell's residual is +0.287, while every other previous-trial cell sits near -0.01. The indicator alone scores 0.319 test. The recorded short form reproduces: 0.452 test, and 0.47 dev as reported. The free fit also reproduces at 0.542 test.",
+   "The belief_lo term mostly stands in for the trial-2 state, and adds little by itself. last_is + belief_lo scores 0.328 test, against 0.319 for last_is alone. It only adds about 0.06 when combined with reward(-2)==0. A free fit over the 8 trial-2 patterns gives these weights: a1 S2 u +0.84, a2 S2 u +0.37, a1 S1 u +0.25, a1 S1 r +0.18, and about 0 for any rewarded S2 visit and for a2 S1 u/r. So 'belief favoured S1' really says the trial before was an unrewarded S2 visit (evidence for S1), and belief_lo is a smooth proxy for that. The label's reading of it is roughly right, but it is not graded evidence for S2 in general.",
+   "The base last_is term gets a small, changing weight: 0.069 in the recorded form and -0.18 in the free fit. The magnitude is mostly carried by the modifiers, not by a constant level.",
+   "The label leaves out a run of losses. Adding reward three trials back gives a better short form: L*(tv('reward',-2)==0) ;; L*belief_lo ;; L*(tv('reward',-3)==0) scores 0.508 dev and 0.492 test, against 0.452 for the recorded form. That is 91% of the free fit. Its weights are all positive: +0.45, +0.15, +0.24.",
+   "The misses are not systematic beyond the window edges. The worst windows are window-start D1 steps whose previous trial (or the trial before that) falls outside the window, so the pattern cannot be seen there. Mean error by phase x previous-trial cell is at most 0.008 in magnitude. No phase or previous-trial class stands out.",
+   "No future variables are used, and the hidden good state and trials since reversal add nothing in the reference scores. The claims check out."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "D1 after a rewarded rare a1->S2; stronger after earlier losses and when belief favours S1.",
+  "better_short_terms": "(phase == D1) * last_is('a1 S2 r') * (tv('reward', -2) == 0) ;; (phase == D1) * last_is('a1 S2 r') * belief_lo ;; (phase == D1) * last_is('a1 S2 r') * (tv('reward', -3) == 0)",
+  "better_short_terms_test_r2_beyond_timing": 0.492
+ },
+ "final_label": "D1 after a rewarded rare a1->S2; stronger after earlier losses and when belief favours S1.",
+ "original_short_terms": "(phase == D1) * last_is(\"a1 S2 r\") ;; (phase == D1) * last_is(\"a1 S2 r\") * belief_lo ;; (phase == D1) * last_is(\"a1 S2 r\") * (tv(\"reward\", -2) == 0)",
+ "original_test_scores": {
+  "gate": "update",
+  "feature": 8,
+  "terms": [
+   "(phase == D1) * last_is(\"a1 S2 r\")",
+   "(phase == D1) * last_is(\"a1 S2 r\") * belief_lo",
+   "(phase == D1) * last_is(\"a1 S2 r\") * (tv(\"reward\", -2) == 0)"
+  ],
+  "weights": [
+   0.06913706771828988,
+   0.1307334016224269,
+   0.4534507688597503
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.45196518720844436,
+  "r2": 0.4589793531521703,
+  "r2_timing_only": 0.012798759823299477
+ },
+ "terms_from": "skeptic"
+}

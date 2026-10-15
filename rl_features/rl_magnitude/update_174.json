@@ -1,0 +1,91 @@
+{
+  "label": "Fires at GO after a rewarded rare a2->S1 trial, stronger when belief favors S2 and early in episode.",
+  "short_terms": "(phase == GO) * last_is(\"a2 S1 r\") ;; (phase == GO) * last_is(\"a2 S1 r\") * belief ;; (phase == GO) * last_is(\"a2 S1 r\") * ep_dec",
+  "terms": "(phase == GO) * last_is(\"a2 S1 r\") ;; (phase == GO) * last_is(\"a2 S1 r\") * belief_lo ;; (phase == GO) * last_is(\"a2 S1 r\") * ep_dec ;; (phase == GO) * last_is(\"a2 S1 r\") * belief_lo**2 ;; (phase == GO) * last_is(\"a2 S1 r\") * (ep_dec**2) ;; (phase == GO) * last_is(\"a2 S1 r\") * belief_cover ;; (phase == GO) * last_is(\"a2 S1 r\") * (tv(\"reward\", -2) == 1) ;; (phase == GO) * last_is(\"a2 S1 r\") * (tv(\"action\", -2) == 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Silent at D1 and D2; at GO it is active essentially only when the previous trial was a2 -> S1 (rare) rewarded (indicator alone dev R2 0.28). Its magnitude within that case is graded: larger when the ideal-observer belief still favors S2 (low P(S1 good), i.e. the rare reward is surprising evidence for S1) and decays across the episode (ep_dec), going near zero late. Short form dev 0.60. Free fit adds that the trial before being rewarded raises it, plus small nonlinear belief/time terms (dev 0.64). Residual misses are mostly window-first trials whose previous trial is unknown. No future or model-output variables used.",
+  "full_test_scores": {
+    "gate": "update",
+    "feature": 174,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S1 r\")",
+      "(phase == GO) * last_is(\"a2 S1 r\") * belief_lo",
+      "(phase == GO) * last_is(\"a2 S1 r\") * ep_dec",
+      "(phase == GO) * last_is(\"a2 S1 r\") * belief_lo**2",
+      "(phase == GO) * last_is(\"a2 S1 r\") * (ep_dec**2)",
+      "(phase == GO) * last_is(\"a2 S1 r\") * belief_cover",
+      "(phase == GO) * last_is(\"a2 S1 r\") * (tv(\"reward\", -2) == 1)",
+      "(phase == GO) * last_is(\"a2 S1 r\") * (tv(\"action\", -2) == 2)"
+    ],
+    "weights": [
+      0.6929651588746977,
+      -0.12067640190857654,
+      -0.16207494479892637,
+      0.023290789273047553,
+      0.006680415572427402,
+      0.006353204616781022,
+      0.2148720016240466,
+      0.007983851060334078
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6272806162111983,
+    "r2": 0.6369524155495512,
+    "r2_timing_only": 0.025949279160198402
+  },
+  "gate": "update",
+  "feature": 174,
+  "test_scores": {
+    "gate": "update",
+    "feature": 174,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S1 r\")",
+      "(phase == GO) * last_is(\"a2 S1 r\") * belief",
+      "(phase == GO) * last_is(\"a2 S1 r\") * ep_dec"
+    ],
+    "weights": [
+      1.0946857286433118,
+      -0.6094269240633546,
+      -0.09807816171283476
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5875733944467926,
+    "r2": 0.5982755675673859,
+    "r2_timing_only": 0.025949279160198402
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 174,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S1 r\")",
+      "(phase == GO) * last_is(\"a2 S1 r\") * belief",
+      "(phase == GO) * last_is(\"a2 S1 r\") * ep_dec"
+    ],
+    "weights": [
+      1.0946857286433118,
+      -0.6094269240633546,
+      -0.09807816171283476
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6013208499624603,
+    "r2": 0.6112691421517713,
+    "r2_timing_only": 0.024953128821445514
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Every claim held up when I re-scored it on the test split. The last_is('a2 S1 r') indicator alone gives 0.256. Adding belief gives 0.370, adding ep_dec gives 0.482, and with both the recorded short form gives 0.588. Both fitted weights are negative (belief -0.61, ep_dec -0.10), so the activation is larger when belief is low (leaning toward S2) and earlier in the episode, as the label says.",
+      "The profile confirms the feature is exactly 0 at D1 and D2. At GO, the residual is +0.305 after a2 S1 r and about -0.015 after every other previous trial.",
+      "Small caveat: within the a2 S1 r case the feature looks closer to on/off (about 1.1-1.4 or 0) than smoothly graded. The mean of 0.3 against firing values near 1.2 suggests it fires in only about a quarter of these cases. The linear belief and time terms act as a soft gate. This is still consistent with the label's 'stronger when'.",
+      "Misses show no large systematic class. Mean errors by phase x previous trial are all within \u00b10.012. The worst windows are mostly firings on a window's first trial, where the previous trial is unknown, plus some under-prediction of magnitude late in the episode (for example t45-49 fires about 0.78 where the model predicts 0.15-0.29).",
+      "None of the alternatives clearly beat the recorded form on test. belief_lo scored 0.580, ep_trial 0.588 (about the same), (belief_lo<0) 0.577, a reward two trials back 0.572, tv('action',-2)==2 0.494, belief_cover 0.378 and since_rev 0.378. No future or model-output variables are used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  }
+}

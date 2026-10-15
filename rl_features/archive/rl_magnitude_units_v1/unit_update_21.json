@@ -1,0 +1,65 @@
+{
+  "label": "D1 dip after previous a1->S2 (rare) trial, deepening late in episode",
+  "terms": "(phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D1) * (prev_action == 1) * (prev_state == 1) ;; (phase == D1) * (prev_action == 2) * (prev_state == 1) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * np.exp((ep_trial-99)/10.0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Update gate z of unit 21 sits near 1 (keep state) on almost all steps; variance is at D1. At D1 it drops sharply (about -0.27 vs. other histories) when the previous trial was a1 reaching S2 (a rare transition), regardless of whether that trial was rewarded. The dip grows strongly toward the end of the episode (an extra about -0.45 x exp((t-99)/10), so z goes to about 0.2-0.6 in the last ~10 trials). It is slightly higher (+0.05 to +0.07) after a1->S1 and a2->S1 than after a2->S2. GO and D2 are almost constant near 1. Reward, the trial before, the hidden good state, and value add little; a streak-of-unrewarded term got weight ~0 and was dropped. Some misses remain: late-episode D1 drops after runs of a2->S2 trials are not captured. Dev R^2 beyond timing 0.665; last-trial table reference 0.62, all-cues ceiling 0.68. Only observed variables are used.",
+  "gate": "unit_update",
+  "feature": 21,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 21,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 1)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 1)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * np.exp((ep_trial-99)/10.0)"
+    ],
+    "weights": [
+      -0.26565661247119243,
+      0.04817656136768535,
+      0.0655885453380245,
+      -0.4491391761997693
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6543708256819736,
+    "r2": 0.7270230437527994,
+    "r2_timing_only": 0.21020279383005935
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 21,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 1)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 1)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * np.exp((ep_trial-99)/10.0)"
+    ],
+    "weights": [
+      -0.26565661247119243,
+      0.04817656136768535,
+      0.0655885453380245,
+      -0.4491391761997693
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6651819028103905,
+    "r2": 0.7349790393945167,
+    "r2_timing_only": 0.2084628554130984
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The factual claims hold up on test. The proposed terms score test R^2 beyond timing 0.654, with weights -0.266 (a1->S2 at D1), +0.048 (a1->S1), +0.066 (a2->S1) and -0.449 (late-episode a1->S2 x exp((t-99)/10)). Reward does not matter: an added a1->S2 x prev_reward term gets weight +0.014 and R^2 0.6546. GO and D2 residuals are all under 0.013. The trial before adds little: tv(-2) a1->S2 gives 0.657, and an a1->S2 x tv('state',-2)==2 interaction gives 0.656. Value adds little (0.659), and so does the hidden good state (0.667).",
+      "Main omission: at D1 the gate tracks the model's own policy logit (choice), and the explanation never mentions it. The profile already shows a strong D1 trend by policy decile, from +0.080 at decile 1 down to -0.143 at decile 8. Adding (phase==D1)*choice raises test R^2 from 0.654 to 0.717. Adding a choice x exp((t-99)/10) term as well gives 0.721. That is above the stated all-cues ceiling of 0.68, so the claim that the result is 'near ceiling' overstates how complete the explanation is.",
+      "With choice in the model, the size of the a1->S2 dip shrinks from -0.27 to about -0.20, and the a2->S1 boost drops from +0.066 to +0.022. So part of what the label credits to the previous trial's transition is really the agent's current preference for a1 (more a1 preference means lower z).",
+      "The original terms leave errors (misses): they under-predict D1 after a2 S2 r (+0.027). The worst-fit windows are steady late-episode drops at D1 (0.72 -> 0.49 -> 0.29 -> 0.18 over trials 96-99) after runs of a2->S2 or a1->S1 trials. No term captures them: a general D1 late-exp term, an a2->S2 late-exp term and a start_high x late term all give about 0.654-0.657. The explanation admits this error. With the choice terms, the remaining per-pattern errors are all 0.03 or less."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 dip after a previous a1->S2 (rare) trial, deeper late in the episode, plus a lower D1 z when the agent's policy currently favours a1",
+    "better_terms": "(phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D1) * (prev_action == 1) * (prev_state == 1) ;; (phase == D1) * (prev_action == 2) * (prev_state == 1) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * np.exp((ep_trial-99)/10.0) ;; (phase==D1)*choice ;; (phase==D1)*choice*np.exp((ep_trial-99)/10.0)",
+    "better_terms_test_r2_beyond_timing": 0.721
+  },
+  "final_label": "D1 dip after a previous a1->S2 (rare) trial, deeper late in the episode, plus a lower D1 z when the agent's policy currently favours a1"
+}

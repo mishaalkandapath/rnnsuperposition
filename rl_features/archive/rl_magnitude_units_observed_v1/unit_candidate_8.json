@@ -1,0 +1,76 @@
+{
+  "label": "GO candidate: up after unrewarded or S2-rewarded trials, down after S1-rewarded",
+  "terms": "(phase == GO) * table(prev_action*100 + prev_state*10 + prev_reward, {111: -0.46, 110: 0.01, 121: 0.33, 120: 0.4, 221: 0.11, 220: 0.34, 211: -0.27, 210: 0.23}) ;; (phase == D1) * ep_dec**2 * table(prev_action*100 + prev_state*10 + prev_reward, {111: 0.055, 110: -0.23, 121: 0.12, 120: -0.02, 221: 0.11, 220: -0.05, 211: -0.02, 210: -0.31}) ;; (phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) ;; (phase == GO) * np.clip(belief_lo, -4, 4) ;; (phase == D2) * table(prev_action*100 + prev_state*10 + prev_reward, {111: -0.1, 110: -0.02, 121: 0.03, 120: -0.04, 221: 0.06, 220: 0.05, 211: 0.05, 210: 0.06}) ;; (phase == D2) * np.clip(belief_lo, -4, 4)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw GRU candidate n of unit 8. Timing explains most variance (R^2 0.83: D1 and D2 near +1, falling late in the episode; GO falls from +0.26 to -0.63 over the episode). Beyond timing it is mostly driven by the previous trial outcome at GO: lower after a rewarded trial at S1 (a1 S1 r -0.46, a2 S1 r -0.27), higher after S2-rewarded trials (a1 S2 r +0.33, a2 S2 r +0.11) and after unrewarded trials (+0.2 to +0.4, except a1 S1 u near 0). So it acts roughly as a GO-phase signal for evidence that S2 is good or S1 is not, plus a lose bonus. It goes up further after two unrewarded trials in a row (weight +0.21). At D1, unrewarded S1 trials push it down (a1 S1 u -0.23, a2 S1 u -0.31) and S2 rewards push it up. This effect grows with episode time (ep_dec^2 shape) as the D1 baseline moves off saturation. D2 gets a small last-trial table. The graded ideal-observer belief_lo adds only a little once the last-trial table is in (weights about -0.01 to -0.02 per log-odds unit at GO and D2; higher belief that S1 is good means lower value). The trial before adds nothing beyond the streak term. Uses observed quantities only. Dev R^2 beyond timing 0.646, test 0.640. The all-observed reference is 0.67 and the all ceiling (which includes model policy) is 0.70, so dropping the model value or policy costs little: the last-trial pattern carries most of it.",
+  "gate": "unit_candidate",
+  "feature": 8,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 8,
+    "terms": [
+      "(phase == GO) * table(prev_action*100 + prev_state*10 + prev_reward, {111: -0.46, 110: 0.01, 121: 0.33, 120: 0.4, 221: 0.11, 220: 0.34, 211: -0.27, 210: 0.23})",
+      "(phase == D1) * ep_dec**2 * table(prev_action*100 + prev_state*10 + prev_reward, {111: 0.055, 110: -0.23, 121: 0.12, 120: -0.02, 221: 0.11, 220: -0.05, 211: -0.02, 210: -0.31})",
+      "(phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * np.clip(belief_lo, -4, 4)",
+      "(phase == D2) * table(prev_action*100 + prev_state*10 + prev_reward, {111: -0.1, 110: -0.02, 121: 0.03, 120: -0.04, 221: 0.06, 220: 0.05, 211: 0.05, 210: 0.06})",
+      "(phase == D2) * np.clip(belief_lo, -4, 4)"
+    ],
+    "weights": [
+      0.8736754987348541,
+      0.02976939926576609,
+      0.2146894630057549,
+      -0.01614829220696334,
+      0.655389694515419,
+      -0.010551169860624144
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6395514511177658,
+    "r2": 0.9389888706715035,
+    "r2_timing_only": 0.8307355390451855
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 8,
+    "terms": [
+      "(phase == GO) * table(prev_action*100 + prev_state*10 + prev_reward, {111: -0.46, 110: 0.01, 121: 0.33, 120: 0.4, 221: 0.11, 220: 0.34, 211: -0.27, 210: 0.23})",
+      "(phase == D1) * ep_dec**2 * table(prev_action*100 + prev_state*10 + prev_reward, {111: 0.055, 110: -0.23, 121: 0.12, 120: -0.02, 221: 0.11, 220: -0.05, 211: -0.02, 210: -0.31})",
+      "(phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * np.clip(belief_lo, -4, 4)",
+      "(phase == D2) * table(prev_action*100 + prev_state*10 + prev_reward, {111: -0.1, 110: -0.02, 121: 0.03, 120: -0.04, 221: 0.06, 220: 0.05, 211: 0.05, 210: 0.06})",
+      "(phase == D2) * np.clip(belief_lo, -4, 4)"
+    ],
+    "weights": [
+      0.8736754987348541,
+      0.02976939926576609,
+      0.2146894630057549,
+      -0.01614829220696334,
+      0.655389694515419,
+      -0.010551169860624144
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6446324245218549,
+    "r2": 0.9407657656677166,
+    "r2_timing_only": 0.8333155908988488
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I reproduced the reported scores: test R^2 beyond timing is 0.6396 and the weights are as claimed. Removing terms one at a time shows the main claims hold. The GO last-trial table alone gives 0.466. Adding the D1 table scaled by ep_dec^2 brings it to 0.587; the same D1 table without ep_dec^2 gives only 0.596 against 0.627 with the full set, so the late-episode growth is real. The GO two-loss streak adds about +0.016, the D2 table about +0.024, and the GO belief term about +0.011. The D2 belief term adds about 0.002, so it is nearly useless.",
+      "The claim that the trial before adds nothing beyond the streak term is slightly overstated. At GO, adding whether the trial before was rewarded at S2 or at S1 raises test R^2 from 0.640 to 0.651.",
+      "The terms miss a late-episode D2 effect. Adding (phase==D2)*ep_dec**2*clip(belief_lo) raises test R^2 to 0.657, the largest single gain I found. The worst-fit windows match this: late in the episode (t93-99), after a run of a1 S1 trials, D2 sits near 0 while the terms predict about 0.6. The explanation describes D2 as only a small last-trial table.",
+      "The GO last-trial effect also grows with episode time. Adding (phase==GO)*ep_dec*table gives +0.006. The explanation states this growth only for D1.",
+      "The remaining systematic errors are small, about 0.06 at most. GO is over-predicted after a1 S1 u and a2 S1 u (-0.06) and under-predicted after a1 S2 u and a1 S2 r (+0.06). These mostly come from fixed table weights rather than a missing class of cases.",
+      "With 8 observed-only terms I reach test 0.662 (dev 0.668), essentially the 'all observed' reference of 0.67. The original terms are about 0.02 short of that, so the label is not badly incomplete. It does use the model's own outputs and no future variables, as claimed."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO candidate: up after unrewarded or S2-rewarded trials, down after S1-rewarded; late in the episode, D1 drops after unrewarded S1 trials and D2 drops with belief that S1 is good",
+    "better_terms": "(phase == GO) * table(prev_action*100 + prev_state*10 + prev_reward, {111: -0.46, 110: 0.01, 121: 0.33, 120: 0.4, 221: 0.11, 220: 0.34, 211: -0.27, 210: 0.23}) ;; (phase == D1) * ep_dec**2 * table(prev_action*100 + prev_state*10 + prev_reward, {111: 0.055, 110: -0.23, 121: 0.12, 120: -0.02, 221: 0.11, 220: -0.05, 211: -0.02, 210: -0.31}) ;; (phase == GO) * (prev_reward == 0) * (tv('reward', -2) == 0) ;; (phase == D2) * table(prev_action*100 + prev_state*10 + prev_reward, {111: -0.1, 110: -0.02, 121: 0.03, 120: -0.04, 221: 0.06, 220: 0.05, 211: 0.05, 210: 0.06}) ;; (phase == D2) * ep_dec**2 * np.clip(belief_lo,-4,4) ;; (phase == GO) * ep_dec * table(prev_action*100 + prev_state*10 + prev_reward, {111: -0.46, 110: 0.01, 121: 0.33, 120: 0.4, 221: 0.11, 220: 0.34, 211: -0.27, 210: 0.23}) ;; (phase == GO) * ((tv('state', -2) == 2) * 1.0 - (tv('state', -2) == 1)) * (tv('reward', -2) == 1) ;; (phase == GO) * np.clip(belief_lo,-4,4)",
+    "better_terms_test_r2_beyond_timing": 0.662
+  },
+  "final_label": "GO candidate: up after unrewarded or S2-rewarded trials, down after S1-rewarded; late in the episode, D1 drops after unrewarded S1 trials and D2 drops with belief that S1 is good"
+}

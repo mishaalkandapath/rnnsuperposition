@@ -1,0 +1,82 @@
+{
+  "label": "D1 up after unrewarded S1, GO up after unrewarded S2; down after rewards",
+  "terms": "(phase == D1) * (prev_state == S1) * (prev_reward == 0) ;; (phase == D1) * (prev_state == S2) * (prev_reward == 1) ;; (phase == GO) * (prev_state == S2) * (prev_reward == 0) ;; (phase == GO) * (prev_action == 2) * (prev_state == S1) ;; (phase == GO) * last_is(\"a1 S2 r\") ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) ;; (phase == D1) * (prev_state == S1) * (prev_reward == 0) * (tv(\"state\", -2) == S1) * (tv(\"reward\", -2) == 0) ;; (phase == GO) * (prev_state == S2) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw reset gate r14 is dominated by timing (high at GO, low at D2, timing R^2 0.88). Beyond timing, its magnitude is set by the previous trial s state x reward, differently by phase. At D1 it rises (~+0.09) after an unrewarded trial that reached S1 (either action) and falls (~-0.05) after a rewarded S2 trial; a second consecutive unrewarded trial adds ~+0.03, and a further ~+0.03 if both were unrewarded at S1 (streaks of S1 losses build up). At GO it rises (~+0.09-0.10) after an unrewarded S2 trial, and falls after a2 trials that reached S1 (~-0.05) and after a1 S2 rewarded (~-0.03). D2 is essentially unmodulated. So it tracks evidence against S1 at D1 and against S2 at GO. Observed-only terms; dev R^2 beyond timing 0.61 (last-trial reference 0.62, all-observed 0.69, all 0.73). Adding model policy logit terms gives only +0.01; the current choice, hidden good state and time since reversal add little.",
+  "gate": "unit_reset",
+  "feature": 14,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 14,
+    "terms": [
+      "(phase == D1) * (prev_state == S1) * (prev_reward == 0)",
+      "(phase == D1) * (prev_state == S2) * (prev_reward == 1)",
+      "(phase == GO) * (prev_state == S2) * (prev_reward == 0)",
+      "(phase == GO) * (prev_action == 2) * (prev_state == S1)",
+      "(phase == GO) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * (prev_state == S1) * (prev_reward == 0) * (tv(\"state\", -2) == S1) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * (prev_state == S2) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)"
+    ],
+    "weights": [
+      0.08948954177967457,
+      -0.04575041104331573,
+      0.09664697274291587,
+      -0.05207569098743662,
+      -0.02763418515616289,
+      0.0316215385000198,
+      0.030485784038472838,
+      -0.019143792969069425
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6095338246460887,
+    "r2": 0.9543409545122705,
+    "r2_timing_only": 0.8830652989433848
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 14,
+    "terms": [
+      "(phase == D1) * (prev_state == S1) * (prev_reward == 0)",
+      "(phase == D1) * (prev_state == S2) * (prev_reward == 1)",
+      "(phase == GO) * (prev_state == S2) * (prev_reward == 0)",
+      "(phase == GO) * (prev_action == 2) * (prev_state == S1)",
+      "(phase == GO) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * (prev_state == S1) * (prev_reward == 0) * (tv(\"state\", -2) == S1) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * (prev_state == S2) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)"
+    ],
+    "weights": [
+      0.08948954177967457,
+      -0.04575041104331573,
+      0.09664697274291587,
+      -0.05207569098743662,
+      -0.02763418515616289,
+      0.0316215385000198,
+      0.030485784038472838,
+      -0.019143792969069425
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6094368638186596,
+    "r2": 0.9553322665299111,
+    "r2_timing_only": 0.8856324897766352
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The label's 'down after rewards' is too broad. At D1 the residual after S1-rewarded trials does not fall: a1 S1 r is +0.003 and a2 S1 r is +0.020, and misses still shows D1 after a2 S1 r under-predicted by +0.024. At GO the drop after a2 S1 trials happens whether or not they were rewarded (r -0.058, u -0.054), so it is not a reward effect.",
+      "The summary 'evidence against S2 at GO' does not fit the a2 S1 r case. A rare rewarded trial is evidence against S2, yet the GO value falls by 0.058 after it. At GO the gate behaves more like 'up after an S2 loss, down after a2 that ended in S1'.",
+      "The explanation leaves out the GO streak term. Its fitted weight is -0.019, so a second loss in a row at S2 slightly reduces the GO increase.",
+      "The streak terms add little. Test R^2 is 0.587 without the three history-2 terms and 0.6095 with them, so 'streaks build up' rests on about 0.02 of R^2. The worst-fit windows (actual about 0.36 vs predicted about 0.10 at D1 on the window's first trial) mostly come from the window start, where prev_state is unknown. That is an artifact of the 5-trial window, not a missed mechanism.",
+      "Remaining errors are small and scattered: the largest phase x previous-trial errors are about 0.025. Better terms (a window-start D1 term and a graded loss-streak term) only raise test R^2 to 0.635, so I found no large systematic gap. The claims about the policy logit and the 'all observed' score checked out: adding the D1 choice logit gives 0.606."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 up after unrewarded S1 (more with S1-loss streaks), down after rewarded S2; GO up after unrewarded S2, down after a2->S1 trials",
+    "better_terms": "(phase == D1) * (prev_state == S1) * (prev_reward == 0) ;; (phase == D1) * (prev_state == S2) * (prev_reward == 1) ;; (phase == GO) * (prev_state == S2) * (prev_reward == 0) ;; (phase == GO) * (prev_action == 2) * (prev_state == S1) ;; (phase == GO) * last_is('a1 S2 r') ;; (phase == D1)*(prev_state==-1)*(prev_reward==0) ;; (phase == D1)*(prev_reward==0)*(tv('reward',-2)==0)*(1+(prev_state==S1)*(tv('state',-2)==S1)) ;; (phase == D1)*(prev_reward==0)*(tv('reward',-2)==0)*(tv('reward',-3)==0)*(prev_state==S1)",
+    "better_terms_test_r2_beyond_timing": 0.6353
+  },
+  "final_label": "D1 up after unrewarded S1 (more with S1-loss streaks), down after rewarded S2; GO up after unrewarded S2, down after a2->S1 trials"
+}

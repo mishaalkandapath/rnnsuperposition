@@ -1,0 +1,74 @@
+{
+  "label": "GO-only a2 preference: ideal-observer belief S2 good, plus last-trial pattern",
+  "terms": "(phase == GO) * np.tanh(-belief_lo) ;; (phase == GO) * (prev_action == 2) ;; (phase == GO) * last_is(\"a1 S1 u\") ;; (phase == GO) * last_is(\"a1 S2 r\") ;; (phase == GO) * last_is(\"a2 S1 r\") ;; (phase == GO) * last_is(\"a1 S2 u\")",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO (D1/D2 essentially zero). Magnitude tracks how strongly an ideal observer believes S2 is the good state: a saturating tanh(-belief_lo) term is the main driver (GO residual runs from about +2.2 at belief decile 0 to -2.0 at decile 9). On top of that, a previous a2 choice raises it, and the last-trial pattern shifts it in the model-based direction: after a1 S1 u it drops strongly, after a1 S2 r and a1 S2 u it drops, after a2 S1 r it rises. belief_cover and the trial-before choice add <0.01. Observed-only test R^2 beyond timing 0.786 (dev 0.803), versus 0.90 for the model policy-decile reference and 0.88 for the all-observed table ceiling (all = 0.94), so leaving out the model outputs costs roughly 0.1. No future variables are used.",
+  "gate": "hidden",
+  "feature": 119,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 119,
+    "terms": [
+      "(phase == GO) * np.tanh(-belief_lo)",
+      "(phase == GO) * (prev_action == 2)",
+      "(phase == GO) * last_is(\"a1 S1 u\")",
+      "(phase == GO) * last_is(\"a1 S2 r\")",
+      "(phase == GO) * last_is(\"a2 S1 r\")",
+      "(phase == GO) * last_is(\"a1 S2 u\")"
+    ],
+    "weights": [
+      1.6080333924056291,
+      0.45112326695177624,
+      -1.3604189876635797,
+      -0.8201343517652149,
+      0.6828019910584153,
+      -0.4686541458950265
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7863289331029681,
+    "r2": 0.8785484803060066,
+    "r2_timing_only": 0.4315958568573024
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 119,
+    "terms": [
+      "(phase == GO) * np.tanh(-belief_lo)",
+      "(phase == GO) * (prev_action == 2)",
+      "(phase == GO) * last_is(\"a1 S1 u\")",
+      "(phase == GO) * last_is(\"a1 S2 r\")",
+      "(phase == GO) * last_is(\"a2 S1 r\")",
+      "(phase == GO) * last_is(\"a1 S2 u\")"
+    ],
+    "weights": [
+      1.6080333924056291,
+      0.45112326695177624,
+      -1.3604189876635797,
+      -0.8201343517652149,
+      0.6828019910584153,
+      -0.4686541458950265
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.803451089092867,
+    "r2": 0.8883685623151091,
+    "r2_timing_only": 0.4320424510638198
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The numbers reproduce. The claimed 6 terms score test R^2 beyond timing 0.786. The GO-only claim holds: the D1 and D2 residuals are about 1e-5. The belief-decile residuals (+2.24 down to -1.98) and the term signs also match (weights: tanh +1.61, prev a2 +0.45, a1S1u -1.36, a1S2r -0.82, a2S1r +0.68, a1S2u -0.47). Adding belief_cover (<10) changed R^2 by <0.001, and the choice two trials back by <0.005, so 'gained <0.01' is correct.",
+      "The explanation says the last-trial effects shift the feature 'in the model-based direction'. Two of them clearly do not. a2 S1 r (rare rewarded) raises this a2 feature (+0.68), but a model-based agent should switch to a1 there, so a rise is the model-free direction: repeat the rewarded action. a1 S2 r lowers the a2 feature (-0.82), which is again model-free (repeat a1 after reward); model-based would favour a2. a1 S1 u (common unrewarded) drops strongly (-1.36), where both model-based and model-free switching would raise a2, so beyond belief it looks perseverative. On top of the ideal-observer belief, the residual history effects are reward-driven repetition of the last action plus perseveration, not model-based.",
+      "The belief shape is too smooth. The decile residuals step sharply between deciles 3 and 5 (+1.51, +0.42, -1.02). Adding a cubic tanh(-belief_lo)**3, or a second, sharper tanh(-2*belief_lo), lifts test R^2 from 0.786 to 0.80-0.805 with no other change.",
+      "A gap to the all-observed ceiling remains (0.88, against 0.786-0.805), and I could not close it within 8 terms. A full last-trial table plus belief gives 0.788, and two-trials-back choice terms add <0.01. In the worst-fit windows the feature is 0 at GO even though belief strongly favours S2 and the agent keeps choosing a2 (predicted ~4, actual 0). The errors grouped by phase x previous trial are small (largest -0.2 to -0.3, after a2 S1 u or a1 S2 u), so this is not one large systematic class, but the observed-only account is roughly 0.08-0.1 short of both the table ceiling and the model-policy reference (0.90)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO-only a2 preference: a sharp (step-like) function of the ideal-observer belief that S2 is good, plus model-free/perseverative last-trial shifts (prev a2 up, a2 S1 r up; a1 S1 u, a1 S2 r/u down)",
+    "better_terms": "(phase == GO) * np.tanh(-belief_lo) ;; (phase == GO)*np.tanh(-belief_lo)**3 ;; (phase == GO) * last_is('a1 S1 u') ;; (phase == GO) * last_is('a1 S2 r') ;; (phase == GO) * last_is('a2 S1 r') ;; (phase == GO) * last_is('a1 S2 u') ;; (phase == GO) * (prev_action == 2)",
+    "better_terms_test_r2_beyond_timing": 0.8047
+  },
+  "final_label": "GO-only a2 preference: a sharp (step-like) function of the ideal-observer belief that S2 is good, plus model-free/perseverative last-trial shifts (prev a2 up, a2 S1 r up; a1 S1 u, a1 S2 r/u down)"
+}

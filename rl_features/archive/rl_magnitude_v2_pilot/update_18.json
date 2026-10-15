@@ -1,0 +1,113 @@
+{
+ "label": "Fires only at D1, strongly after a1 led to S1, weakly after a2->S1, off after S2.",
+ "short_terms": "(phase == D1) * (prev_state == S1) * (prev_action == 1) ;; (phase == D1) * (prev_state > 0) ;; (phase == D1) * (prev_state == -1) * belief_lo",
+ "terms": "(phase == D1) * (prev_state == S1) ;; (phase == D1) * (prev_state == S2) ;; (phase == D1) * (prev_state == S1) * (prev_action == 1) ;; (phase == D1) * belief_lo ;; (phase == D1) * (prev_state == S1) * (prev_reward == 1) ;; (phase == D1) * last_is(\"a2 S1 r\") ;; (phase == D1) * (tv(\"state\", -2) == 1) ;; (phase == D1) * (prev_state == S1) * (tv(\"state\", -2) == 1)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Active only at D1 (zero at GO and D2). Its magnitude is set by the previous trial: largest after a1 -> S1 (common), whether rewarded or not; intermediate after a2 -> S1 (rare); suppressed after any trial that reached S2 (relative to window-first trials, where the previous trial is unknown in the data). Reward has little effect. The free fit adds belief_lo, reward x S1, a2 S1 r and the trial-before state, which gains only ~0.03 dev R^2 (0.71 vs 0.68). Future and model-output variables are not needed.",
+ "full_test_scores": {
+  "gate": "update",
+  "feature": 18,
+  "terms": [
+   "(phase == D1) * (prev_state == S1)",
+   "(phase == D1) * (prev_state == S2)",
+   "(phase == D1) * (prev_state == S1) * (prev_action == 1)",
+   "(phase == D1) * belief_lo",
+   "(phase == D1) * (prev_state == S1) * (prev_reward == 1)",
+   "(phase == D1) * last_is(\"a2 S1 r\")",
+   "(phase == D1) * (tv(\"state\", -2) == 1)",
+   "(phase == D1) * (prev_state == S1) * (tv(\"state\", -2) == 1)"
+  ],
+  "weights": [
+   -0.29923568187520494,
+   -0.7512037531478755,
+   2.105886402909471,
+   0.09838837423999029,
+   -0.4245691115607393,
+   0.41108550795758797,
+   -0.20048274265192695,
+   -0.07430337879001747
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7074417180802877,
+  "r2": 0.7846501701691228,
+  "r2_timing_only": 0.2639079351375998
+ },
+ "gate": "update",
+ "feature": 18,
+ "test_scores": {
+  "gate": "update",
+  "feature": 18,
+  "terms": [
+   "(phase == D1) * (prev_state == S1) * (prev_action == 1)",
+   "(phase == D1) * (prev_state > 0)",
+   "(phase == D1) * (prev_state == -1) * belief_lo"
+  ],
+  "weights": [
+   2.399205699059547,
+   -0.8224163969932007,
+   0.32265235324322
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7314599121352845,
+  "r2": 0.8023297722253311,
+  "r2_timing_only": 0.2639079351375998
+ },
+ "dev_scores": {
+  "gate": "update",
+  "feature": 18,
+  "terms": [
+   "(phase == D1) * (prev_state == S1) * (prev_action == 1)",
+   "(phase == D1) * (prev_state > 0)",
+   "(phase == D1) * (prev_state == -1) * belief_lo"
+  ],
+  "weights": [
+   2.399205699059547,
+   -0.8224163969932007,
+   0.32265235324322
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.73985016361212,
+  "r2": 0.8086550850672761,
+  "r2_timing_only": 0.2644818940134518
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The main claims hold. The feature is non-zero only at D1 (the GO and D2 baselines and residuals are all 0). It is highest after a1->S1 (residual +1.56 rewarded, +1.67 unrewarded, so reward has little effect) and suppressed after S2 (about -0.90 for every S2 pattern).",
+   "There is a large class of errors the short form ignores: window-first trials (prev_state == -1), which get only the baseline. On these trials the activation follows the ideal-observer belief that S1 is good. Adding (phase == D1) * (prev_state == -1) * belief_lo to the recorded form raises test R^2 from 0.678 to 0.722. Replacing the S1/S2 pair with a single 'previous trial known' term raises it to 0.731. Using belief_lo on all trials instead adds nothing (test 0.674-0.688).",
+   "The 'weakly after a2->S1' claim is only true on average. a2->S1 is bimodal: the worst misses include runs of a2 S1R trials with activation about 3 against a prediction of 0.4 (e.g. t17-t20 and t75-t77). With the improved form, misses still under-predict D1 after a2 S1 r (+0.48) and a2 S1 u (+0.16). No 3-term observed predictor I tried fixed this: belief_lo x S1 and the trial-before state or action all score at or below 0.674.",
+   "The S1 term (-0.55) in the recorded form is close to a fitted correction. Merging a2->S1 with S2 into 'any known previous trial' costs nothing and scores better on test (0.731 vs 0.678).",
+   "The future variable 'upcoming choice a1' adds less (0.699) than the observed belief term on window-first trials (0.722), so no future variable is needed.",
+   "There is still a gap to the 'all observed' ceiling (0.73 vs 0.78), mostly the a2->S1 bimodality."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "D1 only: high after a1->S1, low after other trials; window-first trials follow belief S1 is good",
+  "better_short_terms": "(phase == D1) * (prev_state == S1) * (prev_action == 1) ;; (phase == D1) * (prev_state > 0) ;; (phase == D1) * (prev_state == -1) * belief_lo",
+  "better_short_terms_test_r2_beyond_timing": 0.7315
+ },
+ "final_label": "D1 only: high after a1->S1, low after other trials; window-first trials follow belief S1 is good",
+ "original_short_terms": "(phase == D1) * (prev_state == S1) ;; (phase == D1) * (prev_state == S2) ;; (phase == D1) * (prev_state == S1) * (prev_action == 1)",
+ "original_test_scores": {
+  "gate": "update",
+  "feature": 18,
+  "terms": [
+   "(phase == D1) * (prev_state == S1)",
+   "(phase == D1) * (prev_state == S2)",
+   "(phase == D1) * (prev_state == S1) * (prev_action == 1)"
+  ],
+  "weights": [
+   -0.5480097493373898,
+   -0.9043527519072614,
+   2.1232117344692107
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6776088113473936,
+  "r2": 0.7626904042512593,
+  "r2_timing_only": 0.2639079351375998
+ },
+ "terms_from": "skeptic"
+}

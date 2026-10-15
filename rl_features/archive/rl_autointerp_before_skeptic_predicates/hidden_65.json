@@ -1,0 +1,65 @@
+{
+  "label": "GO: stay with a2 after a fresh common-unrewarded a2->S2 trial",
+  "predicate": "(phase == GO) & (prev_reward == 0) & (prev_action == 2) & (prev_common == 1) & (model_act == 2) & ~((tv(\"prev_reward\",-1)==0) & (tv(\"prev_action\",-1)==2) & (tv(\"prev_common\",-1)==1))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO steps (zero at D1/D2), and only when the agent is choosing a2 (model_act==2; policy logit a1-a2 mostly between -8.9 and -4.4, a moderate rather than extreme a2 preference). Requires that the previous trial was a2 to S2 (common) and unrewarded (prev_reward 0; essentially never after a reward). It is strongest on the first such loss and much weaker or silent when the trial before that was also an a2/S2-common loss (excluding those raises precision 0.71 to 0.81). So it reads as: agent sticks with a2 despite a fresh common-transition loss. All variables are observed at GO (model_act is the agent's own current choice). Dev: P 0.81, R 0.79, F1 0.80, mass recall 0.83. Most remaining misses are rel -3 GO steps where the previous trial lies outside the window (prev_action unknown); a looser version allowing unknown history reaches mass recall 0.99 but precision 0.60. Never fires on a1 choices, rewarded history, or rare-transition previous trials.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 65,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (prev_action == 2) & (prev_common == 1) & (model_act == 2) & ~((tv(\"prev_reward\",-1)==0) & (tv(\"prev_action\",-1)==2) & (tv(\"prev_common\",-1)==1))",
+    "split": "test",
+    "precision": 0.7891581108829568,
+    "recall": 0.7909771960154771,
+    "f1": 0.7900666063646081,
+    "mass_recall": 0.8257175250821811,
+    "correlation": 0.7147620812234614,
+    "n_active": 24294,
+    "n_predicted": 24350,
+    "coverage_by_activation_quartile": [
+      0.6684227856437274,
+      0.8342113928218636,
+      0.8275975629836984,
+      0.8336901037378561
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 65,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (prev_action == 2) & (prev_common == 1) & (model_act == 2) & ~((tv(\"prev_reward\",-1)==0) & (tv(\"prev_action\",-1)==2) & (tv(\"prev_common\",-1)==1))",
+    "split": "dev",
+    "precision": 0.8094109996283909,
+    "recall": 0.7931269913518434,
+    "f1": 0.8011862614373075,
+    "mass_recall": 0.8260880907634761,
+    "correlation": 0.7274467337549481,
+    "n_active": 21970,
+    "n_predicted": 21528,
+    "coverage_by_activation_quartile": [
+      0.6750409612233752,
+      0.8399781540141998,
+      0.8273852876911871,
+      0.8301165331391115
+    ]
+  },
+  "gate": "hidden",
+  "feature": 65,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The factual claims hold up. Phase: 100% of the mass is at GO and none at D1 or D2. Choice: (GO & model_act==1) gives 0 actives out of 175k steps. After a reward: (GO & prev_reward==1) has P 0.002 and mass 0.003. After a rare transition: (GO & prev_reward==0 & model_act==2 & prev_common==0) has P 0.002. Repeated losses: the subset where the trial before was also an unrewarded a2/S2-common trial has P 0.137 and mass 0.004, so the 'weaker or silent on repeated losses' claim is right.",
+      "One systematic miss class is left. All rel -3 GO steps are missed: 16.5% of the activation mass and 3623 of 21970 actives. The predicate cannot fire there because prev_action == -1 at the window's first trial. The original agent knew about this and kept 'explained' with test F1 0.79, which is below the bar. The gap is fixable: the logit band from its own explanation recovers these steps. At rel -3, (GO & prev_reward==0 & model_act==2 & -9 < choice < -5) has P 0.66, versus P 0.31 without the band.",
+      "The in-window false positives are also systematic. Adding choice < -4 to the original predicate raises dev precision from 0.81 to 0.87 with no loss of recall. With -4 < choice < 0 the predicate has P 0.07, so the 'moderate preference for a2' part of the explanation is load-bearing but was left out of the predicate.",
+      "Smaller residual pattern: if the agent had just switched to a2 (two trials back it chose a1), the feature is almost silent (P 0.04, n = 630). So it also wants an a2 streak of at least two trials. This is minor.",
+      "Precision is lower when S1 is the good state (0.68, versus 0.90 when S2 is good). With choice < -4 this rises to 0.81, so most of the gap is again explained by the logit band.",
+      "Future variables: none are used. model_act and choice are the agent's own policy outputs at GO, which the task allows, and the history variables are all observed."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO: choosing a2 with a moderate preference (logit a1-a2 between about -9 and -4) right after a fresh common, unrewarded a2->S2 loss",
+    "better_predicate": "((phase == GO) & (prev_reward == 0) & (prev_action == 2) & (prev_common == 1) & (model_act == 2) & ~((tv(\"prev_reward\",-1)==0) & (tv(\"prev_action\",-1)==2) & (tv(\"prev_common\",-1)==1)) & (choice<-4)) | ((phase==GO)&(prev_reward==0)&(model_act==2)&(rel==-3)&(choice<-5)&(choice>-9))",
+    "better_predicate_test_f1": 0.876
+  },
+  "final_label": "GO: choosing a2 with a moderate preference (logit a1-a2 between about -9 and -4) right after a fresh common, unrewarded a2->S2 loss"
+}

@@ -1,0 +1,83 @@
+{
+  "label": "lower after a1 / a1->S2 trials; higher after reward (D1) and at S2 (D2)",
+  "terms": "(phase == D1) * (prev_action == 1) ;; (phase == D1) * (prev_reward == 1) ;; (phase == D1)*(prev_action==1)*(prev_state==2) ;; (phase == GO)*(prev_action==1)*(prev_state==2) ;; (phase == D2) * (state == 2) ;; (phase == D2)*(prev_action==1)*(prev_state==2)*(prev_reward==0) ;; (phase == D1) * choice ;; (phase == D2)*(prev_state==2)*(prev_reward==0)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 9 is near 0.9 early and decays strongly over the episode (timing R^2 0.86). Beyond timing: at D1 it is lower after an a1 choice (about -0.02), further lower when a1 led to S2 (rare, about -0.04), higher after a rewarded trial (+0.045), and lower when the policy favours a1 (negative weight on choice logit). At GO it is lower after a1->S2 trials (-0.04). At D2 it is higher when the reached state is S2 (+0.05) and lower after an unrewarded S2 trial (-0.05), more so after a1 S2 u. All terms observed (choice = model policy logit). Test R^2 beyond timing 0.55 vs all ceiling 0.64 (86%). Residual misses are mostly late-episode (trials 85-99) runs of a1 S1 choices where the gate is lower than predicted; multiplicative late-episode scaling did not help. Trial-before terms added little (<0.01).",
+  "gate": "unit_update",
+  "feature": 9,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 9,
+    "terms": [
+      "(phase == D1) * (prev_action == 1)",
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1)*(prev_action==1)*(prev_state==2)",
+      "(phase == GO)*(prev_action==1)*(prev_state==2)",
+      "(phase == D2) * (state == 2)",
+      "(phase == D2)*(prev_action==1)*(prev_state==2)*(prev_reward==0)",
+      "(phase == D1) * choice",
+      "(phase == D2)*(prev_state==2)*(prev_reward==0)"
+    ],
+    "weights": [
+      -0.02313042280418482,
+      0.04472324992066385,
+      -0.04142048250537459,
+      -0.037859282869954776,
+      0.0535028817324931,
+      -0.028109990738121027,
+      -0.010274693083751875,
+      -0.04675737781866712
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5504773655851651,
+    "r2": 0.9378144239517059,
+    "r2_timing_only": 0.8616630814836631
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 9,
+    "terms": [
+      "(phase == D1) * (prev_action == 1)",
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1)*(prev_action==1)*(prev_state==2)",
+      "(phase == GO)*(prev_action==1)*(prev_state==2)",
+      "(phase == D2) * (state == 2)",
+      "(phase == D2)*(prev_action==1)*(prev_state==2)*(prev_reward==0)",
+      "(phase == D1) * choice",
+      "(phase == D2)*(prev_state==2)*(prev_reward==0)"
+    ],
+    "weights": [
+      -0.02313042280418482,
+      0.04472324992066385,
+      -0.04142048250537459,
+      -0.037859282869954776,
+      0.0535028817324931,
+      -0.028109990738121027,
+      -0.010274693083751875,
+      -0.04675737781866712
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5513705748866466,
+    "r2": 0.938325628130068,
+    "r2_timing_only": 0.8625271361673414
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced: the 8 terms score test R^2 beyond timing 0.5505 against an 'all' ceiling of 0.64 (86%). The fitted weights match the explanation: D1 prev_a1 -0.023, D1 prev_reward +0.045, D1 a1->S2 -0.041, GO a1->S2 -0.038, D2 state S2 +0.054, D2 a1S2u -0.028 on top of D2 prevS2u -0.047, D1 choice -0.010.",
+      "Overstated wording: the explanation says every term uses only what the agent has seen, but the D1 choice logit is a model-output cue, which the tool's 'all observed' reference leaves out. Dropping that one term cuts test R^2 to 0.468 (vs 0.59 observed ceiling, ~79%), so about 0.08 of the score comes from the policy logit. That is the agent's own computed quantity, not a future variable, but the label should say so.",
+      "The D1 choice term mostly stands in for the agent's upcoming choice. Using the future (phase==D1)*(action==1) instead gives 0.526, close to the logit's 0.550. Since the observed-only logit does at least as well, using it is legitimate.",
+      "The '+ after reward at D1' claim is less clean than it sounds. The D1 residual table shows reward and choice interact: a1 S2 u -0.129, a1 S1 u -0.075, a1 S2 r -0.052, a1 S1 r -0.019, a2 r +0.06. In practice the drop after an a1 choice is mostly a drop after an unrewarded a1 trial. Even so, a (prev_a1 & unrewarded) term gives the same 0.546, so it makes little difference.",
+      "Misses: the worst windows are late-episode (t87-99) runs of a1->S1 choices, where the actual value is about 0.2 below the prediction at every phase. Mean errors by phase x previous trial stay small (|err| <= 0.028; GO slightly under-predicted at +0.013 on average). None of these fixed it: terms scaled by exp(ep_trial/15) (0.41-0.52), late x prev_a1, late x choice, two a1 trials in a row, value, or the hidden good state as an 8th term (all <= 0.541). This looks like late-episode variance that grows with time and that the cue set cannot capture, not a missed systematic class.",
+      "I could not beat the claimed terms with alternatives: full per-phase last-trial tables plus choice in every phase scored 0.498 and 0.541."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "lower after a1 choices (esp. unrewarded / a1->S2) and when policy leans a1 (D1); higher after reward (D1) and at S2 (D2)",
+    "better_terms": null,
+    "better_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "lower after a1 choices (esp. unrewarded / a1->S2) and when policy leans a1 (D1); higher after reward (D1) and at S2 (D2)"
+}

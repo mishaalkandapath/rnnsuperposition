@@ -1,0 +1,76 @@
+{
+  "label": "drops after a1 reaching S2 (D1) and when choosing a1 (D2), graded by policy",
+  "terms": "(phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D2) * (action == 1) ;; (phase == D2) * (action == 1) * (prev_action == 1) * (prev_state == 2) * (prev_reward == 0) ;; (phase == D2) * np.clip(choice, -5, 5) ;; (phase == D1) * np.clip(choice, -5, 5) ;; (phase == D2) * np.clip(choice, -5, 5) * ep_dec ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * ep_dec",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 13 sits near 1 (mean 0.96). It dips in three places. (1) At D1 after the last trial was a1 that reached S2 (a rare transition), by about -0.11 whether or not it was rewarded, and the dip grows later in the episode. (2) At D2 when this trial chose a1 (about -0.06 vs a2), and more after a1 S2 unrewarded (about -0.05 extra). (3) At D2 (and weakly at D1) it falls in proportion to the model policy logit toward a1, again more strongly late in the episode. GO barely varies. This trial reward and the hidden good state add nothing beyond these. Observed-only history terms (a1->S2 at D1, a1 choice at D2, a1 S2 u, ep_trial interactions) reach test R^2 0.59 beyond timing; adding the graded policy logit (model output, not future) raises dev R^2 to 0.84. The all ceiling is 0.86.",
+  "gate": "unit_update",
+  "feature": 13,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 13,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D2) * (action == 1)",
+      "(phase == D2) * (action == 1) * (prev_action == 1) * (prev_state == 2) * (prev_reward == 0)",
+      "(phase == D2) * np.clip(choice, -5, 5)",
+      "(phase == D1) * np.clip(choice, -5, 5)",
+      "(phase == D2) * np.clip(choice, -5, 5) * ep_dec",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * ep_dec"
+    ],
+    "weights": [
+      -0.06032183517224509,
+      -0.05842984223404132,
+      -0.05002265463598789,
+      -0.009560286091324035,
+      -0.0035946652751367996,
+      -0.0010507539144828575,
+      -0.009159815937863768
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.828145509213774,
+    "r2": 0.873043194287791,
+    "r2_timing_only": 0.2612540694666302
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 13,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D2) * (action == 1)",
+      "(phase == D2) * (action == 1) * (prev_action == 1) * (prev_state == 2) * (prev_reward == 0)",
+      "(phase == D2) * np.clip(choice, -5, 5)",
+      "(phase == D1) * np.clip(choice, -5, 5)",
+      "(phase == D2) * np.clip(choice, -5, 5) * ep_dec",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * ep_dec"
+    ],
+    "weights": [
+      -0.06032183517224509,
+      -0.05842984223404132,
+      -0.05002265463598789,
+      -0.009560286091324035,
+      -0.0035946652751367996,
+      -0.0010507539144828575,
+      -0.009159815937863768
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8353394843696096,
+    "r2": 0.8786403883879306,
+    "r2_timing_only": 0.2629707787112582
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor systematic miss: D2 after a1 S2 r is under-predicted by +0.041 (in the misses output). The profile residual for D2 after a1 S2 r is +0.042, against -0.157 after a1 S2 u. Adding (phase == D2) * last_is('a1 S2 r') raises test R^2 only from 0.828 to 0.834, so the gap is small.",
+      "The 'graded by policy' part uses the choice logit read out at D1 and D2. The variables doc says choice is 'meaningful at GO', so at D2 it is a readout of the current hidden state, not the decision for this trial. It is a model output (disclosed), not a future variable. It carries about 0.24 of the R^2: observed-only terms reach 0.58 on test (reported as 0.59), and the policy terms bring it to 0.83. The observed-only figure stays well below the all-observed ceiling of 0.79. Adding more observed D2 history terms (previous action, the trial before, action x ep_dec) only reaches 0.593.",
+      "The late-episode (ep_dec) interaction claims are real but small: dropping both ep_dec terms gives 0.810 vs 0.828 on test. The worst-fit windows are late-episode a1 streaks where D1 and D2 drops are 0.1-0.2 deeper than predicted. A threshold term for late episode, (ep_dec >= 8), does not improve the fit (0.834).",
+      "The claims that do check out: the D1 drop after a1 S2 is the same whether or not that trial was rewarded (residual -0.111 for both r and u). The D1 policy effect is weak (removing it costs 0.015). Dropping the D2 a1 term costs 0.12. This trial's reward reference score is 0.00. GO barely varies (residuals under 0.007)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_terms": null,
+    "better_terms_test_r2_beyond_timing": null
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "label": "late-episode D1 after a rewarded rare a1->S2 trial",
+  "predicate": "(phase == D1) & (prev_reward == 1) & (prev_action == 1) & (prev_common == 0) & (tv(\"reward\", -2) != 0) & (value < 5.0)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1, when the reward input is 1 and the previous trial was a1 with a rare transition to S2 (rare-rewarded a1, so a model-based agent should switch to a2). Every dev activation has prev_reward == 1, and 93% have prev_action == 1 with prev_common == 0; the rest are mostly first-window D1s whose history is unknown. It never fires after rare-rewarded a2 trials, at GO or at D2, or in episodes before about trial 80: 97% of activations fall in trials 90-99, and all have the model value output in its lowest bin (value < 5.22). So the value condition acts as an observed, late-episode signal. The trial before that is usually rewarded too (tv reward -2 != 0 cuts false positives). All variables are observed at D1 (value is the output of the model itself); no future variables are used. Dev: P 0.76, R 0.91, F1 0.83, mass recall 0.93. I did not check what modulates magnitude.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 74,
+    "predicate": "(phase == D1) & (prev_reward == 1) & (prev_action == 1) & (prev_common == 0) & (tv(\"reward\", -2) != 0) & (value < 5.0)",
+    "split": "test",
+    "precision": 0.7497116493656286,
+    "recall": 0.9015256588072122,
+    "f1": 0.818639798488665,
+    "mass_recall": 0.9283485783000395,
+    "correlation": 0.7569798919538627,
+    "n_active": 721,
+    "n_predicted": 867,
+    "coverage_by_activation_quartile": [
+      0.8232044198895028,
+      0.9222222222222223,
+      0.9166666666666666,
+      0.9444444444444444
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 74,
+    "predicate": "(phase == D1) & (prev_reward == 1) & (prev_action == 1) & (prev_common == 0) & (tv(\"reward\", -2) != 0) & (value < 5.0)",
+    "split": "dev",
+    "precision": 0.7635658914728682,
+    "recall": 0.9106317411402157,
+    "f1": 0.830639494026704,
+    "mass_recall": 0.9302677982603493,
+    "correlation": 0.7590632823762311,
+    "n_active": 649,
+    "n_predicted": 774,
+    "coverage_by_activation_quartile": [
+      0.8404907975460123,
+      0.9259259259259259,
+      0.9567901234567902,
+      0.9197530864197531
+    ]
+  },
+  "gate": "update",
+  "feature": 74,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I checked the factual claims and they hold. On dev, the feature fires only at D1 (649 activations at D1, 0 at GO, 0 at D2). Every activation has in_rew == 1. Of the activations, 606 have prev_action == 1 with prev_common == 0, and the other 43 have prev_action == -1 (the window's first trial). Nothing fires before ep_trial 80: 56 activations fall in trials 80-89 and 593 in trials 90-99. All activations sit in the lowest value bin (< 5.22). There are no activations after a rare-rewarded a2 trial at value < 5 (0 of 1708 predicted steps).",
+      "The explanation understates the condition on the trial two back. It says that trial is 'usually rewarded too', but it is effectively required: with tv('reward',-2) == 0 the predicate gets 0 of 316 steps. That trial is also almost always a1 common, i.e. a1 to S1 rewarded. With tv('common',-2) == 0 there are 0 of 32 hits, and with tv('action',-2) == 2 there are 0 of 9. So the selectivity is closer to 'a rewarded a1 to S1 run, then a rare a1 to S2 that was also rewarded', not just one rare-rewarded a1 trial.",
+      "Systematic false-positive class: `tv('reward',-2) != 0` also lets through tv == -9, i.e. the trial two back lies outside the window (D1 at rel -2). Precision on that slice is only 0.49 (84 predicted steps). The rest of the predicate's precision is about 0.80-0.84.",
+      "The `value < 5` term is the model's own output at the same step, so it comes partly after the feature's own computation. It is legitimate as an observed proxy for 'late in the episode' (`ep_trial >= 90` instead gives F1 0.64 versus 0.68 for the value threshold), but it is not something the agent receives as an input.",
+      "None of this overturns the label. Making the trial-two-back condition explicit only raises test F1 from 0.819 to 0.841. The remaining misses are mostly first-trial-of-window D1s where the history is unknown, which counts as scattered or uncheckable."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "late-episode D1 after a rare a1->S2 rewarded trial that followed a rewarded a1->S1 trial",
+    "better_predicate": "(phase == D1) & (prev_reward == 1) & (prev_action == 1) & (prev_common == 0) & (((tv('action',-2)==1) & (tv('common',-2)==1) & (tv('reward',-2)==1)) | (tv('reward',-2)==-9)) & (value<5.0)",
+    "better_predicate_test_f1": 0.841
+  },
+  "final_label": "late-episode D1 after a rare a1->S2 rewarded trial that followed a rewarded a1->S1 trial"
+}

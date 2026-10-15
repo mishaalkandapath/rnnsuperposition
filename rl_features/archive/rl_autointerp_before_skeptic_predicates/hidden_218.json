@@ -1,0 +1,63 @@
+{
+  "label": "D2 after a2 -> S2 common transition, late in episode (trial >= 40)",
+  "predicate": "(phase == D2) & (action == 2) & (state == 2) & (ep_trial >= 40)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (never at D1 or GO), only when the agent chose a2 and reached S2 (the common a2 transition; inputs in_action=2 and in_state=2). It never fires on a1, on S1, or on rare transitions. It is also gated by position in the episode: silent before trial ~35, rising through trials 40-49 and saturating from about trial 50 (rate per active cell grows with ep_trial; activation mass is concentrated in trials 70-99). The ep_trial>=40 cutoff gives the best simple predicate (dev F1 0.94, mass recall 1.0); >=45 is marginally higher on F1 (0.95), and the misses are low-magnitude activations around trials 40-45. All variables are observed at D2. Magnitude is higher later in the episode; in the top windows it is often a common S2 trial coming right after a rare a2->S1 trial, but I did not score that as a magnitude effect. Reward and the hidden good state do not gate firing, apart from correlating with choosing a2.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 218,
+    "predicate": "(phase == D2) & (action == 2) & (state == 2) & (ep_trial >= 40)",
+    "split": "test",
+    "precision": 0.8756495916852264,
+    "recall": 0.9989470672389127,
+    "f1": 0.9332435192164786,
+    "mass_recall": 0.9999732465117759,
+    "correlation": 0.7838820562059383,
+    "n_active": 87375,
+    "n_predicted": 99678,
+    "coverage_by_activation_quartile": [
+      0.9957883171580296,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 218,
+    "predicate": "(phase == D2) & (action == 2) & (state == 2) & (ep_trial >= 40)",
+    "split": "dev",
+    "precision": 0.8875107467130785,
+    "recall": 0.9992327124206153,
+    "f1": 0.9400639673055994,
+    "mass_recall": 0.9999781422828523,
+    "correlation": 0.791153979360265,
+    "n_active": 84714,
+    "n_predicted": 95378,
+    "coverage_by_activation_quartile": [
+      0.9969309221398556,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 218,
+  "final_verdict": "explained",
+  "skeptic": {
+    "better_predicate": null,
+    "better_predicate_test_f1": null,
+    "upheld": true,
+    "issues": [
+      "All the factual claims hold up on the test split. The feature never fires outside D2 (phase != D2: 0 actives). It never fires when action == 1 or on rare transitions (common == 0: 0 actives). In the profile it fires only when in_action == 2 and in_state == 2. It is silent before trial 30 and has only 65 dev actives in trials 30-39. Within the predicate's base (D2, a2, reached S2), precision is 0.01 for trials 35-39, 0.33 for 40-44, 0.68 for 45-49 and 0.95 for trials 50 and later. Activation mass sits mostly in trials 70-99.",
+      "The predicate's test scores reproduce: P 0.876, R 0.999, F1 0.933, mass recall 1.0. A cutoff of >= 45 gives F1 0.946, as the explanation says. The 92 missed test activations hold 0.0% of the activation mass and are tiny (about 0.01-0.03 of max).",
+      "Most false positives are the ramp-up in trials 40-49, which the explanation already states. One minor unmentioned modulation: when the previous trial's action was a1 (a switch to a2), the feature fires less often. Precision there is 0.53 (0.64 at trial >= 50) versus about 0.90 otherwise. This subset is only about 6.6k of 99.7k predicted steps, and adding prev_action != 1 does not raise F1 (0.928 at >= 40, 0.938 at >= 45).",
+      "The hidden good state modulates firing somewhat (precision 0.76 when good == 1 vs 0.90 otherwise), but restricting on it lowers F1 to 0.874. This fits the explanation's claim that good is only a correlate.",
+      "The predicate uses no future variables. The label matches the predicate and does not overclaim."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null
+  }
+}

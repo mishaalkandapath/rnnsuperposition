@@ -1,0 +1,109 @@
+{
+ "label": "GO after a1 reached S2 unrewarded, damped if the trial before was rewarded, scaled by S1 belief",
+ "short_terms": "(phase == GO) * last_is('a1 S2 u') ;; (phase == GO) * (prev_reward == 0) * belief_lo ;; (phase == GO) * last_is('a1 S2 u') * (tv('reward', -2) == 1)",
+ "terms": "(phase == GO) * last_is(\"a1 S2 u\") ;; (phase == GO) * last_is(\"a1 S1 u\") ;; (phase == GO) * last_is(\"a2 S2 u\") ;; (phase == GO) * last_is(\"a1 S2 u\") * belief_lo ;; (phase == GO) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 1) ;; (phase == GO) * belief_lo ;; (phase == GO) * last_is(\"a1 S2 u\") * (tv(\"action\", -2) == 1)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Active almost only at GO. Magnitude is driven by the previous trial being a1 -> S2 (rare) unrewarded, the model-based stay-on-a1 case (residual +1.0 vs ~-0.1 for every other pattern); this single indicator gives dev R^2 0.47 beyond timing. Within that case the activation is much smaller if the trial before was rewarded (weight -0.68) and grows with the observer log-odds that S1 is good (+0.28). D1 and D2 carry essentially nothing. The free fit adds small terms (a1 S1 u, a2 S2 u, trial-before action a1, a GO-wide belief term) for only ~0.03 more dev R^2; residual misses are scattered high-activation GO steps after other unrewarded trials (e.g. a1 S1 u) when the agent keeps choosing a1. All terms are observed-only.",
+ "full_test_scores": {
+  "gate": "reset",
+  "feature": 125,
+  "terms": [
+   "(phase == GO) * last_is(\"a1 S2 u\")",
+   "(phase == GO) * last_is(\"a1 S1 u\")",
+   "(phase == GO) * last_is(\"a2 S2 u\")",
+   "(phase == GO) * last_is(\"a1 S2 u\") * belief_lo",
+   "(phase == GO) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 1)",
+   "(phase == GO) * belief_lo",
+   "(phase == GO) * last_is(\"a1 S2 u\") * (tv(\"action\", -2) == 1)"
+  ],
+  "weights": [
+   0.41470363077165345,
+   0.02813342525511625,
+   -0.035355565409514136,
+   0.2044018015339969,
+   -1.0112023382534907,
+   0.01006969351671406,
+   0.6425073066625211
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5130478415729638,
+  "r2": 0.5376462889327557,
+  "r2_timing_only": 0.05051512131961877
+ },
+ "gate": "reset",
+ "feature": 125,
+ "test_scores": {
+  "gate": "reset",
+  "feature": 125,
+  "terms": [
+   "(phase == GO) * last_is('a1 S2 u')",
+   "(phase == GO) * (prev_reward == 0) * belief_lo",
+   "(phase == GO) * last_is('a1 S2 u') * (tv('reward', -2) == 1)"
+  ],
+  "weights": [
+   1.1970804156813446,
+   0.05105718324095322,
+   -0.5975969472890816
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5006368042310946,
+  "r2": 0.5258621966479133,
+  "r2_timing_only": 0.05051512131961877
+ },
+ "dev_scores": {
+  "gate": "reset",
+  "feature": 125,
+  "terms": [
+   "(phase == GO) * last_is('a1 S2 u')",
+   "(phase == GO) * (prev_reward == 0) * belief_lo",
+   "(phase == GO) * last_is('a1 S2 u') * (tv('reward', -2) == 1)"
+  ],
+  "weights": [
+   1.1970804156813446,
+   0.05105718324095322,
+   -0.5975969472890816
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.5270802015100244,
+  "r2": 0.5522103283874203,
+  "r2_timing_only": 0.05313824237774767
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The 'scaled by S1 belief' part of the label is weakly supported and mostly a fitted correction. Adding (GO)*last_is('a1 S2 u')*belief_lo to the bare indicator gives weight +0.013 and test R^2 0.4438 vs 0.4439, so it adds nothing. It reaches weight +0.28 only alongside the reward(-2) term, where it adds 0.005 (0.479 -> 0.484), which is the pattern of a suppressor term. Using raw belief instead of belief_lo flips the base weight to -0.63, another sign of curve fitting.",
+   "The damping claim holds: the indicator alone scores 0.444 test, adding (tv('reward',-2)==1) scores 0.479, with weight -0.58 against a base of +1.36.",
+   "Misses show a systematic class the label leaves out. At GO after other unrewarded trials (a1 S1 u, a2 S2 u, a2 choices) there are many windows with activation around 1-2.4 where the prediction is about 0.1. The most under-predicted GO cell is 'after a1 S1 u' (+0.032). The short form is also over-predicted by about -0.09 on every GO cell after a rewarded trial. A GO-wide term for 'previous trial unrewarded' scaled by belief_lo captures part of this.",
+   "A better short form exists that passes --short. It replaces the belief term inside the a1 S2 u case with a belief term over all unrewarded trials: (phase == GO) * last_is('a1 S2 u') ;; (phase == GO) * (prev_reward == 0) * belief_lo ;; (phase == GO) * last_is('a1 S2 u') * (tv('reward', -2) == 1) scores test R^2 0.501, vs 0.484 recorded. A less readable variant reached 0.509."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "GO after a1 rare unrewarded (damped if trial before rewarded); weaker after any loss with S1 belief",
+  "better_short_terms": "(phase == GO) * last_is('a1 S2 u') ;; (phase == GO) * (prev_reward == 0) * belief_lo ;; (phase == GO) * last_is('a1 S2 u') * (tv('reward', -2) == 1)",
+  "better_short_terms_test_r2_beyond_timing": 0.5006
+ },
+ "final_label": "GO after a1 rare unrewarded (damped if trial before rewarded); weaker after any loss with S1 belief",
+ "original_short_terms": "(phase == GO) * last_is(\"a1 S2 u\") ;; (phase == GO) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 1) ;; (phase == GO) * last_is(\"a1 S2 u\") * belief_lo",
+ "original_test_scores": {
+  "gate": "reset",
+  "feature": 125,
+  "terms": [
+   "(phase == GO) * last_is(\"a1 S2 u\")",
+   "(phase == GO) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 1)",
+   "(phase == GO) * last_is(\"a1 S2 u\") * belief_lo"
+  ],
+  "weights": [
+   0.4758975375559381,
+   -0.680700393864765,
+   0.28411177173043706
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.48393854341999654,
+  "r2": 0.5100074505075145,
+  "r2_timing_only": 0.05051512131961877
+ },
+ "terms_from": "skeptic"
+}

@@ -1,0 +1,111 @@
+{
+ "label": "Fires at D2 when a2 led rarely to S1, stronger after a rewarded trial.",
+ "short_terms": "(in_state == 1) * (in_action == 2) ;; (in_state == 1) * (in_action == 2) * belief_lo ;; (in_state == 1) * (in_action == 2) * (ep_trial >= 80)",
+ "terms": "(in_state == 1) * (in_action == 2) ;; (in_state == 1) * (in_action == 2) * belief_lo ;; (in_state == 1) * (in_action == 2) * (prev_action == 2) ;; (in_state == 1) * (in_action == 2) * (prev_reward == 1) ;; (in_state == 1) * (in_action == 2) * (prev_state == 1) ;; (in_state == 1) * (in_action == 2) * (prev_common == 1) ;; (in_state == 1) * (in_action == 2) * (tv(\"action\", -2) == 2) ;; (in_state == 1) * (in_action == 2) * belief_cover",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Silent at D1 and GO. At D2 the magnitude is almost entirely set by the a2 -> S1 rare transition (one indicator gives dev R^2 0.66 beyond timing). Within those steps it is larger when the previous trial was rewarded (+~1.0), and slightly larger when the observer belief favours S2 (negative belief_lo; adds little). The free fit adds the previous choice being a2 (+), previous state S1 (-) and previous transition common (-), reaching dev 0.74 vs 0.735 for the short form. Leftover errors: some a1 -> S1 common trials fire strongly (about 2) and some late-episode a2 -> S1 trials stay silent; observed history does not capture these, so the policy decile (model output, 0.77) explains more. The activation also falls late in the episode, which the timing baseline handles.",
+ "full_test_scores": {
+  "gate": "hidden",
+  "feature": 33,
+  "terms": [
+   "(in_state == 1) * (in_action == 2)",
+   "(in_state == 1) * (in_action == 2) * belief_lo",
+   "(in_state == 1) * (in_action == 2) * (prev_action == 2)",
+   "(in_state == 1) * (in_action == 2) * (prev_reward == 1)",
+   "(in_state == 1) * (in_action == 2) * (prev_state == 1)",
+   "(in_state == 1) * (in_action == 2) * (prev_common == 1)",
+   "(in_state == 1) * (in_action == 2) * (tv(\"action\", -2) == 2)",
+   "(in_state == 1) * (in_action == 2) * belief_cover"
+  ],
+  "weights": [
+   1.2058601791813603,
+   -0.2531450498040841,
+   0.49770707472241366,
+   0.6037071890947089,
+   -0.4639004636212289,
+   -0.5407201821755188,
+   -0.021689273981176323,
+   -0.04352301224566819
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7357228635249196,
+  "r2": 0.7644198088210642,
+  "r2_timing_only": 0.10858656060415794
+ },
+ "gate": "hidden",
+ "feature": 33,
+ "test_scores": {
+  "gate": "hidden",
+  "feature": 33,
+  "terms": [
+   "(in_state == 1) * (in_action == 2)",
+   "(in_state == 1) * (in_action == 2) * belief_lo",
+   "(in_state == 1) * (in_action == 2) * (ep_trial >= 80)"
+  ],
+  "weights": [
+   1.4171808395900192,
+   -0.3152396976554434,
+   -1.3114509263545657
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7566222372373576,
+  "r2": 0.7830497914232876,
+  "r2_timing_only": 0.10858656060415794
+ },
+ "dev_scores": {
+  "gate": "hidden",
+  "feature": 33,
+  "terms": [
+   "(in_state == 1) * (in_action == 2)",
+   "(in_state == 1) * (in_action == 2) * belief_lo",
+   "(in_state == 1) * (in_action == 2) * (ep_trial >= 80)"
+  ],
+  "weights": [
+   1.4171808395900192,
+   -0.3152396976554434,
+   -1.3114509263545657
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.7725459602269067,
+  "r2": 0.7977639002496868,
+  "r2_timing_only": 0.1108704863977682
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The label leaves out the belief term, and the explanation undersells it. In the scored short form the belief term adds more than the prev_reward term. Test R^2 beyond timing for the a2->S1 indicator alone is 0.633. Adding prev_reward gives 0.685 (+0.05); adding belief_lo instead gives 0.703 (+0.07). Within the 3-term form, dropping belief_lo costs 0.041 (0.726 -> 0.685) and dropping prev_reward costs 0.023 (0.726 -> 0.703). So 'adds little' is wrong for belief_lo, and the label names only the weaker modulator.",
+   "The claim that the late-episode drop is 'covered by the timing baseline' is false. The baseline is additive per (phase, decile), so it spreads the late-episode loss across all D2 steps. It does not model the a2->S1 response itself dying out. Replacing the prev_reward term with (in_state==1)*(in_action==2)*(ep_trial>=80) raises test R^2 from 0.726 to 0.757. That beats the free fit (0.736) and the 'all observed' additive table (0.74). A linear ep_trial interaction gives 0.746 (weight -0.017 per trial). misses on the recorded form confirms this: its worst windows are a2->S1 trials at t90-99 that are predicted ~1.7-2.4 but are actually 0.",
+   "Systematic error that remains in every form tried: whole runs of a1->S1 common D2 steps fire at about 2 but are predicted at about 0.33 (the worst-fit windows at t25-29 and t41-45). Observed belief terms do not capture it. Adding (phase==D2)*(in_state==1)*belief_lo gives 0.716-0.717, below the recorded 0.726. This class looks small (the mean residual for a1 S1 is -0.23), but it is real.",
+   "Smaller check: the free fit's previous-choice term adds almost nothing in the short form (prev_action==2: 0.703 vs 0.703 without it). The interpretation does not depend on it."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Fires at D2 after a2->S1 rare transitions, more when belief favours S2; silent late-episode.",
+  "better_short_terms": "(in_state == 1) * (in_action == 2) ;; (in_state == 1) * (in_action == 2) * belief_lo ;; (in_state == 1) * (in_action == 2) * (ep_trial >= 80)",
+  "better_short_terms_test_r2_beyond_timing": 0.7566222372373576
+ },
+ "final_label": "Fires at D2 after a2->S1 rare transitions, more when belief favours S2; silent late-episode.",
+ "original_short_terms": "(in_state == 1) * (in_action == 2) ;; (in_state == 1) * (in_action == 2) * (prev_reward == 1) ;; (in_state == 1) * (in_action == 2) * belief_lo",
+ "original_test_scores": {
+  "gate": "hidden",
+  "feature": 33,
+  "terms": [
+   "(in_state == 1) * (in_action == 2)",
+   "(in_state == 1) * (in_action == 2) * (prev_reward == 1)",
+   "(in_state == 1) * (in_action == 2) * belief_lo"
+  ],
+  "weights": [
+   0.8257647494829894,
+   0.674636712269712,
+   -0.2655015087545846
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7258183694726892,
+  "r2": 0.7555908097124898,
+  "r2_timing_only": 0.10858656060415794
+ },
+ "terms_from": "skeptic"
+}

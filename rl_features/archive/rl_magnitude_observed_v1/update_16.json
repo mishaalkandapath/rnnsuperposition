@@ -1,0 +1,73 @@
+{
+  "label": "D1 after an unrewarded a1->S1 trial, strongest if the trial before was unrewarded S2, early episode",
+  "terms": "(phase == D1) * last_is(\"a1 S1 u\") ;; (phase == D1) * last_is(\"a1 S1 u\") * (tv(\"reward\", -2) == 0) * (tv(\"state\", -2) == 2) ;; (phase == D1) * last_is(\"a1 S1 u\") * (tv(\"reward\", -2) == 1) ;; (phase == D1) * last_is(\"a1 S1 u\") * ep_dec ;; (phase == D1) * last_is(\"a2 S1 u\") * (tv(\"action\", -2) == 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Active only at D1 (zero at GO and D2). Magnitude is mostly set by the previous trial: it is large after a common unrewarded a1->S1 trial (+0.68 base), larger again (+0.5) when the trial before that was also unrewarded and reached S2 (two failures in a row on both states), smaller (-0.17) when the trial before was rewarded, and it shrinks over the episode (-0.08 per episode decile, on top of the timing baseline). After a rare unrewarded a2->S1 trial it fires mainly when the trial before was an a1 choice (+0.28). Other previous-trial patterns (any S2 outcome, rewarded S1) give about zero. The ideal-observer belief / belief_lo (graded or as a bump near 0.5) and belief_cover add nothing once trial history is in. Some unexplained firing remains on a window first trial (previous trial outside the window) and on some runs of unrewarded a2->S1 trials. Observed-only test R^2 beyond timing is about 0.48 with 5 terms, above the all-cue additive ceiling (0.38) and the all-observed reference (0.30). Leaving out the model policy/value costs nothing measurable: the policy decile alone scored only 0.06.",
+  "gate": "update",
+  "feature": 16,
+  "test_scores": {
+    "gate": "update",
+    "feature": 16,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S1 u\")",
+      "(phase == D1) * last_is(\"a1 S1 u\") * (tv(\"reward\", -2) == 0) * (tv(\"state\", -2) == 2)",
+      "(phase == D1) * last_is(\"a1 S1 u\") * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * last_is(\"a1 S1 u\") * ep_dec",
+      "(phase == D1) * last_is(\"a2 S1 u\") * (tv(\"action\", -2) == 1)"
+    ],
+    "weights": [
+      0.6628917080377638,
+      0.5170623020717423,
+      -0.15216422080187633,
+      -0.07599263451071973,
+      0.2782821919996292
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.4836089736066731,
+    "r2": 0.5097665837375422,
+    "r2_timing_only": 0.05065465663407054
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 16,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S1 u\")",
+      "(phase == D1) * last_is(\"a1 S1 u\") * (tv(\"reward\", -2) == 0) * (tv(\"state\", -2) == 2)",
+      "(phase == D1) * last_is(\"a1 S1 u\") * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * last_is(\"a1 S1 u\") * ep_dec",
+      "(phase == D1) * last_is(\"a2 S1 u\") * (tv(\"action\", -2) == 1)"
+    ],
+    "weights": [
+      0.6628917080377638,
+      0.5170623020717423,
+      -0.15216422080187633,
+      -0.07599263451071973,
+      0.2782821919996292
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.472754458112184,
+    "r2": 0.4984428662739554,
+    "r2_timing_only": 0.04872190681744504
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I'm upholding it. The headline claims hold on test: re-scoring the 5 terms gives R^2 beyond timing 0.4836 with the stated weights (+0.66, +0.52, -0.15, -0.076/decile, +0.28). GO and D2 activation is exactly 0 in the profile, so 'only at D1' is true. Other previous-trial patterns have residual of about -0.03, so 'about zero' is fair.",
+      "The a2->S1-unrewarded clause is imprecise. 'Fires when the trial before was an a1 choice' really means 'when that a1 trial was also unrewarded'. Splitting it on test: a1->S2 unrewarded gives +0.92, a1->S1 unrewarded +0.39, a1 rewarded -0.02, and R^2 rises to 0.4856. A preceding a2 trial gives -0.02 and a preceding trial outside the window gives -0.01. So the theme is 'two unrewarded trials in a row', not 'a1 before'.",
+      "There is an unreported suppression. After a1->S1 unrewarded, a trial before that was a2->S1 unrewarded (rare) gives -0.46 to -0.47, which nearly cancels the main term. It is rare, so R^2 only rises by about 0.001. The phrase 'two failures in a row on different states' is right for the boost; the boost holds whether the S2 failure came from a1 (+0.56) or a2 (+0.44). Two a1->S1 failures in a row give only +0.03.",
+      "'Early episode' is only roughly right. On test, a term for the first 10 trials after a1 S1 u has a NEGATIVE weight (-0.39), while an exponential decay term is positive. So the decline over the episode is real, but the very first trials are not the peak.",
+      "The leftover error is not systematic within the window. Misses by phase x previous trial are all within \u00b10.025. The worst-fit windows are runs of rare unrewarded a2->S1 trials and window-first trials that fire 1.0-1.7 with predicted about 0.06. None of these fixed them: deeper history (3 trials back), belief or belief_lo (graded or a bump near 0.5), belief_cover, start_high, early-episode indicators, or a first-trial indicator; each added at most about 0.002. The explanation already admits this gap.",
+      "I couldn't test the claim that dropping policy and value 'cost nothing measurable', because model outputs are rejected in this run. The earlier firing scorecard leaned heavily on policy deciles, so the claim rests only on the policy decile alone scoring 0.06.",
+      "With a future variable (this trial's upcoming choice = a1 after a1 S1 u, weight +0.13), test R^2 rises only to 0.489. The recorded explanation uses no future variables, as it says."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after an unrewarded S1 trial that itself followed another unrewarded trial (a1->S1 u, boosted by a prior S2 failure; a2->S1 u only after an unrewarded a1 trial); declines over the episode",
+    "better_terms": "(phase == D1) * last_is('a1 S1 u') ;; (phase == D1) * last_is('a1 S1 u')*(tv('reward', -2) == 0) * (tv('state', -2) == 2) ;; (phase == D1) * last_is('a1 S1 u')*(tv('reward',-2)==1) ;; (phase == D1) * last_is('a1 S1 u')*ep_dec ;; (phase == D1) * last_is('a2 S1 u')*(tv('action',-2)==1)*(tv('reward',-2)==0)*(tv('state',-2)==1) ;; (phase == D1) * last_is('a2 S1 u')*(tv('action',-2)==1)*(tv('reward',-2)==0)*(tv('state',-2)==2) ;; (phase == D1) * last_is('a2 S1 u')*(tv('action',-2)==1)*(tv('reward',-2)==1)",
+    "better_terms_test_r2_beyond_timing": 0.4856
+  },
+  "final_label": "D1 after an unrewarded S1 trial that itself followed another unrewarded trial (a1->S1 u, boosted by a prior S2 failure; a2->S1 u only after an unrewarded a1 trial); declines over the episode"
+}

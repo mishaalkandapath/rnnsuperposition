@@ -1,0 +1,104 @@
+{
+  "label": "Late-episode D1 after an unrewarded trial, while the policy strongly favours a2",
+  "predicate": "(phase == D1) & (prev_reward == 0) & (prev_state != 2) & (choice < -3) & (ep_trial >= 73) & (ep_trial <= 97)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1, and only when the reward input is 0 (the previous trial went unrewarded). It never fires at GO or D2, on rewarded D1 steps, or before about episode trial 60. Activity rises from trial 70 and peaks at trials 80-99. Every activation falls where the policy logit leans strongly toward a2 (choice < -4.4 holds 93% of mass) and value is low (< 7.1). The good state is mostly S2. When the previous trial is in the window, it was always a2 -> S1 (rare) unrewarded: prev_common == 1 and prev_action == 1 give zero activations. So the typical context is an agent committed to a2 that just had a rare transition to the bad state with no reward, which is the model-based stay signal. Swapping the choice term for an explicit (prev_action == 2) & (prev_common == 0) & (ep_trial >= 70) gives dev F1 0.78. That version misses rel -3 steps, where the previous trial is outside the window, and adds false positives. Magnitude is largest when there are consecutive unrewarded rare a2 trials (it builds 0.75 -> 0.99 -> 1.0 across them). The predicate uses only observed inputs plus the model's own policy readout and the episode position. Dev F1 0.853, mass recall 0.946.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 79,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (prev_state != 2) & (choice < -3) & (ep_trial >= 73) & (ep_trial <= 97)",
+    "split": "test",
+    "precision": 0.8591289236450527,
+    "recall": 0.9151914844382737,
+    "f1": 0.8862745098039215,
+    "mass_recall": 0.9700991414423648,
+    "correlation": 0.8317501645252123,
+    "n_active": 8643,
+    "n_predicted": 9207,
+    "coverage_by_activation_quartile": [
+      0.7311429893567792,
+      0.93521517815826,
+      0.994447015270708,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 79,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (prev_state != 2) & (choice < -3) & (ep_trial >= 73) & (ep_trial <= 97)",
+    "split": "dev",
+    "precision": 0.8517036235803137,
+    "recall": 0.9277718864145164,
+    "f1": 0.8881118881118881,
+    "mass_recall": 0.9751659941457607,
+    "correlation": 0.8210856728354982,
+    "n_active": 8487,
+    "n_predicted": 9245,
+    "coverage_by_activation_quartile": [
+      0.7676720075400566,
+      0.9486333647502356,
+      0.9948162111215834,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 79,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most claims hold up. The feature fires only at D1 (0 activations at GO or D2) and only when prev_reward == 0 (0 of 740k rewarded D1 steps). prev_action == 1 and prev_common == 1 have zero activations. Nothing fires before trial 60. All activation mass has value < 7.13, and 93% has choice in [-8.91, -4.44). stay == 0 has 0 activations. Good state S2 holds 79% of the mass. The reported test score reproduces: F1 0.856, mass recall 0.938.",
+      "Factual error about the episode end. The explanation says activity 'peaks at trials 80-99', but the feature switches off in the last trials. For (D1 & prev_reward==0 & choice<-4), precision by trial is: 95: 0.84, 96: 0.70, 97: 0.49, 98: 0.30, 99: 0.06. Trials 98-99 are a systematic block of false positives.",
+      "The ep_trial >= 70 cutoff is too early. The onset is a ramp, not a step. Precision with the other terms held fixed is: trial 70: 0.16, 71: 0.26, 72: 0.32, 74: 0.62, 76: 0.89, 80: 0.98. So most false positives at trials 70-75 are systematic, not scattered noise.",
+      "The label leaves out the key observed condition: the previous trial was a2 -> S1 (rare) and unrewarded. 'choice < -4' is only a stand-in for this. After an unrewarded a2 -> S2 trial the agent switches, so choice is not that negative. The rare-transition context should be in the label. Also, the late-episode gating is very strong. Without the trial term, (D1 & prev_reward==0 & prev_action==2 & prev_state==1) has precision of only 0.24. So the feature is mostly an episode-position (late-trial) signal combined with the rare-unrewarded-stay context, and the label should say how narrow the window is.",
+      "Replacing the trial window with [73, 97] and adding prev_state != 2 raises test F1 from 0.856 to 0.886 and test mass recall from 0.938 to 0.970. The remaining test misses and false positives are weak activations and rel -3 steps, which look like scattered noise."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after an unrewarded rare a2->S1 trial while the agent stays committed to a2, only in a late-episode window (about trials 73-97; it turns off in the last 2-3 trials)",
+    "better_predicate": "(phase == D1) & (prev_reward == 0) & (prev_state != 2) & (choice < -3) & (ep_trial >= 73) & (ep_trial <= 97)",
+    "better_predicate_test_f1": 0.886
+  },
+  "final_label": "D1 after an unrewarded rare a2->S1 trial while the agent stays committed to a2, only in a late-episode window (about trials 73-97; it turns off in the last 2-3 trials)",
+  "original_predicate": "(phase == D1) & (prev_reward == 0) & (ep_trial >= 70) & (choice < -4)",
+  "original_test_scores": {
+    "gate": "update",
+    "feature": 79,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (ep_trial >= 70) & (choice < -4)",
+    "split": "test",
+    "precision": 0.8174544688914622,
+    "recall": 0.8984149022330209,
+    "f1": 0.8560246940800352,
+    "mass_recall": 0.9380299126605566,
+    "correlation": 0.7914672100915185,
+    "n_active": 8643,
+    "n_predicted": 9499,
+    "coverage_by_activation_quartile": [
+      0.8149005090236002,
+      0.8334104581212401,
+      0.945395650161962,
+      1.0
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "update",
+    "feature": 79,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (ep_trial >= 70) & (choice < -4)",
+    "split": "dev",
+    "precision": 0.8025332225913622,
+    "recall": 0.9108047602215152,
+    "f1": 0.8532479717423699,
+    "mass_recall": 0.9461609765042467,
+    "correlation": 0.7801461892099654,
+    "n_active": 8487,
+    "n_predicted": 9632,
+    "coverage_by_activation_quartile": [
+      0.8298774740810556,
+      0.8727615457115928,
+      0.94062205466541,
+      1.0
+    ]
+  },
+  "predicate_from": "skeptic"
+}

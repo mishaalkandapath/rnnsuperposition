@@ -1,0 +1,111 @@
+{
+ "label": "Higher when the observer believes S2 is good, after choosing a2 (D2), and after reward (D1).",
+ "short_terms": "belief_lo ;; (phase == D2) * (action == 2) ;; (phase == D1) * last_is('a1 S1 u')",
+ "terms": "np.tanh(belief_lo/2) ;; (phase == D2) * np.tanh(belief_lo/2) ;; (phase == D2) * (state == 2) ;; (phase == D1)*(prev_reward==1) ;; (phase==D2)*(action==2) ;; (phase==D1)*(prev_reward==1)*(prev_state==2) ;; (phase==GO)*(prev_reward==1)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Beyond the strong timing profile (high at D1/D2, low at GO, declining through the episode), the raw reset gate of unit 9 tracks the ideal-observer belief that S2 is the good state: it falls with belief_lo (S1 good) at all phases, most steeply at D2. At D2 it is further raised when the just-made choice was a2 (observed at D2). At D1 it is higher after a rewarded previous trial and much lower after an unrewarded one. The free fit adds a separate D2 belief slope, the reached state at D2, a D1 reward x S2 interaction and a GO reward term (dev 0.72 vs 0.66 short). No future variables used; this trial reward and hidden good state add nothing beyond belief.",
+ "full_test_scores": {
+  "gate": "unit_reset",
+  "feature": 9,
+  "terms": [
+   "np.tanh(belief_lo/2)",
+   "(phase == D2) * np.tanh(belief_lo/2)",
+   "(phase == D2) * (state == 2)",
+   "(phase == D1)*(prev_reward==1)",
+   "(phase==D2)*(action==2)",
+   "(phase==D1)*(prev_reward==1)*(prev_state==2)",
+   "(phase==GO)*(prev_reward==1)"
+  ],
+  "weights": [
+   -0.07460926351605345,
+   -0.030355675576922002,
+   -0.06849555842425978,
+   0.054686421835215486,
+   0.1350041587139067,
+   0.021129870142813013,
+   0.0356302498459097
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6995854144983022,
+  "r2": 0.9440848920051422,
+  "r2_timing_only": 0.8138735244779192
+ },
+ "gate": "unit_reset",
+ "feature": 9,
+ "test_scores": {
+  "gate": "unit_reset",
+  "feature": 9,
+  "terms": [
+   "belief_lo",
+   "(phase == D2) * (action == 2)",
+   "(phase == D1) * last_is('a1 S1 u')"
+  ],
+  "weights": [
+   -0.027205422659470655,
+   0.06774418846919883,
+   -0.1659771680321404
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6461914248364573,
+  "r2": 0.9341468568953206,
+  "r2_timing_only": 0.8138735244779192
+ },
+ "dev_scores": {
+  "gate": "unit_reset",
+  "feature": 9,
+  "terms": [
+   "belief_lo",
+   "(phase == D2) * (action == 2)",
+   "(phase == D1) * last_is('a1 S1 u')"
+  ],
+  "weights": [
+   -0.027205422659470655,
+   0.06774418846919883,
+   -0.1659771680321404
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.656084055165927,
+  "r2": 0.9353233390134731,
+  "r2_timing_only": 0.8119404989561299
+ },
+ "final_verdict": "partially_explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The directional claims check out, with the D1 reward effect partly overlapping the belief term. On test the short form scores 0.641 beyond timing (dev 0.656). Fitted weights: belief_lo -0.026, D2*a2 +0.090, D1*prev_reward +0.058. Belief deciles show the steepest slope at D2 (residual range +0.157 to -0.182, against about +0.09 to -0.07 at D1 and GO). The reward step at D1 holds for every previous choice/state pair: r minus u is +0.12, +0.10, +0.10 and +0.06.",
+   "One large systematic error class remains. On misses the short form over-predicts D1 after 'a1 S1 u' by -0.146, the biggest error cell and a common trial type. Worst-fit windows are runs of unrewarded trials where the unit sits 0.3-0.4 below the prediction at D1 (e.g. t92-96, r0 actual 0.22-0.35 vs predicted 0.50-0.64). After 'a1 S1 u' the belief moves toward S2, so the model predicts a rise, but the unit is at its lowest. The label does not cover this.",
+   "Reward-history terms do not fix it: prev_reward + tv(reward,-2) + tv(reward,-3) scores 0.600, a two-unrewarded-trials term 0.610, and prev_reward at all phases 0.613. Adding D1*last_is('a1 S1 u') gives 0.646 test, a small gain that only partly closes the cell. On misses the worst cells become D1 after a2 S1 u at -0.080 and D2 after a1 S1 u at -0.081.",
+   "The gap to what observed cues can reach is large. The all-observed additive reference is 0.82 and the free fit only reaches 0.70 (a 5-term free fit I ran got 0.697), so the 3-term form leaves about 0.18 of the reachable variance unexplained. That is too much for 'explained'.",
+   "Belief shape: the decile residuals look like a step around belief 0.5 rather than a straight line in log-odds, but tanh(belief_lo) scores worse (0.623) than linear belief_lo, so the linear term is fine. Removing terms: belief alone 0.545, belief + D2*a2 0.598, so every term earns its place.",
+   "The label is broadly accurate. 'After reward (D1)' is right but does not say that the D1 dip after unrewarded a1->S1 is much larger than the belief and reward terms predict."
+  ],
+  "revised_verdict": "partially_explained",
+  "revised_label": "Higher when the observer favors S2, at D2 after choosing a2; lowest at D1 after unrewarded a1->S1.",
+  "better_short_terms": "belief_lo ;; (phase == D2) * (action == 2) ;; (phase == D1) * last_is('a1 S1 u')",
+  "better_short_terms_test_r2_beyond_timing": 0.6462
+ },
+ "final_label": "Higher when the observer favors S2, at D2 after choosing a2; lowest at D1 after unrewarded a1->S1.",
+ "original_short_terms": "belief_lo ;; (phase == D2) * (action == 2) ;; (phase == D1) * (prev_reward == 1)",
+ "original_test_scores": {
+  "gate": "unit_reset",
+  "feature": 9,
+  "terms": [
+   "belief_lo",
+   "(phase == D2) * (action == 2)",
+   "(phase == D1) * (prev_reward == 1)"
+  ],
+  "weights": [
+   -0.026081617133459477,
+   0.08997527863156501,
+   0.058165126062111216
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6405770609182349,
+  "r2": 0.9331018751269234,
+  "r2_timing_only": 0.8138735244779192
+ },
+ "terms_from": "skeptic"
+}

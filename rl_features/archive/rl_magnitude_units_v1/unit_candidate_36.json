@@ -1,0 +1,78 @@
+{
+  "label": "late-episode D1 drop after unrewarded trials, strongest after unrewarded S2 and runs of losses",
+  "terms": "(phase == D1) * (prev_reward == 0) * (ep_trial/100.0)**2 ;; (phase == D1) * (prev_reward == 1) * (ep_trial/100.0)**2 ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (ep_trial/100.0)**2 ;; (phase == D1) * (prev_reward == 0) * (prev_state == 2) * (ep_trial/100.0)**2 ;; (phase == GO) * choice * (ep_trial/100.0)**2 ;; (phase == GO) * (prev_reward == 0) * (ep_trial/100.0)**2 ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0) * (ep_trial/100.0)**2",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw GRU candidate n of unit 36 sits near 1 (saturated at D2 every step) and sags late in the episode, mostly at D1 and GO. Beyond timing, its magnitude is set by reward history, with effects that grow with episode time (scaled by (ep_trial/100)^2; flat scalars without this interaction reach only ~0.36 on dev). At D1 it drops after an unrewarded previous trial, much more when the unrewarded state was S2 (largest single term), and further with each extra consecutive unrewarded trial (2 and 3 back); a rewarded previous trial raises it. At GO it is lower when the policy favours a1 (graded choice logit) and slightly higher after an unrewarded trial. Transition common/rare adds little; hidden good state, future reward and value add little. Only observed quantities (plus the model policy logit) are used. Test R^2 beyond timing 0.66 versus the profile all ceiling 0.53 (the time interaction lets it exceed the additive ceiling); dev 0.65. Residual misses are whole-window offsets in some late episodes.",
+  "gate": "unit_candidate",
+  "feature": 36,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 36,
+    "terms": [
+      "(phase == D1) * (prev_reward == 0) * (ep_trial/100.0)**2",
+      "(phase == D1) * (prev_reward == 1) * (ep_trial/100.0)**2",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (ep_trial/100.0)**2",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 2) * (ep_trial/100.0)**2",
+      "(phase == GO) * choice * (ep_trial/100.0)**2",
+      "(phase == GO) * (prev_reward == 0) * (ep_trial/100.0)**2",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0) * (ep_trial/100.0)**2"
+    ],
+    "weights": [
+      -0.1048282416321136,
+      0.1639794264402038,
+      -0.08664657713697134,
+      -0.3292144485947588,
+      -0.014404356075935373,
+      0.04618169070955966,
+      -0.15903756666907437
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6589567916830665,
+    "r2": 0.8281042718624847,
+    "r2_timing_only": 0.4959708214515398
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 36,
+    "terms": [
+      "(phase == D1) * (prev_reward == 0) * (ep_trial/100.0)**2",
+      "(phase == D1) * (prev_reward == 1) * (ep_trial/100.0)**2",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (ep_trial/100.0)**2",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 2) * (ep_trial/100.0)**2",
+      "(phase == GO) * choice * (ep_trial/100.0)**2",
+      "(phase == GO) * (prev_reward == 0) * (ep_trial/100.0)**2",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0) * (ep_trial/100.0)**2"
+    ],
+    "weights": [
+      -0.1048282416321136,
+      0.1639794264402038,
+      -0.08664657713697134,
+      -0.3292144485947588,
+      -0.014404356075935373,
+      0.04618169070955966,
+      -0.15903756666907437
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6512174749987979,
+    "r2": 0.826727535439883,
+    "r2_timing_only": 0.5032077236108092
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claim that the same terms without time scaling 'reach only about 0.36 on dev' is wrong: I re-scored them without the (ep_trial/100)^2 factor and got dev R^2 beyond timing 0.49. The time scaling still helps (0.65 with it), but the gap is smaller than stated.",
+      "The S2 effect after an unrewarded trial is larger after rare a1->S2 than after common a2->S2. In the profile the D1 residuals are a1 S2 u -0.246 and a2 S2 u -0.152, while unrewarded S1 is near zero (-0.026 and -0.008). With the agent's terms, misses still over-predict D1 after a1 S2 u by -0.087 and under-predict D1 after a2 S1 u by +0.039. Adding a rare-unrewarded-S2 term gets weight -0.16 but only raises test R^2 from 0.659 to 0.667. So 'common vs rare add little' holds in R^2 terms, but the sign and size are worth mentioning.",
+      "Swapping the S2 term for a prev_action==a2 term drops test R^2 to 0.579, so the effect is about the state reached, not the action, as the label says. Interacting it with good state, start_high or a second S2 visit adds at most 0.003.",
+      "Some late-episode GO steps are badly missed: actual about 0.0-0.2 against predicted about 0.53 in a1-repeating windows. The GO choice term has a tiny weight (-0.014). GO variants I tried (tanh(choice), choice>0, the future action==1, prev_action, a1-after-rewarded-a1) all scored the same or worse (0.61-0.65), so I could not reduce this whole-window offset.",
+      "Other checks confirm the explanation: the time exponent of 2 is best (power 4: 0.614, power 8: 0.504, exponential: 0.437); the consecutive-loss terms have negative weights (-0.087, -0.159); the rewarded term is positive (+0.164); the unrewarded-S2 term is the largest (-0.33). No future variables are used. Test R^2 0.659 reproduces and beats the additive 'all' ceiling of 0.53."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Late-episode D1 drop after unrewarded trials that reached S2 (most after rare a1->S2) and after loss runs; raised after rewarded trials",
+    "better_terms": "(phase == D1) * (prev_reward == 0) * (ep_trial/100.0)**2 ;; (phase == D1) * (prev_reward == 1) * (ep_trial/100.0)**2 ;; (phase == D1) * (prev_reward == 0) * (tv('reward', -2) == 0) * (ep_trial/100.0)**2 ;; (phase == D1) * (prev_reward == 0) * (prev_state == 2) * (ep_trial/100.0)**2 ;; (phase == GO) * choice * (ep_trial/100.0)**2 ;; (phase == GO) * (prev_reward == 0) * (ep_trial/100.0)**2 ;; (phase == D1) * (prev_reward == 0) * (tv('reward', -2) == 0) * (tv('reward', -3) == 0) * (ep_trial/100.0)**2 ;; (phase == D1) * (prev_reward == 0) * (prev_state == 2) * (prev_common == 0) * (ep_trial/100.0)**2",
+    "better_terms_test_r2_beyond_timing": 0.667
+  },
+  "final_label": "Late-episode D1 drop after unrewarded trials that reached S2 (most after rare a1->S2) and after loss runs; raised after rewarded trials"
+}

@@ -1,0 +1,73 @@
+{
+  "label": "last-trial choice x state x reward by phase, plus a1-vs-a2 policy at GO/D2",
+  "terms": "(phase == D1) * table(4*(prev_action-1)+2*(prev_state-1)+prev_reward, {0: 0.083, 1: -0.044, 2: 0.14, 3: 0.031, 4: 0.0015, 5: -0.131, 6: 0.104, 7: -0.038}) ;; (phase == GO) * table(4*(prev_action-1)+2*(prev_state-1)+prev_reward, {0: -0.007, 1: 0.083, 2: 0.103, 3: 0.07, 4: -0.195, 5: -0.031, 6: -0.035, 7: -0.035}) ;; (phase == D2) * table(4*(prev_action-1)+2*(prev_state-1)+prev_reward, {0: 0.013, 1: 0.028, 2: 0.104, 3: 0.018, 4: -0.048, 5: -0.033, 6: -0.002, 7: -0.04}) ;; (phase == GO) * choice ;; (phase == D2) * choice ;; (phase == D2) * table(3*action+state, {4: 0.02, 5: 0.09, 7: -0.06, 8: -0.02})",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r of unit 39. Timing dominates (high ~0.7 at D1/GO, low ~0.15 at D2; timing R^2 0.92). Beyond timing, the magnitude is set by the previous trial (choice, state reached, reward), with a phase-specific pattern. At D1 it is raised after unrewarded trials (a1 S2 u +0.14, a2 S2 u +0.10, a1 S1 u +0.08) and lowered after a2 S1 r (-0.13). At GO it is high after a1 trials (a1 S1 r, a1 S2 r/u, +0.07 to +0.10) and low after a2 trials, most strongly after a2 S1 u (-0.2); in effect it follows the drive toward a1. At D2 it is raised after a1 S2 u (+0.10) and by this trial being a1 (a1 reaching S2 +0.09), lowered by a2 (a2 S1 -0.06). The model policy logit (a1 minus a2) at GO and D2 adds graded a1-high / a2-low variance. Last-trial tables alone: about 0.65-0.68 test; adding the D2 choice x state: 0.68 test (observed only); adding the policy logit: 0.746 test (dev 0.75). The trial before (tv -2) added nothing beyond these. The future reward and hidden good state are not needed. Ceiling all = 0.88, all observed = 0.79.",
+  "gate": "unit_reset",
+  "feature": 39,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 39,
+    "terms": [
+      "(phase == D1) * table(4*(prev_action-1)+2*(prev_state-1)+prev_reward, {0: 0.083, 1: -0.044, 2: 0.14, 3: 0.031, 4: 0.0015, 5: -0.131, 6: 0.104, 7: -0.038})",
+      "(phase == GO) * table(4*(prev_action-1)+2*(prev_state-1)+prev_reward, {0: -0.007, 1: 0.083, 2: 0.103, 3: 0.07, 4: -0.195, 5: -0.031, 6: -0.035, 7: -0.035})",
+      "(phase == D2) * table(4*(prev_action-1)+2*(prev_state-1)+prev_reward, {0: 0.013, 1: 0.028, 2: 0.104, 3: 0.018, 4: -0.048, 5: -0.033, 6: -0.002, 7: -0.04})",
+      "(phase == GO) * choice",
+      "(phase == D2) * choice",
+      "(phase == D2) * table(3*action+state, {4: 0.02, 5: 0.09, 7: -0.06, 8: -0.02})"
+    ],
+    "weights": [
+      1.0016263953900053,
+      0.5522789943406193,
+      0.2830742021370464,
+      0.00540801712272804,
+      0.006411290622157459,
+      0.48143632859301916
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7458769213234107,
+    "r2": 0.9804373824976597,
+    "r2_timing_only": 0.923019122843082
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 39,
+    "terms": [
+      "(phase == D1) * table(4*(prev_action-1)+2*(prev_state-1)+prev_reward, {0: 0.083, 1: -0.044, 2: 0.14, 3: 0.031, 4: 0.0015, 5: -0.131, 6: 0.104, 7: -0.038})",
+      "(phase == GO) * table(4*(prev_action-1)+2*(prev_state-1)+prev_reward, {0: -0.007, 1: 0.083, 2: 0.103, 3: 0.07, 4: -0.195, 5: -0.031, 6: -0.035, 7: -0.035})",
+      "(phase == D2) * table(4*(prev_action-1)+2*(prev_state-1)+prev_reward, {0: 0.013, 1: 0.028, 2: 0.104, 3: 0.018, 4: -0.048, 5: -0.033, 6: -0.002, 7: -0.04})",
+      "(phase == GO) * choice",
+      "(phase == D2) * choice",
+      "(phase == D2) * table(3*action+state, {4: 0.02, 5: 0.09, 7: -0.06, 8: -0.02})"
+    ],
+    "weights": [
+      1.0016263953900053,
+      0.5522789943406193,
+      0.2830742021370464,
+      0.00540801712272804,
+      0.006411290622157459,
+      0.48143632859301916
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7502884977225733,
+    "r2": 0.9804674337458781,
+    "r2_timing_only": 0.921779469203539
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor overclaim at GO: 'higher after a1 trials (+0.07 to +0.10)' does not hold for a1 S1 u (-0.007 in the profile). 'Follows the pull toward a1' is also loose: after a2 S1 r (rare rewarded, which should push a model-based agent toward a1) the GO residual is -0.031, not positive.",
+      "'The trial before (tv -2) added nothing' only holds once the policy logit is in the fit. In the observed-only fit, adding 2-back last-trial tables at GO and D1 raises test R^2 from 0.676 to 0.701 (dev 0.706), so the observed-only description leaves out some multi-trial history.",
+      "The policy-logit claim is supported. Without the GO and D2 logit terms, test R^2 is 0.676; with the GO logit it is 0.732; with GO and D2 logit it is 0.746. Adding the logit roughly halves the GO table's weight (0.56), so part of the 'GO last-trial' effect is really the policy. Adding a D1 logit term as well gives 0.760 test, so the label's restriction to GO/D2 slightly undersells it.",
+      "Remaining errors are small and not dominated by one class. Misses: mean error per phase is under 0.01. The largest cell biases are GO after a2 S1 u -0.035, GO after a2 S2 r +0.030 and D2 after a1 S2 u +0.027, against residual effects of 0.1-0.2. The worst windows are long a2 runs where r at GO drops to about 0.2-0.35 against a prediction of 0.54. A 2-back a2-streak indicator did not help (0.677), and tanh-shaped logit terms added at most +0.006 (0.752)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "last-trial choice x state x reward by phase, plus the model's a1-vs-a2 policy logit (mainly at GO and D2, a little at D1)",
+    "better_terms": "(phase == D1) * table(4*(prev_action-1)+2*(prev_state-1)+prev_reward, {0: 0.083, 1: -0.044, 2: 0.14, 3: 0.031, 4: 0.0015, 5: -0.131, 6: 0.104, 7: -0.038}) ;; (phase == GO) * table(4*(prev_action-1)+2*(prev_state-1)+prev_reward, {0: -0.007, 1: 0.083, 2: 0.103, 3: 0.07, 4: -0.195, 5: -0.031, 6: -0.035, 7: -0.035}) ;; (phase == D2) * table(4*(prev_action-1)+2*(prev_state-1)+prev_reward, {0: 0.013, 1: 0.028, 2: 0.104, 3: 0.018, 4: -0.048, 5: -0.033, 6: -0.002, 7: -0.04}) ;; (phase == D2) * table(3*action+state, {4: 0.02, 5: 0.09, 7: -0.06, 8: -0.02}) ;; (phase == GO) * choice ;; (phase == D2) * choice ;; (phase == D1) * choice",
+    "better_terms_test_r2_beyond_timing": 0.7599
+  },
+  "final_label": "last-trial choice x state x reward by phase, plus the model's a1-vs-a2 policy logit (mainly at GO and D2, a little at D1)"
+}

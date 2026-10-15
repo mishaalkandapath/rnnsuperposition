@@ -1,0 +1,92 @@
+{
+  "label": "At D1, z dips after an a1 trial that reached S2, more so later in the episode.",
+  "short_terms": "(phase == D1) * (prev_state > prev_action) ;; (phase == D1) * (prev_state > prev_action) * ep_trial ;; (phase == D1) * (prev_state == S1) * ep_trial",
+  "terms": "(phase == D1) * last_is(\"a1 S2 r\") ;; (phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * (prev_state == S1) ;; (phase == D1) * (prev_action == 1) * (prev_state == S2) * ep_trial ;; (phase == D1) * (prev_state == S1) * ep_trial ;; (phase == D1) * belief_lo ;; (phase == D1) * (prev_action == 1) * (prev_state == S2) * belief_lo ;; (phase == D1)*(prev_action == 1) * (prev_state == S2) * (tv(\"action\",-2)==1)*(tv(\"state\",-2)==2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Update gate unit 37 sits near 1 at GO and D2 (essentially no variance there); all graded variation is at D1. Its main driver is the previous trial being a1 -> S2 (rare transition after a1; prev_state > prev_action): z drops by ~0.06 plus ~0.002 per episode trial, so the dip grows from ~0.07 early to ~0.28 late in the episode. After a trial reaching S1 z is slightly higher, increasingly with episode time (opposing the general late-episode decline of the baseline). Reward matters little (a1 S2 r dips a bit more than a1 S2 u); belief_lo, the trial before (a repeated a1 S2), and reward add only ~0.01 in the free fit (0.683 vs 0.673 dev). Remaining misses: late-episode D1 dips after a2 S2 trials not captured. Observed-only; no future variables.",
+  "full_test_scores": {
+    "gate": "unit_update",
+    "feature": 37,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * (prev_state == S1)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == S2) * ep_trial",
+      "(phase == D1) * (prev_state == S1) * ep_trial",
+      "(phase == D1) * belief_lo",
+      "(phase == D1) * (prev_action == 1) * (prev_state == S2) * belief_lo",
+      "(phase == D1)*(prev_action == 1) * (prev_state == S2) * (tv(\"action\",-2)==1)*(tv(\"state\",-2)==2)"
+    ],
+    "weights": [
+      -0.07514811595235475,
+      -0.03722096381415027,
+      0.005757751073038667,
+      -0.002194791441656055,
+      0.0008622022138485546,
+      -0.001836608364294039,
+      -0.0011770386988712814,
+      -0.04193364694201197
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6739583607599628,
+    "r2": 0.7790081330132218,
+    "r2_timing_only": 0.3221974116499875
+  },
+  "gate": "unit_update",
+  "feature": 37,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 37,
+    "terms": [
+      "(phase == D1) * (prev_state > prev_action)",
+      "(phase == D1) * (prev_state > prev_action) * ep_trial",
+      "(phase == D1) * (prev_state == S1) * ep_trial"
+    ],
+    "weights": [
+      -0.06285391263238575,
+      -0.002196996725326735,
+      0.0009071641569689147
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.663752025707697,
+    "r2": 0.7720902526972285,
+    "r2_timing_only": 0.3221974116499875
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 37,
+    "terms": [
+      "(phase == D1) * (prev_state > prev_action)",
+      "(phase == D1) * (prev_state > prev_action) * ep_trial",
+      "(phase == D1) * (prev_state == S1) * ep_trial"
+    ],
+    "weights": [
+      -0.06285391263238575,
+      -0.002196996725326735,
+      0.0009071641569689147
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6734094469341152,
+    "r2": 0.7789970032382716,
+    "r2_timing_only": 0.3233025429331866
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The short form reproduces as reported: test R^2 beyond timing 0.664. Weights are a1->S2 -0.063, a1->S2*ep_trial -0.0022, S1*ep_trial +0.0009, and the dip claim and its growth with episode time hold. The reward claim also holds: the profile's D1 residual is -0.196 after a1 S2 r and -0.167 after a1 S2 u.",
+      "The label leaves out the third term, and that term carries a large share of the fit. Dropping (prev_state==S1)*ep_trial lowers test R^2 from 0.664 to 0.520, about 0.14 of the 0.66 explained. Its meaning: the baseline's late-episode fall in z at D1 (0.97 to 0.85 by decile) happens only after trials that reached S2, and z stays high late after S1 trials. Writing the same idea as (prev_state==S2)*ep_trial scores only 0.533. From the label alone, a reader would wrongly predict that z holds up late after a2 S2 trials.",
+      "Misses show a systematic error class: late-episode (t95-99) D1 windows after streaks of a2 S2 common trials. There z falls to 0.39-0.6 while the fit predicts 0.849, and the dip deepens along the streak (0.74, 0.61, 0.49, 0.39). D1 after a2 S2 u is over-predicted by -0.012 and D1 after a1 S2 r by -0.021. The explanation admits this error, but the label does not reflect it.",
+      "Variants gain almost nothing. A step for S2 trials with ep_trial>=90 scores 0.666, exp(ep_trial/25) time shapes score 0.668, and belief_lo, belief_cover, the trial-before state and prev_reward all score 0.652-0.659. No observed-only cue tested fixes the late a2 S2 dips. The recorded short form is near the best available, so I keep it and only fix the label.",
+      "No future variables are used, so no observed-only check is needed."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "At D1, z falls late in the episode after reaching S2 (most after a1 to S2), not after S1.",
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "At D1, z falls late in the episode after reaching S2 (most after a1 to S2), not after S1."
+}

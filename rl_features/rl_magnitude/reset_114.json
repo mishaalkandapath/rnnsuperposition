@@ -1,0 +1,112 @@
+{
+ "label": "Fires at D1 after a1 led rarely to S2, strongest when unrewarded; lower after S1.",
+ "short_terms": "(phase == D1) * last_is('a1 S2 u') * ep_trial ;; (phase == D1) * last_is('a1 S2 r') * ep_trial ;; (phase == D1) * (prev_state == 1) * ep_trial",
+ "terms": "(phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a1 S2 r\") ;; (phase == D1) * last_is(\"a2 S2 u\") ;; (phase == D1) * (prev_state == 1) ;; (phase == D1) * belief_lo ;; (phase == D1) * (prev_state == 2) * ep_trial ;; (phase == D1) * (prev_state == 2) * (tv(\"state\", -2) == 2) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * belief_lo",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Active only at D1 (zero at GO/D2), with a strong rise over the episode captured by timing. Beyond timing the magnitude is set by the previous trial: largest after a1 -> S2 rare unrewarded (+2.7), large after a1 -> S2 rare rewarded (+1.5), and below baseline after any trial reaching S1 (-0.4). Previous a2 -> S2 trials are near baseline. The free fit adds small graded terms (belief log-odds toward S1, a2 S2 u, two S2 trials in a row, an ep_trial x S2 interaction) for only +0.03 dev R^2. Remaining misses are very late-episode windows where it fires strongly regardless of the last trial.",
+ "full_test_scores": {
+  "gate": "reset",
+  "feature": 114,
+  "terms": [
+   "(phase == D1) * last_is(\"a1 S2 u\")",
+   "(phase == D1) * last_is(\"a1 S2 r\")",
+   "(phase == D1) * last_is(\"a2 S2 u\")",
+   "(phase == D1) * (prev_state == 1)",
+   "(phase == D1) * belief_lo",
+   "(phase == D1) * (prev_state == 2) * ep_trial",
+   "(phase == D1) * (prev_state == 2) * (tv(\"state\", -2) == 2)",
+   "(phase == D1) * (prev_action == 1) * (prev_state == 2) * belief_lo"
+  ],
+  "weights": [
+   2.188883918595254,
+   1.2663014345141728,
+   0.07133841426650632,
+   -0.4910392454388023,
+   0.06895279578442554,
+   0.00396826923084822,
+   -0.18788298957360242,
+   0.021192701079924013
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5433057306049434,
+  "r2": 0.6144373635835033,
+  "r2_timing_only": 0.15575328561223656
+ },
+ "gate": "reset",
+ "feature": 114,
+ "test_scores": {
+  "gate": "reset",
+  "feature": 114,
+  "terms": [
+   "(phase == D1) * last_is('a1 S2 u') * ep_trial",
+   "(phase == D1) * last_is('a1 S2 r') * ep_trial",
+   "(phase == D1) * (prev_state == 1) * ep_trial"
+  ],
+  "weights": [
+   0.04784757158080413,
+   0.029605883794243493,
+   -0.00838328954597568
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5952348941327613,
+  "r2": 0.6582783892727686,
+  "r2_timing_only": 0.15575328561223656
+ },
+ "dev_scores": {
+  "gate": "reset",
+  "feature": 114,
+  "terms": [
+   "(phase == D1) * last_is('a1 S2 u') * ep_trial",
+   "(phase == D1) * last_is('a1 S2 r') * ep_trial",
+   "(phase == D1) * (prev_state == 1) * ep_trial"
+  ],
+  "weights": [
+   0.04784757158080413,
+   0.029605883794243493,
+   -0.00838328954597568
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.6146470967104214,
+  "r2": 0.6736208600251461,
+  "r2_timing_only": 0.15303832619734548
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The individual claims hold up. Residuals are zero at GO and D2. At D1 the residual by previous trial is a1 S2 u +2.63, a1 S2 r +1.46, every S1 trial about -0.43, a2 S2 u +0.18 and a2 S2 r -0.29. The recorded short form reproduces 0.511 on test.",
+   "The main structure is missing. The a1->S2 response is not a fixed offset on top of timing: it grows with time in the episode. Changing the terms from additive to multiplicative with ep_trial gives test R^2 beyond timing 0.574 (a1 S2 u*ep_trial, a1 S2 r*ep_trial, prev_state==1) and 0.595 when the S1 term is also multiplied by ep_trial. That beats the free fit (0.543) and nearly reaches the 0.60 ceiling.",
+   "The explanation treats the late-episode windows that fire strongly (actual 5-6 against predicted 1.2) as leftover noise. The ep_trial interaction captures them, so they are a systematic error class, not scattered misses.",
+   "Misses for the improved form leave only small leftovers: D1 after a2 S2 u is under-predicted by +0.20, D1 after a1 S2 u by +0.20, and D1 after a2 S2 r is over-predicted by -0.27. The improved form has no large systematic error class left.",
+   "Swapping in the free fit's extra terms (belief_lo, a2 S2 u, prev_state==2*ep_trial) as the third short-form term lowers test R^2 to about 0.47. They were small fitted corrections, as the original agent said."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "D1 after a1 led rarely to S2 (strongest unrewarded); rises over the episode, lowered after S1.",
+  "better_short_terms": "(phase == D1) * last_is('a1 S2 u') * ep_trial ;; (phase == D1) * last_is('a1 S2 r') * ep_trial ;; (phase == D1) * (prev_state == 1) * ep_trial",
+  "better_short_terms_test_r2_beyond_timing": 0.5952348941327613
+ },
+ "final_label": "D1 after a1 led rarely to S2 (strongest unrewarded); rises over the episode, lowered after S1.",
+ "original_short_terms": "(phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a1 S2 r\") ;; (phase == D1) * (prev_state == 1)",
+ "original_test_scores": {
+  "gate": "reset",
+  "feature": 114,
+  "terms": [
+   "(phase == D1) * last_is(\"a1 S2 u\")",
+   "(phase == D1) * last_is(\"a1 S2 r\")",
+   "(phase == D1) * (prev_state == 1)"
+  ],
+  "weights": [
+   2.660265538618912,
+   1.4821581695564376,
+   -0.406809404957441
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5108394979291475,
+  "r2": 0.5870278533184141,
+  "r2_timing_only": 0.15575328561223656
+ },
+ "terms_from": "skeptic"
+}

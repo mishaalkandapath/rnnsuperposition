@@ -17,6 +17,7 @@ import argparse
 import json
 import os
 import textwrap
+from collections import defaultdict
 
 import numpy as np
 
@@ -934,6 +935,164 @@ def rotation_wheel_plots(path, outdir, n_labels=3):
     return [p]
 
 
+def conditional_plots(d, outdir, n_labels=8):
+    """Figures for circuit/copy_task/conditional_analyses.py: effects averaged over all sequences vs over only the
+    sequences a feature takes part in. File names end in _conditional so no earlier figure is replaced."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    os.makedirs(outdir, exist_ok=True)
+    J = lambda name: json.load(open(os.path.join(d, name)))
+    paths = []
+    dense_c, sparse_c = SOURCE_COLORS[0], SOURCE_COLORS[1]
+
+    def style(ax, title, xlabel, ylabel):
+        ax.set_facecolor(SURFACE)
+        for side in ("top", "right"):
+            ax.spines[side].set_visible(False)
+        for side in ("left", "bottom"):
+            ax.spines[side].set_color(GRID)
+        ax.tick_params(colors=INK_2, labelsize=8)
+        ax.grid(color=GRID, lw=0.6)
+        ax.set_axisbelow(True)
+        ax.set_title(title, fontsize=10, color=INK, loc="left")
+        ax.set_xlabel(xlabel, fontsize=8.5, color=INK_2)
+        ax.set_ylabel(ylabel, fontsize=8.5, color=INK_2)
+
+    def save(fig, name, title, foot):
+        fig.suptitle(title, fontsize=12, color=INK, x=0.01, ha="left")
+        fig.supxlabel(textwrap.fill(foot, int(fig.get_figwidth() * 15)), fontsize=7.5, color=INK_2, x=0.01, ha="left")
+        p = os.path.join(outdir, name)
+        fig.savefig(p, dpi=170, facecolor=SURFACE, bbox_inches="tight")
+        plt.close(fig)
+        paths.append(p)
+
+    def scatter(ax, x, y, rate, labels_by):
+        x, y, rate = map(np.asarray, (x, y, rate))
+        dense = rate >= 0.9
+        ax.scatter(x[dense], y[dense], s=16, color=dense_c, alpha=0.75, lw=0, label="dense (active in ≥ 90% of sequences)")
+        ax.scatter(x[~dense], y[~dense], s=16, color=sparse_c, alpha=0.75, lw=0, label="sparse")
+        hi = max(float(x.max()), float(y.max())) * 1.05
+        ax.plot([0, hi], [0, hi], color=INK_2, lw=0.8, ls="--")
+        for k in np.argsort(-labels_by)[:n_labels]:
+            ax.annotate(str(k), (x[k], y[k]), xytext=(3, 3), textcoords="offset points", fontsize=7, color=INK)
+        ax.legend(frameon=False, fontsize=7.5, loc="lower right")
+
+    if os.path.exists(os.path.join(d, "conditional_importance.json")):
+        imp = J("conditional_importance.json")
+        Ls = [k for k in imp if k.startswith("L")]
+        fig, axes = plt.subplots(2, len(Ls), figsize=(5.4 * len(Ls), 9), facecolor=SURFACE, layout="constrained",
+                                 squeeze=False)
+        for j, L in enumerate(Ls):
+            r = imp[L]
+            o = 100 * np.array(r["overall_drop"])
+            a = 100 * np.array(r["active_drop"])
+            w = 100 * np.array(r["drop_by_output_token"]).max(1)
+            scatter(axes[0, j], o, a, r["seq_rate"], a)
+            style(axes[0, j], f"length {L[1:]}: on the sequences where it is active", "accuracy drop over all sequences (%)",
+                  "accuracy drop on sequences where it is active (%)")
+            scatter(axes[1, j], o, w, r["seq_rate"], w)
+            style(axes[1, j], f"length {L[1:]}: on its most affected output token", "accuracy drop over all sequences (%)",
+                  "accuracy drop on outputs of its worst token (%)")
+        save(fig, "feature_importance_conditional.png",
+             "Single-feature ablation, measured where the feature matters instead of averaged over every sequence",
+             "Real GRU, each candidate feature mean-ablated alone (per-step mean, transcoder error kept), 2000 sequences per "
+             "length. x: accuracy drop averaged over all sequences (the earlier ranking). Top: the drop on only the sequences "
+             "where the feature is active at some step (a dense feature is active everywhere, so it stays on the dashed y = x "
+             "line). Bottom: the drop on the outputs of the one token it hurts most (treats dense and sparse features alike). "
+             "Labelled: the largest conditional drops. conditional_analyses.py --sections importance.")
+
+    if os.path.exists(os.path.join(d, "conditional_pop.json")):
+        pop = J("conditional_pop.json")["features"]
+        by_tok = defaultdict(list)
+        for f, r in pop.items():
+            off = (r.get("L7") or {}).get("off") or (r.get("L4") or {}).get("off")
+            on = (r.get("L7") or {}).get("on") or (r.get("L4") or {}).get("on")
+            if off:
+                by_tok[r["token"]].append((off["argmax_is_X"], (on or {}).get("dlogit_X", 0.0), int(f)))
+        toks = sorted(by_tok, key=lambda t: -max(v[0] for v in by_tok[t]))
+        fig, axes = plt.subplots(1, 2, figsize=(12, 0.26 * len(toks) + 1.6), facecolor=SURFACE, layout="constrained",
+                                 sharey=True)
+        ys = np.arange(len(toks))
+        for ax, idx, title, xlabel in ((axes[0], 0, "Off where X is fed back: X is output again",
+                                        "share of next outputs that repeat X (%)"),
+                                       (axes[1], 1, "On before X's turn: X's logit at its own output",
+                                        "logit change of X")):
+            for y, t in zip(ys, toks):
+                vals = sorted(by_tok[t], key=lambda v: -v[0])
+                best = vals[0]
+                ax.barh(y, 100 * best[idx] if idx == 0 else best[idx], color=sparse_c, height=0.6)
+                for v in vals[1:]:
+                    ax.plot(100 * v[idx] if idx == 0 else v[idx], y, "o", ms=3.5, color=INK_2)
+                if idx == 0:
+                    ax.text(100 * best[0] + 1.5, y, f"{best[2]}" + (f"  (+{len(vals) - 1} inert)" if len(vals) > 1 else ""),
+                            va="center", fontsize=7, color=INK)
+            style(ax, title, xlabel, None)
+            ax.grid(axis="y", visible=False)
+        axes[0].set_yticks(ys, [f"fed-back {t}" for t in toks], fontsize=7.5)
+        axes[0].invert_yaxis()
+        save(fig, "pop_features_by_token_conditional.png",
+             "Token-specific pop features: one clamp test per 'copy input X' feature, measured only where X is involved",
+             "Real GRU, length 7 (length 4 where a feature has no L=7 test), 1000 sequences. Every candidate feature whose label "
+             "is 'copy-phase input X' (any verdict). Bar: the feature of that token with the largest effect (its id is printed); "
+             "grey dots: the other features with the same label. Left: feature set to 0 at the step X is fed back. Right: feature "
+             "set to its mean active value at a copy step before X is output. conditional_analyses.py --sections pop.")
+
+    if os.path.exists(os.path.join(d, "conditional_flows.json")):
+        fl = J("conditional_flows.json")
+        F = fl["features"]
+        ids = np.array([f["feature"] for f in F])
+        rate = np.array([f["seq_rate"] for f in F])
+        a_all = np.array([f["mean_abs_flow_all"] for f in F])
+        a_part = np.array([f["mean_abs_flow_when_taking_part"] for f in F])
+        fig, ax = plt.subplots(figsize=(6.4, 4.8), facecolor=SURFACE, layout="constrained")
+        dense = rate >= 0.9
+        ax.scatter(a_all[dense], a_part[dense], s=16, color=dense_c, alpha=0.75, lw=0, label="dense (active in ≥ 90% of sequences)")
+        ax.scatter(a_all[~dense], a_part[~dense], s=16, color=sparse_c, alpha=0.75, lw=0, label="sparse")
+        hi = max(a_all.max(), a_part.max()) * 1.05
+        ax.plot([0, hi], [0, hi], color=INK_2, lw=0.8, ls="--")
+        for k in np.argsort(-a_part)[:n_labels]:
+            ax.annotate(str(ids[k]), (a_all[k], a_part[k]), xytext=(3, 3), textcoords="offset points", fontsize=7, color=INK)
+        ax.legend(frameon=False, fontsize=7.5, loc="lower right")
+        style(ax, f"length {fl['L']}", "mean |flow| over all (sequence, slot) pairs",
+              "mean |flow| over the pairs it takes part in")
+        save(fig, f"carrier_flow_conditional_L{fl['L']}.png",
+             "How much each candidate feature carries a token: averaged over all pairs vs only where it takes part",
+             f"Exact contrastive flow (DeepLIFT rescale) of the token in a slot, original vs token-swapped run, summed over steps "
+             f"i … L+i; {fl['n']} sequences × {fl['L']} slots. A feature 'takes part' in a pair if its |flow| > {fl['min_flow']}. "
+             "The earlier circuit diagrams and supernodes used the x-axis average. conditional_analyses.py --sections flows.")
+
+        # wheel: write angle vs conditional write weight
+        ok = [f for f in F if f["write_angle"] is not None and f["write_weight_when_taking_part"] > 0 and f["share_of_pairs"] > 0.01]
+        fig, axes = plt.subplots(1, 2, figsize=(10, 5), subplot_kw={"projection": "polar"}, facecolor=SURFACE,
+                                 layout="constrained")
+        for ax, key, title in ((axes[0], "write_weight_all", "weight averaged over all pairs (as before)"),
+                               (axes[1], "write_weight_when_taking_part", "weight over the pairs it takes part in")):
+            ax.set_facecolor(SURFACE)
+            w = np.array([f[key] for f in ok])
+            wmax = w.max()
+            for f, ww in sorted(zip(ok, w), key=lambda z: z[1]):
+                c = dense_c if f["seq_rate"] >= 0.9 else sparse_c
+                ax.annotate("", xy=(np.deg2rad(f["write_angle"]), ww / wmax), xytext=(0, 0),
+                            arrowprops=dict(arrowstyle="-|>", color=c, lw=0.6 + 1.4 * ww / wmax, alpha=0.7))
+            top = [ok[k]["feature"] for k in np.argsort(-w)[:5]]
+            ax.text(np.deg2rad(-60), 1.45, "largest: " + ", ".join(map(str, top)), ha="center", fontsize=7.5, color=INK_2)
+            ax.set_ylim(0, 1.25)
+            ax.set_yticks([])
+            ax.set_xticks(np.deg2rad([0, 90, 180, 270]), ["0°", "90°", "180°", ""], fontsize=7.5, color=INK_2)
+            ax.grid(color=GRID, lw=0.6)
+            ax.spines["polar"].set_color(GRID)
+            ax.set_title(title, fontsize=9.5, color=INK, pad=14)
+        handles = [plt.Line2D([], [], color=dense_c, lw=2, label="dense"), plt.Line2D([], [], color=sparse_c, lw=2, label="sparse")]
+        fig.legend(handles=handles, loc="lower center", ncol=2, frameon=False, fontsize=8.5, bbox_to_anchor=(0.5, -0.05))
+        save(fig, f"rotation_wheel_conditional_L{fl['L']}.png",
+             "Write angles of the candidate features, weighted over all pairs vs only the pairs each takes part in",
+             "Each arrow: one feature at the circular mean angle it writes the token (0° = the token's code as written, "
+             "180° = towards its read direction; pooled over steps i … L+i and slots), length = its in-plane write. "
+             "Features taking part in > 1% of pairs. conditional_analyses.py --sections flows.")
+    return paths
+
+
 def circuit_summary_plots(d, outdir):
     """Evidence figures for docs/interp_circuits.md, from the JSON outputs in features/copy_circuits/."""
     import matplotlib
@@ -1207,7 +1366,13 @@ def main():
     rw.add_argument("rotation_json"); rw.add_argument("--out", help="output directory (default: next to the JSON)")
     cs = sub.add_parser("circuit_summary", help="evidence figures for docs/interp_circuits.md")
     cs.add_argument("dir", help="features/copy_circuits"); cs.add_argument("--out", help="output directory (default: DIR/plots)")
+    cd = sub.add_parser("conditional", help="figures for circuit/copy_task/conditional_analyses.py output")
+    cd.add_argument("dir", help="features/copy_circuits"); cd.add_argument("--out", help="output directory (default: DIR/plots)")
     args = ap.parse_args()
+    if args.cmd == "conditional":
+        for p in conditional_plots(args.dir, args.out or os.path.join(args.dir, "plots")):
+            print(p)
+        return
     if args.cmd == "circuit_summary":
         for p in circuit_summary_plots(args.dir, args.out or os.path.join(args.dir, "plots")):
             print(p)

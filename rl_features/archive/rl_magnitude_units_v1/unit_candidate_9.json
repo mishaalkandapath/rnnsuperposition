@@ -1,0 +1,75 @@
+{
+  "label": "Late-episode reward/state history modulation of a decaying candidate",
+  "terms": "(phase == D1) * ep_trial * table(prev_reward, {1: -1, 0: 1}) ;; (phase == D1) * ep_trial * (prev_reward == 1) * (prev_common == 0) ;; (phase != D1) * ep_trial * table(prev_state, {1: -1, 2: 1}) ;; (phase != D1) * ep_trial * (prev_reward == 0) * table(prev_action, {1: 1, 2: -1}) ;; (phase == D2) * choice * ep_trial ;; (phase == GO) * choice * ep_trial ;; ep_trial * table(tv(\"reward\", -2), {1: -1, 0: 1})",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw GRU candidate n9 is dominated by timing: it sits near +0.93 early in the episode and decays to about -0.3 by trials 90-99 (timing R^2 0.87). The history effects beyond timing grow with episode trial (multiplying the terms by ep_trial raised dev R^2 beyond timing from 0.26 to 0.35 at five terms), so they are largest late in the episode where the unit is off saturation. At D1, an unrewarded previous trial raises the unit and a rewarded one lowers it, except that rare-rewarded trials are partly offset. At GO and D2, a previous S2 state raises it and S1 lowers it, and after an unrewarded trial a previous a1 choice raises it and a2 lowers it. At GO and especially D2 it also rises with the model policy logit toward a1 (choice). The trial before also adds a smaller effect in the same direction (unrewarded raises). Test R^2 beyond timing is 0.46, against an all ceiling of 0.49 (94%). Without the policy-logit terms, using observed inputs only (with D2 in_state instead), dev is 0.35. The value head, the hidden good state and trials since reversal add little. The worst misses are whole late-episode windows where the unit stays high: episode-level drift in the decay rate that window history does not capture.",
+  "gate": "unit_candidate",
+  "feature": 9,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 9,
+    "terms": [
+      "(phase == D1) * ep_trial * table(prev_reward, {1: -1, 0: 1})",
+      "(phase == D1) * ep_trial * (prev_reward == 1) * (prev_common == 0)",
+      "(phase != D1) * ep_trial * table(prev_state, {1: -1, 2: 1})",
+      "(phase != D1) * ep_trial * (prev_reward == 0) * table(prev_action, {1: 1, 2: -1})",
+      "(phase == D2) * choice * ep_trial",
+      "(phase == GO) * choice * ep_trial",
+      "ep_trial * table(tv(\"reward\", -2), {1: -1, 0: 1})"
+    ],
+    "weights": [
+      0.0017004828201564867,
+      -0.0014182760815214424,
+      0.0006499037851921469,
+      0.00044838284092454993,
+      0.00040923243275203856,
+      0.00018206943236251976,
+      0.0002661375687470503
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.46249157160493404,
+    "r2": 0.9301814753815704,
+    "r2_timing_only": 0.8701071072933699
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 9,
+    "terms": [
+      "(phase == D1) * ep_trial * table(prev_reward, {1: -1, 0: 1})",
+      "(phase == D1) * ep_trial * (prev_reward == 1) * (prev_common == 0)",
+      "(phase != D1) * ep_trial * table(prev_state, {1: -1, 2: 1})",
+      "(phase != D1) * ep_trial * (prev_reward == 0) * table(prev_action, {1: 1, 2: -1})",
+      "(phase == D2) * choice * ep_trial",
+      "(phase == GO) * choice * ep_trial",
+      "ep_trial * table(tv(\"reward\", -2), {1: -1, 0: 1})"
+    ],
+    "weights": [
+      0.0017004828201564867,
+      -0.0014182760815214424,
+      0.0006499037851921469,
+      0.00044838284092454993,
+      0.00040923243275203856,
+      0.00018206943236251976,
+      0.0002661375687470503
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.46819568344555706,
+    "r2": 0.928267282925098,
+    "r2_timing_only": 0.8651144512333825
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The 7 claimed terms reproduce on test (R^2 beyond timing 0.4625). But misses shows a systematic error at D1: the unit is under-predicted after a1 S1 trials, both unrewarded (+0.084) and rewarded (+0.082). The profile shows the same thing: the D1 residual after a1 S1 u is +0.195, against +0.07 to +0.11 for other unrewarded histories, and after a1 S1 r it is +0.02, against -0.12 to -0.15 for other rewarded histories. So at D1 the unit depends on the previous a1->S1 transition, not only on prev_reward. The label does not mention this.",
+      "The claimed 'rare-rewarded partly offset' effect at D1 is negligible. On test, the D1 reward term alone scores 0.177 and adding the rare-rewarded term gives 0.183 (+0.006). Using rare-unrewarded instead gives 0.177. Adding a D1 (prev_action==1)*(prev_state==1) term instead gives 0.240 (+0.063)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Decaying candidate with history effects that grow late in the episode: at D1, raised after unrewarded trials and after a1->S1 transitions; at GO/D2, raised after S2 states, by a1 after unrewarded trials, and by the policy logit toward a1",
+    "better_terms": "(phase == D1) * ep_trial * table(prev_reward, {1: -1, 0: 1}) ;; (phase == D1) * ep_trial * (prev_action == 1) * (prev_state == 1) ;; (phase != D1) * ep_trial * table(prev_state, {1: -1, 2: 1}) ;; (phase != D1) * ep_trial * (prev_reward == 0) * table(prev_action, {1: 1, 2: -1}) ;; (phase == D2) * choice * ep_trial ;; (phase == GO) * choice * ep_trial ;; ep_trial * table(tv(\"reward\", -2), {1: -1, 0: 1}) ;; (phase == D1) * ep_trial * choice",
+    "better_terms_test_r2_beyond_timing": 0.5234
+  },
+  "final_label": "Decaying candidate with history effects that grow late in the episode: at D1, raised after unrewarded trials and after a1->S1 transitions; at GO/D2, raised after S2 states, by a1 after unrewarded trials, and by the policy logit toward a1"
+}

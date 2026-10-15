@@ -1,0 +1,105 @@
+{
+  "label": "D2 after repeating a2 following a reward, early in the episode",
+  "predicate": "(phase == D2) & (action == 2) & (prev_reward == 1) & (prev_action != 1) & (((state == 2) & (ep_trial < 52)) | ((state == 1) & (ep_trial < 30)))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (never at D1 or GO) and essentially only when this trial s choice was a2 (in_action == 2). On top of that it needs the previous trial to have been rewarded and the agent to have stayed on a2 (or no previous trial in the window). It only fires in the first ~55 trials of an episode (none after trial 60), so it tracks an episode-time drift in the hidden state. Every variable is observed by D2. Magnitude is largest when a2 led to S2 by the common transition (about 0.9-1.0 of max in top windows) and about 0.4 when a2 led to S1 by the rare transition. It is also strongly concentrated where the value head is high (>8.1) and the policy logit favours a2. It does not fire after a1 choices, after unrewarded trials (rate 0.4x), or late in the episode. Dev: P 0.76, R 0.87, F1 0.81, mass recall 0.91.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 17,
+    "predicate": "(phase == D2) & (action == 2) & (prev_reward == 1) & (prev_action != 1) & (((state == 2) & (ep_trial < 52)) | ((state == 1) & (ep_trial < 30)))",
+    "split": "test",
+    "precision": 0.8804957319904282,
+    "recall": 0.841772800218527,
+    "f1": 0.8606989491324232,
+    "mass_recall": 0.9098951000416428,
+    "correlation": 0.7964540771131704,
+    "n_active": 58574,
+    "n_predicted": 55998,
+    "coverage_by_activation_quartile": [
+      0.6934580715651462,
+      0.8170581808249112,
+      0.8567233490404972,
+      0.9998634159666735
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 17,
+    "predicate": "(phase == D2) & (action == 2) & (prev_reward == 1) & (prev_action != 1) & (((state == 2) & (ep_trial < 52)) | ((state == 1) & (ep_trial < 30)))",
+    "split": "dev",
+    "precision": 0.8972076082557668,
+    "recall": 0.8427618619760169,
+    "f1": 0.8691328985352293,
+    "mass_recall": 0.9101088050913066,
+    "correlation": 0.8043230587845475,
+    "n_active": 57874,
+    "n_predicted": 54362,
+    "coverage_by_activation_quartile": [
+      0.6994954730803787,
+      0.8099384891837722,
+      0.8617638927287807,
+      0.9998617638927287
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 17,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most claims hold up. The unit is silent at D1 and GO (0 of 761k steps). Of 57874 active steps, 57863 come after an a2 choice. It fires at a 0.018 rate after unrewarded trials (0.4x lift). It is silent from ep_trial 62 onward (precision 0.0 over 49818 predicted steps). value > 8.1 picks out the active steps (P 0.83, R 0.77). Adding state == 2 gives about the same F1 (dev 0.814 vs 0.810).",
+      "Systematic gap: the episode-time cutoff depends on the transition, and the explanation treats it as a single cutoff. When a2 leads to S1 by the rare transition (within the predicate), precision is 0.72 at trials 0-10, 0.86 at 10-20 and 0.70 at 20-30, then falls to 0.05 at 30-40, 0.0 at 40-50 and 0.0 at 50-55. Common a2->S2 steps stay at precision 0.86-0.97 up to trial 50 and only drop near 55 (0.54 at 50-55). So rare a2 trials after trial ~30, about 8.8k predicted dev steps, are an almost entirely false-positive class.",
+      "The explanation's '~0.4 of max on rare transitions' misleads about how often the unit fires there. Over all of trials 0-55, rare-transition steps in the predicate have precision 0.39 and carry only 5% of the activation mass. That is because rare trials only activate the unit early in the episode, not because they activate it weakly throughout.",
+      "The cutoff at trial 55 is not sharp. With the predicate's other conditions held, precision falls steadily: 0.94 at trials 10-20, 0.71 at 30-40, 0.59 at 45-50, 0.25 at 53-55. Part of that fall is the rare-transition shutoff above.",
+      "Missed activations (8.7% of the mass) are mostly common a2->S2 steps after an unrewarded trial (prev_reward == 0 & state == 2: P 0.25, R 0.13). These are low-activation and scattered, so they are acceptable.",
+      "Better predicate, using only variables observed by D2: give common and rare transitions separate cutoffs. Test: P 0.880, R 0.842, F1 0.861 (original: 0.801). Dev: F1 0.869."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after choosing a2 again following a reward: fires when a2 reached S2 (common transition) until about trial 50, and when it reached S1 (rare transition) only in the first ~30 trials",
+    "better_predicate": "(phase == D2) & (action == 2) & (prev_reward == 1) & (prev_action != 1) & (((state == 2) & (ep_trial < 52)) | ((state == 1) & (ep_trial < 30)))",
+    "better_predicate_test_f1": 0.861
+  },
+  "final_label": "D2 after choosing a2 again following a reward: fires when a2 reached S2 (common transition) until about trial 50, and when it reached S1 (rare transition) only in the first ~30 trials",
+  "original_predicate": "(phase == D2) & (action == 2) & (ep_trial < 55) & (prev_reward == 1) & (prev_action != 1)",
+  "original_test_scores": {
+    "gate": "neuron_reset",
+    "feature": 17,
+    "predicate": "(phase == D2) & (action == 2) & (ep_trial < 55) & (prev_reward == 1) & (prev_action != 1)",
+    "split": "test",
+    "precision": 0.7436201172874713,
+    "recall": 0.8680984737255437,
+    "f1": 0.8010523579592447,
+    "mass_recall": 0.9126626273843153,
+    "correlation": 0.718292828683468,
+    "n_active": 58574,
+    "n_predicted": 68379,
+    "coverage_by_activation_quartile": [
+      0.7987571701720841,
+      0.8170581808249112,
+      0.8567233490404972,
+      0.9998634159666735
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 17,
+    "predicate": "(phase == D2) & (action == 2) & (ep_trial < 55) & (prev_reward == 1) & (prev_action != 1)",
+    "split": "dev",
+    "precision": 0.7588561415169872,
+    "recall": 0.8679890797249197,
+    "f1": 0.8097621523160127,
+    "mass_recall": 0.9126860748664506,
+    "correlation": 0.726266860372945,
+    "n_active": 57874,
+    "n_predicted": 66197,
+    "coverage_by_activation_quartile": [
+      0.8003317437279701,
+      0.8100076024604327,
+      0.8617638927287807,
+      0.9998617638927287
+    ]
+  },
+  "predicate_from": "skeptic"
+}

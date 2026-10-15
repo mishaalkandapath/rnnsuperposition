@@ -1,0 +1,81 @@
+{
+  "label": "D2: state reached (S1 high, S2 low); D1: last trial S2-unrewarded/a2 high, S1-rewarded low",
+  "terms": "(phase == D2) * (state == S1) ;; (phase == D1) * (prev_action == 2) ;; (phase == D1) * (prev_state == S1) * (prev_reward == 1) ;; (phase == D1) * (prev_state == S2) * (prev_reward == 0) ;; (phase == GO) * (prev_reward == 1) ;; (phase == D2) * (common == 1) ;; (phase == D2) * (prev_reward == 1) ;; (phase == D2) * (prev_action == 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw candidate n of unit 31 is mostly a state-reached signal at D2: strongly positive when S1 is shown, strongly negative for S2 (weight ~+1.37, the dominant term; this choice x state table alone reaches 0.83). At D2 it is somewhat lower on common transitions, after a rewarded previous trial, and after a previous a2 choice. At D1 it encodes the previous trial outcome as evidence against S1: high after a2 choices and especially after S2-unrewarded (+0.54), low after S1-rewarded (-0.44); i.e. D1 rises with evidence that S2 is bad / switch toward a1 is not favoured... sign: positive = evidence S1 good absent, negative = S1 rewarded. At GO it is modestly higher after a rewarded previous trial. All terms are observed at their step (no future, hidden or model-output variables). Dev R^2 beyond timing 0.88; first 6-term version without D2 history terms gave 0.78.",
+  "gate": "unit_candidate",
+  "feature": 31,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 31,
+    "terms": [
+      "(phase == D2) * (state == S1)",
+      "(phase == D1) * (prev_action == 2)",
+      "(phase == D1) * (prev_state == S1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_state == S2) * (prev_reward == 0)",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == D2) * (common == 1)",
+      "(phase == D2) * (prev_reward == 1)",
+      "(phase == D2) * (prev_action == 2)"
+    ],
+    "weights": [
+      1.3731741074846213,
+      0.37211317753684686,
+      -0.43881371280182857,
+      0.541821525810966,
+      0.2641726119748761,
+      -0.2633234443412469,
+      -0.18497556476736202,
+      -0.2322073365042131
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8814013906608822,
+    "r2": 0.8888163094408836,
+    "r2_timing_only": 0.06252112753531103
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 31,
+    "terms": [
+      "(phase == D2) * (state == S1)",
+      "(phase == D1) * (prev_action == 2)",
+      "(phase == D1) * (prev_state == S1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_state == S2) * (prev_reward == 0)",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == D2) * (common == 1)",
+      "(phase == D2) * (prev_reward == 1)",
+      "(phase == D2) * (prev_action == 2)"
+    ],
+    "weights": [
+      1.3731741074846213,
+      0.37211317753684686,
+      -0.43881371280182857,
+      0.541821525810966,
+      0.2641726119748761,
+      -0.2633234443412469,
+      -0.18497556476736202,
+      -0.2322073365042131
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8830559382070374,
+    "r2": 0.8903554273453882,
+    "r2_timing_only": 0.06241863867593189
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the D2 'lower on common transitions (-0.26)' term is an additive simplification. Table-based terms show the common effect mostly comes from a2->S2 common being extra negative (weight -0.60 for choice x state code 8; code 4, a1->S1 common, only +0.10). With that change the D2 prev_reward and prev_action terms are no longer needed, and a 7-term set scores test 0.891 vs 0.881. The overall reading still holds.",
+      "Minor: at GO the 'higher after a rewarded previous trial' effect is uneven. Residuals at GO are a1 S2 r +0.24 vs a1 S2 u -0.22, but a1 S1 r -0.02 vs a1 S1 u -0.10. Even so, the generic prev_reward term fits best on test (S2-only 0.870, S1-only 0.854, generic 0.881), so the claim stands.",
+      "Remaining systematic misses are modest, at most about 0.16. The misses output shows D1 on the first trial (prev '?') under-predicted by +0.16, GO after a1 S2 r by +0.16, GO after a2 S1 u by +0.15, and D2 after a1 S1 u over-predicted by -0.27 with the original terms. In the worst windows the D2 history terms push S1-rare predictions to 1.12 while actual values are about 0.55, so D2 looks saturating (tanh-like) and the additive D2 history terms overshoot. None of these is a large error class.",
+      "Verified: test R^2 beyond timing is 0.8814, matching the claim (ceiling 0.96). The terms use only observed variables. Without the D2 history terms the 5-term set scores test 0.769."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 state reached (S1 high, S2 low, most negative for a2->S2 common); D1 last outcome (unrewarded/S2/a2 high, S1-rewarded low)",
+    "better_terms": "(phase == D2) * (state == S1) ;; (phase == D2) * table(3*action+state, {4:1}) ;; (phase == D2) * table(3*action+state, {8:1}) ;; (phase == D2) * (state == S1) * (prev_reward == 1) ;; (phase == D1) * (prev_action == 2) ;; (phase == D1) * (prev_state == S1) * (prev_reward == 1) ;; (phase == D1) * (prev_state == S2) * (prev_reward == 0) ;; (phase == GO) * (prev_reward == 1)",
+    "better_terms_test_r2_beyond_timing": 0.8906
+  },
+  "final_label": "D2 state reached (S1 high, S2 low, most negative for a2->S2 common); D1 last outcome (unrewarded/S2/a2 high, S1-rewarded low)"
+}

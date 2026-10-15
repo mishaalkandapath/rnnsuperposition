@@ -1,0 +1,82 @@
+{
+  "label": "Fires at GO after a rewarded a1-to-S1 trial in the last ~8 episode trials, ramping up.",
+  "short_terms": "(phase == GO) * last_is(\"a1 S1 r\") * (ep_trial >= 92) ;; (phase == GO) * last_is(\"a1 S1 r\") * np.maximum(ep_trial - 92, 0)",
+  "terms": "(phase == GO) * last_is(\"a1 S1 r\") * (ep_trial >= 92) ;; (phase == GO) * last_is(\"a1 S1 r\") * np.maximum(ep_trial - 92, 0) ;; (phase == GO) * last_is(\"a1 S2 r\") * np.maximum(ep_trial - 92, 0) ;; (phase == GO) * (prev_reward == 1) * np.maximum(ep_trial - 92, 0) * belief_lo ;; (phase == GO) * (ep_trial >= 92) * belief_lo",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Very sparse feature (0.3% of steps) that is active only at GO, at the very end of the episode (about trial 92 onward). Its magnitude is set almost entirely by the previous trial being a1 -> S1 (common) rewarded, and it grows roughly linearly with episode trial, from ~0.3 at t92 to ~1.5 at t99. After other rewarded patterns (a1 S2 r, a2 S1 r) it is weak, and after unrewarded trials it is near zero. The free fit adds a small a1 S2 r ramp and graded belief_lo terms (P(S1 good)), which help very little (dev 0.567 vs 0.563 for the two a1-S1-r terms alone): belief is redundant once the last trial is known. The earlier hypothesis that the upcoming a1 choice drives it is captured by the observed last-trial pattern; no future variables are used.",
+  "full_test_scores": {
+    "gate": "update",
+    "feature": 128,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S1 r\") * (ep_trial >= 92)",
+      "(phase == GO) * last_is(\"a1 S1 r\") * np.maximum(ep_trial - 92, 0)",
+      "(phase == GO) * last_is(\"a1 S2 r\") * np.maximum(ep_trial - 92, 0)",
+      "(phase == GO) * (prev_reward == 1) * np.maximum(ep_trial - 92, 0) * belief_lo",
+      "(phase == GO) * (ep_trial >= 92) * belief_lo"
+    ],
+    "weights": [
+      -0.17750697124943338,
+      0.1392885822695948,
+      -0.01868479433799238,
+      0.005240028952153022,
+      0.004406721353101073
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6018008980232421,
+    "r2": 0.6338440506818352,
+    "r2_timing_only": 0.08047017810819546
+  },
+  "gate": "update",
+  "feature": 128,
+  "test_scores": {
+    "gate": "update",
+    "feature": 128,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S1 r\") * (ep_trial >= 92)",
+      "(phase == GO) * last_is(\"a1 S1 r\") * np.maximum(ep_trial - 92, 0)"
+    ],
+    "weights": [
+      -0.16383998937932504,
+      0.15698835559409052
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5794479900465357,
+    "r2": 0.6132898851912506,
+    "r2_timing_only": 0.08047017810819546
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 128,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S1 r\") * (ep_trial >= 92)",
+      "(phase == GO) * last_is(\"a1 S1 r\") * np.maximum(ep_trial - 92, 0)"
+    ],
+    "weights": [
+      -0.16383998937932504,
+      0.15698835559409052
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5431842658201762,
+    "r2": 0.5771217777008988,
+    "r2_timing_only": 0.07429146883842475
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The step term (ep_trial >= 92) is fitted with a negative weight (-0.164, against slope +0.157 per trial), so it acts as an intercept correction and not as an onset jump. A single ramp term, (phase == GO) * last_is(\"a1 S1 r\") * np.maximum(ep_trial - 92, 0), scores test 0.568, against 0.579 for the two-term form. The component is a ramp that starts around trial 91-92.",
+      "The explanation's numbers (about 0.3 at trial 92 rising to about 1.5 at trial 99) describe the best example windows, not the typical case. The fitted line gives about 0.1 at trial 92 and about 1.0 at trial 99. Activation after a1-S1-r varies a lot at the same trial (e.g. 1.2 at t93-94 in some windows, 0.3-0.6 in others), and no observed variable I tried explains it: belief_lo, belief_cover, the reward/state/action two trials back, and the choice now being made each add 0.005 or less on test.",
+      "Systematic misses: the largest under-predictions are on the first trial of a window, where the previous trial is unknown ('?') so last_is cannot fire, yet the activation is about 1.0-1.2. Adding a window-start * prev_reward * ramp term raises test R^2 from 0.579 to 0.602 (a free fit; it is not a valid short form). This comes from how windows are cut, not from a wrong idea.",
+      "The 'weak after other rewarded patterns' claim holds on average: free-fit late-ramp slopes are +0.095 for a1 S1 r, about 0 for a2 S1 r, -0.013 for a1 S2 r and -0.014 for a2 S2 r. Single windows still show a2 S1 r reaching 0.8 at t99.",
+      "A prev_reward-only ramp scores test R^2 0.136, so being specific to a1->S1 (and not just to reward) is clearly needed. Adding belief terms gains at most +0.005, so the claim that belief adds little holds.",
+      "Small short-form gains exist (adding (phase==GO)*(ep_trial>=92)*(tv('reward',-2)==1) gives test 0.594), but they are too small to justify replacing the recorded form."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  }
+}

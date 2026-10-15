@@ -1,0 +1,75 @@
+{
+  "label": "D1 late-episode (t>=75) after unrewarded S2, strongest a2 S2 u, ramping",
+  "terms": "(phase == D1) * last_is(\"a2 S2 u\") * np.clip(ep_trial - 75, 0, 25) ;; (phase == D1) * last_is(\"a1 S2 u\") * np.clip(ep_trial - 75, 0, 25) ;; (phase == D1) * (prev_state == -1) * (prev_reward == 0) * np.clip(ep_trial - 75, 0, 25) ;; (phase == D1) * (prev_reward == 0) * (prev_state == 2) * (tv(\"reward\", -2) == 0) ;; (phase == D1) * (prev_reward == 0) * (prev_state == 2) * (tv(\"state\", -2) == 2) * np.clip(ep_trial - 75, 0, 25) ;; (phase == D1) * (prev_reward == 0) * (prev_state == 1) * np.clip(ep_trial - 75, 0, 25)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Sparse candidate feature (nonzero on 1.4% of steps), active only at D1 and only late in the episode. Its magnitude is driven by the previous trial being unrewarded in S2, with the size rising roughly linearly with episode trial from about trial 75 to 100 (the late ramp is an interaction the additive timing baseline cannot capture). After a2 S2 u (common, unrewarded) it is strongest; a1 S2 u (rare, unrewarded) gives about a quarter of that; unrewarded S1 lowers it slightly relative to that; any rewarded previous trial keeps it near zero. A second unrewarded S2 trial before (tv reward -2 == 0, state -2 == S2) adds more. Windows whose first trial has no known previous state also fire when the D1 reward input is 0. GO and D2 are silent. Model value or policy adds only about 0.01 (dev 0.62 vs 0.61). All terms use observed variables only. Dev R^2 beyond timing 0.61; the test score is the one recorded. The additive all-cue ceiling of 0.18 is far below this because it has no ep_trial x history interaction.",
+  "gate": "hidden",
+  "feature": 26,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 26,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S2 u\") * np.clip(ep_trial - 75, 0, 25)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * np.clip(ep_trial - 75, 0, 25)",
+      "(phase == D1) * (prev_state == -1) * (prev_reward == 0) * np.clip(ep_trial - 75, 0, 25)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 2) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 2) * (tv(\"state\", -2) == 2) * np.clip(ep_trial - 75, 0, 25)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 1) * np.clip(ep_trial - 75, 0, 25)"
+    ],
+    "weights": [
+      0.06392924615903153,
+      0.017018974239457557,
+      0.022730062800605952,
+      0.17131742987452755,
+      0.011644061228504502,
+      -0.011823265080006395
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6285599270949644,
+    "r2": 0.6771238095081337,
+    "r2_timing_only": 0.1307448656073933
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 26,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S2 u\") * np.clip(ep_trial - 75, 0, 25)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * np.clip(ep_trial - 75, 0, 25)",
+      "(phase == D1) * (prev_state == -1) * (prev_reward == 0) * np.clip(ep_trial - 75, 0, 25)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 2) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 2) * (tv(\"state\", -2) == 2) * np.clip(ep_trial - 75, 0, 25)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 1) * np.clip(ep_trial - 75, 0, 25)"
+    ],
+    "weights": [
+      0.06392924615903153,
+      0.017018974239457557,
+      0.022730062800605952,
+      0.17131742987452755,
+      0.011644061228504502,
+      -0.011823265080006395
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6140125606206918,
+    "r2": 0.660625864529939,
+    "r2_timing_only": 0.12076378439724422
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "issues": [
+      "The reported score reproduces: the 6 original terms get test R^2 beyond timing 0.6286 (total 0.677). The main shape also holds: it fires only at D1, ramps late in the episode, needs the previous trial unrewarded and not in S1, and is silent at GO and D2.",
+      "The claim 'trial before also unrewarded IN S2' is wrong about the state. What matters is that the trial before was unrewarded, whatever state it reached. The term needing tv('state',-2)==2 gets weight 0.012 in the original fit and about 0.001 when refit with an onset at trial 70. Splitting a2 S2 u by the state of the trial before gives weights 0.057 vs 0.056, so no difference. Splitting it by the reward of the trial before gives 0.04 (rewarded) vs 0.079 (unrewarded).",
+      "'After a1 S2 u it reaches about a quarter' is a mixture. Rare-unrewarded alone is near zero: weight 0.003 when the trial before was rewarded, against 0.049 when it was unrewarded. That is about 60% of the matching a2 S2 u weight (0.079). So rare-unrewarded raises it mainly after two losses in a row.",
+      "The onset is earlier than trial 75. The worst-fit windows show activations of about 0.5 to 1.5 at trials 74 to 77 (e.g. t77 actual 1.50 vs predicted 0.15). Moving the ramp to clip(ep_trial-70,0,30) with the same term structure raises test R^2 from 0.668 to 0.676. The label's 't>=75' is too sharp.",
+      "'An unrewarded S1 trial lowers it slightly' is misleading. The residual after a1 S1 u (-0.038) is the same as after rewarded trials (-0.039 to -0.044). After S1 u it is just as silent as after a reward; it is not an intermediate level.",
+      "The remaining systematic misses are at the first trial of a window, where the previous state is unknown. Actual activations of about 2.0 to 2.4 are predicted at 0.3 to 0.65. The real activation looks close to all-or-none (about 0 or about 2) rather than a smooth linear ramp. Model value and choice terms add nothing: 0.457 vs 0.451 for the single-term base."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 late in the episode (ramping from about trial 70) after an unrewarded trial that did not end in S1. Strongest after a2 S2 u, and raised further when the trial before was also unrewarded (any state). After a1 S2 u it fires mainly following an earlier loss. Silent after rewards and after S1 losses.",
+    "better_terms": "(phase == D1)*(prev_reward == 0)*last_is('a2 S2 u')*np.clip(ep_trial - 70, 0, 30) ;; (phase == D1)*(prev_reward == 0)*last_is('a1 S2 u')*np.clip(ep_trial - 70, 0, 30) ;; (phase == D1)*(prev_reward == 0)*(prev_state==-1)*np.clip(ep_trial - 70, 0, 30) ;; (phase == D1)*(prev_reward == 0)*(prev_state==2)*np.clip(ep_trial - 70, 0, 30)*(tv('reward',-2)==0) ;; (phase == D1)*(prev_reward == 0)*(prev_state==2)*np.clip(ep_trial - 70, 0, 30)*(tv('reward',-2)==0)*(tv('reward',-3)==0) ;; (phase == D1)*(prev_reward == 0)*(prev_state==1)*np.clip(ep_trial - 70, 0, 30) ;; (phase == D1)*(prev_reward == 0)*(prev_state==2)*np.clip(ep_trial - 70, 0, 30)*(tv('reward',-2)==-9) ;; (phase == D1)*(prev_reward == 0)*last_is('a1 S2 u')*np.clip(ep_trial - 70, 0, 30)*(tv('reward',-2)==0)",
+    "better_terms_test_r2_beyond_timing": 0.6919,
+    "upheld": false
+  },
+  "final_label": "D1 late in the episode (ramping from about trial 70) after an unrewarded trial that did not end in S1. Strongest after a2 S2 u, and raised further when the trial before was also unrewarded (any state). After a1 S2 u it fires mainly following an earlier loss. Silent after rewards and after S1 losses."
+}

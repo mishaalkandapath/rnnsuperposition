@@ -1,0 +1,70 @@
+{
+  "label": "a2-vs-a1 preference (negative policy logit), plus reward at D1 and choice/state at D2",
+  "terms": "np.tanh(choice/2) ;; np.tanh(choice) ;; (phase==D1)*(in_rew==1) ;; (phase==D2)*(action==2) ;; (phase==D2)*(state==1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Candidate n of unit 5 is a signed action-preference unit: high when the model prefers a2, low when it prefers a1. A saturating function of the policy logit (logit a1 - logit a2, negative weight) explains most of it; the policy terms alone give dev R^2 0.74 beyond timing. Two more phase effects: at D1 it is pushed up when the previous trial was rewarded (in long rewarded a1 streaks D1 stays positive even though GO and D2 are negative). At D2 it rises when a2 was just chosen and falls when S1 is reached. With these five terms test R^2 beyond timing is 0.89, against an all ceiling of 0.96. Previous-trial pattern indicators without the policy only reach about 0.60-0.68 on dev (all observed reference 0.87), so the policy term carries the multi-trial history. Value does not matter (reference 0.01), and neither does time since reversal. No future variables are used: choice is the model output at that step, and action/state are observed at D2.",
+  "gate": "unit_candidate",
+  "feature": 5,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 5,
+    "terms": [
+      "np.tanh(choice/2)",
+      "np.tanh(choice)",
+      "(phase==D1)*(in_rew==1)",
+      "(phase==D2)*(action==2)",
+      "(phase==D2)*(state==1)"
+    ],
+    "weights": [
+      -1.6788778977095293,
+      0.9801884112753281,
+      0.45138944967876976,
+      0.3727162652375293,
+      -0.45804210614926455
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8943509244814586,
+    "r2": 0.9002233790078294,
+    "r2_timing_only": 0.05558453301695221
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 5,
+    "terms": [
+      "np.tanh(choice/2)",
+      "np.tanh(choice)",
+      "(phase==D1)*(in_rew==1)",
+      "(phase==D2)*(action==2)",
+      "(phase==D2)*(state==1)"
+    ],
+    "weights": [
+      -1.6788778977095293,
+      0.9801884112753281,
+      0.45138944967876976,
+      0.3727162652375293,
+      -0.45804210614926455
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.897580337916213,
+    "r2": 0.9032010970344589,
+    "r2_timing_only": 0.05487968817596567
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Every factual claim held up on the test split. Policy terms alone score 0.737 (claimed 0.74). Adding the D1 reward term gives 0.813, adding D2 action==2 gives 0.840, and all five terms give 0.894 against an 'all' ceiling of 0.96. Each term adds something.",
+      "The D1 reward effect is not a clean 'reward raises it'. Misses on the five terms show D1 after an unrewarded a1 trial over-predicted by about 0.41 (a1 S1 u -0.409, a1 S2 u -0.364) and D1 after a1 S2 r over-predicted by 0.32. So at D1 the unit also depends on the previous choice and how it interacts with reward. Adding (phase==D1)*table(prev_action,{1:-1,2:1}) and (phase==D1)*(prev_reward==0)*(prev_action==1) raises test R^2 to 0.913. Even then D1 after a1 S2 r (rare rewarded) stays over-predicted by about 0.34.",
+      "The unit is not purely the current policy logit at GO. The worst-fit windows have a2 chosen at GO with the logit favouring a2 (predicted about +0.45) while the unit sits at about -0.5 to -0.6. This happens after runs of unrewarded rare a2 -> S1 trials, so the unit lags the decision there. Adding (phase==GO)*(model_act==2) helps a little (test 0.920), but the class is not fully removed.",
+      "GO has a phase-level bias under the original terms: mean error +0.118, and GO after rewarded a2 trials is under-predicted by about 0.21. Better terms shrink this to about +0.04.",
+      "These are modest gaps: about 0.025 of test R^2, with the ceiling at 0.96. The 'value and trials since reversal do not matter' claim matches the references (0.01). No future variables are used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "a2-vs-a1 preference (negative policy logit); at D1 raised by the previous reward, with the previous choice mattering (lower after unrewarded a1); choice/state at D2",
+    "better_terms": "np.tanh(choice/2) ;; np.tanh(choice) ;; (phase==D1)*(in_rew==1) ;; (phase==D2)*(action==2) ;; (phase==D2)*(state==1) ;; (phase==D1)*table(prev_action,{1:-1,2:1}) ;; (phase==D1)*(prev_reward==0)*(prev_action==1) ;; (phase==GO)*(model_act==2)",
+    "better_terms_test_r2_beyond_timing": 0.9197
+  },
+  "final_label": "a2-vs-a1 preference (negative policy logit); at D1 raised by the previous reward, with the previous choice mattering (lower after unrewarded a1); choice/state at D2"
+}

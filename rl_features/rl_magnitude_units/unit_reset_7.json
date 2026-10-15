@@ -1,0 +1,92 @@
+{
+  "label": "Higher when evidence favors S2 and a2 was the latest choice; raised by reward at D1.",
+  "short_terms": "belief_lo ;; (phase != D1) * (prev_action == 2) + (phase == D2) * (action == 2) ;; in_rew",
+  "terms": "belief_lo ;; (phase == D2) * (action == 2) ;; (phase == D1) * (prev_action == 2) ;; (phase == GO) * (prev_action == 2) ;; (phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 0) * (prev_common == 1) ;; (phase == D2) * (state == 2) ;; (phase == D2) * belief_lo",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Reset gate unit 7 is graded in the ideal observer belief: it rises as belief_lo favors S2 (negative weight on belief_lo, monotone across belief deciles in all phases). On top of that it carries the most recent choice: higher after a2 at GO and D2 (at D2, this trial a2 choice, which is observed as input). At D1 it is raised by a rewarded previous trial and lowered by an unrewarded one. The free fit adds that common-unrewarded trials push it down further at D1 and that reaching S2 at D2 lowers it given the choice (state sign opposite to choice), plus phase-specific belief slopes. Future variables (this reward) carry nothing; no future term is used.",
+  "full_test_scores": {
+    "gate": "unit_reset",
+    "feature": 7,
+    "terms": [
+      "belief_lo",
+      "(phase == D2) * (action == 2)",
+      "(phase == D1) * (prev_action == 2)",
+      "(phase == GO) * (prev_action == 2)",
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_reward == 0) * (prev_common == 1)",
+      "(phase == D2) * (state == 2)",
+      "(phase == D2) * belief_lo"
+    ],
+    "weights": [
+      -0.027386828840795033,
+      0.17270369663911453,
+      0.005089100033888978,
+      0.07845438047533097,
+      0.10738291719832857,
+      -0.09689535700464282,
+      -0.09423649041661274,
+      -0.0015053729118585848
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7131602055444679,
+    "r2": 0.8664656702798557,
+    "r2_timing_only": 0.5344637239975234
+  },
+  "gate": "unit_reset",
+  "feature": 7,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 7,
+    "terms": [
+      "belief_lo",
+      "(phase != D1) * (prev_action == 2) + (phase == D2) * (action == 2)",
+      "in_rew"
+    ],
+    "weights": [
+      -0.028484682913425895,
+      0.10889290034058963,
+      0.12735032700901538
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.661429441965039,
+    "r2": 0.8423831232483239,
+    "r2_timing_only": 0.5344637239975234
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 7,
+    "terms": [
+      "belief_lo",
+      "(phase != D1) * (prev_action == 2) + (phase == D2) * (action == 2)",
+      "in_rew"
+    ],
+    "weights": [
+      -0.028484682913425895,
+      0.10889290034058963,
+      0.12735032700901538
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6746881745189215,
+    "r2": 0.8463662894447971,
+    "r2_timing_only": 0.5277340123495177
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The label's 'a2 was the latest choice' is loose. The choice term leaves out D1, even though at D1 the latest choice is the previous trial's. At D2 it adds the previous a2 and this trial's a2 together (0/1/2). Adding D1's prev_action==2 to the term makes the test score worse: 0.604-0.619 against 0.661.",
+      "The ablations support the claims (test R^2 beyond timing): without in_rew 0.551, without the D2 action 0.633, without the GO/D2 prev_action 0.622. Using (phase==D1)*(prev_reward==1) instead of in_rew gives 0.662. belief instead of belief_lo gives 0.659. The future reward explains nothing (reference 0.00).",
+      "Misses leave a moderate systematic error at D1. After a2 S1 r (rare rewarded) the fit is too low by 0.145. After a1 S1 u, a1 S2 r and a1 S2 u it is too high by about 0.08-0.11. The likely reason is that belief_lo at D1 already includes the just-seen outcome, while the unit still carries the earlier a2 preference. I could not score a lagged belief: tv-based log-odds failed with a KeyError on __import__. Adding a D1 rare-rewarded term does not help (0.660).",
+      "The worst-fit windows are long a1 S1 rewarded streaks where the actual value is about 0.27 above the prediction at D1/D2. This is a belief-extreme class that the linear belief term misses. Clipping or tanh of the belief does not fix it (0.656 / 0.648).",
+      "The label leaves out the drop at D2 when S2 is reached given the choice (residual by choice x state: a1S2 -0.22 vs a1S1 -0.11; a2S2 +0.10 vs a2S1 +0.19). Adding it to the short form does not improve the test score (0.640)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Higher as belief favors S2 and after choosing a2 (GO, D2); raised by reward at D1.",
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "Higher as belief favors S2 and after choosing a2 (GO, D2); raised by reward at D1."
+}

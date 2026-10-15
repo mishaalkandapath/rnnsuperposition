@@ -1,0 +1,76 @@
+{
+  "label": "D2 a1->S1 after rewarded a1->S1; fades over episode, grows with S1 belief",
+  "terms": "(phase == D2) * (action == 1) * (state == 1) * last_is(\"a1 S1 r\") ;; (phase == D2) * (action == 1) * (state == 1) * last_is(\"a1 S1 r\") * np.minimum(ep_trial, 60) ;; (phase == D2) * (action == 1) * (state == 1) * last_is(\"a1 S1 r\") * (ep_trial < 5) ;; (phase == D2) * (action == 1) * (state == 1) * (trial == 0) ;; (phase == D2) * (action == 1) * (state == 1) * (trial == 0) * np.minimum(ep_trial, 60) ;; (phase == D2) * (action == 1) * (state == 1) * last_is(\"a1 S1 r\") * np.clip(belief_lo, -3, 3)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (zero at D1/GO). Its magnitude comes from one gate: this trial is a1 -> S1 (common, seen at D2) and the previous trial was also a1 -> S1 rewarded. The base term alone gives dev R^2 beyond timing 0.21. Inside that context, the size falls off steeply with episode trial (it interacts with timing; the additive phase x decile baseline does not capture this): it is small on trials 0-4, peaks around trials 5-20, and decays toward zero by about 60. That episode-trial interaction, plus a term for the window first trial (previous trial unknown), takes R^2 to about 0.47. The ideal-observer S1 belief log-odds adds a small positive graded effect (+0.005). Two-back rewards, belief_cover, start_high and the hidden good state / since_rev add essentially nothing (<0.003). Test R^2 beyond timing is 0.537 (dev 0.537), above the profile additive all ceiling of 0.34 and the all-observed ceiling of 0.26. Unexplained: some windows with long a1 S1 rewarded streaks stay at zero while others sit near 0.38. Observed variables do not predict which; the earlier value/policy-based explanation probably covered this, and that is the main loss from going observed-only.",
+  "gate": "hidden",
+  "feature": 252,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 252,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 1) * last_is(\"a1 S1 r\")",
+      "(phase == D2) * (action == 1) * (state == 1) * last_is(\"a1 S1 r\") * np.minimum(ep_trial, 60)",
+      "(phase == D2) * (action == 1) * (state == 1) * last_is(\"a1 S1 r\") * (ep_trial < 5)",
+      "(phase == D2) * (action == 1) * (state == 1) * (trial == 0)",
+      "(phase == D2) * (action == 1) * (state == 1) * (trial == 0) * np.minimum(ep_trial, 60)",
+      "(phase == D2) * (action == 1) * (state == 1) * last_is(\"a1 S1 r\") * np.clip(belief_lo, -3, 3)"
+    ],
+    "weights": [
+      0.20519349506484877,
+      -0.0045991401367571575,
+      -0.11449747197045035,
+      0.15189768714997262,
+      -0.0023804458590729314,
+      0.026986449158194138
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5370788992419449,
+    "r2": 0.5987244035383847,
+    "r2_timing_only": 0.1331663304945323
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 252,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 1) * last_is(\"a1 S1 r\")",
+      "(phase == D2) * (action == 1) * (state == 1) * last_is(\"a1 S1 r\") * np.minimum(ep_trial, 60)",
+      "(phase == D2) * (action == 1) * (state == 1) * last_is(\"a1 S1 r\") * (ep_trial < 5)",
+      "(phase == D2) * (action == 1) * (state == 1) * (trial == 0)",
+      "(phase == D2) * (action == 1) * (state == 1) * (trial == 0) * np.minimum(ep_trial, 60)",
+      "(phase == D2) * (action == 1) * (state == 1) * last_is(\"a1 S1 r\") * np.clip(belief_lo, -3, 3)"
+    ],
+    "weights": [
+      0.20519349506484877,
+      -0.0045991401367571575,
+      -0.11449747197045035,
+      0.15189768714997262,
+      -0.0023804458590729314,
+      0.026986449158194138
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.537126247927195,
+    "r2": 0.6023922892273752,
+    "r2_timing_only": 0.14100181962772995
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The reported numbers reproduce. The six claimed terms give test R^2 beyond timing 0.537. The base context term alone (D2 x a1->S1 x last trial a1 S1 r) gives 0.211.",
+      "The episode-time shape checks out when the context term is split into ep_trial bins on test: weights are 0.150 (trials 0-4), 0.217 (5-9), 0.216 (10-19), 0.193 (20-29), 0.136 (30-44), 0.042 (45-59) and 0.013 (60+). It is low early, peaks at 5-20 and is near zero by 60. The decline is closer to concave than linear: a squared term adds about +0.003.",
+      "The belief effect is real but tiny: removing the belief term drops test R^2 from 0.537 to 0.533. 'Grows with S1 belief' in the label overstates something worth +0.004.",
+      "The misses output shows a systematic offset error. D1 and GO are under-predicted by +0.005 on average (the true value there is exactly 0), and every non-context D2 cell is over-predicted by about -0.014. This is an intercept/baseline artifact, not a wrong cue. Adding one '(phase != D2)' term removes it (mean errors fall to about 0.000) and raises test R^2 from 0.537 to 0.587. The reported score therefore understates what this explanation can reach.",
+      "The worst misses are whole windows of rewarded a1->S1 streaks where the actual value is 0 but the prediction is 0.17-0.30, mostly at episode trials 4-20. None of these predicts them (each adds under 0.002): start_high, good state, p_s1, since_rev, belief_cover, belief < 0.5, a two-back pattern, streak length or valid/d1_err. The original explanation already admits this gap, and it is an episode-level bimodality rather than a phase or previous-trial class.",
+      "No future variables are used; the claim checks out."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 a1->S1 after rewarded a1->S1; peaks at episode trials 5-20, fades by ~60; weak S1-belief boost",
+    "better_terms": "(phase == D2) * (action == 1) * (state == 1) * last_is(\"a1 S1 r\") ;; (phase == D2) * (action == 1) * (state == 1) * last_is(\"a1 S1 r\") * np.minimum(ep_trial, 60) ;; (phase == D2) * (action == 1) * (state == 1) * last_is(\"a1 S1 r\") * (ep_trial < 5) ;; (phase == D2) * (action == 1) * (state == 1) * (trial == 0) ;; (phase == D2) * (action == 1) * (state == 1) * (trial == 0) * np.minimum(ep_trial, 60) ;; (phase == D2) * (action == 1) * (state == 1) * last_is(\"a1 S1 r\") * np.clip(belief_lo, -3, 3) ;; (phase != D2) ;; (phase == D2) * (action == 1) * (state == 1) * last_is(\"a1 S1 r\") * np.minimum(ep_trial,60)**2",
+    "better_terms_test_r2_beyond_timing": 0.5896
+  },
+  "final_label": "D2 a1->S1 after rewarded a1->S1; peaks at episode trials 5-20, fades by ~60; weak S1-belief boost"
+}

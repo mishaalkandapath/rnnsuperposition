@@ -1,0 +1,113 @@
+{
+ "label": "At D1, low after a rewarded trial, higher after reaching S1; unrewarded level holds late in episode.",
+ "short_terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward >= 0) * (1 + (prev_state == S1)) ;; (phase == D2) * (state - action)",
+ "terms": "(phase == D1) * (prev_reward == 0) * ep_trial ;; (phase == D1) * (prev_state == S1) * ep_trial ;; (phase == D2) * (state - action) ;; (phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_state == S1) ;; (phase == GO) * (prev_reward == 1) ;; (phase == D2) * (prev_reward == 1) ;; (phase == D1) * (prev_state == prev_action)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Raw reset gate r of unit 31 (always on, mean 0.70). Beyond the timing baseline, which falls late in the episode, it is driven mostly at D1 by the previous trial outcome shown then: it drops by about 0.17 after a rewarded trial and is higher (+0.15) when the previous trial reached S1 than S2 (so S2-rewarded is lowest and S1-unrewarded highest). After unrewarded trials it does not follow the late-episode decline of the baseline (the prev_reward==0 x ep_trial term, positive), so the gap between rewarded and unrewarded grows late in the episode. GO and D2 effects are small: GO is slightly lower after reward, and at D2 it is higher after a1->S2 and lower after a2->S1 (rare transitions, the state - action term). The free fit adds these GO/D2 terms, a common-transition bump at D1, and episode-time scaling of the S1 effect (dev 0.81 vs 0.69 for the short form). The observer belief adds little once the last trial is in. No future variables used.",
+ "full_test_scores": {
+  "gate": "unit_reset",
+  "feature": 31,
+  "terms": [
+   "(phase == D1) * (prev_reward == 0) * ep_trial",
+   "(phase == D1) * (prev_state == S1) * ep_trial",
+   "(phase == D2) * (state - action)",
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D1) * (prev_state == S1)",
+   "(phase == GO) * (prev_reward == 1)",
+   "(phase == D2) * (prev_reward == 1)",
+   "(phase == D1) * (prev_state == prev_action)"
+  ],
+  "weights": [
+   0.0012624782547614307,
+   -0.00032002496968752426,
+   0.10613912635116855,
+   -0.24659148872978193,
+   0.16993570151935722,
+   -0.03535424538048749,
+   -0.03916655492478698,
+   0.05725067424695144
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.817619018689453,
+  "r2": 0.924124214279083,
+  "r2_timing_only": 0.5839709536833755
+ },
+ "gate": "unit_reset",
+ "feature": 31,
+ "test_scores": {
+  "gate": "unit_reset",
+  "feature": 31,
+  "terms": [
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D1) * (prev_reward >= 0) * (1 + (prev_state == S1))",
+   "(phase == D2) * (state - action)"
+  ],
+  "weights": [
+   -0.30546448319318975,
+   0.1408245409842831,
+   0.10565521526603171
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.8131985378438662,
+  "r2": 0.9222851658486326,
+  "r2_timing_only": 0.5839709536833755
+ },
+ "dev_scores": {
+  "gate": "unit_reset",
+  "feature": 31,
+  "terms": [
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D1) * (prev_reward >= 0) * (1 + (prev_state == S1))",
+   "(phase == D2) * (state - action)"
+  ],
+  "weights": [
+   -0.30546448319318975,
+   0.1408245409842831,
+   0.10565521526603171
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.8098499343388998,
+  "r2": 0.9215272947357936,
+  "r2_timing_only": 0.5873117109301118
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The claim that the unrewarded level holds late in the episode is false. The (phase==D1)*(prev_reward==0)*ep_trial term only works as a stand-in for 'the previous trial is known' (D1 steps where prev is '?' get 0). Add a plain (phase==D1)*(prev_reward==0) indicator and the ep_trial weight drops to +0.000: r1 / r0 / S1 scores test 0.733, higher than the recorded 0.693. With (phase==D1)*(prev_reward>=0) in place, the r0*ep_trial weight is also 0.000 (test 0.610). So the gap between rewarded and unrewarded trials does not widen late in the episode.",
+   "Supporting check: (D1)*(prev_reward==1)*ep_trial adds nothing (0.579 vs 0.579 without it), so the episode-time story has no other support either.",
+   "The short form leaves out the D2 rare-transition effect (state - action, weight +0.106: higher after a1->S2, lower after a2->S1). Adding it is worth about +0.08 test (0.693 -> 0.775 as a 4-term fit), and it accounts for much of the gap to the free fit's 0.818.",
+   "Misses on the recorded short form: the worst windows are late-episode D1 steps after unrewarded trials, over-predicted by about 0.19 (actual ~0.57 vs predicted ~0.76). The linear ep_trial term overshoots there, which is again a sign it is a fitted correction.",
+   "Small systematic error left in every form: a previous a2 choice is over-predicted at D1 by about 0.05-0.08 (after a2 S1 r/u and a2 S2 r). Adding prev_action as a separate 4th term gives no test gain, so I did not add it.",
+   "The residual tables do confirm the reward drop (about -0.17) and the S1-over-S2 raise (about +0.14) at D1."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At D1: low after rewarded trials, higher after reaching S1; at D2: higher after a1->S2, lower after a2->S1.",
+  "better_short_terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward >= 0) * (1 + (prev_state == S1)) ;; (phase == D2) * (state - action)",
+  "better_short_terms_test_r2_beyond_timing": 0.813
+ },
+ "final_label": "At D1: low after rewarded trials, higher after reaching S1; at D2: higher after a1->S2, lower after a2->S1.",
+ "original_short_terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 0) * ep_trial ;; (phase == D1) * (prev_state == S1)",
+ "original_test_scores": {
+  "gate": "unit_reset",
+  "feature": 31,
+  "terms": [
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D1) * (prev_reward == 0) * ep_trial",
+   "(phase == D1) * (prev_state == S1)"
+  ],
+  "weights": [
+   -0.17312896698873373,
+   0.002083193824006277,
+   0.153591658578851
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.693402693375724,
+  "r2": 0.8724466149218567,
+  "r2_timing_only": 0.5839709536833755
+ },
+ "terms_from": "skeptic"
+}

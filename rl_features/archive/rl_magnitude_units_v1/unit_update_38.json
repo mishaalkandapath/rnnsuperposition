@@ -1,0 +1,68 @@
+{
+  "label": "D1 update gate: high after reaching S2, low after reward and after rare a2->S1",
+  "terms": "(phase == D1) * (in_rew == 1) ;; (phase == D1) * (prev_state == 2) ;; (phase == D1) * (prev_action == 2) * (prev_state == 1) ;; (phase == D1) * (prev_state == -1) ;; (phase == GO) * (prev_action == 1) * (prev_reward == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 38. Almost all variance is at D1 (mean ~0.5-0.68, rising over the episode); GO and D2 are near 0. Beyond timing, the D1 value is set by the previous trial: higher (+0.37) when the previous trial reached S2, lower (-0.22) when the reward input is 1, and lower still (-0.17) when the previous trial was a rare a2->S1 transition (so a2 S1 r is the lowest, a1/a2 S2 u the highest). A term for the window-start trial (previous trial unknown in the window, +0.15) absorbs a fitting artifact. A small GO bump after a1 rewarded. Trial-before reward/state, the model policy logit and value add little (<0.015). All terms are observed. Test R^2 beyond timing 0.77 vs the all ceiling 0.82 (all observed 0.80).",
+  "gate": "unit_update",
+  "feature": 38,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 38,
+    "terms": [
+      "(phase == D1) * (in_rew == 1)",
+      "(phase == D1) * (prev_state == 2)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 1)",
+      "(phase == D1) * (prev_state == -1)",
+      "(phase == GO) * (prev_action == 1) * (prev_reward == 1)"
+    ],
+    "weights": [
+      -0.22023253287044384,
+      0.37402590257585006,
+      -0.17399117804544015,
+      0.15481334005259773,
+      0.03761092584014092
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7725377243753353,
+    "r2": 0.945200932163724,
+    "r2_timing_only": 0.7590850276786124
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 38,
+    "terms": [
+      "(phase == D1) * (in_rew == 1)",
+      "(phase == D1) * (prev_state == 2)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 1)",
+      "(phase == D1) * (prev_state == -1)",
+      "(phase == GO) * (prev_action == 1) * (prev_reward == 1)"
+    ],
+    "weights": [
+      -0.22023253287044384,
+      0.37402590257585006,
+      -0.17399117804544015,
+      0.15481334005259773,
+      0.03761092584014092
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7732891431304396,
+    "r2": 0.945468615055828,
+    "r2_timing_only": 0.7594672540294487
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The (prev_state == -1) term lumps two cases together: the window's first trial, where the previous trial is unknown (+0.15), and the episode's very first trial t0. At t0 the gate is about 0.12 against a predicted 0.66; the misses output lists several t0 cells among the worst fits. Adding (phase==D1)*(ep_trial==0) gets weight -0.54 and lifts test R^2 beyond timing from 0.7725 to 0.779, so the explanation's line about the windowing artifact is incomplete. The effect is small.",
+      "The remaining errors are minor: D1 after a1 S2 r is under-predicted by +0.071, and D1 after a2 S2 u and after a1 S1 r are over-predicted by about -0.05. They come from a small reward x S2 interaction. Adding that term plus a t0 term and an S2 x ep_dec term reaches 0.788 test. No large systematic error class remains.",
+      "The other claims check out against the profile tables and the term ablations. The value is near 0 at GO and D2. At D1 it is highest after S2 unrewarded (+0.34/+0.32) and lowest after a2 S1 r (-0.39). The S2, reward and rare-a2->S1 effects are roughly additive. All terms use observed variables only."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 update gate: high after reaching S2, low after reward and after rare a2->S1; very low on the episode's first trial",
+    "better_terms": "(phase == D1) * (in_rew == 1) ;; (phase == D1) * (prev_state == 2) ;; (phase == D1) * (prev_action == 2) * (prev_state == 1) ;; (phase == D1) * (prev_state == -1) ;; (phase == GO) * (prev_action == 1) * (prev_reward == 1) ;; (phase == D1) * (ep_trial == 0) ;; (phase == D1) * (in_rew == 1) * (prev_state == 2) ;; (phase==D1)*(prev_state==2)*ep_dec",
+    "better_terms_test_r2_beyond_timing": 0.788
+  },
+  "final_label": "D1 update gate: high after reaching S2, low after reward and after rare a2->S1; very low on the episode's first trial"
+}

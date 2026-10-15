@@ -1,0 +1,75 @@
+{
+  "label": "D2 rare a2->S1 late in episode, grows with trial; boosted after reward, damped after S1",
+  "terms": "(phase == D2) * (action == 2) * (state == 1) * np.clip(ep_trial - 80, 0, None) ;; (phase == D2) * (action == 2) * (state == 1) * np.clip(ep_trial - 70, 0, None) ;; (phase == D2) * (action == 2) * (state == 1) * np.clip(ep_trial - 70, 0, None) * (prev_reward == 1) ;; (phase == D2) * (1 - (action == 2) * (state == 1)) * np.clip(ep_trial - 80, 0, None) ;; (phase == D2) * (action == 2) * (state == 1) * np.clip(ep_trial - 80, 0, None) * (prev_state == 1) ;; (phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 80, 0, None) * (prev_state == 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2, almost entirely late in the episode (trial > ~70-80). Its magnitude is set by the choice and the state just reached (both observed at D2): it is large on rare a2->S1 transitions and grows roughly linearly with episode trial past ~80 (about +0.03-0.05 per trial), reaching ~1.5-2. Within a2->S1 it is higher when the previous trial was rewarded (prev_reward = 1) and lower when the previous trial also ended in S1 (repeated S1 arrivals). It fires weakly on a1->S1 when the previous trial reached S2, and the other late D2 cells (S2 arrivals) sit slightly below the timing baseline. Silent at D1 and GO. Belief (ideal-observer log-odds) adds almost nothing (dev +0.003), and neither do hidden good-state or future variables. Observed-only terms (action, state, ep_trial, previous reward/state) reach dev R^2 beyond timing 0.85, well above the additive all ceiling 0.19, because the feature is a multiplicative late-episode x a2-S1 interaction. The earlier label (low value at S1 late) needs no model output: the a2->S1 transition x episode-time interaction replaces it with no loss.",
+  "gate": "hidden",
+  "feature": 69,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 69,
+    "terms": [
+      "(phase == D2) * (action == 2) * (state == 1) * np.clip(ep_trial - 80, 0, None)",
+      "(phase == D2) * (action == 2) * (state == 1) * np.clip(ep_trial - 70, 0, None)",
+      "(phase == D2) * (action == 2) * (state == 1) * np.clip(ep_trial - 70, 0, None) * (prev_reward == 1)",
+      "(phase == D2) * (1 - (action == 2) * (state == 1)) * np.clip(ep_trial - 80, 0, None)",
+      "(phase == D2) * (action == 2) * (state == 1) * np.clip(ep_trial - 80, 0, None) * (prev_state == 1)",
+      "(phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 80, 0, None) * (prev_state == 2)"
+    ],
+    "weights": [
+      0.05045710508725206,
+      0.002852556936257832,
+      0.03258392466254845,
+      -0.014991586306130724,
+      -0.06862161209968956,
+      0.02336245424238434
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8513518811049873,
+    "r2": 0.8791649270994147,
+    "r2_timing_only": 0.1871066125907136
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 69,
+    "terms": [
+      "(phase == D2) * (action == 2) * (state == 1) * np.clip(ep_trial - 80, 0, None)",
+      "(phase == D2) * (action == 2) * (state == 1) * np.clip(ep_trial - 70, 0, None)",
+      "(phase == D2) * (action == 2) * (state == 1) * np.clip(ep_trial - 70, 0, None) * (prev_reward == 1)",
+      "(phase == D2) * (1 - (action == 2) * (state == 1)) * np.clip(ep_trial - 80, 0, None)",
+      "(phase == D2) * (action == 2) * (state == 1) * np.clip(ep_trial - 80, 0, None) * (prev_state == 1)",
+      "(phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 80, 0, None) * (prev_state == 2)"
+    ],
+    "weights": [
+      0.05045710508725206,
+      0.002852556936257832,
+      0.03258392466254845,
+      -0.014991586306130724,
+      -0.06862161209968956,
+      0.02336245424238434
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8467622348564203,
+    "r2": 0.8749720860493807,
+    "r2_timing_only": 0.18409202957592374
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The reported test R^2 beyond timing of 0.851 reproduces. Most of it comes from 4 terms: a2->S1 at D2 x late ramp, x prev_reward==1, x prev_state==1, plus a negative ramp on late D2 arrivals in S2. Those 4 alone score 0.846 on test. The a1->S1 x prev_state==2 term carries almost nothing (weight +0.013 to +0.023, about +0.004 R^2), so 'fires weakly on a1->S1 when the previous trial reached S2' is true but negligible.",
+      "The ramp is not linear past trial 80; it is concave (saturating). With ramps at 75 and 90, the weights are +0.050 and -0.052, so the slope roughly halves after trial 90, and test R^2 rises from 0.846 to 0.864. 'Grows roughly linearly' is a slight misstatement.",
+      "The previous-trial effect inside a2->S1 is closer to a gate than to a 'boost after reward'. Per-cell weights by previous trial: after an unrewarded S1 trial about 0 (a1 S1 u -0.012, a2 S1 u -0.019); after any S2 trial highest (+0.07 to +0.11); after a rewarded S1 trial in between (about +0.06). So the feature is almost silent on a2->S1 when the last trial was an unrewarded visit to S1. The additive reward and prev-state terms capture this reasonably well.",
+      "One unexplained error class remains: misses shows a1->S1 (common) arrivals in some late episodes with activations of 0.4-1.2 against predictions near 0.05-0.4. These are high after an unrewarded trial and decay over a run of rewarded S1 visits (e.g. 1.13 -> 0.70 -> 0.37 -> 0.14). Terms built from belief, (1 - belief) and prev_reward on a1->S1 did not capture it (all under +0.003). The class is sporadic and small in variance: mean errors by phase and previous trial are all within about 0.02.",
+      "Belief adds nothing: an a2->S1 x belief_lo term gets weight +0.003 and adds +0.003 R^2. That agrees with the explanation's claim that observed quantities alone lose nothing."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 rare a2->S1 late in episode (ramp from ~trial 75, saturating after ~90); near-silent if previous trial was unrewarded S1, highest after S2 trials",
+    "better_terms": "(phase == D2) * (action == 2) * (state == 1) * np.clip(ep_trial - 75, 0, None) ;; (phase == D2) * (action == 2) * (state == 1) * np.clip(ep_trial - 90, 0, None) ;; (phase == D2) * (action == 2) * (state == 1) * np.clip(ep_trial - 80, 0, None) * (prev_reward == 1) ;; (phase == D2) * (action == 2) * (state == 1) * np.clip(ep_trial - 80, 0, None) * (prev_state == 1) ;; (phase == D2) * (action == 2) * (state == 1) * np.clip(ep_trial - 80, 0, None) * (prev_state == 1) * (prev_reward == 0) ;; (phase == D2) * (state == 2) * np.clip(ep_trial - 80, 0, None) ;; (phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 80, 0, None) * (prev_state == 2)",
+    "better_terms_test_r2_beyond_timing": 0.8682
+  },
+  "final_label": "D2 rare a2->S1 late in episode (ramp from ~trial 75, saturating after ~90); near-silent if previous trial was unrewarded S1, highest after S2 trials"
+}

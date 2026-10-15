@@ -1,0 +1,108 @@
+{
+ "label": "GO after a common unrewarded a2->S2 loss, stronger the more the observer still favours S2",
+ "short_terms": "(phase == GO) * last_is('a2 S2 u') ;; (phase == GO) * last_is('a2 S2 u') * belief ;; (phase == GO) * last_is('a2 S2 u') * (tv('state', -2) == 2)",
+ "terms": "(phase == GO) * last_is(\"a2 S2 u\") ;; (phase == GO) * last_is(\"a2 S2 u\") * belief_lo ;; (phase == GO) * last_is(\"a2 S2 u\") * belief_lo**2 ;; (phase == GO) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 0) ;; (phase == GO) * last_is(\"a2 S2 u\") * (tv(\"action\", -2) == 2) ;; (phase == GO) * last_is(\"a2 S2 u\") * belief_cover ;; (phase == GO) * last_is(\"a2 S2 u\") * (tv(\"state\", -2) == 2)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Fires only at GO, essentially only when the previous trial was a2 -> S2 (common) unrewarded (residual +0.35 vs about -0.04 for every other pattern; that indicator alone gives dev R2 0.32). Magnitude is graded by the ideal-observer belief: the more negative belief_lo (observer still confident S2 is good despite the loss) the stronger it fires, so a fresh loss after S2 wins fires most and a second consecutive loss (belief already near 0.5) fires weakly. Indicator + indicator*belief_lo reaches dev R2 0.53. The free fit adds small refinements (curvature in belief, the trial before reaching S2 lowers it, belief cover) for dev 0.58. Remaining misses are mostly windows whose first trial has no previous-trial info. Silent at D1 and D2; no future or model-output variables used.",
+ "full_test_scores": {
+  "gate": "hidden",
+  "feature": 65,
+  "terms": [
+   "(phase == GO) * last_is(\"a2 S2 u\")",
+   "(phase == GO) * last_is(\"a2 S2 u\") * belief_lo",
+   "(phase == GO) * last_is(\"a2 S2 u\") * belief_lo**2",
+   "(phase == GO) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 0)",
+   "(phase == GO) * last_is(\"a2 S2 u\") * (tv(\"action\", -2) == 2)",
+   "(phase == GO) * last_is(\"a2 S2 u\") * belief_cover",
+   "(phase == GO) * last_is(\"a2 S2 u\") * (tv(\"state\", -2) == 2)"
+  ],
+  "weights": [
+   0.5720220280690782,
+   -0.2502383248449627,
+   0.04872867143631846,
+   -0.02307933880719083,
+   0.14308808467913697,
+   -0.02941478881686436,
+   -0.2385685690342099
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5847111099531777,
+  "r2": 0.6003391118736194,
+  "r2_timing_only": 0.03763163979339723
+ },
+ "gate": "hidden",
+ "feature": 65,
+ "test_scores": {
+  "gate": "hidden",
+  "feature": 65,
+  "terms": [
+   "(phase == GO) * last_is('a2 S2 u')",
+   "(phase == GO) * last_is('a2 S2 u') * belief",
+   "(phase == GO) * last_is('a2 S2 u') * (tv('state', -2) == 2)"
+  ],
+  "weights": [
+   1.0426841478512239,
+   -1.0449799249677363,
+   -0.155894311942608
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5614945495116745,
+  "r2": 0.5779962286718926,
+  "r2_timing_only": 0.03763163979339723
+ },
+ "dev_scores": {
+  "gate": "hidden",
+  "feature": 65,
+  "terms": [
+   "(phase == GO) * last_is('a2 S2 u')",
+   "(phase == GO) * last_is('a2 S2 u') * belief",
+   "(phase == GO) * last_is('a2 S2 u') * (tv('state', -2) == 2)"
+  ],
+  "weights": [
+   1.0426841478512239,
+   -1.0449799249677363,
+   -0.155894311942608
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.5607406992470366,
+  "r2": 0.5765323006911551,
+  "r2_timing_only": 0.0359505226572302
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": true,
+  "issues": [
+   "The claims hold. The feature is exactly zero at D1 and D2. At GO the residual is +0.35 after 'a2 S2 u' and about -0.04 after every other pattern. On test, the recorded short form scores 0.532 beyond timing, as reported. The belief_lo weight is -0.18, so the feature fires more strongly the more the observer still favours S2.",
+   "One part of the explanation needs rewording. It says a second loss in a row gives a weak activation, but adding (tv('reward',-2)==0) to the short form changes nothing (weight -0.003, test 0.5316). That effect is already carried by belief, so it is a consequence of the belief term, not a separate effect.",
+   "Raw belief fits slightly better than belief_lo. Swapping it into the short form raises test R^2 from 0.532 to 0.547 (weight -1.0). Splitting on the sign of belief_lo is worse (test 0.519), so the response is graded, not a step.",
+   "There is a small effect the label leaves out. Adding (tv('state',-2)==2) gets weight -0.16 and raises test to 0.561, so activation is lower when the trial before also reached S2. Adding belief_cover does about as well (0.558).",
+   "Misses on the short form show no large systematic error class. The worst windows are ones where the high activation falls on the window's first trial, where last_is is unknown. Otherwise errors are uniform intercept offsets of about 0.01-0.03 by phase and previous trial."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "GO after a common unrewarded a2->S2 loss; stronger the more belief still favours S2, weaker if the trial before also reached S2",
+  "better_short_terms": "(phase == GO) * last_is('a2 S2 u') ;; (phase == GO) * last_is('a2 S2 u') * belief ;; (phase == GO) * last_is('a2 S2 u') * (tv('state', -2) == 2)",
+  "better_short_terms_test_r2_beyond_timing": 0.5615
+ },
+ "final_label": "GO after a common unrewarded a2->S2 loss; stronger the more belief still favours S2, weaker if the trial before also reached S2",
+ "original_short_terms": "(phase == GO) * last_is(\"a2 S2 u\") ;; (phase == GO) * last_is(\"a2 S2 u\") * belief_lo",
+ "original_test_scores": {
+  "gate": "hidden",
+  "feature": 65,
+  "terms": [
+   "(phase == GO) * last_is(\"a2 S2 u\")",
+   "(phase == GO) * last_is(\"a2 S2 u\") * belief_lo"
+  ],
+  "weights": [
+   0.4493347276120121,
+   -0.17873497820394407
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5316742444222999,
+  "r2": 0.5492981105621706,
+  "r2_timing_only": 0.03763163979339723
+ },
+ "terms_from": "skeptic"
+}

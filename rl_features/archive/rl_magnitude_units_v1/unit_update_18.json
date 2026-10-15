@@ -1,0 +1,75 @@
+{
+  "label": "Update gate tracks choice side: high after a2, very low on long a1 runs at D2",
+  "terms": "(phase == D2) * (action == 2) ;; (phase == D2) * np.tanh(choice) ;; (phase == D2) * (action == 1) * ((tv(\"action\", -1) == 1) + (tv(\"action\", -1) == 1) * (tv(\"action\", -2) == 1) + (tv(\"action\", -1) == 1) * (tv(\"action\", -2) == 1) * (tv(\"action\", -3) == 1)) ;; (phase == D1) * (prev_action == 2) ;; (phase == GO) * (prev_action == 2) ;; (phase == D1) * np.tanh(choice)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw update gate z18 (mean 0.86; about 0.92 at D1, 0.97 at GO, 0.65 at D2). Beyond timing, the main driver is which action was chosen, and the effect is largest at D2. At D2 the gate is higher after choosing a2 (about +0.08) and lower the more the model leans toward a1 (tanh of policy logit a1-a2, about -0.11). It is also strongly lowered by consecutive a1 choices: about -0.12 per extra previous a1 in the run, so D2 drops to about 0.45 in long late-episode a1 streaks. At D1 and GO the gate is slightly higher when the previous choice was a2 (+0.04) and slightly lower when the policy leans a1. Reward, transition type and value add little: the reward of the current trial has a reference score of 0. The hidden good state (0.34) only matters through the choice. Test R^2 beyond timing is about 0.84 with these 6 terms (all ceiling 0.97, policy decile alone 0.83). An observed-only version (D2 a2 choice, D2 a1-run length, previous action at D1/GO, D1 a1-run) gets 0.70 on test.",
+  "gate": "unit_update",
+  "feature": 18,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 18,
+    "terms": [
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * np.tanh(choice)",
+      "(phase == D2) * (action == 1) * ((tv(\"action\", -1) == 1) + (tv(\"action\", -1) == 1) * (tv(\"action\", -2) == 1) + (tv(\"action\", -1) == 1) * (tv(\"action\", -2) == 1) * (tv(\"action\", -3) == 1))",
+      "(phase == D1) * (prev_action == 2)",
+      "(phase == GO) * (prev_action == 2)",
+      "(phase == D1) * np.tanh(choice)"
+    ],
+    "weights": [
+      0.08264739381002847,
+      -0.10546694617895092,
+      -0.12354562147020033,
+      0.039121560320656286,
+      0.036182924837954676,
+      -0.03292759095975321
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8299917971915424,
+    "r2": 0.92996200375121,
+    "r2_timing_only": 0.5880316649914865
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 18,
+    "terms": [
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * np.tanh(choice)",
+      "(phase == D2) * (action == 1) * ((tv(\"action\", -1) == 1) + (tv(\"action\", -1) == 1) * (tv(\"action\", -2) == 1) + (tv(\"action\", -1) == 1) * (tv(\"action\", -2) == 1) * (tv(\"action\", -3) == 1))",
+      "(phase == D1) * (prev_action == 2)",
+      "(phase == GO) * (prev_action == 2)",
+      "(phase == D1) * np.tanh(choice)"
+    ],
+    "weights": [
+      0.08264739381002847,
+      -0.10546694617895092,
+      -0.12354562147020033,
+      0.039121560320656286,
+      0.036182924837954676,
+      -0.03292759095975321
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8359080835240235,
+    "r2": 0.9318630976128935,
+    "r2_timing_only": 0.584763808904128
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The six terms reproduce exactly the stated score (test R^2 beyond timing 0.830) but add nothing over the policy-decile reference alone (0.83). Most of the fit comes from the model's own policy logit, and at D2 that logit is read out of the same hidden state the gate feeds, so it is a readout rather than an input. tanh(choice) at D1/GO/D2 alone scores 0.665. The observed-only claim checks out: D2 a2, D2 a1-run, previous action at D1/GO and a D1 a1-run score 0.703 on test.",
+      "Ablations support the D2 claims. D2 action==2 alone scores 0.41, D2 tanh(choice) alone 0.61, a2 plus the a1-run term 0.64, and a2 plus choice 0.62. Adding the run term to a2 plus choice gives 0.76, so the run term carries its own signal. The D1/GO prev_action terms add about 0.05 (0.813 rises to 0.830 with the D1 choice term).",
+      "Small systematic leftover at D1: the previous trial's reached state matters as well as its choice. The D1 residual after a1->S2 is -0.09 to -0.11, against about -0.03 after a1->S1. Adding (phase==D1)*(prev_action==1)*(prev_state==2) raises the score to 0.839, so the line 'D1 depends on previous choice a2' is slightly incomplete.",
+      "Small episode-time interaction at D2: adding D2 action x ep_trial terms gives 0.856. The label's 'late in the episode' is loosely supported, but the D2 timing baseline itself peaks mid-episode (0.69) and is lowest at the end (0.64).",
+      "Misses: phase mean errors are small (D1 +0.007, GO +0.008, D2 -0.015) and the largest (phase, previous trial) cell error is -0.076 (D2 after a1 S1 u). The worst windows are a2 choices that reach S1 by a rare transition in a1-heavy contexts, which are over-predicted at D2 by about 0.2-0.3. But D2 a2*(state==1) adds nothing (0.831) and a2-after-a1 adds only 0.005, so this is not a large error class.",
+      "'Reward adds little' is true only for direct effects. Previous-trial reward after a rare transition strongly splits D2 (a1 S2 r +0.05 vs a1 S2 u -0.28), but this runs through the model-based choice, as the label implies."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Update gate tracks the a1/a2 policy: high after a2, very low on long a1 runs at D2 (also lowered at D1 after a rare a1->S2 trial)",
+    "better_terms": "(phase == D2) * (action == 2) ;; (phase == D2) * np.tanh(choice) ;; (phase == D2) * (action == 1) * ((tv('action', -1) == 1) + (tv('action', -1) == 1) * (tv('action', -2) == 1) + (tv('action', -1) == 1) * (tv('action', -2) == 1) * (tv('action', -3) == 1)) ;; (phase == D1) * (prev_action == 2) ;; (phase == GO) * (prev_action == 2) ;; (phase == D1) * np.tanh(choice) ;; (phase == D2) * (action == 2) * ep_trial/100 ;; (phase == D2) * (action == 1) * ep_trial/100",
+    "better_terms_test_r2_beyond_timing": 0.856
+  },
+  "final_label": "Update gate tracks the a1/a2 policy: high after a2, very low on long a1 runs at D2 (also lowered at D1 after a rare a1->S2 trial)"
+}

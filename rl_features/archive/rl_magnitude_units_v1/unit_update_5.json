@@ -1,0 +1,69 @@
+{
+  "label": "D1 update gate opens after reaching S2 (strongest a1->S2 rare), shut after S1",
+  "terms": "(phase == D1) ;; (phase == D1) * (prev_state == 2) ;; (phase == D1) * (prev_state == 2) * (prev_action == 2) ;; (phase == D1) * (prev_state == 2) * (prev_action == 2) * (prev_reward == 1) ;; (phase == D1) * (prev_state == -1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw z of unit 5 is essentially a D1-only signal (GO/D2 ~0.01). At D1 it is set by the state reached on the previous trial: near 1 (~0.95) after S2, near 0 after S1, regardless of reward. Within S2 it is highest after a rare a1->S2 transition, a bit lower after common a2->S2, and lowest after a2->S2 rewarded (~+0.26 vs +0.39 unrewarded residual). The (prev_state == -1) term only covers the window first trial where the previous trial is not in the window. Reward alone, the trial before, the hidden good state, value and policy add almost nothing (adding value/choice: +0.001 dev). Dev R^2 beyond timing 0.79; all-cue ceiling 0.83. Uses only observed variables.",
+  "gate": "unit_update",
+  "feature": 5,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 5,
+    "terms": [
+      "(phase == D1)",
+      "(phase == D1) * (prev_state == 2)",
+      "(phase == D1) * (prev_state == 2) * (prev_action == 2)",
+      "(phase == D1) * (prev_state == 2) * (prev_action == 2) * (prev_reward == 1)",
+      "(phase == D1) * (prev_state == -1)"
+    ],
+    "weights": [
+      -0.3743348952189079,
+      0.9282454819195372,
+      -0.16840123923406558,
+      -0.125705037964469,
+      0.36304902634323233
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7893478188948829,
+    "r2": 0.8752851336403922,
+    "r2_timing_only": 0.4079583429645377
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 5,
+    "terms": [
+      "(phase == D1)",
+      "(phase == D1) * (prev_state == 2)",
+      "(phase == D1) * (prev_state == 2) * (prev_action == 2)",
+      "(phase == D1) * (prev_state == 2) * (prev_action == 2) * (prev_reward == 1)",
+      "(phase == D1) * (prev_state == -1)"
+    ],
+    "weights": [
+      -0.3743348952189079,
+      0.9282454819195372,
+      -0.16840123923406558,
+      -0.125705037964469,
+      0.36304902634323233
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7903242559376881,
+    "r2": 0.8753892267759168,
+    "r2_timing_only": 0.40569771777201313
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claim that z is 'about 0.95 after S2' only holds for a1->S2. The D1 baseline is about 0.37. Residuals are +0.53/+0.56 for a1 S2 r/u (about 0.92), +0.39 for a2 S2 u (about 0.76) and +0.26 for a2 S2 r (about 0.64). The explanation's wording about S2 lumps these together.",
+      "'Reward barely changes this' is too strong for a2->S2. The rewarded/unrewarded gap there is about 0.13 (fitted weight -0.126, and the residual table shows +0.26 vs +0.39). It is negligible only for S1 and for a1->S2.",
+      "Small leftover structure: the worst misses are window-start D1 steps, where the previous trial is outside the window (actual about 0.95 vs predicted 0.35). This can't be fixed from inside the window. Adding the future term state==2 at the window start gives 0.799. A few a2 S2 r steps read about 0.94 instead of 0.62, and the trial before only partly explains them: adding tv('state',-2)==2 or tv('reward',-2)==1 gives 0.791-0.795. Adding the model's choice logit gives 0.795, i.e. +0.005, not the +0.001 claimed for value/policy. misses shows no systematic class above about 0.03 (mean phase errors are 0; the largest cell is GO after a1 S2 r at +0.029).",
+      "The test R^2 beyond timing reproduces at 0.7893. The core claims hold: D1 only (GO about 0.012, D2 about 0.003), after S1 about 0, after S2 high, highest after a1->S2. Using only D1 and prev_state==2 gives 0.626, the window-start term brings it to 0.749, and the a2 and reward refinements bring it to 0.789."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 update gate opens after reaching S2 (about 0.92 after a1->S2, lower after a2->S2, lowest after a rewarded a2->S2), shut after S1",
+    "better_terms": "(phase == D1) ;; (phase == D1) * (prev_state == 2) ;; (phase == D1) * (prev_state == 2) * (prev_action == 2) ;; (phase == D1) * (prev_state == 2) * (prev_action == 2) * (prev_reward == 1) ;; (phase == D1) * (prev_state == -1) ;; (phase == D1) * (prev_state == 2) * (tv('state', -2) == 2) ;; (phase == D1)*(prev_state==-1)*(prev_reward==1) ;; (phase == D1) * (prev_state == 2) * (tv('reward', -2) == 1)",
+    "better_terms_test_r2_beyond_timing": 0.7961
+  },
+  "final_label": "D1 update gate opens after reaching S2 (about 0.92 after a1->S2, lower after a2->S2, lowest after a rewarded a2->S2), shut after S1"
+}

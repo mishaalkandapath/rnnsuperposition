@@ -1,0 +1,105 @@
+{
+  "label": "D2 arrival in S2 late in the episode (rare a1->S2 from trial ~50, common a2->S2 only in the last ~10 trials)",
+  "predicate": "(phase == D2) & (in_state == 2) & (((action==1) & (ep_trial>=45)) | ((action==2)&(((ep_trial>=90)&(prev_reward==0))|(ep_trial>=95))))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 and only when the state shown is S2 (100% of mass; never on S1, D1 or GO). It is also gated by how far into the episode the agent is: silent before trial ~40, rising steadily toward trial 99 (an elapsed-time / drift signal in the hidden state). After a1 (rare transition to S2) it switches on from about trial 40-50 and carries 83% of mass, and the strongest activations are rare a1->S2 arrivals. After a2 (common transition to S2) it fires only in the last ~10 trials and more weakly. Activation goes with low model value. Uses only observed inputs (this D2 state, the GO action just taken) plus the trial index. The thresholds 50/90 were picked by hand; 45/92 gives a slightly higher dev F1 (0.87 vs 0.86).",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 27,
+    "predicate": "(phase == D2) & (in_state == 2) & (((action==1) & (ep_trial>=45)) | ((action==2)&(((ep_trial>=90)&(prev_reward==0))|(ep_trial>=95))))",
+    "split": "test",
+    "precision": 0.8470911737747344,
+    "recall": 0.9372706935123043,
+    "f1": 0.8899021509791983,
+    "mass_recall": 0.9814950502948822,
+    "correlation": 0.7750486219437951,
+    "n_active": 33525,
+    "n_predicted": 37094,
+    "coverage_by_activation_quartile": [
+      0.8118587449296111,
+      0.9435628206657917,
+      0.9936761722944756,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 27,
+    "predicate": "(phase == D2) & (in_state == 2) & (((action==1) & (ep_trial>=45)) | ((action==2)&(((ep_trial>=90)&(prev_reward==0))|(ep_trial>=95))))",
+    "split": "dev",
+    "precision": 0.8647205911274689,
+    "recall": 0.9334303824341128,
+    "f1": 0.8977627395502144,
+    "mass_recall": 0.9806975603473939,
+    "correlation": 0.7845766379719685,
+    "n_active": 32973,
+    "n_predicted": 35593,
+    "coverage_by_activation_quartile": [
+      0.7954876273653566,
+      0.9475918961543127,
+      0.990658740749727,
+      1.0
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 27,
+  "final_verdict": "explained",
+  "skeptic": {
+    "revised_verdict": "explained",
+    "upheld": false,
+    "issues": [
+      "The factual claims hold on dev. The unit fires only at D2: 32964 of 32973 active steps, with 9 at GO and 0 at D1. Every D2 activation is on S2, never on S1 (in_state==1 gives 0 of 183887). About 83% of the mass is in the a1 (rare) branch. The unit is silent before trial ~40 and rises toward trial 99. Firing goes with low value: rate 0.119 in the lowest value bin and 0 above 7.73.",
+      "Test scores of the original predicate reproduce exactly: P 0.775, R 0.927, F1 0.844, mass recall 0.982. Misses are scattered (1.8% of the mass) and are not a problem.",
+      "Systematic false-positive class in the a2 (common) branch. In (D2, S2, a2, ep_trial>=90), precision is 0.88 when prev_reward==0 but only 0.43 when prev_reward==1. These are trials 90-94 that follow a rewarded trial. That subset predicts 9432 dev steps and gives about 5400 false positives, most of the predicate's roughly 8000 dev false positives. The test misses output shows the same thing: false positives are mostly a2->S2c steps inside rewarded a2 streaks (r1 a2 S2c ...). On test, raising the a2 threshold to >=95 alone gives F1 0.856.",
+      "The same reward modulation shows up more weakly in the a1 branch: precision 0.948 when prev_reward==1 vs 0.859 when prev_reward==0. A previous unrewarded trial seems to bring the a2 branch's onset earlier, so the a2 side is not a plain time gate as the label says.",
+      "The thresholds (50/90) were picked by hand, and the 'elapsed-time or drift' reading is speculative. Value alone is a much worse gate (D2 & S2 & value<7.13 gives F1 0.60), so the trial index carries information that value does not.",
+      "Better predicate on test: F1 0.890, P 0.847, R 0.937, mass recall 0.981. That is up from 0.844 and uses only observed variables (D2 state input, the GO action just taken, the previous reward shown at D1, and the trial index)."
+    ],
+    "revised_label": "D2 arrival in S2 late in the episode: after a1 (rare) from about trial 45; after a2 (common) from about trial 90 if the previous trial went unrewarded, otherwise only in the last ~5 trials",
+    "better_predicate": "(phase == D2) & (in_state == 2) & (((action==1) & (ep_trial>=45)) | ((action==2)&(((ep_trial>=90)&(prev_reward==0))|(ep_trial>=95))))",
+    "better_predicate_test_f1": 0.89
+  },
+  "final_label": "D2 arrival in S2 late in the episode: after a1 (rare) from about trial 45; after a2 (common) from about trial 90 if the previous trial went unrewarded, otherwise only in the last ~5 trials",
+  "original_predicate": "(phase == D2) & (in_state == 2) & (((action == 1) & (ep_trial >= 50)) | ((action == 2) & (ep_trial >= 90)))",
+  "original_test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 27,
+    "predicate": "(phase == D2) & (in_state == 2) & (((action == 1) & (ep_trial >= 50)) | ((action == 2) & (ep_trial >= 90)))",
+    "split": "test",
+    "precision": 0.7748304746709214,
+    "recall": 0.9270693512304251,
+    "f1": 0.8441408531037387,
+    "mass_recall": 0.9821098736657922,
+    "correlation": 0.7447876951422208,
+    "n_active": 33525,
+    "n_predicted": 40112,
+    "coverage_by_activation_quartile": [
+      0.758291577189215,
+      0.9550173010380623,
+      0.9949886648371316,
+      1.0
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 27,
+    "predicate": "(phase == D2) & (in_state == 2) & (((action == 1) & (ep_trial >= 50)) | ((action == 2) & (ep_trial >= 90)))",
+    "split": "dev",
+    "precision": 0.7939903035959659,
+    "recall": 0.9287902223030965,
+    "f1": 0.8561165157106116,
+    "mass_recall": 0.9823809748335833,
+    "correlation": 0.7539619666111803,
+    "n_active": 32973,
+    "n_predicted": 38571,
+    "coverage_by_activation_quartile": [
+      0.759946627850558,
+      0.9632415382748999,
+      0.9919932063569089,
+      1.0
+    ]
+  },
+  "predicate_from": "skeptic"
+}

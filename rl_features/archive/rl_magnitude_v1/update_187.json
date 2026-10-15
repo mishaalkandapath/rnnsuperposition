@@ -1,0 +1,67 @@
+{
+  "label": "D1 only: run of S1 visits, earlier one unrewarded; grows with longer S1 runs",
+  "terms": "(phase==D1)*(prev_state==1)*(tv(\"state\",-2)==1)*(tv(\"reward\",-2)==0) ;; (phase==D1)*(prev_state==1)*(tv(\"state\",-2)==1)*(tv(\"reward\",-2)==0)*(tv(\"state\",-3)==1) ;; (phase==D1)*(prev_state==1)*(tv(\"state\",-2)==-9)*(prev_reward==0) ;; (phase==D1)*(prev_state==1)*(tv(\"state\",-2)==1)*(tv(\"reward\",-2)==0)*(tv(\"state\",-3)==-9)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (zero at GO/D2). Magnitude is set by the reached-state history: large (~0.6-0.7 above baseline) when the last two trials both reached S1 and the earlier of them (t-2) went unrewarded; another +0.3-0.45 when t-3 also reached S1 (or is outside the window). The last trial reward matters little once t-2 is accounted for; any S2 visit on the previous trial silences it (residual about -0.05). Choice, transition type, hidden good state and time since reversal add nothing. When history is cut off by the window start, a previous unrewarded S1 visit gets a smaller weight (0.13), because the earlier history is unseen. Adding a graded D1 policy term (a2-leaning) raises dev only from 0.484 to 0.498. All terms are observed (past trials only). Test R^2 beyond timing 0.49, against an all-cues ceiling of 0.38.",
+  "gate": "update",
+  "feature": 187,
+  "test_scores": {
+    "gate": "update",
+    "feature": 187,
+    "terms": [
+      "(phase==D1)*(prev_state==1)*(tv(\"state\",-2)==1)*(tv(\"reward\",-2)==0)",
+      "(phase==D1)*(prev_state==1)*(tv(\"state\",-2)==1)*(tv(\"reward\",-2)==0)*(tv(\"state\",-3)==1)",
+      "(phase==D1)*(prev_state==1)*(tv(\"state\",-2)==-9)*(prev_reward==0)",
+      "(phase==D1)*(prev_state==1)*(tv(\"state\",-2)==1)*(tv(\"reward\",-2)==0)*(tv(\"state\",-3)==-9)"
+    ],
+    "weights": [
+      0.5878496760301238,
+      0.45153422039409746,
+      0.13306987141710025,
+      0.2888437859019574
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.48656057859256663,
+    "r2": 0.508466201414854,
+    "r2_timing_only": 0.04266447395534967
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 187,
+    "terms": [
+      "(phase==D1)*(prev_state==1)*(tv(\"state\",-2)==1)*(tv(\"reward\",-2)==0)",
+      "(phase==D1)*(prev_state==1)*(tv(\"state\",-2)==1)*(tv(\"reward\",-2)==0)*(tv(\"state\",-3)==1)",
+      "(phase==D1)*(prev_state==1)*(tv(\"state\",-2)==-9)*(prev_reward==0)",
+      "(phase==D1)*(prev_state==1)*(tv(\"state\",-2)==1)*(tv(\"reward\",-2)==0)*(tv(\"state\",-3)==-9)"
+    ],
+    "weights": [
+      0.5878496760301238,
+      0.45153422039409746,
+      0.13306987141710025,
+      0.2888437859019574
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.48364514785663226,
+    "r2": 0.505094923948181,
+    "r2_timing_only": 0.04154076601103218
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Mostly minor. The original terms reproduce test R^2 beyond timing 0.487. The core claims hold. Activation at GO and D2 is exactly zero. Activation after an S2 trial is about -0.05 relative to the timing baseline. If t-2 reached S1 and was rewarded, the weight is about 0, versus 0.88 when it was unrewarded (full 2-back table, test 0.472).",
+      "'Last trial's reward matters little' is somewhat overstated. Splitting the main term by prev_reward gives 0.64 (unrewarded) vs 0.46 (rewarded), test 0.489. The reward at t-3 also matters: S1 unrewarded at t-3 adds +0.49, S1 rewarded adds +0.24, and S2 at t-3 gives -0.14. So the feature tracks a run of S1 visits that mostly went unrewarded, not just S1 visits with t-2 unrewarded.",
+      "'Grows with longer S1 runs' holds weakly. An S1 visit at t-4 adds +0.175, but adding it does not raise test R^2 (0.4875).",
+      "The policy term was dismissed as adding only 0.014 on dev. Used inside the main term (K*choice) or with the extra splits, it adds about 0.04 on test (0.507 observed-only -> 0.550 with choice). It is a model-output cue, so leaving it out of an observed-only label is defensible, but the gain is understated.",
+      "Misses: the timing baseline over-predicts every D1 cell after an S2 trial by about -0.044. A single (phase==D1)*(prev_state==2) term fixes this and adds +0.014 on test (0.501). This is systematic but small.",
+      "The worst-fit windows are all at the window start, where the history before the window is cut off (tv(...)==-9 or prev_state==-1). Actual values there are about 1.8-2.1 against predictions of about 0.05-0.19. This looks like history outside the window, not a missed rule. Adding prev_reward terms for the first trial does nothing (0.488)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 only: high after a run of recent S1 visits that mostly went unrewarded (t-2 unrewarded required); slightly below baseline after S2",
+    "better_terms": "K = (phase==D1)*(prev_state==1)*(tv('state',-2)==1)*(tv('reward',-2)==0). Terms: K*(prev_reward==0) ;; K*(prev_reward==1) ;; K*(tv('state',-3)==1)*(tv('reward',-3)==0) ;; K*(tv('state',-3)==1)*(tv('reward',-3)==1) ;; K*(tv('state',-3)==-9) ;; (phase==D1)*(prev_state==1)*(tv('state',-2)==-9)*(prev_reward==0) ;; (phase==D1)*(prev_state==2) ;; K*choice. Test R^2 beyond timing is 0.550 with all 8 terms, or 0.507 observed-only, i.e. without the K*choice model-policy term.",
+    "better_terms_test_r2_beyond_timing": 0.5503
+  },
+  "final_label": "D1 only: high after a run of recent S1 visits that mostly went unrewarded (t-2 unrewarded required); slightly below baseline after S2"
+}

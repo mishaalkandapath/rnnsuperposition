@@ -1,0 +1,73 @@
+{
+  "label": "Late-episode GO, ramps with trial after rewarded S2 / S2-belief",
+  "terms": "(phase==GO)*(ep_trial>=88)*np.clip(ep_trial-87,0,12)*((tv(\"state\",-1)==2)&(tv(\"reward\",-1)==1)) ;; (phase==GO)*(ep_trial>=88)*np.clip(ep_trial-87,0,12)*(prev_reward==1)*(1-belief) ;; (phase==GO)*(ep_trial>=88)*((tv(\"state\",-1)==2)&(tv(\"reward\",-1)==1)) ;; (phase==GO)*(ep_trial>=88)*(prev_reward==1)*np.clip(-belief_lo,-4,4) ;; (phase==GO)*(ep_trial>=88)*np.clip(ep_trial-87,0,12)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO in the last ~12 trials of the episode (timing alone R^2 0.25). Beyond timing, its magnitude is set by an interaction of how late in the episode it is and the last outcome: it ramps roughly linearly with ep_trial (about +0.17-0.23 per trial from trial 88) when the previous trial reached S2 and was rewarded, and more broadly when the previous trial was rewarded and the ideal-observer belief favours S2 (1-belief, -belief_lo). After an unrewarded trial, or with S1 belief, it stays near zero or small (about 2 after an unrewarded trial inside an S2-reward streak, which it under-predicts). The trial before last adds almost nothing once belief is included. The profile additive ceiling (all = 0.05) misses this because it ignores the timing interaction; the multiplicative terms give dev 0.75 / test 0.68 R^2 beyond timing, using only observed quantities (no value/policy). Remaining errors: over-prediction after a2 S1 r and rare transitions, and under-prediction in long S2-reward streaks.",
+  "gate": "reset",
+  "feature": 127,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 127,
+    "terms": [
+      "(phase==GO)*(ep_trial>=88)*np.clip(ep_trial-87,0,12)*((tv(\"state\",-1)==2)&(tv(\"reward\",-1)==1))",
+      "(phase==GO)*(ep_trial>=88)*np.clip(ep_trial-87,0,12)*(prev_reward==1)*(1-belief)",
+      "(phase==GO)*(ep_trial>=88)*((tv(\"state\",-1)==2)&(tv(\"reward\",-1)==1))",
+      "(phase==GO)*(ep_trial>=88)*(prev_reward==1)*np.clip(-belief_lo,-4,4)",
+      "(phase==GO)*(ep_trial>=88)*np.clip(ep_trial-87,0,12)"
+    ],
+    "weights": [
+      0.17277726743308286,
+      0.241598584298291,
+      -0.8130480293551249,
+      0.05263983587251556,
+      -0.07961845759028907
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6849217098693088,
+    "r2": 0.7637043787670579,
+    "r2_timing_only": 0.2500415654314704
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 127,
+    "terms": [
+      "(phase==GO)*(ep_trial>=88)*np.clip(ep_trial-87,0,12)*((tv(\"state\",-1)==2)&(tv(\"reward\",-1)==1))",
+      "(phase==GO)*(ep_trial>=88)*np.clip(ep_trial-87,0,12)*(prev_reward==1)*(1-belief)",
+      "(phase==GO)*(ep_trial>=88)*((tv(\"state\",-1)==2)&(tv(\"reward\",-1)==1))",
+      "(phase==GO)*(ep_trial>=88)*(prev_reward==1)*np.clip(-belief_lo,-4,4)",
+      "(phase==GO)*(ep_trial>=88)*np.clip(ep_trial-87,0,12)"
+    ],
+    "weights": [
+      0.17277726743308286,
+      0.241598584298291,
+      -0.8130480293551249,
+      0.05263983587251556,
+      -0.07961845759028907
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7507250822190741,
+    "r2": 0.8185152511606143,
+    "r2_timing_only": 0.2719494185175795
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Score reproduced: the claimed 5 terms give test R^2 beyond timing 0.6849 (0.75 on dev), well above the additive ceiling of 0.05. The drop from dev to test (about 0.07) is moderate, not alarming.",
+      "The slope claim misreads the weights. 0.173 and 0.242 are weights on two separate terms, and the plain ramp term has weight -0.080. So after a rewarded S2 trial with belief near S2, the net slope is about 0.173 + 0.242 - 0.080 = 0.33 per trial, not '+0.17 to +0.24'. The step term (-0.81) and the -belief_lo term add offsets on top.",
+      "The unrewarded-in-streak miss is real but small overall. misses shows windows where GO after a2 S2 u has actual activation of about 2.0 against a prediction of about 0 (e.g. t97 2.03 vs -0.02, t99 2.10 vs -0.18). But the mean residual for GO after a2 S2 u is only +0.012. Adding terms for the trial two back, or for prev_reward==0 x (1-belief), did not fix it (test 0.6847 to 0.6868). This looks like the gate carrying over its own past level, which these terms don't capture, rather than a missed observed cue.",
+      "The over-prediction after a2 S1 r (-0.044) remains. Adding a term for last_is('a2 S1 r') x ramp, plus two more terms, only moves test to 0.6859.",
+      "'The trial before last adds almost nothing' checks out: adding a ramp term for rewarded S2 two trials back gives test 0.6852.",
+      "How much the observed-only restriction costs, checked with a future term: adding the agent's upcoming choice (action==2) x ramp raises test only to 0.693. So belief is a good stand-in, as claimed.",
+      "Simpler subsets support the label: ramp x prev_reward x (1-belief) alone with the ramp gives test 0.628, and ramp x last rewarded S2 alone gives 0.529."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Late-episode GO (trial 88 on), ramps with trial after rewarded S2 / S2-belief",
+    "better_terms": null,
+    "better_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "Late-episode GO (trial 88 on), ramps with trial after rewarded S2 / S2-belief"
+}

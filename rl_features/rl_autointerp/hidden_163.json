@@ -1,0 +1,67 @@
+{
+  "label": "GO step right after a D1 fixation break (penalty input), mostly a2",
+  "predicate": "(phase == GO) & (d1_err == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO. Almost all activation mass (98%) is on GO steps where the agent broke fixation at D1, so the GO step gets the penalty reward input (in_rew = -1) and the D1 action as in_action. Of those steps, 97% are active, and the strongest cases are ones where the D1 action was a2 (in_action == 2; adding this condition gives precision 0.99). It concentrates late in episodes (trials 80-99), where those errors occur, and goes with a low value and a strong a2 policy logit. The misses (27% of active steps but only 2% of mass) are tiny activations (under 0.1 of max) at ordinary GO steps where the agent chooses a2 after an unrewarded trial, late in the episode. It never fires at D1 or D2, or at GO after a rewarded trial. Every variable in the predicate is observed at GO (d1_err shows up as the penalty and action inputs).",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 163,
+    "predicate": "(phase == GO) & (d1_err == 1)",
+    "split": "test",
+    "precision": 0.9718614718614719,
+    "recall": 0.6201657458563536,
+    "f1": 0.7571669477234403,
+    "mass_recall": 0.9722640880903454,
+    "correlation": 0.9655043426005224,
+    "n_active": 724,
+    "n_predicted": 462,
+    "coverage_by_activation_quartile": [
+      0.0,
+      0.48066298342541436,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 163,
+    "predicate": "(phase == GO) & (d1_err == 1)",
+    "split": "dev",
+    "precision": 0.9740820734341252,
+    "recall": 0.7333333333333333,
+    "f1": 0.836734693877551,
+    "mass_recall": 0.9814884780699074,
+    "correlation": 0.9611780860467019,
+    "n_active": 615,
+    "n_predicted": 463,
+    "coverage_by_activation_quartile": [
+      0.05844155844155844,
+      0.8766233766233766,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 163,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I reproduced the reported scores. Dev: P 0.974, R 0.733, F1 0.837, mass recall 0.981. Test: P 0.972, R 0.62, F1 0.757, mass recall 0.972. (phase==GO)&(in_rew==-1) gives exactly the same scores, so d1_err is observed at GO through the penalty input, as claimed.",
+      "The feature is GO-only. The phase profile shows 0 active steps at D1 and D2, and 100% of the activation mass is at GO.",
+      "'Never fires at GO after a rewarded trial' holds. On test, GO & prev_reward==1 has recall 0.004 and mass 0.005, a few scattered steps.",
+      "'Mostly a2' holds. Adding in_action==2 gives dev P 0.988 and covers 0.955 of the mass. The in_action==1 D1-break cases still fire (P 0.83) but carry only about 3% of the mass. The label's 'mostly a2' describes where the mass sits; it is not a requirement.",
+      "'Clusters late in episode' holds. d1_err with ep_trial<80 holds only 10-13% of the mass.",
+      "Choice claim: nearly all predicate steps have choice<0 (a strong a2 logit). Adding choice<0 gives test F1 0.76, essentially no change. I did not check the value claim separately.",
+      "On test, 275 active steps fall outside the predicate (38% of active steps) but hold only 2.8% of the mass, and all the rendered examples are at 0.00-0.12 of max. They are ordinary GO steps choosing a2 after an unrewarded trial. That class has precision below 1% under every variant I tried (GO & ~d1_err & prev_reward==0 & action==2, the same with ep_trial>=80, choice<-3), so it is a weak, diffuse background and not a capturable sub-feature. The 'late in the episode' description of the misses is only partly true: 231 of 380 (in recall units) are at ep_trial>=80.",
+      "I found no systematic false positives: only 13 of 462 predicted steps on test are inactive, and they are scattered.",
+      "The test count-F1 of 0.757 is below 0.8 only because of the near-zero misses, so the case rests on mass recall and precision. No observed-only predicate I tried improves test F1."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

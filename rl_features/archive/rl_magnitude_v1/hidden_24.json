@@ -1,0 +1,78 @@
+{
+  "label": "D1 after unrewarded S1 visit, grows with run of consecutive unrewarded trials",
+  "terms": "(phase == D1) * (prev_state == 1) * (prev_reward == 0) ;; (phase == D1) * (prev_state == 1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) ;; (phase == D1) * (prev_state == 1) * (prev_reward == 0) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 0) ;; (phase == D1) * (prev_state == 1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) != 1) ;; (phase == D1) * (prev_state == 1) * (prev_reward == 0) * (tv(\"reward\", -2) == -9) ;; (phase == D1) * (prev_state == 1) * (prev_reward == 0) * np.maximum(choice, 0) ;; (phase == D1) * (prev_state == -1) * (prev_reward == 0)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Sparse D1-only feature (nonzero on 3% of steps, max ~3.7; zero at GO and D2). It is gated by the last trial having reached S1 unrewarded (either action; a1 S1 u and a2 S1 u both raise it, all other last-trial patterns about zero, and any rewarded last trial silences it). Its magnitude then grows with the length of the preceding run of unrewarded trials: a small boost if the trial before was also unrewarded, more if that one was also S1 unrewarded, and the largest boost if the trial three back was also not rewarded. Windows where the earlier history lies outside the window (unknown) also get a sizeable boost, and the feature fires on the window first trial when the reward shown is 0. A graded term for the D1 policy logit toward a1 (choice > 0) adds about 0.045 R^2. Reading: accumulating evidence that S1 is bad / that rewards have dried up. Scores (R^2 beyond timing): last-trial-only reference 0.28; history terms without the policy term 0.48 dev; full 7 terms 0.53 dev, 0.545 test, above the additive all-cue ceiling of 0.46. No future or hidden variables are used. Remaining error: some very large activations (~3) after a single S1-unrewarded trial are under-predicted (about 0.5-1.5 predicted), probably from longer history beyond the window.",
+  "gate": "hidden",
+  "feature": 24,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 24,
+    "terms": [
+      "(phase == D1) * (prev_state == 1) * (prev_reward == 0)",
+      "(phase == D1) * (prev_state == 1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * (prev_state == 1) * (prev_reward == 0) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * (prev_state == 1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) != 1)",
+      "(phase == D1) * (prev_state == 1) * (prev_reward == 0) * (tv(\"reward\", -2) == -9)",
+      "(phase == D1) * (prev_state == 1) * (prev_reward == 0) * np.maximum(choice, 0)",
+      "(phase == D1) * (prev_state == -1) * (prev_reward == 0)"
+    ],
+    "weights": [
+      -0.021980970369919958,
+      0.4018220704099989,
+      0.4054115652359531,
+      0.46940961618981636,
+      0.26799653548768937,
+      0.1071721534220898,
+      0.1407143771956378
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5453376861344037,
+    "r2": 0.5633271525269998,
+    "r2_timing_only": 0.0395666538527184
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 24,
+    "terms": [
+      "(phase == D1) * (prev_state == 1) * (prev_reward == 0)",
+      "(phase == D1) * (prev_state == 1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * (prev_state == 1) * (prev_reward == 0) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * (prev_state == 1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) != 1)",
+      "(phase == D1) * (prev_state == 1) * (prev_reward == 0) * (tv(\"reward\", -2) == -9)",
+      "(phase == D1) * (prev_state == 1) * (prev_reward == 0) * np.maximum(choice, 0)",
+      "(phase == D1) * (prev_state == -1) * (prev_reward == 0)"
+    ],
+    "weights": [
+      -0.021980970369919958,
+      0.4018220704099989,
+      0.4054115652359531,
+      0.46940961618981636,
+      0.26799653548768937,
+      0.1071721534220898,
+      0.1407143771956378
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5299677305391383,
+    "r2": 0.5484721111117677,
+    "r2_timing_only": 0.039368319528049533
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Common and rare S1 visits do not raise it equally. With split terms, a1 S1 u preceded by an unrewarded trial gets about 1.39 (0.23 + 1.16), while a2 S1 u (rare) with the same history gets about 0.70 (0.12 + 0.58). The profile residuals agree: +0.556 vs +0.223. 'Both a1 S1 u and a2 S1 u raise it' hides that the common case is roughly twice as strong. Adding B*(prev_action==1) to the history terms raises test R^2 from 0.505 to 0.530, and to 0.565 together with a choice term.",
+      "The policy term's shape is a bit off. A linear B*choice term does slightly better than np.maximum(choice,0): with the 6 history terms, test 0.552 vs 0.545. Under the last-trial gate, B*np.maximum(-choice,0) gets weight -0.034 and B*np.maximum(choice,0) gets +0.103, so a stronger a1 preference raises it. Its contribution is small (about 0.04 to 0.05).",
+      "Two terms only patch the 5-trial window: the 'tv(reward,-2)==-9' boost (+0.27) and the 'first trial, reward shown 0' term. They stand in for unrewarded history that falls outside the window; they are not separate behavioural effects.",
+      "The largest remaining misses are systematic but cannot be fixed with window data. Runs of a2 S1R u trials, and the window's first trials, reach about 3 but are predicted at 0.2 to 1.5. Under the gate, value and ep_trial add only about 0.001 to 0.01. By phase x previous trial the leftover bias is small (D1 after a2 S1 u under-predicted by 0.03; other D1 cells over-predicted by 0.05, from the intercept and baseline).",
+      "The core claims check out. It is zero at GO and D2. A rewarded last trial gives residual about -0.07. Only S1-unrewarded last trials raise it. The history terms alone score 0.505 on test (claimed 0.48 on dev). The full 7 terms reproduce 0.545 on test."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after an unrewarded S1 visit (stronger after a common a1->S1 than a rare a2->S1), growing with the run of unrewarded trials before it",
+    "better_terms": "B=(phase == D1)*(prev_state == 1)*(prev_reward == 0); U=(phase == D1)*(prev_state == -1)*(prev_reward == 0); terms: B ;; B*(tv(\"reward\",-2)==0) ;; B*(tv(\"state\",-2)==1)*(tv(\"reward\",-2)==0) ;; B*(tv(\"reward\",-2)==0)*(tv(\"reward\",-3)!=1) ;; B*(tv(\"reward\",-2)==-9) ;; U ;; B*(prev_action==1) ;; B*choice",
+    "better_terms_test_r2_beyond_timing": 0.5647
+  },
+  "final_label": "D1 after an unrewarded S1 visit (stronger after a common a1->S1 than a rare a2->S1), growing with the run of unrewarded trials before it"
+}

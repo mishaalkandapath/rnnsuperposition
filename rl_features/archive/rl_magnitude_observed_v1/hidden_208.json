@@ -1,0 +1,79 @@
+{
+  "label": "D1 after unrewarded S2 visit (a1 rare >> a2 common), larger when belief favors S1",
+  "terms": "(phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a2 S2 u\") ;; (phase == D1) * last_is(\"a1 S2 u\") * belief_lo ;; (phase == D1) * last_is(\"a2 S2 u\") * belief_lo ;; (phase == D1) * ((prev_state == 1) | (in_rew == 1)) ;; (phase == D1) * (prev_state < 0) * (in_rew == 0) * belief_lo ;; (phase == D1) * (prev_state < 0) * (in_rew == 0) * (belief_lo > 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Candidate feature active only at D1 (zero at GO and D2). It is large (about +4.6 over the D1 baseline) after a1 -> S2 unrewarded (rare, unrewarded) and moderate (about +1.2) after a2 -> S2 unrewarded (common, unrewarded). It is essentially zero after any rewarded trial or any trial that reached S1. Within S2-unrewarded trials it grows with the ideal observer log-odds that S1 is good (belief_lo; weight about +0.24 per unit after a1 S2 u and +0.50 after a2 S2 u), so it reads as an unrewarded-S2 signal that is strongest when S1 already looks good (evidence for switching to or staying with a1). On window-first trials, where the previous pattern is not in the window, an unrewarded D1 combined with belief favoring S1 (a step plus a graded belief term) recovers most of the remaining variance. The three S2-unrewarded indicators give dev 0.77; belief terms raise it to 0.79; zeroing S1/rewarded D1s gives 0.81; the window-start terms give 0.89. Test R^2 beyond timing 0.885 with 7 terms, all observed-only and no future variables, which is above the additive all ceiling (0.83) and the all-observed ceiling (0.79). Using belief instead of the model policy (policy-decile reference 0.38) costs nothing here: the earlier lean-toward-a1 effect is captured by belief_lo.",
+  "gate": "hidden",
+  "feature": 208,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 208,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * last_is(\"a1 S2 u\") * belief_lo",
+      "(phase == D1) * last_is(\"a2 S2 u\") * belief_lo",
+      "(phase == D1) * ((prev_state == 1) | (in_rew == 1))",
+      "(phase == D1) * (prev_state < 0) * (in_rew == 0) * belief_lo",
+      "(phase == D1) * (prev_state < 0) * (in_rew == 0) * (belief_lo > 0)"
+    ],
+    "weights": [
+      3.819181713918376,
+      0.9260103172345195,
+      0.23534189483558662,
+      0.5039301931392808,
+      -0.6535723535251036,
+      0.3602253777959752,
+      1.7974491555708452
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8846133351062901,
+    "r2": 0.8965440276760076,
+    "r2_timing_only": 0.10339749901522444
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 208,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * last_is(\"a1 S2 u\") * belief_lo",
+      "(phase == D1) * last_is(\"a2 S2 u\") * belief_lo",
+      "(phase == D1) * ((prev_state == 1) | (in_rew == 1))",
+      "(phase == D1) * (prev_state < 0) * (in_rew == 0) * belief_lo",
+      "(phase == D1) * (prev_state < 0) * (in_rew == 0) * (belief_lo > 0)"
+    ],
+    "weights": [
+      3.819181713918376,
+      0.9260103172345195,
+      0.23534189483558662,
+      0.5039301931392808,
+      -0.6535723535251036,
+      0.3602253777959752,
+      1.7974491555708452
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8924000671843954,
+    "r2": 0.9032153113588339,
+    "r2_timing_only": 0.10051348445516894
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the belief_lo slope inside the S2-unrewarded cells adds only about 0.03 test R^2 (0.858 without the two interaction terms, 0.885 with them), so 'larger when belief favors S1' is a real but secondary effect.",
+      "Minor: most of the gain above the indicator terms comes from window-start D1 steps (prev_state < 0), where the previous trial is not in the window and belief stands in for it. Indicators plus the S1/rewarded zeroing term score 0.785 on test; adding the window-start terms raises it to 0.858. The remaining worst misses are all window-start D1 r0 steps with low predicted values (e.g. actual 5.76, predicted -0.02). This is a data-window artefact, not a behavioural pattern.",
+      "misses shows no systematic error: mean error by phase is at most +0.018, and the largest cell is D1 with an unknown previous trial (+0.09). GO and D2 activations are exactly zero, as claimed.",
+      "The residual table matches the stated numbers: D1 after a1 S2 u is +4.61, after a2 S2 u is +1.19, and every rewarded or S1-reached previous trial is about -0.64, which cancels the D1 baseline of about 0.64, so the activation is about 0.",
+      "Small possible gain: a future-choice indicator at window start, (tv('action',0)==1), reaches 0.890, and a belief_lo>2 step reaches 0.895. Neither changes the label."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after unrewarded S2 visit (a1 rare >> a2 common), larger when belief favors S1",
+    "better_terms": null,
+    "better_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "D1 after unrewarded S2 visit (a1 rare >> a2 common), larger when belief favors S1"
+}

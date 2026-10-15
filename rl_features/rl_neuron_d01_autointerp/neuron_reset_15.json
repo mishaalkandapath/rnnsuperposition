@@ -1,0 +1,64 @@
+{
+  "label": "D1 with strong a1 preference after an unrewarded trial (mostly a1 -> rare S2, no reward)",
+  "predicate": "(phase == D1) & (choice > 5.9)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (11843 of 11846 dev activations), never at GO and essentially never at D2. Every activation has prev_reward == 0 (in_rew 0, never after a reward) and an upcoming a1 choice. The model policy logit(a1)-logit(a2) at that D1 step is always in a band of about 5.9 to 8; the predicate D1 & choice > 5.9 gets dev P 0.76 / R 0.91 / F1 0.83 / mass recall 0.97. The behavioural description is D1 right after an a1 trial that went to rare S2 and was not rewarded (82% of activations; the rest are window-first trials where prev_common is unknown). That is the model-based stay-on-a1 case. But the history predicate alone has precision only 0.36, so the unit reads the agent current a1 preference strength more than the raw outcome. choice is the model own current output, so no future variables are used. Activations are small (max 0.033 above threshold). Magnitude is higher at the next-trial D1 (rel +1). It does not fire after rewarded trials, at GO/D2, or when a2 is preferred.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 15,
+    "predicate": "(phase == D1) & (choice > 5.9)",
+    "split": "test",
+    "precision": 0.763440070505288,
+    "recall": 0.9084950183534347,
+    "f1": 0.8296751536435472,
+    "mass_recall": 0.9701335272310067,
+    "correlation": 0.768384860309801,
+    "n_active": 11442,
+    "n_predicted": 13616,
+    "coverage_by_activation_quartile": [
+      0.7224746592100664,
+      0.9115693813351975,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 15,
+    "predicate": "(phase == D1) & (choice > 5.9)",
+    "split": "dev",
+    "precision": 0.7632044120766457,
+    "recall": 0.9111936518656086,
+    "f1": 0.8306591250144292,
+    "mass_recall": 0.9714870713032555,
+    "correlation": 0.7692669426935016,
+    "n_active": 11846,
+    "n_predicted": 14143,
+    "coverage_by_activation_quartile": [
+      0.7201215395003376,
+      0.9247130317353139,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 15,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims hold up. Phase: D1 has 11843 of 11846 activations, GO has 0 and D2 has 3 (test: GO and D2 precision 0). After a rewarded trial: precision 0. After a2 (prev_action==2): precision 0. After a common transition (prev_common==1): precision 0. Upcoming action==1 at D1 gives recall 0.9997.",
+      "The history claim checks out. D1 & prev_action==1 & prev_common==0 & prev_reward==0 gives P 0.355 / R 0.815, matching the stated 82% / 0.36. The remaining activations are where prev_common is unknown (recall 0.185).",
+      "The stated choice band of 5.9 to 8 is slightly off at the low end. About 9% of activations have choice between 5.5 and 5.9. D1 & choice>5.5 gives R 0.9997 but P 0.36, and D1 & choice>6.2 gives P 0.998 but R 0.31. The unit is a soft threshold on the a1 logit gap around 5.5 to 6.2, not a sharp cut at 5.9. This is a threshold effect, not a separate class of counterexamples.",
+      "False positives (test, 3221 steps) include many D1 steps with exactly the claimed history (a1 to rare S2, unrewarded) where the unit stayed inactive. They are near-threshold cases, not a separate pattern. Only 65 predicted steps follow a common transition. Precision is about 0.76 to 0.77 at both rel +1 and rel < 1, so no trial position is responsible.",
+      "Missed activations (1047 test steps) carry 3% of the activation mass. They are low-magnitude D1 steps after unrewarded a1 trials, just below choice 5.9. No systematic class.",
+      "Adding prev_reward==0 or prev_common!=1 to the predicate barely changes F1 (0.831 to 0.833), so I found no better predicate. No future variables are used: choice is the model's own current output."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

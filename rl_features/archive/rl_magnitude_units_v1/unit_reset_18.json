@@ -1,0 +1,72 @@
+{
+  "label": "High after reward and when leaning a2 (D1/GO); high when S1 reached at D2",
+  "terms": "(phase == D2) * (state == S1) ;; (phase == D2) * (action == 2) ;; isin(phase,[D1,GO]) * np.clip(choice,-3,3) ;; isin(phase,[D1,GO]) * (prev_action==2) ;; isin(phase,[D1,GO]) * (prev_reward == 1) ;; (phase == D2) * np.clip(choice,-3,3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r18 (timing alone R^2 0.71; D1 ~0.73, GO ~0.62, D2 ~0.29). Beyond timing: at D1 and GO it is raised by a rewarded previous trial (+0.13, the dominant term; long runs of unrewarded trials drive GO down to ~0.36) and by the previous choice being a2 (+0.045), and it falls as the policy leans toward a1 (graded on the choice logit a1-a2, -0.023 per unit). At D2 it mostly tracks the reached state: S1 shown raises it by +0.26, with a smaller reduction for having chosen a2 (-0.06) and for a1-leaning policy. Hidden good state, value and trials since reversal add little. All terms are observed-only (the choice logit is the model own policy); using the future upcoming choice instead of the logit at D1/GO scored similarly or worse (0.69 with a 4-term version). Dev R^2 beyond timing 0.89, test 0.88; ceiling all 0.94, all observed 0.89.",
+  "gate": "unit_reset",
+  "feature": 18,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 18,
+    "terms": [
+      "(phase == D2) * (state == S1)",
+      "(phase == D2) * (action == 2)",
+      "isin(phase,[D1,GO]) * np.clip(choice,-3,3)",
+      "isin(phase,[D1,GO]) * (prev_action==2)",
+      "isin(phase,[D1,GO]) * (prev_reward == 1)",
+      "(phase == D2) * np.clip(choice,-3,3)"
+    ],
+    "weights": [
+      0.26298087526698793,
+      -0.0611158035861586,
+      -0.02257556517030604,
+      0.04543632768405748,
+      0.12869709498482934,
+      -0.022915262199945143
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8841760783269219,
+    "r2": 0.966305846066436,
+    "r2_timing_only": 0.709091581023578
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 18,
+    "terms": [
+      "(phase == D2) * (state == S1)",
+      "(phase == D2) * (action == 2)",
+      "isin(phase,[D1,GO]) * np.clip(choice,-3,3)",
+      "isin(phase,[D1,GO]) * (prev_action==2)",
+      "isin(phase,[D1,GO]) * (prev_reward == 1)",
+      "(phase == D2) * np.clip(choice,-3,3)"
+    ],
+    "weights": [
+      0.26298087526698793,
+      -0.0611158035861586,
+      -0.02257556517030604,
+      0.04543632768405748,
+      0.12869709498482934,
+      -0.022915262199945143
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8891777846752864,
+    "r2": 0.9676787526267231,
+    "r2_timing_only": 0.7083504667491587
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The explanation says long runs of unrewarded trials push GO down to about 0.36, but no term encodes this. Adding (phase==GO)*(prev_reward==0)*(tv('reward',-2)==0) raises test R^2 only from 0.884 to 0.889. The worst-fit windows still show GO steps predicted at 0.63 that are actually about 0.36, when an a2 choice follows unrewarded a2->S1 trials. This error is concentrated in a few windows; the per-pattern means stay small.",
+      "Systematic errors by phase x previous trial are modest. The largest are D1 after a2 S2 u (+0.076), GO after a1 S2 r (+0.068) and D1 after a1 S1 u (-0.041). No large error class remains.",
+      "The D2 a2 term (-0.06) is close to redundant: with only the state term at D2, test R^2 is 0.856, and adding the a2 term gives 0.856. The D2 choice-logit term is what adds value (test 0.884 with it).",
+      "The core claims hold on test. Previous reward is the biggest D1/GO effect (0.60 alone at D1/GO with the 3 D2 terms). Removing the choice logit drops test to 0.79 and removing prev_action drops it to 0.87. Adding the hidden good state gives +0.001. The recorded terms are all observed-only (the choice logit is the model's own output). Test R^2 0.884 is at the 'all observed' ceiling of 0.89."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_terms": "(phase == D2) * (state == S1) ;; (phase == D2) * (action == 2) ;; (phase == D2) * np.clip(choice,-3,3) ;; isin(phase,[D1,GO]) * np.clip(choice,-3,3) ;; isin(phase,[D1,GO]) * (prev_action==2) ;; isin(phase,[D1,GO]) * (prev_reward == 1) ;; (phase==GO)*(prev_reward==0)*np.clip(choice,-3,3)",
+    "better_terms_test_r2_beyond_timing": 0.8903
+  }
+}

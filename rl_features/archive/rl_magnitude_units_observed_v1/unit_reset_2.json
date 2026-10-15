@@ -1,0 +1,84 @@
+{
+  "label": "Lowered after unrewarded/a1-S2 trials and a1 choices; drops amplify late in episode",
+  "terms": "(phase == D1) * last_is(\"a1 S2 u\") * (1 + np.clip((ep_trial - 70) / 30, 0, 1) * 2) ;; (phase == D1) * (prev_reward == 0) * (1 + np.clip((ep_trial - 70) / 30, 0, 1) * 2) ;; (phase == D2) * (action == 1) * (1 + np.clip((ep_trial - 70) / 30, 0, 1) * 2) ;; (phase == D2) * belief_lo * (1 + np.clip((ep_trial - 70) / 30, 0, 1) * 2) ;; (phase == GO) * (prev_action == 1) * (1 + np.clip((ep_trial - 70) / 30, 0, 1) * 2) ;; (phase == GO) * (prev_reward == 1) * (prev_state == 1) * (1 + np.clip((ep_trial - 70) / 30, 0, 1) * 2) ;; (phase == D1) * last_is(\"a1 S2 r\") ;; (phase == D1) * (prev_action == 2) * (prev_state == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r of unit 2 sits near 0.93-0.97 and dips with history; timing alone R^2 0.43 (it falls strongly in the last ~20 trials of the episode). Beyond timing, observed-only: at D1 it is lowered by an unrewarded previous trial (-0.03) and most by a previous a1->S2 (rare) unrewarded trial (extra -0.07), also lowered after a1 S2 rewarded (-0.05), and raised after a2->S1 (rare) trials (+0.03). At GO it is lowered after choosing a1 last trial and further after a rewarded S1 trial. At D2 it is lower when the agent just chose a1 (-0.03) and lower the more the ideal observer believes S1 is good (belief_lo, negative weight). All these history effects scale up roughly 3x over episode trials 70-99 (multiplier 1 + 2*clip((t-70)/30)), matching the late-episode collapse of the gate. Not driven by this trial's future reward. Dev R^2 beyond timing 0.694, test 0.694 vs ceilings all 0.75 / all observed 0.72; an earlier model-output (policy) explanation is not needed: observed history + belief reach ~96% of the observed ceiling.",
+  "gate": "unit_reset",
+  "feature": 2,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 2,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\") * (1 + np.clip((ep_trial - 70) / 30, 0, 1) * 2)",
+      "(phase == D1) * (prev_reward == 0) * (1 + np.clip((ep_trial - 70) / 30, 0, 1) * 2)",
+      "(phase == D2) * (action == 1) * (1 + np.clip((ep_trial - 70) / 30, 0, 1) * 2)",
+      "(phase == D2) * belief_lo * (1 + np.clip((ep_trial - 70) / 30, 0, 1) * 2)",
+      "(phase == GO) * (prev_action == 1) * (1 + np.clip((ep_trial - 70) / 30, 0, 1) * 2)",
+      "(phase == GO) * (prev_reward == 1) * (prev_state == 1) * (1 + np.clip((ep_trial - 70) / 30, 0, 1) * 2)",
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 1)"
+    ],
+    "weights": [
+      -0.07269901192244811,
+      -0.0327744232745987,
+      -0.02986590278039976,
+      -0.004379367244202339,
+      -0.010843382806724134,
+      -0.02278599473610278,
+      -0.05257154764578149,
+      0.03268470383522452
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6940654951873313,
+    "r2": 0.8258569486814686,
+    "r2_timing_only": 0.4307832278507996
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 2,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\") * (1 + np.clip((ep_trial - 70) / 30, 0, 1) * 2)",
+      "(phase == D1) * (prev_reward == 0) * (1 + np.clip((ep_trial - 70) / 30, 0, 1) * 2)",
+      "(phase == D2) * (action == 1) * (1 + np.clip((ep_trial - 70) / 30, 0, 1) * 2)",
+      "(phase == D2) * belief_lo * (1 + np.clip((ep_trial - 70) / 30, 0, 1) * 2)",
+      "(phase == GO) * (prev_action == 1) * (1 + np.clip((ep_trial - 70) / 30, 0, 1) * 2)",
+      "(phase == GO) * (prev_reward == 1) * (prev_state == 1) * (1 + np.clip((ep_trial - 70) / 30, 0, 1) * 2)",
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 1)"
+    ],
+    "weights": [
+      -0.07269901192244811,
+      -0.0327744232745987,
+      -0.02986590278039976,
+      -0.004379367244202339,
+      -0.010843382806724134,
+      -0.02278599473610278,
+      -0.05257154764578149,
+      0.03268470383522452
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6942838387307452,
+    "r2": 0.8259182027393982,
+    "r2_timing_only": 0.43057705376824396
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Scores reproduce: the claimed 8 terms score test R^2 beyond timing 0.694 (timing alone 0.431). That is close to the all-observed ceiling of 0.72. The misses output shows no large systematic class: the largest mean error in any phase x previous-trial cell is +0.026 (D2 after a1 S2 r), and the phase means are within +/-0.004.",
+      "The label overstates how much the effects grow late in the episode. A multiplier of 1+2*clip((t-70)/30) (about 3x) is not the best fit. With the multiplier on all terms, about 2x (1+clip((t-70)/30)) gives test 0.713 vs 0.700 for 3x, and 4x gives 0.665. The late amplification is real, though: removing the multiplier drops test to 0.653.",
+      "The explanation says 'All of these history effects grow about 3x', but two terms (D1 a1-S2-r and D1 a2->S1) have no multiplier. Putting the multiplier on them too raises test slightly (0.700).",
+      "The D1 lowering after a1->S2 applies whether or not the trial was rewarded (residual a1 S2 r -0.036, a1 S2 u -0.127). This is consistent with the terms but is really a 'previous trial reached S2 via a1 (rare)' effect plus a reward effect, rather than a specifically 'unrewarded' story.",
+      "The belief_lo term at D2 adds about 0.03 (test 0.664 without it). Belief gradients also show up at D1 and GO in the profile, but adding a belief term for those phases did not help (0.681).",
+      "The D2 effect of choosing a1 is strongest when it led to S2 (residual -0.070 vs -0.028 for a1->S1). Adding a D2 a1&S2 term helps slightly (better terms below)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Lowered after unrewarded and a1->S2 (rare) trials and after a1 choices (most at D2 when a1 led to S2); raised after a2->S1; effects roughly double in the last ~25 trials",
+    "better_terms": "M=(1 + np.clip((ep_trial - 75) / 25, 0, 1) * 1): (phase == D1) * last_is('a1 S2 u') * M ;; (phase == D1) * (prev_reward == 0) * M ;; (phase == D2) * (action == 1) * M ;; (phase == D2) * belief_lo * M ;; (phase == GO) * (prev_action == 1) * M ;; (phase == D2) * (state==2)*(action==1) * M ;; (phase == D1) * last_is('a1 S2 r') * M ;; (phase == D1) * (prev_action == 2) * (prev_state == 1) * M",
+    "better_terms_test_r2_beyond_timing": 0.7148
+  },
+  "final_label": "Lowered after unrewarded and a1->S2 (rare) trials and after a1 choices (most at D2 when a1 led to S2); raised after a2->S1; effects roughly double in the last ~25 trials"
+}

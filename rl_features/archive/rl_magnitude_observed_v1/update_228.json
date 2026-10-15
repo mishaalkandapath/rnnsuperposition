@@ -1,0 +1,70 @@
+{
+  "label": "late-episode GO after a reward when belief favours S2; biggest on the first reward after a miss",
+  "terms": "(phase == GO) * (prev_reward == 1) * (ep_trial >= 70) * (belief < 0.5) * np.clip(-belief_lo, 0, 6) ;; (phase == GO) * (prev_reward == 1) * (ep_trial >= 70) * (belief < 0.5) * (tv(\"reward\", -2) != 1) ;; (phase == GO) * (prev_reward == 1) * (ep_trial >= 70) * (belief < 0.5) * (ep_trial < 90) ;; (phase == GO) * (prev_reward == 1) * (ep_trial >= 70) * (prev_action == 1) ;; (phase == GO) * (prev_reward == 1) * (ep_trial >= 70) * (belief < 0.5) * (tv(\"action\", -2) == 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO and only late in the episode (trials 70+, peaking at 80-89; the timing baseline alone gives test R^2 0.24). On top of timing, using only observed quantities: it is large when the previous trial was rewarded (D1 reward input = 1) AND the ideal-observer belief favours S2 (belief < 0.5), and it grows with the strength of that S2 belief (clipped -belief_lo). It is biggest on the first rewarded trial after an unrewarded one (tv(reward,-2) != 1, weight about +0.12) and fades over a run of consecutive rewards (about 0.9 then 0.65, 0.55, 0.47 in the examples). It is higher at trials 70-89 than at 90-99 (+0.11), lower after a rewarded a1 (-0.12), and lower when the trial before last was a1 (-0.18, meaning a recent switch to a2). It is silent after unrewarded trials and at D1/D2. This is the observed-only stand-in for the earlier model-based label (repeating a2 with an a2-favouring logit): S2-favouring belief plus a reward from a2 takes the place of the policy logit and the agent upcoming choice. Test R^2 beyond timing 0.50 (dev 0.49), well above the additive all ceiling of the profile (0.22) and all-observed (0.17), so the interaction structure (reward x belief x late episode) carries most of it. Dropping model outputs costs little here, since the reference policy-decile score is only 0.14.",
+  "gate": "update",
+  "feature": 228,
+  "test_scores": {
+    "gate": "update",
+    "feature": 228,
+    "terms": [
+      "(phase == GO) * (prev_reward == 1) * (ep_trial >= 70) * (belief < 0.5) * np.clip(-belief_lo, 0, 6)",
+      "(phase == GO) * (prev_reward == 1) * (ep_trial >= 70) * (belief < 0.5) * (tv(\"reward\", -2) != 1)",
+      "(phase == GO) * (prev_reward == 1) * (ep_trial >= 70) * (belief < 0.5) * (ep_trial < 90)",
+      "(phase == GO) * (prev_reward == 1) * (ep_trial >= 70) * (prev_action == 1)",
+      "(phase == GO) * (prev_reward == 1) * (ep_trial >= 70) * (belief < 0.5) * (tv(\"action\", -2) == 1)"
+    ],
+    "weights": [
+      0.04149804886465711,
+      0.11668371886644661,
+      0.10900293085538132,
+      -0.11625966051497182,
+      -0.18486013786784675
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.4980262230786824,
+    "r2": 0.6207131679025999,
+    "r2_timing_only": 0.2444090716777586
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 228,
+    "terms": [
+      "(phase == GO) * (prev_reward == 1) * (ep_trial >= 70) * (belief < 0.5) * np.clip(-belief_lo, 0, 6)",
+      "(phase == GO) * (prev_reward == 1) * (ep_trial >= 70) * (belief < 0.5) * (tv(\"reward\", -2) != 1)",
+      "(phase == GO) * (prev_reward == 1) * (ep_trial >= 70) * (belief < 0.5) * (ep_trial < 90)",
+      "(phase == GO) * (prev_reward == 1) * (ep_trial >= 70) * (prev_action == 1)",
+      "(phase == GO) * (prev_reward == 1) * (ep_trial >= 70) * (belief < 0.5) * (tv(\"action\", -2) == 1)"
+    ],
+    "weights": [
+      0.04149804886465711,
+      0.11668371886644661,
+      0.10900293085538132,
+      -0.11625966051497182,
+      -0.18486013786784675
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.4912123813224323,
+    "r2": 0.612004788311378,
+    "r2_timing_only": 0.23741223755190277
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Systematic error the terms leave in place: misses on the original terms show GO over-predicted after every unrewarded previous trial (a2 S2 u -0.036, a1 S2 u -0.032, a2 S1 u -0.032, a1 S1 u -0.031). The explanation says the feature is 'silent after unrewarded trials', but none of the terms encode that. The positive late-episode GO timing baseline is left uncorrected there (worst-fit windows show actual 0, predicted 0.19). Adding a single term (phase == GO) * (prev_reward == 0) * (ep_trial >= 60) raises test R^2 beyond timing from 0.498 to 0.569 (+0.07), and the per-cell errors fall to about 0.",
+      "Overclaim about the belief-strength term: the claim that it 'grows as that S2 belief gets stronger' carries almost no weight. Dropping the clip(-belief_lo) term changes test R^2 only from 0.498 to 0.491. The binary belief < 0.5 gate is what matters: replacing it with prev_action == 2 drops the score to 0.36.",
+      "The other claims hold up under single-term ablation on test. Dropping the first-reward-after-a-miss term costs 0.057, the trials-70-89 term 0.033, the trial-before-last-a1 term 0.069, and the previous-rewarded-a1 term 0.012.",
+      "The largest remaining misses are rewarded GO steps with activation 0.6-0.9 but predictions of only 0.07-0.2 (for example at t91 and t79). These appear to be windows where the agent's internal evidence for S2 runs ahead of the ideal-observer belief, so the binary belief gate fails there. This is the cost of dropping the model's own outputs, and it is not quantified because no matched model-based score was run."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO late in the episode after a reward when the observer's belief favours S2 (strongest on the first reward after a miss, at trials 70-89); suppressed below the timing baseline after unrewarded trials",
+    "better_terms": "(phase == GO) * (prev_reward == 1) * (ep_trial >= 70) * (belief < 0.5) * np.clip(-belief_lo, 0, 6) ;; (phase == GO) * (prev_reward == 1) * (ep_trial >= 70) * (belief < 0.5) * (tv('reward', -2) != 1) ;; (phase == GO) * (prev_reward == 1) * (ep_trial >= 70) * (belief < 0.5) * (ep_trial < 90) ;; (phase == GO) * (prev_reward == 1) * (ep_trial >= 70) * (prev_action == 1) ;; (phase == GO) * (prev_reward == 1) * (ep_trial >= 70) * (belief < 0.5) * (tv('action', -2) == 1) ;; (phase == GO) * (prev_reward == 0) * (ep_trial >= 60)",
+    "better_terms_test_r2_beyond_timing": 0.569
+  },
+  "final_label": "GO late in the episode after a reward when the observer's belief favours S2 (strongest on the first reward after a miss, at trials 70-89); suppressed below the timing baseline after unrewarded trials"
+}

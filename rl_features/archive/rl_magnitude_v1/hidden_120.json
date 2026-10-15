@@ -1,0 +1,57 @@
+{
+  "label": "D1 after rare-rewarded a2->S1 trial, decaying linearly over the episode",
+  "terms": "(phase == D1) * last_is(\"a2 S1 r\") ;; (phase == D1) * last_is(\"a2 S1 r\") * np.maximum(0, 1 - ep_trial / 80)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1, and almost only when the previous trial was a2 -> S1 (rare) and rewarded. Its size after that trial falls off roughly linearly with trial number in the episode: about 1.1 early, near 0 by trial ~80. That ep_trial interaction lifts R^2 beyond timing from 0.39 (indicator alone) to 0.69 on dev and 0.70 on test, above the 0.44 additive ceiling, which has no interaction terms. Small extra firing after a1 S1 r following an earlier rewarded S1 trial, or on the first window trial after a reward, adds under 0.01. The value and policy logit, the hidden good state, trials since reversal and two-trials-back history add nothing. Zero at GO and D2. Only observed variables are used.",
+  "gate": "hidden",
+  "feature": 120,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 120,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S1 r\")",
+      "(phase == D1) * last_is(\"a2 S1 r\") * np.maximum(0, 1 - ep_trial / 80)"
+    ],
+    "weights": [
+      -0.013370235012332723,
+      1.1846024921706333
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6965269794670021,
+    "r2": 0.7213173609462116,
+    "r2_timing_only": 0.0816889140117607
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 120,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S1 r\")",
+      "(phase == D1) * last_is(\"a2 S1 r\") * np.maximum(0, 1 - ep_trial / 80)"
+    ],
+    "weights": [
+      -0.013370235012332723,
+      1.1846024921706333
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6865922790360008,
+    "r2": 0.7122836057352564,
+    "r2_timing_only": 0.0819741345881092
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The decay is not quite linear. With one weight per episode decile, the size after a2 S1 r goes 0.96, 0.94, 0.86, 0.75, 0.58, 0.37, 0.12, 0.01 (deciles 0-7, test). That is a plateau near 0.95, not 'about 1.1 early', then a drop to roughly 0 by trial ~70. A concave shape, max(0, 1-(ep_trial/70)^2), scores slightly better: test 0.706 vs 0.697. Minor overstatement of the early size and of how linear the drop is.",
+      "About 30% of the variance beyond timing is still unexplained, and no tested cue reduces it. Inside the a2 S1 r case, adding value (+0.0003), choice (+0.004), the reward two trials back (+0.006), the state and reward two trials back (+0.001), the action two trials back (+0.002), the good state (0), since_rev (0) or window-first-trial (0) changes test R^2 by under 0.01. So the leftover looks like scatter, not a missed class of trials.",
+      "Misses show only small systematic errors. D1 after every other previous-trial pattern is over-predicted by about 0.026, because the timing baseline absorbs the a2 S1 r mass. D1 after a1 S1 r is under-predicted by about 0.012. Several worst-fit windows are early-episode a1 S1 r chains (0.6-0.9) and rewarded first trials of a window (up to 1.2), as the explanation says. Adding terms for them gives +0.001 to +0.002 on test, which agrees with the 'under 0.01' claim.",
+      "Checks that pass: the feature is zero at GO and D2 (the baseline and residuals there are all 0); the claimed terms score 0.6965 on test; the a2 S1 r indicator alone scores about 0.40; the additive ceiling is 0.44; no future variables are used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after rare-rewarded a2->S1; about 0.95 for trials 0-20, then falling to ~0 by trial ~70",
+    "better_terms": "(phase == D1) * last_is(\"a2 S1 r\") ;; (phase == D1) * last_is(\"a2 S1 r\") * np.maximum(0, 1 - (ep_trial / 70)**2)",
+    "better_terms_test_r2_beyond_timing": 0.7063
+  },
+  "final_label": "D1 after rare-rewarded a2->S1; about 0.95 for trials 0-20, then falling to ~0 by trial ~70"
+}

@@ -1,0 +1,71 @@
+{
+  "label": "GO-only: after unrewarded trials, scaled by a1 preference; peak after a1 S2 u",
+  "terms": "(phase == GO) * (prev_reward == 0) * np.clip(choice, -5, 5) ;; (phase == GO) * np.clip(choice, -5, 5) ;; (phase == GO) * (prev_reward == 0) ;; (phase == GO) * last_is(\"a1 S2 u\") ;; (phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Active essentially only at GO (D1/D2 ~0). Beyond timing, magnitude is high after an unrewarded previous trial (+0.95), and on those trials it scales with the policy logit toward a1 (choice, +0.24 per logit unit when unrewarded vs +0.06 otherwise). Largest single pattern: previous trial a1 S2 u (rare-unrewarded after a1, where model-based agent repeats a1) adds +1.38 on top; a second consecutive unrewarded trial adds +0.63. After rewarded trials, especially a2 rewarded, it is low. Future reward/next state not used. Test R^2 beyond timing 0.76 (dev 0.77) vs all ceiling 0.77; an observed-only version with previous-trial pattern indicators (a1 S2 u, a1 S1 u, a2 S2 u, prev a2, two unrewarded) gives dev 0.65. Residual misses: first trial of window (no prev info) when the feature already fires high.",
+  "gate": "reset",
+  "feature": 15,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 15,
+    "terms": [
+      "(phase == GO) * (prev_reward == 0) * np.clip(choice, -5, 5)",
+      "(phase == GO) * np.clip(choice, -5, 5)",
+      "(phase == GO) * (prev_reward == 0)",
+      "(phase == GO) * last_is(\"a1 S2 u\")",
+      "(phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)"
+    ],
+    "weights": [
+      0.24128030141276444,
+      0.056181667638600157,
+      0.9472044730192222,
+      1.3830826006110009,
+      0.6304989884944477
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7618688834215898,
+    "r2": 0.8045454135374984,
+    "r2_timing_only": 0.17921442073218674
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 15,
+    "terms": [
+      "(phase == GO) * (prev_reward == 0) * np.clip(choice, -5, 5)",
+      "(phase == GO) * np.clip(choice, -5, 5)",
+      "(phase == GO) * (prev_reward == 0)",
+      "(phase == GO) * last_is(\"a1 S2 u\")",
+      "(phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)"
+    ],
+    "weights": [
+      0.24128030141276444,
+      0.056181667638600157,
+      0.9472044730192222,
+      1.3830826006110009,
+      0.6304989884944477
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.76873119111067,
+    "r2": 0.8092233088360845,
+    "r2_timing_only": 0.1750868088086679
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "better_terms": "(phase == GO) * (prev_reward == 0) * np.clip(choice, -5, 5) ;; (phase == GO) * np.clip(choice, -5, 5) ;; (phase == GO) * (prev_reward == 0) ;; (phase == GO) * last_is('a1 S2 u') ;; (phase == GO) * (prev_reward == 0) * (tv('reward', -2) == 0) ;; (phase != GO) ;; (phase == GO) * last_is('a1 S1 u') ;; (phase == GO) * (prev_reward == 0) * (prev_state == 2)",
+    "better_terms_test_r2_beyond_timing": 0.857,
+    "issues": [
+      "The claimed terms do reproduce test R^2 0.762 with the stated weights (+0.947 for unrewarded, +0.241 vs +0.056 for the choice slope, +1.383 for a1 S2 u, +0.63 for two unrewarded in a row). No future variables are used. The claim of 'low after rewarded trials, especially a2' fits the residual table (a2 r about -0.8, a1 r about -0.33).",
+      "Large systematic error by previous trial, from misses on the claimed terms: GO after a1 S1 u is over-predicted by -0.641 and GO after a2 S1 u by -0.232, while GO after a2 S2 u is under-predicted by +0.351. The residual table agrees: a1 S2 u +3.8, a1 S1 u +0.985, a2 S2 u +0.505, a2 S1 u -0.775. So the boost is not for 'unrewarded trials' in general. It depends on the state: it is strong after no reward at S2 and weak or absent after no reward at S1. The label's general '+0.95 after unrewarded trials' overclaims.",
+      "Adding the two terms GO*last_is('a1 S1 u') (weight -0.96) and GO*(prev_reward==0)*(prev_state==2) (weight +0.29) raises test R^2 from about 0.84 to 0.857. Under that fit, the a1 S1 u and a2 S2 u error classes disappear. The largest remaining class is GO after a1 S2 r at +0.21.",
+      "There is also a fitting artifact. The claimed terms are GO-only, so the intercept shifts D1/D2 predictions to -0.139 (misses: mean error D1 +0.139, D2 +0.139). Adding one (phase != GO) term raises test R^2 from 0.762 to 0.836, which is above the quoted 'all' ceiling of 0.77. So 'reaching the ceiling' does not show the explanation is complete.",
+      "The first-trial claim is weak. A GO*(prev_action == -1) term has weight -0.2 and adds almost nothing (0.762 -> 0.765). The '?' residual is -0.09, so the feature is not 'often already high' on a window's first trial in any systematic way.",
+      "The observed-only claim roughly checks out: the stated observed set scores 0.634 on test (claimed 0.65 on dev)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO-only: high after no reward at S2 (esp. a1 S2 u), weak after no reward at S1; scaled by a1 preference",
+    "upheld": false
+  },
+  "final_label": "GO-only: high after no reward at S2 (esp. a1 S2 u), weak after no reward at S1; scaled by a1 preference"
+}

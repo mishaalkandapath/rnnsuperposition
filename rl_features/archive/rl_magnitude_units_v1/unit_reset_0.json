@@ -1,0 +1,83 @@
+{
+  "label": "Choice-identity unit: higher after a1, lower after a2, mainly at D2",
+  "terms": "(phase == D2) * table(action, {1: 1, 2: -1}) * np.exp(ep_trial/30) ;; (phase == D2) * table(state, {1: 1, 2: -1}) ;; (phase == D1) * table(prev_action, {1: 1, 2: -1}) * np.exp(ep_trial/30) ;; (phase == D1) * table(prev_state, {1: 1, 2: -1}) * (prev_reward == 1) ;; (phase == GO) * np.tanh(choice) ;; (phase == D1) * (prev_reward == 1) ;; (phase == D2) * table(action, {1: 1, 2: -1}) ;; (phase == D1) * table(prev_action, {1: 1, 2: -1})",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r of GRU unit 0 (always on; timing alone gives R^2 0.84; it rises across the episode and is highest at D2). Beyond timing it mostly tracks which action was chosen. At D2 it is about +0.09 higher after a1 than baseline and lower after a2, with a small extra push from the state reached (S1 up, S2 down). At D1 it carries the previous choice (a1 up, a2 down, an effect that grows later in the episode), plus the previous rewarded state (S1 rewarded up, S2 rewarded down) and a main effect of prev reward. At GO it follows the policy logit (a1-leaning goes up), but the effect is small. Value, time since reversal and this trial reward add almost nothing. Test R^2 beyond timing 0.73 (all-cue ceiling 0.83, observed-only 0.80). No future variables. It still under-predicts long a1-rewarded streaks late in the episode.",
+  "gate": "unit_reset",
+  "feature": 0,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 0,
+    "terms": [
+      "(phase == D2) * table(action, {1: 1, 2: -1}) * np.exp(ep_trial/30)",
+      "(phase == D2) * table(state, {1: 1, 2: -1})",
+      "(phase == D1) * table(prev_action, {1: 1, 2: -1}) * np.exp(ep_trial/30)",
+      "(phase == D1) * table(prev_state, {1: 1, 2: -1}) * (prev_reward == 1)",
+      "(phase == GO) * np.tanh(choice)",
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D2) * table(action, {1: 1, 2: -1})",
+      "(phase == D1) * table(prev_action, {1: 1, 2: -1})"
+    ],
+    "weights": [
+      -0.0012657433187086328,
+      0.010475563569671447,
+      0.002336821729222656,
+      0.022345987346676432,
+      0.007155901229652846,
+      0.02023097152262246,
+      0.09110511219757884,
+      0.007887845667373805
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7288203330878715,
+    "r2": 0.9568316062191616,
+    "r2_timing_only": 0.8408125717079431
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 0,
+    "terms": [
+      "(phase == D2) * table(action, {1: 1, 2: -1}) * np.exp(ep_trial/30)",
+      "(phase == D2) * table(state, {1: 1, 2: -1})",
+      "(phase == D1) * table(prev_action, {1: 1, 2: -1}) * np.exp(ep_trial/30)",
+      "(phase == D1) * table(prev_state, {1: 1, 2: -1}) * (prev_reward == 1)",
+      "(phase == GO) * np.tanh(choice)",
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D2) * table(action, {1: 1, 2: -1})",
+      "(phase == D1) * table(prev_action, {1: 1, 2: -1})"
+    ],
+    "weights": [
+      -0.0012657433187086328,
+      0.010475563569671447,
+      0.002336821729222656,
+      0.022345987346676432,
+      0.007155901229652846,
+      0.02023097152262246,
+      0.09110511219757884,
+      0.007887845667373805
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7372556580848622,
+    "r2": 0.9585000906274139,
+    "r2_timing_only": 0.8420521291910831
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Dead or mis-signed term: at D2 the fitted weight on action*exp(ep_trial/30) is -0.0013, so the D2 choice effect shrinks slightly late in the episode rather than growing. The label never claims D2 growth, but the term is mostly unused (0.5770 to 0.5809 test R^2 alone with the plain D2 action term). The 'grows later in the episode' claim holds only at D1, where the weight is +0.0023 on exp(ep_trial/30), about +0.06 by trial 99.",
+      "D2 state claim checks out but is tiny: D2 action alone gives test R^2 0.577 and adding D2 state gives 0.584 (weight +0.010). 'Small extra push' is accurate.",
+      "Omission at D2: the previous trial's evidence about the good state, table(prev_state,{1:1,2:-1})*(2*prev_reward-1), also drives D2 (r after S1-rewarded or S2-unrewarded, lower after S1-unrewarded or S2-rewarded). Misses on the original terms leave D2 errors of about \u00b10.03 in exactly this pattern (D2 after a2 S2 u +0.030, a1 S2 u +0.029, a2 S1 u -0.038, a1 S1 u -0.032). Adding the term raises test R^2 from 0.729 to 0.754, so D2 is not purely 'choice identity'.",
+      "Remaining systematic D1 error that no tested term fixes: the model over-predicts D1 after unrewarded S2 trials (a2 S2 u -0.040, a1 S2 u -0.040) and after a1 S1 u (-0.022). Mean D1 error is -0.010. Lag-2 reward, window-start and reward-by-time-gain terms did not remove it.",
+      "Large late-episode under-prediction of about 0.2 at D1 and GO in long a1-rewarded streaks (trials 93-99). The explanation acknowledges this, and multiplicative time-gain terms (exp(ep_trial/15)) did not fix it.",
+      "The other claims check out on test: the D1 previous-action, D1 rewarded-state and D1 general reward-bonus terms all carry positive weights. A full 8-way table of the previous trial at D1 plus D2 action scores 0.710, close to the claimed terms. The GO policy-logit effect is small (weight 0.007). No future variables are used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Choice-identity unit: higher after a1, lower after a2 (mainly at D2), plus evidence that S1 is good from the last outcome",
+    "better_terms": "(phase == D2) * table(action, {1: 1, 2: -1}) ;; (phase == D2) * table(state, {1: 1, 2: -1}) ;; (phase == D1) * table(prev_action, {1: 1, 2: -1}) * np.exp(ep_trial/30) ;; (phase == D1) * table(prev_state, {1: 1, 2: -1}) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 1) ;; (phase == D1) * table(prev_action, {1: 1, 2: -1}) ;; (phase == D2) * table(prev_state, {1: 1, 2: -1}) * (2*prev_reward-1) ;; (phase == GO) * np.tanh(choice)",
+    "better_terms_test_r2_beyond_timing": 0.7539
+  },
+  "final_label": "Choice-identity unit: higher after a1, lower after a2 (mainly at D2), plus evidence that S1 is good from the last outcome"
+}

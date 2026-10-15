@@ -1,0 +1,112 @@
+{
+ "label": "At D2, update gate stays high for S2, dips for S1, deeper when S1 believed good and late.",
+ "short_terms": "(phase == D2) * (state == S2) ;; (phase == D2) * (state == S1) * belief ;; (phase == D2) * (state == S1) * ep_dec",
+ "terms": "(phase == D2) * (state == S2) ;; (phase == D2) * (state == S1) * belief_lo ;; (phase == D2) * (state == S2) * belief_lo ;; (phase == D2) * (state == S1) * ep_dec ;; (phase == D2) * (state == S2) * ep_dec ;; (phase == D2) * (action == 2) ;; (phase == D1) * (prev_state == S2)*(prev_action==1) ;; (phase == D2) * (state == S2) * (action==2)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Raw update gate z of unit 25 sits near 0.98 at D1/GO and drops at D2 (timing). Beyond timing, almost everything is the reached state shown at D2: reaching S2 keeps z high (~+0.13 to +0.14), reaching S1 lowers it, and the S1 dip deepens as the ideal observer grows more confident S1 is good (belief_lo) and later in the episode (ep_dec). All observed at D2, no future variables. Previous-trial pattern and D1/GO effects are tiny (<0.03). The free fit adds the choice x state interaction (a2 into S1, i.e. rare, dips less than a1 into S1; a2 into S2 is highest) and a small D1 dip after a1->S2 trials, raising dev R^2 from 0.90 to 0.92.",
+ "full_test_scores": {
+  "gate": "unit_update",
+  "feature": 25,
+  "terms": [
+   "(phase == D2) * (state == S2)",
+   "(phase == D2) * (state == S1) * belief_lo",
+   "(phase == D2) * (state == S2) * belief_lo",
+   "(phase == D2) * (state == S1) * ep_dec",
+   "(phase == D2) * (state == S2) * ep_dec",
+   "(phase == D2) * (action == 2)",
+   "(phase == D1) * (prev_state == S2)*(prev_action==1)",
+   "(phase == D2) * (state == S2) * (action==2)"
+  ],
+  "weights": [
+   0.08465901890599323,
+   -0.030946381387654393,
+   -0.002451202628450609,
+   -0.016122730441330065,
+   0.004963206552167125,
+   -0.0523625053819201,
+   -0.016707858472700732,
+   0.08857033761831161
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.9187570545547846,
+  "r2": 0.9660034752466975,
+  "r2_timing_only": 0.5815449013203569
+ },
+ "gate": "unit_update",
+ "feature": 25,
+ "test_scores": {
+  "gate": "unit_update",
+  "feature": 25,
+  "terms": [
+   "(phase == D2) * (state == S2)",
+   "(phase == D2) * (state == S1) * belief",
+   "(phase == D2) * (state == S1) * ep_dec"
+  ],
+  "weights": [
+   0.13550140372374367,
+   -0.1555058736472332,
+   -0.007976088891478477
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.9383477751068658,
+  "r2": 0.974201312148524,
+  "r2_timing_only": 0.5815449013203569
+ },
+ "dev_scores": {
+  "gate": "unit_update",
+  "feature": 25,
+  "terms": [
+   "(phase == D2) * (state == S2)",
+   "(phase == D2) * (state == S1) * belief",
+   "(phase == D2) * (state == S1) * ep_dec"
+  ],
+  "weights": [
+   0.13550140372374367,
+   -0.1555058736472332,
+   -0.007976088891478477
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.939758293643275,
+  "r2": 0.975008286049571,
+  "r2_timing_only": 0.5851426617559758
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The belief_lo term has the wrong shape. Linear belief fits much better: replacing (state==S1)*belief_lo with (state==S1)*belief raises test R^2 beyond timing from 0.898 to 0.938. Two terms alone, S2 ;; S1*belief, reach 0.923, which beats the recorded three-term form.",
+   "The 'deeper late' claim is mostly an artifact of the belief_lo shape. With belief_lo, the S1*ep_dec weight is -0.020 and dropping the term costs a lot (0.898 -> 0.717). With linear belief, the ep_dec weight shrinks to -0.008 and dropping it costs only 0.938 -> 0.923. Late-episode deepening is a minor effect, not a main driver.",
+   "Systematic misses on the recorded short form: the worst-fit windows are all EARLY-episode (t2-t17) S1 visits. Actual z is about 0.60-0.68 but the prediction is about 0.79-0.84, because belief_lo is near 0 early and the form under-predicts the dip. D2 errors also run negative on average (-0.010), with D2 after a1 S1 r at -0.024 and after a1 S2 u at -0.022. With linear belief these errors shrink to at most about 0.02 and the phase means to about 0.001.",
+   "The free-fit 'choice x state' story mostly overlaps with belief. (state==S1)*(action==1) in place of belief gives 0.938 with ep_dec and 0.909 without, about the same as belief, because a1 is chosen when S1 is believed good. The label cannot cleanly separate 'common a1->S1' from 'S1 believed good'.",
+   "Directional claims do check out. S2 keeps z high (+0.14), the S1 dip deepens with belief that S1 is good (weight -0.156 on belief), all terms are observed-only, and D1/GO effects are small (under 0.025)."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At D2, update gate stays high on reaching S2; dips on S1, deeper the more S1 is believed good.",
+  "better_short_terms": "(phase == D2) * (state == S2) ;; (phase == D2) * (state == S1) * belief ;; (phase == D2) * (state == S1) * ep_dec",
+  "better_short_terms_test_r2_beyond_timing": 0.9383
+ },
+ "final_label": "At D2, update gate stays high on reaching S2; dips on S1, deeper the more S1 is believed good.",
+ "original_short_terms": "(phase == D2) * (state == S2) ;; (phase == D2) * (state == S1) * belief_lo ;; (phase == D2) * (state == S1) * ep_dec",
+ "original_test_scores": {
+  "gate": "unit_update",
+  "feature": 25,
+  "terms": [
+   "(phase == D2) * (state == S2)",
+   "(phase == D2) * (state == S1) * belief_lo",
+   "(phase == D2) * (state == S1) * ep_dec"
+  ],
+  "weights": [
+   0.1401044575002055,
+   -0.023909584226079226,
+   -0.01961563803293374
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.8978906468325053,
+  "r2": 0.9572718205441815,
+  "r2_timing_only": 0.5815449013203569
+ },
+ "terms_from": "skeptic"
+}

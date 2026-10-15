@@ -1,0 +1,64 @@
+{
+  "label": "Leaky reward-history signal, scaled by episode lateness: unrewarded up, rewarded down",
+  "terms": "(phase == D1) * (0.17*last_is(\"a1 S1 u\") - 0.11*last_is(\"a1 S2 r\") + 0.14*last_is(\"a1 S2 u\") - 0.09*last_is(\"a2 S2 r\") + 0.13*last_is(\"a2 S2 u\") - 0.17*last_is(\"a2 S1 r\")) * ep_trial ;; (phase == GO) * (-0.045*last_is(\"a1 S1 r\") + 0.06*last_is(\"a1 S1 u\") + 0.054*last_is(\"a1 S2 r\") + 0.126*last_is(\"a1 S2 u\") - 0.03*last_is(\"a2 S2 r\") + 0.08*last_is(\"a2 S2 u\") - 0.094*last_is(\"a2 S1 r\")) * ep_trial ;; (phase == D2) * (prev_reward == 1) * ep_trial ;; (phase != D2) * (0.6*(tv(\"reward\", -2) == 1) + 0.36*(tv(\"reward\", -3) == 1) - 0.6*(tv(\"reward\", -2) == 0) - 0.36*(tv(\"reward\", -3) == 0)) * ep_trial ;; (phase == D2) * (0.6*(tv(\"reward\", -2) == 1) + 0.36*(tv(\"reward\", -3) == 1) - 0.6*(tv(\"reward\", -2) == 0) - 0.36*(tv(\"reward\", -3) == 0)) * ep_trial ;; (phase != D2) * belief_lo * ep_trial ;; (phase == D2) * ((state == 2) + 0.7*(prev_state == 2)) * ep_trial",
+  "verdict": "partially_explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw GRU candidate n of unit 28. Timing explains most of it (R^2 0.92): it starts near +0.9 and falls toward negative values late in the episode. Beyond timing, it acts like a leaky reward integrator whose gain grows with episode trial (every term is multiplied by ep_trial; effects are near zero early and largest late). At D1 and GO an unrewarded previous trial raises it (a1 S1 u, a1 S2 u, a2 S2 u about +0.13 to +0.17 at D1) and a rewarded one lowers it (a2 S1 r about -0.17, a1 S2 r and a2 S2 r about -0.1). Two patterns are near zero at D1: a1 S1 r and a2 S1 u. At GO the pattern is weaker and a1 S2 r turns slightly positive. Rewards two and three trials back push it the same way with decaying weight, so runs of rewards drive it steadily negative. At D2, reaching S2 (observed then), and having reached S2 on the previous trial, raises it. A previous reward lowers it at D2 too. Belief log-odds (positive = S1) adds a small graded positive term. Uses only observed variables, no future and no model outputs. Scores: dev 0.36, test 0.36 beyond timing, against an all-cue ceiling of 0.37 and an all-observed table score of 0.33. So the observed-only version matches the additive ceiling (policy decile alone scored 0.11, so dropping model outputs loses little). The rest is a slow per-window offset that the 5-trial window cannot see.",
+  "gate": "unit_candidate",
+  "feature": 28,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 28,
+    "terms": [
+      "(phase == D1) * (0.17*last_is(\"a1 S1 u\") - 0.11*last_is(\"a1 S2 r\") + 0.14*last_is(\"a1 S2 u\") - 0.09*last_is(\"a2 S2 r\") + 0.13*last_is(\"a2 S2 u\") - 0.17*last_is(\"a2 S1 r\")) * ep_trial",
+      "(phase == GO) * (-0.045*last_is(\"a1 S1 r\") + 0.06*last_is(\"a1 S1 u\") + 0.054*last_is(\"a1 S2 r\") + 0.126*last_is(\"a1 S2 u\") - 0.03*last_is(\"a2 S2 r\") + 0.08*last_is(\"a2 S2 u\") - 0.094*last_is(\"a2 S1 r\")) * ep_trial",
+      "(phase == D2) * (prev_reward == 1) * ep_trial",
+      "(phase != D2) * (0.6*(tv(\"reward\", -2) == 1) + 0.36*(tv(\"reward\", -3) == 1) - 0.6*(tv(\"reward\", -2) == 0) - 0.36*(tv(\"reward\", -3) == 0)) * ep_trial",
+      "(phase == D2) * (0.6*(tv(\"reward\", -2) == 1) + 0.36*(tv(\"reward\", -3) == 1) - 0.6*(tv(\"reward\", -2) == 0) - 0.36*(tv(\"reward\", -3) == 0)) * ep_trial",
+      "(phase != D2) * belief_lo * ep_trial",
+      "(phase == D2) * ((state == 2) + 0.7*(prev_state == 2)) * ep_trial"
+    ],
+    "weights": [
+      0.01876938664734376,
+      0.018194191785692083,
+      -0.0007122228658639413,
+      -0.0005960911142730902,
+      -0.0005260054970523337,
+      4.347801228653959e-05,
+      0.0008121621819869733
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.3578976219097618,
+    "r2": 0.949305821011403,
+    "r2_timing_only": 0.9210496943814892
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 28,
+    "terms": [
+      "(phase == D1) * (0.17*last_is(\"a1 S1 u\") - 0.11*last_is(\"a1 S2 r\") + 0.14*last_is(\"a1 S2 u\") - 0.09*last_is(\"a2 S2 r\") + 0.13*last_is(\"a2 S2 u\") - 0.17*last_is(\"a2 S1 r\")) * ep_trial",
+      "(phase == GO) * (-0.045*last_is(\"a1 S1 r\") + 0.06*last_is(\"a1 S1 u\") + 0.054*last_is(\"a1 S2 r\") + 0.126*last_is(\"a1 S2 u\") - 0.03*last_is(\"a2 S2 r\") + 0.08*last_is(\"a2 S2 u\") - 0.094*last_is(\"a2 S1 r\")) * ep_trial",
+      "(phase == D2) * (prev_reward == 1) * ep_trial",
+      "(phase != D2) * (0.6*(tv(\"reward\", -2) == 1) + 0.36*(tv(\"reward\", -3) == 1) - 0.6*(tv(\"reward\", -2) == 0) - 0.36*(tv(\"reward\", -3) == 0)) * ep_trial",
+      "(phase == D2) * (0.6*(tv(\"reward\", -2) == 1) + 0.36*(tv(\"reward\", -3) == 1) - 0.6*(tv(\"reward\", -2) == 0) - 0.36*(tv(\"reward\", -3) == 0)) * ep_trial",
+      "(phase != D2) * belief_lo * ep_trial",
+      "(phase == D2) * ((state == 2) + 0.7*(prev_state == 2)) * ep_trial"
+    ],
+    "weights": [
+      0.01876938664734376,
+      0.018194191785692083,
+      -0.0007122228658639413,
+      -0.0005960911142730902,
+      -0.0005260054970523337,
+      4.347801228653959e-05,
+      0.0008121621819869733
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.36363662049586243,
+    "r2": 0.949317290931681,
+    "r2_timing_only": 0.9203557107453111
+  },
+  "final_verdict": "partially_explained",
+  "observed_only": true
+}

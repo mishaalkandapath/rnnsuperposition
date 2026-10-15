@@ -1,0 +1,74 @@
+{
+  "label": "D2: high after a1->S1, low after a2->S2; D1: high after unrewarded S2",
+  "terms": "(phase == D2) * (action == 1) * (state == S1) ;; (phase == D2) * (action == 1) * (state == S2) ;; (phase == D2) * (action == 2) * (state == S2) ;; (phase == D1) * (prev_reward == 0) * (prev_state == S2) ;; (phase == D1) * (prev_reward == 0) * (prev_state == S1) ;; (phase == D1) * (prev_reward == 1) * (prev_state == S1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw candidate n of unit 6. Timing alone gives R^2 0.71 (about +0.95 at GO, about +0.2 at D1, about -0.35 at D2, drifting down later in the episode). Beyond timing, D2 matters most: it depends on this trial choice x reached state, both observed at D2. a1->S1 (common) gives about +0.69, a2->S1 (rare) is near baseline, a1->S2 (rare) about -0.29, a2->S2 (common) about -0.52. So it follows the reached state (S1 up) plus a choice effect (a1 up). At D1 it codes the previous outcome x state: unrewarded at S2 +0.38, unrewarded at S1 +0.08, rewarded at S1 -0.27, rewarded at S2 near 0. GO is close to saturated and barely changes. Six observed-only indicator terms reach dev R^2 beyond timing 0.88 (ceiling all 0.94, all observed 0.91). Adding the D2 policy logit and the reward/state from two trials back only lifts it to 0.89. What is left over is a slow carryover across long runs of rewarded a1 S1 trials late in the episode (D1 more negative).",
+  "gate": "unit_candidate",
+  "feature": 6,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 6,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == S1)",
+      "(phase == D2) * (action == 1) * (state == S2)",
+      "(phase == D2) * (action == 2) * (state == S2)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == S2)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == S1)",
+      "(phase == D1) * (prev_reward == 1) * (prev_state == S1)"
+    ],
+    "weights": [
+      0.6888055278864463,
+      -0.29340993582412395,
+      -0.5175635217152774,
+      0.37744893954706593,
+      0.08040691420327739,
+      -0.26958629154027464
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8771371325046851,
+    "r2": 0.9643727383797265,
+    "r2_timing_only": 0.7100241729126822
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 6,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == S1)",
+      "(phase == D2) * (action == 1) * (state == S2)",
+      "(phase == D2) * (action == 2) * (state == S2)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == S2)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == S1)",
+      "(phase == D1) * (prev_reward == 1) * (prev_state == S1)"
+    ],
+    "weights": [
+      0.6888055278864463,
+      -0.29340993582412395,
+      -0.5175635217152774,
+      0.37744893954706593,
+      0.08040691420327739,
+      -0.26958629154027464
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.880427204672158,
+    "r2": 0.9650376510370289,
+    "r2_timing_only": 0.7076061585153037
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Main claims reproduce. The 6 terms score test R^2 beyond timing 0.877. The fitted weights match the stated cell values: D2 a1S1 +0.69, a1S2 -0.29, a2S2 -0.52 (a2S1 is the reference, residual about +0.04). D1 unrewarded S2 +0.38, unrewarded S1 +0.08, rewarded S1 -0.27. GO residuals are all below 0.07 in absolute value.",
+      "Minor overstatement in the D2 description 'reached state plus a choice effect'. A purely additive D2 model (D2 intercept + S1 + a1) scores test 0.854, compared with 0.877 for the full cell model. Adding the a1*S1 interaction gives a weight of +0.43, so a1->S1 (common) is clearly superadditive. The pattern reads better as 'common to S1 high, common to S2 low, rare transitions in between'.",
+      "The leftover-carryover claim only partly checks out. A late-episode interaction, D1*(rewarded S1)*ep_dec, adds nothing (0.8778). Rewarded S1 two trials back at D1 adds about 0.01 (0.887), and three trials back adds nothing more (0.8875). So 'long runs ... late in the episode' is at best weakly supported. The examples do show persistent D1 offsets of about -0.55 late in the episode, which suggests a slow internal state that window variables do not capture.",
+      "Misses show no large systematic error class. The worst cells are D2 after a1 S2 u (+0.11), D1 after a2 S1 r (+0.06) and GO after a2 S1 u (-0.07). Mean error by phase is at most 0.005. Splitting D1 by previous action, adding D2 terms for the previous trial, or adding value/choice each gain at most 0.004.",
+      "No future variables are used; the terms are observed-only, as claimed."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2: high after common a1->S1, low after common a2->S2, rare transitions in between; D1: high after unrewarded S2, low after rewarded S1",
+    "better_terms": "(phase == D2) * (action == 1) * (state == S1) ;; (phase == D2) * (action == 1) * (state == S2) ;; (phase == D2) * (action == 2) * (state == S2) ;; (phase == D1) * (prev_reward == 0) * (prev_state == S2) ;; (phase == D1) * (prev_reward == 0) * (prev_state == S1) ;; (phase == D1) * (prev_reward == 1) * (prev_state == S1) ;; (phase==D1)*((tv('state',-2)==1)&(tv('reward',-2)==1))",
+    "better_terms_test_r2_beyond_timing": 0.887
+  },
+  "final_label": "D2: high after common a1->S1, low after common a2->S2, rare transitions in between; D1: high after unrewarded S2, low after rewarded S1"
+}

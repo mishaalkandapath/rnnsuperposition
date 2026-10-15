@@ -1,0 +1,74 @@
+{
+  "label": "D2 a2->S1 rare transition; larger after a rewarded/a2 previous trial and when belief favours S2, fades late in episode",
+  "terms": "(phase == D2) * (action == 2) * (state == S1) ;; (phase == D2) * (action == 2) * (state == S1) * belief_lo ;; (phase == D2) * (action == 2) * (state == S1) * (prev_action == 2) ;; (phase == D2) * (action == 2) * (state == S1) * (prev_reward == 1) ;; (phase == D2) * (action == 2) * (state == S1) * (prev_action == 2) * (prev_reward == 1) ;; (phase == D2) * (action == 2) * (state == S1) * (ep_trial >= 70) * (ep_trial - 70)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Silent at D1 and GO; fires at D2 almost only when the agent chose a2 and reached S1 (the rare transition). The a2->S1 indicator by itself gives dev R^2 beyond timing 0.66. Within a2->S1 the magnitude is higher when the previous trial was rewarded (+1.1) or was also an a2 choice (+0.48), with sub-additive overlap (-0.54 for a2 and rewarded together). It is also higher the more the ideal observer believes S2 is good (weight -0.24 per unit of belief_lo), and it fades after episode trial 70 (about -0.07 per trial). All of these terms are observed at D2, since the choice and state are shown by then. The 6-term set scores dev 0.81. A term for S1 reached under a strong S2 belief on a1 trials added nothing. In the remaining misses, some episodes fire strongly on a1->S1 common trials, which no observed cue captures. Observed-only belief/history replaces the earlier policy-based description (policy decile reference 0.77) at little cost: the test score is about 0.80, against an all-observed reference of 0.74 and an all ceiling of 0.87.",
+  "gate": "hidden",
+  "feature": 33,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 33,
+    "terms": [
+      "(phase == D2) * (action == 2) * (state == S1)",
+      "(phase == D2) * (action == 2) * (state == S1) * belief_lo",
+      "(phase == D2) * (action == 2) * (state == S1) * (prev_action == 2)",
+      "(phase == D2) * (action == 2) * (state == S1) * (prev_reward == 1)",
+      "(phase == D2) * (action == 2) * (state == S1) * (prev_action == 2) * (prev_reward == 1)",
+      "(phase == D2) * (action == 2) * (state == S1) * (ep_trial >= 70) * (ep_trial - 70)"
+    ],
+    "weights": [
+      0.815731552008277,
+      -0.24451608756985685,
+      0.4753676678335762,
+      1.1134320125683976,
+      -0.5361918753217262,
+      -0.07372508530045993
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7955197568380188,
+    "r2": 0.8177235631544801,
+    "r2_timing_only": 0.10858656060415794
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 33,
+    "terms": [
+      "(phase == D2) * (action == 2) * (state == S1)",
+      "(phase == D2) * (action == 2) * (state == S1) * belief_lo",
+      "(phase == D2) * (action == 2) * (state == S1) * (prev_action == 2)",
+      "(phase == D2) * (action == 2) * (state == S1) * (prev_reward == 1)",
+      "(phase == D2) * (action == 2) * (state == S1) * (prev_action == 2) * (prev_reward == 1)",
+      "(phase == D2) * (action == 2) * (state == S1) * (ep_trial >= 70) * (ep_trial - 70)"
+    ],
+    "weights": [
+      0.815731552008277,
+      -0.24451608756985685,
+      0.4753676678335762,
+      1.1134320125683976,
+      -0.5361918753217262,
+      -0.07372508530045993
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8088340268764552,
+    "r2": 0.8300286912993653,
+    "r2_timing_only": 0.1108704863977682
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Each claim holds up on test. The a2->S1 indicator alone scores 0.633 (the label says 0.66 on dev). Adding the previous reward raises it to 0.685 (w +0.97). Adding belief_lo raises it to 0.703 (w -0.33). Adding the late fade raises it to 0.706 (w -0.075 per trial). The previous a2 choice adds little alone (0.639). Full set: 0.7955. Dropping belief costs 0.03 (0.765), and keeping only belief plus the late term costs about the same (0.768), so belief and trial history overlap but each adds something.",
+      "Small overstatement: on its own the previous a2 choice adds only +0.006 on test. Its +0.48 weight mostly makes sense together with the prev_reward interaction (-0.54). In practice the rise from a previous a2 choice shows up mainly on unrewarded previous trials.",
+      "Misses: the worst-fit windows are whole episodes where the feature fires about 2 on a1->S1 common trials while the fit predicts about 0.33. None of the observed cues I tried predicts this: belief_lo sign or threshold, belief_cover, prev_reward, prev a1 rewarded, two a1 choices in a row, ep_trial<50. Each gains at most about 0.01 (best: plain a1S1 plus a1S1*belief_lo, 0.808). The explanation already admits this miss.",
+      "The systematic mean errors by phase (D1/GO +0.088, D2 -0.18) are a constant offset from the intercept and timing baseline on steps where the feature is silent. No previous-trial pattern stands out. The second miss class is a2->S1 trials predicted high but actually 0. It is not predicted by a previous a2 S1 u trial, a two-back pattern, or extreme belief (gains at most 0.0003).",
+      "Other variants added nothing: prev_state instead of prev_action (0.7946), |belief_lo| and belief_cover (0.7969), prev_common and the action two trials back (0.7959), and a decile ramp instead of the ep_trial>70 hinge (0.7931). The observed-only fit (0.80) matches or beats the policy-decile reference (0.77), so dropping the model's outputs costs nothing here."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_terms": null,
+    "better_terms_test_r2_beyond_timing": null
+  }
+}

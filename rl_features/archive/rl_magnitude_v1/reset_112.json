@@ -1,0 +1,84 @@
+{
+  "label": "D1 only: large after unrewarded S1 visit (esp. a1 S1 u), graded by a1-leaning policy",
+  "terms": "(phase == D1) * last_is(\"a1 S1 u\") ;; (phase == D1) * (prev_state == 1) ;; (phase == D1) * last_is(\"a1 S1 u\") * choice ;; (phase == D1) * (prev_state == 1) * np.maximum(choice, 0) ;; (phase == D1) * np.maximum(choice, 0) ;; (phase == D1) * value ;; (phase == D1) * last_is(\"a2 S1 u\") ;; (phase == D1) * last_is(\"a1 S2 u\")",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (zero at GO and D2). Its magnitude is set mostly by the previous trial: it is largest after a1 S1 unrewarded (about +1.4 to +2 above the D1 baseline), raised after a2 S1 unrewarded (+0.7), slightly raised after a1 S1 rewarded, and lowered after any S2 outcome, most strongly after a1 S2 unrewarded (-0.8). On top of that it scales with the model policy logit toward a1 at that D1 step (positive part of choice, stronger when the last state was S1 and especially after a1 S1 u), and weakly falls with higher value. Unrewarded streaks two or three trials back, the hidden good state and this trial reward add nothing beyond these terms. Test R^2 beyond timing is 0.73 (all ceiling 0.74). Previous-trial indicators alone give 0.47 test; the model policy/value terms add the rest. No future variables are used.",
+  "gate": "reset",
+  "feature": 112,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 112,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S1 u\")",
+      "(phase == D1) * (prev_state == 1)",
+      "(phase == D1) * last_is(\"a1 S1 u\") * choice",
+      "(phase == D1) * (prev_state == 1) * np.maximum(choice, 0)",
+      "(phase == D1) * np.maximum(choice, 0)",
+      "(phase == D1) * value",
+      "(phase == D1) * last_is(\"a2 S1 u\")",
+      "(phase == D1) * last_is(\"a1 S2 u\")"
+    ],
+    "weights": [
+      1.3994315926334084,
+      -0.4527786356277875,
+      0.13181347261319978,
+      0.2246992589090046,
+      0.14550727062494795,
+      -0.05534749863505015,
+      0.6726757036969575,
+      -0.8347939904597155
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7336530859431283,
+    "r2": 0.7766895020203464,
+    "r2_timing_only": 0.16158030675748192
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 112,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S1 u\")",
+      "(phase == D1) * (prev_state == 1)",
+      "(phase == D1) * last_is(\"a1 S1 u\") * choice",
+      "(phase == D1) * (prev_state == 1) * np.maximum(choice, 0)",
+      "(phase == D1) * np.maximum(choice, 0)",
+      "(phase == D1) * value",
+      "(phase == D1) * last_is(\"a2 S1 u\")",
+      "(phase == D1) * last_is(\"a1 S2 u\")"
+    ],
+    "weights": [
+      1.3994315926334084,
+      -0.4527786356277875,
+      0.13181347261319978,
+      0.2246992589090046,
+      0.14550727062494795,
+      -0.05534749863505015,
+      0.6726757036969575,
+      -0.8347939904597155
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7339291370093293,
+    "r2": 0.7765768254798174,
+    "r2_timing_only": 0.16028695510332347
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Core claims check out. reset/112 is exactly zero at GO and D2 (the profile's GO/D2 residuals are all +0). It is largest at D1 after a1 S1 u (raw residual +1.98). It grows with the positive part of the policy logit toward a1: the D1 policy-decile residuals run from -0.36 (deciles 1-4) to +0.55 (decile 8), and dropping the prev_state==1 * max(choice,0) interaction costs 0.036 test R^2. The reported test R^2 of 0.7337 reproduces.",
+      "The value claim is wrong. 'It falls slightly as value rises' understates it: value is the single most important term. Dropping (phase==D1)*value cuts test R^2 from 0.734 to 0.650, the largest loss of any of the 8 terms (next largest: max(choice,0) 0.682, a1 S1 u 0.689). Its weight looks small (-0.055) only because value has a large scale. In the profile, value deciles 7-8 have D1 residuals of -0.25 and -0.41.",
+      "The a2 S1 u claim confuses fitted weights with raw effects. 'Raised after a2 S1 unrewarded (+0.7)': that +0.67 weight sits on top of a prev_state==1 weight of -0.45, so the net is about +0.2. The raw D1 residual after a2 S1 u is -0.136, so it is not raised compared with the timing baseline.",
+      "The a1 S2 u claim is the same mistake. 'Lowered after any outcome at S2, most strongly after a1 S2 u (-0.8)': the raw D1 residuals for the four S2 patterns are all about the same (a1 S2 r -0.409, a1 S2 u -0.396, a2 S2 r -0.406, a2 S2 u -0.401). The -0.8 is a conditional weight that offsets the policy terms, not a stronger drop. a2 S1 r (-0.30) is about as low as the S2 patterns, so 'lowered after S2' is not specific to S2.",
+      "Running misses on the proposed terms shows a systematic gap. D1 after a2 S1 r is under-predicted by +0.401. The terms have no a2 S1 r indicator, so the shared prev_state==1 offset pushes it too low. D1 after a1 S2 r is over-predicted (-0.267), and so is D1 after a2 S2 u (-0.173). The worst-fit windows are D1 steps around a2 rare-to-S1 trials, with actual activation 2.7-3.9 against predicted 0.3-1.2.",
+      "Swapping the weak a1S1u*choice term (dropping it costs only 0.004) for (phase==D1)*last_is('a2 S1 r') raises test R^2 to 0.759, above the 0.74 additive ceiling. It also removes the a2 S1 r miss and refits the a2 S1 u weight to +1.29 and the a2 S1 r weight to +0.97, both on top of a prev_state==1 offset of -1.07. A smaller error remains for S2 previous trials (a1 S2 r -0.27, a2 S2 u -0.17).",
+      "Confirmed: unrewarded streaks two trials back add nothing ((phase==D1)*(tv('reward',-2)==0) gives 0.6505 against 0.6502 when added to the 7 terms without value). No future variables are used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 only: large after a1 S1 unrewarded (+2 raw), small after a1 S1 rewarded, otherwise below baseline; scaled up by the a1-leaning policy logit (more so after S1 visits) and strongly down by high value",
+    "better_terms": "(phase == D1) * last_is(\"a1 S1 u\") ;; (phase == D1) * (prev_state == 1) ;; (phase == D1) * (prev_state == 1) * np.maximum(choice, 0) ;; (phase == D1) * np.maximum(choice, 0) ;; (phase == D1) * value ;; (phase == D1) * last_is(\"a2 S1 u\") ;; (phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a2 S1 r\")",
+    "better_terms_test_r2_beyond_timing": 0.7594
+  },
+  "final_label": "D1 only: large after a1 S1 unrewarded (+2 raw), small after a1 S1 rewarded, otherwise below baseline; scaled up by the a1-leaning policy logit (more so after S1 visits) and strongly down by high value"
+}

@@ -1,0 +1,69 @@
+{
+  "label": "GO after rewarded rare a2->S1, larger when belief favours S2 and early in episode",
+  "terms": "(phase == GO) * last_is(\"a2 S1 r\") ;; (phase == GO) * last_is(\"a2 S1 r\") * belief ;; (phase == GO) * last_is(\"a2 S1 r\") * belief**2 ;; (phase == GO) * last_is(\"a2 S1 r\") * ep_trial",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Sparse feature (nonzero on 0.8% of steps), active only at GO. Almost all of its magnitude comes from GO steps where the previous trial was a2 -> S1 (rare) and rewarded; on its own that indicator gives dev R^2 0.28 beyond timing. Within those steps the size is set by the ideal-observer belief: it is largest when belief still favours S2 (low P(S1 good)) and gets smaller as belief moves toward S1. The fitted shape is 1.28 - 1.29b + 0.60b^2, which falls monotonically across 0..1. It also shrinks linearly with episode trial (about -0.01 per trial), so it is near zero late in the episode. Adding the belief terms raises dev R^2 to 0.60, well above the profile all ceiling of 0.34, because the ceiling tables do not include the interaction. belief_cover, the trial before (tv action -2) and a first-in-window term each added under 0.01. The misses that remain are mostly GO steps on a window first trial, where the previous trial is not in the window. The earlier value/policy-based explanation (agent still leaning a2) maps onto low belief in S1. With observed quantities only, nothing seems to be lost: it scores at or above the firing-level description. Observed-only, no future or hidden variables used.",
+  "gate": "update",
+  "feature": 174,
+  "test_scores": {
+    "gate": "update",
+    "feature": 174,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S1 r\")",
+      "(phase == GO) * last_is(\"a2 S1 r\") * belief",
+      "(phase == GO) * last_is(\"a2 S1 r\") * belief**2",
+      "(phase == GO) * last_is(\"a2 S1 r\") * ep_trial"
+    ],
+    "weights": [
+      1.2767230696754903,
+      -1.2850326564686685,
+      0.5995133530141628,
+      -0.009878882747817628
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5904557109741795,
+    "r2": 0.6010830900585754,
+    "r2_timing_only": 0.025949279160198402
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 174,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S1 r\")",
+      "(phase == GO) * last_is(\"a2 S1 r\") * belief",
+      "(phase == GO) * last_is(\"a2 S1 r\") * belief**2",
+      "(phase == GO) * last_is(\"a2 S1 r\") * ep_trial"
+    ],
+    "weights": [
+      1.2767230696754903,
+      -1.2850326564686685,
+      0.5995133530141628,
+      -0.009878882747817628
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6048103479713305,
+    "r2": 0.6146715662673041,
+    "r2_timing_only": 0.024953128821445514
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claim holds. The feature is GO-only and sits on last_is('a2 S1 r'): the GO residual is +0.305 there and about -0.015 for every other previous trial. The indicator alone gives test R^2 0.256, and the D1/D2 residuals are all 0.",
+      "The episode-trial claim has the wrong shape. The effect is not a smooth fall of 0.01 per trial; it behaves like a cutoff near trial 60. Swapping the linear ep_trial term for a gate (ep_trial<60), with linear ep_trial and belief_lo kept inside the gate, lifts test R^2 from 0.588 to 0.682. Cutoffs at 50/55/65/70 give 0.671/0.681/0.673/0.660. Adding a separate term for ep_trial>=60 changes nothing (0.7320 vs 0.7324), so the feature is essentially off after about trial 60.",
+      "The headline belief claim is overstated. The quadratic belief term adds nothing: indicator+belief scores 0.3698 and +belief**2 scores 0.3697, so the reported '1.28 - 1.29b + 0.60b^2' curve only means something because of collinearity with ep_trial. Episode trial adds more than belief: indicator+ep_trial reaches 0.483, versus 0.370 for indicator+belief. The label leads with belief when timing within the condition is the bigger factor.",
+      "The claim that the trial before adds <0.01 is false once the timing is right. Adding E*(tv('action',-2)==2) and E*(tv('reward',-2)==1) to the gated model raises test R^2 from 0.685 to 0.728, where E = (phase==GO)*last_is('a2 S1 r')*(ep_trial<60).",
+      "The future variable action==2 (the upcoming choice) adds about 0.02-0.03 (0.690 to 0.713 in the gated model). It is not needed, and the observed-only trial-before terms do slightly better.",
+      "Misses confirm the remaining errors are mostly GO steps on a window's first trial: actual about 1.2-1.4, predicted about 0.03, because the previous trial is outside the window. A prev_action==-1 & prev_reward==1 term does not fix this (0.5905 vs 0.5905). That miss class is a data limit and is correctly described; there are also a few under-predictions after repeated a2 S1 r trials.",
+      "The ceiling comparison (0.59 vs the additive 'all' ceiling of 0.34) holds as stated, but the 4-term model leaves about 0.14 test R^2 that simple observed-only terms recover."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after rewarded rare a2->S1, only in the first ~60 trials of the episode; larger when belief favours S2 and when the trial before was also a rewarded a2",
+    "better_terms": "E = (phase == GO) * last_is('a2 S1 r') * (ep_trial < 60); terms: E ;; E * belief_lo ;; E * belief_lo**2 ;; E * ep_trial ;; E * (tv('action',-2)==2) ;; E * (tv('reward',-2)==1) ;; E * (tv('state',-2)==1)",
+    "better_terms_test_r2_beyond_timing": 0.732
+  },
+  "final_label": "GO after rewarded rare a2->S1, only in the first ~60 trials of the episode; larger when belief favours S2 and when the trial before was also a rewarded a2"
+}

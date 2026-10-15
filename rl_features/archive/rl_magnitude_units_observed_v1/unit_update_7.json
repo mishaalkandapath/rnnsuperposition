@@ -1,0 +1,79 @@
+{
+  "label": "D2 update gate high when belief favours S2 and a2 chosen, grows late in episode",
+  "terms": "(phase == D2) * np.tanh(belief_lo/2) ;; (phase == D2) * (action == 2) ;; (phase == D2) * np.tanh(belief_lo/2) * ep_dec ;; (phase == D2) * (state == 2) ;; (phase == GO) * np.tanh(belief_lo/2) * ep_dec**2 ;; (phase == D2) * (prev_action == 2) * ep_dec ;; (phase == GO) * (prev_action == 2) * (prev_reward == 0) * ep_dec**2",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 7. Near zero at D1, small at GO, large at D2 (timing alone R^2 0.72, rising strongly over the episode). Beyond timing, magnitude is set mainly at D2 by the ideal-observer belief: high when the observed history favours S2 being good (belief_lo negative), low when it favours S1, with the effect growing later in the episode (belief x ep_dec). It is also higher at D2 when this trial chose a2 (observed at D2) and reached S2, and when the previous choice was a2. At GO a smaller version of the same belief signal appears, amplified late in the episode, plus a boost after an unrewarded a2 trial late in the episode. Belief plus choice/state alone gives about 0.69 dev; the full 7 observed-only terms give 0.74 dev / 0.72 test R^2 beyond timing (all-observed ceiling 0.82, all 0.88; model-policy decile alone 0.76, so replacing the model policy with observed belief loses little). Residual misses: late-episode GO/D2 after a2 S1 r/u under-predicted, D2 after a1 unrewarded over-predicted. Reward of this trial (future) explains nothing.",
+  "gate": "unit_update",
+  "feature": 7,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 7,
+    "terms": [
+      "(phase == D2) * np.tanh(belief_lo/2)",
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * np.tanh(belief_lo/2) * ep_dec",
+      "(phase == D2) * (state == 2)",
+      "(phase == GO) * np.tanh(belief_lo/2) * ep_dec**2",
+      "(phase == D2) * (prev_action == 2) * ep_dec",
+      "(phase == GO) * (prev_action == 2) * (prev_reward == 0) * ep_dec**2"
+    ],
+    "weights": [
+      -0.11610624843225412,
+      0.034667991015724514,
+      -0.01083360375520072,
+      0.024797958738300412,
+      -0.0007721352486742411,
+      -0.00015739984835797237,
+      0.0014739760976793075
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7208908844960289,
+    "r2": 0.9213822732994816,
+    "r2_timing_only": 0.7183261945473802
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 7,
+    "terms": [
+      "(phase == D2) * np.tanh(belief_lo/2)",
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * np.tanh(belief_lo/2) * ep_dec",
+      "(phase == D2) * (state == 2)",
+      "(phase == GO) * np.tanh(belief_lo/2) * ep_dec**2",
+      "(phase == D2) * (prev_action == 2) * ep_dec",
+      "(phase == GO) * (prev_action == 2) * (prev_reward == 0) * ep_dec**2"
+    ],
+    "weights": [
+      -0.11610624843225412,
+      0.034667991015724514,
+      -0.01083360375520072,
+      0.024797958738300412,
+      -0.0007721352486742411,
+      -0.00015739984835797237,
+      0.0014739760976793075
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7407082137098738,
+    "r2": 0.9244082641257779,
+    "r2_timing_only": 0.7084684518712787
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The claim that the D2 gate is higher when the previous choice was a2 is not supported. That term's fitted weight is -0.00016, so it is about zero and has the opposite sign to the claim. Dropping it leaves test R^2 unchanged (0.7209 with it, 0.7209 without it). Adding it alone to the base terms gives only +0.002 (0.672 to 0.674).",
+      "A large systematic error class is left over and is mentioned only in passing. In the misses output for the claimed terms, D2 after a2-S1-rewarded trials is under-predicted by +0.101. D2 after a1-S1-unrewarded trials is over-predicted by -0.105, and after a1-S2-unrewarded trials by -0.098. The explanation names only the 'a2-S1 late' and 'unrewarded a1' cases. It does not say that the previous trial's outcome shapes the D2 gate as a main effect, separately from belief.",
+      "The previous-trial effect at D2 is large and should be in the label. A D2 term for 'previous a1 unrewarded' gets weight -0.113 and a D2 term for 'previous a2-S1-rewarded' gets weight +0.091, comparable to the belief weight (about -0.075 to -0.116). Adding them moves test R^2 from 0.72 to 0.78.",
+      "The 'grows late in the episode' interaction for belief at D2 is real but modest: it adds +0.013 on test (0.672 to 0.685). The two GO terms together add about +0.036. These parts of the claim check out.",
+      "The core claims check out. Belief at D2 alone gives 0.647 on test. Belief plus this trial's choice and state gives 0.672. The signs are as stated: a2 and S2 raise the gate, and belief favouring S1 lowers it."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 update gate high when observed belief favours S2, a2 chosen / S2 reached, and after a2-S1-rewarded trials; low after unrewarded a1 trials; belief effect grows late in episode (small echo at GO late)",
+    "better_terms": "(phase == D2) * np.tanh(belief_lo/2) * (1+ep_dec/5) ;; (phase == D2) * (action == 2) ;; (phase == D2) * (state == 2) ;; (phase == D2) * last_is('a1 S2 u') ;; (phase == D2) * (prev_action == 1) * (prev_reward == 0) ;; (phase == D2) * last_is('a2 S1 r') ;; (phase == GO) * np.tanh(belief_lo/2) * ep_dec**2 ;; (phase == GO) * (prev_action == 2) * (prev_reward == 0) * ep_dec**2",
+    "better_terms_test_r2_beyond_timing": 0.7779
+  },
+  "final_label": "D2 update gate high when observed belief favours S2, a2 chosen / S2 reached, and after a2-S1-rewarded trials; low after unrewarded a1 trials; belief effect grows late in episode (small echo at GO late)"
+}

@@ -1,0 +1,68 @@
+{
+  "label": "D2 rare a1->S2 late in episode, boosted after unrewarded (esp. a1 S2 u) prior trial",
+  "terms": "(phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 50, 0) ;; (phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 50, 0) * (prev_reward == 0) ;; (phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 50, 0) * last_is(\"a1 S2 u\") ;; (phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 50, 0) * belief_lo",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2, essentially only when the agent chose a1 and landed in S2 (rare transition; residual +0.08 for that cell, ~-0.01 for others). Magnitude ramps with episode trial beyond ~50 (ramp threshold 50 best; 40 worse, 60 similar). Within a1->S2 late steps it is large when the previous trial was unrewarded and largest when the previous trial was also a1->S2 unrewarded (repeated rare unrewarded a1); after a rewarded previous trial it is small; the ideal-observer belief that S1 is good (belief_lo) adds a small positive modulation. Trial-before reward, a1 streaks and belief_cover added <0.015. All observed-only (action/state are known at D2). Dev R^2 beyond timing 0.669, test 0.653, well above the profile all ceiling 0.25 (the ceiling is additive and misses the interaction with episode time); the earlier model-based explanation used policy deciles (reference 0.17), so observed quantities lose nothing here. Remaining misses: variable firing after rewarded trials not captured.",
+  "gate": "update",
+  "feature": 37,
+  "test_scores": {
+    "gate": "update",
+    "feature": 37,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 50, 0)",
+      "(phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 50, 0) * (prev_reward == 0)",
+      "(phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 50, 0) * last_is(\"a1 S2 u\")",
+      "(phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 50, 0) * belief_lo"
+    ],
+    "weights": [
+      -0.000577170963147749,
+      0.008225592693605099,
+      0.012226739633027247,
+      0.001167236317858774
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.653196719367086,
+    "r2": 0.6668749682963236,
+    "r2_timing_only": 0.03944094445783464
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 37,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 50, 0)",
+      "(phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 50, 0) * (prev_reward == 0)",
+      "(phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 50, 0) * last_is(\"a1 S2 u\")",
+      "(phase == D2) * (action == 1) * (state == 2) * np.maximum(ep_trial - 50, 0) * belief_lo"
+    ],
+    "weights": [
+      -0.000577170963147749,
+      0.008225592693605099,
+      0.012226739633027247,
+      0.001167236317858774
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6694877513878152,
+    "r2": 0.6835041676270137,
+    "r2_timing_only": 0.04240815975218215
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The bare late-episode ramp gets a fitted weight of about -0.0006 (near zero), so late growth only shows up after an unrewarded previous trial. After a rewarded previous trial the activation is roughly flat in episode time. The label's 'late in episode, boosted after unrewarded' reads as if the ramp were unconditional. On its own the ramp scores only 0.33 dev; adding the prev_reward==0 term gives 0.56 and the last_is('a1 S2 u') term gives 0.66.",
+      "The belief_lo term adds only about 0.006 dev R^2 (0.664 -> 0.669), which matches 'small'. Using belief_lo clipped to \u00b15 plus belief_cover instead gives 0.671.",
+      "Unrewarded two trials back adds about 0.014 dev (0.678 vs 0.664 without belief_lo). This is about the 'at most 0.013' the explanation reports.",
+      "Firing does not keep rising up to trial 99. A term np.maximum(ep_trial-90,0) gets a negative weight (-0.02) and adds about 0.009 dev. This matches the end-of-episode over-prediction the explanation admits.",
+      "Misses after the claimed terms show only small, uniform offsets (D1/GO +0.004 from the intercept; D2 rows -0.007 to -0.013). There is no large systematic class left. The worst windows are sizeable firing after rewarded previous trials and over-prediction at trials 97-99, both of which the explanation already admits.",
+      "The claim that observed-only terms 'lose nothing' rests only on the policy-decile reference table (0.17). The model-output explanation itself was not re-scored. The claim is hedged but weakly supported."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 rare a1->S2 late in episode (past ~trial 50), growing with episode time mainly after an unrewarded previous trial (most after a1 S2 u, also after 2-back unrewarded); dips at the very end of the episode",
+    "better_terms": "B=(phase == D2) * (action == 1) * (state == 2); R=np.maximum(ep_trial - 50, 0): B*R ;; B*R*(prev_reward==0) ;; B*R*last_is(\"a1 S2 u\") ;; B*R*(tv(\"reward\",-2)==0) ;; B*R*(prev_reward==0)*(tv(\"reward\",-2)==0) ;; B*R*(prev_action==1) ;; B*np.maximum(ep_trial-90,0) ;; B*R*(prev_state==2)",
+    "better_terms_test_r2_beyond_timing": 0.6848
+  },
+  "final_label": "D2 rare a1->S2 late in episode (past ~trial 50), growing with episode time mainly after an unrewarded previous trial (most after a1 S2 u, also after 2-back unrewarded); dips at the very end of the episode"
+}

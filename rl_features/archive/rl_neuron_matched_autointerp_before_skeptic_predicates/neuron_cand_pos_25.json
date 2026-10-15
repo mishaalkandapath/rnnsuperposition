@@ -1,0 +1,65 @@
+{
+  "label": "D2: reached S2 via a rare transition after choosing a1, when value is low",
+  "predicate": "(phase == D2) & (in_state == 2) & (in_action == 1) & (value < 7.7)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 and only when the shown state is S2 (100% of activations; 0 at D1/GO and at S1). Within S2, 89% of activation mass is when the agent chose a1, i.e. a rare a1->S2 transition (input-only predicate S2 & a1: dev F1 0.73). Adding the model own value-head output < 7.7 (observed/computed, not future) removes most false positives, which are rare a1->S2 steps where value stays high (agent apparently expecting S2 to pay); dev P 0.78 R 0.87 F1 0.82 mass 0.89. The remaining ~10% of mass is a2->S2 common transitions, which include the strongest activations (near max), typically when S1 is good and the agent has just switched to a2, so these are also S2-reached-while-low-value episodes. Activations grow with episode trial (later trials stronger). Does not fire on S1 regardless of transition, nor at D1/GO. Magnitude: no claims beyond the above; tops include both rare a1->S2 (~0.7-0.8 of max) and common a2->S2 (~0.9-1.0).",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 25,
+    "predicate": "(phase == D2) & (in_state == 2) & (in_action == 1) & (value < 7.7)",
+    "split": "test",
+    "precision": 0.7650280559508148,
+    "recall": 0.8414043583535109,
+    "f1": 0.8014005877968866,
+    "mass_recall": 0.8674429225006184,
+    "correlation": 0.6922723188593433,
+    "n_active": 33866,
+    "n_predicted": 37247,
+    "coverage_by_activation_quartile": [
+      0.7548128026455652,
+      0.8635880477146569,
+      0.8736120954405858,
+      0.8736120954405858
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 25,
+    "predicate": "(phase == D2) & (in_state == 2) & (in_action == 1) & (value < 7.7)",
+    "split": "dev",
+    "precision": 0.7783171521035599,
+    "recall": 0.869667810737926,
+    "f1": 0.8214606188670508,
+    "mass_recall": 0.8930236461943635,
+    "correlation": 0.7108302001717282,
+    "n_active": 32632,
+    "n_predicted": 36462,
+    "coverage_by_activation_quartile": [
+      0.7941897523902918,
+      0.8826918362343712,
+      0.9025496445207158,
+      0.8992400098063251
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 25,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold. All activation is at D2 with in_state == 2 (D1, GO and S1 have 0 activations). in_action == 1 carries 89.4% of the mass. Dev scores reproduce exactly: P 0.778, R 0.870, F1 0.821, mass 0.893. Test F1 is 0.801. In the a1 -> S2 case, value >= 7.7 almost never fires (P 0.035, mass 0.001).",
+      "The residual claim is wrong. The explanation says the common a2 -> S2 activations 'include the strongest activations (about 0.9-1.0 of max), usually when S1 is the good state'. In fact, a2 -> S2 coverage is skewed toward the WEAKEST activations: by activation quartile it is [0.166, 0.117, 0.097, 0.101]. a2 -> S2 with good == 1 has only 4.7% of mass (P 0.087), less than half of the 10.6% a2 mass.",
+      "Systematic miss class: the a2 -> S2 activations are mostly switch trials where the previous choice was a1 (prev_action == 1): P 0.279 on dev and mass 0.071 of 0.106. By contrast, a2 -> S2 after a2 has P 0.008. So the residual is 'S2 shown right after the agent switched away from a1', not 'S1 good'.",
+      "Systematic false-positive class: a1 -> S2 right after an a2 choice (prev_action == 2) rarely fires (dev P 0.23; test P 0.24). The unit tracks 'S2 reached while recent choices were a1', not rarity of the current transition alone. Overall prev_action == 1 holds 82% of mass and prev_action == 2 holds 3%.",
+      "Value acts as a graded magnitude variable, which the explanation does not claim. With value < 7.0, coverage is [0.155, 0.207, 0.42, 0.934] across activation quartiles, so lower value means stronger firing.",
+      "Including the switch-from-a1 class gives a modest gain: test F1 0.820 vs 0.801 and mass 0.935 vs 0.867. The base predicate is a reasonable core description, but the explanation's account of the residual is factually wrong."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2: S2 shown when the recent choice was a1 (rare a1->S2, or a switch a1->a2 reaching S2), stronger the lower the value",
+    "better_predicate": "(phase == D2) & (in_state == 2) & ((in_action == 1) & (prev_action != 2) | (prev_action == 1)) & (value < 7.7)",
+    "better_predicate_test_f1": 0.82
+  },
+  "final_label": "D2: S2 shown when the recent choice was a1 (rare a1->S2, or a switch a1->a2 reaching S2), stronger the lower the value"
+}

@@ -1,0 +1,112 @@
+{
+ "label": "GO-only: rises with belief S1 is good and after a1 choices that went unrewarded.",
+ "short_terms": "(phase == GO) * belief_lo ;; (phase == GO) * (prev_action == 1) * ((prev_reward == 0) + (tv('reward', -2) == 0)) ;; (phase == GO) * last_is('a1 S2 r')",
+ "terms": "(phase == GO) * belief_lo ;; (phase == GO) * (prev_action == 1) * (prev_reward == 0) ;; (phase == GO) * last_is(\"a1 S2 u\") ;; (phase == GO) * (prev_action == 1) * belief_lo ;; (phase == GO) * (prev_action == 1) * (tv(\"reward\", -2) == 0) ;; (phase == GO) * (tv(\"action\", -2) == 1) ;; (phase == GO) * (prev_action == 1) * (tv(\"action\", -2) == 1) ;; (phase == GO) * (prev_reward == 0) * belief_lo",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Silent at D1 and D2; at GO its magnitude (baseline decaying over the episode) grows with the ideal-observer log-odds that S1 is good, and is boosted when the previous choice was a1 and the last one or two trials were unrewarded, most strongly after a1 S2 unrewarded (the model-based cue to repeat a1). It is low after a1 S2 r, a2 S1 r/u and a2 S2 r (cues pointing to a2). Read as an a1-at-GO preference carrier built from observed history. Short form test 0.40 vs free fit 0.44 (92%); the free fit adds a little (prev a1 x belief, two-back action interactions). Remaining misses are episodes where it fires ~2 at every GO regardless of recent outcomes, i.e. a sustained a1 bias not captured by belief or the last two trials. No future variables used.",
+ "full_test_scores": {
+  "gate": "hidden",
+  "feature": 88,
+  "terms": [
+   "(phase == GO) * belief_lo",
+   "(phase == GO) * (prev_action == 1) * (prev_reward == 0)",
+   "(phase == GO) * last_is(\"a1 S2 u\")",
+   "(phase == GO) * (prev_action == 1) * belief_lo",
+   "(phase == GO) * (prev_action == 1) * (tv(\"reward\", -2) == 0)",
+   "(phase == GO) * (tv(\"action\", -2) == 1)",
+   "(phase == GO) * (prev_action == 1) * (tv(\"action\", -2) == 1)",
+   "(phase == GO) * (prev_reward == 0) * belief_lo"
+  ],
+  "weights": [
+   0.09556115862529131,
+   0.3674423804094165,
+   0.377673625134341,
+   0.014039596901084594,
+   0.5697382208378059,
+   -0.05770488318999214,
+   -0.2164755685636168,
+   0.02081085735842516
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.4386497759750415,
+  "r2": 0.5547358500570501,
+  "r2_timing_only": 0.2067979473663616
+ },
+ "gate": "hidden",
+ "feature": 88,
+ "test_scores": {
+  "gate": "hidden",
+  "feature": 88,
+  "terms": [
+   "(phase == GO) * belief_lo",
+   "(phase == GO) * (prev_action == 1) * ((prev_reward == 0) + (tv('reward', -2) == 0))",
+   "(phase == GO) * last_is('a1 S2 r')"
+  ],
+  "weights": [
+   0.09222672731798484,
+   0.5762852593007293,
+   -0.565633467515765
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.40815459698205125,
+  "r2": 0.53054701148438,
+  "r2_timing_only": 0.2067979473663616
+ },
+ "dev_scores": {
+  "gate": "hidden",
+  "feature": 88,
+  "terms": [
+   "(phase == GO) * belief_lo",
+   "(phase == GO) * (prev_action == 1) * ((prev_reward == 0) + (tv('reward', -2) == 0))",
+   "(phase == GO) * last_is('a1 S2 r')"
+  ],
+  "weights": [
+   0.09222672731798484,
+   0.5762852593007293,
+   -0.565633467515765
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.426890000401706,
+  "r2": 0.5462747996504143,
+  "r2_timing_only": 0.20831044534624743
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The label says the feature rises 'after a1 choices that went unrewarded', which misleads. Residuals at GO by previous trial: a1 S1 r +0.25, a1 S1 u +0.34, a1 S2 u +1.08, a1 S2 r -0.36. So common a1 trials raise it whether or not they were rewarded. The one a1 outcome that switches it off is rare-rewarded (a1 S2 r). Someone reading only the label would predict wrongly that it is low after a1 S1 r.",
+   "Large systematic error in the recorded short form. misses shows GO after a1 S2 r over-predicted by -0.50. The explanation says it is low after a1 S2 r, but the short form predicts it high there, because the (prev_action==1)*(tv('reward',-2)==0) part still fires when the last trial was a1 S2 r.",
+   "A second systematic error that every short form I tried leaves in: GO after a2 S1 r over-predicted by about -0.33 (and a2 S2 u by -0.21). After a2 S1 r, belief_lo rises toward S1, but the feature is off (residual -0.34). So 'rises with belief S1 is good' only holds when the previous choice was not a2. The explanation lists a2 S1 r as low, but the scored model does not reproduce it.",
+   "Some checks passed. The feature is GO-only (D1/D2 residuals are around 1e-4). The belief_lo effect rises steadily across GO belief deciles (-0.35 to +0.61). The two-back-unrewarded part is a real effect, not a window-position artefact: adding rel==-3 / rel==-2 terms changes test R^2 by only 0.002, and their weights are about 0. Taking out the 2-back reward drops test R^2 from 0.405 to 0.365. No future variables are used.",
+   "Alternative short form: replace last_is('a1 S2 u') with last_is('a1 S2 r'). Test R^2 beyond timing is 0.408, against 0.405 recorded. Weights: belief +0.09, a1 x unrewarded count +0.58, a1 S2 r -0.57. This removes the -0.50 a1 S2 r error. What remains is a smaller under-prediction after a1 S2 u (+0.23) and the a2 S1 r error (-0.34). Both forms reach about 92% of the free fit (0.44). A free fit that adds belief_cover reaches 0.437 (weight negative: the feature is higher when the belief rests on less history)."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "GO-only: rises with belief S1 is good and after a1 trials, more if unrewarded; off after a1 rare-rewarded.",
+  "better_short_terms": "(phase == GO) * belief_lo ;; (phase == GO) * (prev_action == 1) * ((prev_reward == 0) + (tv('reward', -2) == 0)) ;; (phase == GO) * last_is('a1 S2 r')",
+  "better_short_terms_test_r2_beyond_timing": 0.40815459698205125
+ },
+ "final_label": "GO-only: rises with belief S1 is good and after a1 trials, more if unrewarded; off after a1 rare-rewarded.",
+ "original_short_terms": "(phase == GO) * belief_lo ;; (phase == GO) * (prev_action == 1) * ((prev_reward == 0) + (tv(\"reward\", -2) == 0)) ;; (phase == GO) * last_is(\"a1 S2 u\")",
+ "original_test_scores": {
+  "gate": "hidden",
+  "feature": 88,
+  "terms": [
+   "(phase == GO) * belief_lo",
+   "(phase == GO) * (prev_action == 1) * ((prev_reward == 0) + (tv(\"reward\", -2) == 0))",
+   "(phase == GO) * last_is(\"a1 S2 u\")"
+  ],
+  "weights": [
+   0.08681887560797884,
+   0.38850570416543295,
+   0.4360897858621072
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.4047591398529089,
+  "r2": 0.5278537279199148,
+  "r2_timing_only": 0.2067979473663616
+ },
+ "terms_from": "skeptic"
+}

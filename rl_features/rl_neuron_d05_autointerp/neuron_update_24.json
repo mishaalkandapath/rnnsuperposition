@@ -1,0 +1,105 @@
+{
+  "label": "D2 after choosing a2, previous trial rewarded, early-to-mid episode (trials ~5-55)",
+  "predicate": "(phase==D2)&(in_action==2)&(prev_reward==1)&(prev_common!=0)&(ep_trial>=5)&(ep_trial<55)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Update-gate unit that fires only at D2 (never at D1 or GO), and almost only when the action just taken (in_action at D2) was a2 (99.9% of activation mass). Rate is further gated by the previous trial having been rewarded (prev_reward=1 carries 98.6% of mass) and by episode time: it is strongly active in trials ~10-50, weaker in 0-9, fades by 50-59 and is silent after trial 60, so it seems to track slow drift in the hidden state across the episode, not any input. Correlates: good=S2 and high value (the a2-rewarded regime). It does not fire after a1 choices, after unrewarded previous trials (mostly), or in late episodes. Reached state (S1 vs S2) and common/rare only mildly change the rate. Phase+a2 alone has recall 0.999 but precision 0.28; adding prev_reward and the episode-time window gives dev F1 0.83, mass recall 0.97. All variables are observed (ep_trial is not an input, but it is a past/internal quantity, not a future one).",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 24,
+    "predicate": "(phase==D2)&(in_action==2)&(prev_reward==1)&(prev_common!=0)&(ep_trial>=5)&(ep_trial<55)",
+    "split": "test",
+    "precision": 0.8717863216512721,
+    "recall": 0.9051691306304747,
+    "f1": 0.8881641527381438,
+    "mass_recall": 0.9727126622198045,
+    "correlation": 0.8207077502589338,
+    "n_active": 57766,
+    "n_predicted": 59978,
+    "coverage_by_activation_quartile": [
+      0.6553108987674837,
+      0.9792964963301481,
+      0.9927982826674053,
+      0.9932830136417146
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 24,
+    "predicate": "(phase==D2)&(in_action==2)&(prev_reward==1)&(prev_common!=0)&(ep_trial>=5)&(ep_trial<55)",
+    "split": "dev",
+    "precision": 0.8807568176772937,
+    "recall": 0.8995901281939479,
+    "f1": 0.890073859322151,
+    "mass_recall": 0.9727256826118688,
+    "correlation": 0.8259551242247425,
+    "n_active": 57335,
+    "n_predicted": 58561,
+    "coverage_by_activation_quartile": [
+      0.6317845681596205,
+      0.97886144830473,
+      0.9921166457374075,
+      0.9956045489429987
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 24,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The label leaves out a systematic gate: the previous trial's transition. Inside the original predicate, the slice with prev_common==0 (previous trial rare and rewarded) has precision 0.009 and mass recall 0.0005 on dev, so the unit is essentially silent there. With prev_common==1, precision is 0.89. These rare-rewarded previous trials are the main source of the original predicate's false positives (precision 0.77 dev / 0.755 test).",
+      "The explanation says common vs rare 'change the rate only a little'. That holds for the current trial's transition (common 0: rate 0.054; common 1: 0.049). It is badly wrong for the previous trial's transition, which is the deciding variable once prev_reward==1. Unrewarded previous trials behave the same way: (D2 & a2 & prev_reward==0 & prev_common==1) has zero activations, and the small leftover prev_reward==0 activity (about 1% of the mass) comes from prev rare-unrewarded trials (precision 0.12).",
+      "In practice the unit fires at D2 after an a2 choice that follows a previous a2->S2 common, rewarded trial. prev_action==1 holds only 0.1% of the mass, and (D2 & a2 & prev_reward==1 & prev_state==1) has precision 0.002. Read with the residual prev rare-unrewarded activity, the pattern looks like 'staying on a2 after outcome evidence that S2 is good', not just 'previous trial rewarded'.",
+      "Checks that held up: no activity at D1 or GO (0 of 380k steps each). in_action==2 holds 99.9% of the mass. prev_reward==1 holds 98.6%. The episode-position pattern is as described: 0.067 for trials 0-9, about 0.11 for 10-29, 0.026 for 50-59, about 0 from 60 on. good==1 is strongly suppressive (precision 0.32 inside the predicate).",
+      "The original test scores reproduce exactly (P 0.755, R 0.907, F1 0.824, mass recall 0.973).",
+      "Tool oddity, not used as evidence: the profile's 'top activating windows' show core cells labelled a1 with activation 1.00. Scoring contradicts this (only 52 active steps with in_action==1, 0.1% of the mass), and the header reports magnitude mean/max as 0.000. The window rendering or magnitude display looks unreliable for this unit, so all conclusions above rest on the scores."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after choosing a2, when the previous trial was common and rewarded (not rare), early-to-mid episode (trials ~5-55)",
+    "better_predicate": "(phase==D2)&(in_action==2)&(prev_reward==1)&(prev_common!=0)&(ep_trial>=5)&(ep_trial<55)",
+    "better_predicate_test_f1": 0.888
+  },
+  "final_label": "D2 after choosing a2, when the previous trial was common and rewarded (not rare), early-to-mid episode (trials ~5-55)",
+  "original_predicate": "(phase == D2) & (in_action == 2) & (prev_reward == 1) & (ep_trial >= 5) & (ep_trial < 55)",
+  "original_test_scores": {
+    "gate": "neuron_update",
+    "feature": 24,
+    "predicate": "(phase == D2) & (in_action == 2) & (prev_reward == 1) & (ep_trial >= 5) & (ep_trial < 55)",
+    "split": "test",
+    "precision": 0.7551502919339724,
+    "recall": 0.9067790741958938,
+    "f1": 0.8240476359031236,
+    "mass_recall": 0.9732989359554373,
+    "correlation": 0.760271842284805,
+    "n_active": 57766,
+    "n_predicted": 69365,
+    "coverage_by_activation_quartile": [
+      0.6602963578451738,
+      0.9803351336380003,
+      0.993075271795582,
+      0.9934215082058029
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_update",
+    "feature": 24,
+    "predicate": "(phase == D2) & (in_action == 2) & (prev_reward == 1) & (ep_trial >= 5) & (ep_trial < 55)",
+    "split": "dev",
+    "precision": 0.7726470412253934,
+    "recall": 0.9008982297026249,
+    "f1": 0.8318584070796461,
+    "mass_recall": 0.973219760711392,
+    "correlation": 0.7703190965228087,
+    "n_active": 57335,
+    "n_predicted": 66852,
+    "coverage_by_activation_quartile": [
+      0.6358308915864378,
+      0.9794195618808428,
+      0.9926747593135203,
+      0.9956743180073955
+    ]
+  },
+  "predicate_from": "skeptic"
+}

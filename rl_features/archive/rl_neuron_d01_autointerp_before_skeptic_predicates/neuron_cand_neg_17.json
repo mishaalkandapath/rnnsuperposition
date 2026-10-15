@@ -1,0 +1,65 @@
+{
+  "label": "a2 -> S2 common transition at D2, early in the episode (first ~12 trials)",
+  "predicate": "(phase == D2) & (state == 2) & (action == 2) & (ep_trial < 12)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires almost only at D2 (99.9% of mass), and only when the agent chose a2 and landed in S2 (a common transition): in_action=2 and in_state=2 together hold 99.5% of mass. It never fires on S1, on rare a1->S2, at GO, or after trial ~20 of the episode. It is strongly restricted to early-episode trials (81% of mass in trials 0-9, 19% in 10-19, none later). Within that, it is stronger and more frequent when S2 started as the good state (start_high=0, 89% of mass), when the previous trial was unrewarded, and when the value head is high. Its rate drops with ep_trial, so the ep_trial<12 cutoff is an approximation of a decaying early-episode transient. Without the time cutoff, a2->S2 at D2 alone gets recall 0.98 but precision 0.07. Dev scores: ep_trial<12 gives F1 0.80 (P 0.78, R 0.82, mass 0.90), and <15 gives F1 0.75. Uses only variables observed at D2.",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 17,
+    "predicate": "(phase == D2) & (state == 2) & (action == 2) & (ep_trial < 12)",
+    "split": "test",
+    "precision": 0.7713880573499291,
+    "recall": 0.8098585724919362,
+    "f1": 0.7901553358886424,
+    "mass_recall": 0.8981095540921047,
+    "correlation": 0.7229599932257953,
+    "n_active": 12091,
+    "n_predicted": 12694,
+    "coverage_by_activation_quartile": [
+      0.5931194177968905,
+      0.8160767449553423,
+      0.8484948726430698,
+      0.9818001323626737
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 17,
+    "predicate": "(phase == D2) & (state == 2) & (action == 2) & (ep_trial < 12)",
+    "split": "dev",
+    "precision": 0.7788494077834179,
+    "recall": 0.8225518227305219,
+    "f1": 0.8001042934121328,
+    "mass_recall": 0.9031669003988471,
+    "correlation": 0.7255044632184848,
+    "n_active": 11192,
+    "n_predicted": 11820,
+    "coverage_by_activation_quartile": [
+      0.6272337383845604,
+      0.8316654753395283,
+      0.8516797712651895,
+      0.9796283059328091
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 17,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I reproduced every reported score. Dev: P 0.779, R 0.823, F1 0.800, mass 0.903. Test: P 0.771, R 0.810, F1 0.790, mass 0.898.",
+      "The factual claims hold. D2 carries 99.9% of the mass. GO has 0 active steps out of 380,619. D2 with state==1 never fires (F1 0). The rare a1->S2 case holds 0.07% of mass (P 0.001). D2 with S2 at ep_trial>=20 has no activations (F1 0). By ep_trial bin, 81% of mass falls in trials 0-9, 19% in 10-19 and only 3 steps after that. start_high=0 holds 89% of mass.",
+      "The time cutoff hides a gradual decay, as the explanation itself admits. Per-trial precision of a2->S2 at D2 is 1.00 at trial 0, about 0.85 at trials 3-8, 0.64 at 10, 0.51 at 11, 0.40 at 12, 0.14 at 14 and 0.07 at 18. Activation also shrinks across consecutive rewarded a2->S2 trials (for example 0.31, 0.23, 0.15, 0.06 in one window).",
+      "One miss class is systematic but small. Firing in trials 12-19 happens almost only after an unrewarded previous trial. a2->S2 at D2 in trials 12-19 with prev_reward==0 has P 0.35 and holds 8.7% of mass; with prev_reward==1 it has P 0.036 and 0.5% of mass. Adding this class to the predicate, as B & ((ep_trial<12) | ((ep_trial<20) & (prev_reward==0))), raises test mass recall from 0.898 to 0.990 but leaves F1 about the same (0.781 vs 0.790). The explanation mentions the effect of a missing previous reward only in general terms.",
+      "Many false positives come from episodes where S1 started out good. Within trials <12, start_high==1 has P 0.495 and holds only 9% of mass. The explanation covers this, but the label does not. Requiring start_high==0 raises precision to 0.838 but lowers test F1 to 0.755, so the simpler predicate is a reasonable choice.",
+      "Neither the predicate nor the label uses future variables, so there is no overclaiming. 'Common' in the label is correct: action==2 & state==2 implies a common transition.",
+      "Verdict: upheld. I found no systematic class of counterexamples large enough to change the verdict."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == 2) & (state == 2) & (action == 2) & ((ep_trial < 12) | ((ep_trial < 20) & (prev_reward == 0)))",
+    "better_predicate_test_f1": 0.781
+  }
+}

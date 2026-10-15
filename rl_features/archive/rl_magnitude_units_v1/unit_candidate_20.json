@@ -1,0 +1,82 @@
+{
+  "label": "Late-episode drop, gated by last state S1 (up), a2/reward (down); D2 a2->S1 rare deep dip",
+  "terms": "(phase == D1) * (prev_state == S1) * (ep_trial/100.0)**8 ;; (phase == D1) * (prev_action == 2) * (ep_trial/100.0)**8 ;; (phase == D1) * (prev_reward == 1) * (ep_trial/100.0)**8 ;; (phase == D2) * (state == S1) * (ep_trial/100.0)**8 ;; (phase == D2) * (action == 2) * (ep_trial/100.0)**8 ;; (phase == D2) * (state == S1) * (action == 2) * (ep_trial/100.0)**8 ;; (phase == D1) * (prev_state == S1) ;; (phase == D2) * (state == S1) * (action == 2)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw GRU candidate n of unit 20 sits near +1 at GO throughout, and at D1 and D2 for most of the episode. It drops sharply over the last ~10-15 trials of the episode (timing alone gives R^2 0.71). How deep that late drop goes depends on observed trial content, and the effect grows with ep_trial (shape (ep_trial/100)^8). At D1 the value stays higher when the previous trial reached S1, and lower when the previous choice was a2 or the previous trial was rewarded. At D2 it stays higher when S1 is reached, except for a2->S1 (rare): that case gives the deepest dip, down to about -0.4 near trial 97-99. Before the late period only small offsets remain: D1 higher after reaching S1 (about +0.04 to +0.09 per the residual tables). GO is barely affected. The finer timing alone (phase x late-ramp, no content) adds only 0.015, so the gain comes from the content x lateness interactions. The additive profile cues (ceiling all = 0.33) miss this because they are not interacted with time in the episode. All terms are observed (previous-trial outcome at D1, this trial choice/state at D2). Value, policy and hidden good state were not needed. Dev R^2 beyond timing 0.59; test 0.57 (8 terms).",
+  "gate": "unit_candidate",
+  "feature": 20,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 20,
+    "terms": [
+      "(phase == D1) * (prev_state == S1) * (ep_trial/100.0)**8",
+      "(phase == D1) * (prev_action == 2) * (ep_trial/100.0)**8",
+      "(phase == D1) * (prev_reward == 1) * (ep_trial/100.0)**8",
+      "(phase == D2) * (state == S1) * (ep_trial/100.0)**8",
+      "(phase == D2) * (action == 2) * (ep_trial/100.0)**8",
+      "(phase == D2) * (state == S1) * (action == 2) * (ep_trial/100.0)**8",
+      "(phase == D1) * (prev_state == S1)",
+      "(phase == D2) * (state == S1) * (action == 2)"
+    ],
+    "weights": [
+      0.4320140017335331,
+      -0.2710518384292604,
+      -0.22078545934182683,
+      0.24501947967780188,
+      -0.07704901343720827,
+      -0.9158366802510227,
+      0.044805349075692134,
+      -0.005582419132499669
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5709676715543064,
+    "r2": 0.8759191355571316,
+    "r2_timing_only": 0.7107890100207814
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 20,
+    "terms": [
+      "(phase == D1) * (prev_state == S1) * (ep_trial/100.0)**8",
+      "(phase == D1) * (prev_action == 2) * (ep_trial/100.0)**8",
+      "(phase == D1) * (prev_reward == 1) * (ep_trial/100.0)**8",
+      "(phase == D2) * (state == S1) * (ep_trial/100.0)**8",
+      "(phase == D2) * (action == 2) * (ep_trial/100.0)**8",
+      "(phase == D2) * (state == S1) * (action == 2) * (ep_trial/100.0)**8",
+      "(phase == D1) * (prev_state == S1)",
+      "(phase == D2) * (state == S1) * (action == 2)"
+    ],
+    "weights": [
+      0.4320140017335331,
+      -0.2710518384292604,
+      -0.22078545934182683,
+      0.24501947967780188,
+      -0.07704901343720827,
+      -0.9158366802510227,
+      0.044805349075692134,
+      -0.005582419132499669
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5900061907385559,
+    "r2": 0.8767228864318414,
+    "r2_timing_only": 0.6993195731656829
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced: the 8 terms score test R^2 beyond timing 0.571 (dev 0.59), above the 'all' additive ceiling of 0.33. All terms use observed variables only.",
+      "The claim that finer timing adds little holds up: phase x (ep_trial/100)^8 with no content scores only 0.006 on test.",
+      "The late-episode content effect does not depend on the exact shape. Exponent 5 gives 0.568, 8 gives 0.571, 16 gives 0.528. Using 6 late terms only (no non-late offsets) gives 0.539.",
+      "Minor: the non-late term (phase==D2)*(state==S1)*(action==2) gets weight -0.006, so it does almost nothing. The two non-late terms together add only about 0.03.",
+      "Misses show no large systematic class. Mean error by phase is at most 0.008. The largest per-pattern errors are D1 after a1 S2 r (-0.042) and D1 after a2 S2 r (-0.032). The worst windows are late-episode runs of a2 choices where the dip is deeper than predicted, plus GO at t99 dropping (about 0.39 vs 0.91 predicted). This points to some unmodelled multi-trial history.",
+      "Attempts to capture that leftover failed. Adding two-back choice, GO-phase late terms, reward or state counts from earlier trials, a very steep late GO term, or value/choice x late gave 0.54 to 0.57 at most. The best variant (an extra ep^4 shape) reached 0.588. The leftover is not something a simple extra term picks up."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_terms": null,
+    "better_terms_test_r2_beyond_timing": null
+  }
+}

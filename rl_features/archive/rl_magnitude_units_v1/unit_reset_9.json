@@ -1,0 +1,83 @@
+{
+  "label": "high when policy leans a2 / just chose a2; raised by previous reward at D1",
+  "terms": "(phase == D1) * choice ;; (phase == GO) * choice ;; (phase == D2) * choice ;; (phase == D1) * prev_reward ;; (phase == D2) * (action == 2) ;; (phase == D2) * (state == 2) ;; (phase == GO) * (prev_action == 2) ;; (phase == D2) * last_is(\"a1 S1 r\")",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r9 is mostly timing (high at D1/D2, low at GO, falling over the episode; timing R^2 0.81). Beyond timing, its magnitude tracks the agent's lean toward a2: it falls as the policy logit(a1)-logit(a2) rises, at every phase (biggest at D1 and D2). At D2 it is also higher after choosing a2 and a bit lower when S2 is reached (so a2->S1 rare is highest), and it drops by a lot at D2 after a previous a1 S1 rewarded trial. At D1 the previous reward raises it; at GO a previous a2 choice raises it. Value and trials since reversal add almost nothing. All terms are observable or model-internal (no future variables). Test R^2 beyond timing 0.80 (all ceiling 0.90, all observed 0.80); observed-only, without the policy logit, prev_action/prev_reward/action/state terms reach about 0.58-0.63 on dev.",
+  "gate": "unit_reset",
+  "feature": 9,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 9,
+    "terms": [
+      "(phase == D1) * choice",
+      "(phase == GO) * choice",
+      "(phase == D2) * choice",
+      "(phase == D1) * prev_reward",
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * (state == 2)",
+      "(phase == GO) * (prev_action == 2)",
+      "(phase == D2) * last_is(\"a1 S1 r\")"
+    ],
+    "weights": [
+      -0.022448893128662585,
+      -0.006298974818494226,
+      -0.025171335560778867,
+      0.07174584973583197,
+      0.06423470081693052,
+      -0.02900924389445742,
+      0.035237362203316164,
+      -0.12056864099117309
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8017134292011112,
+    "r2": 0.9630936194338433,
+    "r2_timing_only": 0.8138735244779192
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 9,
+    "terms": [
+      "(phase == D1) * choice",
+      "(phase == GO) * choice",
+      "(phase == D2) * choice",
+      "(phase == D1) * prev_reward",
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * (state == 2)",
+      "(phase == GO) * (prev_action == 2)",
+      "(phase == D2) * last_is(\"a1 S1 r\")"
+    ],
+    "weights": [
+      -0.022448893128662585,
+      -0.006298974818494226,
+      -0.025171335560778867,
+      0.07174584973583197,
+      0.06423470081693052,
+      -0.02900924389445742,
+      0.035237362203316164,
+      -0.12056864099117309
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8089499738504726,
+    "r2": 0.9640712274079015,
+    "r2_timing_only": 0.8119404989561299
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claimed terms reproduce test R^2 beyond timing of 0.8017. The main claims hold: the policy-logit terms alone give 0.633, adding D1 prev_reward gives 0.704, and the D2 action, state and last_is('a1 S1 r') terms bring it to 0.797.",
+      "The GO prev_action==2 claim is close to irrelevant. Dropping that term only moves test R^2 from 0.802 to 0.797, so the label gives it more weight than it carries.",
+      "'Drops as the policy logit rises at every phase' is not monotonic at D1. The D1 residual by policy decile is -0.006, +0.026, +0.09, +0.11, +0.02, -0.03, -0.07, -0.13, peaking in deciles 3-4, and adding a choice^2 term at D1 gives a small gain (0.804).",
+      "There is a missed systematic D1 effect: it is lowest after unrewarded trials that reached S1. The D1 residual is -0.181 after a1 S1 u, and the misses rank D1 after a1 S1 u (-0.086) and after a2 S1 u (-0.075) as the worst over-predictions. Adding (phase==D1)*(prev_state==1)*(prev_reward==0) in place of the GO prev_action term raises test R^2 to 0.829.",
+      "The framing that it is 'policy-driven' is somewhat overstated. The observed-only reference tables ('all observed') already reach 0.80 on test, the same as the claimed terms, so the logit mostly stands in for trial history rather than adding anything beyond it. This contradicts the explanation's line that observed-only variables reach only about 0.58-0.63.",
+      "Some systematic errors remain but are small (|err| < 0.06 against a std of 0.26): D1 after a1 S2 u is under-predicted by 0.058, D2 after a1 S1 u and after a2 S1 r are over-predicted by 0.058, and the worst-fit windows sit at the end of the episode (trials 92-99)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "high when the policy leans a2 / just chose a2; raised by the previous reward at D1, lowest at D1 after an unrewarded trial that reached S1",
+    "better_terms": "(phase == D1) * choice ;; (phase == GO) * choice ;; (phase == D2) * choice ;; (phase == D1) * prev_reward ;; (phase == D1) * (prev_state == 1) * (prev_reward == 0) ;; (phase == D2) * (action == 2) ;; (phase == D2) * (state == 2) ;; (phase == D2) * last_is('a1 S1 r')",
+    "better_terms_test_r2_beyond_timing": 0.8293
+  },
+  "final_label": "high when the policy leans a2 / just chose a2; raised by the previous reward at D1, lowest at D1 after an unrewarded trial that reached S1"
+}

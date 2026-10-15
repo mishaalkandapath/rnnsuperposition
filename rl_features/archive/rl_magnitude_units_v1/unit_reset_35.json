@@ -1,0 +1,81 @@
+{
+  "label": "D1 reset high after rewarded S1, low after unrewarded S2; deeper late in episode",
+  "terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_state == 2) ;; (phase == D1) * (prev_reward == 1) * (prev_state == 2) ;; (phase == GO) * (prev_action == 2) ;; (phase == GO) * (prev_reward == 1) ;; (phase == D2) * (action == 2) ;; (phase == GO) * choice ;; (phase == D1) * (prev_reward != 1) * ep_dec * (1 + (tv(\"reward\", -2) != 1))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r of unit 35 (timing alone R^2 0.79; it falls through the episode, lowest at GO). Beyond timing it is driven mainly at D1 by the last trial outcome x reached state: rewarded raises it (~+0.13), reaching S2 lowers it (~-0.18), with a positive interaction so S1-rewarded is highest and S2-unrewarded lowest (a1 S2 u -0.23, a2 S2 u -0.19). Unrewarded D1 dips grow with episode time and when the trial before was also unrewarded. At GO it is higher after an a2 choice and slightly lower after reward, and decreases with the policy logit toward a1 (graded choice term); at D2 it is slightly higher when a2 was chosen. Value, hidden good state and since-reversal add little. Dev R^2 beyond timing 0.785 with 8 terms (0.71 with the 6 last-trial terms only); test ~0.78 vs all ceiling 0.81. No future variables used (choice is the model policy at GO).",
+  "gate": "unit_reset",
+  "feature": 35,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 35,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_state == 2)",
+      "(phase == D1) * (prev_reward == 1) * (prev_state == 2)",
+      "(phase == GO) * (prev_action == 2)",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == D2) * (action == 2)",
+      "(phase == GO) * choice",
+      "(phase == D1) * (prev_reward != 1) * ep_dec * (1 + (tv(\"reward\", -2) != 1))"
+    ],
+    "weights": [
+      0.11436275252830529,
+      -0.1417692519302921,
+      0.07303351905486928,
+      0.04697275631979234,
+      -0.027778654457115377,
+      0.035521931465756815,
+      -0.004097881705757868,
+      -0.007189630435063166
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7818913341339466,
+    "r2": 0.9552454475585294,
+    "r2_timing_only": 0.7948061702924007
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 35,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_state == 2)",
+      "(phase == D1) * (prev_reward == 1) * (prev_state == 2)",
+      "(phase == GO) * (prev_action == 2)",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == D2) * (action == 2)",
+      "(phase == GO) * choice",
+      "(phase == D1) * (prev_reward != 1) * ep_dec * (1 + (tv(\"reward\", -2) != 1))"
+    ],
+    "weights": [
+      0.11436275252830529,
+      -0.1417692519302921,
+      0.07303351905486928,
+      0.04697275631979234,
+      -0.027778654457115377,
+      0.035521931465756815,
+      -0.004097881705757868,
+      -0.007189630435063166
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.785174507756332,
+    "r2": 0.9565997558472898,
+    "r2_timing_only": 0.7979744224047534
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The 'trial before also unrewarded' factor uses tv('reward',-2) != 1, which also counts the window-edge 'unknown' value (-9) as unrewarded. Using == 0 instead drops test R^2 from 0.782 to 0.774. Adding an explicit (trial==0) edge bump raises it to 0.786. So part of that gain is a window-edge effect, not a real two-unrewarded effect. The misses output agrees: D1 after '?' is over-predicted by 0.034.",
+      "Small leftover errors remain, all at about the size of the residual noise (std about 0.04 after the fit). GO after S2-unrewarded is under-predicted by +0.036 to +0.043. D2 after an unrewarded a1 trial is over-predicted by about 0.03. D1 after a1 S2 r is over-predicted by 0.040. No large systematic class.",
+      "The policy (choice) term also matters at D2, not only at GO. Using (phase != D1) * choice raises test R^2 from 0.782 to 0.788. The explanation says D2 is 'slightly higher when a2 was chosen', but part of that is graded by the policy logit.",
+      "Each claimed term checked out on test. Removing GO*prev_reward drops R^2 to 0.763. Removing D2*action drops it to 0.769. Removing choice drops it to 0.748. Using ep_dec alone (0.736) or the two-back term alone (0.751) each beats having neither (0.707). The six last-trial terms alone give 0.707, which matches the claimed 0.71."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 reset high after rewarded S1, low after unrewarded S2; dip deepens late in episode and after repeated non-reward",
+    "better_terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_state == 2) ;; (phase == D1) * (prev_reward == 1) * (prev_state == 2) ;; (phase == GO) * (prev_action == 2) ;; (phase == GO) * (prev_reward == 1) ;; (phase == D2) * (action == 2) ;; (phase != D1) * choice ;; (phase == D1) * (prev_reward != 1) * ep_dec * (1 + (tv(\"reward\", -2) == 0) + (tv(\"reward\", -2) < -5) + (trial==0))",
+    "better_terms_test_r2_beyond_timing": 0.7923
+  },
+  "final_label": "D1 reset high after rewarded S1, low after unrewarded S2; dip deepens late in episode and after repeated non-reward"
+}

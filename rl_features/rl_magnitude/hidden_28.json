@@ -1,0 +1,87 @@
+{
+  "label": "At GO in the last ten trials, ramps up with trial number after an unrewarded a2-to-S2 trial.",
+  "short_terms": "(phase == GO) * last_is(\"a2 S2 u\") * np.maximum(ep_trial - 90, 0) ;; (phase == GO) * (ep_dec == 9) * (prev_reward == 1)",
+  "terms": "(phase == GO) * last_is(\"a2 S2 u\") * np.maximum(ep_trial - 90, 0) ;; (phase == GO) * last_is(\"a2 S2 u\") * (ep_dec == 9) ;; (phase == GO) * last_is(\"a1 S2 u\") * np.maximum(ep_trial - 90, 0) ;; (phase == GO) * (prev_reward == 0) * (prev_state == 1) * np.maximum(ep_trial - 90, 0) ;; (phase == GO) * (ep_dec == 9) * (prev_reward == 1) ;; (phase == GO) * last_is(\"a2 S2 u\") * np.maximum(ep_trial - 90, 0) * (tv(\"reward\", -2) == 0) ;; (phase == GO) * (ep_dec == 9) * belief_lo ;; (phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 98)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO in episode trials 90-99. Its magnitude is driven by the previous trial being a2 -> S2 unrewarded (common, no reward), and grows roughly linearly with ep_trial past 90 (about +0.17 per trial, reaching ~1.5-1.7 by trial 97-99). After a rewarded previous trial it is essentially silent (the second term cancels the late-GO timing baseline). Other unrewarded patterns (a1 S2 u, S1 unrewarded) add little; belief_lo, the trial before, and choice/state contribute nothing measurable. The 8-term free fit (dev 0.777) adds only a small saturation at trials 98-99 and minor corrections over the 2-term short form (dev 0.763). Only observed variables are used.",
+  "full_test_scores": {
+    "gate": "hidden",
+    "feature": 28,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 u\") * np.maximum(ep_trial - 90, 0)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_dec == 9)",
+      "(phase == GO) * last_is(\"a1 S2 u\") * np.maximum(ep_trial - 90, 0)",
+      "(phase == GO) * (prev_reward == 0) * (prev_state == 1) * np.maximum(ep_trial - 90, 0)",
+      "(phase == GO) * (ep_dec == 9) * (prev_reward == 1)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * np.maximum(ep_trial - 90, 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * (ep_dec == 9) * belief_lo",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 98)"
+    ],
+    "weights": [
+      0.18502905050578267,
+      -0.02724031104826769,
+      0.01142439092976441,
+      -0.018276598219289314,
+      -0.1058657506028831,
+      -0.002973433406940301,
+      0.000517297148918659,
+      -0.15583946321468747
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7622383366459602,
+    "r2": 0.7864264992619373,
+    "r2_timing_only": 0.10173281207222873
+  },
+  "gate": "hidden",
+  "feature": 28,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 28,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 u\") * np.maximum(ep_trial - 90, 0)",
+      "(phase == GO) * (ep_dec == 9) * (prev_reward == 1)"
+    ],
+    "weights": [
+      0.17154768758272765,
+      -0.10567901133845667
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7484031668688583,
+    "r2": 0.7739988202117566,
+    "r2_timing_only": 0.10173281207222873
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 28,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 u\") * np.maximum(ep_trial - 90, 0)",
+      "(phase == GO) * (ep_dec == 9) * (prev_reward == 1)"
+    ],
+    "weights": [
+      0.17154768758272765,
+      -0.10567901133845667
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7632696612760143,
+    "r2": 0.7849892820522822,
+    "r2_timing_only": 0.09174836184217128
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the ramp is not quite linear. Fitting one weight per trial for a2 S2 u at GO gives 0.04 (t90), 0.13, 0.29, 0.49, 0.71, 0.95, 1.09, 1.24, 1.32 and 1.43 (t99). It rises by about 0.2 per trial early on and flattens after t96. The explanation's '+0.17 per trial' is the fitted average, so it holds.",
+      "The worst-fit windows are mostly at window starts, where the previous trial is unknown ('?') but the shown reward is r0. The feature fires there at 1.3-1.6 and the model predicts about 0.1. This is a gap in the data, not in the interpretation. After a1 S2 u the feature sometimes fires at about 1.0-1.2, but the systematic residual for that pattern is only +0.002. Adding an a1 S2 u ramp term raises test R^2 only from 0.748 to 0.752.",
+      "Pooling all S2-unrewarded trials ((prev_state==S2)*(prev_reward==0)*ramp) drops test R^2 to 0.54, and pooling all unrewarded trials drops it to 0.23. So the claim that the effect is specific to a2 S2 u checks out.",
+      "Removing the second term (prev_reward==1 at GO in the last decile) drops test R^2 to 0.695, so that term does real work: it cancels the timing baseline. A step at trial >= 97 instead of the ramp gives only 0.44, so the ramp is real.",
+      "Adding belief_lo, a reward two trials back (tv('reward',-2)), or an extra decile-9 step for a2 S2 u each adds less than 0.001 test R^2. That confirms the 'adds nothing' claims. No systematic error remains by phase or previous-trial pattern: all cells have mean error at or below 0.011 in absolute value."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  }
+}

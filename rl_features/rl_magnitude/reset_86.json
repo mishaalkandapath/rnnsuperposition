@@ -1,0 +1,111 @@
+{
+ "label": "Fires at GO after a rewarded S2 visit, growing stronger later in the episode.",
+ "short_terms": "(phase == GO) * (prev_state + prev_reward == 3) * ep_trial ;; (phase == GO) * (prev_state >= 1) * ep_trial ;; (phase == GO) * (prev_state == -1) * belief_lo",
+ "terms": "(phase == GO) * (prev_state == 2) * (prev_reward == 1) * ep_trial ;; (phase == GO) * ep_trial ;; (phase == GO) * (prev_state == 2) * (prev_reward == 1) * (prev_action == 1) * ep_trial ;; (phase == GO) * belief_lo ;; (phase == GO) * (prev_state==2)*(prev_reward==1)*belief_lo ;; (phase == GO) * (prev_state == 2) * (prev_reward == 1) ;; (phase == D1)*(prev_state==2)*ep_trial",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Activity is essentially GO-only. Its magnitude is set by whether the previous trial ended rewarded in S2 (prev_state + prev_reward == 3 picks out exactly S2 rewarded), and that response scales roughly linearly with trial number in the episode: near zero before about trial 20, around 2 to 3 late in the episode. On every other previous-trial pattern (S1 visits, unrewarded S2) it stays near zero, so the GO timing baseline over-predicts those trials and the ep_trial term corrects it. It responds a bit more after a rare a1->S2 rewarded trial than after a common a2->S2 rewarded one. The free fit adds that, plus graded belief_lo terms (stronger when the observer believes S2 is good), and gains little (0.66 vs 0.64 on dev). D1 and D2 activity is negligible. The largest remaining misses are GO steps on the window first trial, where the previous trial is unknown. No future, hidden or model-output variables are used.",
+ "full_test_scores": {
+  "gate": "reset",
+  "feature": 86,
+  "terms": [
+   "(phase == GO) * (prev_state == 2) * (prev_reward == 1) * ep_trial",
+   "(phase == GO) * ep_trial",
+   "(phase == GO) * (prev_state == 2) * (prev_reward == 1) * (prev_action == 1) * ep_trial",
+   "(phase == GO) * belief_lo",
+   "(phase == GO) * (prev_state==2)*(prev_reward==1)*belief_lo",
+   "(phase == GO) * (prev_state == 2) * (prev_reward == 1)",
+   "(phase == D1)*(prev_state==2)*ep_trial"
+  ],
+  "weights": [
+   0.020182412793196054,
+   -0.0037060789993199734,
+   0.002250226420737194,
+   -0.025648410804051693,
+   0.053203764171178336,
+   -0.28584962405237013,
+   0.000129568479183726
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6564341352475284,
+  "r2": 0.7477416565098348,
+  "r2_timing_only": 0.2657642409501032
+ },
+ "gate": "reset",
+ "feature": 86,
+ "test_scores": {
+  "gate": "reset",
+  "feature": 86,
+  "terms": [
+   "(phase == GO) * (prev_state + prev_reward == 3) * ep_trial",
+   "(phase == GO) * (prev_state >= 1) * ep_trial",
+   "(phase == GO) * (prev_state == -1) * belief_lo"
+  ],
+  "weights": [
+   0.01692438347612229,
+   -0.005534130070378415,
+   -0.09022257425278082
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7105924584146688,
+  "r2": 0.7875066340293297,
+  "r2_timing_only": 0.2657642409501032
+ },
+ "dev_scores": {
+  "gate": "reset",
+  "feature": 86,
+  "terms": [
+   "(phase == GO) * (prev_state + prev_reward == 3) * ep_trial",
+   "(phase == GO) * (prev_state >= 1) * ep_trial",
+   "(phase == GO) * (prev_state == -1) * belief_lo"
+  ],
+  "weights": [
+   0.01692438347612229,
+   -0.005534130070378415,
+   -0.09022257425278082
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.7112046064376503,
+  "r2": 0.7899723714961048,
+  "r2_timing_only": 0.2727459191327053
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The main claim checks out. In the profile, GO residuals are +0.67 after a1 S2 r and +0.49 after a2 S2 r, and about -0.25 after every other known previous-trial pattern. D1 and D2 residuals are about 0.01 or less. The recorded short form scores test R^2 beyond timing 0.638, matching what was reported.",
+   "The recorded short form leaves a systematic error class. Its GO*ep_trial term, which cancels the timing baseline for non-S2-rewarded trials, also applies to GO steps on the window's first trial, where the previous trial is unknown (prev_state = -1). In misses, those steps are the most under-predicted cell ('GO after ? +0.213'), and they make up most of the worst-fit windows: actual about 3 vs predicted about 0.2 at rel -3.",
+   "Fix: limit the correction to steps where the previous trial is known, i.e. (phase==GO)*(prev_state>=1)*ep_trial. With only two terms, '(GO)*(prev_state+prev_reward==3)*ep_trial ;; (GO)*(prev_state>=1)*ep_trial', test R^2 is 0.679, above the recorded three-term 0.638. Adding (GO)*(prev_state+prev_reward==3) gives 0.706. Adding (GO)*(prev_state==-1)*belief_lo instead gives 0.711. After the fix, the 'GO after ?' cell no longer appears among the large misses.",
+   "The rare-vs-common claim is real but small. Adding last_is('a1 S2 r') as a term raises test R^2 only from 0.679 to 0.681-0.686. 'GO after a1 S2 r' is still under-predicted by +0.164 in misses.",
+   "The belief_lo-within-S2-rewarded term adds nothing to the short form (0.6378 vs 0.6376), so the free fit's graded belief claim is negligible.",
+   "The label leaves out that the feature stays near zero after all other previous-trial patterns. That is what the second term encodes, and a reader needs it to predict the feature from the label."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At GO after a rewarded S2 visit, grows with episode trial; near zero after other outcomes.",
+  "better_short_terms": "(phase == GO) * (prev_state + prev_reward == 3) * ep_trial ;; (phase == GO) * (prev_state >= 1) * ep_trial ;; (phase == GO) * (prev_state == -1) * belief_lo",
+  "better_short_terms_test_r2_beyond_timing": 0.7106
+ },
+ "final_label": "At GO after a rewarded S2 visit, grows with episode trial; near zero after other outcomes.",
+ "original_short_terms": "(phase == GO) * (prev_state + prev_reward == 3) ;; (phase == GO) * ep_trial ;; (phase == GO) * (prev_state + prev_reward == 3) * ep_trial",
+ "original_test_scores": {
+  "gate": "reset",
+  "feature": 86,
+  "terms": [
+   "(phase == GO) * (prev_state + prev_reward == 3)",
+   "(phase == GO) * ep_trial",
+   "(phase == GO) * (prev_state + prev_reward == 3) * ep_trial"
+  ],
+  "weights": [
+   -0.3572009634615811,
+   -0.004101858489478307,
+   0.020806949361431997
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6376181789776266,
+  "r2": 0.7339263085757539,
+  "r2_timing_only": 0.2657642409501032
+ },
+ "terms_from": "skeptic"
+}

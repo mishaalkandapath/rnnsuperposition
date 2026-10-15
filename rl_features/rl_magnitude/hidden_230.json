@@ -1,0 +1,90 @@
+{
+  "label": "Fires at D1 after a rewarded a2->S2 trial, stronger when S2 belief is high, early episode.",
+  "short_terms": "(phase == D1) * last_is(\"a2 S2 r\") ;; (phase == D1) * last_is(\"a2 S2 r\") * belief_lo ;; (phase == D1) * last_is(\"a2 S2 r\") * ep_dec",
+  "terms": "(phase == D1) * last_is(\"a2 S2 r\") ;; (phase == D1) * last_is(\"a2 S2 r\") * belief_lo ;; (phase == D1) * last_is(\"a2 S2 r\") * ep_dec ;; (phase == D1) * last_is(\"a2 S2 r\") * (tv(\"reward\", -2) == 1) ;; (phase == D1) * last_is(\"a2 S2 r\") * (tv(\"action\", -2) == 2) ;; (phase == D1) * belief_lo ;; (phase == D1) * last_is(\"a2 S2 r\") * belief_cover",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Active only at D1 and essentially only when the previous trial was a2 -> S2 (common) rewarded (residual +0.34 vs about -0.14 for every other previous-trial pattern); zero at GO and D2. Within that case the magnitude grows with the observer belief that S2 is good (negative belief_lo) and shrinks across the episode (ep_dec), going silent late in episodes. The free fit adds that a rewarded trial two back raises it while a2 two back lowers it, and a small global belief_lo term; residual misses are a2 S2 r D1s where it is unexpectedly silent mid-to-late episode. Observed-only: no future or model-output variables used.",
+  "full_test_scores": {
+    "gate": "hidden",
+    "feature": 230,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S2 r\")",
+      "(phase == D1) * last_is(\"a2 S2 r\") * belief_lo",
+      "(phase == D1) * last_is(\"a2 S2 r\") * ep_dec",
+      "(phase == D1) * last_is(\"a2 S2 r\") * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * last_is(\"a2 S2 r\") * (tv(\"action\", -2) == 2)",
+      "(phase == D1) * belief_lo",
+      "(phase == D1) * last_is(\"a2 S2 r\") * belief_cover"
+    ],
+    "weights": [
+      0.30526744260169153,
+      -0.12463750879400598,
+      -0.07289939383257064,
+      0.2765239606150475,
+      -0.19892221919285388,
+      -0.02897449024212098,
+      -0.016326607020222796
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.4724280943107627,
+    "r2": 0.5652174841101976,
+    "r2_timing_only": 0.17588008155629853
+  },
+  "gate": "hidden",
+  "feature": 230,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 230,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S2 r\")",
+      "(phase == D1) * last_is(\"a2 S2 r\") * belief_lo",
+      "(phase == D1) * last_is(\"a2 S2 r\") * ep_dec"
+    ],
+    "weights": [
+      0.1739366092640744,
+      -0.17450289695142873,
+      -0.07466164784705737
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.40013033655667984,
+    "r2": 0.5056354618862404,
+    "r2_timing_only": 0.17588008155629853
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 230,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S2 r\")",
+      "(phase == D1) * last_is(\"a2 S2 r\") * belief_lo",
+      "(phase == D1) * last_is(\"a2 S2 r\") * ep_dec"
+    ],
+    "weights": [
+      0.1739366092640744,
+      -0.17450289695142873,
+      -0.07466164784705737
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.4202457663600536,
+    "r2": 0.5285871268410636,
+    "r2_timing_only": 0.18687463444776642
+  },
+  "final_verdict": "partially_explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The basic claims hold up. The residual is +0.338 at D1 after 'a2 S2 r' and -0.13 to -0.14 after every other previous-trial pattern. GO and D2 are exactly 0. The fitted weights point the stated way: belief_lo -0.175 (stronger when S2 belief is high) and ep_dec -0.075 (weaker later in the episode).",
+      "The verdict sits exactly on the line. The recorded short form scores test R^2 beyond timing 0.400. The indicator alone scores 0.279, adding the belief_lo term gives 0.311, and adding the ep_dec term instead gives 0.365. Every 3-term variant I tried landed between 0.34 and 0.41: thresholded belief (belief_lo<-2, <-1, <0), np.minimum(belief_lo,0), tv('reward',-2)==1, belief_cover, ep_trial (0.402), and ep_trial<78 (0.407). So 0.40 looks like the limit of this description, not a robust 'explained'.",
+      "A large systematic error class remains. The worst misses (run on the short form) are D1 steps after 'a2 S2 r' early-to-mid episode (t14-t24), all at the first one or two rewarded a2->S2 trials after the agent has just moved over from a1 or from unrewarded trials. The model predicts about 0.86-0.92 there, but the activation is 0, and it only ramps up (0.4-0.55) after several consecutive a2 S2 r trials. The feature seems to need an established run of rewarded a2, which neither belief_lo nor reward two back captures. The explanation calls these misses 'mid-to-late in the episode', which misdescribes them; most are at t14-t24.",
+      "Much of the 'goes silent late in episodes' claim is timing that is already in the baseline: the D1 baseline falls to about 0 by deciles 8-9. The ep_dec interaction adds about 0.09 of R^2 within the a2 S2 r case.",
+      "Systematic over-prediction of about -0.115 at D1 after every non-a2S2r pattern (from misses). This is a baseline/indicator offset artifact, but it shows the fit is not clean."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "D1 after rewarded a2->S2, stronger with S2 belief, early episode; silent at the start of a2 runs.",
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "D1 after rewarded a2->S2, stronger with S2 belief, early episode; silent at the start of a2 runs."
+}

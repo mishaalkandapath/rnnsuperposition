@@ -1,0 +1,79 @@
+{
+  "label": "update gate higher when agent leans/chooses a2, lower for a1 and after a1 S2 unrewarded",
+  "terms": "np.tanh(choice) ;; np.tanh(choice)*np.exp((ep_trial-99)/6.0) ;; (prev_action == 2) ;; last_is(\"a1 S2 u\") ;; np.exp((ep_trial-99)/6.0) ;; (ep_trial % 10)*(ep_dec>=7) ;; (phase==D2)*(action==2)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 2 is dominated by timing (sits near 0.9 and collapses over the last ~20 trials of the episode; timing R^2 0.84). Beyond timing, its magnitude mainly tracks the agent choice side: it is higher when the policy favours a2 (graded -tanh(policy logit a1-a2), all phases, stronger late in episode), higher after a previous a2 choice, and higher at D2 when a2 was just chosen; it is lowest after an a1 -> S2 unrewarded trial (about -0.06, strongest at GO/D2). Reward and value contribute little (value decile R^2 0.02; this-trial reward 0.00). Part of the gain comes from fine within-decile timing late in the episode (exp((ep_trial-99)/6) and trial-within-decile terms), which the per-decile baseline misses. A future-choice version ((action==2) instead of the policy logit) scored dev 0.518 vs 0.50 for this observed/model-only version; recorded the observed one. Test R^2 beyond timing 0.498 vs all-cue ceiling 0.60 (83%).",
+  "gate": "unit_update",
+  "feature": 2,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 2,
+    "terms": [
+      "np.tanh(choice)",
+      "np.tanh(choice)*np.exp((ep_trial-99)/6.0)",
+      "(prev_action == 2)",
+      "last_is(\"a1 S2 u\")",
+      "np.exp((ep_trial-99)/6.0)",
+      "(ep_trial % 10)*(ep_dec>=7)",
+      "(phase==D2)*(action==2)"
+    ],
+    "weights": [
+      -0.0363932433978124,
+      -0.007670593837478702,
+      0.023712133056730506,
+      -0.060989884225451714,
+      -0.022051933268526776,
+      -0.007602220626727215,
+      0.022239677060647355
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.498281414733022,
+    "r2": 0.9191978985923802,
+    "r2_timing_only": 0.8389493557137757
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 2,
+    "terms": [
+      "np.tanh(choice)",
+      "np.tanh(choice)*np.exp((ep_trial-99)/6.0)",
+      "(prev_action == 2)",
+      "last_is(\"a1 S2 u\")",
+      "np.exp((ep_trial-99)/6.0)",
+      "(ep_trial % 10)*(ep_dec>=7)",
+      "(phase==D2)*(action==2)"
+    ],
+    "weights": [
+      -0.0363932433978124,
+      -0.007670593837478702,
+      0.023712133056730506,
+      -0.060989884225451714,
+      -0.022051933268526776,
+      -0.007602220626727215,
+      0.022239677060647355
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5009880376818077,
+    "r2": 0.9208519598639573,
+    "r2_timing_only": 0.8413904953934264
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The test score reproduces: 0.498 beyond timing (timing-only R^2 0.839). The behavioural claims hold. Residual tables: a1 S2 u is lowest at GO (-0.139) and D2 (-0.12). At D1 it is only level with a1 S1 u (-0.078 vs -0.077), so the claim 'strongest at GO and D2' is correct. Prev a2 is positive and prev a1 negative. Value deciles are flat (ref 0.02) and this trial's reward is 0.00.",
+      "The late-episode growth of the choice effect is real, but its shape is wrong. tanh(choice)*exp((ep_trial-99)/6) gets almost no weight (-0.008). Adding tanh(choice)*ep_trial/100 raises test to 0.542. Replacing the /6 interaction with tanh(choice)*exp((ep_trial-99)/20) gives 0.522 on its own. So the choice effect builds up slowly over the second half of the episode, not just in the last ~6 trials.",
+      "A large part of the 'beyond timing' score is just finer timing that the per-decile baseline misses. The three timing-shape terms alone (exp/6, exp/20, ep_trial%10 late) score 0.131 on test. Adding exp((ep_trial-99)/20) to the original 7 terms jumps test from 0.498 to 0.590 (dev 0.581). The 'all-cue ceiling 0.60 (83%)' comparison is therefore misleading: that ceiling uses decile timing only, and the behavioural content beyond fine timing is about 0.40-0.46.",
+      "Ablations: tanh(choice) alone scores 0.379. Choice + prev_action + a1S2u + D2*a2, with no timing terms, scores 0.436. Removing last_is('a1 S2 u') drops test to 0.469. Each named behavioural term contributes.",
+      "Misses on the original and the improved terms leave only moderate structured errors (|error| <= 0.04). Under-prediction: GO after a1 S1 r +0.04, D1 after a1 S2 u +0.035 (a1S2u is overstated at D1). Over-prediction: GO after a2 S2 u -0.038, D2 after a1 S1 r / a1 S2 r about -0.03. The worst windows are late-episode (t87-95) episodes where z stays far above the predicted timing decline (e.g. 0.7 vs 0.38) during a2 runs. That is mostly between-episode variation in timing that no term fixes. No large systematic class remains.",
+      "Minor: at D1 the policy-decile residual is not monotonic (deciles 3-4 highest, +0.067), so a single graded tanh(choice) across all phases is approximate. The D2*(action==2) term is observed at D2 (equivalent to in_action==2), so no future-variable issue arises. The improved set below uses in_action."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "update gate higher when the policy leans a2 (effect builds over the second half of the episode), after a previous a2 choice and at D2 after choosing a2; lowest after a1 S2 unrewarded (GO/D2); plus finer late-episode timing",
+    "better_terms": "np.tanh(choice) ;; np.tanh(choice)*np.exp((ep_trial-99)/20.0) ;; table(prev_action,{1:-1,2:1}) ;; last_is('a1 S2 u') ;; (phase==D2)*(in_action==2) ;; np.exp((ep_trial-99)/6.0) ;; np.exp((ep_trial-99)/20.0) ;; (ep_trial % 10)*(ep_dec>=7)",
+    "better_terms_test_r2_beyond_timing": 0.594
+  },
+  "final_label": "update gate higher when the policy leans a2 (effect builds over the second half of the episode), after a previous a2 choice and at D2 after choosing a2; lowest after a1 S2 unrewarded (GO/D2); plus finer late-episode timing"
+}

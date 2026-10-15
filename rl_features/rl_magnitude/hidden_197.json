@@ -1,0 +1,113 @@
+{
+ "label": "GO step late in episode: grows after rewarded common a2 and with belief S2 is good.",
+ "short_terms": "(phase == GO) * last_is('a2 S2 r') * ep_trial ;; (phase == GO) * belief_lo * ep_trial ;; (phase == GO) * (prev_reward == 0) * ep_trial",
+ "terms": "(phase == GO) * last_is(\"a2 S2 r\") * ep_trial ;; (phase == GO) * belief_lo * ep_trial ;; (phase == GO) * (prev_action == 2) * ep_trial ;; (phase == GO) * last_is(\"a2 S2 r\") * belief_lo ;; (phase == GO) * last_is(\"a2 S2 r\") * (tv(\"action\", -2)==2) * (tv(\"reward\", -2)==1) ;; (phase == GO) * last_is(\"a2 S2 r\") * belief_cover ;; (phase == GO) * (prev_action == 2) * belief_lo ;; (phase == GO) * last_is(\"a2 S2 r\") * (tv(\"action\", -2)==2) * ep_trial",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Active only at GO, and mostly in the second half of the episode (the timing baseline rises from trial ~40 to ~90). Beyond timing, its magnitude is a win-stay-on-a2 signal: high after a2 -> S2 rewarded, near zero after any a1 trial or after an a2 trial that was unrewarded or rare. All three effects scale with episode trial: positive for last trial a2 S2 r, negative for other a2 trials, and higher the more the ideal observer believes S2 is good (negative belief_lo). Sustained a2 S2 r streaks late in the episode reach 0.8, which is still somewhat under-predicted. The free fit adds the trial before (an earlier rewarded a2), belief interacting with last trial, and belief_cover, for a small gain (dev 0.46 vs 0.43). Not driven by D1/D2 (always zero there) or by future reward.",
+ "full_test_scores": {
+  "gate": "hidden",
+  "feature": 197,
+  "terms": [
+   "(phase == GO) * last_is(\"a2 S2 r\") * ep_trial",
+   "(phase == GO) * belief_lo * ep_trial",
+   "(phase == GO) * (prev_action == 2) * ep_trial",
+   "(phase == GO) * last_is(\"a2 S2 r\") * belief_lo",
+   "(phase == GO) * last_is(\"a2 S2 r\") * (tv(\"action\", -2)==2) * (tv(\"reward\", -2)==1)",
+   "(phase == GO) * last_is(\"a2 S2 r\") * belief_cover",
+   "(phase == GO) * (prev_action == 2) * belief_lo",
+   "(phase == GO) * last_is(\"a2 S2 r\") * (tv(\"action\", -2)==2) * ep_trial"
+  ],
+  "weights": [
+   0.004030802952912736,
+   -0.00045156741387396054,
+   -0.001220986509736707,
+   -0.009022837110127663,
+   0.03484445843056788,
+   -0.0071010174441629315,
+   0.02269725852641825,
+   -0.00024186427286915647
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.46749715134068603,
+  "r2": 0.5975521330388898,
+  "r2_timing_only": 0.2442334008646979
+ },
+ "gate": "hidden",
+ "feature": 197,
+ "test_scores": {
+  "gate": "hidden",
+  "feature": 197,
+  "terms": [
+   "(phase == GO) * last_is('a2 S2 r') * ep_trial",
+   "(phase == GO) * belief_lo * ep_trial",
+   "(phase == GO) * (prev_reward == 0) * ep_trial"
+  ],
+  "weights": [
+   0.002119323156815737,
+   -0.00031472535634508047,
+   -0.0012815011747455488
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.456271329864672,
+  "r2": 0.5890680321194626,
+  "r2_timing_only": 0.2442334008646979
+ },
+ "dev_scores": {
+  "gate": "hidden",
+  "feature": 197,
+  "terms": [
+   "(phase == GO) * last_is('a2 S2 r') * ep_trial",
+   "(phase == GO) * belief_lo * ep_trial",
+   "(phase == GO) * (prev_reward == 0) * ep_trial"
+  ],
+  "weights": [
+   0.002119323156815737,
+   -0.00031472535634508047,
+   -0.0012815011747455488
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.45008777821905,
+  "r2": 0.5870987089501133,
+  "r2_timing_only": 0.24915054676787984
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The explanation says the feature is near zero after an a2 trial that was rare. That is wrong for rare rewarded a2 (a2 S1 r). The profile residual there is -0.029, against about -0.06 for the other non-a2-S2-r histories. The worst-fit windows show about 0.35 at GO after a2 S1R r1, where the short form predicts about 0.10. Misses also lists 'GO after a2 S1 r' as the most under-predicted cell (+0.053).",
+   "The third term, (prev_action==2)*ep_trial, is a fitted correction ('a2 but not a2 S2 r'). It is not a stated driver. Replacing it with (prev_reward==0)*ep_trial ('lower after unrewarded trials') scores better on test (0.456 vs 0.434; dev 0.450). It is also simpler to read. prev_reward==1 in its place gives only 0.386, so what matters is specifically the drop after no reward.",
+   "The belief claim holds. The belief_lo weight is negative, so belief that S2 is good raises the feature. Dropping the term lowers test R^2 from 0.434 to 0.346. Both the raw log-odds and the S2-only version np.minimum(belief_lo,0) work (0.421 in the improved form).",
+   "Systematic error remains: long a2-S2-r streaks late in the episode reach about 0.78-0.81 actual against about 0.44-0.45 predicted, in every worst-fit window, for both forms. Adding a two-back a2 term barely helps (0.387 vs 0.385). Per-previous-trial errors of about \u00b10.05 at GO also remain (a1 S2 r over-predicted -0.053, a2 S1 u -0.047). They come from the additive timing baseline, which cannot be zero on a1 histories.",
+   "The label leaves out that the feature is silent after a1 trials and after unrewarded trials. A reader would not predict the low cases from the label alone.",
+   "The scores reproduce: short form test 0.434. GO-only, never active at D1 or D2, no future or model-output terms."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "GO only, late episode: high after rewarded common a2 and when S2 believed good, low after unrewarded trials.",
+  "better_short_terms": "(phase == GO) * last_is('a2 S2 r') * ep_trial ;; (phase == GO) * belief_lo * ep_trial ;; (phase == GO) * (prev_reward == 0) * ep_trial",
+  "better_short_terms_test_r2_beyond_timing": 0.456271329864672
+ },
+ "final_label": "GO only, late episode: high after rewarded common a2 and when S2 believed good, low after unrewarded trials.",
+ "original_short_terms": "(phase == GO) * last_is(\"a2 S2 r\") * ep_trial ;; (phase == GO) * belief_lo * ep_trial ;; (phase == GO) * (prev_action == 2) * ep_trial",
+ "original_test_scores": {
+  "gate": "hidden",
+  "feature": 197,
+  "terms": [
+   "(phase == GO) * last_is(\"a2 S2 r\") * ep_trial",
+   "(phase == GO) * belief_lo * ep_trial",
+   "(phase == GO) * (prev_action == 2) * ep_trial"
+  ],
+  "weights": [
+   0.003384988832262475,
+   -0.000372750827459088,
+   -0.0014174364752966848
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.4341498429647931,
+  "r2": 0.572349351197325,
+  "r2_timing_only": 0.2442334008646979
+ },
+ "terms_from": "skeptic"
+}

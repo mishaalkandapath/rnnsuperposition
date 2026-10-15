@@ -1,0 +1,106 @@
+{
+  "label": "GO step near episode end (trial >= 88) when choosing a2 after a rewarded trial",
+  "predicate": "(phase == GO) & (model_act == 2) & (prev_reward == 1) & (value < 5.0)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO, and only in the last ~12 trials of the 100-trial episode (97% of mass in trials 90-99, none before trial 80), which coincides with the lowest value-head bin (value < 5.22, all activations). Within that window it is nearly exclusive to the agent choosing a2 (98% of mass; model_act==2, strongly negative choice logit) and to trials where the previous trial was rewarded (96% of mass). Magnitude ramps up trial by trial toward the episode end and over runs of consecutive rewarded a2 choices, and drops sharply after an unrewarded trial. Never fires at D1 or D2, or early in the episode. Uses only observed variables plus the agent own upcoming choice; an equivalent predicate with value<5.22 instead of ep_trial gives dev F1 0.85.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 127,
+    "predicate": "(phase == GO) & (model_act == 2) & (prev_reward == 1) & (value < 5.0)",
+    "split": "test",
+    "precision": 0.9199524764238509,
+    "recall": 0.8087870479174827,
+    "f1": 0.8607955532395345,
+    "mass_recall": 0.9278941484674129,
+    "correlation": 0.815420426452102,
+    "n_active": 15318,
+    "n_predicted": 13467,
+    "coverage_by_activation_quartile": [
+      0.5349869451697128,
+      0.7488250652741515,
+      0.9514233481326717,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 127,
+    "predicate": "(phase == GO) & (model_act == 2) & (prev_reward == 1) & (value < 5.0)",
+    "split": "dev",
+    "precision": 0.9254485150007538,
+    "recall": 0.8439540798790128,
+    "f1": 0.8828245784345449,
+    "mass_recall": 0.9473974667259927,
+    "correlation": 0.8262806482351689,
+    "n_active": 14547,
+    "n_predicted": 13266,
+    "coverage_by_activation_quartile": [
+      0.5798735221336266,
+      0.821281275776739,
+      0.9747044267253231,
+      1.0
+    ]
+  },
+  "gate": "reset",
+  "feature": 127,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most of the factual claims check out on dev. The feature fires only at GO (D1 and D2 have 0 active steps). It never fires before trial 80, 97.2% of its mass is in trials 90-99, 100% of its mass is at value < 5.22, 98.5% is at model_act == 2 and 96.3% is at prev_reward == 1. The reported test scores also reproduce: P 0.750, R 0.814, F1 0.781, MR 0.927.",
+      "There is a systematic false-positive class from the trial cutoff. The feature switches on gradually, not at trial 88. On test, the predicate's precision is 0.16 at ep_trial 88, 0.30 at 89, 0.50 at 90, 0.71 at 91, 0.83 at 92 and 0.88 at 93. Trials 88-90 account for about 4.5k predicted steps, and most of the predicate's 4164 test false positives come from them. Trials 88-89 alone give F1 0.06 and hold 1.7% of the mass.",
+      "The verdict 'explained' was kept at test F1 0.78, below the 0.8 bar. Mass recall is not a good reason to override it here, because the shortfall comes from a fixable systematic error (the loose cutoff), not scattered noise.",
+      "The other agent found that value < 5.22 scored better but recorded the ep_trial version anyway. A tighter value threshold does better still: '(phase == GO) & (model_act == 2) & (prev_reward == 1) & (value < 5.0)' scores dev F1 0.883 and test F1 0.861 (P 0.920, R 0.809, MR 0.928). If the timing form is preferred, ep_trial >= 91 gives test F1 0.804 (P 0.909).",
+      "Adding a run-of-rewards condition (prev_action == 2, or two consecutive rewards) lowers F1 to 0.67-0.70. So 'after a rewarded trial' is the right granularity, and the claim about magnitude rising over runs describes how strongly it fires, not whether it fires.",
+      "The good state and start_high split differently between dev and test (on dev 83% of mass has start_high = 1; on test the low_first episodes dominate). So the good state is not a stable driver, and the label is right to leave it out.",
+      "Under the value predicate, the remaining test misses (7.2% of mass) are low-magnitude and scattered: a1 choices, or GOs just after an unrewarded trial. No systematic class remains."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step at the very end of the episode (value head below about 5, roughly trials 91-99) when the agent chooses a2 after a rewarded trial",
+    "better_predicate": "(phase == GO) & (model_act == 2) & (prev_reward == 1) & (value < 5.0)",
+    "better_predicate_test_f1": 0.861
+  },
+  "final_label": "GO step at the very end of the episode (value head below about 5, roughly trials 91-99) when the agent chooses a2 after a rewarded trial",
+  "original_predicate": "(phase == GO) & (ep_trial >= 88) & (model_act == 2) & (prev_reward == 1)",
+  "original_test_scores": {
+    "gate": "reset",
+    "feature": 127,
+    "predicate": "(phase == GO) & (ep_trial >= 88) & (model_act == 2) & (prev_reward == 1)",
+    "split": "test",
+    "precision": 0.7497295347998557,
+    "recall": 0.8143360752056404,
+    "f1": 0.7806984603830267,
+    "mass_recall": 0.9267974039347271,
+    "correlation": 0.731585292732852,
+    "n_active": 15318,
+    "n_predicted": 16638,
+    "coverage_by_activation_quartile": [
+      0.566840731070496,
+      0.7399477806788511,
+      0.9506398537477148,
+      1.0
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "reset",
+    "feature": 127,
+    "predicate": "(phase == GO) & (ep_trial >= 88) & (model_act == 2) & (prev_reward == 1)",
+    "split": "dev",
+    "precision": 0.7801468241302266,
+    "recall": 0.8401044888980546,
+    "f1": 0.8090162849198994,
+    "mass_recall": 0.9440629236773347,
+    "correlation": 0.7567709860995443,
+    "n_active": 14547,
+    "n_predicted": 15665,
+    "coverage_by_activation_quartile": [
+      0.5771240032994226,
+      0.8091833929062414,
+      0.9744294748419027,
+      0.9997249724972497
+    ]
+  },
+  "predicate_from": "skeptic"
+}

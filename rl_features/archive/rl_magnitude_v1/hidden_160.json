@@ -1,0 +1,83 @@
+{
+  "label": "D2 arrival at S2, larger after a2 choice, unrewarded S2 history and a1-leaning policy",
+  "terms": "(phase == D2) * (state == S2) ;; (phase == D2) * (state == S2) * (action == 1) ;; (phase == D2) * (state == S2) * np.clip(choice, -3, 3) ;; (phase == D2) * (state == S2) * (prev_state == S2) * (prev_reward == 0) ;; (phase == D2) * (state == S2) * (prev_state == S2) * (prev_reward == 0) * np.clip(choice, -3, 3) ;; (phase == D2) * (state == S2) * (tv(\"state\", -2) == S2) * (tv(\"reward\", -2) == 0) ;; (phase == D2) * (state == S2) * (prev_state == S2) * (prev_reward == 0) * (tv(\"state\", -2) == S2) * (tv(\"reward\", -2) == 0) ;; (phase == D2) * (state == S1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Silent at D1 and GO; fires only at D2, essentially only when S2 is reached. Magnitude is larger when S2 was reached by the common a2 choice (a1->S2 rare arrivals get a much smaller weight), grows with the D2 policy logit leaning toward a1 (i.e. the agent planning to switch away from a2), and is strongly boosted when the previous trial also reached S2 unrewarded (and more when the trial before that did too): a run of unrewarded S2 visits drives activations near 1. S1 arrivals give slightly below the timing baseline. Value and hidden good state add little. All terms observed at D2 (choice = model policy logit). Test R^2 beyond timing 0.49 (dev 0.49), above the all-cue additive ceiling 0.32 because of interaction terms.",
+  "gate": "hidden",
+  "feature": 160,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 160,
+    "terms": [
+      "(phase == D2) * (state == S2)",
+      "(phase == D2) * (state == S2) * (action == 1)",
+      "(phase == D2) * (state == S2) * np.clip(choice, -3, 3)",
+      "(phase == D2) * (state == S2) * (prev_state == S2) * (prev_reward == 0)",
+      "(phase == D2) * (state == S2) * (prev_state == S2) * (prev_reward == 0) * np.clip(choice, -3, 3)",
+      "(phase == D2) * (state == S2) * (tv(\"state\", -2) == S2) * (tv(\"reward\", -2) == 0)",
+      "(phase == D2) * (state == S2) * (prev_state == S2) * (prev_reward == 0) * (tv(\"state\", -2) == S2) * (tv(\"reward\", -2) == 0)",
+      "(phase == D2) * (state == S1)"
+    ],
+    "weights": [
+      0.13989228458222816,
+      -0.19500695925973646,
+      0.054812034578847174,
+      0.07871801791415262,
+      0.04296756354535043,
+      0.004559266110487681,
+      0.03803082747546595,
+      -0.02653894760600938
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.490554780507378,
+    "r2": 0.5291667815526838,
+    "r2_timing_only": 0.07579225315679894
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 160,
+    "terms": [
+      "(phase == D2) * (state == S2)",
+      "(phase == D2) * (state == S2) * (action == 1)",
+      "(phase == D2) * (state == S2) * np.clip(choice, -3, 3)",
+      "(phase == D2) * (state == S2) * (prev_state == S2) * (prev_reward == 0)",
+      "(phase == D2) * (state == S2) * (prev_state == S2) * (prev_reward == 0) * np.clip(choice, -3, 3)",
+      "(phase == D2) * (state == S2) * (tv(\"state\", -2) == S2) * (tv(\"reward\", -2) == 0)",
+      "(phase == D2) * (state == S2) * (prev_state == S2) * (prev_reward == 0) * (tv(\"state\", -2) == S2) * (tv(\"reward\", -2) == 0)",
+      "(phase == D2) * (state == S1)"
+    ],
+    "weights": [
+      0.13989228458222816,
+      -0.19500695925973646,
+      0.054812034578847174,
+      0.07871801791415262,
+      0.04296756354535043,
+      0.004559266110487681,
+      0.03803082747546595,
+      -0.02653894760600938
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.48760743985961896,
+    "r2": 0.5265607328124264,
+    "r2_timing_only": 0.07602236250685479
+  },
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "I reproduced the reported test R^2 beyond timing (0.491), but the terms leave out a large interaction with time in the episode. The boost after an unrewarded S2 visit on the previous trial falls about 7x across the episode. Fitting (D2 & S2 & prev S2 unrewarded) separately by episode trial gives weights 0.646 for trials <5, 0.405 for 5-9, 0.337 for 10-19, 0.240 for 20-49 and 0.093 for 50+. The timing baseline is additive by phase and episode decile, so it cannot capture this. Adding exp(-ep_trial/10) interactions raises test R^2 from 0.49 to 0.56.",
+      "Peaks are badly under-predicted. In the worst-fit windows, actual values of 0.97-1.31 are predicted at 0.21-0.52 (e.g. 1.219 vs 0.331, 1.307 vs 0.520). This contradicts the claim that the terms push runs of unrewarded S2 visits close to 1. Most of these are early-episode windows, which matches the missing episode interaction.",
+      "The claim 'stronger when S2 came from the common a2 choice; rare a1-to-S2 gets a large negative weight' only holds once the choice logit is controlled for. Without that control, the profile residuals are +0.080 for a1->S2 (rare) and +0.008 for a2->S2 (common). Rare arrivals look larger because the logit there leans toward a1. With separate intercepts and slopes per action, the a1->S2 intercept is -0.014 vs 0.212 for a2. So the -0.195 weight mostly offsets the choice term. The label's 'larger after a2 choice' is misleading as worded.",
+      "'A further boost when the trial before that did too': the standalone two-trials-back S2-unrewarded term has weight 0.005 (essentially nothing). The effect only exists through the triple interaction (weight 0.038), so it is small.",
+      "The choice effect is not monotone. Binned D2&S2 weights by logit are -0.019, 0.022, 0.073, 0.142, 0.095, 0.123, 0.213 from the lowest bin to the highest. The linear clipped-choice term is an approximation.",
+      "Claims that check out: the feature is exactly 0 at D1 and GO. It is near-silent at S1 (weight -0.027, matching 'slightly less than baseline'). Only unrewarded S2 history matters: prev S2-unrewarded gets +0.167, while S1-rewarded (+0.010) and S2-rewarded (-0.032) do not. A signed evidence-for-S1 score does worse (0.15). Value adds little (0.265 vs 0.257). No future variables are used."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "D2 arrival at S2. Grows with an a1-leaning policy logit and after a previous unrewarded S2 visit. That boost is strong early in the episode and fades about 7x by trial 50+.",
+    "better_terms": "(phase == D2) * (state == S2) ;; (phase == D2) * (state == S2) * (action == 1) ;; (phase == D2) * (state == S2) * np.clip(choice,-3,3) ;; (phase == D2) * (state == S2) * (tv('state',-1)==S2)*(tv('reward',-1)==0) * np.clip(choice,-3,3) ;; (phase == D2) * (state == S2) * (tv('state',-1)==S2)*(tv('reward',-1)==0) * (tv('state',-2)==S2)*(tv('reward',-2)==0) ;; (phase == D2) * (state == S2) * np.exp(-ep_trial/10) ;; (phase == D2) * (state == S2) * (tv('state',-1)==S2)*(tv('reward',-1)==0) * np.exp(-ep_trial/10) ;; (phase == D2) * (state == S2) * np.clip(choice,-3,3) * np.exp(-ep_trial/10)",
+    "better_terms_test_r2_beyond_timing": 0.564
+  },
+  "final_label": "D2 arrival at S2. Grows with an a1-leaning policy logit and after a previous unrewarded S2 visit. That boost is strong early in the episode and fades about 7x by trial 50+."
+}

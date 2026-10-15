@@ -1,0 +1,105 @@
+{
+  "label": "D1 after a rewarded S1 trial, when about to choose a1 again",
+  "predicate": "(phase == D1) & (in_rew == 1) & isin(prev_action, [1, -1]) & isin(prev_common, [1, -1]) & (action == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": true,
+  "explanation": "Fires only at D1 (never at GO or D2), and only when the reward input is 1. Within that, it needs the previous trial to have reached S1 (prev_state == 1; -1 is the window first trial, where prev_state is unknown) and the agent to be about to choose a1. In short it is a reward-at-S1 -> repeat a1 signal. The only FUTURE variable is the agent own upcoming choice (action at D1), which the agent computes, so it is legitimate. With observed variables only, (phase==D1)&(in_rew==1)&isin(prev_state,[1,-1]) has recall 1.0 but precision 0.60 (dev F1 0.75). Adding action==1 lifts dev F1 to 0.90 with mass recall 1.0. Almost silent after rewarded S2 trials, after unrewarded trials, and at every GO/D2 step. Magnitude builds over a run of consecutive rewarded a1/S1 trials: it is weak (0.1-0.4) on the first one and saturates near 1.0 after several. It tracks good==S1 and the D1 value bin around 7.5-7.7. Most false positives are rewarded-S1 D1 steps that follow an unrewarded or rare streak break.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 181,
+    "predicate": "(phase == D1) & (in_rew == 1) & isin(prev_action, [1, -1]) & isin(prev_common, [1, -1]) & (action == 1)",
+    "split": "test",
+    "precision": 0.8320797238572502,
+    "recall": 0.9735647530040054,
+    "f1": 0.8972790615402758,
+    "mass_recall": 0.9946078661661915,
+    "correlation": 0.8420624113342501,
+    "n_active": 89880,
+    "n_predicted": 105163,
+    "coverage_by_activation_quartile": [
+      0.8962171784601691,
+      0.9983978638184245,
+      0.9997329773030708,
+      0.9999109924343569
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 181,
+    "predicate": "(phase == D1) & (in_rew == 1) & isin(prev_action, [1, -1]) & isin(prev_common, [1, -1]) & (action == 1)",
+    "split": "dev",
+    "precision": 0.8347386812518991,
+    "recall": 0.977081249305324,
+    "f1": 0.9003185137391054,
+    "mass_recall": 0.9951665682234301,
+    "correlation": 0.842664069721936,
+    "n_active": 89970,
+    "n_predicted": 105312,
+    "coverage_by_activation_quartile": [
+      0.9111279064597875,
+      0.9975547948250567,
+      0.9997332384847946,
+      0.9999110794949315
+    ]
+  },
+  "gate": "hidden",
+  "feature": 181,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The label's 'rewarded S1 trial' conflates the reached state with the chosen action. The feature needs the previous trial to have been a1 with a COMMON transition (a1 -> S1), not just to have reached S1. On dev, (D1)&(in_rew==1)&(prev_state==1)&(prev_action==2) (a rare a2 -> S1 rewarded trial) has precision 0.11 and mass recall 0.003. Even when the agent then switches to a1, which is the model-based move, precision is only 0.37 (4340 predicted steps, mass 0.3%). The original predicate isin(prev_state,[1,-1]) includes this whole class, so it is a systematic false-positive class and not scattered noise. It is also the exact case that separates a state-based (model-based) reading from an action-based one, and the activations favour the action-based reading.",
+      "Every active step does have prev_action in {1,-1} with a common transition. (D1)&(in_rew==1)&(prev_state==2)&(prev_action==1) (rare a1 -> S2) is 0 for recall and mass. prev_action==2 holds only 0.3% of the activation mass.",
+      "The claim that 'most false positives are rewarded-S1 D1 steps right after an unrewarded or rare trial broke the streak' is not supported. Inside the predicate, precision is 0.85 when trial -2 was also a common-rewarded a1 and 0.83 when it was not; it is 0.80 when trial -2 was unrewarded. The test misses also show false positives in the middle of long a1/S1c rewarded streaks. The false positives line up with the model's own value output instead: value>7.4 gives precision 1.0 and value<7.4 gives 0.63.",
+      "'Goes with good==S1' is only a correlate. Inside the predicate, precision is 0.83 when good==S2 against 0.84 when good==S1, so the hidden good state adds nothing beyond the a1/common/rewarded history.",
+      "The checks that hold up: D1 only (no GO or D2 activations at all), in_rew==1 only (0 activations when in_rew is 0 or -1), almost all mass on action==1 (0.998), and misses hold only 0.2% of the mass (test). With prev unknown (first trial) and action==2, precision is 0.002, so the upcoming-choice gate is real.",
+      "Observed-only check: (D1)&(in_rew==1)&isin(prev_action,[1,-1])&isin(prev_common,[1,-1]) scores test F1 0.784 (precision 0.65). That beats the reported observed-only version (dev F1 0.75), but the agent's upcoming choice is still needed to reach about 0.90."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a rewarded, common-transition a1 trial (a1 -> S1, reward shown), when the agent is about to repeat a1",
+    "better_predicate": "(phase == D1) & (in_rew == 1) & isin(prev_action, [1, -1]) & isin(prev_common, [1, -1]) & (action == 1)",
+    "better_predicate_test_f1": 0.897
+  },
+  "final_label": "D1 after a rewarded, common-transition a1 trial (a1 -> S1, reward shown), when the agent is about to repeat a1",
+  "original_predicate": "(phase == D1) & (in_rew == 1) & isin(prev_state, [1, -1]) & (action == 1)",
+  "original_test_scores": {
+    "gate": "hidden",
+    "feature": 181,
+    "predicate": "(phase == D1) & (in_rew == 1) & isin(prev_state, [1, -1]) & (action == 1)",
+    "split": "test",
+    "precision": 0.8085968960680512,
+    "recall": 0.9941477525589675,
+    "f1": 0.8918232402624947,
+    "mass_recall": 0.9982578888749568,
+    "correlation": 0.8227200654667056,
+    "n_active": 89880,
+    "n_predicted": 110505,
+    "coverage_by_activation_quartile": [
+      0.9783266577659101,
+      0.9986203827325323,
+      0.9997329773030708,
+      0.9999109924343569
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "hidden",
+    "feature": 181,
+    "predicate": "(phase == D1) & (in_rew == 1) & isin(prev_state, [1, -1]) & (action == 1)",
+    "split": "dev",
+    "precision": 0.8162185824243972,
+    "recall": 0.9947760364565966,
+    "f1": 0.8966947530833275,
+    "mass_recall": 0.998403992638962,
+    "correlation": 0.8270374333877517,
+    "n_active": 89970,
+    "n_predicted": 109652,
+    "coverage_by_activation_quartile": [
+      0.9813275241186147,
+      0.9981327524118615,
+      0.9997332384847946,
+      0.9999110794949315
+    ]
+  },
+  "predicate_from": "skeptic"
+}

@@ -1,0 +1,64 @@
+{
+  "label": "GO step, confident a1 choice after a rewarded trial, mid-episode",
+  "predicate": "(phase == GO) & (choice > 8) & (prev_reward == 1) & (ep_trial >= 15) & (ep_trial < 78)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires almost only at GO (99.9% of mass), and only when the policy strongly favours a1 (logit(a1)-logit(a2) > 8; 99% of mass), almost always right after a rewarded trial (prev_reward=1: 98.6% of mass). Never fires on a2 choices, D2 steps, or rewarded D1 inputs. It also depends strongly on position in the episode: silent in episode trials 0-9 and 80-99, and strongest around trials 20-70. That suggests the gate threshold sits on a slow drift in hidden state rather than anything in the task. Every term is observable (the policy logit is the agent own upcoming choice). Without the episode-time window F1 is 0.75 on dev; with it, 0.90. Magnitude looks higher on runs of rewarded a1 trials (from the example windows only, not checked quantitatively).",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 44,
+    "predicate": "(phase == GO) & (choice > 8) & (prev_reward == 1) & (ep_trial >= 15) & (ep_trial < 78)",
+    "split": "test",
+    "precision": 0.8738452894419381,
+    "recall": 0.9093863933411296,
+    "f1": 0.89126166137147,
+    "mass_recall": 0.9786060058088385,
+    "correlation": 0.8267733023231858,
+    "n_active": 58148,
+    "n_predicted": 60513,
+    "coverage_by_activation_quartile": [
+      0.6737291050423059,
+      0.9676687074361973,
+      0.9962853408543716,
+      0.9998624200316434
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 44,
+    "predicate": "(phase == GO) & (choice > 8) & (prev_reward == 1) & (ep_trial >= 15) & (ep_trial < 78)",
+    "split": "dev",
+    "precision": 0.8815024098387901,
+    "recall": 0.9097770154373928,
+    "f1": 0.8954165611547227,
+    "mass_recall": 0.9783671489451079,
+    "correlation": 0.8330592078382284,
+    "n_active": 58300,
+    "n_predicted": 60170,
+    "coverage_by_activation_quartile": [
+      0.6785591766723842,
+      0.9632933104631218,
+      0.9973241852487136,
+      0.9999313893653516
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 44,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "All factual claims hold. GO carries 0.999 of activation mass, D1 has 134 of 58300 active steps and D2 has 0. a2 choices hold 0.001 of mass (143 steps). choice > 8: the top bin [8.07, inf) has 0.991 of mass. prev_reward == 1 holds 0.986 of mass. Episode trials 0-9 and 90-99 have 0 activations, trials 80-89 have 117. Dev F1 is 0.749 without the episode window and 0.895 with it. Test F1 reproduces at 0.891 (precision 0.874, recall 0.909, mass recall 0.979).",
+      "Misses on test: the missed activations are 5269 steps holding 2.1% of mass. They are low-magnitude cells, mostly GO a1 steps where prev_reward is 0 or the trial is near the window edges, with activation trailing off across a run. No systematic class.",
+      "False positives are concentrated where the episode window starts and ends. Precision is 0.62 at ep_trial 15-17, 0.57 at 74-77 and 0.19 at 78-80, against about 0.88 in the middle. This is a gradual fade, not a hard cutoff. Nudging the window (choice > 7, trials 16-76) gives test F1 0.872, no better.",
+      "Precision is about 0.84-0.90 across the hidden good state (good = 1, 2, unknown), the starting good state, and the reward on the trial before the previous one (rewarded, unrewarded, outside the window). So no hidden variable or reward-run term sharpens the predicate. The good == 1 skew (85% of mass) only comes from a1 being chosen mostly when S1 is good.",
+      "Rare-rewarded previous trials: with choice > 8 there are only 52 dev steps, because the agent switches after a rare reward. So prev_common is redundant given choice. Adding prev_common != 0 changes F1 by less than 0.001. The label is fine as stated.",
+      "Two caveats. The claim that magnitude grows over runs of rewarded a1 trials is not established, and the author says so. Splitting on the trial before the previous one being rewarded or not shows no precision difference. The 'slow hidden-state drift' explanation for the episode-time dependence is speculative, but it is hedged and is not part of the predicate."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

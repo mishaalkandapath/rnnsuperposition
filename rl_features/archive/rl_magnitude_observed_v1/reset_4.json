@@ -1,0 +1,79 @@
+{
+  "label": "D1 after a2->S2, scaled by belief that S1 is good (higher after unrewarded)",
+  "terms": "(phase == D1) * (prev_state >= 0) ;; (phase == D1) * (prev_action == 2) * (prev_state == 2) ;; (phase == D1) * (prev_action == 2) * (prev_state == 2) * (prev_reward == 0) ;; (phase == D1) * (prev_action == 2) * (prev_state == 2) * belief ;; (phase == D1) * (prev_action == 2) * (prev_state == 2) * belief**2 ;; (phase == D1) * (prev_action == 2) * (prev_state == 2) * (tv(\"reward\", -2) == 0) ;; (phase == D1) * (prev_action == 2) * (prev_state == 2) * (prev_reward == 1) * (tv(\"state\", -2) == 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1, and only after the previous trial was a2 -> S2 (common). It is about zero at GO/D2 and at D1 after any other previous trial (the first term zeroes the D1 timing baseline wherever the previous trial is known). Within a2->S2 trials, the size tracks the ideal-observer belief that S1 is good (concave in belief, so it rises and then levels off). That is why it is much larger after a2 S2 unrewarded (residual +0.27) than after a2 S2 rewarded (+0.03): no reward at S2 moves the belief toward S1. A no-reward on the trial before adds about +0.24. After a rewarded a2->S2 that came right after a visit to S1, it is lower (-0.14). Whether the trial before was also a2->S2 adds nothing. The first trial of each window (previous trial unknown) is left at baseline; trying to model it with the observed reward input and belief gained less than 0.01. Test R^2 beyond timing 0.54 (dev 0.54). The all-cue ceiling is 0.59 and the all-observed ceiling is 0.43, so this is about 92% of the ceiling with no model outputs and no future or hidden variables. The earlier value/policy-based explanation therefore loses little or nothing once the observer belief is used.",
+  "gate": "reset",
+  "feature": 4,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 4,
+    "terms": [
+      "(phase == D1) * (prev_state >= 0)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 2)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 2) * (prev_reward == 0)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 2) * belief",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 2) * belief**2",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 2) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 2) * (prev_reward == 1) * (tv(\"state\", -2) == 1)"
+    ],
+    "weights": [
+      -0.05893339510252016,
+      0.004254755662468431,
+      -0.2514277204684637,
+      1.122253113526373,
+      -0.33864457661406344,
+      0.24223296707679567,
+      -0.141387676002084
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.542502590662681,
+    "r2": 0.5815517641388848,
+    "r2_timing_only": 0.08535386797657751
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 4,
+    "terms": [
+      "(phase == D1) * (prev_state >= 0)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 2)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 2) * (prev_reward == 0)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 2) * belief",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 2) * belief**2",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 2) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 2) * (prev_reward == 1) * (tv(\"state\", -2) == 1)"
+    ],
+    "weights": [
+      -0.05893339510252016,
+      0.004254755662468431,
+      -0.2514277204684637,
+      1.122253113526373,
+      -0.33864457661406344,
+      0.24223296707679567,
+      -0.141387676002084
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.538034442031847,
+    "r2": 0.5750605386410192,
+    "r2_timing_only": 0.08014904135282908
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor overclaim on the belief shape. The quadratic belief term adds only about 0.004 dev R^2 (0.474 to 0.478). The fitted curve is 1.12*b - 0.34*b^2, whose slope at b=1 is still about +0.44, so it does not 'level off'. 'Grows with belief' is accurate; 'concave, rises then levels off' is not supported.",
+      "The 'visit to S1' effect is mis-specified. Its term (rewarded and tv('state',-2)==S1, weight -0.14) is narrower than the data supports. Without the reward condition, tv('state',-2)==1 gets -0.19, and a separate term for the choice two trials back, tv('action',-2)==1 (a1), gets +0.25. Together with splitting the belief slope by prev_reward, these lift test R^2 from 0.542 to 0.566. So 'the trial before adds nothing' holds for an a2->S2 trial before, but the CHOICE two trials back does matter.",
+      "Mechanism wording. The direct prev_reward==0 term is negative (-0.25) once belief is in the model, so the jump after unrewarded trials comes from belief, as the explanation says. Belief alone does not explain it, though: dropping belief costs about 0.17 (0.36 vs 0.53 dev).",
+      "No large systematic error class remains. On the original terms, the mean misses-table error by phase x previous trial is |e| <= 0.005 everywhere. GO and D2 are exactly 0, as claimed. The worst windows are mostly on the window's first trial, where the previous trial is unknown (e.g. actual 0.91 vs predicted 0.07). Modelling those with in_rew==0 and belief gains under 0.001, which matches the claim. Some streaks of unrewarded a2->S2 trials late in the episode (t96-99) are over-predicted (0.7 predicted vs 0 actual), but a late-episode term gains under 0.01.",
+      "All factual numbers check out. The test R^2 of 0.5425 reproduces exactly. Residuals after a2 S2 u (+0.273) and a2 S2 r (+0.031) match the profile. The two-trials-back no-reward weight is +0.24 and the S1-visit rewarded weight is -0.14. About zero after any other previous trial (residual about -0.06, equal to the baseline). 0.54/0.59 = 92%, above the all-observed ceiling of 0.43."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a2->S2 only, growing roughly linearly with the observer's belief that S1 is good (so higher after unrewarded); raised if two trials back was a1 or unrewarded, lowered if two trials back reached S1",
+    "better_terms": "(phase == D1) * (prev_action == 2) * (prev_state == 2) ;; (phase == D1) * (prev_state >= 0) ;; (phase == D1) * (prev_action == 2) * (prev_state == 2) * (prev_reward==0) ;; (phase == D1) * (prev_action == 2) * (prev_state == 2)*(prev_reward==1) * belief ;; (phase == D1) * (prev_action == 2) * (prev_state == 2)*(prev_reward==0)*belief ;; (phase == D1) * (prev_action == 2) * (prev_state == 2) * (tv('reward', -2) == 0) ;; (phase == D1) * (prev_action == 2) * (prev_state == 2) * (tv('action',-2)==1) ;; (phase == D1) * (prev_action == 2) * (prev_state == 2) * (tv('state', -2) == 1)",
+    "better_terms_test_r2_beyond_timing": 0.5665
+  },
+  "final_label": "D1 after a2->S2 only, growing roughly linearly with the observer's belief that S1 is good (so higher after unrewarded); raised if two trials back was a1 or unrewarded, lowered if two trials back reached S1"
+}

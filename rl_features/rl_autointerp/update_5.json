@@ -1,0 +1,65 @@
+{
+  "label": "GO step after a common a1->S1 trial that went unrewarded",
+  "predicate": "(phase == GO) & (prev_reward == 0) & (prev_action == 1) & (prev_common == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at the GO step (D1/D2 essentially never), when the previous trial was a1 with a common transition to S1 and was unrewarded (a model-based switch-away-from-a1 situation). Uses only observed history. prev_reward==0 at GO alone covers 99.9% of mass but precision 0.18; adding previous choice a1 and common transition gives precision 0.93, recall 0.80 on dev. Essentially all misses are GO steps on the window first trial (rel -3) where the previous trial is outside the window (prev_action unknown), so the true recall is higher; it does not fire after rewarded trials, after a2 choices, or after rare a1->S2 trials. Firing is most reliable when the agent then still picks a1 (precision 0.99 with action==1), and the feature tends to be absent when the agent switches to a2, so it may relate to policy logit favouring a1 (choice in 2.8..8 bin); magnitude modulation not further checked.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 5,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (prev_action == 1) & (prev_common == 1)",
+    "split": "test",
+    "precision": 0.9194590713259932,
+    "recall": 0.8009799833194329,
+    "f1": 0.8561399598841095,
+    "mass_recall": 0.8395108647129339,
+    "correlation": 0.7972346818875312,
+    "n_active": 28776,
+    "n_predicted": 25068,
+    "coverage_by_activation_quartile": [
+      0.6815401723658604,
+      0.8434806783430636,
+      0.841117597998332,
+      0.8377814845704754
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 5,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (prev_action == 1) & (prev_common == 1)",
+    "split": "dev",
+    "precision": 0.9303745928338762,
+    "recall": 0.7957667453469025,
+    "f1": 0.857822178655599,
+    "mass_recall": 0.8387666587000465,
+    "correlation": 0.802415085867498,
+    "n_active": 25843,
+    "n_predicted": 22104,
+    "coverage_by_activation_quartile": [
+      0.6641386782231853,
+      0.8421297012846308,
+      0.8415106020739823,
+      0.8352941176470589
+    ]
+  },
+  "gate": "update",
+  "feature": 5,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I reproduced the test scores exactly: P 0.919, R 0.801, F1 0.856, mass recall 0.84.",
+      "The phase claim holds. On dev, all 25838 GO activations account for 100% of activation mass. D1 has 5 activations and D2 has none.",
+      "The negative claims hold. a1 then rare to S2, unrewarded: P 0.002. a2 then rare, unrewarded: P 0.004. prev_reward==1: 1222 weak activations with about 0 mass. prev_action==2: 115 activations, mass 0.001.",
+      "Most misses are at rel -3, where prev_action and prev_common are unknown. rel -3 GO holds about 4167 of the roughly 5300 dev misses (~16% of mass). Restricting to rel > -3 gives P 0.93. This is a limit of the 5-trial window, not a flaw in the predicate. The other misses are scattered weak activations, mostly after rewarded trials.",
+      "The false positives follow a pattern: the predicate is true but the feature stays off when the agent goes on to switch to a2. Within the predicate, P is 0.99 if the next choice is a1 and 0.78 if it is a2. This is a graded drop, which the explanation already states, not a missing class. Adding action==1 lowers F1 to 0.75 because recall falls.",
+      "Choice-based alternatives score worse: prev unrewarded & choice a1, F1 0.43; with prev a1/unknown and logit > 2.8, F1 0.64. Using prev_state==1 instead of a1-common gives F1 0.54, so the feature tracks the a1-common pattern, not just reaching S1.",
+      "Minor: the weakest activation quartile has lower coverage (0.68), and magnitude was not studied. This does not undermine the label."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "label": "D1 of last ~10 trials: ramps with episode trial, boosted after S1 and no reward, shaped by value",
+  "terms": "(phase == D1) * (ep_dec == 9) * value ;; (phase == D1) * (ep_dec == 9) * (ep_trial - 90) ;; (phase == D1) * (ep_dec == 9) * (prev_reward == 0) ;; (phase == D1) * (ep_dec == 9) * (ep_trial - 90) * (prev_state == 1) ;; (phase == D1) * (ep_dec == 9) * (ep_trial - 90) * value ;; (phase == D1) * (ep_dec == 9) * value**2",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 in the last episode decile (trials 90-99); essentially zero at GO and D2 and earlier in the episode (timing alone R^2 0.28). Within that window the magnitude ramps up with ep_trial, and the ramp is steeper when the previous trial reached S1 (after a2 S1 r/u and a1 S1 u it is highest, after S2 lowest). It is also higher after an unrewarded previous trial. The model value output shapes it: a positive main effect with a concave value**2 term, and a negative value x ep_trial interaction, so late-episode D1 steps with low value grow fastest. All terms are observed or model-internal; none are future. Six terms reach dev R^2 beyond timing 0.81 and test 0.80, well above the profile additive all ceiling of 0.05, because that ceiling has no within-decile ep_trial ramp. Remaining error: the largest activations (about 2.5-3) are underpredicted.",
+  "gate": "hidden",
+  "feature": 50,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 50,
+    "terms": [
+      "(phase == D1) * (ep_dec == 9) * value",
+      "(phase == D1) * (ep_dec == 9) * (ep_trial - 90)",
+      "(phase == D1) * (ep_dec == 9) * (prev_reward == 0)",
+      "(phase == D1) * (ep_dec == 9) * (ep_trial - 90) * (prev_state == 1)",
+      "(phase == D1) * (ep_dec == 9) * (ep_trial - 90) * value",
+      "(phase == D1) * (ep_dec == 9) * value**2"
+    ],
+    "weights": [
+      0.1403190998873825,
+      0.19629702541158103,
+      0.15873193476972347,
+      0.15176866409864792,
+      -0.07021493437272854,
+      -0.04304232143170601
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8001329720133616,
+    "r2": 0.8569510308916611,
+    "r2_timing_only": 0.2842793003461177
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 50,
+    "terms": [
+      "(phase == D1) * (ep_dec == 9) * value",
+      "(phase == D1) * (ep_dec == 9) * (ep_trial - 90)",
+      "(phase == D1) * (ep_dec == 9) * (prev_reward == 0)",
+      "(phase == D1) * (ep_dec == 9) * (ep_trial - 90) * (prev_state == 1)",
+      "(phase == D1) * (ep_dec == 9) * (ep_trial - 90) * value",
+      "(phase == D1) * (ep_dec == 9) * value**2"
+    ],
+    "weights": [
+      0.1403190998873825,
+      0.19629702541158103,
+      0.15873193476972347,
+      0.15176866409864792,
+      -0.07021493437272854,
+      -0.04304232143170601
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8058463963789484,
+    "r2": 0.8609475895828951,
+    "r2_timing_only": 0.2838020627806276
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The 'explained' verdict holds up. On test, the six terms score 0.800 R^2 beyond timing (total R^2 0.857 vs timing-only 0.284). Misses shows no systematic gap: mean error by phase is about 0, and the largest (phase, previous-trial) cell errors are around \u00b10.016. No term uses a future variable.",
+      "The ramp is understated. The growth within the last ten trials happens almost entirely after an S1 trial, not just more steeply after S1. A plain ramp scores only 0.079 (0.082 with prev_reward added). Ramp x (prev_state==1) lifts this to 0.484, and its weight is +0.152 while the unconditioned ramp turns slightly negative (-0.027). Separate ramps give +0.125 after S1 and -0.031 after S2. In the agent's fit the base ramp only looks positive because it is offset by the ramp x value term.",
+      "The claim 'higher when the previous trial was unrewarded' is weak and depends on what else is in the fit. On its own with the ramp, the prev_reward==0 weight is negative (-0.024). It only turns positive (+0.14 to +0.22) once value is in the model, and it adds just 0.007 R^2 (0.793 to 0.800) on top of S1-ramp + S1-ramp x value + value.",
+      "The value effect also sits mainly on the S1 ramp. With S1-ramp x value in the fit, a general ramp x value term gets weight about 0.003. Three terms (S1 ramp, S1 ramp x value, value) already reach 0.793 test. So 'low value grows fastest' really means 'after S1, low value grows fastest'.",
+      "What is left over is the shape of the ramp: it saturates. Adding ramp^2 x S1 (plus value^2 terms) raises test R^2 to 0.843. This is consistent with the agent's note that the largest activations are under-predicted. There is a small amount of firing in decile 8 (e.g. 1.19 at trial 88), but a decile-8 S1-ramp term gets weight about 0."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Late-episode D1 (trials 90-99) ramp that grows only after an S1 trial, faster at low value",
+    "better_terms": "(phase == D1) * (ep_dec == 9) * (ep_trial - 90) * (prev_state == 1) ;; (phase == D1) * (ep_dec == 9) * (ep_trial - 90) * (prev_state == 1) * value ;; (phase == D1) * (ep_dec == 9) * (ep_trial - 90) * (prev_state == 1) * value**2 ;; (phase == D1) * (ep_dec == 9) * value ;; (phase == D1) * (ep_dec == 9) * value**2 ;; (phase == D1) * (ep_dec == 9) * (ep_trial-90)**2 * (prev_state==1) ;; (phase==D1)*(ep_dec==8)*(prev_state==1)*(ep_trial-80)",
+    "better_terms_test_r2_beyond_timing": 0.8433
+  },
+  "final_label": "Late-episode D1 (trials 90-99) ramp that grows only after an S1 trial, faster at low value"
+}

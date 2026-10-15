@@ -1,0 +1,91 @@
+{
+  "label": "Update gate opens at GO after an unrewarded a2 (esp. a2 to S1) and when belief favors S2.",
+  "short_terms": "(phase == GO) * belief_lo ;; (phase == GO) * (prev_action == 2) * (prev_reward == 0) ;; (phase != D2) * last_is(\"a2 S1 u\")",
+  "terms": "(phase == GO) * belief_lo ;; (phase == GO) * (prev_action == 2) ;; (phase == GO) * (prev_action == 2) * (prev_reward == 0) ;; (phase == GO) * last_is(\"a2 S1 u\") ;; (phase == D1) * (prev_state == 2) ;; (phase == D1) * last_is(\"a2 S1 u\") ;; (phase == GO) * (tv(\"action\", -2) == 2) ;; (phase == GO) * (prev_reward == 1) * (prev_action==1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 22 is near 1 at D2 (almost no variation), ~0.25 at D1 and lowest at GO; nearly all magnitude variation beyond timing is at GO. At GO it rises after an unrewarded a2 trial (largest after a2->S1 rare unrewarded, +0.3) and with observer belief that S2 is good (negative belief_lo), and is lowest after a1 rewarded trials. At D1 it is raised after a2 S1 u and lowered after reaching S2 with a1. Free fit (0.62 dev) adds a2 main effect, D1 prev_state==2, and a1-rewarded GO terms; short form gets 0.58 dev. Residual errors: consecutive a2-unrewarded streaks drive it higher than predicted (accumulation not captured). Future reward does not matter.",
+  "full_test_scores": {
+    "gate": "unit_update",
+    "feature": 22,
+    "terms": [
+      "(phase == GO) * belief_lo",
+      "(phase == GO) * (prev_action == 2)",
+      "(phase == GO) * (prev_action == 2) * (prev_reward == 0)",
+      "(phase == GO) * last_is(\"a2 S1 u\")",
+      "(phase == D1) * (prev_state == 2)",
+      "(phase == D1) * last_is(\"a2 S1 u\")",
+      "(phase == GO) * (tv(\"action\", -2) == 2)",
+      "(phase == GO) * (prev_reward == 1) * (prev_action==1)"
+    ],
+    "weights": [
+      -0.031091371190081176,
+      -0.05432510027152125,
+      0.1620123665161674,
+      0.10075911786985291,
+      -0.03357305064600173,
+      0.10230738460291722,
+      0.006579464371747806,
+      -0.04373919231277489
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6062394754372606,
+    "r2": 0.9746787642688004,
+    "r2_timing_only": 0.9356938185733115
+  },
+  "gate": "unit_update",
+  "feature": 22,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 22,
+    "terms": [
+      "(phase == GO) * belief_lo",
+      "(phase == GO) * (prev_action == 2) * (prev_reward == 0)",
+      "(phase != D2) * last_is(\"a2 S1 u\")"
+    ],
+    "weights": [
+      -0.029849419462774987,
+      0.12218973783922293,
+      0.11235090787541412
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5680844105145678,
+    "r2": 0.9722251577415347,
+    "r2_timing_only": 0.9356938185733115
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 22,
+    "terms": [
+      "(phase == GO) * belief_lo",
+      "(phase == GO) * (prev_action == 2) * (prev_reward == 0)",
+      "(phase != D2) * last_is(\"a2 S1 u\")"
+    ],
+    "weights": [
+      -0.029849419462774987,
+      0.12218973783922293,
+      0.11235090787541412
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5768326233062518,
+    "r2": 0.9725782739404524,
+    "r2_timing_only": 0.935198865579392
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The label only mentions GO, but the short form's third term is (phase != D2) * last_is('a2 S1 u'), so it also covers D1. Restricting that term to GO drops test R^2 from 0.568 to 0.535, so the D1 rise after a2 S1 u is real and the label should mention it.",
+      "The explanation says the remaining misses come from a build-up over runs of unrewarded a2 trials. Two-back streak terms added to the short form in a free fit barely help: a2-unrewarded twice in a row gives test 0.5685, a2->S1 twice gives 0.571, against 0.568 without them. The large under-predictions in individual windows (e.g. GO 0.87 actual vs 0.53 predicted) are not fixed by trial-history streaks.",
+      "The largest systematic error the short form leaves is that the gate drops at D1 after a1->S2 trials (over-predicted by -0.09 and -0.07 at D1 after a1 S2 r/u; -0.06 at GO after a1 S2 r). The explanation mentions this but the short form does not encode it. Adding it as a 4th term raises test R^2 to 0.590. Using it in place of the a2 S1 u term gives a lower score (0.543).",
+      "Each short-form term is needed. Dropping belief_lo gives 0.340, replacing a2-unrewarded with any-a2 gives 0.501, and dropping the a2 S1 u term gives 0.498. Using raw belief instead of belief_lo is worse (0.522), and tanh(belief_lo) is the same (0.569). None of the tested variants beat it. It is a compact description, not curve fitting. It still sits well below the observed-only additive ceiling (0.74)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Update gate rises at GO after unrewarded a2 and when belief favors S2; after a2->S1-unrewarded also at D1.",
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "Update gate rises at GO after unrewarded a2 and when belief favors S2; after a2->S1-unrewarded also at D1."
+}

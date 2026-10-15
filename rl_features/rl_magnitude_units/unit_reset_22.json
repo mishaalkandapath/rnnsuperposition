@@ -1,0 +1,111 @@
+{
+ "label": "High at D1 after reward; at D2 higher after choosing a2 and when S2 believed good.",
+ "short_terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D2) * (action == 2) ;; (phase != GO) * belief",
+ "terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 1) * (prev_action == 2) ;; (phase == D1) * belief_lo ;; (phase == D2) * (action == 2) ;; (phase == D2) * belief_lo ;; (phase == D2) * (state == 2) ;; (phase == D1) * (prev_state == 2) ;; (phase == D1) * (tv(\"reward\", -2) == 1)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Raw reset gate r of unit 22; timing (high at D1, low at GO, mid at D2) explains R^2 0.77. Beyond timing: at D1 it rises strongly when the previous trial was rewarded (about +0.13) and drops after no reward; at D2 it is higher when the agent just chose a2 (+0.10); at D1 and D2 it rises with the ideal-observer belief that S2 is good (negative weight on belief_lo). GO is nearly flat. The free fit adds a bigger reward boost after a2 choices, a negative prev_state==S2 term at D1, the reached state at D2 and the reward two trials back (dev 0.69 vs short 0.63). No future variables or model outputs used.",
+ "full_test_scores": {
+  "gate": "unit_reset",
+  "feature": 22,
+  "terms": [
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D1) * (prev_reward == 1) * (prev_action == 2)",
+   "(phase == D1) * belief_lo",
+   "(phase == D2) * (action == 2)",
+   "(phase == D2) * belief_lo",
+   "(phase == D2) * (state == 2)",
+   "(phase == D1) * (prev_state == 2)",
+   "(phase == D1) * (tv(\"reward\", -2) == 1)"
+  ],
+  "weights": [
+   0.1258491430140154,
+   0.08603204650786171,
+   -0.010441247691313875,
+   0.065315867709758,
+   -0.017419856629946984,
+   0.019628667015348218,
+   -0.05310995298342378,
+   -0.040202596596836546
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6798633762412436,
+  "r2": 0.9273437160832587,
+  "r2_timing_only": 0.7730460105948627
+ },
+ "gate": "unit_reset",
+ "feature": 22,
+ "test_scores": {
+  "gate": "unit_reset",
+  "feature": 22,
+  "terms": [
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D2) * (action == 2)",
+   "(phase != GO) * belief"
+  ],
+  "weights": [
+   0.16294090855815355,
+   0.11901575551325644,
+   -0.11482626632783315
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7576546952497782,
+  "r2": 0.9449987662733335,
+  "r2_timing_only": 0.7730460105948627
+ },
+ "dev_scores": {
+  "gate": "unit_reset",
+  "feature": 22,
+  "terms": [
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D2) * (action == 2)",
+   "(phase != GO) * belief"
+  ],
+  "weights": [
+   0.16294090855815355,
+   0.11901575551325644,
+   -0.11482626632783315
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.7677505894956841,
+  "r2": 0.9477844838514217,
+  "r2_timing_only": 0.7751748173000939
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The belief term has the wrong shape. Replacing belief_lo with belief (the probability itself) in the same 3-term short form raises test R^2 beyond timing from 0.623 to 0.758 (dev 0.768). That is above the reported free fit of 0.68. The gate tracks the saturating probability, not the unbounded log-odds; np.tanh(belief_lo) scores 0.621 and (belief_lo > 0) scores 0.724.",
+   "The label puts the belief effect in the wrong phase. It says 'at D2 ... when S2 believed good', but most of the belief effect is at D1. With belief, a D1-only term scores 0.731 on test and adding D2 brings it only to 0.758. With belief_lo, D1-only scores 0.592 and D2-only 0.560. The label never says belief matters at D1, though D1 is where it matters most once a2 is already in the D2 term.",
+   "The explanation's claim that belief acts at both D1 and D2 is weakly supported. At D2 the a2-choice term carries most of the signal. The residual table shows D2 deviations of about +/-0.09 for both choice x state and belief decile, which are confounded with each other.",
+   "A systematic error class remains in misses (worst-fit windows) for both forms: D1 after an unrewarded trial is over-predicted. Original form: a1 S1 u -0.170, a2 S1 u -0.137. Belief form: -0.135 and -0.111. The original form also under-predicts GO by about +0.045 across previous-trial patterns. A binary prev_reward boost does not fully capture how low the gate falls after no reward, especially after reaching S1."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "High at D1 after reward and when S2 believed good; at D2 higher after choosing a2.",
+  "better_short_terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D2) * (action == 2) ;; (phase != GO) * belief",
+  "better_short_terms_test_r2_beyond_timing": 0.758
+ },
+ "final_label": "High at D1 after reward and when S2 believed good; at D2 higher after choosing a2.",
+ "original_short_terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D2) * (action == 2) ;; (phase != GO) * belief_lo",
+ "original_test_scores": {
+  "gate": "unit_reset",
+  "feature": 22,
+  "terms": [
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D2) * (action == 2)",
+   "(phase != GO) * belief_lo"
+  ],
+  "weights": [
+   0.13285673342946488,
+   0.09326663657651335,
+   -0.01487853868354209
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6229558515372817,
+  "r2": 0.9144283263245232,
+  "r2_timing_only": 0.7730460105948627
+ },
+ "terms_from": "skeptic"
+}

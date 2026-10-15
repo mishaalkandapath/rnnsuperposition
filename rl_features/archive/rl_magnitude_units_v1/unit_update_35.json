@@ -1,0 +1,82 @@
+{
+  "label": "End-of-episode drop in z, deepest at D2 in S1 and after a1/S1 histories",
+  "terms": "np.maximum(ep_trial-90,0)**2 ;; np.maximum(ep_trial-90,0)**2*(phase==D2) ;; np.maximum(ep_trial-90,0)**2*(phase==D2)*(state==1) ;; np.maximum(ep_trial-90,0)**2*(phase==D1)*(prev_state==1) ;; np.maximum(ep_trial-90,0)**2*(phase==D1)*(prev_state==1)*(prev_reward==0) ;; np.maximum(ep_trial-90,0)**2*((tv(\"action\",-1)==1)*1+(tv(\"action\",-2)==1)+(tv(\"action\",-3)==1)) ;; (phase==D2)*table(in_state*3+action, {4:1}) ;; (phase==D1)*(prev_action==1)*(prev_state==2)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Update gate z of unit 35 sits near 1 (mean 0.992) almost all episode and drops only in the last ~10 trials (down to ~0.55). Most of the variance beyond the phase x decile baseline comes from how that late drop depends on trial content. Within-decile timing alone (a quadratic ramp past trial 90, per phase) gives only ~0.14 dev R^2. The drop is much deeper (1) at D2 when the reached state is S1 (strongest effect), (2) at D1 after an unrewarded trial that reached S1, and (3) with more a1 choices in the last 3 trials. So late in the episode, a run of a1 -> S1 trials, especially unrewarded ones, pushes z lowest. Throughout the episode there are two small step effects: z is lower at D2 after a1 -> S1 (common) and at D1 after a1 -> S2 (rare), each by about 0.012. The hidden good state, start_high and the policy sign add nothing once these terms are in. All terms use observed variables only. Test R^2 beyond timing 0.51 (dev 0.52), far above the additive all ceiling of 0.17 because the terms interact with late-episode time. Some windows with long a1/S1 runs are still under-predicted (actual drop deeper).",
+  "gate": "unit_update",
+  "feature": 35,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 35,
+    "terms": [
+      "np.maximum(ep_trial-90,0)**2",
+      "np.maximum(ep_trial-90,0)**2*(phase==D2)",
+      "np.maximum(ep_trial-90,0)**2*(phase==D2)*(state==1)",
+      "np.maximum(ep_trial-90,0)**2*(phase==D1)*(prev_state==1)",
+      "np.maximum(ep_trial-90,0)**2*(phase==D1)*(prev_state==1)*(prev_reward==0)",
+      "np.maximum(ep_trial-90,0)**2*((tv(\"action\",-1)==1)*1+(tv(\"action\",-2)==1)+(tv(\"action\",-3)==1))",
+      "(phase==D2)*table(in_state*3+action, {4:1})",
+      "(phase==D1)*(prev_action==1)*(prev_state==2)"
+    ],
+    "weights": [
+      -0.0003729335014709535,
+      0.0011589419489491455,
+      -0.0026511008671983804,
+      0.0007897774180517272,
+      -0.00010340440234356224,
+      -0.0002686155894712694,
+      -0.011439293885848575,
+      -0.011992474449408416
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.511622281965957,
+    "r2": 0.7331567435640567,
+    "r2_timing_only": 0.4536129586130243
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 35,
+    "terms": [
+      "np.maximum(ep_trial-90,0)**2",
+      "np.maximum(ep_trial-90,0)**2*(phase==D2)",
+      "np.maximum(ep_trial-90,0)**2*(phase==D2)*(state==1)",
+      "np.maximum(ep_trial-90,0)**2*(phase==D1)*(prev_state==1)",
+      "np.maximum(ep_trial-90,0)**2*(phase==D1)*(prev_state==1)*(prev_reward==0)",
+      "np.maximum(ep_trial-90,0)**2*((tv(\"action\",-1)==1)*1+(tv(\"action\",-2)==1)+(tv(\"action\",-3)==1))",
+      "(phase==D2)*table(in_state*3+action, {4:1})",
+      "(phase==D1)*(prev_action==1)*(prev_state==2)"
+    ],
+    "weights": [
+      -0.0003729335014709535,
+      0.0011589419489491455,
+      -0.0026511008671983804,
+      0.0007897774180517272,
+      -0.00010340440234356224,
+      -0.0002686155894712694,
+      -0.011439293885848575,
+      -0.011992474449408416
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5198023957689888,
+    "r2": 0.7461256132906391,
+    "r2_timing_only": 0.4713126752976715
+  },
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Claim (2) is wrong in direction. In the original fit the late D1 term with prev_state==1 has weight +0.0008 and the extra unrewarded term has -0.0001, so the net effect at D1 after S1 is a SMALLER drop, not a deeper one. The phase-specific test makes this clear: L*(phase==D1)*last_is(...) gives weights a1 S1 r +0.00017, a1 S1 u +0.00011, a1 S2 r -0.0011, a1 S2 u -0.00112, a2 S1 r/u +0.0003. The late D1 drop is deepest after a1 -> S2 (rare), whatever the reward. Prev-unrewarded adds nothing (0.0358 -> 0.036).",
+      "The phrase 'a run of a1 -> S1 trials, especially unrewarded ones' is not supported. Reward does not deepen the drop at D1 or in the fitted terms.",
+      "At D2 the effect is not just about the reached state. Adding L*(D2)*(action==1) to the state==1 term raises test R^2 from 0.37 to 0.45. Split by cell, late D2 weights are a1 S1 -0.0025, a2 S1 -0.0012, a1 S2 -0.0006, so both the choice a1 and S1 contribute.",
+      "A large systematic under-prediction remains for long late-episode a1 -> S1 runs. In the worst windows, actual D2 is about 0.56-0.70 against predicted 0.78-0.90, a miss of about 0.15-0.2 on a feature whose std is 0.022. The label's own admission understates how much of the late drop is unexplained.",
+      "Of the 0.51, about 0.11 is finer timing alone (L + L*D2). The 'beyond timing' gain therefore partly reflects a coarse decile baseline, as the label notes."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "Late-episode (trial > ~88) drop in z, deepest at D2 after a1 -> S1 and at D1 after a rare a1 -> S2 trial, accumulating with recent a1 choices; reward plays no role",
+    "better_terms": "np.maximum(ep_trial-88,0)**2 ;; np.maximum(ep_trial-88,0)**2*(phase==D2) ;; np.maximum(ep_trial-88,0)**2*(phase==D2)*(state==1) ;; np.maximum(ep_trial-88,0)**2*(phase==D2)*(action==1) ;; np.maximum(ep_trial-88,0)**2*((tv('action',-1)==1)*1+(tv('action',-2)==1)+(tv('action',-3)==1)) ;; np.maximum(ep_trial-88,0)**2*((tv('action',-1)==1)*1+(tv('action',-2)==1)+(tv('action',-3)==1))*(phase==D2) ;; (phase==D2)*table(in_state*3+action, {4:1}) ;; (phase==D1)*(prev_action==1)*(prev_state==2)",
+    "better_terms_test_r2_beyond_timing": 0.5358
+  },
+  "final_label": "Late-episode (trial > ~88) drop in z, deepest at D2 after a1 -> S1 and at D1 after a rare a1 -> S2 trial, accumulating with recent a1 choices; reward plays no role"
+}

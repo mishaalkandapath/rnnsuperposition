@@ -1,0 +1,66 @@
+{
+  "label": "GO after a2 S2 unrewarded, ramps with trial past ~80, weaker when belief favors S1",
+  "terms": "(phase == GO) * last_is(\"a2 S2 u\") * np.clip(ep_trial - 80, 0, None) ;; (phase == GO) * last_is(\"a2 S2 u\") * np.clip(ep_trial - 80, 0, None) * belief ;; (phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 80) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * np.clip(ep_trial - 80, 0, None)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Only active at GO late in the episode. Magnitude is a ramp in episode trial beyond ~80 (roughly 0.14 per trial, reaching ~1.9 by trial 99), but only when the previous trial was a2 -> S2 unrewarded. The ramp is shallower when the ideal-observer belief favours S1 (belief weight -0.10 per trial, so it drops by about two thirds at belief 1). A smaller ramp applies on the window first trial where the previous choice is unknown but the previous reward was 0. All other previous-trial patterns (rewarded, a1, S1) contribute about nothing; adding a1 S2 u or S1-unrewarded terms gave negligible negative weights. D1 and D2 are always zero. Dev R^2 beyond timing 0.71 (the indicator alone is 0.17; adding the ramp gives 0.63). The profile ceiling all = 0.13 and all observed = 0.11 are far lower because those tables are additive and cannot form the history x episode-time interaction. Observed-only loses little: adding the FUTURE upcoming choice (a1 vs a2 after a2 S2 u) raises dev to 0.78, so part of the leftover variance is the agent own upcoming switch decision, which belief only partly stands in for. No model value or policy terms are used.",
+  "gate": "update",
+  "feature": 75,
+  "test_scores": {
+    "gate": "update",
+    "feature": 75,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 u\") * np.clip(ep_trial - 80, 0, None)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * np.clip(ep_trial - 80, 0, None) * belief",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 80)",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0) * np.clip(ep_trial - 80, 0, None)"
+    ],
+    "weights": [
+      0.14312349966897914,
+      -0.09591889353765397,
+      -0.12392991231369187,
+      0.01677209901319356
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7024859016509465,
+    "r2": 0.7304821995197999,
+    "r2_timing_only": 0.0941007435419321
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 75,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 u\") * np.clip(ep_trial - 80, 0, None)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * np.clip(ep_trial - 80, 0, None) * belief",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 80)",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0) * np.clip(ep_trial - 80, 0, None)"
+    ],
+    "weights": [
+      0.14312349966897914,
+      -0.09591889353765397,
+      -0.12392991231369187,
+      0.01677209901319356
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7088205002407448,
+    "r2": 0.7333673006358603,
+    "r2_timing_only": 0.08430126576702868
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the window's first trial is under-predicted. When the previous trial falls outside the window but the shown reward was 0 and the agent picks a2, the feature fires at about 1.9-2.0, yet the 0.017-weight ramp predicts about 0.4. This is visible in the misses examples. Adding a FUTURE (action==2) factor to that term only lifts test from 0.702 to 0.720, so it is a small error class.",
+      "Part of the claim relies on the upcoming choice. Adding the FUTURE term last_is('a2 S2 u')*ramp*(action==2) raises test from 0.702 to 0.750, which fits the explanation's dev 0.78 statement. In the misses, a1 trials after a2 S2 u are predicted near 1.0 but the actual value is 0, so the feature really fires only when the agent repeats a2. The label leaves this out, although the explanation admits it.",
+      "Checked claims: D1 and D2 are always 0 (profile). With all 4 terms on test, removing the belief term drops R^2 from 0.702 to 0.613, so the belief modulation is real. The ramp alone gives test 0.598. Fitted weights +0.143 and -0.096 per trial times belief give about 1/3 of the slope at belief near 1, which matches 'about two thirds smaller'. Misses by phase x previous trial show only about 0.01-0.015 mean errors, so no large systematic class is left.",
+      "A history refinement adds little: tv('reward',-2)==0 gives test 0.712. Using belief_lo plus |belief_lo| gives 0.729. About 0.27 of the variance stays unexplained, spread across trials (for example, the drop on repeated a2 S2 u streaks)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after a2 S2 unrewarded (mostly when a2 is chosen again), ramps with episode trial past ~80, weaker when belief favors S1",
+    "better_terms": "(phase == GO) * last_is(\"a2 S2 u\") * np.clip(ep_trial - 80, 0, None) ;; (phase == GO) * last_is(\"a2 S2 u\") * np.clip(ep_trial - 80, 0, None) * belief_lo ;; (phase == GO) * last_is(\"a2 S2 u\") * np.clip(ep_trial - 80, 0, None) * np.abs(belief_lo) ;; (phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 80) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * np.clip(ep_trial - 80, 0, None) ;; (phase == GO) * last_is(\"a2 S2 u\") * np.clip(ep_trial - 80, 0, None) * (tv(\"reward\",-2)==0)",
+    "better_terms_test_r2_beyond_timing": 0.7286
+  },
+  "final_label": "GO after a2 S2 unrewarded (mostly when a2 is chosen again), ramps with episode trial past ~80, weaker when belief favors S1"
+}

@@ -1,0 +1,63 @@
+{
+  "label": "GO step after a rewarded trial when the agent is about to choose a2 (before late episode)",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (action == 2) & (ep_trial < 85)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO, never at D1 or D2. It needs the previous trial to have been rewarded (99.8% of mass has prev_reward==1) and the agent to be choosing a2 right now (98% of mass; model_act==2 / strongly negative choice logit scores the same). The action is the agent own upcoming choice, which it computes, so no unobservable variable is used. It is also silent in the last ~15 trials of the episode: rate falls at trials 80-89 and is ~0 at 90-99. Adding ep_trial<85 raises dev F1 from 0.86 to 0.93, so I recorded that version. Magnitude is largest when there is a run of consecutive rewarded a2 choices and value is high. The feature is weak (~0.1-0.3) when the previous a2 trial was unrewarded or when the agent switches to a2 from a1. A small amount of weak activation also comes before a1 choices (2% of mass). Does not fire after unrewarded trials or before a1 choices.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 99,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (action == 2) & (ep_trial < 85)",
+    "split": "test",
+    "precision": 0.9299635934097901,
+    "recall": 0.9232492604974358,
+    "f1": 0.9265942636809584,
+    "mass_recall": 0.9764579047415486,
+    "correlation": 0.8578419651550012,
+    "n_active": 114266,
+    "n_predicted": 113441,
+    "coverage_by_activation_quartile": [
+      0.7442503588056149,
+      0.95438793012917,
+      0.9953091087306588,
+      0.999054820415879
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 99,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (action == 2) & (ep_trial < 85)",
+    "split": "dev",
+    "precision": 0.9364658330175571,
+    "recall": 0.923189127650491,
+    "f1": 0.9297800868903122,
+    "mass_recall": 0.97723798930932,
+    "correlation": 0.8616857230536662,
+    "n_active": 112432,
+    "n_predicted": 110838,
+    "coverage_by_activation_quartile": [
+      0.7468692187277644,
+      0.9489469190266117,
+      0.9971894122669702,
+      0.9997509605806176
+    ]
+  },
+  "gate": "reset",
+  "feature": 99,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The test scores reproduce exactly: P 0.930, R 0.923, F1 0.927, mass recall 0.976.",
+      "Claims check out. The feature essentially never fires outside GO (phase != GO has mass recall about 1e-6). GO with prev_reward==0 holds 0.17% of mass. GO with action==1 holds 2.1% of mass and 5.4% of active steps, which matches the stated 'about 2% of mass before a1'.",
+      "The late-episode cutoff is real. GO & prev_reward==1 & action==2 & ep_trial>=85 has precision 0.039 and mass recall 0.0007. Without the cutoff, test F1 is 0.854. Cutoffs of 80 and 90 give F1 0.917 and 0.904, so 85 is the best of the three tried.",
+      "Small structured false-positive pocket: when the agent switches to a2 after a rewarded a1 trial (prev_action==1), precision is only 0.54, and it is only about 2.3% of active steps. Rare previous transitions give precision 0.75, and good==S1 gives 0.82. This fits the explanation's note that firing is weak when switching from a1. It is a small share of the false positives, not a large missing class.",
+      "Replacing the 'about to choose a2' term with a choice logit below -1 scores about the same (F1 0.924), which supports the claim that the agent's own policy fits as well as the action. No future variable is needed."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

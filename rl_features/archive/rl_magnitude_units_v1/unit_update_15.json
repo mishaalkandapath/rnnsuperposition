@@ -1,0 +1,72 @@
+{
+  "label": "update gate z15 tracks policy preference for a2 (high when a2 favoured), D1/GO",
+  "terms": "(phase == D1) * choice ;; (phase == GO) * choice ;; (phase == D2) * choice ;; (phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 1) * choice",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 15 (mean 0.76; D2 near 1, GO lowest). Beyond timing its magnitude is a graded, decreasing function of the model policy logit(a1)-logit(a2): high (closer to 1, i.e. hold state) when the agent favours a2, low when it favours a1, strongest at D1 (weight -0.071 per logit unit) and GO (-0.048), negligible at D2. Three phase-specific choice terms give dev R^2 beyond timing 0.875; adding a rewarded-previous-trial offset at D1 (z is higher after rewards, slope on choice flattened) gives 0.898. In observed-only terms this corresponds to the last-trial pattern in a model-based way: after a2-common-rewarded / a2-rare-unrewarded / a1-rare-rewarded-ish trials it is high, after a1 S1 r and a1 S2 u low (last-trial tables plus upcoming choice reach ~0.72 dev; last-trial alone 0.61 reference). Value, reward (future) and trials since reversal do not matter; hidden good state only via its correlation with the policy. No future variables used.",
+  "gate": "unit_update",
+  "feature": 15,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 15,
+    "terms": [
+      "(phase == D1) * choice",
+      "(phase == GO) * choice",
+      "(phase == D2) * choice",
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_reward == 1) * choice"
+    ],
+    "weights": [
+      -0.07316055784477359,
+      -0.04775164371600659,
+      -0.01257406302097975,
+      0.10890985276694912,
+      0.0009047981224306858
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8942571043302169,
+    "r2": 0.9184696381237011,
+    "r2_timing_only": 0.22897551310771525
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 15,
+    "terms": [
+      "(phase == D1) * choice",
+      "(phase == GO) * choice",
+      "(phase == D2) * choice",
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_reward == 1) * choice"
+    ],
+    "weights": [
+      -0.07316055784477359,
+      -0.04775164371600659,
+      -0.01257406302097975,
+      0.10890985276694912,
+      0.0009047981224306858
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8975613993194411,
+    "r2": 0.9211464419516425,
+    "r2_timing_only": 0.23023589228584118
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The main claim holds. The three per-phase policy-logit terms alone score test R^2 beyond timing 0.874, and with the D1 prev_reward term 0.894, which reproduces the reported number. The slope signs and their order by phase (D1 -0.073, GO -0.048, D2 -0.013) are also confirmed.",
+      "One recorded term does nothing. (phase==D1)*(prev_reward==1)*choice gets weight +0.001, and dropping it leaves test R^2 at 0.8942.",
+      "'Raise at D1 after a rewarded previous trial' overclaims. Split by transition type, the raise is +0.113 after common-rewarded trials and only +0.012 after rare-rewarded ones (test R^2 0.890). So it is a common-rewarded raise, not a raise after any reward.",
+      "There is a large systematic miss. On the recorded terms, misses puts D1 after 'a1 S2 r' (rare rewarded) at mean error -0.270. In the profile, the D1 residual after a1 S2 r is -0.309 while the GO residual is +0.037. In that case the policy logit already swings toward a2 at D1 but z15 stays low: at D1 it follows the previous a1 choice rather than the policy. Adding a (phase==D1)*last_is('a1 S2 r') term (weight -0.28 to -0.33) brings test R^2 to 0.903. That contradicts the 'tracks policy preference at D1' framing for this history.",
+      "The policy effect is not linear. It saturates on the a2-favoured side, most strongly at D1: the D1 policy-decile residuals plateau at about +0.25 across deciles 1-4. A piecewise fit gives a D1 slope of -0.101 on the a1-favoured side and -0.033 on the a2-favoured side. Fitting that shape lifts test R^2 to 0.911.",
+      "Remaining errors after the fixes are small: the worst (phase, previous trial) cells are within \u00b10.055.",
+      "'choice' is the model's own policy logit at that same step. At D1 it is not the GO decision, so 'policy preference' at D1 is a correlate of a model internal, not an observed cue. The observed-only reference score ('all observed') is 0.83."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "update gate z15 is high when the policy favours a2 (saturating, strongest at D1/GO), raised at D1 after common-rewarded trials, low at D1 after a1-S2-rewarded",
+    "better_terms": "(phase == D1) * np.maximum(choice,0) ;; (phase == D1) * np.minimum(choice,0) ;; (phase == GO) * np.maximum(choice,0) ;; (phase == GO) * np.minimum(choice,0) ;; (phase == D2) * np.maximum(choice,0) ;; (phase == D2) * np.minimum(choice,0) ;; (phase == D1) * (prev_reward == 1) ;; (phase == D1) * last_is('a1 S2 r')",
+    "better_terms_test_r2_beyond_timing": 0.9228
+  },
+  "final_label": "update gate z15 is high when the policy favours a2 (saturating, strongest at D1/GO), raised at D1 after common-rewarded trials, low at D1 after a1-S2-rewarded"
+}

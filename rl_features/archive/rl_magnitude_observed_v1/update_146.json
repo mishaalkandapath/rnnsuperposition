@@ -1,0 +1,68 @@
+{
+  "label": "GO after unrewarded a1->S2 (rare), ramping down to zero by ~trial 35",
+  "terms": "(phase == GO) * last_is(\"a1 S2 u\") ;; (phase == GO) * last_is(\"a1 S2 u\") * np.maximum(0, 35 - ep_trial) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * np.maximum(0, 35 - ep_trial) ;; (phase == GO) * last_is(\"a1 S2 u\") * np.maximum(0, 35 - ep_trial) * (tv(\"reward\", -2) == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO. Magnitude is set by an interaction: the previous trial was a1 -> S2 (rare) and unrewarded, scaled by a linear ramp that falls from its peak at episode start to zero around trial 35 (activation about 0.5 at trials 3-6). Using the indicator alone gives dev R^2 0.15 beyond timing; adding the ramp interaction lifts it to 0.60, well above the additive all ceiling (0.23), because the cue and the early-episode timing multiply. Smaller additions: GO on the window first trial (previous pattern unknown) after no reward, with the same ramp; and a boost when the trial two back was rewarded. Belief log-odds (ideal observer) adds only about 0.003 and was dropped. Test R^2 beyond timing 0.64 with observed-only terms. The earlier model-based reading (agent strongly choosing a1) is not needed: the observed history plus episode time account for it with essentially no loss. D1 and D2 are always zero.",
+  "gate": "update",
+  "feature": 146,
+  "test_scores": {
+    "gate": "update",
+    "feature": 146,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S2 u\")",
+      "(phase == GO) * last_is(\"a1 S2 u\") * np.maximum(0, 35 - ep_trial)",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0) * np.maximum(0, 35 - ep_trial)",
+      "(phase == GO) * last_is(\"a1 S2 u\") * np.maximum(0, 35 - ep_trial) * (tv(\"reward\", -2) == 1)"
+    ],
+    "weights": [
+      0.004280776492257433,
+      0.011371623887591074,
+      0.002431937398413114,
+      0.004793400309581759
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6368508720270476,
+    "r2": 0.6655674336882842,
+    "r2_timing_only": 0.07907649901716274
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 146,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S2 u\")",
+      "(phase == GO) * last_is(\"a1 S2 u\") * np.maximum(0, 35 - ep_trial)",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0) * np.maximum(0, 35 - ep_trial)",
+      "(phase == GO) * last_is(\"a1 S2 u\") * np.maximum(0, 35 - ep_trial) * (tv(\"reward\", -2) == 1)"
+    ],
+    "weights": [
+      0.004280776492257433,
+      0.011371623887591074,
+      0.002431937398413114,
+      0.004793400309581759
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6385276290093482,
+    "r2": 0.668641480390519,
+    "r2_timing_only": 0.08330886064304355
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claim holds. I reproduced test R^2 beyond timing of 0.637. The activation is zero at D1 and D2 (the baseline and residuals are exactly 0 there). At GO, the only positive residual cell is after 'a1 S2 u' (+0.071; every other cell is between -0.008 and -0.001). last_is('a1 S2 u')*ramp(35) alone gives test 0.599. The 35-trial cutoff is the best I tried: 25 gives 0.529, 45 gives 0.583, exp(-t/15) gives 0.562, and a step at t<35 gives 0.485.",
+      "The explanation is wrong to say that belief 'is not a meaningful driver'. It only tested belief alongside the a1 S2 u term (I also got about +0.01 there). On the window-first GO steps, where the previous trial is unknown, belief carries real information. Adding (GO)*(prev_action==-1)*(prev_reward==0)*ramp*belief_lo, plus its positive part max(belief_lo,0), raises test from 0.662 to 0.710 (+0.048). The same set without belief scores 0.662. These are the window-first misses that the explanation itself names as the main remaining error. So observed belief does stand in for part of what the earlier model-based reading captured.",
+      "There is a small, systematic two-back history effect that the label leaves out. If the trial two back was an unrewarded S1 visit, the a1 S2 u response is suppressed (weight -0.008; test +0.01). Examples from the misses output: a1 S1 u, a1 S1 u, a1 S2 u -> actual 0 vs predicted 0.36. a2 S2 u, a1 S1 u, a1 S2 u -> actual 0 vs predicted 0.41.",
+      "An unrewarded common a2->S2 trial also sometimes drives the feature (one miss window shows 0.505 after a2 S2 u, predicted 0.04). A ramped a2 S2 u term adds about 0.017 on test (0.654 vs 0.637). So 'a1->S2 rare' is too narrow: the cue is closer to 'S2 just went unrewarded, and S1 has not recently failed'.",
+      "Using the future choice (action==1) adds only 0.002 (0.639), so the agent's upcoming a1 choice is not needed. This agrees with the explanation's claim that no future variables are needed.",
+      "About 29% of the variance beyond timing is still unexplained even with the better terms (test 0.71)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO only, early in the episode (fading linearly to zero by ~trial 35), after S2 went unrewarded (mainly a1->S2 rare; weakly a2->S2). Larger if the trial two back was rewarded, suppressed if S1 was recently unrewarded. On window-first trials it follows the ideal-observer belief that S1 is good.",
+    "better_terms": "(phase == GO) * last_is(\"a1 S2 u\") ;; (phase == GO) * last_is(\"a1 S2 u\") * np.maximum(0, 35 - ep_trial) ;; (phase == GO) * last_is(\"a1 S2 u\") * np.maximum(0, 35 - ep_trial) * (tv(\"reward\", -2) == 1) ;; (phase == GO) * (prev_action == -1) * np.maximum(0, 35 - ep_trial) * (prev_reward == 0) ;; (phase == GO) * (prev_action == -1) * np.maximum(0, 35 - ep_trial) * (prev_reward == 0) * belief_lo ;; (phase == GO) * (prev_action == -1) * np.maximum(0, 35 - ep_trial) * (prev_reward == 0) * np.maximum(belief_lo,0) ;; (phase == GO) * (prev_action == -1) * np.maximum(0, 35 - ep_trial) ;; (phase == GO) * last_is(\"a1 S2 u\") * np.maximum(0, 35 - ep_trial) * ((tv(\"state\",-2)==1) & (tv(\"reward\",-2)==0))",
+    "better_terms_test_r2_beyond_timing": 0.7098
+  },
+  "final_label": "GO only, early in the episode (fading linearly to zero by ~trial 35), after S2 went unrewarded (mainly a1->S2 rare; weakly a2->S2). Larger if the trial two back was rewarded, suppressed if S1 was recently unrewarded. On window-first trials it follows the ideal-observer belief that S1 is good."
+}

@@ -1,0 +1,63 @@
+{
+  "label": "GO: choosing a1 after an unrewarded visit to S2",
+  "predicate": "(phase == GO) & (prev_reward == 0) & (prev_state != 1) & (model_act == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at the GO step (100% of mass; never at D1 or D2) when the previous trial was unrewarded, the previous trial reached S2 (via common a2 or rare a1), and the agent is choosing a1 (model_act == 1; the agent's own upcoming choice, which it computes). This is the model-based response to S2 being unrewarded: go to a1, whose common state is S1. prev_state != 1 also keeps the window's first trial (prev_state -1), whose previous trial falls outside the window. Dev P 0.88 / R 0.90 / F1 0.89, mass recall 0.98. It does not fire after rewarded trials, after unrewarded visits to S1, or when choosing a2. Base rates: firing rises with a strongly positive a1 choice logit (choice > 8: 25% of steps active) and with good == S1. Misses are weak activations (bottom quartile, under ~0.3 of max) where the agent picks a2 after an unrewarded S2 or is less sure. False positives come mostly from the window's first trials, whose previous state is not visible. Uses only observed variables plus the agent's own choice.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 206,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (prev_state != 1) & (model_act == 1)",
+    "split": "test",
+    "precision": 0.8685284171484673,
+    "recall": 0.878243028591599,
+    "f1": 0.8733587091254127,
+    "mass_recall": 0.9801206370182118,
+    "correlation": 0.870567066319843,
+    "n_active": 45328,
+    "n_predicted": 45835,
+    "coverage_by_activation_quartile": [
+      0.512972114366396,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 206,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (prev_state != 1) & (model_act == 1)",
+    "split": "dev",
+    "precision": 0.8810111537758274,
+    "recall": 0.8983196998298725,
+    "f1": 0.8895812418504286,
+    "mass_recall": 0.9838087768911075,
+    "correlation": 0.8788289575374046,
+    "n_active": 42909,
+    "n_predicted": 43752,
+    "coverage_by_activation_quartile": [
+      0.5933072334079046,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 206,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced the scores. Dev: P 0.881, R 0.898, F1 0.890, mass recall 0.984. Test: P 0.869, R 0.878, F1 0.873, mass recall 0.98. Coverage by activation quartile on test is [0.51, 1.0, 1.0, 1.0], so the missed activations are only weak ones (2.0% of activation mass).",
+      "The phase claim holds. 100% of activation mass is at GO, with 5 stray D1 activations and 0 at D2. The feature never fires after a rewarded trial (in_rew 1: 0 active steps). With prev_state == 1 the predicate's slice has 0 mass recall.",
+      "Nuance: the two routes to an unrewarded S2 are far from equal in strength. The rare a1 -> S2 unrewarded case, where the agent stays with a1, alone gets P 0.949 and 70.6% of mass, and covers 0.79 to 0.81 of the top two quartiles. The common a2 -> S2 unrewarded case, where the agent switches to a1, is 13% of active steps but only 9.4% of mass, and it sits almost entirely in the bottom two quartiles (top-quartile coverage 0.0008). The explanation's 'by common a2 or rare a1' makes the two sound equal; really the feature is strongest for staying with a1 after a rare unrewarded transition.",
+      "Window-first trials (prev_state == -1) are 18% of mass with precision 0.70. They are the main source of false positives, as the explanation itself says. This is not a refutation, because the previous trial is not visible in the window.",
+      "The false positives on test are scattered: window-first trials, and some common-a2-unrewarded -> a1 switches that don't fire. I found no systematic class by phase, rel, reward or good state that breaks the predicate. Adding good != 2 lowers test F1 to 0.849. Using action instead of model_act gives essentially the same score (0.869)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "label": "GO dips with loss streaks and mid-confidence belief; D1/D2 track belief and S2/a1",
+  "terms": "(phase == D1) * belief_lo ;; (phase == D1) * (prev_state == 2) ;; (phase == D2) * (in_action == 1) ;; (phase == D2) * (in_state == 2) ;; (phase == GO) * ((prev_reward == 0) + (prev_reward == 0) * (tv(\"reward\", -2) == 0) + (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0)) ;; (phase == GO) * np.abs(belief_lo) ;; (phase == GO) * np.exp(-np.abs(belief_lo)) ;; (phase == GO) * last_is(\"a2 S1 u\")",
+  "verdict": "partially_explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw reset gate r of unit 16 sits near 0.96-0.99 at D1/GO and near 0.03-0.09 at D2 (timing explains almost all raw variance). Beyond timing, the largest deviations are GO-phase dips (down to ~0.5) during runs of unrewarded trials, mostly late in the episode, often after a2 choices that reached S1 rare and went unrewarded. Observed-only terms: at GO, a graded loss-streak count (1-3 consecutive unrewarded trials) lowers r (~-0.016 per step), an extra drop after a2->S1 unrewarded, and a non-monotone dependence on ideal-observer confidence |belief_lo| (|lo| and exp(-|lo|) both positive weights, so r is lowest at intermediate confidence, |lo| ~1.5-2, i.e. while the belief is shifting). At D1, r is higher when belief favours S2 (negative belief_lo) and when the previous trial reached S2; at D2, r is higher after choosing a1 and lower when S2 is reached. Future variables not used. Test R^2 beyond timing 0.56 (dev 0.58) vs all ceiling 0.71 and all-observed 0.68; earlier model-based explanation used the policy (policy-decile reference 0.38), and the observed-only version recovers most of it; GO dips in long loss streaks remain under-predicted in the worst windows.",
+  "gate": "unit_reset",
+  "feature": 16,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 16,
+    "terms": [
+      "(phase == D1) * belief_lo",
+      "(phase == D1) * (prev_state == 2)",
+      "(phase == D2) * (in_action == 1)",
+      "(phase == D2) * (in_state == 2)",
+      "(phase == GO) * ((prev_reward == 0) + (prev_reward == 0) * (tv(\"reward\", -2) == 0) + (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0))",
+      "(phase == GO) * np.abs(belief_lo)",
+      "(phase == GO) * np.exp(-np.abs(belief_lo))",
+      "(phase == GO) * last_is(\"a2 S1 u\")"
+    ],
+    "weights": [
+      -0.005560917567846036,
+      0.021374194389083806,
+      0.025841341604319296,
+      -0.011172814481297614,
+      -0.016356970262042376,
+      0.004421802336292579,
+      0.018328395768965,
+      -0.017896890731981547
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5619823094803534,
+    "r2": 0.9988098695873107,
+    "r2_timing_only": 0.9972829170180835
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 16,
+    "terms": [
+      "(phase == D1) * belief_lo",
+      "(phase == D1) * (prev_state == 2)",
+      "(phase == D2) * (in_action == 1)",
+      "(phase == D2) * (in_state == 2)",
+      "(phase == GO) * ((prev_reward == 0) + (prev_reward == 0) * (tv(\"reward\", -2) == 0) + (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0))",
+      "(phase == GO) * np.abs(belief_lo)",
+      "(phase == GO) * np.exp(-np.abs(belief_lo))",
+      "(phase == GO) * last_is(\"a2 S1 u\")"
+    ],
+    "weights": [
+      -0.005560917567846036,
+      0.021374194389083806,
+      0.025841341604319296,
+      -0.011172814481297614,
+      -0.016356970262042376,
+      0.004421802336292579,
+      0.018328395768965,
+      -0.017896890731981547
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5762646898676602,
+    "r2": 0.9988628038471786,
+    "r2_timing_only": 0.997316258226235
+  },
+  "final_verdict": "partially_explained",
+  "observed_only": true
+}

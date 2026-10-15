@@ -1,0 +1,66 @@
+{
+  "label": "GO step late in the episode (trial >= ~80) after a rewarded trial, when choosing a1",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 1) & (ep_trial >= 80)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO steps (never D1/D2), only in the last ~20 trials of the 100-trial episode (zero activity before trial 70, rate 8-11% in trials 80-99), almost only when the previous trial was rewarded (99% of mass), and mostly when the agent picks a1 (93% of mass; the model policy argmax at GO is used, an observed/computed variable, rather than the future action column, which scores almost identically). Magnitude grows toward the episode end and with low value-head output (value < 5.22 holds 78% of mass; value falls as the episode end nears): activations increase trial by trial within a window. It does not fire after unrewarded trials, at a2 choices (small residual), or before trial ~75. Misses are mostly weak activations at trials 75-80 and small a2 activations.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 151,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 1) & (ep_trial >= 80)",
+    "split": "test",
+    "precision": 0.8605739238927012,
+    "recall": 0.8475818485034671,
+    "f1": 0.8540284779340231,
+    "mass_recall": 0.9028408569781091,
+    "correlation": 0.7375724059291738,
+    "n_active": 22786,
+    "n_predicted": 22442,
+    "coverage_by_activation_quartile": [
+      0.7177461822011585,
+      0.8837984904335615,
+      0.8353230337078652,
+      0.9534761235955056
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 151,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 1) & (ep_trial >= 80)",
+    "split": "dev",
+    "precision": 0.8591392585339801,
+    "recall": 0.8563190347336201,
+    "f1": 0.8577268284013151,
+    "mass_recall": 0.923054820077574,
+    "correlation": 0.7427821908460464,
+    "n_active": 22543,
+    "n_predicted": 22469,
+    "coverage_by_activation_quartile": [
+      0.6939318665720369,
+      0.8853797019162527,
+      0.877040454222853,
+      0.968944099378882
+    ]
+  },
+  "gate": "update",
+  "feature": 151,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced the reported test scores for the predicate: P 0.861, R 0.848, F1 0.854, mass recall 0.903.",
+      "Phase claim holds: all 22543 active dev steps are at GO, none at D1 or D2.",
+      "Trial-position claim holds: zero activations in trials 0-69, rate 0.7% in trials 70-79, 7.9% in 80-89, 11.1% in 90-99. Within the predicate, trials 90+ have precision 0.97, while the onset band (trials 80-89) has precision 0.77, so most false positives come from the ramp-up near the cutoff. The explanation already says this.",
+      "Reward claim holds: prev_reward == 1 carries 99.3% of activation mass. Firing after unrewarded trials in trials 80+ has precision 0.02.",
+      "Choice claim holds: model_act == 1 carries 93% of mass (11.8% firing rate vs 0.9% for a2). The same predicate with a2 instead of a1 scores precision 0.07 and mass 0.09 on test, so a2 activations are a small, low-precision residue, not a separate pattern I could isolate.",
+      "The feature is not about the good state: adding good == 1 drops test-side recall to 0.71. A logit threshold (choice > 2) in place of model_act == 1 gives the same test F1 (0.855), and the future action column gives 0.851. The label using the agent's own choice is justified.",
+      "Value claim holds: value < 5.22 plus a1 gives precision 0.97 but recall 0.42, matching the stated alternative.",
+      "The test misses list shows no systematic class beyond the stated ones (weak activations near trials 75-80 and small a2 activations)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

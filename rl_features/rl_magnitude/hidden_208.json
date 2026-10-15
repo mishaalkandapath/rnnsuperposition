@@ -1,0 +1,107 @@
+{
+ "label": "Fires at D1 after an unrewarded S2 visit, strongest when a1 led there (rare).",
+ "short_terms": "(phase == D1) * (in_rew == 0) * (prev_state != S1) ;; (phase == D1) * last_is('a1 S2 u') ;; (phase == D1)",
+ "terms": "(phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a2 S2 u\") ;; (phase == D1) * last_is(\"a1 S2 u\") * belief_lo ;; (phase == D1) * last_is(\"a2 S2 u\") * belief_lo ;; (phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_action == -1)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Active only at D1. Magnitude is set by the previous trial: after a1 -> S2 unrewarded (rare, unrewarded) it fires at about +4.6 above the D1 baseline; after a2 -> S2 unrewarded (common, unrewarded) at about +1.2 on average, which is bimodal. Every other previous-trial pattern (any rewarded trial, any unrewarded S1 visit) leaves it near zero. So it marks an unrewarded S2 outcome, with a strong preference for the rare a1 route. The free fit adds the observer belief (belief_lo) times those patterns: within a2 S2 u, activation is larger when belief leans toward S1 being good, and a bit within a1 S2 u too. It also adds a window-start term. Together these move dev R2 from 0.77 to 0.80. Future, hidden and model-output variables are not needed.",
+ "full_test_scores": {
+  "gate": "hidden",
+  "feature": 208,
+  "terms": [
+   "(phase == D1) * last_is(\"a1 S2 u\")",
+   "(phase == D1) * last_is(\"a2 S2 u\")",
+   "(phase == D1) * last_is(\"a1 S2 u\") * belief_lo",
+   "(phase == D1) * last_is(\"a2 S2 u\") * belief_lo",
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D1) * (prev_action == -1)"
+  ],
+  "weights": [
+   3.8468876018701805,
+   0.9537162051863255,
+   0.2353418948355889,
+   0.5039301931392801,
+   -0.7197813958264634,
+   0.43452130300052777
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7992837145220256,
+  "r2": 0.820037276452074,
+  "r2_timing_only": 0.10339749901522444
+ },
+ "gate": "hidden",
+ "feature": 208,
+ "test_scores": {
+  "gate": "hidden",
+  "feature": 208,
+  "terms": [
+   "(phase == D1) * (in_rew == 0) * (prev_state != S1)",
+   "(phase == D1) * last_is('a1 S2 u')",
+   "(phase == D1)"
+  ],
+  "weights": [
+   1.8383094538261235,
+   3.412462544532929,
+   -0.6442681402765483
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.8169073449632009,
+  "r2": 0.8358386675820633,
+  "r2_timing_only": 0.10339749901522444
+ },
+ "dev_scores": {
+  "gate": "hidden",
+  "feature": 208,
+  "terms": [
+   "(phase == D1) * (in_rew == 0) * (prev_state != S1)",
+   "(phase == D1) * last_is('a1 S2 u')",
+   "(phase == D1)"
+  ],
+  "weights": [
+   1.8383094538261235,
+   3.412462544532929,
+   -0.6442681402765483
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.823994301965753,
+  "r2": 0.8416852479591393,
+  "r2_timing_only": 0.10051348445516894
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The third short-form term, (phase == D1) * (prev_reward == 1), only corrects the fitted baseline (weight -0.638). The label does not mention it, and it is wrong for part of the data. Misses on the recorded short form show D1 after a1 S1 u over-predicted by -0.639 and after a2 S1 u by -0.637: unrewarded S1 visits are left at the D1 baseline even though the feature is near zero there.",
+   "There is a systematic miss at window start. D1 after an unknown previous trial ('?') is under-predicted by +0.366, and the worst-fit windows all show activations of 5.2-5.9 at t-3 on unrewarded D1 steps that are predicted at about 0.63. The feature fires on unrewarded D1 steps whose previous trial is not visible in the window. Adding (phase == D1) * (prev_action == -1) * (in_rew == 0) to the original terms raises test R2 to 0.795. Swapping the third term for prev_action != -1 gives the same 0.760.",
+   "The short-form ablations back the core claim. With only the two S2-u terms, test R2 is 0.677. Adding a belief_lo interaction on a2 S2 u gives only 0.704-0.786, so belief is a minor modulator. The bimodality of a2 S2 u is not explained by belief or by the state two trials back (0.760).",
+   "A better short form that passes --short is (phase == D1) * (in_rew == 0) * (prev_state != S1) ;; (phase == D1) * last_is('a1 S2 u') ;; (phase == D1). It scores test R2 0.817 beyond timing (dev 0.824), against the recorded 0.760. Its weights: +1.84 for an unrewarded D1 whose previous state was not S1, a further +3.41 for a1->S2 unrewarded, and -0.64 for D1 otherwise. Misses on it show no remaining systematic phase x previous-trial errors (all within 0.01)."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Fires at D1 after an unrewarded S2 visit, about three times stronger after rare a1->S2.",
+  "better_short_terms": "(phase == D1) * (in_rew == 0) * (prev_state != S1) ;; (phase == D1) * last_is('a1 S2 u') ;; (phase == D1)",
+  "better_short_terms_test_r2_beyond_timing": 0.8169073449632009
+ },
+ "final_label": "Fires at D1 after an unrewarded S2 visit, about three times stronger after rare a1->S2.",
+ "original_short_terms": "(phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a2 S2 u\") ;; (phase == D1) * (prev_reward == 1)",
+ "original_test_scores": {
+  "gate": "hidden",
+  "feature": 208,
+  "terms": [
+   "(phase == D1) * last_is(\"a1 S2 u\")",
+   "(phase == D1) * last_is(\"a2 S2 u\")",
+   "(phase == D1) * (prev_reward == 1)"
+  ],
+  "weights": [
+   4.6129338810457785,
+   1.1928242843507708,
+   -0.6379135375023464
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7601861144260182,
+  "r2": 0.7849822704234912,
+  "r2_timing_only": 0.10339749901522444
+ },
+ "terms_from": "skeptic"
+}

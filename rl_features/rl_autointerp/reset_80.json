@@ -1,0 +1,62 @@
+{
+  "label": "D2: chose a1 but landed in S2 (rare transition after a1)",
+  "predicate": "(phase == D2) & (action == 1) & (state == 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (never D1/GO), and essentially only when the last-action input is a1. Strong activations (~0.6-1.0 of max) happen when a1 led to S2, which is the rare a1 transition; those carry about 94% of the activation mass, and precision is about 0.94. a1->S1 (common) steps give a weak tail (about 0.02-0.15 of max) that makes up most of the remaining active steps but only about 6% of mass. That tail did not line up with good state or previous reward. The feature does not fire after a2, including the a2->S1 rare transition, so it encodes the specific a1->S2 surprise and not rareness in general. Its rate drops late in the episode. Everything it uses is observed at D2 (in_action, in_state), so no future variable is involved. With high precision and mass recall of at least 0.8 it is labeled explained, even though binary recall is only about 0.59 because of the weak common-a1 tail.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 80,
+    "predicate": "(phase == D2) & (action == 1) & (state == 2)",
+    "split": "test",
+    "precision": 0.931583540881708,
+    "recall": 0.5939442468988355,
+    "f1": 0.7253996800901714,
+    "mass_recall": 0.9376219071802336,
+    "correlation": 0.8936693521636538,
+    "n_active": 73682,
+    "n_predicted": 46977,
+    "coverage_by_activation_quartile": [
+      0.03501438575538787,
+      0.3439009825742359,
+      0.9969055374592833,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 80,
+    "predicate": "(phase == D2) & (action == 1) & (state == 2)",
+    "split": "dev",
+    "precision": 0.9407683046951953,
+    "recall": 0.5879480164158687,
+    "f1": 0.7236435576882603,
+    "mass_recall": 0.9377398268390471,
+    "correlation": 0.9007984394621544,
+    "n_active": 73100,
+    "n_predicted": 45685,
+    "coverage_by_activation_quartile": [
+      0.03146374829001368,
+      0.3225718194254446,
+      0.9977564979480165,
+      1.0
+    ]
+  },
+  "gate": "reset",
+  "feature": 80,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor overstatement: 'does not fire after a2'. At D2 after a2 there are 1874 active steps in dev (test: about 3.2% of active steps, 0.8% of mass, precision 0.011). This is negligible but not zero.",
+      "Minor overstatement: 'tail did not line up with good state'. For a1->S1 steps, precision is 0.22 when good==1 and 0.08 when good==2. The tail also rises with the agent's internal value: a1&S1&value>8.1 has precision 0.36. Either way it is weak and holds only about 4-6% of mass, so it does not change the label.",
+      "The few false positives cluster somewhat on a1->S2 steps right after a switch from a2 (prev_action==2: precision 0.78 vs 0.94 otherwise). This is small: 3337 of 46977 predicted steps.",
+      "Checks that held up: zero activation at D1 and GO; 99% of mass after in_action a1; a1->S2 has test precision 0.93 and mass recall 0.94; a2->S1 (rare) has precision 0.0, so the feature is not general rareness; the misses list (6.2% of mass) is entirely the low-magnitude a1->S1 common tail; the rate does drop late in the episode (trials 90-99 at 0.4x lift)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

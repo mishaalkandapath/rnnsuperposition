@@ -1,0 +1,113 @@
+{
+ "label": "At GO, low after a rewarded S1 trial and high after reaching S2.",
+ "short_terms": "(phase == GO) * (prev_state == S1) * (prev_reward == 1) ;; (phase == GO) * (prev_reward == 0) ;; (phase == D1) * (prev_reward == 0) * ep_trial",
+ "terms": "(phase == GO) * (prev_state == S1) * (prev_reward == 1) ;; (phase == GO) * (prev_state == S2) ;; (phase == GO) * belief_lo ;; (phase == D1) * (prev_reward == 0) * ep_trial ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * ep_trial ;; (phase == D1) * (prev_state == S1) * (prev_reward == 0) * ep_trial ;; (phase == D2) * belief_lo ;; (phase == GO) * (prev_state == S2) * ep_trial",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Raw candidate n of unit 8 is near saturation at D1/D2 and falls across the episode at GO (timing R^2 0.83). Beyond timing, the GO value depends mostly on the last trial: strongly lowered after a rewarded S1 trial (a1 S1 r -0.46, a2 S1 r -0.27), raised after reaching S2 (rewarded or not, +0.1 to +0.4), so it acts as a last-outcome S1-vs-S2 signal where S1-rewarded pushes it negative. At D1 an unrewarded previous trial lowers it, more so later in the episode (and more after S1 unrewarded or consecutive losses). A small graded negative belief_lo effect at GO/D2 adds little. The free fit adds only ~0.06 R^2 over the short form (short is ~89% of free fit), and both are below the all-observed table ceiling (0.67), so some last-trial x choice structure is still missing.",
+ "full_test_scores": {
+  "gate": "unit_candidate",
+  "feature": 8,
+  "terms": [
+   "(phase == GO) * (prev_state == S1) * (prev_reward == 1)",
+   "(phase == GO) * (prev_state == S2)",
+   "(phase == GO) * belief_lo",
+   "(phase == D1) * (prev_reward == 0) * ep_trial",
+   "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * ep_trial",
+   "(phase == D1) * (prev_state == S1) * (prev_reward == 0) * ep_trial",
+   "(phase == D2) * belief_lo",
+   "(phase == GO) * (prev_state == S2) * ep_trial"
+  ],
+  "weights": [
+   -0.44736863758805845,
+   0.2566747903529158,
+   -0.003159827081084496,
+   -0.0016002343087357894,
+   -0.0008265162243357938,
+   -0.004226436006034591,
+   -0.02209251959244969,
+   -0.0012537264225358036
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5295445648610952,
+  "r2": 0.9203686143679506,
+  "r2_timing_only": 0.8307355390451855
+ },
+ "gate": "unit_candidate",
+ "feature": 8,
+ "test_scores": {
+  "gate": "unit_candidate",
+  "feature": 8,
+  "terms": [
+   "(phase == GO) * (prev_state == S1) * (prev_reward == 1)",
+   "(phase == GO) * (prev_reward == 0)",
+   "(phase == D1) * (prev_reward == 0) * ep_trial"
+  ],
+  "weights": [
+   -0.45479318399861146,
+   0.23252033890502527,
+   -0.00337851881425603
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.49002029827951166,
+  "r2": 0.9136785606903844,
+  "r2_timing_only": 0.8307355390451855
+ },
+ "dev_scores": {
+  "gate": "unit_candidate",
+  "feature": 8,
+  "terms": [
+   "(phase == GO) * (prev_state == S1) * (prev_reward == 1)",
+   "(phase == GO) * (prev_reward == 0)",
+   "(phase == D1) * (prev_reward == 0) * ep_trial"
+  ],
+  "weights": [
+   -0.45479318399861146,
+   0.23252033890502527,
+   -0.00337851881425603
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.4949319432849366,
+  "r2": 0.915813029410583,
+  "r2_timing_only": 0.8333155908988488
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The label leaves out the third short-form term, (phase == D1) * (prev_reward == 0) * ep_trial. That term adds about 0.077 test R^2 beyond timing (0.397 without it, 0.474 with it), so a reader of the label alone would not predict the D1 drop after unrewarded trials late in the episode.",
+   "'Raised after reaching S2, whether rewarded or not' is only partly right. The GO residuals after S2 are a1 S2 r +0.33, a1 S2 u +0.40, a2 S2 r +0.11 and a2 S2 u +0.34, so a2 S2 r is weak. a2 S1 u also gives +0.23 without reaching S2. Misses on the recorded form show systematic under-prediction at GO after a2 S1 u (+0.20), a1 S2 u (+0.17) and a2 S1 r (+0.16), and over-prediction at GO after a2 S2 r (-0.11).",
+   "Replacing GO*(prev_state==S2) with GO*(prev_reward==0) scores better on test: 0.490 vs 0.474 (dev 0.495). So the raising factor is better described as 'the previous trial was unrewarded' than 'the previous trial reached S2'.",
+   "The D1 effect is really about losing at S1. The D1 residuals are a1 S1 u -0.23 and a2 S1 u -0.31, against -0.02 and -0.05 after an S2 loss. Misses show D1 after a2 S1 u over-predicted by 0.17. The explanation mentions this, but the short form's 'unrewarded' term merges both states.",
+   "Systematic cell errors of 0.2-0.3 at GO remain in both forms (the revised form misses GO after a1 S2 r by +0.30 and after a1 S1 u by -0.25). The last-trial table alone reaches 0.58 and all observed variables reach 0.67, so the 3-term short form misses some choice x state x reward structure. Still, the main effect (the dip at GO after a rewarded S1 trial, weight -0.46) holds up and the short form meets the explained threshold.",
+   "The belief_lo terms add almost nothing: GO*belief_lo in place of the D1 term scores 0.398. This is consistent with the explanation's claim that belief adds little."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At GO, low after a rewarded S1 trial, high after any unrewarded trial; late-episode D1 lowered after losses.",
+  "better_short_terms": "(phase == GO) * (prev_state == S1) * (prev_reward == 1) ;; (phase == GO) * (prev_reward == 0) ;; (phase == D1) * (prev_reward == 0) * ep_trial",
+  "better_short_terms_test_r2_beyond_timing": 0.49
+ },
+ "final_label": "At GO, low after a rewarded S1 trial, high after any unrewarded trial; late-episode D1 lowered after losses.",
+ "original_short_terms": "(phase == GO) * (prev_state == S1) * (prev_reward == 1) ;; (phase == GO) * (prev_state == S2) ;; (phase == D1) * (prev_reward == 0) * ep_trial",
+ "original_test_scores": {
+  "gate": "unit_candidate",
+  "feature": 8,
+  "terms": [
+   "(phase == GO) * (prev_state == S1) * (prev_reward == 1)",
+   "(phase == GO) * (prev_state == S2)",
+   "(phase == D1) * (prev_reward == 0) * ep_trial"
+  ],
+  "weights": [
+   -0.45552960418520344,
+   0.19521416586553475,
+   -0.003389702707459418
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.4736837906648328,
+  "r2": 0.9109133705351016,
+  "r2_timing_only": 0.8307355390451855
+ },
+ "terms_from": "skeptic"
+}

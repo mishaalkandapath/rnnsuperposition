@@ -1,0 +1,79 @@
+{
+  "label": "D2 dip set by reached state x transition and the D2 policy logit",
+  "terms": "(phase == D2) * choice ;; (phase == D2) * (state == S2) ;; (phase == D2) * (common == 1) ;; (phase == D2) * (action == 2) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == GO) * choice ;; (phase == D2) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw reset gate r37 sits near 0.97 at D1/GO and drops at D2 (about 0.80, falling to 0.66 late in the episode); timing explains R^2 0.85. Beyond timing, most of the variance is the D2 magnitude. At D2 it is higher when S2 is reached (+0.09) and lower when S1 is reached; given the state it is lower for a2 choices (-0.07) and for common transitions (-0.03), so a2->S1 rare is the deepest dip and a1->S2 rare / a2->S2 common the highest. It also falls further at D2 as the D2 policy logit (a1 - a2) goes up (-0.016 per unit), and after two unrewarded trials in a row (-0.03). At D1 it dips by about 0.035 after an a1->S2 (rare) trial, whatever the reward. The GO-phase choice term adds almost nothing. All terms are observable at their step (the D2 choice logit is a model-internal quantity). Test R^2 beyond timing 0.73 (ceiling all 0.90); with observed task variables only, no policy logit, dev reaches about 0.54. Late-episode runs of unrewarded a2->S1 trials are still under-predicted (actual dips are deeper than predicted).",
+  "gate": "unit_reset",
+  "feature": 37,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 37,
+    "terms": [
+      "(phase == D2) * choice",
+      "(phase == D2) * (state == S2)",
+      "(phase == D2) * (common == 1)",
+      "(phase == D2) * (action == 2)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == GO) * choice",
+      "(phase == D2) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)"
+    ],
+    "weights": [
+      -0.015611616327499422,
+      0.09305190314889727,
+      -0.03168511868278668,
+      -0.07129221481811118,
+      -0.03504228729604812,
+      -0.0011036636283843458,
+      -0.02959476475254182
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7282697570919112,
+    "r2": 0.9605518086517897,
+    "r2_timing_only": 0.8548259077604641
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 37,
+    "terms": [
+      "(phase == D2) * choice",
+      "(phase == D2) * (state == S2)",
+      "(phase == D2) * (common == 1)",
+      "(phase == D2) * (action == 2)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == GO) * choice",
+      "(phase == D2) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)"
+    ],
+    "weights": [
+      -0.015611616327499422,
+      0.09305190314889727,
+      -0.03168511868278668,
+      -0.07129221481811118,
+      -0.03504228729604812,
+      -0.0011036636283843458,
+      -0.02959476475254182
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7328613332726017,
+    "r2": 0.961351886995449,
+    "r2_timing_only": 0.8553256498656204
+  },
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The reward-history claim is wrong as stated. At D2 the dip follows from ONE unrewarded previous trial, not two in a row. If '(phase==D2)*(prev_reward==0)' replaces the two-in-a-row term, test R^2 rises from 0.728 to 0.766, and its weight is -0.040. Adding the two-in-a-row term back on top changes almost nothing: weight -0.009, R^2 0.768.",
+      "The claim 'lower after an a2 choice (-0.07)' only holds once the D2 policy logit is in the model. Without the logit, the fitted a2 weight flips sign to +0.034 (observed-only fit, test 0.675). The raw D2 residual by choice x state does not match the stated ranking either: a1->S1 = -0.061 (deepest), a2->S1 = -0.017, a1->S2 = +0.018, a2->S2 = +0.053 (highest). So 'a2->S1 (rare) gives the deepest dip' is true only after controlling for the logit. The claim that a2->S2 (common) is among the highest is not true in the fitted model: its net value is about -0.01, against +0.09 for a1->S2.",
+      "Because the a2 weight shrinks when prev_reward==0 replaces the two-in-a-row term (from -0.071 to -0.048), the stated effect sizes depend on the misspecified reward term.",
+      "The observed-only score is understated. With observed task variables only (state, common, action, single prev_reward==0, stay, prev_reward x S1), test R^2 is 0.675, not about 0.54. The logit adds less than the explanation implies.",
+      "Of the claim's own terms, the GO choice term barely matters: dropping it moves test R^2 from 0.728 to 0.709. But the policy logit at D1 and GO together ('(phase != D2)*choice') raises a better model from 0.772 to 0.799. The profile also shows a D1 gradient by policy decile, from +0.014 to -0.022.",
+      "Misses on the claimed terms show systematic D2 errors by previous trial: under-predicted after a1 S2 r (+0.027), over-predicted after a1 S1 u (-0.033), a1 S1 r (-0.023) and a2 S1 u (-0.021). D1 and GO are under-predicted on average (+0.007, +0.003). Late-episode runs of a2->S1 (rare) trials still dip about 0.1-0.15 deeper than predicted, and late-episode interaction terms do not fix this (R^2 0.734)."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "D2 dip: raised when S2 is reached; deeper after an unrewarded previous trial and as the policy favours a1 (the a2/common effects only hold given the logit)",
+    "better_terms": "(phase == D2) * choice ;; (phase == D2) * (state == S2) ;; (phase == D2) * (common == 1) ;; (phase == D2) * (action == 2) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D2) * (prev_reward == 0) ;; (phase == D2) * (prev_reward == 0) * (state == S1) ;; (phase != D2) * choice",
+    "better_terms_test_r2_beyond_timing": 0.7989
+  },
+  "final_label": "D2 dip: raised when S2 is reached; deeper after an unrewarded previous trial and as the policy favours a1 (the a2/common effects only hold given the logit)"
+}

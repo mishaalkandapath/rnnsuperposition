@@ -1,0 +1,65 @@
+{
+  "label": "D1 fixation, agent leaning toward a2, first ~50 trials of episode",
+  "predicate": "(phase == D1) & (choice < -1.52) & (ep_trial < 50)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (never GO or D2), and essentially only when the agent is about to choose a2 (D1 & upcoming action==2 gives recall 0.999, but precision only 0.28). Activity is also restricted to early/mid episode: rate ~10-13% of steps for ep_trial 0-39, falling off at 40-59 and zero after trial ~60. It is also absent on the first ~3 trials of an episode. Restricting to D1 & action==2 & ep_trial<50 gives dev F1 0.72. Replacing the upcoming action with the D1 policy logit choice < -1.52 (moderate-to-strong preference for a2) gives dev F1 0.81, mass recall 0.98, using only quantities the agent has computed (its own policy plus elapsed time), so this is the predicate recorded. Adding action==2 on top changes nothing. Previous action==2 does worse (recall 0.78), so it tracks the upcoming choice more than the last one. Reward input raises the rate (in_rew=1 at D1: 0.16 vs about 0.05 overall), but prediction does not depend on it. Magnitude: the predicate covers the top activation quartiles best (99.9% vs 91% in the lowest). The strongest examples are early-episode windows with long runs of a2 choices, where activation often grows across consecutive D1 steps. I did not test magnitude beyond that. False positives are D1 a2-preferring steps where the unit stays below threshold. The dependence on ep_trial suggests a slow hidden-state drift over the episode that this gate is sensitive to.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 11,
+    "predicate": "(phase == D1) & (choice < -1.52) & (ep_trial < 50)",
+    "split": "test",
+    "precision": 0.7024725204985658,
+    "recall": 0.9451958875567852,
+    "f1": 0.8059560215523518,
+    "mass_recall": 0.9794181511122039,
+    "correlation": 0.7133015507213138,
+    "n_active": 58554,
+    "n_predicted": 78786,
+    "coverage_by_activation_quartile": [
+      0.8428854429947401,
+      0.9506113805587814,
+      0.9875666074600356,
+      0.9997267386254953
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 11,
+    "predicate": "(phase == D1) & (choice < -1.52) & (ep_trial < 50)",
+    "split": "dev",
+    "precision": 0.7072285434793801,
+    "recall": 0.9502118460873324,
+    "f1": 0.8109093324084802,
+    "mass_recall": 0.9805467368376196,
+    "correlation": 0.7168696150014608,
+    "n_active": 57825,
+    "n_predicted": 77692,
+    "coverage_by_activation_quartile": [
+      0.8587535449955039,
+      0.9553126729385722,
+      0.9878942999446596,
+      0.9988931931377975
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 11,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most factual claims hold. GO and D2 never fire (P=R=0). D1 alone has recall 1.0. D1 & action==2 gives P 0.281 / R 0.999. D1 & action==2 & ep_trial<50 gives F1 0.72. The unit is silent on ep_trial<3 (precision 0.001). The recorded test scores reproduce exactly (P 0.702, R 0.945, F1 0.806, mass recall 0.979).",
+      "Systematic false-positive class: activity fades gradually over the episode rather than stopping at trial 50. Within D1 & choice<-1.52, precision by ep_trial bin is 3-9: 0.85, 10-19: 0.86, 20-29: 0.82, 30-39: 0.67, 40-49: 0.45, 50-59: 0.10, 60+: 0.0005. Roughly 15k of the ~22k dev false positives fall at ep_trial 30-49. The 'ep_trial < 50' cutoff is therefore a crude stand-in for an unexplained slow drift.",
+      "The relation to choice strength is not monotonic, which contradicts the 'stronger lean -> fires' reading. Within D1 & ep_trial 3-49, choice<-3 has precision 0.61, -3<=choice<-2 has 0.81, and choice>=-2 has 0.28. The strongest a2 leans fire less reliably than moderate ones.",
+      "Minor misstatement: lowest-quartile coverage is 0.86 on dev, not 0.91.",
+      "The slow drift is left unidentified. The value head (which falls over the episode) is a worse proxy (best F1 about 0.74 at value>7.5). since_rev, good state and prev_reward each shift precision only modestly (prev_reward==1: 0.76 vs 0: 0.60; start_high==0: 0.74 vs 1: 0.62) and do not fix the gradient.",
+      "Trimming the time window and tightening the choice threshold, (phase==D1)&(ep_trial>=3)&(choice<-2.0)&(ep_trial<45), raises precision from 0.70 to 0.79 on test (F1 0.830 vs 0.806). This confirms that the predicate's boundary is not where the unit's boundary is."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "D1 fixation when the policy leans toward a2, early-to-mid episode (fades gradually from ~trial 30, absent on the first 3 trials and after ~55)",
+    "better_predicate": "(phase == D1) & (ep_trial >= 3) & (ep_trial < 45) & (choice < -2.0)",
+    "better_predicate_test_f1": 0.83
+  },
+  "final_label": "D1 fixation when the policy leans toward a2, early-to-mid episode (fades gradually from ~trial 30, absent on the first 3 trials and after ~55)"
+}

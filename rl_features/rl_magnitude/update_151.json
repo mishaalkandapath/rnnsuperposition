@@ -1,0 +1,111 @@
+{
+ "label": "GO in the last ~20 trials, strongest after a rewarded a1-to-S1 trial and S1-favouring belief",
+ "short_terms": "(phase == GO) * np.maximum(ep_trial - 80, 0) * (prev_reward + (prev_state == S1) == 2) ;; (phase == GO) * (ep_dec == 9) * (prev_reward == 0) ;; (phase == GO) * (ep_dec == 9) * belief_lo",
+ "terms": "(phase == GO) * (ep_dec == 9) * last_is(\"a1 S1 r\") ;; (phase == GO) * (ep_dec == 9) * last_is(\"a2 S1 r\") ;; (phase == GO) * (ep_dec == 8) * last_is(\"a1 S1 r\") ;; (phase == GO) * (ep_dec == 9) * belief_lo ;; (phase == GO) * (ep_dec == 8) * belief_lo ;; (phase == GO) * (ep_dec == 9) * (prev_reward == 1) ;; (phase == GO) * (ep_dec == 9) * (ep_trial - 90) * (prev_reward == 1) ;; (phase == GO) * (ep_dec == 9) * (tv(\"reward\", -2) == 1)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Fires only at GO and only late in the episode (timing baseline: ~0.13 in trials 80-89, ~0.56 in 90-99). Beyond timing, magnitude is largest (~2-3) at late GO steps after a common rewarded a1->S1 trial; rewarded a2->S1 (rare) also raises it, while unrewarded trials or S2 outcomes give near zero. The ideal-observer belief that S1 is good (belief_lo) adds a graded increase in the final decile. The free fit adds the rare-rewarded S1 case, a ramp with ep_trial within trials 90-99, generic prev-reward and reward two trials back; the short form captures ~81% of it on dev. Observed-only: no future or model-output terms.",
+ "full_test_scores": {
+  "gate": "update",
+  "feature": 151,
+  "terms": [
+   "(phase == GO) * (ep_dec == 9) * last_is(\"a1 S1 r\")",
+   "(phase == GO) * (ep_dec == 9) * last_is(\"a2 S1 r\")",
+   "(phase == GO) * (ep_dec == 8) * last_is(\"a1 S1 r\")",
+   "(phase == GO) * (ep_dec == 9) * belief_lo",
+   "(phase == GO) * (ep_dec == 8) * belief_lo",
+   "(phase == GO) * (ep_dec == 9) * (prev_reward == 1)",
+   "(phase == GO) * (ep_dec == 9) * (ep_trial - 90) * (prev_reward == 1)",
+   "(phase == GO) * (ep_dec == 9) * (tv(\"reward\", -2) == 1)"
+  ],
+  "weights": [
+   1.362175812565841,
+   0.8486419329880405,
+   0.2545232202690842,
+   0.07302858642990863,
+   0.024545273053211573,
+   -0.345873489796462,
+   0.0847373550586288,
+   -0.40344082777965495
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6601355230138817,
+  "r2": 0.7472775768218158,
+  "r2_timing_only": 0.25640235949546863
+ },
+ "gate": "update",
+ "feature": 151,
+ "test_scores": {
+  "gate": "update",
+  "feature": 151,
+  "terms": [
+   "(phase == GO) * np.maximum(ep_trial - 80, 0) * (prev_reward + (prev_state == S1) == 2)",
+   "(phase == GO) * (ep_dec == 9) * (prev_reward == 0)",
+   "(phase == GO) * (ep_dec == 9) * belief_lo"
+  ],
+  "weights": [
+   0.07102448674197108,
+   -0.5625054364038975,
+   0.11022442431877115
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7382401910299741,
+  "r2": 0.8053560236709718,
+  "r2_timing_only": 0.25640235949546863
+ },
+ "dev_scores": {
+  "gate": "update",
+  "feature": 151,
+  "terms": [
+   "(phase == GO) * np.maximum(ep_trial - 80, 0) * (prev_reward + (prev_state == S1) == 2)",
+   "(phase == GO) * (ep_dec == 9) * (prev_reward == 0)",
+   "(phase == GO) * (ep_dec == 9) * belief_lo"
+  ],
+  "weights": [
+   0.07102448674197108,
+   -0.5625054364038975,
+   0.11022442431877115
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.7287324648743893,
+  "r2": 0.7985966232798163,
+  "r2_timing_only": 0.25754706833265706
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "Running misses on the recorded short form shows a large systematic error. At late GO steps after unrewarded trials it predicts about 0.4 to 0.9, because the 0.56 decile-9 baseline is left in place, but the feature is actually 0. Biggest over-predictions: GO after a1 S2 u -0.087, a2 S2 u -0.076, a1 S1 u -0.051. The label says 'strongest after rewarded a1->S1' but never says it is essentially silent after any unrewarded trial.",
+   "The recorded form treats each decile as flat, but magnitude grows with ep_trial inside trials 80-99. Worst-fit windows show actual 2.4-2.9 against predicted 0.6-1.9, rising from about t93 to t99. A ramp term max(ep_trial-80,0) x (rewarded, reached S1) gives much higher test R^2 than the two decile step terms (0.738 vs 0.535).",
+   "The a1 restriction from last_is('a1 S1 r') is too narrow. Using 'previous trial rewarded and reached S1' with any choice scores better (test 0.554 vs 0.535 with the same structure). Under the recorded form, rare rewarded a2->S1 is the most under-predicted class (+0.076), and the first trial of a window (previous pattern '?') is also under-predicted.",
+   "Claims that hold up: GO-only (zero at D1/D2), late episode only, belief_lo adds a positive graded term (weight about +0.11), no future variables, no model outputs. Previous reward alone is not enough (test 0.40), so the reached state S1 matters."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Late-episode GO, ramping from trial 80 after rewarded S1 trials; zero after unrewarded trials; rises with S1 belief.",
+  "better_short_terms": "(phase == GO) * np.maximum(ep_trial - 80, 0) * (prev_reward + (prev_state == S1) == 2) ;; (phase == GO) * (ep_dec == 9) * (prev_reward == 0) ;; (phase == GO) * (ep_dec == 9) * belief_lo",
+  "better_short_terms_test_r2_beyond_timing": 0.7382
+ },
+ "final_label": "Late-episode GO, ramping from trial 80 after rewarded S1 trials; zero after unrewarded trials; rises with S1 belief.",
+ "original_short_terms": "(phase == GO) * (ep_dec == 9) * last_is(\"a1 S1 r\") ;; (phase == GO) * (ep_dec == 9) * belief_lo ;; (phase == GO) * (ep_dec == 8) * last_is(\"a1 S1 r\")",
+ "original_test_scores": {
+  "gate": "update",
+  "feature": 151,
+  "terms": [
+   "(phase == GO) * (ep_dec == 9) * last_is(\"a1 S1 r\")",
+   "(phase == GO) * (ep_dec == 9) * belief_lo",
+   "(phase == GO) * (ep_dec == 8) * last_is(\"a1 S1 r\")"
+  ],
+  "weights": [
+   1.0404130032434904,
+   0.10611600604155604,
+   0.3380886319298368
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5345261112460701,
+  "r2": 0.653874714606109,
+  "r2_timing_only": 0.25640235949546863
+ },
+ "terms_from": "skeptic"
+}

@@ -1,0 +1,75 @@
+{
+  "label": "D1 update gate dips after reaching S2, deepest after rare a1->S2, grows late episode",
+  "terms": "(phase == D1) * (prev_state == 2) ;; (phase == D1) * (prev_state == 2) * (prev_action == 1) ;; (phase == D1) * (prev_state == 2) * ep_trial ;; (phase == D1) * (prev_state == 1) * ep_trial ;; (phase == D1) * np.maximum(ep_trial - 85, 0) ;; (phase == D1) * (prev_state == 2) * (prev_action == 1) * ep_trial",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 37 sits near 1 (mean 0.98); GO and D2 are essentially constant (~0.999), so all variance beyond timing is at D1. At D1 it is lowered when the previous trial reached S2 and raised after S1 (reward barely matters): after a1 S2 (rare) the residual is about -0.17 to -0.20, after a2 S2 (common) about 0, after S1 about +0.05. The S2-vs-S1 gap grows with episode trial, and in the last ~15 trials of the episode D1 values fall steeply (to ~0.4-0.6) on top of the decile baseline, most after S2. Trial-before, value, policy, hidden good state add nothing (<0.01). All terms are observed at D1 (previous trial choice/state, episode time). Test R^2 beyond timing 0.67 (dev 0.68) vs all ceiling 0.64 / all observed 0.61.",
+  "gate": "unit_update",
+  "feature": 37,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 37,
+    "terms": [
+      "(phase == D1) * (prev_state == 2)",
+      "(phase == D1) * (prev_state == 2) * (prev_action == 1)",
+      "(phase == D1) * (prev_state == 2) * ep_trial",
+      "(phase == D1) * (prev_state == 1) * ep_trial",
+      "(phase == D1) * np.maximum(ep_trial - 85, 0)",
+      "(phase == D1) * (prev_state == 2) * (prev_action == 1) * ep_trial"
+    ],
+    "weights": [
+      0.015158203975833255,
+      -0.08097085717755159,
+      -0.00037379417707522714,
+      0.0009302086189539966,
+      -0.0012180254540168677,
+      -0.0017559754778319768
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6724762707921151,
+    "r2": 0.778003568596847,
+    "r2_timing_only": 0.3221974116499875
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 37,
+    "terms": [
+      "(phase == D1) * (prev_state == 2)",
+      "(phase == D1) * (prev_state == 2) * (prev_action == 1)",
+      "(phase == D1) * (prev_state == 2) * ep_trial",
+      "(phase == D1) * (prev_state == 1) * ep_trial",
+      "(phase == D1) * np.maximum(ep_trial - 85, 0)",
+      "(phase == D1) * (prev_state == 2) * (prev_action == 1) * ep_trial"
+    ],
+    "weights": [
+      0.015158203975833255,
+      -0.08097085717755159,
+      -0.00037379417707522714,
+      0.0009302086189539966,
+      -0.0012180254540168677,
+      -0.0017559754778319768
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6827587550799438,
+    "r2": 0.7853236562858879,
+    "r2_timing_only": 0.3233025429331866
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most of the claims hold. At GO and D2 the gate sits near 0.999 with residuals around 1e-3. The D1 residuals by previous trial match the explanation: a1 S2 r -0.196 / u -0.167, a2 S2 about 0, S1 about +0.045 to +0.052. Reward matters little (adding a D1 prev_reward term raises test R^2 0.672 -> 0.674). The proposed terms reproduce test R^2 0.672.",
+      "The late-episode claim is wrong as stated. The explanation says D1 values 'fall steeply ... beyond the per-decile baseline, most of all after S2'. In fact the overall hinge term (phase==D1)*max(ep_trial-85,0) adds almost nothing: dropping it takes test R^2 from 0.6725 to 0.6715, and adding it to the base two terms takes 0.4727 to 0.4736. The 0.4-0.6 values are mostly in the decile-9 baseline itself (mean 0.849). Beyond that baseline the late effect splits by state. If the hinge is split by prev_state, S2 gets -0.0084 per trial and S1 gets +0.0044 per trial: after S1 the value rises above the baseline, after S2 it falls. It is not a fall for everyone.",
+      "The S2-vs-S1 gap that 'widens over the episode' is real but mostly linear: swapping the linear ep_trial interactions for hinge-only interactions drops test R^2 to 0.600. The extra late divergence by state is not in the proposed terms. Adding (phase==D1)*max(ep_trial-85,0)*(prev_state==2) raises test R^2 0.672 -> 0.699.",
+      "A systematic error remains in the last trials of the episode. The worst-fit windows are all t91-99 D1 steps. For example, after a2 S2c at t99 the actual value is 0.39 against a prediction of 0.81. Values after the same previous pattern range from 0.39 to 0.97, and no cue I tried closes this: trial before, start_high, good, since_rev, value, choice and future action each add 0.01 or less.",
+      "Small leftover reward effect: in misses, D1 after a1 S2 r is over-predicted by -0.021. Rewarded rare a1->S2 trials dip slightly deeper, which fits the profile (-0.196 vs -0.167 unrewarded).",
+      "One caveat on the comparison: the score above the 'all' ceiling (0.64) comes from time-by-state interactions, which the additive ceiling does not include. That is legitimate, but the explanation's ranking of the late hinge as its own effect overstates what it contributes."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 update gate dips after reaching S2 (deepest after rare a1->S2) and rises after S1; S2-S1 gap widens through the episode, diverging sharply in the last ~15 trials",
+    "better_terms": "(phase == D1) * (prev_state == 2) ;; (phase == D1) * (prev_state == 2) * (prev_action == 1) ;; (phase == D1) * (prev_state == 1) * ep_trial ;; (phase == D1) * (prev_state == 2) * (prev_action == 1) * ep_trial ;; (phase == D1) * (prev_state == 2) * np.maximum(ep_trial - 85, 0) ;; (phase == D1) * (prev_state == 1) * np.maximum(ep_trial - 85, 0) ;; (phase == D1) * np.maximum(ep_trial - 85, 0) * choice ;; (phase == D1) * np.maximum(ep_trial - 85, 0) * (tv('reward',-2)==1)",
+    "better_terms_test_r2_beyond_timing": 0.709
+  },
+  "final_label": "D1 update gate dips after reaching S2 (deepest after rare a1->S2) and rises after S1; S2-S1 gap widens through the episode, diverging sharply in the last ~15 trials"
+}

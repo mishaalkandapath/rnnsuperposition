@@ -1,0 +1,65 @@
+{
+  "label": "D2: rare a1->S2 transition (reached S2 after choosing a1)",
+  "predicate": "(phase == D2) & (in_state == 2) & (in_action == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (never D1/GO), and almost only when the reached-state input is S2 (100% of mass). Conjoined with the last-action input a1, i.e. a rare transition a1->S2, it gives dev P=0.75 R=0.85 F1=0.80, mass recall 0.93; top quartile coverage ~100%. Uses only inputs observed at D2 (equivalently common==0 & state==2). Misses (6.5% of mass) are weak firings on common a2->S2 transitions. False positives are concentrated late in the episode: firing rate declines steadily with ep_trial (6.7% of steps in trials 0-9 vs 0.2% in 90-99); adding ep_trial<80 raises dev F1 to 0.84 but I recorded the simpler input-only predicate. Does not fire on S1 at all, nor on rare a2->S1 transitions, so it is specific to the a1->S2 rare transition rather than rareness in general.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 46,
+    "predicate": "(phase == D2) & (in_state == 2) & (in_action == 1)",
+    "split": "test",
+    "precision": 0.7518147178406455,
+    "recall": 0.8265774199588092,
+    "f1": 0.7874254500863944,
+    "mass_recall": 0.9219160656597896,
+    "correlation": 0.7530673727629397,
+    "n_active": 42728,
+    "n_predicted": 46977,
+    "coverage_by_activation_quartile": [
+      0.5778880359483243,
+      0.7858079011421082,
+      0.9434562815952069,
+      0.9991574611495975
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 46,
+    "predicate": "(phase == D2) & (in_state == 2) & (in_action == 1)",
+    "split": "dev",
+    "precision": 0.7522600415891431,
+    "recall": 0.8512793837160337,
+    "f1": 0.7987124663010132,
+    "mass_recall": 0.9345337632402244,
+    "correlation": 0.7558802400771688,
+    "n_active": 40371,
+    "n_predicted": 45685,
+    "coverage_by_activation_quartile": [
+      0.6252848508867532,
+      0.8172000396314277,
+      0.9636381650648964,
+      0.9990091161315894
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 46,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core facts hold. The unit is active only at D2 (D1 and GO have 0 active steps). S1 is almost never active (552 of 183,887 in_state==1 steps). The predicate scores dev F1 0.799 and test P 0.752 / R 0.827 / F1 0.787 / mass recall 0.922. The misses are weak firings on a2->S2 common steps (in_action==2 & in_state==2 has 13.5% of active steps but 6.5% of the mass).",
+      "The verdict overclaims. Test F1 is 0.787, below the 0.8 bar for 'explained', yet the agent recorded EXPLAINED.",
+      "The false positives form a systematic class, not noise. Inside the predicate, precision falls steeply with ep_trial: 0.996 at ep_trial<10 and 0.355 at ep_trial>=70. The firing rate in trials 90-99 is 0.002. Late firings are also weak: for ep_trial>=70 the predicate covers 0.0 of the top activation quartile. So the gap is not only in firing rate; magnitude falls as well. The label, 'D2: rare a1->S2 transition', leaves out that the unit goes silent on exactly this transition late in the episode.",
+      "There is a second systematic modulation from the previous reward. Inside the predicate, precision is 0.895 when prev_reward==0 and 0.681 when prev_reward==1. Most of the top-quartile mass is in prev_reward==0 (coverage 0.70 vs 0.30). The explanation does not mention this.",
+      "Smaller asymmetries that are not mentioned: precision is 0.85 with start_high==1 vs 0.64 with start_high==0. The predicate also fires mostly while S1 is good (77% of the mass), but that follows from a1 being chosen more often then; precision is similar either way (0.75 vs 0.77).",
+      "Better predicates on the test split: adding ep_trial<80 gives F1 0.828 (P 0.882, R 0.781, mass recall 0.899). Adding ((ep_trial<80) | (prev_reward==0)) gives F1 0.833 (P 0.851, R 0.815, mass recall 0.919). Neither uses a future variable. ep_trial is not a direct input, but the GRU can track elapsed time, and prev_reward is the D1 input it has already seen."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2: rare a1->S2 transition, mainly in the first ~80 trials of an episode (stronger after an unrewarded previous trial; fades late in the episode)",
+    "better_predicate": "(phase == D2) & (in_state == 2) & (in_action == 1) & ((ep_trial < 80) | (prev_reward == 0))",
+    "better_predicate_test_f1": 0.833
+  },
+  "final_label": "D2: rare a1->S2 transition, mainly in the first ~80 trials of an episode (stronger after an unrewarded previous trial; fades late in the episode)"
+}

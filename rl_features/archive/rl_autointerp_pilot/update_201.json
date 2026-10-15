@@ -1,0 +1,65 @@
+{
+  "label": "D2 after choosing a2 and landing in S1 (rare a2->S1 transition)",
+  "predicate": "(phase == D2) & (in_action == 2) & (in_state == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (100% of mass), and there only when the last-action input is a2 and the state input is S1, i.e. the specific rare transition a2->S1. Uses only inputs observed at D2. It does not fire at D1 or GO, on a1->S1 common transitions (0.6% of mass, weak), or on any S2 arrivals. Adding prev_action == 2 cuts recall (F1 0.82), so the feature is not specific to a repeated a2 choice. Dev F1 0.93, mass recall 0.99. Activation is near-saturated (median 4.6 of max 5.6). Weaker activations and the ~9% false positives occur on some a2->S1R steps that depend on recent history (e.g. recent a1 trials or recent rare S1 visits). I did not characterize this precisely, so I make no strong magnitude claim.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 201,
+    "predicate": "(phase == D2) & (in_action == 2) & (in_state == 1)",
+    "split": "test",
+    "precision": 0.9086662117474148,
+    "recall": 0.9445798472171699,
+    "f1": 0.9262750483800487,
+    "mass_recall": 0.992304101622228,
+    "correlation": 0.9001573093903452,
+    "n_active": 54980,
+    "n_predicted": 57153,
+    "coverage_by_activation_quartile": [
+      0.7783193888686796,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 201,
+    "predicate": "(phase == D2) & (in_action == 2) & (in_state == 1)",
+    "split": "dev",
+    "precision": 0.9115359867634892,
+    "recall": 0.9510866437764948,
+    "f1": 0.9308914088314809,
+    "mass_recall": 0.9938683542041716,
+    "correlation": 0.9043943450930677,
+    "n_active": 52133,
+    "n_predicted": 54395,
+    "coverage_by_activation_quartile": [
+      0.8043578333589074,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 201,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims check out. On dev, D2 holds 100% of activation mass (GO has 1 active step, D1 has 0). in_state==2 has 8 active steps. a1->S1 (in_action==1 & in_state==1 at D2) gives recall 0.049 but mass recall only 0.006, all in the lowest activation quartile. Adding prev_action==2 drops F1 to 0.82. Original test scores reproduce: P 0.909, R 0.945, F1 0.926, mass recall 0.992.",
+      "The explanation gets the false positives wrong. It says the ~9% FPs 'depend on recent history, for example recent a1 trials or recent rare S1 visits'. That is not supported: precision of the predicate stays at 0.87-0.94 when split by prev_state, prev_reward, prev_action, two-back states, good state or since_rev, so history does not separate them.",
+      "The FPs are systematic, and the cause is position in the episode (ep_trial). Precision of the predicate is 0.9999 for ep_trial<50, 0.9995 for 50-79 and 0.933 for 80-89, then falls to 0.41 for 90-93, 0.014 for 94-96 and 0.000 for 97+. Near the end of the episode the feature switches off on rare a2->S1 arrivals. The model's value head shows the same thing: every predicate-true step with value<4 is in ep_bucket 5. Bins with value<3.6 have precision 0.0, and value>=5 has precision 0.993.",
+      "The weak a1->S1c misses (activation about 0.01-0.27 of max) tend to come shortly after an a2->S1 rare trial. That is a small residual (0.6% of mass) and does not change the label.",
+      "ep_trial is not a future random outcome. A recurrent agent can track elapsed time, and its value output shows that it does. So the refined predicate uses no unobservable variable.",
+      "The label slightly overclaims by implying the feature fires on every rare a2->S1 arrival. It is suppressed in the last ~10 trials of the 100-trial episode."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after choosing a2 and landing in S1 (rare a2->S1 transition), except in the last ~10 trials of the episode (ep_trial >= ~90), when it is silent",
+    "better_predicate": "(phase == D2) & (in_action == 2) & (in_state == 1) & (ep_trial < 92)",
+    "better_predicate_test_f1": 0.959
+  },
+  "final_label": "D2 after choosing a2 and landing in S1 (rare a2->S1 transition), except in the last ~10 trials of the episode (ep_trial >= ~90), when it is silent"
+}

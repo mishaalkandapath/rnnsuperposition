@@ -1,0 +1,105 @@
+{
+  "label": "D2 after a2 -> S2 (common), repeated a2 choice, mid/late episode (trials ~45-85)",
+  "predicate": "(phase == D2) & (action == 2) & (state == 2) & (ep_trial >= 45) & (ep_trial < 85) & (prev_action != 1) & (choice < -3)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 steps where the agent chose a2 and reached S2 via the common transition (in_action=2, in_state=2). It never fires at D1/GO, after a1, or after a rare transition. Activity is gated by position in the episode: none before trial ~40 or after ~90, and most of it falls in trials 45-85. Nearly all of it comes after a stay (previous choice also a2); after a switch from a1 it is essentially silent. Within that, it is strongest when the previous trial was rewarded or the policy strongly favours a2 (choice logit < -4.44). Activation builds up over runs of rewarded a2->S2 trials, and the top windows have good=S2. The simpler predicate D2 & a2 & S2 & trials 45-85 & prev_action != a1 scores dev F1 0.81 (precision 0.70, recall 0.96, mass recall 0.99). Adding the (prev_reward==1 | strong a2 policy) clause raises dev F1 to 0.88, so that version is recorded. Every variable used is observed at D2 or is the model's own policy. The episode-position dependence is odd and suggests a time-in-episode signal.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 216,
+    "predicate": "(phase == D2) & (action == 2) & (state == 2) & (ep_trial >= 45) & (ep_trial < 85) & (prev_action != 1) & (choice < -3)",
+    "split": "test",
+    "precision": 0.8726199707073318,
+    "recall": 0.9213171419475145,
+    "f1": 0.8963076038140748,
+    "mass_recall": 0.9875360188955322,
+    "correlation": 0.8361520459860757,
+    "n_active": 43974,
+    "n_predicted": 46428,
+    "coverage_by_activation_quartile": [
+      0.6932872475895944,
+      0.991995633982172,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 216,
+    "predicate": "(phase == D2) & (action == 2) & (state == 2) & (ep_trial >= 45) & (ep_trial < 85) & (prev_action != 1) & (choice < -3)",
+    "split": "dev",
+    "precision": 0.8680062542258282,
+    "recall": 0.930950870195794,
+    "f1": 0.8983773617914625,
+    "mass_recall": 0.9889997014062089,
+    "correlation": 0.8323915789012643,
+    "n_active": 44128,
+    "n_predicted": 47328,
+    "coverage_by_activation_quartile": [
+      0.7307831762146483,
+      0.9932922407541697,
+      0.9997280638143582,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 216,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Most factual claims check out on dev. All activation is at D2 (D1 and GO have 0 active steps). Every active step has action==2 and state==2, so it never fires after a1 or after a rare transition. There are 0 active steps at ep_trial <30 or >=90, only 18 in trials 30-39, and 96% of the mass is in ep_bucket 5 (trials 50-99). After a switch (stay==0) there are 32 active steps, against 33944 after a stay. 81% of the mass falls where good==S2.",
+      "The reported scores reproduce. Dev: P 0.845, R 0.923, F1 0.882, MR 0.985. Test: P 0.837, R 0.913, F1 0.874, MR 0.984. The simpler version without the reward/policy clause gives dev F1 0.811 and test F1 0.795.",
+      "The reward clause is not the key factor. The model's policy logit at the D2 step is. Replacing ((prev_reward==1)|(choice<-4.44)) with (choice < -3) scores better: dev F1 0.898, test F1 0.896 (P 0.873, R 0.921, MR 0.988). prev_reward==1 alone gives only dev F1 0.830. So 'strongest when the previous trial was rewarded' describes a correlate. The real factor is how strongly the agent currently favours a2.",
+      "The prev_action != 1 term is redundant once the choice-logit term is included: without it, dev F1 is 0.897 vs 0.898 with it. 'Repeated a2 choice' is true as a description but has no independent effect.",
+      "The false positives cluster in one place. They sit at the first a2->S2c trial of a run that follows a rare S1 trial or an unrewarded trial, where activation is still building. The choice-logit threshold captures this. Missed activations are scattered and carry only 1.6% of the mass (test).",
+      "Small caveat: 'choice' at D2 is the policy logit read out at the D2 step, not at GO. It is the model's own computed preference, so it is legitimate, but 'policy favours a2' should be read as the D2-step readout."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after a2 -> S2 (common) while the agent's policy strongly favours a2, mid/late episode only (trials ~45-85)",
+    "better_predicate": "(phase == D2) & (action == 2) & (state == 2) & (ep_trial >= 45) & (ep_trial < 85) & (prev_action != 1) & (choice < -3)",
+    "better_predicate_test_f1": 0.896
+  },
+  "final_label": "D2 after a2 -> S2 (common) while the agent's policy strongly favours a2, mid/late episode only (trials ~45-85)",
+  "original_predicate": "(phase == D2) & (action == 2) & (state == 2) & (ep_trial >= 45) & (ep_trial < 85) & (prev_action != 1) & ((prev_reward == 1) | (choice < -4.44))",
+  "original_test_scores": {
+    "gate": "update",
+    "feature": 216,
+    "predicate": "(phase == D2) & (action == 2) & (state == 2) & (ep_trial >= 45) & (ep_trial < 85) & (prev_action != 1) & ((prev_reward == 1) | (choice < -4.44))",
+    "split": "test",
+    "precision": 0.8374397596645318,
+    "recall": 0.9128348569609315,
+    "f1": 0.8735134429368818,
+    "mass_recall": 0.9835679119957028,
+    "correlation": 0.8189180745768303,
+    "n_active": 43974,
+    "n_predicted": 47933,
+    "coverage_by_activation_quartile": [
+      0.6716390758595597,
+      0.9802619610696743,
+      0.9994541981260803,
+      1.0
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "update",
+    "feature": 216,
+    "predicate": "(phase == D2) & (action == 2) & (state == 2) & (ep_trial >= 45) & (ep_trial < 85) & (prev_action != 1) & ((prev_reward == 1) | (choice < -4.44))",
+    "split": "dev",
+    "precision": 0.8445182035058604,
+    "recall": 0.9225435097897027,
+    "f1": 0.8818082375748648,
+    "mass_recall": 0.9854664785318344,
+    "correlation": 0.8213700578766009,
+    "n_active": 44128,
+    "n_predicted": 48205,
+    "coverage_by_activation_quartile": [
+      0.7066715010877448,
+      0.984590282813633,
+      0.9989122552574329,
+      1.0
+    ]
+  },
+  "predicate_from": "skeptic"
+}

@@ -1,0 +1,71 @@
+{
+  "label": "GO late in episode (>=83), after reward, scaled by belief S2 is good",
+  "terms": "(phase == GO) * np.clip(ep_trial - 83, 0, None) * (prev_reward == 1) * (1 - belief) ;; (phase == GO) * np.clip(ep_trial - 83, 0, None) ;; (phase == GO) * np.clip(ep_trial - 83, 0, None) * last_is(\"a1 S2 r\") ;; (phase == GO) * np.clip(ep_trial - 83, 0, None) * last_is(\"a2 S2 r\") ;; (phase == GO) * (ep_trial >= 83) * (prev_reward == 1) * (1 - belief)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO and only in the last ~15 trials of the episode, with magnitude ramping up through trial 99 (timing alone R^2 0.24). Beyond timing, the size is set by an interaction: the late-episode ramp times (previous trial rewarded) times (1 - belief), i.e. how confident the ideal observer is that S2 is good. It is largest after a2 -> S2 rewarded (extra positive term) and smaller after a1 -> S2 rewarded (rare-rewarded, negative correction); after unrewarded trials or when belief favours S1 it stays near zero (the plain ramp term gets a negative weight). D1 and D2 are always zero. Observed-only replacement for the earlier policy-strongly-favours-a2 description: belief + previous reward + last-trial pattern reach test R^2 beyond timing 0.785 (dev 0.818), far above the additive all ceiling 0.11 because the effect is multiplicative with episode time; using no model outputs seems to lose little. Residual misses: the first GO of a high-activation run is sometimes under-predicted, and some rewarded late trials with S2 belief do not fire.",
+  "gate": "update",
+  "feature": 100,
+  "test_scores": {
+    "gate": "update",
+    "feature": 100,
+    "terms": [
+      "(phase == GO) * np.clip(ep_trial - 83, 0, None) * (prev_reward == 1) * (1 - belief)",
+      "(phase == GO) * np.clip(ep_trial - 83, 0, None)",
+      "(phase == GO) * np.clip(ep_trial - 83, 0, None) * last_is(\"a1 S2 r\")",
+      "(phase == GO) * np.clip(ep_trial - 83, 0, None) * last_is(\"a2 S2 r\")",
+      "(phase == GO) * (ep_trial >= 83) * (prev_reward == 1) * (1 - belief)"
+    ],
+    "weights": [
+      0.09473751639167692,
+      -0.038325336832879704,
+      -0.02581616041919603,
+      0.04109734926704997,
+      0.03454170824233792
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7852587260497006,
+    "r2": 0.8360088301606163,
+    "r2_timing_only": 0.23633139161995265
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 100,
+    "terms": [
+      "(phase == GO) * np.clip(ep_trial - 83, 0, None) * (prev_reward == 1) * (1 - belief)",
+      "(phase == GO) * np.clip(ep_trial - 83, 0, None)",
+      "(phase == GO) * np.clip(ep_trial - 83, 0, None) * last_is(\"a1 S2 r\")",
+      "(phase == GO) * np.clip(ep_trial - 83, 0, None) * last_is(\"a2 S2 r\")",
+      "(phase == GO) * (ep_trial >= 83) * (prev_reward == 1) * (1 - belief)"
+    ],
+    "weights": [
+      0.09473751639167692,
+      -0.038325336832879704,
+      -0.02581616041919603,
+      0.04109734926704997,
+      0.03454170824233792
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8177038242328856,
+    "r2": 0.8652360348902157,
+    "r2_timing_only": 0.26074167742308085
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced: the claimed 5 terms score test R^2 beyond timing 0.785 (r2 0.836, timing-only 0.236). The weights match the explanation: ramp*rew*(1-belief) +0.095, plain ramp -0.038, a1S2r -0.026, a2S2r +0.041. Profile: activation is exactly 0 at D1 and D2, and the GO timing means are 0 until decile 7, then 0.085 (80-89) and 0.44 (90-99). The claims 'GO only' and 'late, growing' hold.",
+      "An error class the explanation leaves out: GO after a2 S1 r (rare, rewarded) is the most over-predicted class in misses (-0.063, every other class is under 0.01). Examples: t97 a2 S1R followed by t98 r1 a2 gives actual 0 vs predicted 0.99, and t95 a2 S1R followed by t96 gives 0 vs 0.77. Adding the term ramp*last_is('a2 S1 r') (weight -0.048) raises test R^2 to 0.811 and clears that class (it falls to -0.006). The explanation says only a1->S2 rewarded is reduced, but in fact both rare-rewarded patterns are suppressed. That is the model-based signature and the label should say so.",
+      "With one ramp*last_is term per previous-trial pattern, every pattern except a2 S2 r gets weight about -0.035 (just cancelling the ramp) and a2 S2 r gets +0.095 (test 0.736). So the firing depends heavily on the previous trial being a2 -> S2 rewarded. The belief scaling adds real signal on top: a2S2r*ramp + ramp alone gives 0.684, the belief-based model 0.81. So 'after reward, scaled by belief' is accurate but understates how specific it is to a common a2 reward.",
+      "The onset under-prediction the explanation admits is real, but it does not show up as a phase x previous-trial class. Moving the ramp start (80, 83 or 86), using a sqrt ramp, adding (1-belief)^3, or adding a two-rewards-in-a-row term all stay at 0.810-0.813. That looks like a ceiling, not a missing cue.",
+      "There is no overclaim on future variables: none are used. As a check, the future upcoming choice (action==2) times reward times ramp scores only 0.597, below the observed belief model. So observed belief does better than the closest future proxy for the policy."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO late in the episode (>=83) after a rewarded trial, ramping toward trial 99 and scaled by belief that S2 is good. Largest after common a2->S2 rewarded; suppressed after rare-rewarded trials (a2->S1 r, a1->S2 r).",
+    "better_terms": "(phase == GO) * np.clip(ep_trial - 83, 0, None) * (prev_reward == 1) * (1 - belief) ;; (phase == GO) * np.clip(ep_trial - 83, 0, None) ;; (phase == GO) * np.clip(ep_trial - 83, 0, None) * last_is('a1 S2 r') ;; (phase == GO) * np.clip(ep_trial - 83, 0, None) * last_is('a2 S2 r') ;; (phase == GO) * (ep_trial >= 83) * (prev_reward == 1) * (1 - belief) ;; (phase == GO) * np.clip(ep_trial - 83, 0, None) * last_is('a2 S1 r')",
+    "better_terms_test_r2_beyond_timing": 0.811
+  },
+  "final_label": "GO late in the episode (>=83) after a rewarded trial, ramping toward trial 99 and scaled by belief that S2 is good. Largest after common a2->S2 rewarded; suppressed after rare-rewarded trials (a2->S1 r, a1->S2 r)."
+}

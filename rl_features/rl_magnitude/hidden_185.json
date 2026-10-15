@@ -1,0 +1,92 @@
+{
+  "label": "Fires at D1 after rewarded rare a2->S1, stronger if S2 believed good and prior trial rewarded.",
+  "short_terms": "(phase == D1) * last_is(\"a2 S1 r\") ;; (phase == D1) * last_is(\"a2 S1 r\") * belief_lo ;; (phase == D1) * last_is(\"a2 S1 r\") * (tv(\"reward\", -2) == 1)",
+  "terms": "(phase == D1) * last_is(\"a2 S1 r\") ;; (phase == D1) * last_is(\"a2 S1 r\") * belief_lo ;; (phase == D1) * last_is(\"a2 S1 r\") * (tv(\"state\", -2) == 1) ;; (phase == D1) * last_is(\"a2 S1 r\") * (tv(\"reward\", -2) == 1) ;; (phase == D1) * last_is(\"a2 S1 r\") * (tv(\"action\", -2) == 2) ;; (phase == D1) * last_is(\"a2 S1 r\") * belief_cover ;; (phase == D1) * last_is(\"a1 S1 r\") ;; (phase == D1) * last_is(\"a2 S1 r\") * ep_dec",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Silent at GO and D2. At D1 it fires almost only when the previous trial was a2 -> S1 (rare) rewarded, the model-based switch-to-a1 signal; this indicator alone gives dev R^2 0.55 beyond timing. Within those trials, magnitude is larger when the ideal observer still favours S2 as good (negative weight on belief_lo, i.e. the rare reward is surprising) and when the trial before was also rewarded (+0.55). Other last-trial patterns, including a1 S1 r, contribute nothing. Free fit (adds state/action of trial -2, belief_cover, episode decile) adds only about 0.01 dev R^2 over the short form. Observed-only; no future variables.",
+  "full_test_scores": {
+    "gate": "hidden",
+    "feature": 185,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S1 r\")",
+      "(phase == D1) * last_is(\"a2 S1 r\") * belief_lo",
+      "(phase == D1) * last_is(\"a2 S1 r\") * (tv(\"state\", -2) == 1)",
+      "(phase == D1) * last_is(\"a2 S1 r\") * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * last_is(\"a2 S1 r\") * (tv(\"action\", -2) == 2)",
+      "(phase == D1) * last_is(\"a2 S1 r\") * belief_cover",
+      "(phase == D1) * last_is(\"a1 S1 r\")",
+      "(phase == D1) * last_is(\"a2 S1 r\") * ep_dec"
+    ],
+    "weights": [
+      0.5885733669952974,
+      -0.21816482214061578,
+      0.07020911626549341,
+      0.5835905088074459,
+      -0.09051425785969024,
+      -0.0020014384129987644,
+      -0.01592034401749957,
+      0.03134324463209784
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7519972068676819,
+    "r2": 0.7596220378508609,
+    "r2_timing_only": 0.03074493995360339
+  },
+  "gate": "hidden",
+  "feature": 185,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 185,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S1 r\")",
+      "(phase == D1) * last_is(\"a2 S1 r\") * belief_lo",
+      "(phase == D1) * last_is(\"a2 S1 r\") * (tv(\"reward\", -2) == 1)"
+    ],
+    "weights": [
+      0.6880362941137532,
+      -0.2160428408001298,
+      0.5469577418153648
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7441726610666299,
+    "r2": 0.7520380572406266,
+    "r2_timing_only": 0.03074493995360339
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 185,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S1 r\")",
+      "(phase == D1) * last_is(\"a2 S1 r\") * belief_lo",
+      "(phase == D1) * last_is(\"a2 S1 r\") * (tv(\"reward\", -2) == 1)"
+    ],
+    "weights": [
+      0.6880362941137532,
+      -0.2160428408001298,
+      0.5469577418153648
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.743591972346141,
+    "r2": 0.751391181384239,
+    "r2_timing_only": 0.030417179639268044
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Label wording 'prior trial rewarded' is ambiguous: the trigger trial (a2->S1) is itself the prior trial and is always rewarded. The term is tv('reward',-2)==1, the trial before that one. The revised label says so.",
+      "The claims hold on test (--short). The last_is('a2 S1 r') indicator alone gives 0.523. Adding belief_lo gives 0.698 (weight -0.28, so firing is stronger when S2 is believed good). Adding only reward(-2) gives 0.663 (weight +0.84). The full short form gives 0.744, well above the 0.61 additive ceiling. Swapping in action(-2)==2 or state(-2)==2 for reward(-2) does worse (0.700 / 0.698), so the reward claim is specific.",
+      "The linear belief_lo term over-penalises cases where S1 is strongly believed good. Misses show D1 firing at 1.97 against a prediction of 0.16 after consecutive a2 S1 r trials. Bounded belief does slightly better (0.746), and (belief_lo<0) does worse (0.732), so this is a mild shape issue, not a missing variable.",
+      "Remaining misses are scattered: D1 cells at the window start where the previous trial is unknown ('?'), and occasional firing after a1 S1 r. The mean D1 over-prediction on other patterns is only about 0.04, with no large systematic error class.",
+      "No future variables are used. The feature is silent at GO and D2, as claimed."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after rewarded rare a2->S1; stronger if S2 believed good and the trial before that was rewarded.",
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "D1 after rewarded rare a2->S1; stronger if S2 believed good and the trial before that was rewarded."
+}

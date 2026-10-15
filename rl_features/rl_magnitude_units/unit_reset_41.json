@@ -1,0 +1,92 @@
+{
+  "label": "At D1, high after reaching S1, low after a rewarded S2, plus S1-good belief.",
+  "short_terms": "(phase == D1) * (prev_state == S1) ;; (phase == D1) * (prev_state == S2) * (prev_reward == 1) ;; (phase == D1) * belief_lo",
+  "terms": "(phase == D1) * last_is(\"a1 S1 r\") ;; (phase == D1) * last_is(\"a1 S1 u\") ;; (phase == D1) * last_is(\"a1 S2 r\") ;; (phase == D1) * last_is(\"a2 S2 r\") ;; (phase == D1) * last_is(\"a2 S1 r\") ;; (phase == D1) * last_is(\"a2 S1 u\") ;; (phase == D1) * belief_lo ;; (phase == D1) * (prev_state == S1) * ep_dec",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Reset gate unit 41 is near-saturated (about 0.97) at GO and D2 and is modulated almost only at D1, where it falls strongly over the episode (timing). Beyond timing, at D1 it is raised when the previous trial reached S1 (rewarded or not, either choice) and sharply lowered when the previous trial reached S2 and was rewarded; S2-unrewarded is roughly neutral. A graded term in the ideal-observer log-odds that S1 is good adds a smaller push (higher when S1 believed good). So it tracks the last state and S2 reward evidence, a state/belief signal rather than a choice or stay/switch signal. GO and D2 residuals are tiny. The free fit adds: unrewarded S1 trials raise it more than rewarded S1 trials once belief is included, and the S1 effect grows later in the episode; dev 0.75 vs 0.70 for the short form. Only observed variables used.",
+  "full_test_scores": {
+    "gate": "unit_reset",
+    "feature": 41,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S1 r\")",
+      "(phase == D1) * last_is(\"a1 S1 u\")",
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * last_is(\"a2 S2 r\")",
+      "(phase == D1) * last_is(\"a2 S1 r\")",
+      "(phase == D1) * last_is(\"a2 S1 u\")",
+      "(phase == D1) * belief_lo",
+      "(phase == D1) * (prev_state == S1) * ep_dec"
+    ],
+    "weights": [
+      0.02000740103465535,
+      0.10693043048750073,
+      -0.13635684904670853,
+      -0.11971928076005828,
+      -0.010161564652197426,
+      0.11798646376128664,
+      0.016187620341227085,
+      0.010181851074262725
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7481433059913842,
+    "r2": 0.8891312911075673,
+    "r2_timing_only": 0.559794472293677
+  },
+  "gate": "unit_reset",
+  "feature": 41,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 41,
+    "terms": [
+      "(phase == D1) * (prev_state == S1)",
+      "(phase == D1) * (prev_state == S2) * (prev_reward == 1)",
+      "(phase == D1) * belief_lo"
+    ],
+    "weights": [
+      0.10424807052393545,
+      -0.14173159682596642,
+      0.009039068976138688
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6961122658336755,
+    "r2": 0.8662269396178343,
+    "r2_timing_only": 0.559794472293677
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 41,
+    "terms": [
+      "(phase == D1) * (prev_state == S1)",
+      "(phase == D1) * (prev_state == S2) * (prev_reward == 1)",
+      "(phase == D1) * belief_lo"
+    ],
+    "weights": [
+      0.10424807052393545,
+      -0.14173159682596642,
+      0.009039068976138688
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7017967146257631,
+    "r2": 0.8670752418211831,
+    "r2_timing_only": 0.5542478413274354
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The explanation says the D1 rise after reaching S1 happens 'whatever the choice or reward'. The data disagree. D1 residuals beyond timing: a1 S1 u +0.155, a2 S1 u +0.111, a1 S1 r +0.117, a2 S1 r +0.040. So unrewarded S1 trials raise it more than rewarded ones, and rare-rewarded S1 trials barely raise it. Running misses on the recorded short form leaves exactly this error: D1 after a1 S1 u is under-predicted by +0.050, after a2 S1 u by +0.037, and D1 after a2 S1 r is over-predicted by -0.065.",
+      "A different decomposition fits just as well: (phase==D1)*(prev_state==S1) ;; (phase==D1)*(prev_reward==1) ;; (phase==D1)*belief_lo. It scores test 0.695 and dev 0.700, against 0.696 for the recorded form. Its weights are +0.15 for reaching S1 and -0.09 for any reward. So 'reached S1 raises it, any reward lowers it' describes the data as well as 'S1 up, only rewarded S2 down'. The label's claim that the drop is specific to rewarded S2 is not uniquely supported.",
+      "There is a systematic late-episode scale error. In the worst-fit windows (trials 93-99) D1 after a rewarded S2 trial is about 0.26, but the short form predicts about 0.44. The effects grow as the D1 baseline falls late in the episode. Adding ep_dec interactions to the short form only gains about 0.01 (best: belief_lo*ep_dec, test 0.705), so this error stays unexplained.",
+      "belief_lo adds little. Without it the two state/reward terms score test 0.676; with it, 0.696. 'Smaller graded term' is accurate, but belief is a minor contributor.",
+      "The claims that it is mostly a D1 effect and near saturation at GO/D2 check out. GO residuals are at most about 0.03 (a1 S2 r) and D2 residuals at most about 0.01. The short form (0.696) is close to the last-trial table reference (0.71)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "At D1, raised after reaching S1 (most if unrewarded), lowered after rewarded S2.",
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "At D1, raised after reaching S1 (most if unrewarded), lowered after rewarded S2."
+}

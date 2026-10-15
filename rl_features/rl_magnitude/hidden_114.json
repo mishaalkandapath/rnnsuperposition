@@ -1,0 +1,88 @@
+{
+  "label": "Fires at D1 after unrewarded a1->S1, stronger if belief still favors S1, weaker if the trial before was rewarded.",
+  "short_terms": "(phase == D1) * last_is(\"a1 S1 u\") ;; (phase == D1) * last_is(\"a1 S1 u\") * belief_lo ;; (phase == D1) * last_is(\"a1 S1 u\") * (tv(\"reward\", -2) == 1)",
+  "terms": "(phase == D1) * last_is(\"a1 S1 u\") ;; (phase == D1) * last_is(\"a1 S1 u\") * belief_lo ;; (phase == D1) * last_is(\"a1 S1 u\") * (tv(\"reward\", -2) == 1) ;; (phase == D1) * last_is(\"a1 S1 u\") * (tv(\"action\", -2) == 1) ;; (phase == D1) * last_is(\"a2 S1 u\") ;; (phase == D1) * last_is(\"a1 S1 u\") * ep_dec",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Active only at D1 and almost only after a common unrewarded a1->S1 trial (residual +0.89; every other previous-trial pattern is about -0.07). Within that cell, the magnitude goes up with the observer log-odds that S1 is good (positive weight on belief_lo) and goes down by about 0.6-0.8 when the trial before was rewarded. The free fit adds a small boost when the trial before was also a1, a slight decline over the episode, and a negligible a2->S1 unrewarded term (dev 0.547 vs 0.524 for the short form). Remaining misses: large activations on the first trial of a window, where the previous trial is unknown, and some weak firing after a2 S2 u. GO and D2 are always zero. Future and hidden variables add nothing.",
+  "full_test_scores": {
+    "gate": "hidden",
+    "feature": 114,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S1 u\")",
+      "(phase == D1) * last_is(\"a1 S1 u\") * belief_lo",
+      "(phase == D1) * last_is(\"a1 S1 u\") * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * last_is(\"a1 S1 u\") * (tv(\"action\", -2) == 1)",
+      "(phase == D1) * last_is(\"a2 S1 u\")",
+      "(phase == D1) * last_is(\"a1 S1 u\") * ep_dec"
+    ],
+    "weights": [
+      1.2030091550389255,
+      0.35980934136855697,
+      -0.8141008130118127,
+      0.36407475389363286,
+      -0.04388554844986242,
+      -0.05551487534976974
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5466173694346836,
+    "r2": 0.5604744120973768,
+    "r2_timing_only": 0.030563682259761582
+  },
+  "gate": "hidden",
+  "feature": 114,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 114,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S1 u\")",
+      "(phase == D1) * last_is(\"a1 S1 u\") * belief_lo",
+      "(phase == D1) * last_is(\"a1 S1 u\") * (tv(\"reward\", -2) == 1)"
+    ],
+    "weights": [
+      1.135993673754821,
+      0.35130793045034725,
+      -0.642259152493664
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5215125630866018,
+    "r2": 0.5361369010737105,
+    "r2_timing_only": 0.030563682259761582
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 114,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S1 u\")",
+      "(phase == D1) * last_is(\"a1 S1 u\") * belief_lo",
+      "(phase == D1) * last_is(\"a1 S1 u\") * (tv(\"reward\", -2) == 1)"
+    ],
+    "weights": [
+      1.135993673754821,
+      0.35130793045034725,
+      -0.642259152493664
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5243928805492696,
+    "r2": 0.5379296346641772,
+    "r2_timing_only": 0.028462051052854265
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The 'weaker if the trial before was rewarded' claim only holds once belief is fixed. On its own the term adds almost nothing: last_is alone scores 0.433 test, and adding (tv('reward',-2)==1) gives 0.442 (weight -0.26). Combined with belief_lo it adds a lot: 0.476 rises to 0.522 (weight -0.64), and the belief_lo weight goes from 0.23 to 0.35. A reader should understand it as 'given the same belief'.",
+      "The belief dependence checks out. Inside the a1 S1 u cell, binned belief_lo weights rise steadily: 0.36, 0.60, 0.58, 0.86, 1.17 from belief_lo < -2 up to 1-2. So a linear belief_lo term is a fair description and not curve fitting. np.abs(belief_lo) does worse (0.445), and belief_lo > 0 gives 0.508.",
+      "The D1-only and a1 S1 u-only claims check out. GO and D2 are exactly zero, and every other previous-trial residual is about -0.07, with a2 S1 u at -0.06. Misses shows no large systematic error class: mean error by phase is D1 -0.036, GO/D2 +0.018, and every other D1 previous-trial cell is over-predicted by about 0.05.",
+      "Remaining misses are scattered large activations that are under-predicted. Some are on the window's first trial, where the previous trial is unknown. Others are cases where the cell fires at about 2.3 even though belief_lo is strongly negative and the trial before was rewarded (predicted about 0). These are individual windows, not a cell-level pattern.",
+      "Small refinement, free fit only: splitting the trial-before term by state reached gives test 0.545. The drop is larger when the earlier reward came at S2 (-0.66) than at S1 (-0.28), and an unrewarded trial at S2 before raises it (+0.68). This cannot be written in the short form with its 3-factor limit, and the gain is small (0.522 to 0.545 against a 0.55 ceiling)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Fires at D1 after unrewarded a1->S1; grows with S1 belief; weaker, at equal belief, if the trial before was rewarded.",
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "Fires at D1 after unrewarded a1->S1; grows with S1 belief; weaker, at equal belief, if the trial before was rewarded."
+}

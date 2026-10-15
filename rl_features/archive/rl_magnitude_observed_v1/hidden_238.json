@@ -1,0 +1,67 @@
+{
+  "label": "GO after unrewarded a1->S2 rare; larger after prior unrewarded/S2 trial and S1-leaning belief",
+  "terms": "(phase == GO) * last_is(\"a1 S2 u\") ;; (phase == GO) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 0) ;; (phase == GO) * last_is(\"a1 S2 u\") * (tv(\"state\", -2) == 2) ;; (phase == GO) * last_is(\"a1 S2 u\") * np.clip(belief_lo, 0, 4)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO, and almost only when the previous trial was a1 -> S2 (rare) unrewarded (GO residual +0.52 there vs about -0.05 for every other previous-trial pattern; D1 and D2 are essentially zero). How large it gets within that case depends on observed history: bigger when the trial before was also unrewarded (w +0.24), bigger when the trial before also reached S2 (w +0.17), and it grows with the ideal observer belief that S1 is good (clipped log-odds, w +0.13 per unit). The a1 S2 u indicator alone gives dev R^2 0.45 beyond timing. With the 4 observed-only terms: dev 0.49, test 0.47, against an all-cue ceiling of 0.50 (all observed 0.49), so using observed quantities only costs little. Adding the future upcoming choice (action == 1) did not help (0.45 vs 0.45 for the indicator alone). Some fires are still under-predicted (actual about 1.3 vs predicted about 0.5 for some a1 S2 u GO steps), and some at the first trial of the window, where the previous trial is unknown, are missed.",
+  "gate": "hidden",
+  "feature": 238,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 238,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S2 u\")",
+      "(phase == GO) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * last_is(\"a1 S2 u\") * (tv(\"state\", -2) == 2)",
+      "(phase == GO) * last_is(\"a1 S2 u\") * np.clip(belief_lo, 0, 4)"
+    ],
+    "weights": [
+      0.027135070746914205,
+      0.24386608662996387,
+      0.17106887218764463,
+      0.1285566378575408
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.469663966076301,
+    "r2": 0.48866139799249175,
+    "r2_timing_only": 0.03582149939093904
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 238,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S2 u\")",
+      "(phase == GO) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * last_is(\"a1 S2 u\") * (tv(\"state\", -2) == 2)",
+      "(phase == GO) * last_is(\"a1 S2 u\") * np.clip(belief_lo, 0, 4)"
+    ],
+    "weights": [
+      0.027135070746914205,
+      0.24386608662996387,
+      0.17106887218764463,
+      0.1285566378575408
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.49488498843056117,
+    "r2": 0.5150053728274717,
+    "r2_timing_only": 0.039833273484378706
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The 'trial before also reached S2 (+0.17)' claim is misleading as an additive effect. When the trial before is broken into its four state x reward patterns (inside GO after a1 S2 u, no belief term), the weights are: S1 rewarded +0.43, S1 unrewarded +0.46, S2 rewarded -0.04, S2 unrewarded +0.93, unknown +0.55. Reaching S2 only raises the feature when that trial was also unrewarded. An S2-rewarded trial before suppresses it to about 0, which the claimed terms predict as a boost. Adding the S2-and-unrewarded conjunction to the claimed terms flips the S2 weight to -0.47 and gives the conjunction +0.86.",
+      "The a1 S2 u indicator on its own gets a fitted weight of only +0.027 in the claimed model. So the 'GO residual +0.52' firing depends almost entirely on the modifiers (trial before unrewarded or S2, or belief favouring S1) and is not a uniform base response. The magnitude is close to binary (about 1.3 or about 0), and the additive modifiers only roughly capture this.",
+      "There is a systematic, recoverable miss class: GO on the window's first trial (prev_action == -1). There the feature reaches about 1.3 (misses show 1.34 / 1.32 / 1.38 / 1.19 against predictions of about 0.05). The agent's belief is still observable on that trial. Adding (phase == GO) * (prev_action == -1) * (prev_reward == 0) * clip(belief_lo, 0, 4) raises test R^2 from 0.470 to 0.523 (dev 0.554). This beats the stated 'all observed' ceiling of 0.49, so the ceiling understates what observed cues can reach.",
+      "With a 4-way table of the trial before plus belief plus the first-trial term (7 terms), test R^2 beyond timing is 0.537 against the claimed 0.470. That gap of about 0.07 comes from structure the label gets wrong or leaves out.",
+      "Minor: conditioning on this trial's choice being a1 (stay, a future variable) barely helps (test 0.472). The claim that the future choice does not help is consistent with this."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after unrewarded a1->S2 (rare) trial, when the observed history still favours S1 (largest if the trial before was also an unrewarded S2 visit, near zero if it was a rewarded S2 visit); also fires on the window's first GO when the previous reward was 0 and belief favours S1",
+    "better_terms": "(phase == GO) * last_is('a1 S2 u') * (tv('state', -2) == 1) * (tv('reward', -2) == 1) ;; (phase == GO) * last_is('a1 S2 u') * (tv('state', -2) == 1) * (tv('reward', -2) == 0) ;; (phase == GO) * last_is('a1 S2 u') * (tv('state', -2) == 2) * (tv('reward', -2) == 1) ;; (phase == GO) * last_is('a1 S2 u') * (tv('state', -2) == 2) * (tv('reward', -2) == 0) ;; (phase == GO) * last_is('a1 S2 u') * (tv('state', -2) == -9) ;; (phase == GO) * last_is('a1 S2 u') * np.clip(belief_lo, 0, 4) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * np.clip(belief_lo, 0, 4)",
+    "better_terms_test_r2_beyond_timing": 0.5374
+  },
+  "final_label": "GO after unrewarded a1->S2 (rare) trial, when the observed history still favours S1 (largest if the trial before was also an unrewarded S2 visit, near zero if it was a rewarded S2 visit); also fires on the window's first GO when the previous reward was 0 and belief favours S1"
+}

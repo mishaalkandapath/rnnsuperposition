@@ -1,0 +1,63 @@
+{
+  "label": "D2 after choosing a2, in the last ~10 trials of the episode",
+  "predicate": "(phase == D2) & (action == 2) & (ep_trial >= 90)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (never at D1 or GO), almost only when this trial chose a2 (in_action == 2 at D2 holds 99.4% of the mass), and only late in the episode: 97% of the mass is in trials 90-99, a little in 80-89, none earlier. It is equally well described by low model value (value < 5.22 holds 99% of the mass), which is itself an end-of-episode signal. All variables are observed at D2 (the choice is shown as input), so uses_future is false. Magnitude rises steadily over consecutive late trials toward the end of the episode, and is larger when the a2 choice reached S2 by a common transition after rewarded trials. It is weaker on rare S1 outcomes and after unrewarded trials, which are most of the false positives. It is essentially silent after a1 choices and at non-D2 phases, and does not depend much on core pattern or stay/switch. Dev: P 0.81, R 0.89, F1 0.85, mass recall 0.96.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 109,
+    "predicate": "(phase == D2) & (action == 2) & (ep_trial >= 90)",
+    "split": "test",
+    "precision": 0.7813798085605924,
+    "recall": 0.9018708635155558,
+    "f1": 0.8373128190241188,
+    "mass_recall": 0.9681460308664399,
+    "correlation": 0.7596842172207162,
+    "n_active": 19189,
+    "n_predicted": 22148,
+    "coverage_by_activation_quartile": [
+      0.7027928303459775,
+      0.9193245778611632,
+      0.9860329372524494,
+      0.9993746091307066
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 109,
+    "predicate": "(phase == D2) & (action == 2) & (ep_trial >= 90)",
+    "split": "dev",
+    "precision": 0.8114637146371464,
+    "recall": 0.8917063148788927,
+    "f1": 0.8496947528399578,
+    "mass_recall": 0.9637211175195708,
+    "correlation": 0.7796265223575369,
+    "n_active": 18496,
+    "n_predicted": 20325,
+    "coverage_by_activation_quartile": [
+      0.6766868512110726,
+      0.907871972318339,
+      0.9833477508650519,
+      0.9989186851211073
+    ]
+  },
+  "gate": "reset",
+  "feature": 109,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Each factual claim holds on dev. All 18496 active steps are at D2, none at D1 or GO. Steps where a2 was chosen (in_action==2) hold 99.4% of the mass. Trials 90-99 hold 96.9% of the mass, trials 80-89 hold 3.1%, and earlier trials hold none. value<5.22 holds 98.9%. The predicate's test scores reproduce exactly: P 0.781, R 0.902, F1 0.837, mass recall 0.968.",
+      "The misses on both splits are not systematic. On dev they are low-magnitude activations in trials 80-89, where the activation ramps up over consecutive a2 trials (most below 0.3 of max). The test split also has a few weak a1 trials that reached S2 by a rare transition (0.03-0.19 of max). Misses hold only 3.2-3.6% of the mass.",
+      "The false positives match what the explanation says. They are mostly late-episode a2 trials that ended in S1 by a rare transition, or that followed an unrewarded trial, or that were the first a2 after a run of a1 choices (so the ramp had not started). Excluding the state==1 & prev_reward==0 case gives dev F1 0.847, but test F1 only reaches 0.838, which is no real gain. Adding prev_action!=1 lowers test F1 to 0.821. So the magnitude depends on these factors, but none of them is a clean extra condition.",
+      "The value alternative is a bit worse, as the explanation says. On test, F1 is 0.816 with value<5.22 and 0.820 with value<5.0. Cutoffs at trial 89 or 88 trade precision for recall without improving test F1 (0.821 at 89).",
+      "The predicate uses no future variables. The choice is shown as input at D2, and ep_trial is the agent's position in the episode."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

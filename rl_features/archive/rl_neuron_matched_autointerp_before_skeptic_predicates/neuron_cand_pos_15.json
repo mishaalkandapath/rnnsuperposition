@@ -1,0 +1,65 @@
+{
+  "label": "GO after a common-rewarded a2 trial, late in the episode, when the agent strongly commits to a2",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (prev_action != 1) & (prev_common != 0) & (choice < -8.9) & (value < 7.13)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO (0 activations at D1/D2). Requires the previous trial to be a2 -> S2 common and rewarded (0 activations after a1 trials, after rare transitions, or after unrewarded trials). Fires only when the policy strongly commits to a2 (choice logit < -8.9, the bottom 10 pct bin, which holds 99.9 pct of mass); it never fires on a1 choices. It is also strongly gated by episode time: 95 pct of mass is in trials 50-99 and most in 70-99, which appears in the model as low value (value < 7.13). The recorded predicate uses only observed history plus the model own value/policy (no future variables). Dev F1 0.84 (P 0.91, R 0.78, mass recall 0.83). Without the value/late-episode term recall stays near 1.0 but precision falls to 0.40, so the late-episode gating is real. Misses are mostly the same pattern with value or choice just outside the thresholds. Examples suggest activation is largest on the first rewarded a2 trial after unrewarded or rare ones and shrinks over a run of consecutive rewards, but this was not checked quantitatively.",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 15,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (prev_action != 1) & (prev_common != 0) & (choice < -8.9) & (value < 7.13)",
+    "split": "test",
+    "precision": 0.9131745018790328,
+    "recall": 0.7779220779220779,
+    "f1": 0.8401396046708852,
+    "mass_recall": 0.8336669994373284,
+    "correlation": 0.7746329958036081,
+    "n_active": 33110,
+    "n_predicted": 28206,
+    "coverage_by_activation_quartile": [
+      0.6319159217202223,
+      0.7709591688813723,
+      0.8406427449559019,
+      0.8681889573516974
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 15,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (prev_action != 1) & (prev_common != 0) & (choice < -8.9) & (value < 7.13)",
+    "split": "dev",
+    "precision": 0.9062193584535649,
+    "recall": 0.7750688870252785,
+    "f1": 0.8355288647810927,
+    "mass_recall": 0.8283686840737292,
+    "correlation": 0.7638489487582893,
+    "n_active": 33388,
+    "n_predicted": 28556,
+    "coverage_by_activation_quartile": [
+      0.6498143045405534,
+      0.7456571223193962,
+      0.8377860309093087,
+      0.8670180903318557
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 15,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The factual claims hold on dev. The unit fires only at GO (D1 and D2 have 0 activations). It has 0 activations when prev_action==1, prev_common==0 or prev_reward==0. a1 choices get 1 activation out of 525k. 99.9% of the mass is in the choice < -8.91 bin. 95.5% of the mass is in ep_trial 50-99 (42% in 80-89). 83% of the mass has value < 7.13, and value >= 8.10 has 0 activations. The original predicate scores test P 0.913, R 0.778, F1 0.840, mass recall 0.834. Without the value term, dev precision falls to 0.40 at recall 0.995. Both match the report.",
+      "23% of the mass falls at rel -3, where the previous trial is outside the window (prev_action == -1). The predicate lets these steps in through != 1 and != 0. That is fine, but dropping them is costly: a prev_action==2 predicate only reaches F1 0.64.",
+      "The misses are not scattered noise. They form one class: the predicate treats choice and value as two separate cutoffs, while the unit's real boundary is a joint, roughly linear one. With 'choice + value < -2.2' in place of the two thresholds, test F1 rises from 0.840 to 0.918 (P 0.917, R 0.920) and mass recall from 0.83 to 0.98. At 'choice + value < -2.0' (dev), recall is 0.996. With the linear boundary, the remaining test misses are only 1.7% of the mass and are tiny activations (about 0.01-0.09 of max).",
+      "The 'late in the episode' wording describes a correlate, not the cleanest condition. On dev, ep_trial >= 70 in place of value < 7.13 gives F1 0.827, a little below the value-based predicate (0.836). Adding ep_trial >= 40 or ep_trial >= 80 to the value predicate changes nothing, because value < 7.13 already implies a late trial. Value, which is low when little episode time is left, is the better variable.",
+      "The unverified decay claim is partly supported. With the original predicate, binary precision is the same whether the trial two back was rewarded (0.90) or not (0.91). But mass per captured step is about 1.6x higher when that trial was unrewarded (mass share 0.243 for recall 0.162, vs 0.39 for recall 0.436). So the activation is larger on the first reward of a run, but this affects magnitude, not whether the unit fires.",
+      "No future variables are used. Both predicates use only observed history plus the model's own value and policy outputs."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after a common-rewarded a2 trial, when the agent strongly commits to a2 and its value estimate is low (late in the episode); fires when choice + value < about -2.2",
+    "better_predicate": "(phase == GO) & (prev_reward == 1) & (prev_action != 1) & (prev_common != 0) & (choice + value < -2.2)",
+    "better_predicate_test_f1": 0.918
+  },
+  "final_label": "GO after a common-rewarded a2 trial, when the agent strongly commits to a2 and its value estimate is low (late in the episode); fires when choice + value < about -2.2"
+}

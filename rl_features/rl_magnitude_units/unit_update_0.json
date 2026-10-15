@@ -1,0 +1,109 @@
+{
+ "label": "At D1, update gate is high after reaching S1, low after choosing a1 (rare transitions extreme).",
+ "short_terms": "(phase == D1) * (prev_state == S1) ;; (phase == D1) * (prev_action == 1) ;; (phase == D1) * (prev_state == S2)",
+ "terms": "(phase == D1) * (prev_state == S1) ;; (phase == D1) * (prev_action == 1) ;; (phase == D1) * (prev_state == S1) * (prev_action == 1) ;; (phase == D1) * (prev_reward == 1) * (prev_state == S1) ;; (phase == D1) * (prev_reward == 1) ;; (phase == D1) * (tv(\"state\", -2) == 1) * (tv(\"action\", -2) == 1) ;; (phase == D1) * (tv(\"state\", -2) == 1) ;; (phase == D1) * (tv(\"action\", -2) == 1)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Raw update gate z of unit 0 is ~1 at GO and D2 (tiny residuals) and varies only at D1 (~0.5 baseline, declining late in episode). At D1 it rises with the previous trial reaching S1 (+0.45) and falls with the previous choice being a1 (-0.36), so it is highest after a2->S1 (rare, ~+0.4), lowest after a1->S2 (rare, ~-0.4), and near baseline after common transitions (a1 S1 slightly up, a2 S2 slightly down). Previous reward barely matters; belief_lo, the trial before and reward x state add only ~0.03 R^2 in the free fit. Substantial within-pattern variance remains unexplained by observed cues (the policy-decile cue reaches 0.40 and the all ceiling 0.84).",
+ "full_test_scores": {
+  "gate": "unit_update",
+  "feature": 0,
+  "terms": [
+   "(phase == D1) * (prev_state == S1)",
+   "(phase == D1) * (prev_action == 1)",
+   "(phase == D1) * (prev_state == S1) * (prev_action == 1)",
+   "(phase == D1) * (prev_reward == 1) * (prev_state == S1)",
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D1) * (tv(\"state\", -2) == 1) * (tv(\"action\", -2) == 1)",
+   "(phase == D1) * (tv(\"state\", -2) == 1)",
+   "(phase == D1) * (tv(\"action\", -2) == 1)"
+  ],
+  "weights": [
+   0.43590595966235257,
+   -0.3521031816875259,
+   0.08887864014742394,
+   -0.016871480801696034,
+   -0.039218084940453105,
+   0.10190035732721045,
+   -0.05600097126278211,
+   -0.09725748035113857
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6856811556463074,
+  "r2": 0.9288701970749955,
+  "r2_timing_only": 0.7737017547539577
+ },
+ "gate": "unit_update",
+ "feature": 0,
+ "test_scores": {
+  "gate": "unit_update",
+  "feature": 0,
+  "terms": [
+   "(phase == D1) * (prev_state == S1)",
+   "(phase == D1) * (prev_action == 1)",
+   "(phase == D1) * (prev_state == S2)"
+  ],
+  "weights": [
+   0.40187743450484803,
+   -0.32007096587789,
+   -0.09247109785193697
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7015337246721925,
+  "r2": 0.932457605628195,
+  "r2_timing_only": 0.7737017547539577
+ },
+ "dev_scores": {
+  "gate": "unit_update",
+  "feature": 0,
+  "terms": [
+   "(phase == D1) * (prev_state == S1)",
+   "(phase == D1) * (prev_action == 1)",
+   "(phase == D1) * (prev_state == S2)"
+  ],
+  "weights": [
+   0.40187743450484803,
+   -0.32007096587789,
+   -0.09247109785193697
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.7077945377952327,
+  "r2": 0.9342355669804885,
+  "r2_timing_only": 0.7749377012896971
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": true,
+  "issues": [
+   "The recorded short form gives the window's first trial (previous trial unknown, prev_* = -1) the same prediction as a2->S2, because both indicators are 0 there. This drags the intercept and leaves a systematic error at D1 after the common a2 S2 transitions (misses: a2 S2 u over-predicted by -0.104, a2 S2 r by -0.069; mean D1 error -0.025). Adding (phase == D1) * (prev_state == S2) gives that pattern its own weight (-0.09 relative to unknown). Test R^2 beyond timing goes from 0.652 to 0.702, above the free fit (0.686) and close to the full last-trial table (0.71). Remaining phase x previous-trial errors are all within +/-0.04.",
+   "Checked claims. Only D1 matters: the GO/D2 residuals are below 0.007 in every cell. The cell residuals match the label: a2 S1 +0.36/+0.42, a1 S2 -0.415, a1 S1 +0.07/+0.13, a2 S2 -0.08/-0.12. Reward barely matters: adding a prev_reward term gains about 0.004-0.015. Unrewarded trials are slightly more extreme, the leftover +0.04 under-prediction after a1 S1 u.",
+   "Observed-only add-ons gain little: belief_lo (+0.0005), belief_lo x prev state/action (<= +0.004), the previous trial's stay (+0.018), the trial before (<= +0.008), belief_cover / ep_trial interactions (~0). No future variables are used.",
+   "A lot of within-cell variance is still unexplained. In the worst-fit windows, after common a1 S1 the gate sits near 0.8 against a predicted 0.56, and after a2 S2 near 0.1 against 0.4: in some stretches the state effect is much larger. No observed variable tested captures this (all-observed ceiling 0.75), so it is not a missing systematic class, but the label describes a mean pattern."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At D1 only: update gate rises after reaching S1, falls after choosing a1; rare transitions extreme.",
+  "better_short_terms": "(phase == D1) * (prev_state == S1) ;; (phase == D1) * (prev_action == 1) ;; (phase == D1) * (prev_state == S2)",
+  "better_short_terms_test_r2_beyond_timing": 0.7015337246721925
+ },
+ "final_label": "At D1 only: update gate rises after reaching S1, falls after choosing a1; rare transitions extreme.",
+ "original_short_terms": "(phase == D1) * (prev_state == S1) ;; (phase == D1) * (prev_action == 1)",
+ "original_test_scores": {
+  "gate": "unit_update",
+  "feature": 0,
+  "terms": [
+   "(phase == D1) * (prev_state == S1)",
+   "(phase == D1) * (prev_action == 1)"
+  ],
+  "weights": [
+   0.4451191623950331,
+   -0.36403172362211683
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6521149415175524,
+  "r2": 0.9212742217181054,
+  "r2_timing_only": 0.7737017547539577
+ },
+ "terms_from": "skeptic"
+}

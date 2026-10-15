@@ -1,0 +1,63 @@
+{
+  "label": "D2: common transition a1 -> S1 (fades late in episode)",
+  "predicate": "(phase == D2) & (in_state == 1) & (in_action == 1) & (ep_trial < 85)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (DELAY_2), and almost only when the reached state shown is S1 (in_state==1 covers 99.9% of activations; S2 almost never). Within S1 it fires mostly after choosing a1, i.e. the common a1->S1 transition (94% of mass); rare a2->S1 gives weaker, less frequent activations. It fades out in the last ~15 trials of an episode (rate 0.5% in trials 90-99), so adding ep_trial<85 raises dev F1 from 0.85 to 0.90. Magnitude is larger when the previous trial was unrewarded (prev_reward 0: about 1.4x the mean activation of prev_reward 1) and correlates with high model value. Never fires at D1 or GO, on S2 or on rewarded-input steps. All variables are observed at D2.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 226,
+    "predicate": "(phase == D2) & (in_state == 1) & (in_action == 1) & (ep_trial < 85)",
+    "split": "test",
+    "precision": 0.8940370809228411,
+    "recall": 0.8973363415359323,
+    "f1": 0.8956836730240475,
+    "mass_recall": 0.9208238985554509,
+    "correlation": 0.7252528960850138,
+    "n_active": 114354,
+    "n_predicted": 114776,
+    "coverage_by_activation_quartile": [
+      0.8181468396935885,
+      0.9299730665640631,
+      0.9059745347698335,
+      0.935252553518959
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 226,
+    "predicate": "(phase == D2) & (in_state == 1) & (in_action == 1) & (ep_trial < 85)",
+    "split": "dev",
+    "precision": 0.8903049776517259,
+    "recall": 0.9049904205820637,
+    "f1": 0.8975876359556255,
+    "mass_recall": 0.9282711050634768,
+    "correlation": 0.7283264457412759,
+    "n_active": 109610,
+    "n_predicted": 111418,
+    "coverage_by_activation_quartile": [
+      0.8243622960989673,
+      0.9348246542349378,
+      0.9194219400043793,
+      0.9413546456463032
+    ]
+  },
+  "gate": "hidden",
+  "feature": 226,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the fade with episode position is gradual, not a cutoff at 85. Within the predicate, precision is 0.93 for ep_trial<70 but 0.72 for trials 70-84, so most false positives are in late-but-included trials. Activation rate by 10-trial bin: 0.096 at 70-79, 0.048 at 80-89, 0.005 at 90-99. Moving the cutoff changes little: ep_trial<80 gives F1 0.889, <90 gives 0.885, <85 gives 0.898 (dev).",
+      "Minor: rare a2->S1 activations are left out of the predicate. They hold about 5.9% of activation mass (7.4% of active steps). The predicate restricted to that case scores precision 0.149 and recall 0.074, which fits the claim that they are weaker and rarer.",
+      "Claims verified: no activation at all at D1 or GO (0 of 380619 steps each). in_state==1 holds 99.9% of active steps (109477 of 109610) and about 100% of the mass. Only 133 activations on S2. in_action==1 holds 94.1% of the mass. Per-activation mean is about 1.42x higher after prev_reward 0 than after prev_reward 1. Activation rate is 0.51 in the top value bin (value>8.1).",
+      "Test-split scores match the report: P 0.894, R 0.897, F1 0.896, mass recall 0.921. Test misses are scattered weak cases (rare a2->S1, trials past 85) with no systematic class. The predicate uses no future variables.",
+      "Splitting by subgroup reveals no systematic false-positive class beyond the late-episode fade. Precision is 0.87 to 0.90 for both prev_reward values and 0.83 to 0.89 for both values of good, and 0.88 for the first trials of an episode. Adding a value threshold raises precision but costs recall: test F1 is 0.840 versus 0.896."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

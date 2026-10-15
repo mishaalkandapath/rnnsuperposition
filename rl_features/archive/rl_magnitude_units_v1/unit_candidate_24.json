@@ -1,0 +1,83 @@
+{
+  "label": "D1 candidate: high after reward, pushed negative by unrewarded streaks",
+  "terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * last_is(\"a2 S1 u\") ;; (phase == D1) * (prev_reward == 0) * (prev_common == 1) ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0) ;; (phase == D1) * (prev_reward == 0) * (prev_action == tv(\"action\", -2)) ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 1) * (tv(\"reward\", -3) == 0) ;; (phase == D1) * (prev_reward == 1) * (tv(\"reward\", -2) == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw candidate n of unit 24 is saturated by phase (GO about -0.99, D2 about +0.98; timing explains R^2 0.93), so almost all the residual variance is at D1, where the value tracks recent reward history. Previous trial rewarded raises it (+0.29); unrewarded lowers it, and more so after a common unrewarded trial (-0.24) and most of all after a2 S1 u (-0.53 extra). Unrewarded streaks add up: a second unrewarded trial back gives -0.25, a third gives a further -0.14, and repeating the same action into the loss gives a small extra drop (-0.08). A reward two trials back softens the drop (u,r,u gives -0.09), and a reward following a loss is lower than a reward following a reward (-0.13). Only observed variables are used. Things that add little: hidden good state, trials since reversal, value, and the future choice or reward (each about 0.03 or less as a table); the D1 policy logit adds nothing once history is in. The terms are D1-only; GO and D2 residuals are about 0.01. Dev R^2 beyond timing 0.76, test 0.75, against an all-cue ceiling of 0.78 and an all-observed ceiling of 0.74.",
+  "gate": "unit_candidate",
+  "feature": 24,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 24,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * last_is(\"a2 S1 u\")",
+      "(phase == D1) * (prev_reward == 0) * (prev_common == 1)",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0)",
+      "(phase == D1) * (prev_reward == 0) * (prev_action == tv(\"action\", -2))",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 1) * (tv(\"reward\", -3) == 0)",
+      "(phase == D1) * (prev_reward == 1) * (tv(\"reward\", -2) == 0)"
+    ],
+    "weights": [
+      0.29379263777234005,
+      -0.5257899623146678,
+      -0.2347229327601604,
+      -0.24513799047969323,
+      -0.13878771635920042,
+      -0.07983209315003749,
+      -0.08828618559429106,
+      -0.13438742538761178
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7543113859789827,
+    "r2": 0.9839984571821973,
+    "r2_timing_only": 0.9348706374466587
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 24,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * last_is(\"a2 S1 u\")",
+      "(phase == D1) * (prev_reward == 0) * (prev_common == 1)",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0)",
+      "(phase == D1) * (prev_reward == 0) * (prev_action == tv(\"action\", -2))",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 1) * (tv(\"reward\", -3) == 0)",
+      "(phase == D1) * (prev_reward == 1) * (tv(\"reward\", -2) == 0)"
+    ],
+    "weights": [
+      0.29379263777234005,
+      -0.5257899623146678,
+      -0.2347229327601604,
+      -0.24513799047969323,
+      -0.13878771635920042,
+      -0.07983209315003749,
+      -0.08828618559429106,
+      -0.13438742538761178
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7618436486221459,
+    "r2": 0.98480078429641,
+    "r2_timing_only": 0.9361796751770217
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The terms are misspecified. None of them is a plain D1 offset for an unrewarded previous trial. Because the intercept is shared across phases, the fit leaves mean errors by phase of D1 -0.039, GO +0.019 and D2 +0.019 (misses output). Every 'push negative' weight in the explanation is measured against this skewed reference. Swapping one claimed term for a bare (phase == D1) raises test R^2 from 0.754 to 0.865.",
+      "Systematic D1 errors remain in misses: over-predicted after a1 S2 u (-0.176), after unknown history '?' (-0.143) and after a2 S1 r (-0.123). The worst-fit windows are all early-window D1 steps where the reward history before the window is unknown (for example actual -0.55 vs predicted +0.67). The terms that require tv('reward', -k) == 0 are false when that history is unknown, so these steps get the rewarded-like baseline.",
+      "The recurring a2 S1 effect is understated. The residual table shows a2 S1 r at only +0.10 (other rewarded patterns +0.24 to +0.29), but the label only treats a2 S1 u. In a better fit last_is('a2 S1 r') takes -0.134.",
+      "'Drop bigger after common unrewarded' is only half true. Raw residuals: a1 S1 u -0.42 and a2 S2 u -0.41 (common), a1 S2 u -0.33 (rare, smaller drop), a2 S1 u -0.67 (rare, larger drop). The rare effect runs in opposite directions for the two actions. It is not a common-vs-rare effect.",
+      "The claimed 'ceiling' of 0.78 is not an upper bound. A plain 4-trial reward-history kernel (indicators for reward == 1 and == 0 at lags 1 to 4, D1 only) reaches 0.833 test. Adding the a2 S1 terms reaches 0.870 test. The explanation's 0.754 leaves about 0.12 of explainable variance unaccounted for.",
+      "The lag weights in the explanation (-0.25 for a second loss, -0.14 for a third, the u-r-u 'smaller drop', the -0.08 repeat-action effect) are artefacts of the misspecified parameterisation. With a proper D1 offset the history effect is a smoothly decaying kernel: lag 1 +0.25 / -0.40, lag 2 +0.08 / -0.10, lag 3 -0.06 for a loss, lag 4 about -0.02 for a loss."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 candidate: decaying reward-history kernel (last trial dominant, losses weigh more), extra low after a2 -> S1 (rare) trials",
+    "better_terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 0) ;; (phase == D1) * last_is(\"a2 S1 u\") ;; (phase == D1) * last_is(\"a2 S1 r\") ;; (phase == D1) * (tv(\"reward\", -2) == 1) ;; (phase == D1) * (tv(\"reward\", -2) == 0) ;; (phase == D1) * (tv(\"reward\", -3) == 0) ;; (phase == D1) * (tv(\"reward\", -4) == 0)",
+    "better_terms_test_r2_beyond_timing": 0.8703
+  },
+  "final_label": "D1 candidate: decaying reward-history kernel (last trial dominant, losses weigh more), extra low after a2 -> S1 (rare) trials"
+}

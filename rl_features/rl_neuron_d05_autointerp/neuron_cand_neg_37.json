@@ -1,0 +1,104 @@
+{
+  "label": "GO step, choosing a1 after a rewarded trial, late in episode",
+  "predicate": "(phase==GO)&(prev_reward==1)&(action==1)&(ep_trial>=45)&(prev_state!=2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO (never D1/D2), only when the previous trial was rewarded (99.5% of mass), and essentially only when the agent is about to choose a1 (99% of mass; model_act==1 works equally well, F1 0.86; choice logit > 2.78 gives 0.875). Strongly gated by episode position: zero before trial ~40, growing through trials 50-99 (likely slow hidden-state drift). Magnitude is largest with a confident a1 logit, long a1 runs (prev_action a1, repeated rewarded a1 trials) and lower value; weakest on the first a1 GO after an a2 trial. Does not fire after unrewarded trials or on a2 choices. action at GO is the agent own upcoming choice (legitimate), so uses_future=false.",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 37,
+    "predicate": "(phase==GO)&(prev_reward==1)&(action==1)&(ep_trial>=45)&(prev_state!=2)",
+    "split": "test",
+    "precision": 0.8635465153350762,
+    "recall": 0.9308543542511513,
+    "f1": 0.8959380788568404,
+    "mass_recall": 0.9795572645320892,
+    "correlation": 0.8191165130253419,
+    "n_active": 58196,
+    "n_predicted": 62732,
+    "coverage_by_activation_quartile": [
+      0.7735926867825967,
+      0.9593099182074369,
+      0.9918207436937246,
+      0.9986940683208468
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 37,
+    "predicate": "(phase==GO)&(prev_reward==1)&(action==1)&(ep_trial>=45)&(prev_state!=2)",
+    "split": "dev",
+    "precision": 0.8750140949435397,
+    "recall": 0.9324681566931026,
+    "f1": 0.9028279856730905,
+    "mass_recall": 0.9831042102889903,
+    "correlation": 0.8287526529190534,
+    "n_active": 58254,
+    "n_predicted": 62079,
+    "coverage_by_activation_quartile": [
+      0.7627712166987092,
+      0.9749382037901675,
+      0.9933392844880863,
+      0.9988326581061594
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 37,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Systematic false-positive class: if the previous rewarded trial ended in S2 (prev_state==2), the unit is completely silent even when the agent picks a1 at GO in late trials. Predicate & (prev_state==2) is active on 0 of 3865 dev and 0 of 3922 test steps. Most of these are rewarded a1->S2 rare trials followed by staying with a1 (prev_common==0 & prev_action==1: 0/3855 dev). So 'after a rewarded trial' overclaims. The unit needs the reward to have come from S1 (after rewarded a2->S1 rare trials precision is about 0.46).",
+      "Adding & (prev_state != 2) (prev_state is -1 on the first trial of a window, so != is needed rather than ==1) raises test F1 from 0.851 to about 0.877 with ep>=40. It gives 0.896 when combined with ep_trial>=45.",
+      "The ep_trial>=40 cutoff is the other big source of false positives. GO steps in trials 40-49 that match the predicate have precision 0.39 and hold only 1.6% of activation mass. The rate ramps from 0.04 (40-49) to about 0.095 (70+), so 'late in episode' is a soft ramp. ep>=45 or ep>=50 trades recall for precision better.",
+      "Claims that check out: GO only (D1 and D2 have exactly 0 activity); prev_reward==1 holds 99.5% of mass; action==1 holds 99.2% (model_act==1 and choice>0 score the same, F1 0.862 dev); silent before trial about 30. Rewarded-twice-in-a-row (tv('prev_reward',-1)==1) is not required.",
+      "The magnitude claim that activations are larger 'during long runs of rewarded a1 choices' is only partly supported. Several top-activating windows (about 0.99 of max) are the GO right after an r0 -> r1 transition, not long runs."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step, choosing a1 after the previous trial was rewarded in S1 (not S2), late in the episode (soft ramp from trial ~40)",
+    "better_predicate": "(phase==GO)&(prev_reward==1)&(action==1)&(ep_trial>=45)&(prev_state!=2)",
+    "better_predicate_test_f1": 0.896
+  },
+  "final_label": "GO step, choosing a1 after the previous trial was rewarded in S1 (not S2), late in the episode (soft ramp from trial ~40)",
+  "original_predicate": "(phase == GO) & (prev_reward == 1) & (action == 1) & (ep_trial >= 40)",
+  "original_test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 37,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (action == 1) & (ep_trial >= 40)",
+    "split": "test",
+    "precision": 0.7672786921401593,
+    "recall": 0.956474671798749,
+    "f1": 0.8514937816462959,
+    "mass_recall": 0.9822347712870011,
+    "correlation": 0.7604310282133342,
+    "n_active": 58196,
+    "n_predicted": 72546,
+    "coverage_by_activation_quartile": [
+      0.8760739569729878,
+      0.9593099182074369,
+      0.9918207436937246,
+      0.9986940683208468
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 37,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (action == 1) & (ep_trial >= 40)",
+    "split": "dev",
+    "precision": 0.781342450460508,
+    "recall": 0.9611528822055138,
+    "f1": 0.8619702264575028,
+    "mass_recall": 0.9862228516565623,
+    "correlation": 0.770410029281413,
+    "n_active": 58254,
+    "n_predicted": 71660,
+    "coverage_by_activation_quartile": [
+      0.8775061796209832,
+      0.9749382037901675,
+      0.9933392844880863,
+      0.9988326581061594
+    ]
+  },
+  "predicate_from": "skeptic"
+}

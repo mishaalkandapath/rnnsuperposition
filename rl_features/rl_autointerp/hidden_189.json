@@ -1,0 +1,104 @@
+{
+  "label": "D2 after choosing a1 and landing rare in S2 (mid-episode)",
+  "predicate": "(phase == D2) & (action == 1) & (state == 2) & (ep_trial >= 25) & (ep_trial < 85) & (choice > 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2, and only when the inputs show action a1 and state S2, i.e. a rare transition after choosing a1. The a1->S2 case alone has recall 1.0 but precision 0.55 (F1 0.71). The missing condition is time within the episode: it never fires in episode trials 0-9, rarely in 10-19, and almost never in 90-99. Restricting to trials 25-84 raises dev F1 to 0.865 (precision 0.80, recall 0.94, mass recall 0.98). It never fires on the mirror case a2->S1 (rare), on common transitions, or at D1/GO. It is enriched when S1 is the good state (87% of mass), i.e. when a1 is the good choice, but adding good==1 lowers F1. The weak activations are concentrated at the edges of the episode-time window. Everything in the predicate is observed at D2 (action, state and trial count), so uses_future is false.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 189,
+    "predicate": "(phase == D2) & (action == 1) & (state == 2) & (ep_trial >= 25) & (ep_trial < 85) & (choice > 0)",
+    "split": "test",
+    "precision": 0.8667418687723256,
+    "recall": 0.9153033672172808,
+    "f1": 0.8903609571447884,
+    "mass_recall": 0.9747676652348898,
+    "correlation": 0.8183754279823982,
+    "n_active": 25184,
+    "n_predicted": 26595,
+    "coverage_by_activation_quartile": [
+      0.7107687420584498,
+      0.9560038119440915,
+      0.9944409148665819,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 189,
+    "predicate": "(phase == D2) & (action == 1) & (state == 2) & (ep_trial >= 25) & (ep_trial < 85) & (choice > 0)",
+    "split": "dev",
+    "precision": 0.8808922558922558,
+    "recall": 0.9124524413443247,
+    "f1": 0.8963946425790374,
+    "mass_recall": 0.9747205427535515,
+    "correlation": 0.8289667030105556,
+    "n_active": 25232,
+    "n_predicted": 26136,
+    "coverage_by_activation_quartile": [
+      0.7014901712111604,
+      0.9516487000634115,
+      0.9969879518072289,
+      0.9996829422954978
+    ]
+  },
+  "gate": "hidden",
+  "feature": 189,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Factual claims check out on dev. Activation is 100% at D2 and 0 at D1 and GO. Every active step has in_action=1 and in_state=2 (a1->S2 alone: precision 0.552, recall 1.0, F1 0.712). It never fires on common transitions or on a2->S1. It never fires in episode trials 0-9 and fires on only 15 steps in 90-99. 87% of activation mass falls where good==1. The quoted predicate reproduces: dev F1 0.865, test P 0.786 / R 0.937 / F1 0.855 / mass recall 0.981. uses_future=false is correct.",
+      "Systematic problem 1: the episode-time effect is a graded ramp, not a window, so the hard 25-84 cutoff leaves a concentrated class of false positives at its early edge. Test precision of a1->S2 at D2 by ep_trial: 10-19: 0.06, 20-24: 0.26, 25-29: 0.44, 30-39: 0.68, 40-49: 0.80, 50-59: 0.86, 60-79: 0.89, 80-84: 0.76, 85-89: 0.27, 90-99: 0.001. Roughly half of the in-window steps in trials 25-39 are false positives, which is a pattern rather than scattered noise. 'Mid-episode' hides a slow rise from about trial 20 to 50 and a sharp drop at about trial 85.",
+      "Systematic problem 2: in trials 25-44, the agent's current a1 preference (the choice logit at D2) splits firing sharply. Precision is 0.91 when choice > 2.78 and 0.57 when choice < 2.78. The explanation does not mention this. Adding choice > 0 to the predicate raises dev F1 from 0.865 to 0.896 and test F1 from 0.855 to 0.890 (test P 0.867, R 0.915, mass recall 0.975). This fits the finding that good==1 enrichment did not help as a hard filter: the feature tracks the agent's own belief that a1 is better, not the hidden good state.",
+      "Minor: precision drops to 0.42 when prev_action==2, i.e. right after switching to a1, though this is only 1616 steps. That is consistent with problem 2, since the a1 preference is weak just after a switch.",
+      "The label is not wrong but overclaims a crisp time window and omits the a1-preference dependence. Its core is right: D2 rare a1->S2, fully observed."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after choosing a1 and landing rare in S2, when the agent currently prefers a1. Grows with episode time from about trial 20 to 50, silent before trial 10 and after about trial 87.",
+    "better_predicate": "(phase == D2) & (action == 1) & (state == 2) & (ep_trial >= 25) & (ep_trial < 85) & (choice > 0)",
+    "better_predicate_test_f1": 0.89
+  },
+  "final_label": "D2 after choosing a1 and landing rare in S2, when the agent currently prefers a1. Grows with episode time from about trial 20 to 50, silent before trial 10 and after about trial 87.",
+  "original_predicate": "(phase == D2) & (action == 1) & (state == 2) & (ep_trial >= 25) & (ep_trial < 85)",
+  "original_test_scores": {
+    "gate": "hidden",
+    "feature": 189,
+    "predicate": "(phase == D2) & (action == 1) & (state == 2) & (ep_trial >= 25) & (ep_trial < 85)",
+    "split": "test",
+    "precision": 0.7863715162021603,
+    "recall": 0.9366264294790343,
+    "f1": 0.8549474447263501,
+    "mass_recall": 0.9811010630691054,
+    "correlation": 0.7745278795310193,
+    "n_active": 25184,
+    "n_predicted": 29996,
+    "coverage_by_activation_quartile": [
+      0.78430749682338,
+      0.9677573062261754,
+      0.9944409148665819,
+      1.0
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "hidden",
+    "feature": 189,
+    "predicate": "(phase == D2) & (action == 1) & (state == 2) & (ep_trial >= 25) & (ep_trial < 85)",
+    "split": "dev",
+    "precision": 0.8037068525760925,
+    "recall": 0.9366280913126189,
+    "f1": 0.8650914215641415,
+    "mass_recall": 0.9819359031341687,
+    "correlation": 0.7862571100123263,
+    "n_active": 25232,
+    "n_predicted": 29405,
+    "coverage_by_activation_quartile": [
+      0.7817057704502219,
+      0.968135700697527,
+      0.9969879518072289,
+      0.9996829422954978
+    ]
+  },
+  "predicate_from": "skeptic"
+}

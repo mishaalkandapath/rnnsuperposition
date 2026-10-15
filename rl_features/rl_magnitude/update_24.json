@@ -1,0 +1,90 @@
+{
+  "label": "D1 after an unrewarded a1->S2 rare trial, stronger if the trial before was rewarded, fading late in the episode",
+  "short_terms": "(phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 1) ;; (phase == D1) * last_is(\"a1 S2 u\") * ep_trial",
+  "terms": "(phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 1) ;; (phase == D1) * last_is(\"a1 S2 u\") * ep_trial ;; (phase == D1) * last_is(\"a1 S2 u\") * (tv(\"action\", -2) == 1) ;; (phase == D1) * last_is(\"a1 S2 u\") * (tv(\"state\", -2) == 1) ;; (phase == D1) * last_is(\"a1 S2 u\") * belief_lo ;; (phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -3) == 1) ;; (phase == D1) * (prev_action == -1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Feature is active only at D1, and almost only after the previous trial was a1 -> S2 (rare) and unrewarded (residual +0.34 there, about -0.03 after every other pattern; silent at GO/D2). Magnitude within that case is larger when the trial before was rewarded (two losses in a row give weak or no activation) and decreases with episode trial, going silent after about trial 80. The free fit adds that the trial-before being an a1 choice lowers it and having reached S1 raises it, plus a small effect of reward three trials back; belief_lo adds little. Large remaining misses are on the first trial of each window, where the previous trial falls outside the window so last_is cannot be computed. No future, hidden or model-output variables are used.",
+  "full_test_scores": {
+    "gate": "update",
+    "feature": 24,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * ep_trial",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"action\", -2) == 1)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"state\", -2) == 1)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * belief_lo",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -3) == 1)",
+      "(phase == D1) * (prev_action == -1)"
+    ],
+    "weights": [
+      0.5658222856290113,
+      0.2055131592593905,
+      -0.006960043434382173,
+      -0.37580957819277067,
+      0.28075883597461704,
+      0.024245797891352516,
+      0.14797719336698978,
+      0.006022011852666727
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5244604461589724,
+    "r2": 0.5448397690699096,
+    "r2_timing_only": 0.04285515841180676
+  },
+  "gate": "update",
+  "feature": 24,
+  "test_scores": {
+    "gate": "update",
+    "feature": 24,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * ep_trial"
+    ],
+    "weights": [
+      0.5499974328187202,
+      0.28659780770409615,
+      -0.007004949779125709
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.48840790009402557,
+    "r2": 0.510332260577725,
+    "r2_timing_only": 0.04285515841180676
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 24,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * ep_trial"
+    ],
+    "weights": [
+      0.5499974328187202,
+      0.28659780770409615,
+      -0.007004949779125709
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.48114191094588743,
+    "r2": 0.5041778711889183,
+    "r2_timing_only": 0.04439741950448517
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Small caveat on wording: in the fitted short form, a1->S2 unrewarded after an unrewarded trial still predicts about 0.34 at trial 30, against about 0.63 when the trial before was rewarded (weights +0.55, +0.287, -0.007*ep_trial). So 'weaker' is accurate. The explanation's 'weak or no activation' overstates it a little, although some of the dev worst-fit windows (two losses in a row, actual 0, predicted about 0.39) do show zero.",
+      "Each term checks out on test. last_is('a1 S2 u') alone gives 0.335. Adding ep_trial raises it to 0.429, adding reward(-2)==1 instead gives 0.418, and all three give 0.488. Substitutes do worse: belief_lo 0.337 (or 0.435 with ep_trial), since_rev 0.391, belief_cover 0.402, state(-2)==S1 0.483, reward(-3) 0.393. So 'belief_lo adds little' holds, and the fading comes from episode time, not from time since reversal.",
+      "Misses on the short form show no large systematic error class. The worst windows are first-in-window trials (last_is cannot be computed), which the explanation already mentions, plus a few cases of two losses in a row. Mean error by phase is D1 -0.017, GO/D2 +0.008, and other D1 previous-trial cells are all about -0.025, which is just the timing baseline being absorbed.",
+      "The 'silent after trial ~80' claim is consistent with the timing baseline (D1 decile 8 is 0.0006, decile 9 is 0). Replacing the base term with an (ep_trial<80) gate scores the same (0.488), so the linear ep_trial term is a real description, not a fitted correction."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "label": "z dips after a1 choices, most at D1 after a1->S2 rare, amplified at episode end",
+  "terms": "(phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (prev_action == 1) ;; (phase == D2) * (action == 1) ;; np.exp((ep_trial-99)/5) * (phase == D1) * (prev_action == 1) * (prev_state == 2) ;; np.exp((ep_trial-99)/5) * (phase == D1) * (prev_reward == 0) ;; np.exp((ep_trial-99)/5) * (prev_action == 1) ;; np.exp((ep_trial-99)/5) * (phase == D2) * (action == 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 44 sits near 1 (mean 0.993) and drops below 1 mainly late in the episode (timing alone R^2 0.45). Beyond timing it is lowered whenever the agent last chose a1. The largest drop is at D1 after an a1 trial that reached S2 (rare), about -0.014 mid-episode and much larger near trial 99. There is a smaller a1 penalty at every phase (prev_action == 1), and at D2 when the current choice is a1. All of these effects grow sharply over the last ~10 trials of the episode: an exp((ep_trial-99)/5) ramp times each pattern fits much better than constant indicators (dev 0.31 constant, 0.55 with ramp). With the other terms in, a late D1 after an unrewarded trial comes out slightly higher. Reward alone, value, and the hidden good state add little. Every term is observed (previous choice and state, current choice at D2, trial number). Test R^2 beyond timing 0.56, above the profile all-cue ceiling of 0.38 because the ramp captures the late-episode scaling.",
+  "gate": "unit_update",
+  "feature": 44,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 44,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(prev_action == 1)",
+      "(phase == D2) * (action == 1)",
+      "np.exp((ep_trial-99)/5) * (phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "np.exp((ep_trial-99)/5) * (phase == D1) * (prev_reward == 0)",
+      "np.exp((ep_trial-99)/5) * (prev_action == 1)",
+      "np.exp((ep_trial-99)/5) * (phase == D2) * (action == 1)"
+    ],
+    "weights": [
+      -0.013829111780274659,
+      -0.0020522363364014044,
+      -0.0027065691874814434,
+      -0.09296839683190063,
+      0.014087829003130738,
+      -0.022723369975129776,
+      -0.013421894014571173
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5592805173929125,
+    "r2": 0.7554737878520625,
+    "r2_timing_only": 0.4451658667290216
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 44,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(prev_action == 1)",
+      "(phase == D2) * (action == 1)",
+      "np.exp((ep_trial-99)/5) * (phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "np.exp((ep_trial-99)/5) * (phase == D1) * (prev_reward == 0)",
+      "np.exp((ep_trial-99)/5) * (prev_action == 1)",
+      "np.exp((ep_trial-99)/5) * (phase == D2) * (action == 1)"
+    ],
+    "weights": [
+      -0.013829111780274659,
+      -0.0020522363364014044,
+      -0.0027065691874814434,
+      -0.09296839683190063,
+      0.014087829003130738,
+      -0.022723369975129776,
+      -0.013421894014571173
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5521147833741322,
+    "r2": 0.7580835523178526,
+    "r2_timing_only": 0.4598695408957256
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor overclaim: the explanation says there is 'a smaller a1 penalty at every phase', but at D1 after a1->S1 the profile residual is about zero (a1 S1 r +0.00003, a1 S1 u +0.0019). At D1 the a1 effect is specific to S2 (a1 S2 r -0.022, a1 S2 u -0.017), while a2 trials at D1 sit around +0.003 to +0.006.",
+      "The ramp is not just leftover timing within a decile: three per-phase exp ramps alone give a test R^2 beyond timing of only 0.035. The 0.56 comes from the ramp multiplied by the a1 patterns. The ramp-times-a1->S2 pair alone gives 0.37 and the ramp-times-prev_action==1 pair alone gives 0.30, so the main claims hold.",
+      "The prev_reward==0 ramp term (weight +0.014) adds little: removing it drops test R^2 from 0.559 to 0.552. The 'slightly higher after unrewarded' claim is real but marginal.",
+      "The worst-fit windows are long a1 streaks over trials 92-99, where the drop is under-predicted by up to about 0.05-0.1. Adding the policy logit (choice) and its ramp in place of the D2 action terms raises test R^2 slightly to 0.588. So part of the 'a1' effect looks like a graded a1 preference, not just the last choice. The policy-decile residuals are monotone: D1 +0.0077 down to -0.0089.",
+      "Systematic errors by phase and previous trial are small after the fit (all at most 0.004 in absolute value, against a std of 0.010), so no large error class remains."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "z dips after a1 choices, most at D1 after a1->S2 (rare), growing sharply over the last ~10 trials of the episode",
+    "better_terms": "np.exp((ep_trial-99)/5)*(phase==D1) ;; np.exp((ep_trial-99)/5)*(phase==D1)*(prev_action==1)*(prev_state==2) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) ;; choice ;; np.exp((ep_trial-99)/5)*choice ;; (prev_action==1) ;; np.exp((ep_trial-99)/5)*(prev_action==1)",
+    "better_terms_test_r2_beyond_timing": 0.588
+  },
+  "final_label": "z dips after a1 choices, most at D1 after a1->S2 (rare), growing sharply over the last ~10 trials of the episode"
+}

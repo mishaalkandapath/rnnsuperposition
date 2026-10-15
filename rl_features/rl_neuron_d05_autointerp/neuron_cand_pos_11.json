@@ -1,0 +1,63 @@
+{
+  "label": "D2: reached state S2, early in the episode (trials < ~30)",
+  "predicate": "(phase == D2) & (in_state == 2) & (ep_trial < 30)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires almost only at D2 (98% of activation mass) when the state input shows S2 (92% of mass), and only in the first ~30-40 trials of an episode: rate is 0.56 on trial 0, ~0.25 in trials 3-9, decays to ~0 by trial 40 and is never active after trial 50. Never fires at D1 or when a reward input is present; a small residual fires at GO (weak, ~0.46 of max) mostly when the previous trial was unrewarded and the agent is about to choose a1. Magnitude is largest when S2 is reached by a rare transition (after choosing a1; that subset has precision 0.997 and carries 36% of mass from 21% of activations) and when the previous trial was unrewarded; S2-common D2 steps after a rewarded trial are the main false positives. Uses only observed inputs (state input at D2) plus episode time; the episode-time dependence suggests an early-episode transient in the hidden state rather than task content. ep_trial cutoff 30 chosen as best F1 (25: P 0.93 R 0.69; 35: P 0.74 R 0.81).",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 11,
+    "predicate": "(phase == D2) & (in_state == 2) & (ep_trial < 30)",
+    "split": "test",
+    "precision": 0.8344224607642597,
+    "recall": 0.7733579397701535,
+    "f1": 0.8027305656171636,
+    "mass_recall": 0.8812544170806703,
+    "correlation": 0.7671305736011051,
+    "n_active": 59605,
+    "n_predicted": 55243,
+    "coverage_by_activation_quartile": [
+      0.49986578982686886,
+      0.744379571840816,
+      0.8768539024226562,
+      0.972350848936313
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 11,
+    "predicate": "(phase == D2) & (in_state == 2) & (ep_trial < 30)",
+    "split": "dev",
+    "precision": 0.8431728264016212,
+    "recall": 0.7686042011188909,
+    "f1": 0.8041635605621359,
+    "mass_recall": 0.8783596911786954,
+    "correlation": 0.7705338673468952,
+    "n_active": 56842,
+    "n_predicted": 51815,
+    "coverage_by_activation_quartile": [
+      0.4899725564703399,
+      0.7441418619379354,
+      0.867487684729064,
+      0.9728360309641098
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 11,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reported scores reproduce. Dev: P 0.843 / R 0.769 / F1 0.804 / mass recall 0.878. Test: P 0.834 / R 0.773 / F1 0.803 / mass recall 0.881.",
+      "These core claims check out: D1 has 0 activations and D2 holds 98.1% of the mass. in_state==2 holds 91.7% of the mass, and D2 & in_state==1 holds only 6.4%. in_rew==1 has 0 activations. The ep_trial firing rate is 0.556 in bucket 0 and about 0.25 in bucket 3. It is 0.265 / 0.179 / 0.112 / 0.031 / 0.003 in trials 0-9 / 10-19 / 20-29 / 30-39 / 40-49, and there are only 2 activations from trial 50 on. The rare-S2 early subset scores P 0.997, R 0.215 and mass 0.361, which matches the stated 36% of mass from 21% of activations. Splitting on prev_reward==0 gives P 0.929, a mass share of 0.383 against a recall of 0.306. The ep_trial cutoff only matters as an observed episode clock: (phase==D2)&(ep_trial>=50) has 0 activations out of 197798 steps.",
+      "The GO-residual claim is wrong. The explanation says GO activity comes mostly when the previous trial was unrewarded and the agent is about to choose a1. In fact (phase==GO)&(action==1) has 0 activations out of 175177 steps, and every GO activation has action==2 / model_act==2. The 0.46-of-max GO activations are almost all at the GO of the episode's first trial: (phase==GO)&(ep_trial==0) gives P 0.99 on 525 steps and carries 1.3% of the mass. That trial trivially has no previous reward. The rest of the GO residual is weak and falls in ep_trial<10. The example windows label these cells 'a1:0.46', which conflicts with the action variable, so either the window rendering or the explanation's reading of it is misleading. This is a side claim covering about 1.9% of the mass and does not affect the main predicate.",
+      "There is no large systematic counterexample class. The false positives are mostly S2-common D2 steps where the previous trial also reached S2 and was rewarded. That subset still has P 0.72, so it carries reduced magnitude, not a distinct non-firing class. Excluding it raises precision to 0.89 (test F1 0.688) but loses recall, so the original predicate is the better binary description. The misses are spread out: small S1-at-D2 activity, mostly in trials 0-9 (P 0.44, 5% of mass), and a tail of S2 D2 steps between trials 30 and 45 (P 0.13, 3.8% of mass) left by the graded temporal decay. A cutoff will always leave this tail.",
+      "Checked an alternative: 'before the first reversal' (since_rev==-1) as a replacement for ep_trial is much worse (F1 0.447), so episode time, not reversal history, is the right variable. good==1 vs good==2 both give high precision, so the unit does not track the hidden good state."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

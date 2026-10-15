@@ -1,0 +1,85 @@
+{
+  "label": "GO-only; grows with belief S1 good, peaks after a1-S1 reward following a non-reward",
+  "terms": "(phase == GO) * np.clip(belief_lo, 0, 4) ;; (phase == GO) * last_is(\"a1 S1 r\") ;; (phase == GO) * last_is(\"a1 S1 r\") * (tv(\"reward\", -2) == 0) ;; (phase == GO) * last_is(\"a1 S2 u\") ;; (phase == GO) * (belief > 0.5) * ep_trial ;; (phase == GO) * (belief < 0.5) ;; (phase == GO) * (belief < 0.5) * ep_trial ;; (phase == GO) * last_is(\"a1 S1 r\") * (tv(\"reward\", -2) == 1) * (tv(\"reward\", -3) == 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Active only at GO (zero at D1/D2). Magnitude follows the ideal-observer belief that S1 is good: about zero when belief < 0.5 (large negative indicator), rising with positive belief log-odds (rectified belief_lo), and at a given S1 belief it falls over the episode (belief>0.5 x ep_trial negative), which carries the declining GO timing baseline. On top of belief, the last trial matters: after a1->S1 rewarded it is raised, most of all when the trial before was unrewarded (about 2.9 vs about 1 after a non-reward; weight +0.78 on top of +0.26), and it decays over consecutive rewards (negative term for a 3-reward streak). a1->S2 unrewarded raises it in the raw residual table (+0.18) but only through belief; with belief in the fit its own weight is slightly negative. a2 choices and a1 S1 u / a1 S2 r sit below baseline. Observed-only, no future variables. Test R^2 beyond timing 0.50 (dev 0.51) vs all ceiling 0.57 and all-observed 0.46; model policy decile alone gives 0.47, so losing the model outputs costs little once belief and recent reward history are combined.",
+  "gate": "reset",
+  "feature": 91,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 91,
+    "terms": [
+      "(phase == GO) * np.clip(belief_lo, 0, 4)",
+      "(phase == GO) * last_is(\"a1 S1 r\")",
+      "(phase == GO) * last_is(\"a1 S1 r\") * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * last_is(\"a1 S2 u\")",
+      "(phase == GO) * (belief > 0.5) * ep_trial",
+      "(phase == GO) * (belief < 0.5)",
+      "(phase == GO) * (belief < 0.5) * ep_trial",
+      "(phase == GO) * last_is(\"a1 S1 r\") * (tv(\"reward\", -2) == 1) * (tv(\"reward\", -3) == 1)"
+    ],
+    "weights": [
+      0.19446405517217172,
+      0.2613803731752268,
+      0.7823376117811818,
+      -0.1448082378578323,
+      -0.006124150768197361,
+      -0.615306425310902,
+      0.006090645176176218,
+      -0.46562545929289473
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5022789707834613,
+    "r2": 0.5972808250513619,
+    "r2_timing_only": 0.1908736997057221
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 91,
+    "terms": [
+      "(phase == GO) * np.clip(belief_lo, 0, 4)",
+      "(phase == GO) * last_is(\"a1 S1 r\")",
+      "(phase == GO) * last_is(\"a1 S1 r\") * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * last_is(\"a1 S2 u\")",
+      "(phase == GO) * (belief > 0.5) * ep_trial",
+      "(phase == GO) * (belief < 0.5)",
+      "(phase == GO) * (belief < 0.5) * ep_trial",
+      "(phase == GO) * last_is(\"a1 S1 r\") * (tv(\"reward\", -2) == 1) * (tv(\"reward\", -3) == 1)"
+    ],
+    "weights": [
+      0.19446405517217172,
+      0.2613803731752268,
+      0.7823376117811818,
+      -0.1448082378578323,
+      -0.006124150768197361,
+      -0.615306425310902,
+      0.006090645176176218,
+      -0.46562545929289473
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5068635443821323,
+    "r2": 0.6029389827695564,
+    "r2_timing_only": 0.19482526041812875
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced: test R^2 beyond timing is 0.502 with weights exactly as stated (+0.26 a1 S1 r, +0.78 if the trial before was unrewarded, -0.47 for a 3-reward streak, -0.14 a1 S2 u, -0.62 belief<0.5). Dropping terms one at a time costs 0.001 to 0.125, and the biggest drop comes from removing the belief<0.5 term (0.377). So every term except a1 S2 u (which costs 0.001) does real work.",
+      "The worst-fit windows are a systematic class: the GO step on the first trial of the window (rel == -3), where last_is and tv(-2) are undefined and belief has little history behind it. Example: actual 2.8-2.95 against predicted 0.03-0.48. Misses report GO after '?' as under-predicted by +0.13. Adding (phase==GO)*(rel==-3)*(prev_reward==1)*(belief>0.5) helps only a little (0.502 -> 0.511), so this is mostly a limit of the data rather than a missing mechanism.",
+      "The peak size is under-predicted. The label says a1-S1-reward after a non-reward reaches about 2.9. Actual values in misses are about 2.8-3.0, but the fit predicts about 2.0-2.1 (e.g. 2.995 vs 2.081, 2.824 vs 2.036). The 2.9 figure describes the raw data, not what the terms reproduce.",
+      "Remaining over-prediction by previous trial is modest: GO after a2 S2 u -0.16 and a1 S1 u -0.12. Adding a (prev_reward==0)*(belief>0.5) term and the rel==-3 term shrinks these to under 0.07 but only raises test R^2 to 0.511 (dev 0.517).",
+      "'Loses little compared with the model's policy' understates the result. The observed-only fit (0.50) beats both the policy-decile reference (0.47) and the observed-only additive ceiling (0.46), so nothing is lost.",
+      "The ep_trial terms (-0.006 for belief>0.5, +0.006 for belief<0.5) mainly cancel and extend the timing baseline. The claim 'smaller over the episode at the same belief' holds only for belief>0.5. Removing the belief>0.5 * ep_trial term costs 0.05.",
+      "Tried replacing the reward-history terms with a change-in-belief-log-odds term: it does much worse (0.34). So the specific a1 S1 r / reward-streak structure is justified."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO-only; grows with belief that S1 is good; peaks on the first a1-S1 reward after a non-reward, decays over a reward streak",
+    "better_terms": "(phase == GO) * np.clip(belief_lo, 0, 4) ;; (phase == GO) * (belief < 0.5) ;; (phase == GO) * (belief > 0.5) * ep_trial ;; (phase == GO) * last_is('a1 S1 r') ;; (phase == GO) * last_is('a1 S1 r') * (tv('reward', -2) == 0) ;; (phase == GO) * last_is('a1 S1 r') * (tv('reward', -2) == 1) * (tv('reward', -3) == 1) ;; (phase == GO) * (rel == -3) * (prev_reward == 1) * (belief > 0.5) ;; (phase == GO) * (prev_reward == 0) * (belief > 0.5)",
+    "better_terms_test_r2_beyond_timing": 0.511
+  },
+  "final_label": "GO-only; grows with belief that S1 is good; peaks on the first a1-S1 reward after a non-reward, decays over a reward streak"
+}

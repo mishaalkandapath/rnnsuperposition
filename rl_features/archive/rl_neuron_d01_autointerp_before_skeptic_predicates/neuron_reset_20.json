@@ -1,0 +1,64 @@
+{
+  "label": "D2 after a rare a2->S1 transition, early in the episode",
+  "predicate": "(phase == D2) & (action == 2) & (state == 1) & (ep_trial < 25)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (never at D1 or GO), and only when the agent chose a2 and landed in S1, i.e. a rare transition (in_action=2, in_state=1 together cover 99.9% of activations). This is an input-conjunction detector. It is also gated strongly by episode time: the rate is about 5% in trials 0-29, near zero from trial 30 to 89, with a small return in trials 90-99. Without the time term the predicate reaches recall 0.999 but precision 0.21. Adding ep_trial < 25 gives dev P 0.87 / R 0.89 / F1 0.88 / mass recall 0.95, and the remaining misses are mostly weak activations in trials 25-35. Magnitude is largest on a2->S1 rare transitions inside windows that have had several rare transitions, while S2 is good (choice logit strongly favours a2, value in the 7.1-7.5 band). It does not fire on a1->S2 rare transitions, on common transitions, or at D1/GO. All variables used are observed at D2.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 20,
+    "predicate": "(phase == D2) & (action == 2) & (state == 1) & (ep_trial < 25)",
+    "split": "test",
+    "precision": 0.846054229057062,
+    "recall": 0.8945656824989302,
+    "f1": 0.8696339434276207,
+    "mass_recall": 0.9542990307126675,
+    "correlation": 0.7692131155750174,
+    "n_active": 11685,
+    "n_predicted": 12355,
+    "coverage_by_activation_quartile": [
+      0.7272416153319644,
+      0.8784662786716878,
+      0.9900718931872646,
+      0.9825402259500171
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 20,
+    "predicate": "(phase == D2) & (action == 2) & (state == 1) & (ep_trial < 25)",
+    "split": "dev",
+    "precision": 0.8689841833713947,
+    "recall": 0.8853843502240607,
+    "f1": 0.8771076108763393,
+    "mass_recall": 0.9482981283888143,
+    "correlation": 0.7778053067852752,
+    "n_active": 11604,
+    "n_predicted": 11823,
+    "coverage_by_activation_quartile": [
+      0.7207859358841778,
+      0.8555670458462599,
+      0.9806963116166839,
+      0.984488107549121
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 20,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "All the main claims hold up on dev data. Every activation is at D2, with none at D1 or GO. in_action=2 together with in_state=1 covers 99.9% of activations (11594 of 11604). The unit never fires when in_state=2, so it never fires on a1->S2 rare transitions, and it fires on common transitions only 10 times. At D2, the predicate ~(a2 & S1) has recall 0.0009.",
+      "Test scores reproduce exactly: P 0.846 / R 0.895 / F1 0.870 / mass recall 0.954.",
+      "Small inaccuracy in the time description. The firing rate by bin is 4.9% (trials 0-9), 4.3% (10-19) and 1.9% (20-29). So 'about 5% in trials 0-29' overstates the 20-29 bin. The return in trials 90-99 (0.5% rate, 3% of activation mass) is real but diffuse. Adding ep_trial>=98 to the predicate lowers test F1 to 0.859.",
+      "Misses: actives in trials 25-35 make up 6.8% of actives but only 2.1% of activation mass, which is consistent with 'weak activations in trials 25-35'. Another 4.6% of actives fall at ep_trial>=36, mostly in trials 90-99.",
+      "There are false positives early in the episode on a2->S1 steps where S1 is good or the agent has just switched from a1. Adding good, choice, prev_action or value conditions does not raise F1 in a meaningful way (best is the value band 7.0-7.75, dev F1 0.884 against 0.877), so no systematic counterexample class remains.",
+      "The predicate uses no future variables. 'S2 is good' and 'value 7.1-7.5' correctly describe where the largest activations sit (good=2 carries 68% of activation mass; the value bin 7.13-7.54 carries 84%), but they are not needed in the predicate."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

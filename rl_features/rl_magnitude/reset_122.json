@@ -1,0 +1,92 @@
+{
+  "label": "At D2 after a1->S1, grows over the final ~20 trials; boosted after an a1->S2 loss.",
+  "short_terms": "(in_state + in_action == 2) * np.maximum(ep_trial - 80, 0) ;; (in_state + in_action == 2) * np.maximum(ep_trial - 90, 0) ;; (in_state + in_action == 2) * np.maximum(ep_trial - 80, 0) * last_is(\"a1 S2 u\")",
+  "terms": "(in_state + in_action == 2) * (phase == D2) * np.maximum(ep_trial - 80, 0) ;; (in_state + in_action == 2) * (phase == D2) * np.maximum(ep_trial - 90, 0) ;; (in_state + in_action == 2) * (phase == D2) * np.maximum(ep_trial - 80, 0) * (prev_reward == 0) ;; (in_state + in_action == 2) * (phase == D2) * np.maximum(ep_trial - 80, 0) * (prev_state == 2) ;; (in_state + in_action == 2) * (phase == D2) * np.maximum(ep_trial - 80, 0) * last_is(\"a1 S2 u\") ;; (in_state + in_action == 2) * (phase == D2) * np.maximum(ep_trial - 80, 0) * belief_lo ;; (in_state + in_action == 2) * (phase == D2) * np.maximum(ep_trial - 80, 0) * tv(\"action\", -1) ;; (in_state + in_action == 2) * (phase == D2) * np.maximum(ep_trial - 80, 0) * (tv(\"reward\", -2) == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Silent at D1 and GO. At D2 it fires only when the agent chose a1 and reached S1 (common), i.e. in_state + in_action == 2, and only late in the episode: activation ramps up from about trial 80 and steeply beyond 90 (to ~2-4 by trial 95-99), going well past the coarse per-decile timing baseline. Other D2 outcomes (a1->S2 rare, a2->anything) stay near zero. Magnitude is largest when the previous trial was a1 -> S2 unrewarded (rare-unrewarded, a model-based stay-on-a1 case), and lower after a rewarded trial. The free fit adds a small positive belief_lo term (stronger when the observer believes S1 is good) plus weak prev_state==2 and reward-2-trials-back terms; these add little over the short form. Remaining error is largely episode-level: some late a1->S1 steps stay at zero in some episodes, which no observed term captures. All terms observed (no future or model-output variables).",
+  "full_test_scores": {
+    "gate": "reset",
+    "feature": 122,
+    "terms": [
+      "(in_state + in_action == 2) * (phase == D2) * np.maximum(ep_trial - 80, 0)",
+      "(in_state + in_action == 2) * (phase == D2) * np.maximum(ep_trial - 90, 0)",
+      "(in_state + in_action == 2) * (phase == D2) * np.maximum(ep_trial - 80, 0) * (prev_reward == 0)",
+      "(in_state + in_action == 2) * (phase == D2) * np.maximum(ep_trial - 80, 0) * (prev_state == 2)",
+      "(in_state + in_action == 2) * (phase == D2) * np.maximum(ep_trial - 80, 0) * last_is(\"a1 S2 u\")",
+      "(in_state + in_action == 2) * (phase == D2) * np.maximum(ep_trial - 80, 0) * belief_lo",
+      "(in_state + in_action == 2) * (phase == D2) * np.maximum(ep_trial - 80, 0) * tv(\"action\", -1)",
+      "(in_state + in_action == 2) * (phase == D2) * np.maximum(ep_trial - 80, 0) * (tv(\"reward\", -2) == 0)"
+    ],
+    "weights": [
+      -0.0179190511231916,
+      0.12379316721334675,
+      0.008211562697926283,
+      0.027930871350125026,
+      0.09075094002998536,
+      0.012371527999799098,
+      -0.003835209338022537,
+      0.0031745782666167586
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6572191692568172,
+    "r2": 0.7211580991043325,
+    "r2_timing_only": 0.18653006269017247
+  },
+  "gate": "reset",
+  "feature": 122,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 122,
+    "terms": [
+      "(in_state + in_action == 2) * np.maximum(ep_trial - 80, 0)",
+      "(in_state + in_action == 2) * np.maximum(ep_trial - 90, 0)",
+      "(in_state + in_action == 2) * np.maximum(ep_trial - 80, 0) * last_is(\"a1 S2 u\")"
+    ],
+    "weights": [
+      0.02425211824622599,
+      0.11202090688634675,
+      0.12617528290633434
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6284610069045073,
+    "r2": 0.6977641985784531,
+    "r2_timing_only": 0.18653006269017247
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 122,
+    "terms": [
+      "(in_state + in_action == 2) * np.maximum(ep_trial - 80, 0)",
+      "(in_state + in_action == 2) * np.maximum(ep_trial - 90, 0)",
+      "(in_state + in_action == 2) * np.maximum(ep_trial - 80, 0) * last_is(\"a1 S2 u\")"
+    ],
+    "weights": [
+      0.02425211824622599,
+      0.11202090688634675,
+      0.12617528290633434
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6219668627333166,
+    "r2": 0.6946717950834531,
+    "r2_timing_only": 0.19232423082224914
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Each claim holds up when scored on the test split. The two late-episode ramps alone reach R^2 0.463 beyond timing. Adding the ramp x last_is('a1 S2 u') term brings this to 0.628, so the boost after an a1->S2 loss is real.",
+      "The boost is specific to that history. Swapping in last_is('a1 S2 r') gives 0.464 and last_is('a2 S2 u') gives 0.464, both no gain. The broader prev_state==2 gives 0.591 and prev_reward==0 gives 0.507, both worse. stay==0 (0.477) and prev_action==2 (0.488) are also worse.",
+      "The boost grows with the ramp. A flat a1->S1 x last_is('a1 S2 u') term without the ramp only reaches 0.492.",
+      "The two ramps (from trial 80 and from trial 90) are a piecewise-linear way of saying 'accelerating late in the episode', a mild curve-fit. Moving the knees to 85 and 92 gives a similar 0.601, so the result is robust to where they are placed.",
+      "The misses output shows no large systematic error class. The biggest phase x previous-trial means are about -0.07, over-predicting at D2 for outcomes other than a1->S1 (e.g. after a2 S1 r). The worst windows are late a1->S1 steps stuck at 0 in some episodes, plus under-predicted first-in-window values of 3+. These look like episode-level variation that no observed variable captures, as the explanation already says.",
+      "Small point on the label: the 'boost' after a1->S2 loss is a larger slope on the late ramp, not a constant offset."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  }
+}

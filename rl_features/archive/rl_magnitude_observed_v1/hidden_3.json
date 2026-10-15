@@ -1,0 +1,76 @@
+{
+  "label": "GO after a2 S2 rewarded, strongest when previous S1 trial was unrewarded; fades over episode",
+  "terms": "(phase == GO) * last_is(\"a2 S2 r\") ;; (phase == GO) * last_is(\"a2 S2 r\") * (tv(\"reward\", -2) == 0) * (tv(\"state\", -2) == 1) ;; (phase == GO) * last_is(\"a2 S2 r\") * ep_trial ;; (phase == GO) * last_is(\"a2 S2 r\") * (tv(\"stay\", -1) == 0) ;; (phase == GO) * (prev_state == -1) * (prev_reward == 1) * (belief < 0.5) ;; (phase == GO) * last_is(\"a2 S2 r\") * (tv(\"reward\", -2) == -9)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "hidden/3 fires only at GO. Its magnitude is set by the last trial being a2 -> S2 rewarded (base weight ~+0.18), with a large boost (~+0.63) when the trial before that reached S1 and went unrewarded (fresh evidence that S2 is now good after an S1 loss). It decays with episode trial (~-0.003 per trial), is somewhat lower (~-0.16) when the a2 choice on the last trial was itself a switch, and is raised at window-first trials when the shown reward was 1 and the ideal-observer belief favours S2 (prev state unknown). Other previous-trial patterns give ~0 (negative residual vs timing). Graded belief_lo terms add little beyond the a2 S2 r indicator. Observed-only test R^2 beyond timing 0.467 (dev 0.467), above the profile all ceiling 0.41 and all-observed 0.35; the earlier value/policy-based firing account (value deciles 7-8, a2-leaning policy) is not needed for magnitude: trial history alone captures it.",
+  "gate": "hidden",
+  "feature": 3,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 3,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 r\")",
+      "(phase == GO) * last_is(\"a2 S2 r\") * (tv(\"reward\", -2) == 0) * (tv(\"state\", -2) == 1)",
+      "(phase == GO) * last_is(\"a2 S2 r\") * ep_trial",
+      "(phase == GO) * last_is(\"a2 S2 r\") * (tv(\"stay\", -1) == 0)",
+      "(phase == GO) * (prev_state == -1) * (prev_reward == 1) * (belief < 0.5)",
+      "(phase == GO) * last_is(\"a2 S2 r\") * (tv(\"reward\", -2) == -9)"
+    ],
+    "weights": [
+      0.1836844818996735,
+      0.6309729441524489,
+      -0.002772477394181935,
+      -0.15948034925910295,
+      0.13500100583107277,
+      0.11173514794936908
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.4674400222942884,
+    "r2": 0.5143806847420592,
+    "r2_timing_only": 0.08814155102302845
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 3,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 r\")",
+      "(phase == GO) * last_is(\"a2 S2 r\") * (tv(\"reward\", -2) == 0) * (tv(\"state\", -2) == 1)",
+      "(phase == GO) * last_is(\"a2 S2 r\") * ep_trial",
+      "(phase == GO) * last_is(\"a2 S2 r\") * (tv(\"stay\", -1) == 0)",
+      "(phase == GO) * (prev_state == -1) * (prev_reward == 1) * (belief < 0.5)",
+      "(phase == GO) * last_is(\"a2 S2 r\") * (tv(\"reward\", -2) == -9)"
+    ],
+    "weights": [
+      0.1836844818996735,
+      0.6309729441524489,
+      -0.002772477394181935,
+      -0.15948034925910295,
+      0.13500100583107277,
+      0.11173514794936908
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.47873594859325286,
+    "r2": 0.5250576619836883,
+    "r2_timing_only": 0.08886420090820768
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claims hold on the test split. a2 S2 r on the last trial alone gives R^2 0.143. Adding 'trial -2 unrewarded' raises it to 0.321, and splitting that by state gives S1 loss +0.585 vs S2 loss +0.12 (0.378), so 'strongest after a prior S1 loss' is correct.",
+      "The stay term is close to redundant: dropping it lowers test R^2 only from 0.467 to 0.464. It mostly stands in for which action was taken at trial -2. With a full table on the trial -2 pattern (given last = a2 S2 r), a2 S1 u gives +0.67, a1 S1 u +0.48, a2 S2 u +0.18 and every rewarded pattern about 0. So the 'switch lowers it' claim really means that losing after a2 matters more than losing after a1. It is not a separate switch effect.",
+      "The explanation leaves out that an S2 loss at trial -2 also boosts the feature (+0.18 after a2 S2 u). It also leaves out that the after-a-loss boost itself fades over the episode: adding L*ep_trial gives about +0.017 R^2.",
+      "The ep_trial fade is real: dropping it lowers test R^2 from 0.467 to 0.431. The window-first-trial term is also real (0.434 without it). A graded (1-belief) version does slightly better than the belief<0.5 cutoff (0.474).",
+      "Belief terms add nothing on the a2 S2 r rows (belief, tv('belief',-1), belief change: all +0.000 test). So the claim that observed trial history is enough, and that dropping value/policy loses nothing, is supported.",
+      "Misses: the largest remaining errors are at the window's first trial or where trial -2 falls outside the window (actual about 1.4-1.5 vs predicted 0.12-0.25). Those trials' history is not in the window, and belief does not recover it (the A*(reward-2==-9)*(1-belief) term got weight 0.007). This is a limit of the data, not a wrong label. The other errors by phase x previous trial are flat (about -0.045 for all GO non-a2S2r cells), i.e. an intercept effect, not a missing pattern."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after a2 S2 rewarded, strongest when the trial before was an unrewarded S1 (especially after a2); fades over the episode",
+    "better_terms": "(phase == GO) * last_is(\"a2 S2 r\") ;; (phase == GO) * last_is(\"a2 S2 r\")*(tv('reward',-2)==0)*(tv('state',-2)==1) ;; (phase == GO) * last_is(\"a2 S2 r\")*(tv('reward',-2)==0)*(tv('action',-2)==2) ;; (phase == GO) * last_is(\"a2 S2 r\")*(tv('reward',-2)==-9) ;; (phase == GO) * last_is(\"a2 S2 r\")*ep_trial ;; (phase == GO) * (prev_state == -1) * (prev_reward == 1) * (1-belief) ;; (phase == GO) * last_is(\"a2 S2 r\")*(tv('reward',-2)==0)*(tv('reward',-3)==0) ;; (phase == GO) * last_is(\"a2 S2 r\")*(tv('reward',-2)==0)*ep_trial",
+    "better_terms_test_r2_beyond_timing": 0.4979
+  },
+  "final_label": "GO after a2 S2 rewarded, strongest when the trial before was an unrewarded S1 (especially after a2); fades over the episode"
+}

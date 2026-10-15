@@ -1,0 +1,79 @@
+{
+  "label": "D2 candidate: strongly negative after rare a1->S2, high after a2->S1",
+  "terms": "(phase == D2) * (action == 1) * (state == 2) ;; (phase == D2) * (action == 2) * (state == 1) ;; (phase == D2) * (action == 1) * (state == 1) ;; (phase == D1) * (prev_action == 1) * (prev_reward == 0) ;; (phase == D2) * (prev_action == 1) ;; (phase == D2) * (prev_reward == 0) ;; (phase == GO) * (prev_reward == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw candidate n of unit 35 sits near +1 at D1/GO and drops at D2 with episode time (timing R^2 0.47). Beyond timing, the magnitude is driven mainly by the just-made choice x reached state at D2 (all observed at D2): a1 reaching S2 (rare) pushes it strongly negative (about -0.8), a2 reaching S1 (rare) raises it (+0.46), a1->S1 raises it moderately (+0.24), a2->S2 is the reference. Smaller history effects: lower at D2 when the previous choice was a1 or the previous trial was unrewarded, and lower at D1/GO after an unrewarded trial (especially after a1 unrewarded at D1). Hidden good state, since-reversal and value add little. Adding the model policy logit at D2 raises dev R^2 beyond timing from 0.76 to 0.81, but it is not recorded. Observed-only, 7 terms: dev R^2 beyond timing 0.76; all-cue ceiling 0.90, all observed 0.80.",
+  "gate": "unit_candidate",
+  "feature": 35,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 35,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 2)",
+      "(phase == D2) * (action == 2) * (state == 1)",
+      "(phase == D2) * (action == 1) * (state == 1)",
+      "(phase == D1) * (prev_action == 1) * (prev_reward == 0)",
+      "(phase == D2) * (prev_action == 1)",
+      "(phase == D2) * (prev_reward == 0)",
+      "(phase == GO) * (prev_reward == 0)"
+    ],
+    "weights": [
+      -0.8200378205988674,
+      0.4886237674680528,
+      0.2661759198321039,
+      -0.19619757146746683,
+      -0.14592819999574802,
+      -0.11815100059938587,
+      -0.04719096136980839
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7499392310141935,
+    "r2": 0.8669229485492558,
+    "r2_timing_only": 0.467821154071962
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 35,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 2)",
+      "(phase == D2) * (action == 2) * (state == 1)",
+      "(phase == D2) * (action == 1) * (state == 1)",
+      "(phase == D1) * (prev_action == 1) * (prev_reward == 0)",
+      "(phase == D2) * (prev_action == 1)",
+      "(phase == D2) * (prev_reward == 0)",
+      "(phase == GO) * (prev_reward == 0)"
+    ],
+    "weights": [
+      -0.8200378205988674,
+      0.4886237674680528,
+      0.2661759198321039,
+      -0.19619757146746683,
+      -0.14592819999574802,
+      -0.11815100059938587,
+      -0.04719096136980839
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7593201111254206,
+    "r2": 0.8716620343374109,
+    "r2_timing_only": 0.46676905053139983
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The main claim holds. The D2 choice x state effect reproduces on test: a1->S2 -0.82, a2->S1 +0.49, a1->S1 +0.27, with a2->S2 as the reference. The 7 terms give test R^2 beyond timing 0.750. The choice x state reference table alone gives 0.71, so almost all of the explained variance comes from this one effect.",
+      "The history claim 'n is lower at D2 when the previous choice was a1' (weight -0.146) is mostly a misattribution. Adding the term (phase==D2)*(action==2)*(state==2)*(prev_action==1) gives that switch case a weight of -0.54. The diffuse prev_action main effect then shrinks to -0.04. So the real effect is that a2->S2 is much lower right after an a1 trial (a switch from a1 to a2 that lands in S2). It is not a general effect of having chosen a1 last.",
+      "The claim 'n is lower at D2 after an unrewarded trial' is too coarse. The D2 profile residuals are a1 S2 r -0.002 vs a1 S2 u -0.365, but a1 S1 r -0.153 vs a1 S1 u -0.16. So the reward effect depends on which state was reached. A term for the previous trial being S2 and unrewarded (weight -0.20) replaces the plain prev_reward==0 term and fits better.",
+      "misses on the recorded terms shows systematic D2 errors by previous trial: after a2 S1 u under-predicted by +0.158, after a1 S2 u over-predicted by -0.100, after a2 S2 u over-predicted by -0.067. GO after a1 S2 u is also off by -0.06 to -0.10. The worst windows are runs of late-episode a2->S2c D2 steps with n near -0.8 where the model predicts about 0 to +0.3, most of them after a1 trials or unrewarded S2 visits.",
+      "With a term budget of 8, history terms that depend on the state reached (and on switching) raise test R^2 beyond timing from 0.750 to 0.782, against an observed-only ceiling of 0.80. The original terms leave about 60% of the reachable observed-only gap unexplained.",
+      "No future variables are used, which is correct. The claim that the hidden good state adds little checks out (+0.009 on test). The policy logit at D2 adds about +0.05 (test 0.799), which suggests the remaining structure is evidence about which state is good, built up from state x reward history."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 candidate: strongly negative after rare a1->S2, high after a2->S1; a2->S2 is pushed down after an a1 trial and after unrewarded S2 visits",
+    "better_terms": "(phase == D2) * (action == 1) * (state == 2) ;; (phase == D2) * (action == 2) * (state == 1) ;; (phase == D2) * (action == 1) * (state == 1) ;; (phase == D1) * (prev_action == 1) * (prev_reward == 0) ;; (phase == D2) * (prev_action == 1) ;; (phase == D2) * (prev_state == 1) * (prev_reward == 1) ;; (phase == D2) * (action == 2) * (state == 2) * (prev_action == 1) ;; (phase == D2) * (prev_state == 2) * (prev_reward == 0)",
+    "better_terms_test_r2_beyond_timing": 0.782
+  },
+  "final_label": "D2 candidate: strongly negative after rare a1->S2, high after a2->S1; a2->S2 is pushed down after an a1 trial and after unrewarded S2 visits"
+}

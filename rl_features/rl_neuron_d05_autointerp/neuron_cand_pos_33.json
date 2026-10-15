@@ -1,0 +1,104 @@
+{
+  "label": "D1 after a reward, when about to choose a1, early in the episode",
+  "predicate": "(phase == D1) & (in_rew == 1) & (action == 1) & ((prev_state != 2) & (ep_trial < 52) | (ep_trial < 20))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 and only when the reward input is 1 (previous trial rewarded); never at GO or D2 and never after an unrewarded trial. Within rewarded D1 steps it is selective for the agent upcoming choice being a1 (98% of mass; equivalently the D1 policy logit favours a1 and good=S1 in 80% of mass), and only in the first ~50 trials of an episode (rate falls steadily with ep_trial and is zero after trial ~60), so the unit also carries a slow within-episode clock. The predicate uses the agent own upcoming choice (action at D1), which is allowed; prev_action != 2 instead gives F1 0.81 with only observed variables. Highest activations are on runs of rewarded a1->S1 trials early in an episode; lowest-quartile activations occur on the few rewarded D1s before an a2 choice and in trials 50-59. Misses (3% of mass) are mostly weak activations before a2 choices.",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 33,
+    "predicate": "(phase == D1) & (in_rew == 1) & (action == 1) & ((prev_state != 2) & (ep_trial < 52) | (ep_trial < 20))",
+    "split": "test",
+    "precision": 0.9190158713493272,
+    "recall": 0.8957853621927715,
+    "f1": 0.9072519347705915,
+    "mass_recall": 0.971232320346033,
+    "correlation": 0.8706505225748327,
+    "n_active": 58629,
+    "n_predicted": 57147,
+    "coverage_by_activation_quartile": [
+      0.6426524764633648,
+      0.9452821177594324,
+      0.9959063928498328,
+      0.9993177321416388
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 33,
+    "predicate": "(phase == D1) & (in_rew == 1) & (action == 1) & ((prev_state != 2) & (ep_trial < 52) | (ep_trial < 20))",
+    "split": "dev",
+    "precision": 0.9280101932469739,
+    "recall": 0.906936926030335,
+    "f1": 0.9173525527206571,
+    "mass_recall": 0.9738148832323986,
+    "correlation": 0.8776617364864517,
+    "n_active": 57821,
+    "n_predicted": 56508,
+    "coverage_by_activation_quartile": [
+      0.6669894853348091,
+      0.9638187478381183,
+      0.9972327914216534,
+      0.9997232791421653
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 33,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Factual claims check out on dev. Phase share is D1 1.000 with zero firing at GO and D2. in_rew==1 holds 100% of the mass, with none after in_rew 0 or -1. action==1 holds 97.7% of the mass (the explanation's 98% is a slight overstatement). good==S1 holds 80.3%. There is no firing at ep_trial >= 60. Original predicate: dev F1 0.899 / mass recall 0.969, test F1 0.888 / mass recall 0.966, both reproduced. Observed-only variant (prev_action != 2): dev F1 0.806, reproduced.",
+      "The ep_trial cutoff does most of the work. Without it, (D1 & in_rew==1 & action==1) has precision 0.47 and F1 0.62. Within the predicate, precision falls steadily by ep_trial bin: 0.999 (0-9), 0.999 (10-19), 0.94 (20-29), 0.89 (30-39), 0.82 (40-44), 0.70 (45-49), 0.40 (50-54), 0.03 (55-59), 0 (60-99). That fits the 'slow clock' description. But ep_trial runs 0-99, so 'early in the episode' really means roughly the first half, not only the opening trials.",
+      "One small systematic false-positive class: precision is low when the previous trial was a rewarded visit to S2. With action==1 and ep_trial<50, prev_action==1 & prev_common==0 (a1 led rarely to S2, then rewarded) gives precision 0.37, and prev_state==2 & rewarded as a whole gives precision 0.065. The reverse holds for prev_state==1 & prev_action==2 (rewarded after a rare a2->S1 visit): the unit fires there, accounting for some of the misses before a2. So the observed correlate is better stated as 'rewarded at S1' (prev_state) than as prev_action. Adding prev_state != 2 (allowing prev_state==2 only early in the episode) raises test F1 only from 0.888 to 0.907, which is a refinement, not a refutation.",
+      "The claim 'fires when the D1 policy logit favours a1' is only loosely supported. choice is documented as meaningful at GO, and D1 & in_rew==1 & choice>2.78 scores only F1 0.58 / mass recall 0.74.",
+      "Misses on test hold 3.4% of the mass. They are weak activations, mostly before a2 choices and after rare a2->S1 rewarded trials, which fits the explanation's description of misses."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a reward (mostly reward collected at S1), when about to choose a1, in roughly the first half (trials 0-50) of the episode, with the firing rate falling steadily over that span",
+    "better_predicate": "(phase == D1) & (in_rew == 1) & (action == 1) & ((prev_state != 2) & (ep_trial < 52) | (ep_trial < 20))",
+    "better_predicate_test_f1": 0.907
+  },
+  "final_label": "D1 after a reward (mostly reward collected at S1), when about to choose a1, in roughly the first half (trials 0-50) of the episode, with the firing rate falling steadily over that span",
+  "original_predicate": "(phase == D1) & (in_rew == 1) & (action == 1) & (ep_trial < 50)",
+  "original_test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 33,
+    "predicate": "(phase == D1) & (in_rew == 1) & (action == 1) & (ep_trial < 50)",
+    "split": "test",
+    "precision": 0.8984533202988618,
+    "recall": 0.8778420235719524,
+    "f1": 0.888028090033042,
+    "mass_recall": 0.9660583530750201,
+    "correlation": 0.8646783412555873,
+    "n_active": 58629,
+    "n_predicted": 57284,
+    "coverage_by_activation_quartile": [
+      0.5709510165097558,
+      0.9452138909735962,
+      0.9959063928498328,
+      0.9993177321416388
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 33,
+    "predicate": "(phase == D1) & (in_rew == 1) & (action == 1) & (ep_trial < 50)",
+    "split": "dev",
+    "precision": 0.9100430644904035,
+    "recall": 0.8881029383787897,
+    "f1": 0.8989391499194734,
+    "mass_recall": 0.9685603501654848,
+    "correlation": 0.8733334876370565,
+    "n_active": 57821,
+    "n_predicted": 56427,
+    "coverage_by_activation_quartile": [
+      0.5916574432761483,
+      0.9638187478381183,
+      0.9972327914216534,
+      0.9997232791421653
+    ]
+  },
+  "predicate_from": "skeptic"
+}

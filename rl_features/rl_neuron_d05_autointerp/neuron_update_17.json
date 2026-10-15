@@ -1,0 +1,104 @@
+{
+  "label": "D2 after a rewarded a2 -> common S2 repeat (mid-episode)",
+  "predicate": "(phase == D2) & (state == 2) & (common == 1) & (prev_reward == 1) & (prev_action != 1) & (prev_common != 0) & (ep_trial >= 20) & (ep_trial < 88)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (100% of mass), only when the agent chose a2 and reached S2 by a common transition (in_action=2, in_state=2: zero activity on S1 or rare transitions), and only when the previous trial was rewarded (prev_reward=1) and was also an a2 choice (stay on a2). All variables are observed at D2. It is also strongly gated by episode time: silent in trials 0-9, weak in 10-19, near-silent in 90-99; restricting to trials 20-89 raises dev F1 from 0.80 to 0.90, so the predicate includes that window (ep_trial is not a task input but the agent can track elapsed time in its state). Without the time gate the predicate keeps recall ~1.0 but precision 0.67. Magnitude grows along a streak of consecutive rewarded a2->S2c trials in the example windows (e.g. 0.26 -> 0.36 over successive trials) and is higher when model value is high (top value bin rate 21%); it is asymmetric: no counterpart for a1->S1. Remaining false positives are mostly a2->S2c steps right after a break in the streak (e.g. after an unrewarded or rare trial earlier) or early/late in the episode.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 17,
+    "predicate": "(phase == D2) & (state == 2) & (common == 1) & (prev_reward == 1) & (prev_action != 1) & (prev_common != 0) & (ep_trial >= 20) & (ep_trial < 88)",
+    "split": "test",
+    "precision": 0.893983234404193,
+    "recall": 0.9317903734468437,
+    "f1": 0.912495358963108,
+    "mass_recall": 0.9793327575533562,
+    "correlation": 0.8472836553000443,
+    "n_active": 58027,
+    "n_predicted": 60481,
+    "coverage_by_activation_quartile": [
+      0.7677672847590818,
+      0.9593989108706142,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 17,
+    "predicate": "(phase == D2) & (state == 2) & (common == 1) & (prev_reward == 1) & (prev_action != 1) & (prev_common != 0) & (ep_trial >= 20) & (ep_trial < 88)",
+    "split": "dev",
+    "precision": 0.9057637555452559,
+    "recall": 0.9370494049148044,
+    "f1": 0.9211410102098361,
+    "mass_recall": 0.9811386637376468,
+    "correlation": 0.8547313386928889,
+    "n_active": 58395,
+    "n_predicted": 60412,
+    "coverage_by_activation_quartile": [
+      0.7804644153709158,
+      0.9678060141105556,
+      1.0,
+      0.9999314974654062
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 17,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The checkable claims hold. On the dev split, activity occurs only at D2: D1 and GO have 0 active steps, and D2 holds 100% of the mass. All of it is on a2 -> S2 common trials: S1 has 0 active steps and rare transitions have 0. prev_reward==0 has only 54 active steps out of 58395. The ep_trial gating is real: trials 0-9 have precision 0.0, 10-19 have 0.09 and 90-99 have 0.0006. The reported test scores reproduce exactly: P 0.818, R 0.982, F1 0.893.",
+      "There is a systematic false-positive class the explanation leaves out: the previous a2 trial had a RARE transition (a2 -> S1, rewarded). Inside the original predicate, adding prev_common==0 gives precision 0.37 with recall 0.042, on 6719 predicted steps. That is about 4200 false positives, roughly a third of all false positives. Adding prev_common!=0 instead gives precision 0.88 with recall 0.94. Without the episode-time limit, a previous a2 rare-rewarded trial gives precision 0.27. So the unit needs a run of common-rewarded a2 -> S2 trials, not just 'previous trial a2 and rewarded'. The explanation's own remark about false positives 'soon after a break in the run' partly points to this but never names it.",
+      "The upper episode-time cutoff sits a little early. With the other conditions held, precision is 0.73 at trial 85, 0.40 at 87, 0.16 at 88 and 0.03 at 89, so a cutoff at < 88 fits better than < 90. The lower bound of 20 is about right (precision 0.56 at trial 20, 0.22 at 18).",
+      "Smaller remaining pattern: when the hidden good state is S1, precision drops to 0.67 on 2729 steps. These are mostly runs of a2 -> S2 reward just after a reversal. The class is small and fits the agent tracking the observed reward run, so it is not used in the predicate.",
+      "The predicate uses no future variable, and none of the added terms are future variables either (prev_common is observed at D2)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 of an a2 -> S2 common repeat after a previous common-rewarded a2 trial, mid-episode (trials ~20-87)",
+    "better_predicate": "(phase == D2) & (state == 2) & (common == 1) & (prev_reward == 1) & (prev_action != 1) & (prev_common != 0) & (ep_trial >= 20) & (ep_trial < 88)",
+    "better_predicate_test_f1": 0.912
+  },
+  "final_label": "D2 of an a2 -> S2 common repeat after a previous common-rewarded a2 trial, mid-episode (trials ~20-87)",
+  "original_predicate": "(phase == D2) & (state == 2) & (common == 1) & (prev_reward == 1) & (prev_action != 1) & (ep_trial >= 20) & (ep_trial < 90)",
+  "original_test_scores": {
+    "gate": "neuron_update",
+    "feature": 17,
+    "predicate": "(phase == D2) & (state == 2) & (common == 1) & (prev_reward == 1) & (prev_action != 1) & (ep_trial >= 20) & (ep_trial < 90)",
+    "split": "test",
+    "precision": 0.8178231741431994,
+    "recall": 0.9824392093335861,
+    "f1": 0.892604944650602,
+    "mass_recall": 0.9979076396861587,
+    "correlation": 0.801696875926648,
+    "n_active": 58027,
+    "n_predicted": 69707,
+    "coverage_by_activation_quartile": [
+      0.9309988281519267,
+      0.9987592196870476,
+      1.0,
+      1.0
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_update",
+    "feature": 17,
+    "predicate": "(phase == D2) & (state == 2) & (common == 1) & (prev_reward == 1) & (prev_action != 1) & (ep_trial >= 20) & (ep_trial < 90)",
+    "split": "dev",
+    "precision": 0.8326559642349116,
+    "recall": 0.9823615035533865,
+    "f1": 0.9013347579130955,
+    "mass_recall": 0.9978360940551442,
+    "correlation": 0.8115693155012125,
+    "n_active": 58395,
+    "n_predicted": 68894,
+    "coverage_by_activation_quartile": [
+      0.9302006986779916,
+      0.9993150215768203,
+      1.0,
+      0.9999314974654062
+    ]
+  },
+  "predicate_from": "skeptic"
+}

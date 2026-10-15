@@ -1,0 +1,113 @@
+{
+ "label": "High at D2 when S2 is reached; previous reward raises it at D1, lowers at D2; high at GO after S2.",
+ "short_terms": "(phase == D2) * (state == S2) ;; (phase == D1) * prev_reward - (phase == D2) * prev_reward ;; (phase == GO) * (prev_reward == 0)",
+ "terms": "(phase == D2) * (state == S2) ;; (phase == D1) * prev_reward ;; (phase == GO) * (prev_state == S2) ;; (phase == GO) * prev_reward ;; (phase == D2) * prev_reward ;; (phase == GO) * (tv(\"reward\", -2) == 1) ;; (phase == D2) * (state == S2) * prev_reward ;; (phase == D1) * (prev_state == S2) * prev_reward",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Raw reset gate r of unit 21. Dominant driver is the state just shown at D2: about +0.13 when S2 is reached vs S1 (the this choice x state table alone gives 0.71 beyond timing), independent of the choice that led there. The previous trial reward (the reward input at D1) raises it at D1 (~+0.06) and, signed oppositely, lowers it at D2 of the same trial; at GO it is higher when the previous trial reached S2 (~+0.05, a carried-over trace of the D2 state). Belief log-odds adds almost nothing once these are included. The free fit (dev 0.73 vs short 0.71) adds a smaller GO reward effect (unrewarded trials raise GO), a state x reward interaction at D2, and a small trial-before reward term. All terms are observed; no future variables used.",
+ "full_test_scores": {
+  "gate": "unit_reset",
+  "feature": 21,
+  "terms": [
+   "(phase == D2) * (state == S2)",
+   "(phase == D1) * prev_reward",
+   "(phase == GO) * (prev_state == S2)",
+   "(phase == GO) * prev_reward",
+   "(phase == D2) * prev_reward",
+   "(phase == GO) * (tv(\"reward\", -2) == 1)",
+   "(phase == D2) * (state == S2) * prev_reward",
+   "(phase == D1) * (prev_state == S2) * prev_reward"
+  ],
+  "weights": [
+   0.1366780745775367,
+   0.05685639605970437,
+   0.03978273284271601,
+   -0.018037780496680502,
+   -0.07390467178407491,
+   0.010198660314296467,
+   0.032133191150611674,
+   -0.02527348161563678
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7298505472021302,
+  "r2": 0.8072964694606898,
+  "r2_timing_only": 0.28667806451751676
+ },
+ "gate": "unit_reset",
+ "feature": 21,
+ "test_scores": {
+  "gate": "unit_reset",
+  "feature": 21,
+  "terms": [
+   "(phase == D2) * (state == S2)",
+   "(phase == D1) * prev_reward - (phase == D2) * prev_reward",
+   "(phase == GO) * (prev_reward == 0)"
+  ],
+  "weights": [
+   0.15955157980293058,
+   0.05803461295034499,
+   0.07809345872750369
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.8154953803467957,
+  "r2": 0.8683888076035169,
+  "r2_timing_only": 0.28667806451751676
+ },
+ "dev_scores": {
+  "gate": "unit_reset",
+  "feature": 21,
+  "terms": [
+   "(phase == D2) * (state == S2)",
+   "(phase == D1) * prev_reward - (phase == D2) * prev_reward",
+   "(phase == GO) * (prev_reward == 0)"
+  ],
+  "weights": [
+   0.15955157980293058,
+   0.05803461295034499,
+   0.07809345872750369
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.8159632070379048,
+  "r2": 0.8696964212387932,
+  "r2_timing_only": 0.29196995522496105
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The GO claim ('high at GO after S2') is mostly wrong. Scored alone, (phase == GO) * (prev_state == S2) explains only 0.004 test R^2 beyond timing, against 0.060 for (phase == GO) * (prev_reward == 0). The residual table agrees: GO residuals run from +0.017 to +0.069 after unrewarded trials and from -0.042 to +0.014 after rewarded ones, for both states.",
+   "Replacing the GO term with (phase == GO) * (prev_reward == 0) raises test R^2 beyond timing from 0.707 to 0.816 (dev 0.816; weight +0.078). That beats the agent's own free fit (0.73). The prev_state term was standing in, badly, for the reward effect at GO.",
+   "Misses on the recorded short form show a large systematic error at GO after unrewarded trials. It under-predicts GO after a1 S1 u by +0.076, after a1 S2 u by +0.060 and after a2 S1 u by +0.049. In the worst windows GO is about 0.24 actual against about 0.10 predicted, after r0.",
+   "Using prev_reward directly at GO fails (weight about 0, R^2 0.655) because prev_reward is not purely 0/1 (it is 0 on an episode's first trial and can be -1). The binary (prev_reward == 0) form is the one that works; (prev_reward != 1) scores the same.",
+   "The D2-state term (+0.15) and the shared D1-up / D2-down reward term (+0.057) do hold up. Dropping the GO term entirely leaves 0.654.",
+   "With the corrected form the remaining misses are smaller: D1 and GO after a1 S2 r are about +0.05, and D2 after S2-unrewarded trials is about -0.04. These are modest, and no large error class remains."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "High at D2 when S2 is reached and at GO after unrewarded trials; previous reward raises D1, lowers D2.",
+  "better_short_terms": "(phase == D2) * (state == S2) ;; (phase == D1) * prev_reward - (phase == D2) * prev_reward ;; (phase == GO) * (prev_reward == 0)",
+  "better_short_terms_test_r2_beyond_timing": 0.8155
+ },
+ "final_label": "High at D2 when S2 is reached and at GO after unrewarded trials; previous reward raises D1, lowers D2.",
+ "original_short_terms": "(phase == D2) * (state == S2) ;; (phase == D1) * prev_reward - (phase == D2) * prev_reward ;; (phase == GO) * (prev_state == S2)",
+ "original_test_scores": {
+  "gate": "unit_reset",
+  "feature": 21,
+  "terms": [
+   "(phase == D2) * (state == S2)",
+   "(phase == D1) * prev_reward - (phase == D2) * prev_reward",
+   "(phase == GO) * (prev_state == S2)"
+  ],
+  "weights": [
+   0.15434650109581033,
+   0.05670162532961337,
+   0.0418589183112811
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7067596872978394,
+  "r2": 0.7908252525818062,
+  "r2_timing_only": 0.28667806451751676
+ },
+ "terms_from": "skeptic"
+}

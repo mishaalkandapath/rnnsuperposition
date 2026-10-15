@@ -1,0 +1,103 @@
+{
+  "label": "D1 after an unrewarded trial, early in the episode only",
+  "predicate": "(phase == D1) & (in_rew == 0) & (ep_trial > 0) & (((prev_action==1)&(prev_state==2)&(ep_trial<14)) | ((prev_action==1)&(prev_state==1)&(ep_trial<28)) | ((prev_action==2)&(prev_state==1)&(ep_trial<26)) | ((prev_action==2)&(prev_state==2)&(ep_trial<36)) | ((prev_action==-1)&(ep_trial<28)))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires almost exclusively at D1 (99.6% of mass) when the reward input is 0 (the previous trial was unrewarded; 99.6% of mass at prev_reward==0, ~0 when rewarded). It never fires at D2 and only marginally at GO. Strong episode-time gating: rate 15-22% in trials 1-9, falling through trials 10-29, near zero by 30-39 and exactly zero from trial 40 on (and on ep_trial 0), so it is an early-episode unrewarded-D1 detector; this also explains its association with low-mid value bins and with recent reversals. Activation within the gate is fairly uniform; weaker activations are the later-episode (20-35) cases, which the ep_trial<30 cutoff partly misses. Not modulated by transition type, choice or state. False positives are mostly unrewarded D1 steps in trials ~20-29 where the unit has already faded. Uses only observed inputs (reward input) plus episode time, which the agent can track implicitly via its hidden state.",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 14,
+    "predicate": "(phase == D1) & (in_rew == 0) & (ep_trial > 0) & (((prev_action==1)&(prev_state==2)&(ep_trial<14)) | ((prev_action==1)&(prev_state==1)&(ep_trial<28)) | ((prev_action==2)&(prev_state==1)&(ep_trial<26)) | ((prev_action==2)&(prev_state==2)&(ep_trial<36)) | ((prev_action==-1)&(ep_trial<28)))",
+    "split": "test",
+    "precision": 0.913167826394622,
+    "recall": 0.891457026077946,
+    "f1": 0.9021818287745054,
+    "mass_recall": 0.9785203412077061,
+    "correlation": 0.8471970711905934,
+    "n_active": 34742,
+    "n_predicted": 33916,
+    "coverage_by_activation_quartile": [
+      0.6161639419755929,
+      0.9508404328804974,
+      0.9996545768566494,
+      0.9991940126655152
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 14,
+    "predicate": "(phase == D1) & (in_rew == 0) & (ep_trial > 0) & (((prev_action==1)&(prev_state==2)&(ep_trial<14)) | ((prev_action==1)&(prev_state==1)&(ep_trial<28)) | ((prev_action==2)&(prev_state==1)&(ep_trial<26)) | ((prev_action==2)&(prev_state==2)&(ep_trial<36)) | ((prev_action==-1)&(ep_trial<28)))",
+    "split": "dev",
+    "precision": 0.9126812413214067,
+    "recall": 0.8902293057830415,
+    "f1": 0.9013154747668022,
+    "mass_recall": 0.9792624802407455,
+    "correlation": 0.8451972402955304,
+    "n_active": 31748,
+    "n_predicted": 30967,
+    "coverage_by_activation_quartile": [
+      0.6074083406828776,
+      0.9548947965226156,
+      0.9987400781151569,
+      0.9998740078115157
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 14,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The explanation says firing is 'not modulated by transition type, choice or state'. That is false. Inside the predicate, precision depends on the previous trial's transition: 0.967 when prev_common==1 vs 0.602 when prev_common==0. It also depends on the previous action: 0.912 when prev_action==2 vs 0.62 when prev_action==1. Magnitude follows the same split: of the top activation quartile, the predicate covers 71% under prev_common==1 vs 9% under prev_common==0.",
+      "The point where the unit fades out over the episode depends on the previous trial's (action, state), all of which the agent has observed. Dev precision of unrewarded D1 by trial bin (0-9 / 10-19 / 20-29 / 30-39): a1->S2: 0.96 / 0.34 / 0.02 / 0.00. a2->S1: 1.0 / 1.0 / 0.58 / 0.01. a1->S1: 1.0 / 1.0 / 0.84 / 0.15. a2->S2: 1.0 / 1.0 / 0.96 / 0.46. So the single cutoff at trial 30 cuts off a1->S2 too late (false positives in trials 10-29) and a2->S2 too early (misses in trials 30-39). This is the systematic false-positive and miss class that the explanation calls the 'unit has already faded' noise around trials 20-29.",
+      "The claims that do check out: D1 holds 99.6% of activation mass, GO 0.4%, D2 0. in_rew==0 holds about 100% of mass. Activation is exactly zero on trial 0 and from trial 40 on. The predicate's test scores reproduce (P 0.793, R 0.879, F1 0.834). Without the episode-time term, dev F1 is 0.365. The predicate covers only 58% of the lowest activation quartile, and those weak activations are the later trials that the cutoff misses.",
+      "A predicate with a separate cutoff for each previous (action, state) pair (both observed at D1) raises test F1 from 0.834 to 0.902, with precision 0.913, recall 0.891 and mass recall 0.979. The prev_action==-1 branch only covers the window's first trial, where the previous trial is outside the window."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after an unrewarded trial, early in the episode; it persists longest after a2->S2 (to about trial 36) and fades fastest after a1->S2 (by about trial 14)",
+    "better_predicate": "(phase == D1) & (in_rew == 0) & (ep_trial > 0) & (((prev_action==1)&(prev_state==2)&(ep_trial<14)) | ((prev_action==1)&(prev_state==1)&(ep_trial<28)) | ((prev_action==2)&(prev_state==1)&(ep_trial<26)) | ((prev_action==2)&(prev_state==2)&(ep_trial<36)) | ((prev_action==-1)&(ep_trial<28)))",
+    "better_predicate_test_f1": 0.902
+  },
+  "final_label": "D1 after an unrewarded trial, early in the episode; it persists longest after a2->S2 (to about trial 36) and fades fastest after a1->S2 (by about trial 14)",
+  "original_predicate": "(phase == D1) & (in_rew == 0) & (ep_trial < 30) & (ep_trial > 0)",
+  "original_test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 14,
+    "predicate": "(phase == D1) & (in_rew == 0) & (ep_trial < 30) & (ep_trial > 0)",
+    "split": "test",
+    "precision": 0.7928428597397875,
+    "recall": 0.8787634563352714,
+    "f1": 0.8335949978839302,
+    "mass_recall": 0.9732615559669607,
+    "correlation": 0.7890249508857414,
+    "n_active": 34742,
+    "n_predicted": 38507,
+    "coverage_by_activation_quartile": [
+      0.5810499654616624,
+      0.9348376698134929,
+      1.0,
+      0.9991940126655152
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 14,
+    "predicate": "(phase == D1) & (in_rew == 0) & (ep_trial < 30) & (ep_trial > 0)",
+    "split": "dev",
+    "precision": 0.7821796057980767,
+    "recall": 0.8787325185838478,
+    "f1": 0.8276496328710228,
+    "mass_recall": 0.974003577799513,
+    "correlation": 0.7814436020817013,
+    "n_active": 31748,
+    "n_predicted": 35667,
+    "coverage_by_activation_quartile": [
+      0.5788081138969384,
+      0.9362479526269372,
+      1.0,
+      0.9998740078115157
+    ]
+  },
+  "predicate_from": "skeptic"
+}

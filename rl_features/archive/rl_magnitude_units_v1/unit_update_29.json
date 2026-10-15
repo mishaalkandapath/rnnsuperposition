@@ -1,0 +1,82 @@
+{
+  "label": "Update gate drops after a1->S2 (rare) trials, stronger late in episode and when policy favours a1",
+  "terms": "(phase != D2) * (prev_action == 1) ;; (phase == D1) * last_is(\"a1 S2 r\") ;; (phase != D2) * choice ;; (phase == D2) * choice ;; (phase == D2) * last_is(\"a1 S2 u\") ;; (phase != D2) * (prev_action == 1) * (prev_state == 2) * np.exp(ep_trial/20) ;; (phase != D2)*(prev_action==1)*(tv(\"action\",-2)==1)*(tv(\"state\",-2)==2)*np.exp(ep_trial/20) ;; (phase != D2) * last_is(\"a1 S2 u\")",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 29 sits near 1 (mean 0.977) and dips below it. Timing alone gives R^2 0.19: it drops late in the episode, most at D1/GO. Beyond timing, the main driver is the previous trial being a1 that reached S2 (a rare transition). At D1 and GO, after a1 S2 u, z is about 0.04-0.07 below baseline. After a1 S2 r it is lower only at D1 (about -0.05); at GO it is near baseline. At D2 only a1 S2 u lowers it (about -0.02). The drop builds up when the trial before was also a1->S2, and both a1->S2 effects grow roughly exponentially with episode trial (exp(ep_trial/20)). Late-episode runs of repeated a1 with rare/unrewarded outcomes give dips to 0.52-0.65. After a2 trials z is slightly above baseline (+0.02). The model policy logit (choice, a1 - a2) lowers z as a graded term in every phase (more a1 -> lower). The hidden good state and this trial reward add little. All terms are observed-only (choice is the model own policy output); no future variables. Test R^2 beyond timing 0.539 (dev 0.547), vs ceiling all 0.61 / all observed 0.54. A count of a1->S2 trials over the last 3 trials did worse than the consecutive two-trial term.",
+  "gate": "unit_update",
+  "feature": 29,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 29,
+    "terms": [
+      "(phase != D2) * (prev_action == 1)",
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase != D2) * choice",
+      "(phase == D2) * choice",
+      "(phase == D2) * last_is(\"a1 S2 u\")",
+      "(phase != D2) * (prev_action == 1) * (prev_state == 2) * np.exp(ep_trial/20)",
+      "(phase != D2)*(prev_action==1)*(tv(\"action\",-2)==1)*(tv(\"state\",-2)==2)*np.exp(ep_trial/20)",
+      "(phase != D2) * last_is(\"a1 S2 u\")"
+    ],
+    "weights": [
+      0.009400821194204297,
+      -0.03625079789764198,
+      -0.002942009965019031,
+      -0.0015436246956535174,
+      -0.021043519360961025,
+      -0.0006793134261814864,
+      -0.000933718172243663,
+      -0.03858348882484263
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5390198357128474,
+    "r2": 0.6283154843540817,
+    "r2_timing_only": 0.19370822338813376
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 29,
+    "terms": [
+      "(phase != D2) * (prev_action == 1)",
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase != D2) * choice",
+      "(phase == D2) * choice",
+      "(phase == D2) * last_is(\"a1 S2 u\")",
+      "(phase != D2) * (prev_action == 1) * (prev_state == 2) * np.exp(ep_trial/20)",
+      "(phase != D2)*(prev_action==1)*(tv(\"action\",-2)==1)*(tv(\"state\",-2)==2)*np.exp(ep_trial/20)",
+      "(phase != D2) * last_is(\"a1 S2 u\")"
+    ],
+    "weights": [
+      0.009400821194204297,
+      -0.03625079789764198,
+      -0.002942009965019031,
+      -0.0015436246956535174,
+      -0.021043519360961025,
+      -0.0006793134261814864,
+      -0.000933718172243663,
+      -0.03858348882484263
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5468918940873185,
+    "r2": 0.6323379099884578,
+    "r2_timing_only": 0.18857754868240129
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The framing 'all terms use observed-only cues' and 'equal to the all observed score of 0.54' is misleading. choice is the model's policy logit, a model-output cue, and the 'all observed' reference leaves model outputs out. With the choice terms removed, the history-only terms reach test R^2 0.406 (all 6 a1/S2 terms with the exp scaling). On their own, the 3 phase-specific choice terms reach 0.397. So about 0.13 of the 0.539 comes from the policy logit, and the 'equal to all observed' comparison is not like-for-like.",
+      "Most factual claims check out against the residual table. After a1 S2 u the residual is -0.073 at D1, -0.074 at GO and -0.026 at D2. After a1 S2 r it is -0.054 at D1 and +0.005 at GO (so 'only at D1' holds). After a2 trials it is about +0.02 at D1 and GO. The policy-decile trend is monotonic in every phase.",
+      "The episode-scaling claims check out. Dropping both exp terms lowers test R^2 from 0.539 to 0.442. A single exp term gives 0.493. The term for two consecutive a1->S2 trials adds about 0.05, which supports 'builds up when the trial before was also a1->S2'. A linear ep_trial version is worse (0.514) and exp(ep_trial/10) is about the same (0.535), so 'roughly exponential' is fair.",
+      "Misses show no large systematic class: errors by phase x previous trial are all within +/-0.018 (e.g. GO after a1 S2 r +0.018, after a1 S1 u -0.016). The worst-fit windows are deep late-episode dips (0.55 to 0.65 against predictions of about 0.91). They persist and decay over several trials, including after a1 S1c and a2 S2c runs. These are not captured, and probably reflect history from before the 5-trial window: a decaying 3-trial history term did not help (0.406 without choice, 0.528 with it).",
+      "Small gains are possible but don't change the story: scaling choice by exp(ep_trial/20) gives 0.547 on test, and a ReLU or squared choice did worse (0.47 to 0.49). The 0.54 result sits at about 88% of the 0.61 ceiling."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Update gate drops after a1->S2 trials (more so after consecutive ones and late in the episode) and when the policy logit favours a1",
+    "better_terms": "(phase != D2) * (prev_action == 1) ;; (phase == D1) * last_is(\"a1 S2 r\") ;; (phase == D2) * last_is(\"a1 S2 u\") ;; (phase != D2) * (prev_action == 1) * (prev_state == 2) * np.exp(ep_trial/20) ;; (phase != D2)*(prev_action==1)*(tv(\"action\",-2)==1)*(tv(\"state\",-2)==2)*np.exp(ep_trial/20) ;; (phase != D2) * last_is(\"a1 S2 u\") ;; (phase!=D2)*choice*np.exp(ep_trial/20) ;; (phase==D2)*choice*np.exp(ep_trial/20)",
+    "better_terms_test_r2_beyond_timing": 0.547
+  },
+  "final_label": "Update gate drops after a1->S2 trials (more so after consecutive ones and late in the episode) and when the policy logit favours a1"
+}

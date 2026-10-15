@@ -1,0 +1,79 @@
+{
+  "label": "Late-episode dip after losses, a1 bias, strongest at GO after a1 S1 u",
+  "terms": "(prev_reward == 0) * ep_trial ;; (prev_reward == 0) * (tv(\"reward\", -2) == 0) * ep_trial ;; belief_lo * ep_trial ;; (phase == D2) * table(action, {1: 1, 2: -1}) * ep_trial ;; (prev_reward == 0) * table(prev_action, {1: 1, 2: -1}) * ep_trial ;; (phase == GO) * last_is(\"a1 S1 u\") * ep_trial ;; (phase != D1) * table(prev_action, {1: -1, 2: 1}) * (prev_reward == 1) * ep_trial",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw reset gate r of unit 5 sits near 1 (mean 0.97) and dips, more and more as the episode goes on (timing alone R^2 0.47). Beyond timing, all effects grow roughly linearly with episode trial (scaling terms by ep_trial raised dev R^2 from 0.41 to 0.47). It drops after an unrewarded previous trial, drops further after two losses in a row, and drops more when the lost trial was an a1 choice. The largest single drop is at GO after a1 S1 u (common unrewarded a1, a model-based switch trial). It is lower when the observer belief favours S1 (belief_lo, graded) and at D2 after an a1 choice, and higher at GO/D2 after a rewarded a2 trial. So low r goes with recent losses and the a1/S1 side; high r goes with rewarded a2/S2. Observed-only, with no value/policy terms: test R^2 beyond timing 0.516 (dev 0.518), against the all-cue ceiling of 0.56 (about 92%) and the all-observed table ceiling of 0.52. The policy-decile table alone gives 0.32, which the observed loss-history and belief terms mostly replace, so dropping model outputs costs little here. Adding a three-loss streak term only reached 0.520. A future reward adds almost nothing (0.01).",
+  "gate": "unit_reset",
+  "feature": 5,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 5,
+    "terms": [
+      "(prev_reward == 0) * ep_trial",
+      "(prev_reward == 0) * (tv(\"reward\", -2) == 0) * ep_trial",
+      "belief_lo * ep_trial",
+      "(phase == D2) * table(action, {1: 1, 2: -1}) * ep_trial",
+      "(prev_reward == 0) * table(prev_action, {1: 1, 2: -1}) * ep_trial",
+      "(phase == GO) * last_is(\"a1 S1 u\") * ep_trial",
+      "(phase != D1) * table(prev_action, {1: -1, 2: 1}) * (prev_reward == 1) * ep_trial"
+    ],
+    "weights": [
+      -0.00022992328259064065,
+      -0.000259698700156561,
+      -2.744461460132251e-05,
+      -0.00015166148624608299,
+      -0.00014936592616829466,
+      -0.0005412002953918419,
+      0.00010393025025900218
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5160354740357737,
+    "r2": 0.7453155633221197,
+    "r2_timing_only": 0.4737539158051719
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 5,
+    "terms": [
+      "(prev_reward == 0) * ep_trial",
+      "(prev_reward == 0) * (tv(\"reward\", -2) == 0) * ep_trial",
+      "belief_lo * ep_trial",
+      "(phase == D2) * table(action, {1: 1, 2: -1}) * ep_trial",
+      "(prev_reward == 0) * table(prev_action, {1: 1, 2: -1}) * ep_trial",
+      "(phase == GO) * last_is(\"a1 S1 u\") * ep_trial",
+      "(phase != D1) * table(prev_action, {1: -1, 2: 1}) * (prev_reward == 1) * ep_trial"
+    ],
+    "weights": [
+      -0.00022992328259064065,
+      -0.000259698700156561,
+      -2.744461460132251e-05,
+      -0.00015166148624608299,
+      -0.00014936592616829466,
+      -0.0005412002953918419,
+      0.00010393025025900218
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5180270316280853,
+    "r2": 0.7490779028887232,
+    "r2_timing_only": 0.47938553907103654
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The claim that every effect grows 'roughly linearly' with ep_trial is wrong. The effects speed up sharply in the last ~15 trials. Linear scaling gives test R^2 beyond timing 0.516. Scaling every term by (ep_trial + max(ep_trial-85,0)^2/2) instead raises it to 0.589 on test (0.585 dev), which is above the 0.56 'all' additive ceiling. Adding just one late-loss term, (prev_reward==0)*max(ep_trial-80,0)^2, to 7 linear terms gives 0.554. Misses: every worst-fit window is at trials 92-99 during loss streaks, where r is under-predicted by 0.1 to 0.3 (e.g. actual 0.57 vs predicted 0.86 at GO, t94-96).",
+      "A D2 effect of the reached state is missing. The profile at D2 by choice x state reads a1S1 -0.022, a1S2 -0.004, a2S1 +0.009, a2S2 +0.017, so state matters as well as action. Adding (phase==D2)*table(state,{1:1,2:-1})*ep_trial raises test from 0.516 to 0.539. The label credits D2 only to 'after an a1 choice'.",
+      "The 'rewarded a2 raises r' claim is mostly not about a2. With a2 specificity the term scores 0.539 on test; replacing it with plain (phase!=D1)*(prev_reward==1)*ep_trial scores 0.536. In the profile, GO after a1 S2 r is also positive (+0.009). Dropping the original term costs only 0.013, the smallest drop of the 7.",
+      "The claims that do check out (leave-one-out, test): loss term (drop gives 0.457), two-loss streak (0.487), stronger drop after a1 losses (0.486), GO after a1 S1 u (0.488, and the largest raw weight), belief_lo graded (0.493; tanh is no better at 0.517). A three-loss streak adds little (0.520).",
+      "A systematic residual cell remains: D1 after a1 S2 r is over-predicted by 0.019. After a rare rewarded a1, r dips at D1 but rises at GO (+0.010 under-predicted). This contradicts the simple 'rewarded means higher r' summary. GO after a2 S1 u is also over-predicted (-0.010)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Late-episode r dip after losses (sharpest in the last ~15 trials), deeper after a1 losses and two-loss streaks, strongest at GO after a1 S1 u; lower when the belief favours S1 and at D2 after a1 / reaching S1; higher after rewarded trials",
+    "better_terms": "F = (ep_trial + np.maximum(ep_trial-85,0)**2/2); terms: (prev_reward == 0) * F ;; (prev_reward == 0) * (tv('reward', -2) == 0) * F ;; belief_lo * F ;; (phase == D2) * table(action, {1: 1, 2: -1}) * F ;; (prev_reward == 0) * table(prev_action, {1: 1, 2: -1}) * F ;; (phase == GO) * last_is('a1 S1 u') * F ;; (phase == D2) * table(state, {1: 1, 2: -1}) * F ;; (phase != D1) * table(prev_action, {1: -1, 2: 1}) * (prev_reward == 1) * F",
+    "better_terms_test_r2_beyond_timing": 0.589
+  },
+  "final_label": "Late-episode r dip after losses (sharpest in the last ~15 trials), deeper after a1 losses and two-loss streaks, strongest at GO after a1 S1 u; lower when the belief favours S1 and at D2 after a1 / reaching S1; higher after rewarded trials"
+}

@@ -1,0 +1,93 @@
+{
+  "label": "At GO after an unrewarded a2 trial, growing over the episode; strongest when S2 believed good.",
+  "short_terms": "(phase == GO) * last_is(\"a2 S1 u\") * ep_trial ;; (phase == GO) * last_is(\"a2 S2 u\") * ep_trial ;; (phase == GO) * last_is(\"a2 S2 u\") * belief_lo",
+  "terms": "(phase == GO) * last_is(\"a2 S1 u\") ;; (phase == GO) * last_is(\"a2 S2 u\") ;; (phase == GO) * last_is(\"a2 S1 u\") * (tv(\"reward\", -2) == 0) ;; (phase == GO) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 0) ;; (phase == GO) * last_is(\"a2 S1 u\") * ep_trial ;; (phase == GO) * last_is(\"a2 S2 u\") * ep_trial ;; (phase == GO) * (prev_action == 2) * (prev_reward == 0) * belief_lo ;; (phase == GO) * (prev_action == 2) * (prev_reward == 0) * (tv(\"action\", -2) == 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO. Magnitude is driven by the previous trial being an unrewarded a2 choice (a2 S1 u, i.e. rare-unrewarded, strongest; a2 S2 u, common-unrewarded, about half), and scales up roughly linearly with episode trial. After a2 S2 u it is larger when the observer believes S2 is good (negative belief_lo), i.e. the loss looks like a fluke. It is near zero after any rewarded trial or any a1 trial, and at D1/D2. The free fit adds that two consecutive losses (reward two trials back also 0) sharply reduce it and that a2 also chosen two trials back raises it (dev 0.554 vs short 0.511). No future variables used.",
+  "full_test_scores": {
+    "gate": "hidden",
+    "feature": 157,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S1 u\")",
+      "(phase == GO) * last_is(\"a2 S2 u\")",
+      "(phase == GO) * last_is(\"a2 S1 u\") * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * last_is(\"a2 S1 u\") * ep_trial",
+      "(phase == GO) * last_is(\"a2 S2 u\") * ep_trial",
+      "(phase == GO) * (prev_action == 2) * (prev_reward == 0) * belief_lo",
+      "(phase == GO) * (prev_action == 2) * (prev_reward == 0) * (tv(\"action\", -2) == 2)"
+    ],
+    "weights": [
+      -0.5854852431380257,
+      0.08199643295257568,
+      -0.3553559963871357,
+      -0.2752477318171711,
+      0.01539973668007472,
+      0.006238301797583284,
+      -0.13985999788464748,
+      0.059899933803487064
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5508551615138009,
+    "r2": 0.6019120537319588,
+    "r2_timing_only": 0.11367578527728461
+  },
+  "gate": "hidden",
+  "feature": 157,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 157,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S1 u\") * ep_trial",
+      "(phase == GO) * last_is(\"a2 S2 u\") * ep_trial",
+      "(phase == GO) * last_is(\"a2 S2 u\") * belief_lo"
+    ],
+    "weights": [
+      0.01294295520908094,
+      0.006854426365753664,
+      -0.16613838394131386
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5056189787702721,
+    "r2": 0.5618181295847473,
+    "r2_timing_only": 0.11367578527728461
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 157,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S1 u\") * ep_trial",
+      "(phase == GO) * last_is(\"a2 S2 u\") * ep_trial",
+      "(phase == GO) * last_is(\"a2 S2 u\") * belief_lo"
+    ],
+    "weights": [
+      0.01294295520908094,
+      0.006854426365753664,
+      -0.16613838394131386
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5110094354520551,
+    "r2": 0.564988696856439,
+    "r2_timing_only": 0.11038916764025053
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims hold up. Recorded short form scores test R^2 beyond timing 0.506. Dropping the belief_lo term gives 0.442, and fixed a2 S1 u / a2 S2 u indicators without ep_trial give only 0.304. So the growth over the episode is real, and it is linear: sqrt(ep_trial) 0.474, ep_dec 0.508.",
+      "Weights are +0.013/trial after a2 S1 u, +0.007/trial after a2 S2 u, and -0.166 for belief_lo after a2 S2 u. This matches the explanation: about twice as strong after the rare loss, and larger when the observer believes S2 is good. The profile residuals agree: GO after a2 S1 u +0.59, after a2 S2 u +0.26, every other previous-trial pattern about -0.10. D1 and D2 are exactly 0.",
+      "The label is a little imprecise. It does not say the rare-transition loss (a2 S1 u) is the strongest case. It also says 'strongest when S2 believed good' as if it covered every case, but that only matters after a2 S2 u: putting belief_lo on a2 S1 u instead adds nothing (0.442).",
+      "One systematic miss is left. Several losses in a row drive the feature to 0 while the short form predicts about 1.3. In the worst-fit dev windows, a 3rd or 4th straight a2 loss reads 0 against a prediction of 1.3-1.4. Swapping in (tv('reward',-2)==0) as the third term recovers part of it (0.475 for a2 S2 u, 0.465 for a2 S1 u), but less than belief_lo does (0.506). The label does not mention this; the explanation's free-fit note does.",
+      "Misses also over-predict GO after rewarded or a1 trials by about 0.08. This is an artifact of the timing baseline, not a missed cue. Adding (phase==GO)*(prev_reward==1)*ep_trial as a correction raises the score only to 0.514, and that term would just be curve fitting, so I did not recommend it.",
+      "No future variables are used. The short form reaches 92% of the free fit (0.551), so it is not disguised curve fitting."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after an unrewarded a2 trial, growing over the episode; strongest after rare a2 losses, and larger after common ones when S2 looks good.",
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "GO after an unrewarded a2 trial, growing over the episode; strongest after rare a2 losses, and larger after common ones when S2 looks good."
+}

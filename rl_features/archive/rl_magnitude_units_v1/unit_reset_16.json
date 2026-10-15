@@ -1,0 +1,83 @@
+{
+  "label": "side-coded small shifts: D1 previous a2/S2 up, D2 a1/S1 up, GO dips after losses",
+  "terms": "(phase == D1) * table(prev_action, {1: 1, 2: -1}) ;; (phase == D1) * table(prev_state, {1: 1, 2: -1}) ;; (phase == D1) * choice ;; (phase == D2) * table(action, {1: 1, 2: -1}) ;; (phase == GO) * (prev_reward == 0) ;; (phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) ;; (phase == D2) * table(state, {1: 1, 2: -1}) ;; (phase == D2) * table(prev_action, {1: 1, 2: -1})",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw reset gate r16 is almost entirely set by phase (about 0.96 at D1, 0.98 at GO, 0.03-0.09 at D2, all drifting down late in the episode); timing alone gives R^2 0.997, so what is left to explain is small (about 0.01-0.02). Beyond timing, the gate tracks which side the agent is on, with opposite signs at D1 and D2. At D1 it is higher after a previous a2 choice and after reaching S2 (about +0.015 each, relative to a1/S1), and a little lower when the policy logit leans toward a1. At D2 it is higher when this trial chose a1 (+0.01), reached S1 (+0.008), and slightly higher if the previous choice was a1. At GO it dips after an unrewarded trial (-0.013) and dips again after two losses in a row (-0.015). The largest single deviations are GO dips of up to -0.4 on a2 trials late in the episode after a run of losses; the loss-streak terms capture these only partly. Reward x state interactions, the trial before, and value add almost nothing. Dev R^2 beyond timing 0.588, test 0.579, against an all-cue ceiling of 0.71 (all observed 0.68). No future variables are used; the D1 choice term is the model policy logit.",
+  "gate": "unit_reset",
+  "feature": 16,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 16,
+    "terms": [
+      "(phase == D1) * table(prev_action, {1: 1, 2: -1})",
+      "(phase == D1) * table(prev_state, {1: 1, 2: -1})",
+      "(phase == D1) * choice",
+      "(phase == D2) * table(action, {1: 1, 2: -1})",
+      "(phase == GO) * (prev_reward == 0)",
+      "(phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == D2) * table(state, {1: 1, 2: -1})",
+      "(phase == D2) * table(prev_action, {1: 1, 2: -1})"
+    ],
+    "weights": [
+      -0.007241849770687654,
+      -0.014705209792759338,
+      -0.0025359906494845526,
+      0.00935052690323061,
+      -0.012855226743920294,
+      -0.014806678457982421,
+      0.00762947577461157,
+      0.0025626494609841707
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5788698265218617,
+    "r2": 0.998855754372471,
+    "r2_timing_only": 0.9972829170180835
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 16,
+    "terms": [
+      "(phase == D1) * table(prev_action, {1: 1, 2: -1})",
+      "(phase == D1) * table(prev_state, {1: 1, 2: -1})",
+      "(phase == D1) * choice",
+      "(phase == D2) * table(action, {1: 1, 2: -1})",
+      "(phase == GO) * (prev_reward == 0)",
+      "(phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == D2) * table(state, {1: 1, 2: -1})",
+      "(phase == D2) * table(prev_action, {1: 1, 2: -1})"
+    ],
+    "weights": [
+      -0.007241849770687654,
+      -0.014705209792759338,
+      -0.0025359906494845526,
+      0.00935052690323061,
+      -0.012855226743920294,
+      -0.014806678457982421,
+      0.00762947577461157,
+      0.0025626494609841707
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5881537038071281,
+    "r2": 0.9988947108905368,
+    "r2_timing_only": 0.997316258226235
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Some effect sizes are stated at half their real size. The \u00b11 table weights were reported as if they were a1-vs-a2 contrasts. D1 prev_state has weight -0.0147, so S2 sits about +0.029 above S1, not '+0.015 each' (the prev_action contrast of about +0.0145 is right). D2 action has weight +0.0094, a contrast of about +0.019 rather than '+0.01'. D2 state has weight +0.0076, a contrast of about +0.015 rather than '+0.008'.",
+      "The claimed per-phase structure holds on test. D1 terms alone score 0.336, D2 terms alone 0.174, GO terms alone 0.066, and all 8 together 0.579. The D2 prev_action term adds almost nothing: 0.1736 with it vs 0.1719 without.",
+      "The label leaves out a timing interaction. The D1 previous-state effect grows over the episode. Scaling it by (1 + ep_dec) raises D1-only test R^2 from 0.336 to 0.356, with the weight going from 0.004 early to about 0.024 by decile 9. Misses also show large late-episode D1 dips (0.77 actual vs 0.89 predicted) on a1/S1 rewarded streaks.",
+      "The GO loss terms are weak (GO-only test R^2 0.066). The large GO dips of -0.2 to -0.46, on a2 trials late in the episode after runs of losses, stay unexplained. None of these closed the gap: a prev_action split, a three-loss streak, the upcoming action, the choice logit, value, or ep_dec interactions (best 0.096 with a value x loss term). The explanation does say these dips are only partly captured.",
+      "The leftover per-cell errors are small and no single class dominates. The largest are D2 after a1 S2 r (+0.014 to +0.017), D1 after a1 S2 u (+0.011) and GO after a2 S1 u (-0.012 to -0.013), all smaller than the residual SD of about 0.022.",
+      "At D1 the future upcoming action does a bit better than the policy logit the label uses (D1-only 0.362 vs 0.336). Using the observed logit is the right choice and the gap is small."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "side-coded small shifts: D1 higher after prev a2/S2 (S2 effect grows late), D2 higher on a1/S1, GO dips after losses",
+    "better_terms": "(phase == D1) * table(prev_action, {1: 1, 2: -1}) ;; (phase == D1) * table(prev_state, {1: 1, 2: -1}) * (1 + ep_dec) ;; (phase == D1) * choice ;; (phase == D2) * table(action, {1: 1, 2: -1}) ;; (phase == D2) * table(state, {1: 1, 2: -1}) ;; (phase == GO) * (prev_reward == 0) ;; (phase == GO) * (prev_reward == 0) * value ;; (phase == GO) * (prev_reward == 0) * (tv('reward', -2) == 0)",
+    "better_terms_test_r2_beyond_timing": 0.6121
+  },
+  "final_label": "side-coded small shifts: D1 higher after prev a2/S2 (S2 effect grows late), D2 higher on a1/S1, GO dips after losses"
+}

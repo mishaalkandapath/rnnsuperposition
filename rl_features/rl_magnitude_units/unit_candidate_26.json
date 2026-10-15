@@ -1,0 +1,113 @@
+{
+ "label": "At D1, drops after unrewarded trials, more so in no-reward streaks or after unrewarded S1.",
+ "short_terms": "(phase == D1) * (prev_reward == 0) * (prev_state == 1) ;; (phase == D1) * (prev_reward == 0) * (tv('reward', -2) != 1) ;; (phase == D1) * (prev_reward == 1) * (tv('reward', -2) != 0)",
+ "terms": "(phase == D1) * (prev_reward == 0) * (prev_state == 1) ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) != 1) ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) != 1) * (tv(\"reward\", -3) != 1) ;; (phase == D1) * (prev_reward == 1) * (tv(\"reward\", -2) != 1) ;; (phase == D1) * (prev_reward == 1) * (prev_state == 2) ;; (phase == D2) * belief_lo ;; (phase == D1) * (prev_reward == 0) * belief_lo",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Raw candidate n of unit 26 is pinned by phase (about +0.8 at D1, -0.99 at GO, +0.98 at D2); nearly all magnitude variation beyond timing is at D1 and is driven by reward history. An unrewarded previous trial lowers it, much more when the trial before was also unrewarded (or lies outside the window, i.e. not known rewarded), and runs of 3+ unrewarded trials drive it to about -0.8 (a leaky reward-streak integrator). Unrewarded S1 lowers it more than unrewarded S2 (-0.47 vs -0.13 residual), and rewarded S2 raises it slightly. GO and D2 barely vary (tiny belief_lo slope at D2). The free fit adds the 3-trial streak and recovery after a reward following non-reward; belief adds almost nothing. Short-form test 0.48 is about 90% of the free fit 0.535. No future variables used.",
+ "full_test_scores": {
+  "gate": "unit_candidate",
+  "feature": 26,
+  "terms": [
+   "(phase == D1) * (prev_reward == 0) * (prev_state == 1)",
+   "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+   "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) != 1)",
+   "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) != 1) * (tv(\"reward\", -3) != 1)",
+   "(phase == D1) * (prev_reward == 1) * (tv(\"reward\", -2) != 1)",
+   "(phase == D1) * (prev_reward == 1) * (prev_state == 2)",
+   "(phase == D2) * belief_lo",
+   "(phase == D1) * (prev_reward == 0) * belief_lo"
+  ],
+  "weights": [
+   -0.25480150128573475,
+   -0.3876474986501608,
+   0.036218572882803744,
+   -0.23158517448481555,
+   0.042165870456447305,
+   0.13813785760188063,
+   -0.00774735084813578,
+   0.009574586748517572
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5353589638367555,
+  "r2": 0.9805004994650253,
+  "r2_timing_only": 0.9580331933313702
+ },
+ "gate": "unit_candidate",
+ "feature": 26,
+ "test_scores": {
+  "gate": "unit_candidate",
+  "feature": 26,
+  "terms": [
+   "(phase == D1) * (prev_reward == 0) * (prev_state == 1)",
+   "(phase == D1) * (prev_reward == 0) * (tv('reward', -2) != 1)",
+   "(phase == D1) * (prev_reward == 1) * (tv('reward', -2) != 0)"
+  ],
+  "weights": [
+   -0.28963262051327454,
+   -0.2817586697249309,
+   0.15152928774752142
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5209634930018543,
+  "r2": 0.9798963675235931,
+  "r2_timing_only": 0.9580331933313702
+ },
+ "dev_scores": {
+  "gate": "unit_candidate",
+  "feature": 26,
+  "terms": [
+   "(phase == D1) * (prev_reward == 0) * (prev_state == 1)",
+   "(phase == D1) * (prev_reward == 0) * (tv('reward', -2) != 1)",
+   "(phase == D1) * (prev_reward == 1) * (tv('reward', -2) != 0)"
+  ],
+  "weights": [
+   -0.28963262051327454,
+   -0.2817586697249309,
+   0.15152928774752142
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.5201441200216332,
+  "r2": 0.981213124122016,
+  "r2_timing_only": 0.9608489201407077
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The label leaves out the short form's third term. Term 3 is a raise after a rewarded trial at S2 (weight +0.154), but the label only describes drops, so a reader could not predict the high side.",
+   "The S2 detail in term 3 is not the real driver. Replacing (prev_state == 2) with 'trial before also rewarded (tv('reward',-2)==1)' scores test 0.484, against 0.480. Using 'trial before not unrewarded (!= 0, which includes unknown)' scores 0.521. So the positive side is a run of rewards, not 'rewarded at S2'.",
+   "The '3+ unrewarded trials / leaky integrator' claim in the explanation is not in the short form. A third term (phase==D1)*(prev_reward==0)*(tv('reward',-3)!=1) adds nothing (test 0.429, the same as the 2-term base of 0.429).",
+   "Part of the gain comes from the window edge. (tv('reward',-2) != 1) also counts an unknown, out-of-window trial: with ==0 the score is 0.468 against 0.480 for !=1. In the new form, a version restricted to the window (==0 / ==1) scores 0.473 against 0.521. So an unknown earlier trial acts as if it had the same outcome as the last one. The GRU carries history from before the window, and the label should say so.",
+   "The claims that check out: unrewarded S1 lowers it more than unrewarded S2 (residuals a1 S1 u -0.467 and a2 S1 u -0.375, against a1 S2 u -0.13 and a2 S2 u -0.06). Without the S1 term the score falls to about 0.33. Belief, belief_cover, ep_trial and prev_common terms add nothing (about 0.43 each). GO and D2 barely vary.",
+   "Misses on the recorded form show a systematic shortfall: deep no-reward streaks reach about -0.8 actual at D1, against a prediction of about +0.28. With the revised form, the mean D1 error drops from +0.041 to +0.010. The largest leftover cell is D1 after a2 S2 u (+0.089)."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At D1, drops after unrewarded trials (more at S1 or after repeats); rises after repeated rewards.",
+  "better_short_terms": "(phase == D1) * (prev_reward == 0) * (prev_state == 1) ;; (phase == D1) * (prev_reward == 0) * (tv('reward', -2) != 1) ;; (phase == D1) * (prev_reward == 1) * (tv('reward', -2) != 0)",
+  "better_short_terms_test_r2_beyond_timing": 0.5209634930018543
+ },
+ "final_label": "At D1, drops after unrewarded trials (more at S1 or after repeats); rises after repeated rewards.",
+ "original_short_terms": "(phase == D1) * (prev_reward == 0) * (prev_state == 1) ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) != 1) ;; (phase == D1) * (prev_reward == 1) * (prev_state == 2)",
+ "original_test_scores": {
+  "gate": "unit_candidate",
+  "feature": 26,
+  "terms": [
+   "(phase == D1) * (prev_reward == 0) * (prev_state == 1)",
+   "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) != 1)",
+   "(phase == D1) * (prev_reward == 1) * (prev_state == 2)"
+  ],
+  "weights": [
+   -0.2991998397616781,
+   -0.29401232434319075,
+   0.15352794317654697
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.47956856369672574,
+  "r2": 0.9781591545283831,
+  "r2_timing_only": 0.9580331933313702
+ },
+ "terms_from": "skeptic"
+}

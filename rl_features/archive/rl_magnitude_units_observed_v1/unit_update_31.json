@@ -1,0 +1,82 @@
+{
+  "label": "z dips with S1/a1 belief and a1 history, amplified late in episode (GO)",
+  "terms": "(phase == GO) * np.tanh(belief_lo/2) ;; (phase == GO) * np.tanh(belief_lo/2) * np.exp((ep_trial-99)/5.) ;; (phase != GO) * np.tanh(belief_lo/2) * np.exp((ep_trial-99)/5.) ;; (phase == GO) * table(prev_action, {1: 1, 2: -1}) * np.exp((ep_trial-99)/5.) ;; (phase == GO) * np.maximum(np.tanh(belief_lo/2),0) * np.exp((ep_trial-99)/5.) ;; (phase == GO) * (prev_action == 1) * np.exp((ep_trial-99)/5.) ;; (phase == D1) * (prev_action == 1) * (prev_reward == 0) * np.exp((ep_trial-99)/5.) ;; (phase == GO) * table(prev_action, {1: 1, 2: -1})",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 31 is near-saturated (~0.99-1.0), dipping most at GO and increasingly in the last ~10 trials of the episode (timing alone R^2 0.58). Beyond timing, the dip is driven by the ideal-observer belief that S1 is good (tanh(belief_lo/2)) and by the previous choice being a1: S1-belief / a1 history lowers z, S2-belief / a2 history raises it slightly (it saturates near 1, so the a1/S1 side is much larger, captured by one-sided terms). Both effects are strongly amplified late in the episode (exp((ep_trial-99)/5) scaling), where GO values fall to ~0.85-0.9 during long a1 runs. At D1, an unrewarded previous a1 trial adds a further dip late in the episode. D1/D2 carry a weaker late belief term. Observed-only test R^2 beyond timing 0.51 (dev 0.48), above the additive all ceiling 0.35 and all-observed 0.32 because the late-episode multiplicative interaction is not in the additive tables; the model-policy decile alone gave 0.30, so dropping model outputs loses little once belief and previous choice are used. Residual misses: sustained a1 streaks late in the episode are under-predicted in depth; reward x transition (model-based) patterns add only small effects.",
+  "gate": "unit_update",
+  "feature": 31,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 31,
+    "terms": [
+      "(phase == GO) * np.tanh(belief_lo/2)",
+      "(phase == GO) * np.tanh(belief_lo/2) * np.exp((ep_trial-99)/5.)",
+      "(phase != GO) * np.tanh(belief_lo/2) * np.exp((ep_trial-99)/5.)",
+      "(phase == GO) * table(prev_action, {1: 1, 2: -1}) * np.exp((ep_trial-99)/5.)",
+      "(phase == GO) * np.maximum(np.tanh(belief_lo/2),0) * np.exp((ep_trial-99)/5.)",
+      "(phase == GO) * (prev_action == 1) * np.exp((ep_trial-99)/5.)",
+      "(phase == D1) * (prev_action == 1) * (prev_reward == 0) * np.exp((ep_trial-99)/5.)",
+      "(phase == GO) * table(prev_action, {1: 1, 2: -1})"
+    ],
+    "weights": [
+      -0.0032168728513646784,
+      -0.012347045723519212,
+      -0.010879010141016708,
+      -0.002906280008021732,
+      -0.022333766910364785,
+      -0.01974915775899849,
+      -0.035831619893790065,
+      -0.0019757819628334334
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5121774794998737,
+    "r2": 0.7945179320651865,
+    "r2_timing_only": 0.5787769951166897
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 31,
+    "terms": [
+      "(phase == GO) * np.tanh(belief_lo/2)",
+      "(phase == GO) * np.tanh(belief_lo/2) * np.exp((ep_trial-99)/5.)",
+      "(phase != GO) * np.tanh(belief_lo/2) * np.exp((ep_trial-99)/5.)",
+      "(phase == GO) * table(prev_action, {1: 1, 2: -1}) * np.exp((ep_trial-99)/5.)",
+      "(phase == GO) * np.maximum(np.tanh(belief_lo/2),0) * np.exp((ep_trial-99)/5.)",
+      "(phase == GO) * (prev_action == 1) * np.exp((ep_trial-99)/5.)",
+      "(phase == D1) * (prev_action == 1) * (prev_reward == 0) * np.exp((ep_trial-99)/5.)",
+      "(phase == GO) * table(prev_action, {1: 1, 2: -1})"
+    ],
+    "weights": [
+      -0.0032168728513646784,
+      -0.012347045723519212,
+      -0.010879010141016708,
+      -0.002906280008021732,
+      -0.022333766910364785,
+      -0.01974915775899849,
+      -0.035831619893790065,
+      -0.0019757819628334334
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.48429738191559235,
+    "r2": 0.7938211565535706,
+    "r2_timing_only": 0.6001981835727599
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the D1 claim ('an unrewarded a1 on the previous trial adds a further late dip') is incomplete. In the profile, the D1 residual is largest after a1 reaching S2 (a1 S2 u -0.0079, a1 S2 r -0.0033, a1 S1 u only -0.0017). With the original terms, misses still leaves D1 after a1 S2 u under-predicted by 0.006. Adding (phase==D1)*last_is('a1 S2 u') with no late scaling raises test R^2 from 0.500 to 0.523, so part of this D1 dip is not confined to late episode.",
+      "The ablations support the core claims. Without the late exp scaling, test R^2 is 0.268 (vs 0.512), so 'amplified late' is real. Belief-only late terms give 0.447 and previous-action-only terms give 0.381, so both contribute. Dropping the D1 term costs 0.03 (0.480). Removing the redundant terms (8 down to 6) gives 0.500.",
+      "Slight overclaim: 'going without model outputs costs nothing'. That compares against an additive policy-decile table (0.30), not against the earlier model-based explanation's actual score. As a check, adding the future GO choice (action==1, plain and late-scaled) adds only 0.004 (0.516), so little is lost by leaving out the agent's choice.",
+      "No large systematic error class remains. After the refined terms, the biggest phase x previous-trial mean errors are at most 0.004 (GO after a2 S2 u), against an activation std of 0.010. Longer a1 run counts, unsaturated belief_lo, belief_cover and other time shapes each add at most 0.025. About half the variance beyond timing is still unexplained, but it is not organised by any of the tested cues."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "z dips with S1 belief and a1 history at GO, amplified late in episode; D1 dips after a1 reaching S2",
+    "better_terms": "(phase == GO) * np.tanh(belief_lo/2) ;; (phase == GO) * np.tanh(belief_lo/2) * np.exp((ep_trial-99)/5.) ;; (phase != GO) * np.tanh(belief_lo/2) * np.exp((ep_trial-99)/5.) ;; (phase == GO) * np.maximum(np.tanh(belief_lo/2),0) * (ep_trial>=95) ;; (phase == GO) * (prev_action == 1) * np.exp((ep_trial-99)/5.) ;; (phase == D1) * (prev_action == 1) * (prev_reward == 0) * np.exp((ep_trial-99)/5.) ;; (phase==D1)*(prev_action==1)*(prev_state==2) ;; (phase!=GO)*(prev_action==1)*(prev_reward==0)",
+    "better_terms_test_r2_beyond_timing": 0.532
+  },
+  "final_label": "z dips with S1 belief and a1 history at GO, amplified late in episode; D1 dips after a1 reaching S2"
+}

@@ -1,0 +1,64 @@
+{
+  "label": "D2 after choosing a1 and landing in S2 (a1 rare transition)",
+  "predicate": "(phase == D2) & (action == 1) & (state == 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2, when the observed inputs show this trial chose a1 (in_action=1) and reached S2 (in_state=2), i.e. a rare transition after a1. It never fires at D1, almost never at GO (66 steps), and not on a2->S2, a2->S1 or a1->S1. Dev F1 0.945, precision 0.90, recall 0.998. Magnitude is weaker when the previous trial was also a rare transition: excluding those cases drops recall in the lowest activation quartile to 0.38 while the top quartiles are kept, so the activation is largest for a1->S2 transitions that are isolated / unexpected. The rare a1->S2 transition is observed at D2, so no future variable is used.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 47,
+    "predicate": "(phase == D2) & (action == 1) & (state == 2)",
+    "split": "test",
+    "precision": 0.8914788087787641,
+    "recall": 0.9971665317396067,
+    "f1": 0.9413655521213824,
+    "mass_recall": 0.9995338222989019,
+    "correlation": 0.8666463879548783,
+    "n_active": 41998,
+    "n_predicted": 46977,
+    "coverage_by_activation_quartile": [
+      0.9886666666666667,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 47,
+    "predicate": "(phase == D2) & (action == 1) & (state == 2)",
+    "split": "dev",
+    "precision": 0.8978439312684688,
+    "recall": 0.9979805844140045,
+    "f1": 0.9452676699006752,
+    "mass_recall": 0.9996807291454756,
+    "correlation": 0.8709705136402698,
+    "n_active": 41101,
+    "n_predicted": 45685,
+    "coverage_by_activation_quartile": [
+      0.9919229272090307,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 47,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold. Phase profile (dev): D1 0 active, GO 66, D2 41035, with 100% of activation mass at D2. Test scores for the original predicate reproduce: P 0.891, R 0.997, F1 0.941. Misses: 119 test steps, mostly weak GO activations holding 0.0% of the mass, so they are noise.",
+      "The false positives (5098 on test) are not noise. They come mostly from a repeated a1->S2 transition. When the previous trial was also a1->S2, precision falls to 0.63 (8735 steps). When the previous trial was a1->S2 AND rewarded (prev_reward==1), the unit is silent on all 1477 such steps (precision 0.000). When the two previous trials were both a1->S2, precision is 0.28.",
+      "The explanation says the unit is weaker when the previous trial was 'also rare'. That is wrong about the cause. If the previous trial was a rare transition in the other direction (a2->S1), precision is 0.98 (1044 steps). The suppression is specific to a previous a1->S2 transition, strongest when it was rewarded. prev_common==0 only looks predictive because it mostly overlaps with a previous a1->S2.",
+      "Good state matters a little, which goes against the claim that it adds nothing. Precision is 0.83 when good==S2 and 0.91 when good==S1, so the unit is somewhat weaker when S2 is good, i.e. when landing in S2 is less surprising for value.",
+      "A better observed-only predicate removes the systematic silent class. It excludes trials where the previous trial was a rewarded a1->S2: test P 0.923, R 0.997, F1 0.959. Also excluding two consecutive prior a1->S2 trials gives test F1 0.962 (P 0.938, R 0.988). The remaining false positives still look like a recency effect: a1->S2 one or two trials back."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after an a1->S2 (rare) transition, suppressed when the previous trial was also an a1->S2 transition (silent if that one was rewarded)",
+    "better_predicate": "(phase == D2) & (action == 1) & (state == 2) & ~((tv('action',-1)==1) & (tv('state',-1)==2) & (prev_reward==1)) & ~((tv('action',-1)==1) & (tv('state',-1)==2) & (tv('action',-2)==1) & (tv('state',-2)==2))",
+    "better_predicate_test_f1": 0.962
+  },
+  "final_label": "D2 after an a1->S2 (rare) transition, suppressed when the previous trial was also an a1->S2 transition (silent if that one was rewarded)"
+}

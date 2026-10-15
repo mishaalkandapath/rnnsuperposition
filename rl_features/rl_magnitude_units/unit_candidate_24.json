@@ -1,0 +1,114 @@
+{
+ "label": "At D1, higher after reward; lower after unrewarded streaks or unrewarded S1 visits.",
+ "short_terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 0) * (tv('reward', -2) == 0) ;; (phase == D1) * (prev_reward == 0) * np.abs(belief_lo)",
+ "terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0) ;; (phase == D1) * last_is(\"a2 S1 u\") ;; (phase == D1) * last_is(\"a1 S1 u\") ;; (phase == D1) * (prev_common == 0) * (prev_reward == 1) ;; (phase == D1) * belief_lo ;; (phase == D1) * np.abs(belief_lo)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Raw candidate n of unit 24 is saturated at GO (about -0.99) and D2 (about +0.98); only its D1 value varies beyond timing. At D1 it tracks the reward input just shown: it is higher after a rewarded trial and lower after an unrewarded one, and it goes further negative when the trial before was also unrewarded (a loss streak). An unrewarded visit to S1 pushes it down more than an unrewarded visit to S2. The free fit adds a third-loss term, a rare-rewarded penalty, and a small belief-certainty term (lower |belief_lo| gives a higher value), which takes dev R^2 from 0.68 to 0.77. GO and D2 have no structure. No future or model-output variables are used.",
+ "full_test_scores": {
+  "gate": "unit_candidate",
+  "feature": 24,
+  "terms": [
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+   "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0)",
+   "(phase == D1) * last_is(\"a2 S1 u\")",
+   "(phase == D1) * last_is(\"a1 S1 u\")",
+   "(phase == D1) * (prev_common == 0) * (prev_reward == 1)",
+   "(phase == D1) * belief_lo",
+   "(phase == D1) * np.abs(belief_lo)"
+  ],
+  "weights": [
+   0.4909376778020219,
+   -0.2963590012055955,
+   -0.13411453851653024,
+   -0.31245132914548124,
+   -0.22428738784879979,
+   -0.2168962533652082,
+   0.01230697142685458,
+   -0.07310088739081143
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7603274950148176,
+  "r2": 0.9843902825287525,
+  "r2_timing_only": 0.9348706374466587
+ },
+ "gate": "unit_candidate",
+ "feature": 24,
+ "test_scores": {
+  "gate": "unit_candidate",
+  "feature": 24,
+  "terms": [
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D1) * (prev_reward == 0) * (tv('reward', -2) == 0)",
+   "(phase == D1) * (prev_reward == 0) * np.abs(belief_lo)"
+  ],
+  "weights": [
+   0.26350382651274196,
+   -0.29584124230725856,
+   -0.14056419183316807
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7536092885070371,
+  "r2": 0.983952730021399,
+  "r2_timing_only": 0.9348706374466587
+ },
+ "dev_scores": {
+  "gate": "unit_candidate",
+  "feature": 24,
+  "terms": [
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D1) * (prev_reward == 0) * (tv('reward', -2) == 0)",
+   "(phase == D1) * (prev_reward == 0) * np.abs(belief_lo)"
+  ],
+  "weights": [
+   0.26350382651274196,
+   -0.29584124230725856,
+   -0.14056419183316807
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.7609275998241611,
+  "r2": 0.9847423217645689,
+  "r2_timing_only": 0.9361796751770217
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The 'unrewarded S1 visits' term is mostly a stand-in for belief certainty after a loss. Replacing it with (phase == D1) * (prev_reward == 0) * np.abs(belief_lo) raises test R^2 beyond timing from 0.675 to 0.754 under --short. That beats the 'all observed' reference (0.74) and nearly matches the 8-term free fit (0.760). With this certainty term, adding prev_state == S1 brings nothing: swapping it in for the streak term gives 0.753.",
+   "Misses on the recorded short form show systematic errors at D1, not scattered noise. It over-predicts after a2 S2 u (-0.24), a1 S2 u (-0.21) and a2 S1 r (-0.15), and under-predicts after a1 S1 u (+0.16). The S1/S2 split does not capture the unrewarded cases well.",
+   "Each recorded claim still holds when its term is dropped (test R^2). Without the S1 term the score falls from 0.675 to 0.528. Without the streak term it falls to 0.587. Changing the reward term to linear prev_reward makes no difference (0.675). Swapping the S1 term for last_is('a2 S1 u') gives 0.665, and for prev_common == 0 gives 0.651.",
+   "The explanation says it is 'higher when |belief_lo| is low'. In fact the certainty effect works mainly after unrewarded trials. As a phase-wide D1 term it scores only 0.659. After a rewarded trial it adds almost nothing (0.710 to 0.714 in the two-term form).",
+   "Caveat: belief_cover in the same slot does nearly as well (0.745). Part of the certainty effect may reflect how much history is available, not certainty proper.",
+   "The certainty-based short form still leaves residual errors. It under-predicts after a1 S2 u (+0.22) and over-predicts after a2 S1 r (-0.15) and a1 S1 u (-0.16). These are smaller than before but not gone.",
+   "Saturation at GO and D2 checks out: about -0.99 and +0.98, with residuals near 0.01. No future or model-output variables are used."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At D1, higher after reward; after a loss, lower if the previous trial also lost or the S1-vs-S2 belief is confident.",
+  "better_short_terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 0) * (tv('reward', -2) == 0) ;; (phase == D1) * (prev_reward == 0) * np.abs(belief_lo)",
+  "better_short_terms_test_r2_beyond_timing": 0.7536092885070371
+ },
+ "final_label": "At D1, higher after reward; after a loss, lower if the previous trial also lost or the S1-vs-S2 belief is confident.",
+ "original_short_terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) ;; (phase == D1) * (prev_reward == 0) * (prev_state == S1)",
+ "original_test_scores": {
+  "gate": "unit_candidate",
+  "feature": 24,
+  "terms": [
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+   "(phase == D1) * (prev_reward == 0) * (prev_state == S1)"
+  ],
+  "weights": [
+   0.28145206257159283,
+   -0.4033299063948249,
+   -0.43251860834224654
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6745852534182384,
+  "r2": 0.9788059449896728,
+  "r2_timing_only": 0.9348706374466587
+ },
+ "terms_from": "skeptic"
+}

@@ -1,0 +1,63 @@
+{
+  "label": "D1 after a rare-rewarded a1 trial (a1 -> S2, rewarded)",
+  "predicate": "(phase == D1) & (prev_reward == 1) & (prev_action == 1) & (prev_common == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (never GO/D2), and only when the reward input is 1. Specifically it fires when the previous trial was a1 that went rarely to S2 and was rewarded (the rare-rewarded case, which model-based logic says should trigger a switch to a2). Dev P=0.93, R=0.77, F1=0.84, mass recall 0.85. Magnitude: strongest (100% precision, higher mass) when the agent goes on to choose a1 again anyway (no switch), and weaker/less reliable (P=0.84) when it switches to a2. Residual misses are weak activations on other rewarded D1 steps, many on the window first trial where the previous trial is not in the window. It does not fire after unrewarded trials, after a2 trials, or after common a1->S1 rewarded trials (except weakly). All predicate variables are observed at D1.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 145,
+    "predicate": "(phase == D1) & (prev_reward == 1) & (prev_action == 1) & (prev_common == 0)",
+    "split": "test",
+    "precision": 0.9296257879198915,
+    "recall": 0.7342450214267708,
+    "f1": 0.8204640681666139,
+    "mass_recall": 0.8342828455828842,
+    "correlation": 0.8419859954349317,
+    "n_active": 15868,
+    "n_predicted": 12533,
+    "coverage_by_activation_quartile": [
+      0.40433577010335264,
+      0.7169145449962188,
+      0.9042097302747668,
+      0.9115200403327451
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 145,
+    "predicate": "(phase == D1) & (prev_reward == 1) & (prev_action == 1) & (prev_common == 0)",
+    "split": "dev",
+    "precision": 0.9299668585382871,
+    "recall": 0.7658000574547544,
+    "f1": 0.8399369830641985,
+    "mass_recall": 0.8530868094734212,
+    "correlation": 0.8510359456214157,
+    "n_active": 13924,
+    "n_predicted": 11466,
+    "coverage_by_activation_quartile": [
+      0.4415397874174088,
+      0.8009192760700948,
+      0.9106578569376615,
+      0.9100833093938523
+    ]
+  },
+  "gate": "hidden",
+  "feature": 145,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Main claims hold. The feature fires only at D1: all of its activation mass is at D1 and 0 active steps fall at GO or D2. It needs the reward input to be 1 (only 43 active steps have in_rew==0, mass ~0). After a common a1->S1 rewarded trial it does not fire at all (test P=0, 0 active out of 79,803 predicted steps), so 'fires only weakly, if at all' understates how complete the silence is.",
+      "Small overclaim: the explanation says the feature 'does not fire after a2 trials'. On test, D1 after a common a2->S2 rewarded trial accounts for 14.7% of active steps but only 6.3% of mass. The firing rate there is 2.7%, so these are weak, low-rate activations. After a rare a2->S1 rewarded trial the feature never fires (P=0). The best reading is a weak 'rewarded in S2' component that is strongly gated by having chosen a1. It is not a usable predicate.",
+      "The other ~10% of mass sits at the window's first D1 (rel -3), where prev_action and prev_common are unknown. These misses cannot be avoided with the window variables, which matches the explanation.",
+      "The magnitude claim checks out on test. When the upcoming action is a1 (stay), P=0.999 with mass recall 0.58. When the agent switches to a2, P=0.85 with mass recall 0.25. The false positives are mostly switch trials, so the feature is stronger when the agent goes on to stay with a1. That is the agent's own upcoming choice, which is legitimate.",
+      "Test scores reproduce: P=0.930, R=0.734, F1=0.820, mass recall 0.834. The predicate is equivalent to prev_action==1 & prev_state==2 & prev_reward==1 (identical scores), and every variable is observed at D1. I found no systematic counterexample class beyond the weak a2->S2-rewarded tail."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

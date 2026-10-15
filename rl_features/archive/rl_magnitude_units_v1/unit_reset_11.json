@@ -1,0 +1,78 @@
+{
+  "label": "D2: high after a1->S1, low after a2->S2; D1/GO up after losses",
+  "terms": "(phase == D2) * table(3*action+state, {4: 1, 5: 0.1, 7: -0.35, 8: -0.75}) ;; (phase == D1) * (prev_reward == 0) * (prev_state == 1) ;; (phase == GO) * (prev_reward == 0) * (prev_action == 1) ;; (phase == GO) * table(3*prev_action+prev_state, {4:0.4, 5:-0.4, 7:-0.2, 8:-0.45}) * (prev_reward==1) ;; (phase == GO) * (prev_reward==0) * (prev_state==1)* (prev_action==2) ;; (phase != D2) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) ;; (phase == D1) * (prev_reward == 1) * (prev_state == 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r of unit 11 is strongly phase-locked (timing R^2 0.85; GO ~0.41, D2 ~0.13, D1 ~0.08, rising late in the episode). Beyond timing, the largest driver is the just-made choice x reached state at D2 (observed at D2): a1->S1 common is about +0.12, a1->S2 rare ~0, a2->S1 rare ~-0.04, a2->S2 common ~-0.09 (dominant term). At D1 it rises after an unrewarded visit to S1 (+0.06) and falls after rewarded S2 (-0.03); at GO it rises after unrewarded a1 trials, falls after unrewarded a2->S1, and after rewarded trials is higher for a1->S1 and lower for S2 outcomes. Consecutive losses (last two trials unrewarded) add a further increment at D1/GO. Value and time since reversal add little. All terms are observed-only. Test R^2 beyond timing 0.82 (dev 0.79 for 5 terms) vs all ceiling 0.89 and all-observed 0.87.",
+  "gate": "unit_reset",
+  "feature": 11,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 11,
+    "terms": [
+      "(phase == D2) * table(3*action+state, {4: 1, 5: 0.1, 7: -0.35, 8: -0.75})",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 1)",
+      "(phase == GO) * (prev_reward == 0) * (prev_action == 1)",
+      "(phase == GO) * table(3*prev_action+prev_state, {4:0.4, 5:-0.4, 7:-0.2, 8:-0.45}) * (prev_reward==1)",
+      "(phase == GO) * (prev_reward==0) * (prev_state==1)* (prev_action==2)",
+      "(phase != D2) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * (prev_reward == 1) * (prev_state == 2)"
+    ],
+    "weights": [
+      0.11927751014902052,
+      0.057111250586596676,
+      0.035443516843978985,
+      0.04986875626690952,
+      -0.059659220180937056,
+      0.028160459991792616,
+      -0.03428879974534612
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.821887478775828,
+    "r2": 0.9736008203308699,
+    "r2_timing_only": 0.8517836955667808
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 11,
+    "terms": [
+      "(phase == D2) * table(3*action+state, {4: 1, 5: 0.1, 7: -0.35, 8: -0.75})",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 1)",
+      "(phase == GO) * (prev_reward == 0) * (prev_action == 1)",
+      "(phase == GO) * table(3*prev_action+prev_state, {4:0.4, 5:-0.4, 7:-0.2, 8:-0.45}) * (prev_reward==1)",
+      "(phase == GO) * (prev_reward==0) * (prev_state==1)* (prev_action==2)",
+      "(phase != D2) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * (prev_reward == 1) * (prev_state == 2)"
+    ],
+    "weights": [
+      0.11927751014902052,
+      0.057111250586596676,
+      0.035443516843978985,
+      0.04986875626690952,
+      -0.059659220180937056,
+      0.028160459991792616,
+      -0.03428879974534612
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8266284825896819,
+    "r2": 0.9741297674077776,
+    "r2_timing_only": 0.8507815298692036
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The explanation's GO description is incomplete. The profile's GO residuals are a2 S2 u +0.041, a1 S2 u +0.045 and a1 S1 u +0.0385, so after a loss GO rises whatever the choice, except after a2 S1 u (-0.054). The terms only cover the a1 losses and the a2->S1 loss. misses confirms this: 'GO after a2 S2 u' is under-predicted by +0.032, the largest systematic error.",
+      "The claim 'after a rewarded trial, GO is lower if it reached S2' is wrong. The GO residuals are a1 S2 r -0.039, a2 S2 r -0.021 and a2 S1 r -0.045, so the lowest is the rewarded a2->S1 rare trial, which did not reach S2. The hand-set table gives 7: -0.2 vs 8: -0.45, the wrong order, and misses shows 'GO after a2 S1 r' over-predicted by -0.034 and 'GO after a1 S2 r' by -0.019.",
+      "The D2 choice x state effect is not constant over the episode. It gets larger late in the episode, as seen in the worst-fit windows: late-episode a1 S1c at D2 is actual 0.42-0.47 vs predicted 0.31. Adding a term for the late-episode D2 effect alone raises test R^2 from 0.836 to 0.848. The label says the gate rises late in the episode, but that is only the timing baseline; the late growth of the choice/state effect is not described.",
+      "The 7 terms are less efficient than plain tables. Using the profile's residual tables for D2 choice x state, D1 last trial and GO last trial (3 terms) gives test R^2 0.833, beating the 7-term 0.822.",
+      "The core D2 claim checks out (a1->S1 +0.12, a1->S2 about 0, a2->S1 -0.04, a2->S2 -0.09), as does the D1 claim (up after unrewarded S1 visits, down after rewarded S2). Two losses in a row add a little (+0.003 test R^2)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2: high after a1->S1, low after a2->S2 (stronger late in episode); D1: up after unrewarded S1; GO: up after any loss except a2->S1, down after rewarded S2 or rare trials",
+    "better_terms": "(phase == D2) * table(3*action+state, {4: 0.119, 5: 0.01, 7: -0.042, 8: -0.09}) ;; (phase == D1) * (last_is('a1 S1 u')*0.065 - last_is('a1 S2 r')*0.03 + last_is('a1 S2 u')*0.014 - last_is('a2 S2 r')*0.036 + last_is('a2 S2 u')*0.01 + last_is('a2 S1 u')*0.062) ;; (phase == GO) * (last_is('a1 S1 r')*0.016 + last_is('a1 S1 u')*0.0385 - last_is('a1 S2 r')*0.039 + last_is('a1 S2 u')*0.045 - last_is('a2 S2 r')*0.021 + last_is('a2 S2 u')*0.041 - last_is('a2 S1 r')*0.045 - last_is('a2 S1 u')*0.054) ;; (phase != D2) * (prev_reward == 0) * (tv('reward', -2) == 0) ;; (phase==D2)*np.maximum(ep_trial-70,0)/30*table(3*action+state, {4: 0.119, 5: 0.01, 7: -0.042, 8: -0.09}) ;; (phase==GO)*np.maximum(ep_trial-70,0)/30*table(prev_action,{1:1,2:-1}) ;; (phase==GO)*np.clip(choice,-5,5) ;; (phase==D2)*(last_is('a1 S1 r')-last_is('a2 S2 r')-last_is('a2 S1 u') + last_is('a1 S2 u'))",
+    "better_terms_test_r2_beyond_timing": 0.866
+  },
+  "final_label": "D2: high after a1->S1, low after a2->S2 (stronger late in episode); D1: up after unrewarded S1; GO: up after any loss except a2->S1, down after rewarded S2 or rare trials"
+}

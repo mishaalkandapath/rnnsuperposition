@@ -1,0 +1,64 @@
+{
+  "label": "GO step after an unrewarded trial (plus weak firing on a1 choices earlier in the episode)",
+  "predicate": "(phase == GO) & ((prev_reward == 0) | ((model_act == 1) & (ep_trial < 50)))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires almost only at GO (99.7% of mass; never at D1, a little at D2). The strongest firing is at GO after the previous trial went unrewarded: (GO & prev_reward==0) has 81% precision and holds 81% of the mass, and covers 99.6% of the top activation quartile. Activations are largest after a run of unrewarded trials, especially when the agent switches from a1 to a2 (top windows climb 0.5 -> 0.8 -> 0.9 -> 1.0 across successive losses). A second, weaker component shows up at GO after rewarded trials when the agent is choosing a1 (model_act==1, the agent computes this itself, so it is not future), and only in the first half of the episode (ep_trial < 50). Late in the episode this component mostly goes quiet, so the feature drifts with episode time. Without the ep_trial term F1 is 0.80, with it 0.86. It does not fire at D1, at D2 (apart from rare weak cases), or at GO after a reward when the agent picks a2. Only observed variables are used; no future reward or transition is needed.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 121,
+    "predicate": "(phase == GO) & ((prev_reward == 0) | ((model_act == 1) & (ep_trial < 50)))",
+    "split": "test",
+    "precision": 0.8220540669452325,
+    "recall": 0.9067761311820414,
+    "f1": 0.8623391785434142,
+    "mass_recall": 0.9721373835447902,
+    "correlation": 0.7278268265116787,
+    "n_active": 182464,
+    "n_predicted": 201269,
+    "coverage_by_activation_quartile": [
+      0.7017274640477026,
+      0.9381576639775517,
+      0.9874605401613469,
+      0.9997588565415644
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 121,
+    "predicate": "(phase == GO) & ((prev_reward == 0) | ((model_act == 1) & (ep_trial < 50)))",
+    "split": "dev",
+    "precision": 0.8212724368405565,
+    "recall": 0.9085772416799883,
+    "f1": 0.8627217203873742,
+    "mass_recall": 0.9718576376816306,
+    "correlation": 0.7283607639486489,
+    "n_active": 172025,
+    "n_predicted": 190312,
+    "coverage_by_activation_quartile": [
+      0.7103029739344758,
+      0.9378458819699577,
+      0.9862809840487374,
+      0.9998837371529554
+    ]
+  },
+  "gate": "reset",
+  "feature": 121,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The main component also drifts with time in the episode, and the label hides this. The explanation says only the weak a1 component 'goes quiet late in the episode', but the unrewarded component shuts off too. Dev precision of GO & prev_reward==0 is 1.000 for ep_trial<50 and 0.999 for 50<=ep_trial<70. It then falls: 0.986 (70-71), 0.93 (74-75), 0.80 (76-77), 0.64 (78-79), 0.47 (80-81), 0.33 (82-83), 0.17 (85-86) and 0.0016 for ep_trial>=90. So after about trial 80 the feature hardly fires at GO after a loss. The original predicate keeps prev_reward==0 with no time cutoff, so almost all of its 35.8k test false positives are this one class (precision 0.82). They are not scattered noise.",
+      "The weak component (GO, previous trial rewarded, model_act==1) fades gradually rather than at a step at trial 50. Dev precision is 0.85 for ep_trial<50, 0.80 for 40-49, 0.62 for 50-59, 0.54 for 55-59, 0.33 for 60-64, 0.19 for 65-69, 0.08 for 70-74 and 0.02 for 75-79. Its activations are also small and decay over runs of rewards (in the test windows, about 0.18 -> 0.07 -> 0.04 -> 0.02). It holds about 16% of the mass. The ep_trial split is real: with good==1 held fixed, precision is still 0.85 early vs 0.20 late. So it is not standing in for the hidden good state or start_high.",
+      "Claims that check out: 99.7% of the mass is at GO, and the feature never fires at D1. It fires on 0.4% of D2 steps, holding 0.3% of the mass. GO after a reward with model_act==2 has precision 0.02. Activation grows over a run of losses: before trial 70, mean mass per active step is about 1.17x the feature mean after one loss, 1.86x after two and 2.18x after three. Switch trials have above-average activation (mass/recall about 2.1 for a1->a2 and 1.7 for a2->a1, vs 1.29 for all loss trials). But switches hold only about 7% of the mass, so 'biggest when switching' is a minor point. Neither predicate uses a future variable.",
+      "The magnitude ordering is wrong. In the top activation quartile, coverage by GO & prev_reward==0 & model_act==1 is 0.64, against 0.35 for model_act==2. So the largest activations happen mostly when the agent is about to pick a1, not when it switches to a2.",
+      "Better predicate, using only observed variables plus the agent's own choice: (phase == GO) & (((prev_reward == 0) & (ep_trial < 80)) | ((model_act == 1) & (ep_trial < 60))). Test: precision 0.918, recall 0.927, F1 0.923, mass recall 0.977. The original predicate scores test F1 0.862 (precision 0.822). Dev F1 is 0.924."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step after an unrewarded trial (strongest after a run of losses, mostly when about to choose a1), plus weak firing at GO when about to choose a1; both parts fade late in the episode (losses after about trial 80, a1 choices after about trial 60)",
+    "better_predicate": "(phase == GO) & (((prev_reward == 0) & (ep_trial < 80)) | ((model_act == 1) & (ep_trial < 60)))",
+    "better_predicate_test_f1": 0.923
+  },
+  "final_label": "GO step after an unrewarded trial (strongest after a run of losses, mostly when about to choose a1), plus weak firing at GO when about to choose a1; both parts fade late in the episode (losses after about trial 80, a1 choices after about trial 60)"
+}

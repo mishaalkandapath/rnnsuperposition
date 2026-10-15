@@ -1,0 +1,64 @@
+{
+  "label": "GO step late in episode (trial >= ~65) after a rewarded, non-rare trial, when the agent is choosing a2",
+  "predicate": "(phase == GO) & (ep_trial >= 65) & (prev_reward == 1) & (prev_common != 0) & (choice < -2)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at the GO step (never at D1 or D2) and only late in the episode: it is silent before trial ~55, ramps up over trials 60-70, and is on through trial 99, so it acts as an episode-clock unit. Within that window it needs the previous trial to have been rewarded (94% of mass; reward input 0 at D1) and not reached through a rare transition (prev_common==0 gives almost nothing), and it is strongly selective for choosing a2: 89% of mass falls where the policy logit strongly favours a2 (choice < -2). The value output is low-to-mid when it fires. The phase+late-episode condition alone has mass recall 0.99 but precision 0.41; adding prev reward, non-rare prev transition and a2 choice gives precision 0.92, F1 0.76, mass recall 0.83 on dev. I recorded the version using the observed policy logit (choice < -2) and not the FUTURE action==2; the two score almost the same. Misses are mainly weaker activations on a1 GO steps (about 10% of mass) and some GO steps after unrewarded trials. Magnitude is larger on a2 choices and grows with consecutive rewarded a2 trials. Not checked causally.",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 24,
+    "predicate": "(phase == GO) & (ep_trial >= 65) & (prev_reward == 1) & (prev_common != 0) & (choice < -2)",
+    "split": "test",
+    "precision": 0.913181474157084,
+    "recall": 0.6443127594701211,
+    "f1": 0.7555398444601555,
+    "mass_recall": 0.832205043947004,
+    "correlation": 0.8271179706492352,
+    "n_active": 58051,
+    "n_predicted": 40959,
+    "coverage_by_activation_quartile": [
+      0.30296975125749326,
+      0.38875490939158,
+      0.8882381313305312,
+      0.9973125689084895
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 24,
+    "predicate": "(phase == GO) & (ep_trial >= 65) & (prev_reward == 1) & (prev_common != 0) & (choice < -2)",
+    "split": "dev",
+    "precision": 0.9208566335376426,
+    "recall": 0.6457302351067655,
+    "f1": 0.7591343734272773,
+    "mass_recall": 0.8312831929728521,
+    "correlation": 0.8306555716035933,
+    "n_active": 58399,
+    "n_predicted": 40951,
+    "coverage_by_activation_quartile": [
+      0.30527397260273975,
+      0.38904109589041097,
+      0.8942465753424658,
+      0.9943831769299267
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 24,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Every factual claim held up when scored on dev. The unit is active only at GO: D1 and D2 have zero active steps. It is silent through trial 49, fires on 153 steps in trials 50-59, then rate 0.06 in 60-69 and 0.145-0.163 from 70 onward. GO with ep_trial >= 65 scores precision 0.41 and mass recall 0.994, as claimed. 94% of the activation mass falls after a rewarded trial (prev_reward == 1). After a rare previous transition it is essentially silent (prev_common == 0: mass 0.006, precision 0.02). 89% of the mass is on action == 2 / model_act == 2. When active, the value output is low to middle (bins below 7.54 hold 100% of the mass).",
+      "The headline numbers reproduce. Dev: precision 0.921, recall 0.646, F1 0.759, mass recall 0.831. Test: precision 0.913, recall 0.644, F1 0.756, mass recall 0.832. The predicate uses no future variables.",
+      "The label slightly overclaims 'when the agent is choosing a2'. There is a systematic secondary mode: weak activations at GO late in the episode, after a rewarded common trial, when the agent is confidently choosing a1 (choice > 8). It holds about 21% of active steps but only about 10% of the mass, and shows up in test misses as runs of rewarded a1 trials with good=S1 and activations of 0.1-0.4. Scored alone it is weak (choice > 8 branch: precision 0.35, mass 0.08). Adding it as a branch moves test F1 only from 0.756 to 0.771 and precision falls to 0.76. The explanation already discloses this as the main miss, so it is a caveat rather than a refutation.",
+      "A second, smaller miss class is GO steps after unrewarded trials during long a2 runs (prev_reward == 0: about 10.6% of active steps, 6% of mass, precision 0.13 if added). The explanation discloses this too.",
+      "The magnitude-over-runs claim is flagged as unverified and the evidence is only partial. Requiring the trial two back to also be rewarded raises test precision to 0.956, against 0.887 when it was not, which is consistent with activation building up over rewarded runs. This is not decisive."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step late in the episode (trial >= ~65), after a rewarded common (non-rare) trial, mainly when the agent confidently chooses a2 (weaker activations on confident a1 choices)",
+    "better_predicate": "(phase == GO) & (prev_reward == 1) & (prev_common != 0) & (ep_trial >= 65) & ((choice < -2) | ((choice > 8) & (ep_trial >= 75)))",
+    "better_predicate_test_f1": 0.771
+  },
+  "final_label": "GO step late in the episode (trial >= ~65), after a rewarded common (non-rare) trial, mainly when the agent confidently chooses a2 (weaker activations on confident a1 choices)"
+}

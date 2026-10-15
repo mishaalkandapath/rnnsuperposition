@@ -1,0 +1,85 @@
+{
+  "label": "D1 dip after unrewarded S2 visits; rise after S1; GO/D2 track S2 belief",
+  "terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 0) * (prev_state == 2) ;; (phase == D1) * (prev_state == 1) ;; (phase == D1) * (prev_reward == 0) * (prev_state == -1) ;; (phase == D1) * (prev_reward == 0) * ep_trial ;; (phase == GO) * np.clip(belief_lo, -4, 4) ;; (phase == D2) * np.clip(belief_lo, -4, 4) ;; (phase == GO) * last_is(\"a1 S1 r\")",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r of unit 27 (high on average, ~0.83, and falling late in the episode, which the timing baseline covers). Beyond timing it is driven mostly by the previous trial at D1. It dips strongly (about -0.25) when the last trial reached S2 and went unrewarded, rises when the last trial reached S1 (about +0.10), gets a small extra rise for any rewarded last trial, and dips a little after any unrewarded trial, more so later in the episode (and also when the previous state lies outside the window but the D1 reward input is 0). At GO and D2 it tracks the ideal-observer belief in a graded way: it is higher when belief favours S2 (negative belief_lo) and lower when it favours S1. At GO it is also lower after a rewarded a1->S1 trial. Observed-only, 8 terms: dev R^2 beyond timing 0.74, against the profile ceilings of 0.79 (all observed) and 0.83 (all). An earlier version used the policy logit (policy decile alone 0.37); belief_lo stands in for it at GO/D2, and the loss looks small because most of the variance is the D1 last-trial effect, which is fully observed. Future reward and the hidden good state add almost nothing (0.01 and 0.09 as single tables).",
+  "gate": "unit_reset",
+  "feature": 27,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 27,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 2)",
+      "(phase == D1) * (prev_state == 1)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == -1)",
+      "(phase == D1) * (prev_reward == 0) * ep_trial",
+      "(phase == GO) * np.clip(belief_lo, -4, 4)",
+      "(phase == D2) * np.clip(belief_lo, -4, 4)",
+      "(phase == GO) * last_is(\"a1 S1 r\")"
+    ],
+    "weights": [
+      0.02488945986772085,
+      -0.25245420856387635,
+      0.1013304512666587,
+      -0.08923917395088268,
+      -0.0008882012465319002,
+      -0.018158079908321554,
+      -0.012653653428855598,
+      -0.07091276538435913
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.733592015693415,
+    "r2": 0.818932612692576,
+    "r2_timing_only": 0.32033798544472347
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 27,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 2)",
+      "(phase == D1) * (prev_state == 1)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == -1)",
+      "(phase == D1) * (prev_reward == 0) * ep_trial",
+      "(phase == GO) * np.clip(belief_lo, -4, 4)",
+      "(phase == D2) * np.clip(belief_lo, -4, 4)",
+      "(phase == GO) * last_is(\"a1 S1 r\")"
+    ],
+    "weights": [
+      0.02488945986772085,
+      -0.25245420856387635,
+      0.1013304512666587,
+      -0.08923917395088268,
+      -0.0008882012465319002,
+      -0.018158079908321554,
+      -0.012653653428855598,
+      -0.07091276538435913
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7384456116906446,
+    "r2": 0.8220272742707861,
+    "r2_timing_only": 0.31955748523433203
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The test score reproduces: the original 8 terms give R^2 beyond timing 0.7336 on test. The core D1 claim holds: the 'unrewarded S2' weight is -0.252 and the 'S1' weight is +0.101.",
+      "The explanation leaves out a systematic effect of the previous choice at D1. The D1 residuals are lower after a1 than after a2 in every cell: a1 S1 r +0.136 vs a2 S1 r +0.167, a1 S1 u +0.007 vs a2 S1 u +0.082, a1 S2 r -0.096 vs a2 S2 r +0.015, a1 S2 u -0.356 vs a2 S2 u -0.237. Running misses on the original terms shows this pattern: 'D1 after a1 S2 r' is over-predicted by -0.129, 'D1 after a1 S2 u' by -0.066 and 'D1 after a1 S1 u' by -0.057, while 'D1 after a2 S2 u' is under-predicted by +0.055.",
+      "'Rises when the last trial reached S1' overclaims. After an unrewarded a1->S1 trial the D1 residual is only +0.007; the rise is mainly after rewarded S1 trials and after a2->S1 (rare) trials.",
+      "The 'small extra rise when rewarded' term is very weak: its weight is +0.025, and dropping it only lowers test R^2 from 0.734 to 0.728. Swapping it for (phase==D1)*(prev_action==1) (weight -0.072) raises test R^2 to 0.750.",
+      "The 'dips more later in the episode for unrewarded D1' term is tiny: about -0.001 per trial, and removing it lowers test R^2 by only about 0.01. It is a minor effect, not a main driver.",
+      "At GO the explanation only mentions 'lower after rewarded a1->S1'. Misses on the original terms show GO residuals are systematically higher after a2 trials: 'GO after a2 S2 u' +0.093 and 'GO after a2 S1 u' +0.050 under-predicted. A term for GO after an a2 choice (or after unrewarded a2) captures this.",
+      "The belief tracking at GO and D2 checks out. The weights on belief_lo are negative (-0.018 and -0.013), and the belief-decile residual tables fall steadily from about +0.08 to -0.10 at GO. With the revised terms the score is 0.754, close to the 0.79 'all observed' ceiling, so the explanation from observed quantities alone loses little."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1: deep dip after unrewarded S2 visits, rise after S1, lower after a1 choices; GO/D2 rise with S2 belief, GO higher after a2",
+    "better_terms": "(phase == D1) * (prev_action == 1) ;; (phase == D1) * (prev_reward == 0) * (prev_state == 2) ;; (phase == D1) * (prev_state == 1) ;; (phase == D1) * (prev_reward == 0) * (prev_state == -1) ;; (phase == GO) * (prev_action == 2) ;; (phase == GO) * np.clip(belief_lo, -4, 4) ;; (phase == D2) * np.clip(belief_lo, -4, 4) ;; (phase == GO) * (prev_reward == 1)",
+    "better_terms_test_r2_beyond_timing": 0.754
+  },
+  "final_label": "D1: deep dip after unrewarded S2 visits, rise after S1, lower after a1 choices; GO/D2 rise with S2 belief, GO higher after a2"
+}

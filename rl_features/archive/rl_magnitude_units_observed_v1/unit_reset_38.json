@@ -1,0 +1,83 @@
+{
+  "label": "D1 reset dips sharply after a1->S2 (rare) trials, esp. unrewarded; belief in S2 raises it",
+  "terms": "(phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a1 S2 r\") ;; (phase == D1) * (last_is(\"a2 S1 r\") + last_is(\"a2 S1 u\") + last_is(\"a2 S2 r\") + last_is(\"a1 S1 r\")) ;; (phase == D1) * (prev_reward == 0) * (ep_trial/100)**3 ;; (phase == D1) * belief_lo ;; (phase != D1) * belief_lo ;; (phase == D2) * last_is(\"a1 S2 u\") ;; (phase != D1) * (prev_action == 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r of unit 38 is high (~0.9) almost always. Beyond timing, the dominant driver is the previous trial at D1: after a1 that landed in S2 (rare) the gate drops strongly, by ~0.39 if unrewarded and ~0.29 if rewarded; after a2 trials and a1 S1 rewarded trials it sits ~0.08 higher than after a1 S1 unrewarded / a2 S2 unrewarded. Unrewarded D1 steps late in the episode drop further (cubic in episode trial, w ~ -0.07), which accounts for much of the late-episode dip. A graded belief term (ideal-observer log-odds that S1 is good) lowers it when S1 is believed good and raises it when S2 is, at all phases; at D2 after a1 S2 u it stays ~0.09 lower, and GO/D2 run slightly higher after a2. Uses only observed quantities. Test R^2 beyond timing 0.685 (dev 0.698), vs all-observed reference 0.77 and all ceiling 0.84 (81% of ceiling). The earlier model-based version leaned on the policy (policy decile alone 0.57 vs belief decile 0.33), but here the previous-trial pattern carries most of it (last-trial table 0.66), so losing model outputs costs little. Future variables (this reward 0.01) do not matter.",
+  "gate": "unit_reset",
+  "feature": 38,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 38,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * (last_is(\"a2 S1 r\") + last_is(\"a2 S1 u\") + last_is(\"a2 S2 r\") + last_is(\"a1 S1 r\"))",
+      "(phase == D1) * (prev_reward == 0) * (ep_trial/100)**3",
+      "(phase == D1) * belief_lo",
+      "(phase != D1) * belief_lo",
+      "(phase == D2) * last_is(\"a1 S2 u\")",
+      "(phase != D1) * (prev_action == 2)"
+    ],
+    "weights": [
+      -0.38500567891855036,
+      -0.28531503125807245,
+      0.07882687857956101,
+      -0.0684719447285281,
+      -0.016698960007725534,
+      -0.014005561590236158,
+      -0.0890194142286647,
+      0.025100031224133647
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.685235910602809,
+    "r2": 0.7550790498600299,
+    "r2_timing_only": 0.2218904303568383
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 38,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * (last_is(\"a2 S1 r\") + last_is(\"a2 S1 u\") + last_is(\"a2 S2 r\") + last_is(\"a1 S1 r\"))",
+      "(phase == D1) * (prev_reward == 0) * (ep_trial/100)**3",
+      "(phase == D1) * belief_lo",
+      "(phase != D1) * belief_lo",
+      "(phase == D2) * last_is(\"a1 S2 u\")",
+      "(phase != D1) * (prev_action == 2)"
+    ],
+    "weights": [
+      -0.38500567891855036,
+      -0.28531503125807245,
+      0.07882687857956101,
+      -0.0684719447285281,
+      -0.016698960007725534,
+      -0.014005561590236158,
+      -0.0890194142286647,
+      0.025100031224133647
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6984289595708192,
+    "r2": 0.7641825993325574,
+    "r2_timing_only": 0.21803698282222628
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Overclaim about the cubic late-episode term. The explanation says it 'accounts for much of the late-episode dip', but dropping it only moves test R^2 from 0.685 to 0.681. The late dip (D1 baseline falls from 0.865 to 0.69 in decile 9) is already in the timing baseline, so this term adds almost nothing.",
+      "The grouped '+0.08' term blurs two different effects. Scored separately on test, a2->S1 rare trials give +0.114 and a2 S2 r / a1 S1 r give +0.071. The residual table agrees: a2 S1 r +0.145 and a2 S1 u +0.131, against a1 S1 r +0.029. So rare a2->S1 raises D1 reset whether or not it was rewarded, the mirror image of the a1->S2 dip. The label only mentions the dip.",
+      "The belief claim holds. Removing both belief_lo terms drops test R^2 from 0.685 to 0.602. The belief effect also grows across the episode: scaling belief_lo by (1+ep_trial/50) adds about 0.01-0.02.",
+      "No large systematic error class remains. Misses gives mean phase errors of at most 0.005, and the worst (phase, previous trial) cell is D1 after a2 S1 r at +0.075. The worst windows are late-episode (t>90) ones, where the activation is about 0.13 at the window's first D1. There the previous trial is unknown ('?'), so last_is cannot fire, and a (phase==D1)*(prev_action==-1)*(prev_reward==0) term recovers some of that. GO/D2 are also over-predicted by about 0.2 in those windows.",
+      "The model still falls short of what observed cues allow: 0.685 against 0.77 for all observed cues. Some of the gap is D2's own observed choice: replacing (phase!=D1)*(prev_action==2) with GO prev_action plus D2 action helps a little."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 reset dips sharply after a1->S2 rare trials (esp. unrewarded) and rises after a2->S1 rare trials; belief that S2 is good raises it at all phases",
+    "better_terms": "(phase == D1) * last_is('a1 S2 u') ;; (phase == D1) * last_is('a1 S2 r') ;; (phase == D1) * (last_is('a2 S1 r') + last_is('a2 S1 u') + last_is('a2 S2 r') + last_is('a1 S1 r')) ;; (phase == D1) * belief_lo * (1+ep_trial/50) ;; (phase != D1) * belief_lo * (1+ep_trial/50) ;; (phase == D2) * last_is('a1 S2 u') ;; (phase == D2) * (action == 2) + (phase==GO)*(prev_action==2) ;; (phase == D1) * (prev_action == -1) * (prev_reward == 0)",
+    "better_terms_test_r2_beyond_timing": 0.7109
+  },
+  "final_label": "D1 reset dips sharply after a1->S2 rare trials (esp. unrewarded) and rises after a2->S1 rare trials; belief that S2 is good raises it at all phases"
+}

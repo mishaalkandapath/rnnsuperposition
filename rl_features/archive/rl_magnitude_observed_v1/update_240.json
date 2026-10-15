@@ -1,0 +1,72 @@
+{
+  "label": "GO after a rewarded S1 trial (esp. a1->S1), fading over the first ~40 trials",
+  "terms": "(phase == GO) * (prev_state==1) * (prev_reward==1) * np.clip(1-ep_trial/40,0,1) ;; (phase == GO) * (prev_state==1) * (prev_reward==1) * np.clip(1-ep_trial/40,0,1) * belief ;; (phase==GO) * last_is(\"a1 S1 r\") * np.clip(1-ep_trial/40,0,1) ;; (phase==GO) * np.clip(1-ep_trial/40,0,1) * (prev_reward==0) ;; (phase==GO) * np.clip(1-ep_trial/40,0,1) * (prev_state==2)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Active only at GO. Magnitude is about 0.3 when the previous trial reached S1 and was rewarded, strongest after common a1->S1 rewarded and weaker after rare a2->S1 rewarded. It is near zero after unrewarded trials or trials that reached S2. The effect fades roughly linearly to zero by about trial 40 of the episode. The timing baseline only gives the average decay, so the history-by-time interaction terms carry the explanation. Test R^2 beyond timing is 0.62 with 5 observed-only terms, well above the additive all ceiling of 0.27, which cannot represent the interaction. Ideal-observer belief that S1 is good adds little: dropping it costs about 0.006 on dev. Graded belief_lo and the trial before add nothing. Remaining misses: after a2 S1 r the feature fires when the agent then switches to a1, and not when it stays on a2. Adding the future choice (action==1) gains only about 0.01, so leaving out the model outputs and the choice costs little.",
+  "gate": "update",
+  "feature": 240,
+  "test_scores": {
+    "gate": "update",
+    "feature": 240,
+    "terms": [
+      "(phase == GO) * (prev_state==1) * (prev_reward==1) * np.clip(1-ep_trial/40,0,1)",
+      "(phase == GO) * (prev_state==1) * (prev_reward==1) * np.clip(1-ep_trial/40,0,1) * belief",
+      "(phase==GO) * last_is(\"a1 S1 r\") * np.clip(1-ep_trial/40,0,1)",
+      "(phase==GO) * np.clip(1-ep_trial/40,0,1) * (prev_reward==0)",
+      "(phase==GO) * np.clip(1-ep_trial/40,0,1) * (prev_state==2)"
+    ],
+    "weights": [
+      -0.13260767865833079,
+      0.20490170359751592,
+      0.2142641896485994,
+      -0.07258809018894627,
+      -0.0783907098336562
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6212294277216311,
+    "r2": 0.7047738198313478,
+    "r2_timing_only": 0.220567272708603
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 240,
+    "terms": [
+      "(phase == GO) * (prev_state==1) * (prev_reward==1) * np.clip(1-ep_trial/40,0,1)",
+      "(phase == GO) * (prev_state==1) * (prev_reward==1) * np.clip(1-ep_trial/40,0,1) * belief",
+      "(phase==GO) * last_is(\"a1 S1 r\") * np.clip(1-ep_trial/40,0,1)",
+      "(phase==GO) * np.clip(1-ep_trial/40,0,1) * (prev_reward==0)",
+      "(phase==GO) * np.clip(1-ep_trial/40,0,1) * (prev_state==2)"
+    ],
+    "weights": [
+      -0.13260767865833079,
+      0.20490170359751592,
+      0.2142641896485994,
+      -0.07258809018894627,
+      -0.0783907098336562
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.627870771780528,
+    "r2": 0.7150497615277768,
+    "r2_timing_only": 0.23427074020596128
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Main claim holds. The claimed terms reproduce test R^2 beyond timing of 0.621 (dev 0.628). The feature is GO-only and is driven by a previous trial that reached S1 and was rewarded. A linear fade to zero by trial 40 is the best horizon tested: test 0.39 / 0.55 / 0.61 / 0.61 / 0.57 for H = 20 / 30 / 40 / 50 / 60, and 0.59 for exp(-t/20).",
+      "'Ideal-observer belief adds little' is wrong. It only holds for the belief term restricted to prev S1-rewarded trials (dropping that term costs 0.006 on test, 0.621 -> 0.615). Adding one graded GO x fade x belief term over all early GO steps raises test from 0.621 to 0.673. Adding belief x (prev_reward==0) and belief x (prev_state==2) as well gives test 0.681 (dev 0.690). So observed belief carries a real share of the signal.",
+      "'Adding the future choice (action==1) gains only about 0.01' is wrong. That figure is true only when the choice is crossed with prev S1-rewarded (0.621 -> 0.635). Adding GO x fade x (action==1), both on its own and crossed with prev S1-rewarded, gives test 0.700, a gain of about 0.08. The explanation says the observed-only version loses little; it actually loses about 0.02 against the belief-augmented set (0.68 vs 0.70) and about 0.08 against the original terms.",
+      "'Weaker after rare a2->S1 rewarded' misstates the pattern. With the fade baseline, the last_is('a2 S1 r') x fade weight is about 0.05-0.09, against about 0.35-0.38 for a1 S1 r. When crossed with the upcoming a1 choice it gets weight +0.24 and the base becomes -0.03. So after a2 S1 r the feature is not weakly on: it is near zero when the agent stays on a2 and full strength (about 0.38-0.43) when it switches to a1.",
+      "A systematic miss class remains in the misses output (both original and improved terms). The worst windows are all of two kinds. (a) After a2 S1 r followed by a switch to a1: actual about 0.33-0.43, predicted about 0.05-0.10 (e.g. t6, t7, t11, t15, t16). (b) After a1 S1 r where the agent then picks a2 or the episode is silent: predicted about 0.25, actual 0 (e.g. t13-t16 in one episode). Both track the upcoming a1 choice. The observed belief only partly captures this.",
+      "Window-boundary detail: on the window's first trial prev_action is -1, so last_is() is 0 there. Adding a prev_action==-1 term recovers some of this (+0.003 on top of the claimed terms), so it is minor."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO only, early in the episode (fades linearly to zero by about trial 40): fires when the agent is set to choose a1 after a trial that reached S1 and was rewarded. After common a1->S1 rewarded it fires; after rare a2->S1 rewarded it fires only when the agent switches to a1. It scales with the ideal-observer belief that S1 is good. Observed-only test R^2 is 0.68; adding the upcoming choice (future) gives 0.70.",
+    "better_terms": "(phase==GO)*np.clip(1-ep_trial/40,0,1)*(prev_state==1)*(prev_reward==1) ;; (phase==GO)*np.clip(1-ep_trial/40,0,1)*(prev_state==1)*(prev_reward==1)*belief ;; (phase==GO)*np.clip(1-ep_trial/40,0,1)*last_is(\"a1 S1 r\") ;; (phase==GO)*np.clip(1-ep_trial/40,0,1)*(prev_reward==0) ;; (phase==GO)*np.clip(1-ep_trial/40,0,1)*(prev_state==2) ;; (phase==GO)*np.clip(1-ep_trial/40,0,1)*belief ;; (phase==GO)*np.clip(1-ep_trial/40,0,1)*belief*(prev_reward==0) ;; (phase==GO)*np.clip(1-ep_trial/40,0,1)*belief*(prev_state==2)",
+    "better_terms_test_r2_beyond_timing": 0.6813
+  },
+  "final_label": "GO only, early in the episode (fades linearly to zero by about trial 40): fires when the agent is set to choose a1 after a trial that reached S1 and was rewarded. After common a1->S1 rewarded it fires; after rare a2->S1 rewarded it fires only when the agent switches to a1. It scales with the ideal-observer belief that S1 is good. Observed-only test R^2 is 0.68; adding the upcoming choice (future) gives 0.70."
+}

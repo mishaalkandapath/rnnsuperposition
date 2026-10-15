@@ -1,0 +1,65 @@
+{
+  "label": "D2 after a2->S2 common, mid/late episode, scaled by belief S2 is good, boosted after rewarded a2",
+  "terms": "(phase == D2) * np.exp(-((ep_trial - 67) / 14.0) ** 2) ;; (phase == D2) * (action == 2) * (state == 2) * np.exp(-((ep_trial - 67) / 14.0) ** 2) * (1 - belief) ;; (phase == D2) * (action == 2) * (state == 2) * np.exp(-((ep_trial - 67) / 14.0) ** 2) * (1 - belief) * (prev_action == 2) * (prev_reward == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2, and only once this trial's choice a2 has led to S2 by a common transition (both visible at D2). It is gated by a bump in episode time centred near trial 67 (width about 14 trials; zero before trial ~40 and after ~90). Within that window the magnitude grows with the ideal-observer belief that S2 is the good state (1 - belief), and it is larger still when the previous trial was also an a2 choice that was rewarded. Term 1 (D2 x time bump, negative weight) cancels the additive timing baseline on non-a2-S2 D2 steps. D1 and GO are exactly zero. Rare a2->S1 and all a1 outcomes give about zero. The trial before last (a2 twice in a row) and the previous trial's state added nothing (dev 0.678 vs 0.678; 0.660). Dev R^2 beyond timing: 0.69 (Gaussian width 14), 0.678 (width 12), 0.45 without the baseline cancel and the previous-reward term, 0.30 with a hard 40-90 window instead of the bump. The additive 'all' table ceiling is 0.33 and the earlier policy-based label had policy decile 0.24, so the observed belief x gating interaction replaces the policy cue without loss. Remaining errors: some a2 S2c D2 steps inside the window stay at 0 even with S2 belief high, often early in an a2 run, so there is some leftover dependence on the agent's internal state.",
+  "gate": "update",
+  "feature": 216,
+  "test_scores": {
+    "gate": "update",
+    "feature": 216,
+    "terms": [
+      "(phase == D2) * np.exp(-((ep_trial - 67) / 14.0) ** 2)",
+      "(phase == D2) * (action == 2) * (state == 2) * np.exp(-((ep_trial - 67) / 14.0) ** 2) * (1 - belief)",
+      "(phase == D2) * (action == 2) * (state == 2) * np.exp(-((ep_trial - 67) / 14.0) ** 2) * (1 - belief) * (prev_action == 2) * (prev_reward == 1)"
+    ],
+    "weights": [
+      -0.16311302510288686,
+      0.37791129833724013,
+      0.29517316719280023
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6755185396849406,
+    "r2": 0.7443585098698886,
+    "r2_timing_only": 0.2121537856680844
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 216,
+    "terms": [
+      "(phase == D2) * np.exp(-((ep_trial - 67) / 14.0) ** 2)",
+      "(phase == D2) * (action == 2) * (state == 2) * np.exp(-((ep_trial - 67) / 14.0) ** 2) * (1 - belief)",
+      "(phase == D2) * (action == 2) * (state == 2) * np.exp(-((ep_trial - 67) / 14.0) ** 2) * (1 - belief) * (prev_action == 2) * (prev_reward == 1)"
+    ],
+    "weights": [
+      -0.16311302510288686,
+      0.37791129833724013,
+      0.29517316719280023
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6906500863252443,
+    "r2": 0.758038179954988,
+    "r2_timing_only": 0.21783776445657665
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The test score reproduces exactly: R^2 beyond timing 0.6755, weights -0.163 / +0.378 / +0.295. The profile confirms the gating. D1 and GO residuals are 0 everywhere. At D2 the residual by this choice x state is +0.066 for a2->S2 and about -0.04 for a2->S1 rare and for both a1 outcomes.",
+      "The bump's centre and width are tuned: centre 67 / width 14 gives 0.676; 60/14 gives 0.546; 72/14 gives 0.585; 67/10 gives 0.626; 67/20 gives 0.636. 'Trials ~40-90' is fair, but the exact score depends on this fit.",
+      "'Two a2 choices in a row added nothing' is partly wrong. Adding G*(prev_action==2), where G = D2 x a2 x S2 x bump, raises test R^2 to 0.701 (dev 0.720). Its weight is -0.20 and the rewarded-a2 term rises to +0.39, so a repeated a2 is suppressed unless the previous a2 was rewarded.",
+      "'Boosted after rewarded a2' is incomplete. Separate previous-trial terms on G (test) give: a2 S2 r +0.25, a2 S1 r +0.12 (rare-rewarded also boosts), a2 S2 u -0.36 and a1 S1 r -0.38 (both near full suppression), a2 S1 u -0.08. Previous trial a2 S1 r is the most under-predicted cell under the original terms (+0.012).",
+      "There is an unreported belief_cover effect. G*(1-belief)*(belief_cover/10) adds 0.017 on test (0.676 -> 0.693) with a negative weight. The belief scaling is stronger when the belief rests on less history.",
+      "Remaining systematic misses after the better terms are small. D2 after a1 S2 r is over-predicted by 0.021 and D2 after a1 S1 u by 0.017, so the first a2 after a model-based switch away from a1 is lower than predicted. The large misses are whole runs of a2->S2 common D2 steps that stay at 0 while the prediction is about 0.6. Start_high, good, since_rev and longer a2 streaks do not explain them (each adds <= 0.003), which fits the label's note that internal state is involved.",
+      "No future variables are used, so no observed-only substitute is needed. The comparison with the additive ceiling (0.33) and the policy decile reference (0.24) is accurate: the interaction terms clearly beat both."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after a2->S2 common, mid/late episode (bump ~trial 67), scaled by S2 belief; boosted after a rewarded a2 (common or rare), suppressed after an unrewarded a2",
+    "better_terms": "(phase == D2) * np.exp(-((ep_trial - 67) / 14.0) ** 2) ;; G*(1-belief) ;; G*last_is('a2 S2 r') ;; G*last_is('a2 S1 r') ;; G*last_is('a2 S2 u') ;; G*last_is('a2 S1 u') ;; G*last_is('a1 S1 r') ;; G*(1-belief)*(belief_cover/10)   where G = (phase == D2) * (action == 2) * (state == 2) * np.exp(-((ep_trial - 67) / 14.0) ** 2)",
+    "better_terms_test_r2_beyond_timing": 0.7102
+  },
+  "final_label": "D2 after a2->S2 common, mid/late episode (bump ~trial 67), scaled by S2 belief; boosted after a rewarded a2 (common or rare), suppressed after an unrewarded a2"
+}

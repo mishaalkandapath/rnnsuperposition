@@ -1,0 +1,83 @@
+{
+  "label": "a2-side/S2-belief signal: higher when belief favours S2 and after/with a2",
+  "terms": "(phase != D2) * belief ;; (phase == D2) * belief ;; (phase == D2) * (action == 2) ;; (phase == D2) * (state == 2) ;; (phase != D2) * (prev_action == 2) ;; (phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 0) * (prev_state == 1) ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r of unit 9. Timing alone gives R^2 0.81 (high at D1/D2, low at GO, falling across the episode). Beyond timing, the main driver is the ideal-observer belief: the gate is lower when the observed history says S1 is good and higher when it says S2 is good. The D2 slope (-0.19 per unit belief) is steeper than the D1/GO slope (-0.13). At D2 it is also raised by having just chosen a2 (+0.15), partly offset when S2 is reached (-0.07). At D1/GO it is raised slightly after a previous a2 choice (+0.04). At D1 a previous reward raises it (+0.03), a previous unrewarded S1 visit lowers it (-0.10), and two unrewarded trials in a row lower it further (-0.07). All terms are observed-only. Test R^2 beyond timing 0.75 (dev 0.77), against an all-cue ceiling of 0.90 and an all-observed ceiling of 0.82. The model's policy decile alone scores 0.75, so swapping the model's policy for belief plus trial history loses roughly nothing against that single cue. Remaining misses: D1 after a1 S1 u is still over-predicted, and long runs of unrewarded trials push it lower than predicted.",
+  "gate": "unit_reset",
+  "feature": 9,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 9,
+    "terms": [
+      "(phase != D2) * belief",
+      "(phase == D2) * belief",
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * (state == 2)",
+      "(phase != D2) * (prev_action == 2)",
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 1)",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)"
+    ],
+    "weights": [
+      -0.13285309663791003,
+      -0.19167043640454431,
+      0.15200743779419107,
+      -0.06513017369120702,
+      0.03859342368401476,
+      0.03144121691619755,
+      -0.0971605234137981,
+      -0.06634465813348689
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7529797476959726,
+    "r2": 0.9540229910560762,
+    "r2_timing_only": 0.8138735244779192
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 9,
+    "terms": [
+      "(phase != D2) * belief",
+      "(phase == D2) * belief",
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * (state == 2)",
+      "(phase != D2) * (prev_action == 2)",
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 1)",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)"
+    ],
+    "weights": [
+      -0.13285309663791003,
+      -0.19167043640454431,
+      0.15200743779419107,
+      -0.06513017369120702,
+      0.03859342368401476,
+      0.03144121691619755,
+      -0.0971605234137981,
+      -0.06634465813348689
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7662910699363328,
+    "r2": 0.95604881522273,
+    "r2_timing_only": 0.8119404989561299
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Every claim I checked reproduces on test. With the full 8 terms, test R^2 beyond timing is 0.753, the same as reported. The fitted weights match the explanation: D1/GO belief -0.133, D2 belief -0.192, D2 a2 +0.152, D2 S2 -0.065, D1/GO prev a2 +0.039, D1 prev reward +0.031, D1 unrewarded S1 -0.097, D1 two unrewarded in a row -0.066.",
+      "The build-up from the terms is consistent. Belief alone scores 0.569. Adding D2 choice and state gives 0.667. Adding D1/GO prev_action gives 0.679 (a small gain; prev a2 at D2 adds a similar +0.037). Adding D1 prev reward gives 0.702, and the D1 unrewarded-S1 term gives 0.744. The two-unrewarded term adds the last +0.009.",
+      "The label slightly overstates 'after a2': the previous-a2 effect is only +0.04 and adds about 0.01 R^2. Most of the a2 effect comes from the current D2 choice (+0.15).",
+      "Remaining gap: the explanation is 0.07 below the all-observed ceiling of 0.82. The misses output shows no large systematic cell; the largest is about 0.044 (D2 after a1 S2 r +0.044, D2 after a2 S2 u +0.040, D1 after a1 S1 u -0.038).",
+      "The worst-fit windows are late-episode runs of unrewarded trials. There the gate is over-predicted by 0.15-0.3 in every phase, not only at D1 as the explanation implies. However, none of these terms recovered it: a count of consecutive unrewarded trials (all phases, or GO/D2 only), unrewarded x ep_dec, belief x ep_dec, belief_cover, |belief-0.5|, D2 prev_reward, D2 stay. Each gave 0.733-0.751 on test, at or below 0.753. The residual is real but scattered, and simple observed terms do not capture it."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Higher when belief favours S2 and after choosing a2 (mainly at D2); lower at D1 after an unrewarded S1 visit",
+    "better_terms": null,
+    "better_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "Higher when belief favours S2 and after choosing a2 (mainly at D2); lower at D1 after an unrewarded S1 visit"
+}

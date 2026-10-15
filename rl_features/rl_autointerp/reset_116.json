@@ -1,0 +1,103 @@
+{
+  "label": "GO step late in the episode (trial >= ~89) after a rewarded trial",
+  "predicate": "(phase == GO) & (value < 5.22) & (prev_reward == 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires almost only at GO (99.6% of mass), never at D2, and only in the last ~12 trials of the 100-trial episode (zero activity before trial 80; 96% of mass in trials 90-99). It acts like an end-of-episode clock, and it matches the value head falling (99% of mass where value < 5.22). Within that late range it is much stronger after a rewarded previous trial: activation ramps up over consecutive rewarded GO steps, and an unrewarded trial drops it to near zero or silences it. It is more frequent on a2 choices / when S2 is good (about 70% of mass), and the highest activations come at the final trials (~99). Only observed variables are used (ep_trial is elapsed time, prev_reward is the D1 input). An alternative, (phase==GO)&(value<5.22), has F1 0.77 with recall 0.94. Adding an extra clause for ep_trial>=95 regardless of reward gives F1 0.82, which I judged not worth the added complexity. Misses are mostly weak activations at trials 85-88, or after an unrewarded trial very near the end.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 116,
+    "predicate": "(phase == GO) & (value < 5.22) & (prev_reward == 1)",
+    "split": "test",
+    "precision": 0.9020535857532488,
+    "recall": 0.8223636097703672,
+    "f1": 0.8603672532517215,
+    "mass_recall": 0.9270237817246425,
+    "correlation": 0.7976426596442404,
+    "n_active": 27348,
+    "n_predicted": 24932,
+    "coverage_by_activation_quartile": [
+      0.5803715079713324,
+      0.7791428989322803,
+      0.9305250841012139,
+      0.9994149480766418
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 116,
+    "predicate": "(phase == GO) & (value < 5.22) & (prev_reward == 1)",
+    "split": "dev",
+    "precision": 0.8985936343449297,
+    "recall": 0.8159211410648943,
+    "f1": 0.8552641878669276,
+    "mass_recall": 0.9171650735155056,
+    "correlation": 0.7917777827842377,
+    "n_active": 26782,
+    "n_predicted": 24318,
+    "coverage_by_activation_quartile": [
+      0.5902031063321386,
+      0.7700119474313023,
+      0.9039581777445855,
+      0.9995519044062733
+    ]
+  },
+  "gate": "reset",
+  "feature": 116,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Every factual claim I tested held up. On the dev profile, GO holds 99.6% of the activation mass, D1 0.4% and D2 exactly 0. There is zero activity in trials 0-79, and 96.2% of the mass falls in trials 90-99. 99.0% of the mass falls in the value < 5.22 bin. prev_reward==1 holds 92.8% of the mass. a2 choices hold 69.9% of the mass and S2-good steps 49% versus 31% for S1-good, so 'about 70%' is right for the a2 choice but overstates the good-state share. All test-split numbers reproduce exactly: P 0.836, R 0.809, F1 0.822, mass recall 0.921.",
+      "The claim that an unrewarded trial silences the feature mostly holds. At GO with ep_trial>=89 and prev_reward==0, the feature catches only 5.9% of the mass and has precision 0.21.",
+      "One false-positive class is systematic, not noise: the a1 / a2 asymmetry. Within the predicate, steps where the choice is a1 have precision 0.74, against 0.91 for a2. The label leaves this out; the explanation only mentions it in passing.",
+      "The misses and false positives follow the ramp. The feature builds up over consecutive rewarded GO steps, so it stays weak or silent right after a run that contained an unrewarded trial, and it keeps a decaying activation (about 0.2-0.3 of max) at GO right after an unrewarded trial. That is why recall in the lowest activation quartile is only 0.54. Requiring two rewards in a row does not fix this (test F1 0.72).",
+      "A better predicate uses only the agent's own value estimate instead of the trial counter. (phase==GO) & (value<5.22) & (prev_reward==1) scores test F1 0.860 (P 0.902, R 0.822), against 0.822 for the original. Variants with the threshold at 5.0 or 5.4 score 0.85 and 0.84. The original agent tested value < 5.22 on its own (0.76) but never value combined with prev_reward, so its framing of 'clock vs value' undersells the value version. Both predicates use only observed or agent-internal variables, and the semantics are nearly the same (low value is a correlate of the end of the episode), so this refines the label rather than refuting it."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == GO) & (value < 5.22) & (prev_reward == 1)",
+    "better_predicate_test_f1": 0.86
+  },
+  "original_predicate": "(phase == GO) & (ep_trial >= 89) & (prev_reward == 1)",
+  "original_test_scores": {
+    "gate": "reset",
+    "feature": 116,
+    "predicate": "(phase == GO) & (ep_trial >= 89) & (prev_reward == 1)",
+    "split": "test",
+    "precision": 0.8355357547383523,
+    "recall": 0.8091999414948077,
+    "f1": 0.8221570011516885,
+    "mass_recall": 0.9206367187422416,
+    "correlation": 0.7678289154110401,
+    "n_active": 27348,
+    "n_predicted": 26486,
+    "coverage_by_activation_quartile": [
+      0.5443908146848033,
+      0.77270732777534,
+      0.9208717273658037,
+      0.9988298961532837
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "reset",
+    "feature": 116,
+    "predicate": "(phase == GO) & (ep_trial >= 89) & (prev_reward == 1)",
+    "split": "dev",
+    "precision": 0.8321571394965891,
+    "recall": 0.7925098947053991,
+    "f1": 0.8118497552019585,
+    "mass_recall": 0.9076299422358872,
+    "correlation": 0.7643983304716252,
+    "n_active": 26782,
+    "n_predicted": 25506,
+    "coverage_by_activation_quartile": [
+      0.5288231780167264,
+      0.7473118279569892,
+      0.8949962658700523,
+      0.9989544436146378
+    ]
+  },
+  "predicate_from": "skeptic"
+}

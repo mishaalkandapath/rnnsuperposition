@@ -1,0 +1,92 @@
+{
+  "label": "At D2, the update gate drops when a1 reaches S1 and rises when S2 is reached.",
+  "short_terms": "(phase == D2) * (state == S2) ;; (phase == D2) * (action == 1) ;; (phase == D2) * (state == S2) * (action == 1)",
+  "terms": "(phase == D2) * (state == S2) ;; (phase == D2) * (action == 1) ;; (phase == D2) * belief_lo ;; (phase == D2) * (state == S2) * (action == 1) ;; (phase == D2) * last_is(\"a1 S2 u\") ;; (phase == D2) * (state == S2) * belief_lo ;; (phase == D2) * (prev_action == 1) ;; (phase == D2) * ep_trial * (state == S1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "The z gate sits near 1 at D1 and GO, so nearly all variance beyond timing is at D2, where it dips and the dip deepens late in the episode (that part is in the baseline). At D2 it depends on the choice just made and the state just shown, both observed at that step. It is lowest after a1 -> S1 (common a1 trial, about -0.18 vs a2 -> S1), highest after a2 -> S2 (+0.14), with a1 -> S2 in between (+0.09). So reaching S2 raises it and an a1 choice lowers it, mostly when the a1 trial lands in S1. Short form dev R^2 beyond timing 0.85. The free fit (0.89 dev) adds a smaller drop after a previous a1 S2 unrewarded trial, a weak belief_lo term (lower when the observer believes S1 is good) and episode-time x state interactions. Reward and future variables add essentially nothing; D1 and GO effects are around 0.005 or less.",
+  "full_test_scores": {
+    "gate": "unit_update",
+    "feature": 1,
+    "terms": [
+      "(phase == D2) * (state == S2)",
+      "(phase == D2) * (action == 1)",
+      "(phase == D2) * belief_lo",
+      "(phase == D2) * (state == S2) * (action == 1)",
+      "(phase == D2) * last_is(\"a1 S2 u\")",
+      "(phase == D2) * (state == S2) * belief_lo",
+      "(phase == D2) * (prev_action == 1)",
+      "(phase == D2) * ep_trial * (state == S1)"
+    ],
+    "weights": [
+      0.13241473172686022,
+      -0.11224956553497704,
+      -0.007691583043535799,
+      0.08023391831150317,
+      -0.08546470547607452,
+      0.0031115791420164253,
+      0.012297496827083997,
+      -0.0009312570613922124
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8866400887817085,
+    "r2": 0.9521641412390577,
+    "r2_timing_only": 0.5780178526355123
+  },
+  "gate": "unit_update",
+  "feature": 1,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 1,
+    "terms": [
+      "(phase == D2) * (state == S2)",
+      "(phase == D2) * (action == 1)",
+      "(phase == D2) * (state == S2) * (action == 1)"
+    ],
+    "weights": [
+      0.14449481696746402,
+      -0.18115759011415986,
+      0.12239245280163424
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8431791196396428,
+    "r2": 0.933824388153947,
+    "r2_timing_only": 0.5780178526355123
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 1,
+    "terms": [
+      "(phase == D2) * (state == S2)",
+      "(phase == D2) * (action == 1)",
+      "(phase == D2) * (state == S2) * (action == 1)"
+    ],
+    "weights": [
+      0.14449481696746402,
+      -0.18115759011415986,
+      0.12239245280163424
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8477416234429453,
+    "r2": 0.9360449971723094,
+    "r2_timing_only": 0.5799574100691577
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims hold up. On test, the 3-term short form scores 0.843 beyond timing, against a ceiling of 0.90 for all observed cues. Its fitted weights give a1->S1 -0.18, a1->S2 +0.085 and a2->S2 +0.144 relative to a2->S1, which matches the explanation. The profile's choice x state residuals at D2 agree (a1S1 -0.183, a1S2 +0.084, a2S1 -0.031, a2S2 +0.142).",
+      "A 2-term version that states exactly what the label says, (D2)*(S2) ;; (D2)*(S1)*(a1), scores 0.830 on test, so the label captures nearly all of the short form.",
+      "Misses on the short form show a small systematic error at D2 tied to the previous trial's reward. The fit under-predicts after rewarded trials (a1 S2 r +0.055, a1 S1 r +0.023) and over-predicts after unrewarded ones (a1 S2 u -0.075, a2 S2 u -0.050, a1 S1 u -0.041). Adding (D2)*prev_reward raises test R^2 only to 0.853, and the free fit's last_is('a1 S2 u') term gives 0.854. The effect is real but secondary (about \u00b10.05, against main effects of \u00b10.15-0.18). The explanation's line 'reward adds almost nothing' is correct only for this trial's (future) reward.",
+      "In the worst-fit windows, late-episode a2->S1 (rare) trials sit well below the prediction (about 0.2 against 0.58), probably an episode-time interaction. The free fit's ep_trial x state term covers it; it is not a large error class.",
+      "belief_lo adds nothing in short-form variants (0.815-0.841), which agrees with the explanation calling it weak.",
+      "No future variables are used. D1 and GO effects are tiny (|residual| < 0.007), as claimed."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  }
+}

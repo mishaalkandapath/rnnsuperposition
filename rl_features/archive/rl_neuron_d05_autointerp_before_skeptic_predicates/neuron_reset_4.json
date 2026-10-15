@@ -1,0 +1,65 @@
+{
+  "label": "D2 arrival at S1 (early in episode), unless the recent history is all common and rewarded",
+  "predicate": "(phase == D2) & (state == S1) & (ep_trial < 60) & ((prev_reward == 0) | (common == 0) | (prev_common == 0))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Reset-gate unit r[4] fires only at D2 (100% of mass) and almost only when the reached state is S1 (98.7% of mass; in_state==S1 rate 0.29 vs 0.01 for S2), whether S1 came from a1 (common) or a2 (rare). Phase+S1 alone gives recall 0.97 but precision 0.29. Two modulators sharpen it: (1) episode time: the rate falls steadily from 0.13 in trials 0-9 to ~0 after trial 70, so firing stops late in the episode (likely a slow drift of the hidden state, not a task variable); (2) it is suppressed when the recent history is reward-rich and common: firing needs that the previous trial was unrewarded, or this or the previous transition was rare. Dev F1 0.82, mass recall 0.94, precision 0.77. The largest activations come in runs of unrewarded S1 visits (e.g. r0 a1 S1c repeated), and magnitude grows over successive unrewarded S1 arrivals. It never fires at D1 or GO, nor on the reward input. All variables are observed at D2 (state, common, prev_reward, prev_common), so no future variables. A value-head threshold did worse (F1 0.37-0.61).",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 4,
+    "predicate": "(phase == D2) & (state == S1) & (ep_trial < 60) & ((prev_reward == 0) | (common == 0) | (prev_common == 0))",
+    "split": "test",
+    "precision": 0.7803644633292438,
+    "recall": 0.8627574228765197,
+    "f1": 0.8194951804105489,
+    "mass_recall": 0.9341708086316837,
+    "correlation": 0.7362266347963511,
+    "n_active": 60455,
+    "n_predicted": 66838,
+    "coverage_by_activation_quartile": [
+      0.6656080455207093,
+      0.862710070133651,
+      0.9458779939129284,
+      0.9768411301528486
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 4,
+    "predicate": "(phase == D2) & (state == S1) & (ep_trial < 60) & ((prev_reward == 0) | (common == 0) | (prev_common == 0))",
+    "split": "dev",
+    "precision": 0.7739856498825323,
+    "recall": 0.870740767197657,
+    "f1": 0.8195172784725024,
+    "mass_recall": 0.9389039930646788,
+    "correlation": 0.7347447014532169,
+    "n_active": 55996,
+    "n_predicted": 62996,
+    "coverage_by_activation_quartile": [
+      0.6804057432673762,
+      0.8746339024216016,
+      0.9492820915779698,
+      0.9786413315236803
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 4,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The scores reproduce. Test: P 0.780, R 0.863, F1 0.819, mass recall 0.934. The descriptive claims also hold: 100% of activation mass is at D2 and nothing fires at D1 or GO. in_state S1 gets 98.7% of the mass, with a rate of 0.294 at S1 against 0.010 at S2. Phase plus S1 alone gives P 0.29 and R 0.97. The rate by ep_bucket falls to 0.013 for trials 50-99.",
+      "The suppression condition is mischaracterised. The unit is not silenced by 'recent history common and rewarded'. It is silenced when the previous trial was rewarded AT S1. Within D2 & S1 & ep_trial<60 (dev): prev_state==S1 & prev_reward==1 gives P 0.065 (n=37178). prev_state==S1 & prev_reward==0 gives P 0.856. prev_state==S2 gives P 0.78 whether it was rewarded (0.780) or not (0.785). The original's common/prev_common terms only stand in for prev_state.",
+      "This proxy produces a systematic false-positive class: prev_reward==1 & common==0 & prev_common==0. The previous trial was a rare transition that was rewarded at S1. The original predicate includes these steps, but their precision is only 0.204 (n=2388 dev). The prev_state formulation correctly excludes them.",
+      "Saying the variable set is 'all common' is wrong. With prev_reward==1 & common==1 & prev_common==0, the previous trial went rare to S2, and P is 0.657. With prev_reward==1 & common==0 & prev_common==1, the previous trial was S2, and P is 0.806. What matters is which state paid out, not whether the transitions were common.",
+      "The magnitude claim is consistent with what I measured, though only roughly. Repeated unrewarded S1 history raises precision and pushes coverage toward the top quartile: prev S1 unrewarded and 2-back S1 unrewarded gives P 0.979 and covers 0.07 of the top quartile against 0.00 of the bottom one. Going further back (excluding a reward at S1 two or three trials back) raises precision to 0.84 but lowers F1 to 0.79, so the dependence on deeper history is graded rather than all-or-none.",
+      "ep_trial<60 is still a non-task proxy for slow drift. The cutoff is arbitrary: F1 is 0.77 at <50, 0.76 at <60 and 0.72 at <70 for the prev_state predicate. That is acceptable, but it should stay flagged as a proxy."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 arrival at S1 (early in episode) unless the previous trial was rewarded at S1, i.e. S1 arrival when S1 did not just pay off",
+    "better_predicate": "(phase == D2) & (state == S1) & (ep_trial < 60) & ((prev_state==S2) | (prev_reward==0) | ((prev_state==-1)&(common==0)))",
+    "better_predicate_test_f1": 0.824
+  },
+  "final_label": "D2 arrival at S1 (early in episode) unless the previous trial was rewarded at S1, i.e. S1 arrival when S1 did not just pay off"
+}

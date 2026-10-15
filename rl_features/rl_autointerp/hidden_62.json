@@ -1,0 +1,104 @@
+{
+  "label": "End-of-episode D1 after a reward, policy leaning a2",
+  "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (prev_state != 1) & (prev_action != 1) & (choice < -1.2)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (none at GO or D2), only when the reward input is 1 (previous trial rewarded), and only in the last ~10 trials of the 100-trial episode: none before trial 80, rate jumps from ~2% at trial 86 to ~75% from trial 92 on, falling slightly at trials 98-99. Correspondingly it fires only when the value head is low (<5.2, the end-of-episode regime). It is also specific to the a2 side: 9461 of 9462 activations are on trials where the agent goes on to choose a2, and the D1 policy logit (a1 - a2) sits in a moderate a2-favouring band (about -4.4 to -1.5). The recorded predicate uses only observed/model-computed quantities (D1, reward input, episode trial, D1 policy logit < -1.2), dev F1 0.84; swapping the logit for the upcoming action == 2 (the agent own choice) gives F1 0.79. Does not fire after unrewarded trials, on a1-leaning trials, or earlier in the episode. Example windows suggest magnitude rises over runs of consecutive rewarded a2 trials, but I did not check that systematically.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 62,
+    "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (prev_state != 1) & (prev_action != 1) & (choice < -1.2)",
+    "split": "test",
+    "precision": 0.8264599785512333,
+    "recall": 0.9304137855339699,
+    "f1": 0.8753614209004543,
+    "mass_recall": 0.9725543859569898,
+    "correlation": 0.803520465224453,
+    "n_active": 9111,
+    "n_predicted": 10257,
+    "coverage_by_activation_quartile": [
+      0.8037752414398596,
+      0.9271290605794557,
+      0.9916593503072871,
+      0.9991216512955643
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 62,
+    "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (prev_state != 1) & (prev_action != 1) & (choice < -1.2)",
+    "split": "dev",
+    "precision": 0.8520657920501272,
+    "recall": 0.9197844007609385,
+    "f1": 0.884631022565562,
+    "mass_recall": 0.965660728183117,
+    "correlation": 0.8224783459413972,
+    "n_active": 9462,
+    "n_predicted": 10214,
+    "coverage_by_activation_quartile": [
+      0.7776838546069316,
+      0.9209636517328825,
+      0.9818181818181818,
+      0.9987315010570824
+    ]
+  },
+  "gate": "hidden",
+  "feature": 62,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The D1-only, in_rew==1 and late-episode claims all hold: zero activations at GO/D2 and zero before trial 80, on both dev and test. The value < 5.2 and choice-band claims also hold.",
+      "The predicate leaves out a hard condition, which is a systematic gap. The feature NEVER fires when the reward just shown came from S1 (prev_state==1), and it never fires after an a1 choice (prev_action==1), even when that a1 choice reached S2 rarely and was rewarded. On dev, D1 & in_rew==1 & prev_state==1 gives 0 of 96584 steps active. D1 & in_rew==1 & ep_trial>=90 & prev_action==1 & prev_state==2 gives 0 of 1088. On test, the late D1 rewarded steps with prev_state==1 or prev_action==1 give 0 of 11083 active.",
+      "1040 of the original predicate's ~2580 dev false positives are rewarded-from-S1 D1 steps with an a2-leaning logit (e.g. after a rare a2->S1 reward). The feature is silent on every one of them. So 'policy leaning a2' is a correlate: what the feature tracks is the observed history 'last trial was a2 -> S2 and rewarded'.",
+      "The label 'after a reward, policy leaning a2' overclaims generality. It is specifically after a reward collected at S2 via a2. The prev_action==-1 recall comes only from rel -3 rows, where the previous trial is outside the window.",
+      "The adjustment changes no recall and only raises precision. Adding (prev_state != 1) & (prev_action != 1) moves test precision from 0.73 to 0.83 and F1 from 0.818 to 0.875. Recall stays the same and the remaining misses are scattered weak activations (3.4% of mass)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "End-of-episode D1 right after a reward collected at S2 via a2 (common a2->S2 rewarded), with policy leaning a2",
+    "better_predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (prev_state != 1) & (prev_action != 1) & (choice < -1.2)",
+    "better_predicate_test_f1": 0.875
+  },
+  "final_label": "End-of-episode D1 right after a reward collected at S2 via a2 (common a2->S2 rewarded), with policy leaning a2",
+  "original_predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (choice < -1.2)",
+  "original_test_scores": {
+    "gate": "hidden",
+    "feature": 62,
+    "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (choice < -1.2)",
+    "split": "test",
+    "precision": 0.7296436563952488,
+    "recall": 0.9304137855339699,
+    "f1": 0.8178879830189589,
+    "mass_recall": 0.9725543195482238,
+    "correlation": 0.7545288748394016,
+    "n_active": 9111,
+    "n_predicted": 11618,
+    "coverage_by_activation_quartile": [
+      0.8037752414398596,
+      0.9271290605794557,
+      0.9916593503072871,
+      0.9991216512955643
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "hidden",
+    "feature": 62,
+    "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (choice < -1.2)",
+    "split": "dev",
+    "precision": 0.7714741600921904,
+    "recall": 0.9197844007609385,
+    "f1": 0.8391264522971605,
+    "mass_recall": 0.965660728183117,
+    "correlation": 0.7822202386581149,
+    "n_active": 9462,
+    "n_predicted": 11281,
+    "coverage_by_activation_quartile": [
+      0.7776838546069316,
+      0.9209636517328825,
+      0.9818181818181818,
+      0.9987315010570824
+    ]
+  },
+  "predicate_from": "skeptic"
+}

@@ -1,0 +1,66 @@
+{
+  "label": "previous-trial choice x state x reward, strongest at D1 (up after unrewarded a2)",
+  "terms": "(phase == D1) * table(prev_action*10+prev_state*2+prev_reward, {12:0.03, 13:-0.09, 14:0.006, 15:-0.08, 22:0.17, 23:0.015, 24:0.11, 25:-0.01}) ;; (phase == GO) * table(prev_action*10+prev_state*2+prev_reward, {12:0.04, 13:0.008, 14:-0.13, 15:-0.06, 22:0.074, 23:0.043, 24:-0.041, 25:0.013}) ;; (phase == D2) * table(prev_action*10+prev_state*2+prev_reward, {12:0.044, 13:0.017, 14:-0.051, 15:-0.028, 22:0.048, 23:0.018, 24:-0.031, 25:-0.014}) ;; (phase == D2) * table(action*3+state, {4:0.022, 5:-0.056, 7:0.069, 8:-0.026})",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r of unit 1. Timing dominates (GO ~0.6 vs D1 ~0.2, D2 ~0.14, and it rises late in the episode; timing R^2 0.90). Beyond timing, the magnitude is set mainly by the previous trial (choice, state reached, reward), with a different pattern in each phase. At D1 it is highest after unrewarded a2 trials (a2 S1 u +0.17, a2 S2 u +0.11) and lowest after rewarded a1 trials (a1 S1 r -0.09, a1 S2 r -0.08). At GO it is lowest after unrewarded a1 that reached S2 (-0.13) and highest after a2 S1 u (+0.07). At D2 the same history effect is weaker and the state just reached adds to it (S1 up, S2 down, largest for a2 -> S1 rare). Four phase-specific tables, all over observed cues: dev 0.671, test 0.664 R^2 beyond timing (all ceiling 0.80, all observed 0.76). What adds little or nothing: a count of consecutive unrewarded trials (+0.000), the choices two and three trials back (+0.006), the policy logit (+0.02 on dev), and scaling the history effects by episode time (+0.01). Leftover error: long a2 runs with no reward late in the episode, where the actual value builds up over trials beyond what the one-trial table predicts.",
+  "gate": "unit_reset",
+  "feature": 1,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 1,
+    "terms": [
+      "(phase == D1) * table(prev_action*10+prev_state*2+prev_reward, {12:0.03, 13:-0.09, 14:0.006, 15:-0.08, 22:0.17, 23:0.015, 24:0.11, 25:-0.01})",
+      "(phase == GO) * table(prev_action*10+prev_state*2+prev_reward, {12:0.04, 13:0.008, 14:-0.13, 15:-0.06, 22:0.074, 23:0.043, 24:-0.041, 25:0.013})",
+      "(phase == D2) * table(prev_action*10+prev_state*2+prev_reward, {12:0.044, 13:0.017, 14:-0.051, 15:-0.028, 22:0.048, 23:0.018, 24:-0.031, 25:-0.014})",
+      "(phase == D2) * table(action*3+state, {4:0.022, 5:-0.056, 7:0.069, 8:-0.026})"
+    ],
+    "weights": [
+      1.0100165086110386,
+      1.0047844903467704,
+      1.0201661696701538,
+      1.017574981546851
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6640801294789904,
+    "r2": 0.9668401316649089,
+    "r2_timing_only": 0.9012863743854735
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 1,
+    "terms": [
+      "(phase == D1) * table(prev_action*10+prev_state*2+prev_reward, {12:0.03, 13:-0.09, 14:0.006, 15:-0.08, 22:0.17, 23:0.015, 24:0.11, 25:-0.01})",
+      "(phase == GO) * table(prev_action*10+prev_state*2+prev_reward, {12:0.04, 13:0.008, 14:-0.13, 15:-0.06, 22:0.074, 23:0.043, 24:-0.041, 25:0.013})",
+      "(phase == D2) * table(prev_action*10+prev_state*2+prev_reward, {12:0.044, 13:0.017, 14:-0.051, 15:-0.028, 22:0.048, 23:0.018, 24:-0.031, 25:-0.014})",
+      "(phase == D2) * table(action*3+state, {4:0.022, 5:-0.056, 7:0.069, 8:-0.026})"
+    ],
+    "weights": [
+      1.0100165086110386,
+      1.0047844903467704,
+      1.0201661696701538,
+      1.017574981546851
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6711377177325192,
+    "r2": 0.9676185471964998,
+    "r2_timing_only": 0.9015349143105357
+  },
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The factual claims hold. The D1/GO/D2 previous-trial tables match the profile residuals (D1: a2 S1 u +0.17, a2 S2 u +0.114, a1 S1 r -0.091, a1 S2 r -0.083; GO: a1 S2 u -0.131, a2 S1 u +0.074). At D2 the state just reached does push the value up for S1 (a2->S1 +0.069, a1->S1 +0.022) and down for S2 (a1->S2 -0.056, a2->S2 -0.026). All weights fit to about 1.0, and test R^2 beyond timing reproduces at 0.664.",
+      "There is a systematic error the recorded terms miss. On the first trial of each window, D1 has prev_action = -1 (the '?' cell), and the D1 table gives it 0. The previous reward is still observable there as the D1 reward input, and it drives the value strongly. Most of the worst-fit windows in misses are this cell: [-3 t96] r0 actual 0.698 vs predicted 0.359, [-3 t88] 0.595 vs 0.288, [-3 t83] 0.666 vs 0.288, [-3 t86] 0.575 vs 0.288. Adding two terms, (phase==D1)*(prev_action==-1)*(prev_reward==0) and (phase==D1)*(prev_action==-1)*(prev_reward==1), raises test R^2 beyond timing from 0.664 to 0.718.",
+      "Two trials back also matters, mainly through reward. The trial after an unrewarded trial stays high: [-2 t84] r1 after r0 is actual 0.455 vs predicted 0.278, and [-1 t76] r1 is 0.386 vs 0.238. Adding (phase==D1)*(tv('reward',-2)==0) takes test from 0.718 to 0.727. The other agent's negative result (choices two and three trials back +0.006) tested the wrong variable: reward two trials back is the one that carries over.",
+      "The explanation puts most of the remaining error on 'long runs of unrewarded a2 late in the episode'. That overstates it. A late-episode ramp on unrewarded a2, (phase==D1)*(prev_action==2)*(prev_reward==0)*ep_dec, adds only about +0.001 test once the first-trial and two-back terms are in. A three-back unrewarded run adds nothing (0.7276). Most of the large misses are the window-edge cell plus a one-step carryover of the earlier reward.",
+      "Using the model's own policy logit at D1, (phase==D1)*choice, adds about +0.01 (test 0.738). This is a model-output cue, not an observed one, so it is not used in the recommended terms."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "Previous-trial choice x state x reward, strongest at D1: up after unrewarded (especially a2) trials, down after rewarded a1. This includes the window's first trial, where only the previous reward is known. The effect carries over one more trial.",
+    "better_terms": "(phase == D1) * table(prev_action*10+prev_state*2+prev_reward, {12:0.03, 13:-0.09, 14:0.006, 15:-0.08, 22:0.17, 23:0.015, 24:0.11, 25:-0.01}) ;; (phase == GO) * table(prev_action*10+prev_state*2+prev_reward, {12:0.04, 13:0.008, 14:-0.13, 15:-0.06, 22:0.074, 23:0.043, 24:-0.041, 25:0.013}) ;; (phase == D2) * table(prev_action*10+prev_state*2+prev_reward, {12:0.044, 13:0.017, 14:-0.051, 15:-0.028, 22:0.048, 23:0.018, 24:-0.031, 25:-0.014}) ;; (phase == D2) * table(action*3+state, {4:0.022, 5:-0.056, 7:0.069, 8:-0.026}) ;; (phase == D1) * (prev_action == -1) * (prev_reward == 0) ;; (phase == D1) * (prev_action == -1) * (prev_reward == 1) ;; (phase == D1) * (tv('reward', -2) == 0) ;; (phase == D1) * (tv('reward', -2) == 0) * (prev_reward == 0) * (prev_action == 2)",
+    "better_terms_test_r2_beyond_timing": 0.7273
+  },
+  "final_label": "Previous-trial choice x state x reward, strongest at D1: up after unrewarded (especially a2) trials, down after rewarded a1. This includes the window's first trial, where only the previous reward is known. The effect carries over one more trial."
+}

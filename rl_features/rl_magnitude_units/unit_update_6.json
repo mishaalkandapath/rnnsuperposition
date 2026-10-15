@@ -1,0 +1,110 @@
+{
+ "label": "Update gate dips at D1 after a1 led to S2, sharply in the last trials of the episode.",
+ "short_terms": "(phase == D1) * (prev_state - prev_action == 1) * np.exp((ep_trial - 99) / 4) ;; (phase == D1) * (prev_state - prev_action == 1) ;; (belief_lo + 1) * np.exp((ep_trial - 99) / 4)",
+ "terms": "(phase == D1) * (prev_action == 1) * (prev_state == 2) * np.exp((ep_trial - 99) / 3) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D1) * np.exp((ep_trial - 99) / 3) ;; np.exp((ep_trial - 99) / 3) ;; (phase == D1) * (prev_reward == 0) * np.exp((ep_trial - 99) / 3) ;; belief_lo * np.exp((ep_trial - 99) / 3) ;; (prev_action == 1) * np.exp((ep_trial - 99) / 3)",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Raw update gate z of unit 6 is saturated near 1 (mean 0.992) and drops mainly in the final trials of the episode. Beyond the per-decile timing baseline, the main driver is the D1 step after a trial where the agent chose a1 and reached S2 (a1 rare transition): z dips there (about -0.02 throughout), and the dip grows steeply as the episode nears trial 99 (exponential in ep_trial with a ~3-trial scale). The short form adds a general within-last-decile ramp (np.exp((ep_trial-99)/3)), which the decile baseline cannot capture. Reward on that trial matters little; a2->S1 (the other rare transition) does not produce the dip, so the term is choice-and-state specific, not rare-transition generic. The free fit adds an end-of-episode ramp at D1 that is weaker after unrewarded trials, plus small belief_lo x lateness terms (higher belief in S1 lowers z slightly), giving 0.45 vs 0.42 on dev. Both forms beat the profile additive ceiling (0.23) because the effect is an interaction with lateness in the episode. Observed variables only.",
+ "full_test_scores": {
+  "gate": "unit_update",
+  "feature": 6,
+  "terms": [
+   "(phase == D1) * (prev_action == 1) * (prev_state == 2) * np.exp((ep_trial - 99) / 3)",
+   "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+   "(phase == D1) * np.exp((ep_trial - 99) / 3)",
+   "np.exp((ep_trial - 99) / 3)",
+   "(phase == D1) * (prev_reward == 0) * np.exp((ep_trial - 99) / 3)",
+   "belief_lo * np.exp((ep_trial - 99) / 3)",
+   "(prev_action == 1) * np.exp((ep_trial - 99) / 3)"
+  ],
+  "weights": [
+   -0.24919736562176437,
+   -0.021348655170894765,
+   -0.01682751540925714,
+   -0.026454453776234177,
+   0.0499982899191135,
+   -0.004014991786053402,
+   -0.0007003959506398471
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.46880858129173775,
+  "r2": 0.7455868145250069,
+  "r2_timing_only": 0.5210517781072809
+ },
+ "gate": "unit_update",
+ "feature": 6,
+ "test_scores": {
+  "gate": "unit_update",
+  "feature": 6,
+  "terms": [
+   "(phase == D1) * (prev_state - prev_action == 1) * np.exp((ep_trial - 99) / 4)",
+   "(phase == D1) * (prev_state - prev_action == 1)",
+   "(belief_lo + 1) * np.exp((ep_trial - 99) / 4)"
+  ],
+  "weights": [
+   -0.22936654457824232,
+   -0.019066001962473964,
+   -0.005378440543623125
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.46376312343688675,
+  "r2": 0.7431703014567914,
+  "r2_timing_only": 0.5210517781072809
+ },
+ "dev_scores": {
+  "gate": "unit_update",
+  "feature": 6,
+  "terms": [
+   "(phase == D1) * (prev_state - prev_action == 1) * np.exp((ep_trial - 99) / 4)",
+   "(phase == D1) * (prev_state - prev_action == 1)",
+   "(belief_lo + 1) * np.exp((ep_trial - 99) / 4)"
+  ],
+  "weights": [
+   -0.22936654457824232,
+   -0.019066001962473964,
+   -0.005378440543623125
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.41700967481483464,
+  "r2": 0.7319314837721196,
+  "r2_timing_only": 0.5401835937110306
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": true,
+  "issues": [
+   "The core claims hold up. The recorded short form reproduces test R^2 beyond timing of 0.436. Making the a1->S2 dip general to all rare transitions, (phase==D1)*(prev_common==0) with its late interaction, drops test R^2 to 0.142. a2->S1 has a positive D1 residual (+0.008 rewarded, +0.010 unrewarded). So the effect really is specific to a1->S2.",
+   "'Whether that trial was rewarded makes little difference' is too strong. The D1 residual after a1 S2 rewarded is -0.036, against -0.024 after a1 S2 unrewarded, so the rewarded dip is about 50% bigger. Misses still flag D1 after a1 S2 r as the most over-predicted cell (-0.008). Adding last_is('a1 S2 r') terms raises test R^2 from 0.436 to 0.446.",
+   "The label leaves out the third short-form term, a general late-episode ramp at every phase (weight -0.027). Dropping the constant D1 a1->S2 term instead costs a lot (0.359), so the label's claim that the dip happens throughout the episode is supported.",
+   "The free fit's belief_lo x lateness term is real and observed-only. On top of the recorded form it raises test R^2 to 0.462. z drops more late in the episode when belief favours S1, matching the belief-decile residuals (D1 +0.005 at decile 0 vs -0.008 at decile 9; the same trend in GO and D2). The recorded form and label leave this out.",
+   "Large errors remain that look scattered: late D1 dips of -0.2 to -0.3 after a2 S2c-rewarded or a2 S1R trials (for example t96 and t97 windows). Neither D1*prev_reward*late, D1*prev_action==2*late, two-back a1->S2, nor D1*belief_lo*late captures them (all about 0.432-0.437). The systematic error by phase and previous trial is small (|mean| <= 0.009)."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Update gate dips at D1 after a1->S2, steeply near episode end; dips more late when belief favours S1.",
+  "better_short_terms": "(phase == D1) * (prev_state - prev_action == 1) * np.exp((ep_trial - 99) / 4) ;; (phase == D1) * (prev_state - prev_action == 1) ;; (belief_lo + 1) * np.exp((ep_trial - 99) / 4)",
+  "better_short_terms_test_r2_beyond_timing": 0.4638
+ },
+ "final_label": "Update gate dips at D1 after a1->S2, steeply near episode end; dips more late when belief favours S1.",
+ "original_short_terms": "(phase == D1) * (prev_state - prev_action == 1) ;; (phase == D1) * (prev_state - prev_action == 1) * np.exp((ep_trial - 99) / 3) ;; np.exp((ep_trial - 99) / 3)",
+ "original_test_scores": {
+  "gate": "unit_update",
+  "feature": 6,
+  "terms": [
+   "(phase == D1) * (prev_state - prev_action == 1)",
+   "(phase == D1) * (prev_state - prev_action == 1) * np.exp((ep_trial - 99) / 3)",
+   "np.exp((ep_trial - 99) / 3)"
+  ],
+  "weights": [
+   -0.021341327496778306,
+   -0.2423208854319497,
+   -0.026845637095582426
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.4363481771134201,
+  "r2": 0.7300399616618827,
+  "r2_timing_only": 0.5210517781072809
+ },
+ "terms_from": "skeptic"
+}

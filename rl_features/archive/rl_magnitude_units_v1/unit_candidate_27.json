@@ -1,0 +1,78 @@
+{
+  "label": "D2 state-reached signal: rare a1->S2 strongly lowers, rare a2->S1 raises (grows late)",
+  "terms": "(phase == D2) * (state == S2) * (action == 1) ;; (phase == D2) * (state==S1)*(action==2) * ep_trial ;; (phase == D2) * (state == S2) * ep_trial ;; (phase != D2) * (prev_reward == 0) * ep_trial ;; (phase != D2) * (prev_state == S1) ;; (phase == D2) * (prev_reward==1) * (prev_state==S2) ;; (phase == D2) * (prev_reward==0) * (prev_state==S1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw GRU candidate n of unit 27. Near +1 at D1/GO and declining through the episode (timing R^2 0.58). Beyond timing, the main driver is the D2 choice x reached-state code. A rare a1->S2 transition drops it by about 0.75. A rare a2->S1 transition raises it, and that rise grows with episode trial (about +0.007 per trial). Reaching S2 drives it lower as the episode goes on (about -0.0036 per trial). Common a1->S1 sits mildly above the baseline. At D1/GO it is lower after an unrewarded previous trial (scaled by episode trial) and after a previous S1 state. At D2 it is higher after a rewarded S2 trial and lower after an unrewarded S1 trial. Every term is observed when it applies: action and state are known at D2. Hidden good state, value and future reward add little (reference scores 0.02-0.04). Three D2 choice x state terms alone reach dev 0.72. The 7-term model reaches test R^2 beyond timing 0.86, against an all ceiling of 0.87 and an all-observed ceiling of 0.84.",
+  "gate": "unit_candidate",
+  "feature": 27,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 27,
+    "terms": [
+      "(phase == D2) * (state == S2) * (action == 1)",
+      "(phase == D2) * (state==S1)*(action==2) * ep_trial",
+      "(phase == D2) * (state == S2) * ep_trial",
+      "(phase != D2) * (prev_reward == 0) * ep_trial",
+      "(phase != D2) * (prev_state == S1)",
+      "(phase == D2) * (prev_reward==1) * (prev_state==S2)",
+      "(phase == D2) * (prev_reward==0) * (prev_state==S1)"
+    ],
+    "weights": [
+      -0.7618331014434384,
+      0.0068505122782139445,
+      -0.003620615028920525,
+      -0.0019039277649327833,
+      -0.0887126198178182,
+      0.10516985347477406,
+      -0.06113873180005919
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8596116110258718,
+    "r2": 0.9407888880278431,
+    "r2_timing_only": 0.5782335533242089
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 27,
+    "terms": [
+      "(phase == D2) * (state == S2) * (action == 1)",
+      "(phase == D2) * (state==S1)*(action==2) * ep_trial",
+      "(phase == D2) * (state == S2) * ep_trial",
+      "(phase != D2) * (prev_reward == 0) * ep_trial",
+      "(phase != D2) * (prev_state == S1)",
+      "(phase == D2) * (prev_reward==1) * (prev_state==S2)",
+      "(phase == D2) * (prev_reward==0) * (prev_state==S1)"
+    ],
+    "weights": [
+      -0.7618331014434384,
+      0.0068505122782139445,
+      -0.003620615028920525,
+      -0.0019039277649327833,
+      -0.0887126198178182,
+      0.10516985347477406,
+      -0.06113873180005919
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8610340171713367,
+    "r2": 0.9415358361018238,
+    "r2_timing_only": 0.5792915452534952
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the rise after a rare a2->S1 transition grows with episode trial and is about zero early on. Adding a constant (phase==D2)*(state==S1)*(action==2) term gets weight -0.02 and leaves test R^2 at 0.8597, so 'raises' only holds from mid-episode onward. The explanation states the ep_trial scaling, so this is not a contradiction.",
+      "Minor leftover error: the misses output under-predicts D2 after a previous a1 S2 u trial by +0.149. Adding (phase==D2)*last_is('a1 S2 u') lifts test R^2 beyond timing from 0.860 to 0.869, about the 'all' ceiling of 0.87. Other phase-level errors are small (D1/GO -0.017, D2 +0.034).",
+      "The D1/GO previous-trial terms add about 0.07 (D2 choice x state plus D1/GO terms only: test 0.843). The D2 previous-trial terms add about 0.02 (D2 choice x state plus D2 previous-trial terms only: test 0.793). Both match the stated directions.",
+      "The claim that three D2 choice x state terms reach 0.72 is right only for the constant versions (test 0.720). The ep_trial-scaled versions as written in the model reach 0.771. Both are consistent with the explanation.",
+      "Checked: the reported 7-term score reproduces exactly (test 0.8596). No future, hidden or model-output variables are used. Adding a GO choice x ep_trial term adds nothing (0.8598)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 choice x reached-state code: a1->S2 strongly lowers; a2->S1 raises, more so later in the episode; plus small previous-trial effects",
+    "better_terms": "(phase == D2) * (state == S2) * (action == 1) ;; (phase == D2) * (state==S1)*(action==2) * ep_trial ;; (phase == D2) * (state == S2) * ep_trial ;; (phase != D2) * (prev_reward == 0) * ep_trial ;; (phase != D2) * (prev_state == S1) ;; (phase == D2) * (prev_reward==1) * (prev_state==S2) ;; (phase == D2) * (prev_reward==0) * (prev_state==S1) ;; (phase==D2)*last_is('a1 S2 u')",
+    "better_terms_test_r2_beyond_timing": 0.8689
+  },
+  "final_label": "D2 choice x reached-state code: a1->S2 strongly lowers; a2->S1 raises, more so later in the episode; plus small previous-trial effects"
+}

@@ -1,0 +1,70 @@
+{
+  "label": "D1 detector: unrewarded S1 two trials back, then reached S2 (strongest after a1 S1 u)",
+  "terms": "(phase == D1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 0) * (prev_state == 2) ;; (phase == D1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 0) * (prev_state == 2) * (tv(\"action\", -2) == 1) ;; (phase == D1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 0) * (prev_state == 2) * (tv(\"action\", -2) == 1) * (tv(\"reward\", -3) == 0) ;; (phase == D1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 0) * (prev_state == 2) * (tv(\"action\", -2) == 1) * prev_reward ;; (phase == D1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 0) * (prev_state == 2) * (prev_action == 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Sparse feature (nonzero on 1.8% of steps), active only at D1. Its magnitude is driven by a two-trial history: the trial before last reached S1 and was unrewarded, and the last trial reached S2. A small base effect (fitted weight ~0.17) gets much larger when that earlier S1 trial was an a1 choice, i.e. common unrewarded (+1.13). It is larger again if the trial three back was also unrewarded (+1.0), if the last S2 trial was rewarded (+0.41), and if the last choice was a1 (a1 S2 rare, +0.23). The last trial alone explains little (table 0.05), and choice/state, future reward, hidden good state and since_rev add nothing. Some large activations at the window start (rel=-3) cannot be predicted because their history falls outside the window. Five terms, all using observed past variables only: dev R^2 beyond timing 0.476, test 0.469, above the additive all ceiling of 0.33.",
+  "gate": "reset",
+  "feature": 0,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 0,
+    "terms": [
+      "(phase == D1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 0) * (prev_state == 2)",
+      "(phase == D1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 0) * (prev_state == 2) * (tv(\"action\", -2) == 1)",
+      "(phase == D1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 0) * (prev_state == 2) * (tv(\"action\", -2) == 1) * (tv(\"reward\", -3) == 0)",
+      "(phase == D1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 0) * (prev_state == 2) * (tv(\"action\", -2) == 1) * prev_reward",
+      "(phase == D1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 0) * (prev_state == 2) * (prev_action == 1)"
+    ],
+    "weights": [
+      0.16953414131767483,
+      1.1277938466183057,
+      1.0020739354922346,
+      0.41010345804760506,
+      0.230353776167501
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.4685976709876921,
+    "r2": 0.48132481951762074,
+    "r2_timing_only": 0.02395011808394576
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 0,
+    "terms": [
+      "(phase == D1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 0) * (prev_state == 2)",
+      "(phase == D1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 0) * (prev_state == 2) * (tv(\"action\", -2) == 1)",
+      "(phase == D1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 0) * (prev_state == 2) * (tv(\"action\", -2) == 1) * (tv(\"reward\", -3) == 0)",
+      "(phase == D1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 0) * (prev_state == 2) * (tv(\"action\", -2) == 1) * prev_reward",
+      "(phase == D1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 0) * (prev_state == 2) * (prev_action == 1)"
+    ],
+    "weights": [
+      0.16953414131767483,
+      1.1277938466183057,
+      1.0020739354922346,
+      0.41010345804760506,
+      0.230353776167501
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.4757319129682702,
+    "r2": 0.4876287509830691,
+    "r2_timing_only": 0.022692279597172682
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claim holds. A single term, D1 * (a1 S1 u two trials back) * (prev_state == S2), reaches test R^2 0.434 on its own, against 0.469 for all five terms. The 'only at D1' claim is also correct: the timing baseline and every residual at GO and D2 are 0.",
+      "The claim that a last choice of a1 (a1 S2 rare) adds +0.23 is not supported. With the two-back trial fixed at a1 S1 u, the per-cell weights are: prev unrewarded 1.78 after a1 vs 1.61 after a2; prev rewarded 2.10 after a1 vs 2.20 after a2. Dropping the prev_action term changes test R^2 from 0.4686 to 0.4683.",
+      "'Grows further if the trial three back was also unrewarded (+1.0)' is attributed to the wrong variable. Split by state, the -3 unrewarded effect is +1.37 when that trial was S1 and +0.50 when it was S2. When an 'a1 S1 u at -3' term is added, the generic 'reward -3 == 0' weight drops from 1.0 to 0.24. The real driver is repeated S1-unrewarded evidence.",
+      "The explanation misses a whole history class. a1 S1 u at -3, then a2 S1 u (rare) at -2, then S2 gets a fitted weight of 2.49 (test R^2 rises from 0.469 to 0.487). The claimed terms predict about 0.2 for these windows. For example, in the worst-fit window t74 a1 S1 u, t75 a2 S1R u, t76 S2 r, the core trial t77 is actual 4.03 vs predicted 0.24. The basic 'a2 S1 u two back' pattern alone is weak (weight 0.13 to 0.17).",
+      "What is left is mostly windows whose history lies outside the window (rel -3/-2 firing of about 3.9 predicted at about 0.07) plus a small under-prediction at D1 after a1 S2 r (+0.03 to +0.07). There is no large systematic phase error. The value decile 8 residual (+1.54) adds nothing beyond the history terms (0.4866 vs 0.4863)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 detector: S1 failed via common a1 (a1 S1 u) in the last 2-3 trials, then the last trial reached S2; boosted when S2 was rewarded or S1 also failed earlier",
+    "better_terms": "B = (phase == D1) * (tv('state', -2) == 1) * (tv('reward', -2) == 0) * (prev_state == 2) ;; terms: B * (tv('action', -2) == 1) ;; B * (tv('action', -2) == 1) * (tv('reward', -3) == 0) ;; B * prev_reward ;; B * (tv('state', -3) == 1) * (tv('reward', -3) == 0) * (tv('action', -3) == 1) ;; B * (tv('action', -2) == 1) * prev_reward",
+    "better_terms_test_r2_beyond_timing": 0.486
+  },
+  "final_label": "D1 detector: S1 failed via common a1 (a1 S1 u) in the last 2-3 trials, then the last trial reached S2; boosted when S2 was rewarded or S1 also failed earlier"
+}

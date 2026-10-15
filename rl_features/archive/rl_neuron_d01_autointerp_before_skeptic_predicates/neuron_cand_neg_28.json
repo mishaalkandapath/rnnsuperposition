@@ -1,0 +1,65 @@
+{
+  "label": "End-of-episode rewarded D1 (low value, last ~8 trials)",
+  "predicate": "(phase == D1) & (value < 4.0) & (in_rew == 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires almost only at D1 (99% of mass) in the final trials of the episode (ep_trial 90-99 holds 99.8% of mass; never before trial 80), and mainly when the previous trial was rewarded (in_rew==1, 94% of mass). The model value head falls as the episode nears its end, so value < 4.0 is an observed proxy for late in the episode: (D1 & value<4 & in_rew==1) gives dev F1 0.85 (P 0.84, R 0.87, mass 0.94). The purely positional version (D1 & ep_trial>=93 & in_rew==1) reaches only F1 0.71. Magnitude ramps up trial by trial toward the episode end and is largest when the agent has been choosing a2 (prev_action==2, mildly negative choice logit). It is weak at GO (about 1% of mass) and silent at D2 and on any step with a nonzero action/state input. Unrewarded D1s late in the episode give weak activations, which are most of the misses. Uses only observed quantities (reward input, the model value).",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 28,
+    "predicate": "(phase == D1) & (value < 4.0) & (in_rew == 1)",
+    "split": "test",
+    "precision": 0.8383715260848367,
+    "recall": 0.8777437468095968,
+    "f1": 0.8576059850374065,
+    "mass_recall": 0.9500704140916949,
+    "correlation": 0.7827173491067584,
+    "n_active": 11754,
+    "n_predicted": 12306,
+    "coverage_by_activation_quartile": [
+      0.690030622660769,
+      0.8564137461721674,
+      0.9646017699115044,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 28,
+    "predicate": "(phase == D1) & (value < 4.0) & (in_rew == 1)",
+    "split": "dev",
+    "precision": 0.8361064891846922,
+    "recall": 0.871261378413524,
+    "f1": 0.8533220123116111,
+    "mass_recall": 0.9407614098162435,
+    "correlation": 0.7772652315130089,
+    "n_active": 11535,
+    "n_predicted": 12020,
+    "coverage_by_activation_quartile": [
+      0.7028432732316228,
+      0.8505547850208044,
+      0.9316920943134536,
+      1.0
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 28,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The factual claims hold. Dev: D1 has 98.9% of activation mass, GO 1.1%, D2 0. Trials 90-99 hold 99.8% of mass and 0 before trial 80. in_rew==1 holds 94.4%. The unit never fires on a nonzero in_action or in_state. The reported scores reproduce: dev F1 0.853, test P 0.838 / R 0.878 / F1 0.858 / mass recall 0.950. The position-only version (D1 & ep_trial>=93 & in_rew==1) gets test F1 0.729.",
+      "There is a systematic false-positive class: late rewarded D1s where the agent has been choosing a1 (S1 good). Adding prev_action==2 to the predicate gives precision 0.974. Adding prev_action==1 gives only 0.613. good==2 gives 0.961 and good==1 gives 0.640. About three quarters of the predicate's false positives therefore come from a1/S1 contexts. The label says nothing about this choice asymmetry. The explanation only says magnitude is larger after a2 and that a prev_action gate costs recall. Mass shares agree: prev_action==2 holds 74%, start_high==1 holds 75%, and choice-logit bin [-4.4,-1.5) holds 73%.",
+      "The choice asymmetry can be captured without losing recall by letting the value threshold depend on the agent's own choice logit. (D1 & in_rew==1 & value < 3.8 - 0.1*choice) scores dev F1 0.892 and test P 0.926 / R 0.863 / F1 0.893 / mass recall 0.948, against 0.858 on test for the original.",
+      "The firing threshold on value is sharp. At value<3.5, precision is 0.976 but recall is 0.646. At value<4.5, precision falls to 0.611. Activation ramps up trial by trial over the last ~6 to 8 trials. Per-trial precision for rewarded D1s is 0.04 at trial 90, 0.60 at 95 and 0.98 at 99. So the first low-value D1s in each ramp are another recurring source of false positives.",
+      "Caveat: value is the model's own value-head readout from the same hidden state this unit feeds into. It is 'observed' only in the sense that the model computes it. It stands in for an internal 'episode ending / little future reward' signal, not for an input.",
+      "Misses: about 1.1% of mass is at GO, mostly moderate activations (0.08 to 0.33 of max) in a1-chooser windows. About 4.4% is on late unrewarded D1s, which can reach about 0.44 of max in strongly a2-biased windows. This is consistent with the explanation and is minor."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Rewarded D1 at the end of the episode (low value, last ~8 trials), biased toward a2 / S2-good choice history",
+    "better_predicate": "(phase == D1) & (in_rew == 1) & (value < 3.8 - 0.1*choice)",
+    "better_predicate_test_f1": 0.893
+  },
+  "final_label": "Rewarded D1 at the end of the episode (low value, last ~8 trials), biased toward a2 / S2-good choice history"
+}

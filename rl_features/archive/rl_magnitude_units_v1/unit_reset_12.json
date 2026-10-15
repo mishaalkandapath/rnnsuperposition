@@ -1,0 +1,77 @@
+{
+  "label": "D1 reset rises after unrewarded trials (esp. a1, S2, repeated losses)",
+  "terms": "(phase == D1) * (prev_reward == 0) ;; (phase == D1) * (prev_reward == 0) * (prev_action == 1) ;; (phase == D1) * (prev_reward == 1) * (prev_action == 2) ;; (phase == D1) * (prev_state == 2) ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) ;; (phase == GO) * choice ;; (phase == D2) * table(action, {1: 1, 2: -1})",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r12 is mostly timing (high at GO ~0.85, mid at D1 ~0.3, low at D2 ~0.17; timing R^2 0.86). Beyond timing, the magnitude is driven at D1 by the just-seen outcome: it rises (~+0.08) when the previous trial was unrewarded, more so if that choice was a1 (~+0.14 extra) and if the trial before was also unrewarded (~+0.09, consecutive losses), and a bit if the previous state was S2 (~+0.06); it drops (~-0.17) after rewarded a2 trials. At GO it tracks the policy logit (higher when leaning a1), and at D2 it is higher after choosing a1 than a2 (~+/-0.09). All terms are observed-only (choice logit is the model own policy). Dev R^2 beyond timing 0.73 vs all ceiling 0.88; future reward / hidden good state add little.",
+  "gate": "unit_reset",
+  "feature": 12,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 12,
+    "terms": [
+      "(phase == D1) * (prev_reward == 0)",
+      "(phase == D1) * (prev_reward == 0) * (prev_action == 1)",
+      "(phase == D1) * (prev_reward == 1) * (prev_action == 2)",
+      "(phase == D1) * (prev_state == 2)",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * choice",
+      "(phase == D2) * table(action, {1: 1, 2: -1})"
+    ],
+    "weights": [
+      0.08108490857631702,
+      0.13622231038164442,
+      -0.17204198709916724,
+      0.06337454505987948,
+      0.09449945543433892,
+      0.006908151548885654,
+      0.08709921882237422
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7227103071353808,
+    "r2": 0.9622432627518429,
+    "r2_timing_only": 0.8638364922327244
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 12,
+    "terms": [
+      "(phase == D1) * (prev_reward == 0)",
+      "(phase == D1) * (prev_reward == 0) * (prev_action == 1)",
+      "(phase == D1) * (prev_reward == 1) * (prev_action == 2)",
+      "(phase == D1) * (prev_state == 2)",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * choice",
+      "(phase == D2) * table(action, {1: 1, 2: -1})"
+    ],
+    "weights": [
+      0.08108490857631702,
+      0.13622231038164442,
+      -0.17204198709916724,
+      0.06337454505987948,
+      0.09449945543433892,
+      0.006908151548885654,
+      0.08709921882237422
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7276396900183341,
+    "r2": 0.9630369770539491,
+    "r2_timing_only": 0.8642863090127227
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims hold up. On test the terms score R^2 0.7227 beyond timing. Dropping single terms costs this much: GO policy logit -0.18 (0.5425 without it), D2 action -0.08 (0.6388), prev_state==2 -0.014 (0.7084), the two-loss term -0.015 (0.7078). Fitted weights match the stated sizes: +0.081, +0.136, -0.172, +0.063, +0.094, +0.087.",
+      "The 'drops by about 0.17 after a rewarded a2 trial' figure is net of the prev_state term. After a2 S2 r the combined effect is about -0.11 (residual table: -0.121). After a2 S1 r it is -0.17 (residual: -0.153). So it is accurate, but the 0.17 really applies only to a2 S1 r.",
+      "There is a remaining systematic error, but it is small on average. When a reward follows a run of losses, D1 stays high, around 0.50 actual against 0.18 predicted in the worst dev windows; the gate holds on to the earlier losses. But adding (D1)*(prev_reward==1)*(reward two trials back == 0) only raises test R^2 to 0.729 (weight +0.049). Other misses by previous trial are moderate: D1 after a2 S1 u over-predicted by 0.071, D1 after a1 S1 r over-predicted by 0.064, D2 after a1 S1/S2 u under-predicted by about 0.04.",
+      "My best rework of up to 8 terms reaches only about 0.745 on test: a full 8-pattern last-trial table at D1, plus the two-trials-back loss, GO logit, D2 action, D2 state and D1 value. That leaves the claimed explanation close to the best simple fit. The 'all observed' ceiling of 0.79 is not reached, which suggests a slow, accumulating dependence on outcome history."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 reset rises after unrewarded trials (most after a1 and two losses in a row), falls after rewarded a2; at GO it tracks the a1 policy logit; at D2 it is higher after a1",
+    "better_terms": "(phase == D1) * (0.20*last_is('a1 S1 u') + 0.325*last_is('a1 S2 u') + 0.036*last_is('a1 S2 r') - 0.072*last_is('a1 S1 r') - 0.121*last_is('a2 S2 r') + 0.165*last_is('a2 S2 u') - 0.153*last_is('a2 S1 r') + 0.023*last_is('a2 S1 u')) ;; (phase == D1) * (tv('reward', -2) == 0) ;; (phase == GO) * choice ;; (phase == D2) * table(action, {1: 1, 2: -1}) ;; (phase == D2) * table(state, {1: 1, 2: -1}) ;; (phase == D1) * value",
+    "better_terms_test_r2_beyond_timing": 0.745
+  },
+  "final_label": "D1 reset rises after unrewarded trials (most after a1 and two losses in a row), falls after rewarded a2; at GO it tracks the a1 policy logit; at D2 it is higher after a1"
+}

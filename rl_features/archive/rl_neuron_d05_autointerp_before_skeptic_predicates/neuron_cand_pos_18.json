@@ -1,0 +1,62 @@
+{
+  "label": "end-of-episode / low-value clock (D1 and D2, trials ~90-99)",
+  "predicate": "((phase == D1) & (value < 5.22)) | ((phase == D2) & (value < 4))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Episode-end timer. The unit never fires before episode trial 80; 96% of activation mass is on trials 90-99, where the agent value head has dropped because few trials remain (99% of mass at value < 5.22, none at value >= 7.13). Within that late regime it fires on the delay steps (D1 81% of mass, D2 19%) and almost never at GO. D2 needs a lower value (later in the episode) than D1. Phase plus a value threshold gives dev F1 0.87 and mass recall 0.97; (ep_trial >= 90) & (phase != GO) gives F1 0.77. Magnitude grows toward the episode end (later trials in the window are higher) and is larger at D1 when the previous trial was rewarded (in_rew = 1, lift 2.2x). Task variables (choice, state, transition, reward pattern, good state) barely modulate it. Uses only the model own value output and phase, so nothing in the predicate is future.",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 18,
+    "predicate": "((phase == D1) & (value < 5.22)) | ((phase == D2) & (value < 4))",
+    "split": "test",
+    "precision": 0.8617334612966211,
+    "recall": 0.8698222875467664,
+    "f1": 0.8657589812644423,
+    "mass_recall": 0.9642828413580967,
+    "correlation": 0.751659730674745,
+    "n_active": 59872,
+    "n_predicted": 60434,
+    "coverage_by_activation_quartile": [
+      0.6281400320684126,
+      0.8611704970603955,
+      0.9905130946018172,
+      0.9994655264564404
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 18,
+    "predicate": "((phase == D1) & (value < 5.22)) | ((phase == D2) & (value < 4))",
+    "split": "dev",
+    "precision": 0.8649055283414976,
+    "recall": 0.8737870941515403,
+    "f1": 0.8693236269001837,
+    "mass_recall": 0.9671255420703456,
+    "correlation": 0.7523262481840037,
+    "n_active": 56579,
+    "n_predicted": 57160,
+    "coverage_by_activation_quartile": [
+      0.631389183457052,
+      0.8723930717568045,
+      0.9919406150583245,
+      0.9994343891402715
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 18,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "All the factual claims hold up. The predicate scores dev F1 0.869 and test F1 0.866 (mass recall 0.964). ep_trial < 80 has 0 recall. ep_trial >= 90 holds 96.2% of the mass. value < 5.22 holds 98.8% of the mass and value >= 7.13 holds none. GO carries 0.3% of the mass (rate 0.003). (ep_trial >= 90) & (phase != GO) gives F1 0.775.",
+      "There is one systematic false-positive class, and it is only partial. D1 & value < 5.22 has precision 0.99 when in_rew == 1 but 0.73 when in_rew == 0. At D2 the effect runs the other way: precision 0.94 when prev_reward == 0 versus 0.72 when prev_reward == 1. The value threshold the unit fires at shifts with recent reward, so the effect is not just one of magnitude. The explanation reports the in_rew effect only as a magnitude lift, which undersells it.",
+      "Making the thresholds depend on reward improves test F1 from 0.866 to 0.901, with precision rising from 0.86 to 0.92 and mass recall from 0.964 to 0.977. This refines the predicate rather than refuting it: both predicates use only observed variables plus the model's value output, and the 'late-episode / low-value clock on delay steps' label still stands.",
+      "The misses on the test split are scattered: they hold 3.6% of the mass, sit in the low-activation quartile, and are mostly near the threshold. I found no other systematic class by choice, state, transition, chose_good or reward."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "((phase==D1)&(in_rew==1)&(value<5.5)) | ((phase==D1)&(in_rew!=1)&(value<4.5)) | ((phase==D2)&(prev_reward==0)&(value<4.5)) | ((phase==D2)&(prev_reward!=0)&(value<3.5))",
+    "better_predicate_test_f1": 0.901
+  }
+}

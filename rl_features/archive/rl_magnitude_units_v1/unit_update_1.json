@@ -1,0 +1,79 @@
+{
+  "label": "D2 update gate: high on reaching S2, dips on S1, deepening late in episode",
+  "terms": "(phase == D2) * (state == S2) ;; (phase == D2) * (action == 2) ;; (phase == D2) * (state == S2) * (action == 2) ;; (phase == D2) * (state == S2) * ep_dec ;; (phase == D2) * (state == S1) * ep_dec ;; (phase == D2) * choice ;; (phase == D2) * (state == S1) * (good == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 1 sits near 1 (about 0.997) at D1 and GO with only tiny (~0.005) history effects; all meaningful variance is at D2, where it dips. Beyond timing, the D2 value is set by the reached state and the choice just made (both observed at D2): reaching S2 keeps it high (+0.09 vs S1), a2 choices also keep it higher; a1->S1 (common) is the deepest dip (residual -0.18), a2->S2 the highest (+0.14). The late-episode drop in the D2 timing baseline is carried almost entirely by S1 arrivals (S1 x episode decile -0.019 per decile, S2 x decile +0.007). Further lowering at D2: a larger a1-preferring policy logit (choice, -0.019 per unit) and reaching S1 while S1 is the hidden good state (-0.07). Observed-only state/choice/episode-decile terms (first five) reach test R^2 beyond timing 0.78; adding the policy logit and hidden good-state term gives 0.88 (ceiling all 0.93, all observed 0.90). The previous trial reward/state adds little (~0.02) once the current state is included.",
+  "gate": "unit_update",
+  "feature": 1,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 1,
+    "terms": [
+      "(phase == D2) * (state == S2)",
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * (state == S2) * (action == 2)",
+      "(phase == D2) * (state == S2) * ep_dec",
+      "(phase == D2) * (state == S1) * ep_dec",
+      "(phase == D2) * choice",
+      "(phase == D2) * (state == S1) * (good == 1)"
+    ],
+    "weights": [
+      0.09100266995848164,
+      -0.03544587307151348,
+      -0.011182539706834287,
+      0.007164405278845798,
+      -0.01925042833812337,
+      -0.018740446455165344,
+      -0.06979672237003211
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8787314524045197,
+    "r2": 0.9488268378778866,
+    "r2_timing_only": 0.5780178526355123
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 1,
+    "terms": [
+      "(phase == D2) * (state == S2)",
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * (state == S2) * (action == 2)",
+      "(phase == D2) * (state == S2) * ep_dec",
+      "(phase == D2) * (state == S1) * ep_dec",
+      "(phase == D2) * choice",
+      "(phase == D2) * (state == S1) * (good == 1)"
+    ],
+    "weights": [
+      0.09100266995848164,
+      -0.03544587307151348,
+      -0.011182539706834287,
+      0.007164405278845798,
+      -0.01925042833812337,
+      -0.018740446455165344,
+      -0.06979672237003211
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8827186161980312,
+    "r2": 0.9507368237971479,
+    "r2_timing_only": 0.5799574100691577
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The headline numbers reproduce. The 7 terms reach test R^2 beyond timing 0.8787 and the first five observed-only terms reach 0.7817. Weights match the claims: S2 +0.091, S1 x ep_dec -0.019, S2 x ep_dec +0.007, choice -0.019, S1 x good==1 -0.070. The profile's choice x state D2 residuals also match: a1->S1 -0.183, a2->S2 +0.142, a1->S2 +0.084, a2->S1 -0.031.",
+      "The hidden good-state term stands in for something the agent computes. Replacing (state==S1)*(good==1) with (phase==D2)*(state==S1)*value, the model's own value output, gives test 0.910 against 0.879 with the same number of terms. So 'reaching S1 while S1 is the hidden good state' is better described as 'reaching S1 while the agent's value is high'. That is an internal quantity the agent has, not a hidden one.",
+      "The 'choice' term is the policy logit at the D2 step itself, not the logit from the GO decision. The variable list says it is 'meaningful at GO'. The text 'a more a1-leaning policy logit lowers it' does not say which step's logit is meant.",
+      "Misses show systematic previous-trial errors at D2, not scattered noise. With the original terms: D2 after a1 S2 r is under-predicted by +0.041, and D2 after a1 S1 u, a2 S1 u and a1 S2 u are over-predicted by -0.043, -0.040 and -0.036. A large share of this is a previous-reward effect that grows over the episode. Adding (phase==D2)*prev_reward*ep_dec to the value-based set raises test R^2 from 0.910 to 0.928, which reaches the 'all' ceiling of 0.93. It also shrinks those errors to about +-0.01-0.02, except +0.036 after a1 S2 r. The claim that previous reward and state add 'only about 0.02' is about right in size, but they are a real, structured effect that the label leaves out.",
+      "Adding a previous-reward x episode term gives an observed-only set at 0.839 (test), against the reported 0.78 for observed-only. The observed-only description is therefore incomplete.",
+      "Modelling the late-episode S1 drop non-linearly (e.g. S1 x ep_trial>=85) adds only about 0.002. The worst windows (late-episode S1 arrivals at about 0.2 where about 0.45 is predicted) stay under-fit, and the linear S1 x ep_dec term does not capture the steep final-decile collapse."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 update gate: high on reaching S2 (especially via a2), dips on S1 (deepest a1->S1), dips more when S1 is reached with high model value, after unrewarded trials, and late in the episode",
+    "better_terms": "(phase == D2) * (state == S2) ;; (phase == D2) * (action == 2) ;; (phase == D2) * (state == S2) * (action == 2) ;; (phase == D2) * (state == S2) * ep_dec ;; (phase == D2) * (state == S1) * ep_dec ;; (phase == D2) * (state == S1) * value ;; (phase == D2) * choice ;; (phase == D2) * prev_reward * ep_dec",
+    "better_terms_test_r2_beyond_timing": 0.9277
+  },
+  "final_label": "D2 update gate: high on reaching S2 (especially via a2), dips on S1 (deepest a1->S1), dips more when S1 is reached with high model value, after unrewarded trials, and late in the episode"
+}

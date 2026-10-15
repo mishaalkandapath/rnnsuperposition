@@ -1,0 +1,111 @@
+{
+ "label": "High at D1 after unrewarded S1, low after rewarded S2; at D2 up on a1->S2, down on a2->S1.",
+ "short_terms": "(phase == D1) * ((prev_state == 1) - prev_reward) ;; (phase != D2) * (1 - prev_reward) ;; (phase == D2) * (state - action)",
+ "terms": "(phase == D1) * (prev_reward == 0) * (prev_state == 1) ;; (phase == D1) * (prev_reward == 1) * (prev_state == 2) ;; (phase == D1) * (prev_reward == 0) ;; (phase == GO) * (prev_reward == 0) ;; (phase == D2) * (action == 1) * (state == 2) ;; (phase == D2) * (action == 2) * (state == 1) ;; (phase == D1) * belief_lo ;; (phase == D2) * belief_lo",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Raw reset gate r of unit 47 (timing explains 0.86: low at D1, high at GO/D2). Beyond timing, at D1 it rises when the last trial reached S1 unrewarded (+0.24) and falls when it reached S2 rewarded (-0.15), i.e. it tracks last-outcome evidence against S1 / for S2 by state, not by choice. At D2 it encodes rare transitions with a sign: higher after a1->S2, lower after a2->S1 (common transitions near baseline). The free fit adds a small general boost after any unrewarded trial at D1 and GO and weak belief_lo terms (dev 0.80 vs 0.71 short). Hidden good state, since_rev and future reward add little. All terms are observed at their step.",
+ "full_test_scores": {
+  "gate": "unit_reset",
+  "feature": 47,
+  "terms": [
+   "(phase == D1) * (prev_reward == 0) * (prev_state == 1)",
+   "(phase == D1) * (prev_reward == 1) * (prev_state == 2)",
+   "(phase == D1) * (prev_reward == 0)",
+   "(phase == GO) * (prev_reward == 0)",
+   "(phase == D2) * (action == 1) * (state == 2)",
+   "(phase == D2) * (action == 2) * (state == 1)",
+   "(phase == D1) * belief_lo",
+   "(phase == D2) * belief_lo"
+  ],
+  "weights": [
+   0.23560222865192468,
+   -0.10793459689034943,
+   0.03998684958489829,
+   0.08020881880230434,
+   0.15664107342887892,
+   -0.19132386476096455,
+   0.009510072868717233,
+   -0.0022665765028026695
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7964822171503358,
+  "r2": 0.9708889155784635,
+  "r2_timing_only": 0.8569604876098691
+ },
+ "gate": "unit_reset",
+ "feature": 47,
+ "test_scores": {
+  "gate": "unit_reset",
+  "feature": 47,
+  "terms": [
+   "(phase == D1) * ((prev_state == 1) - prev_reward)",
+   "(phase != D2) * (1 - prev_reward)",
+   "(phase == D2) * (state - action)"
+  ],
+  "weights": [
+   0.12913366319506348,
+   0.07310331063714517,
+   0.17055330471084632
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7510504179463735,
+  "r2": 0.9643903731733223,
+  "r2_timing_only": 0.8569604876098691
+ },
+ "dev_scores": {
+  "gate": "unit_reset",
+  "feature": 47,
+  "terms": [
+   "(phase == D1) * ((prev_state == 1) - prev_reward)",
+   "(phase != D2) * (1 - prev_reward)",
+   "(phase == D2) * (state - action)"
+  ],
+  "weights": [
+   0.12913366319506348,
+   0.07310331063714517,
+   0.17055330471084632
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.7515011521115397,
+  "r2": 0.9650597116548992,
+  "r2_timing_only": 0.8593945660432846
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The explanation's reading, that it 'tracks last-outcome evidence against S1 (or for S2)', contradicts the data. Unrewarded S1 and rewarded S2 are both evidence for S2, yet at D1 they push the gate in opposite directions (residual +0.31/+0.20 vs -0.15/-0.15). The label's literal claims hold, but the explanation's account of them is wrong. The D1 pattern looks like (reached S1) minus (rewarded) instead.",
+   "Systematic error the short form leaves: misses on the recorded short form under-predict GO after every unrewarded previous trial (+0.054 to +0.075) and over-predict GO after rewarded S2 (-0.093, -0.046). The profile shows the same thing: GO residuals are about +0.06 to +0.08 after any unrewarded trial. That is a whole phase-by-reward class missing from the short form and the label.",
+   "Checks that hold up: recorded short form test 0.7037 (reproduced). The D2 term has to be signed (state - action): keeping only a1->S2 gives 0.528, so 'down on a2->S1' is needed. Using any rewarded trial at D1 instead of rewarded S2 gives 0.621, so restricting to S2 is justified.",
+   "Better short form, (phase == D1) * ((prev_state == 1) - prev_reward) ;; (phase != D2) * (1 - prev_reward) ;; (phase == D2) * (state - action), scores test 0.751 vs 0.704. It folds the two D1 cells into one signed term and adds the general boost after unrewarded trials at D1 and GO. Its misses still show some leftovers: D1 after a1 S1 u under by 0.11, D1 after S2 u over by about 0.06, GO after a1 S2 r over by 0.085."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Higher after unrewarded trials (D1/GO), highest after unrewarded S1, lowest after rewarded S2; D2: a1->S2 up, a2->S1 down.",
+  "better_short_terms": "(phase == D1) * ((prev_state == 1) - prev_reward) ;; (phase != D2) * (1 - prev_reward) ;; (phase == D2) * (state - action)",
+  "better_short_terms_test_r2_beyond_timing": 0.751
+ },
+ "final_label": "Higher after unrewarded trials (D1/GO), highest after unrewarded S1, lowest after rewarded S2; D2: a1->S2 up, a2->S1 down.",
+ "original_short_terms": "(phase == D1) * (prev_reward == 0) * (prev_state == 1) ;; (phase == D1) * (prev_reward == 1) * (prev_state == 2) ;; (phase == D2) * (state - action)",
+ "original_test_scores": {
+  "gate": "unit_reset",
+  "feature": 47,
+  "terms": [
+   "(phase == D1) * (prev_reward == 0) * (prev_state == 1)",
+   "(phase == D1) * (prev_reward == 1) * (prev_state == 2)",
+   "(phase == D2) * (state - action)"
+  ],
+  "weights": [
+   0.2435587046946165,
+   -0.1493238835812915,
+   0.17120345338082207
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7037131332847149,
+  "r2": 0.9576192710574459,
+  "r2_timing_only": 0.8569604876098691
+ },
+ "terms_from": "skeptic"
+}

@@ -1,0 +1,83 @@
+{
+  "label": "GO after rewarded S2 (esp. a2), growing with episode trial, off after trial ~85",
+  "terms": "(phase == GO) * (prev_state == 2) * (prev_reward == 1) * (prev_action == 1) ;; (phase == GO) * np.minimum(ep_trial, 80) ;; (phase == GO) * (prev_state == 2) * (prev_reward == 1) * (prev_action == 2) * np.minimum(ep_trial, 80) ;; (phase == GO) * (prev_state == 2) * (prev_reward == 1) * (prev_action == 1) * np.minimum(ep_trial, 80) ;; (phase == GO) * (ep_trial >= 85) ;; (phase == GO) * (prev_state == 2) * (prev_reward == 1) * np.clip(-belief_lo, 0, 6) ;; (phase == GO) * (prev_state == 2) * (prev_reward == 1) * (ep_trial >= 85) ;; (phase == GO) * (prev_state == -1) * (prev_reward == 1) * (1 - belief) * np.minimum(ep_trial, 80)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO. Magnitude = (previous trial reached S2 and was rewarded) x a ramp in episode trial (rises to ~trial 80, collapses after ~85). Slope is about 2x larger after a2->S2 common rewarded than after a1->S2 rare rewarded. All other previous-trial patterns sit at ~0, so a term that cancels the additive timing baseline at GO matters. Given S2-rewarded, stronger ideal-observer certainty that S2 is good slightly lowers it. On the window's first trial (previous state unknown, previous reward 1), (1 - belief) x ramp stands in for 'last outcome was S2 rewarded'. No future, hidden or model-output variables used. Dev R2 beyond timing 0.776, test 0.773, above the profile's additive 'all' ceiling (0.56) because of the multiplicative last-trial x episode-time structure. The earlier model-based firing label (GO after a2 S2 r, choosing a2) is matched by observed quantities alone with no loss.",
+  "gate": "hidden",
+  "feature": 134,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 134,
+    "terms": [
+      "(phase == GO) * (prev_state == 2) * (prev_reward == 1) * (prev_action == 1)",
+      "(phase == GO) * np.minimum(ep_trial, 80)",
+      "(phase == GO) * (prev_state == 2) * (prev_reward == 1) * (prev_action == 2) * np.minimum(ep_trial, 80)",
+      "(phase == GO) * (prev_state == 2) * (prev_reward == 1) * (prev_action == 1) * np.minimum(ep_trial, 80)",
+      "(phase == GO) * (ep_trial >= 85)",
+      "(phase == GO) * (prev_state == 2) * (prev_reward == 1) * np.clip(-belief_lo, 0, 6)",
+      "(phase == GO) * (prev_state == 2) * (prev_reward == 1) * (ep_trial >= 85)",
+      "(phase == GO) * (prev_state == -1) * (prev_reward == 1) * (1 - belief) * np.minimum(ep_trial, 80)"
+    ],
+    "weights": [
+      -0.059832915847294374,
+      -0.002454298270858609,
+      0.009409747505835234,
+      0.004910814072875453,
+      0.07222762460446948,
+      -0.021702027034669565,
+      -0.34495033942269593,
+      0.0076799818701053955
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7732818345644853,
+    "r2": 0.8248178373271412,
+    "r2_timing_only": 0.22731307243801002
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 134,
+    "terms": [
+      "(phase == GO) * (prev_state == 2) * (prev_reward == 1) * (prev_action == 1)",
+      "(phase == GO) * np.minimum(ep_trial, 80)",
+      "(phase == GO) * (prev_state == 2) * (prev_reward == 1) * (prev_action == 2) * np.minimum(ep_trial, 80)",
+      "(phase == GO) * (prev_state == 2) * (prev_reward == 1) * (prev_action == 1) * np.minimum(ep_trial, 80)",
+      "(phase == GO) * (ep_trial >= 85)",
+      "(phase == GO) * (prev_state == 2) * (prev_reward == 1) * np.clip(-belief_lo, 0, 6)",
+      "(phase == GO) * (prev_state == 2) * (prev_reward == 1) * (ep_trial >= 85)",
+      "(phase == GO) * (prev_state == -1) * (prev_reward == 1) * (1 - belief) * np.minimum(ep_trial, 80)"
+    ],
+    "weights": [
+      -0.059832915847294374,
+      -0.002454298270858609,
+      0.009409747505835234,
+      0.004910814072875453,
+      0.07222762460446948,
+      -0.021702027034669565,
+      -0.34495033942269593,
+      0.0076799818701053955
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7757487529840271,
+    "r2": 0.8273942175347149,
+    "r2_timing_only": 0.2303017942504868
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "\"Off after ~85\" is wrong as stated. Splitting the trials after an S2-rewarded trial into 3-trial bins on top of a min(ep_trial,80) ramp (slope 0.0056, peak about 0.45) gives these offsets: 80-83 +0.01, 83-86 -0.02, 86-89 -0.09, 89-92 -0.15, 92-95 -0.28, 95-98 -0.43, 98-100 -0.48. So the feature is still fully on at 85-86, about half on near trial 92, and only off from about trial 95.",
+      "The worst-fit windows from misses are mostly late in the episode, where the step term (ep_trial >= 85, weight -0.345) predicts about 0 but the feature fires strongly. Examples: t85 a2 after a1 S2R r, actual 1.03 vs predicted 0.03; t92 after a1 S2R r, actual 0.94 vs -0.08; t89, actual 0.31 vs 0.05.",
+      "Swapping the step for a gradual decline, np.clip(ep_trial-82,0,16), and applying it also to the first-trial proxy, raises R^2 beyond timing from 0.773 to 0.810 on test (0.818 dev). That is a real systematic gain, though modest.",
+      "Other claims check out. The a2->S2 slope is about twice the a1->S2 slope (0.0094 vs 0.0049). The belief term matters only slightly: removing it costs 0.005 on test. The first-trial (prev_state == -1) proxy matters a lot: removing it drops test R^2 from 0.768 to 0.566.",
+      "There is no large hidden factor beyond what the terms already cover. The upcoming choice (action == 2) adds 0.004 on test. Belief within a1 S2 r adds 0.001 or less, and two-back history adds 0.005 or less. Misses by phase and previous trial show only residuals of 0.007 or smaller."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after rewarded S2 (a2 common > a1 rare), ramping with episode trial to ~80, then fading gradually to 0 by ~95",
+    "better_terms": "(phase == GO) * (prev_state == 2) * (prev_reward == 1) * (prev_action == 1) ;; (phase == GO) * np.minimum(ep_trial, 80) ;; (phase == GO) * (prev_state == 2) * (prev_reward == 1) * (prev_action == 2) * np.minimum(ep_trial, 80) ;; (phase == GO) * (prev_state == 2) * (prev_reward == 1) * (prev_action == 1) * np.minimum(ep_trial, 80) ;; (phase == GO) * np.clip(ep_trial-82,0,16) ;; (phase == GO) * ((prev_state == 2) * (prev_reward == 1) + (prev_state == -1) * (prev_reward == 1) * (1 - belief)) * np.clip(ep_trial-82, 0, 16) ;; (phase == GO) * (prev_state == 2) * (prev_reward == 1) * np.clip(-belief_lo, 0, 6) ;; (phase == GO) * (prev_state == -1) * (prev_reward == 1) * (1 - belief) * np.minimum(ep_trial, 80)",
+    "better_terms_test_r2_beyond_timing": 0.8103
+  },
+  "final_label": "GO after rewarded S2 (a2 common > a1 rare), ramping with episode trial to ~80, then fading gradually to 0 by ~95"
+}

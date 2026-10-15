@@ -1,0 +1,113 @@
+{
+ "label": "Rises when the observer believes S2 is good, mostly at GO, and after choosing a2.",
+ "short_terms": "(1 + 3*(phase == GO)) * np.tanh(belief_lo/2) ;; (phase == GO) * (prev_action == 2) * (prev_reward == 0) ;; (phase == D1) * (ep_trial == 0)",
+ "terms": "(phase == GO) * np.tanh(belief_lo) ;; (phase != GO) * np.tanh(belief_lo) ;; (phase == D1) * (ep_trial == 0) ;; (phase == GO) * (prev_action == 2) ;; (phase == GO) * last_is(\"a2 S1 u\") ;; (phase == GO) * last_is(\"a2 S1 r\") ;; (phase == D2)*(action==2) ;; (phase == GO)*(prev_action==2)*(prev_reward==1)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "The raw candidate value of unit 23 is almost always near -0.96. Beyond timing it is graded by the ideal observer belief: it goes up (less negative) when S2 is believed good and down when S1 is, and this is about 4x stronger at GO than at D1/D2. At GO it is also higher after a previous a2 choice. On the episode first D1 it is much higher (+0.26). The free fit adds that at GO an a2-rewarded previous trial cancels the prev-a2 boost (because belief already carries it), plus a small boost at D2 after choosing a2. No future, hidden or model-output variables are used.",
+ "full_test_scores": {
+  "gate": "unit_candidate",
+  "feature": 23,
+  "terms": [
+   "(phase == GO) * np.tanh(belief_lo)",
+   "(phase != GO) * np.tanh(belief_lo)",
+   "(phase == D1) * (ep_trial == 0)",
+   "(phase == GO) * (prev_action == 2)",
+   "(phase == GO) * last_is(\"a2 S1 u\")",
+   "(phase == GO) * last_is(\"a2 S1 r\")",
+   "(phase == D2)*(action==2)",
+   "(phase == GO)*(prev_action==2)*(prev_reward==1)"
+  ],
+  "weights": [
+   -0.044829836641839,
+   -0.010738794133863127,
+   0.26747617469413176,
+   0.046256912220945086,
+   0.0026223229493826114,
+   -0.0014134237064266884,
+   0.007685100336348549,
+   -0.05104634048703714
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6868255471289405,
+  "r2": 0.771837820848221,
+  "r2_timing_only": 0.2714534117962739
+ },
+ "gate": "unit_candidate",
+ "feature": 23,
+ "test_scores": {
+  "gate": "unit_candidate",
+  "feature": 23,
+  "terms": [
+   "(1 + 3*(phase == GO)) * np.tanh(belief_lo/2)",
+   "(phase == GO) * (prev_action == 2) * (prev_reward == 0)",
+   "(phase == D1) * (ep_trial == 0)"
+  ],
+  "weights": [
+   -0.012847763440547607,
+   0.046446507786883695,
+   0.2664804491856428
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6877016471537077,
+  "r2": 0.7724761005321904,
+  "r2_timing_only": 0.2714534117962739
+ },
+ "dev_scores": {
+  "gate": "unit_candidate",
+  "feature": 23,
+  "terms": [
+   "(1 + 3*(phase == GO)) * np.tanh(belief_lo/2)",
+   "(phase == GO) * (prev_action == 2) * (prev_reward == 0)",
+   "(phase == D1) * (ep_trial == 0)"
+  ],
+  "weights": [
+   -0.012847763440547607,
+   0.046446507786883695,
+   0.2664804491856428
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.699126617622123,
+  "r2": 0.7789615015590408,
+  "r2_timing_only": 0.26534379115215456
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The 'after choosing a2' claim is wrong in a way that matters. The GO boost comes almost entirely after an UNREWARDED a2. Replacing (phase == GO)*(prev_action == 2) with (phase == GO)*(prev_action == 2)*(prev_reward == 0) raises test R^2 beyond timing from 0.605 to 0.678, with tanh(belief_lo) kept unchanged. Adding plain prev_action==2 back next to the unrewarded term lowers the score (0.665 vs 0.688), so a rewarded a2 adds nothing. The profile shows the same thing: GO residual after a2 S1 u is +0.090 and after a2 S2 u +0.039, but after a2 S1 r it is -0.008.",
+   "Misses on the recorded short form show this as the largest systematic error: GO after a2 S1 u is under-predicted by +0.034 and GO after a2 S2 u by +0.030, while GO after a2 S1 r is over-predicted by -0.022 and GO after a2 S2 r by -0.019.",
+   "The belief shape is too saturating. np.tanh(belief_lo/2), which equals 2*P(S1 good)-1 and is linear in the probability, does better than np.tanh(belief_lo). With the corrected second term it scores 0.688 vs 0.678 on test.",
+   "The prev_action==2 term in the recorded form adds only +0.019 on test (0.586 without it, 0.605 with it). Most of what the short form misses is the reward condition.",
+   "The episode-first D1 jump (+0.27) checks out: dropping that term costs about 0.027 on test.",
+   "Remaining errors, smaller ones: late-episode runs of a2 (around trials 91-98) are under-predicted at GO, actual about -0.65 vs predicted about -0.79. D1 after a2 S1 r is under-predicted by +0.038."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Rises in proportion to belief that S2 is good (strongest at GO), and at GO after an unrewarded a2.",
+  "better_short_terms": "(1 + 3*(phase == GO)) * np.tanh(belief_lo/2) ;; (phase == GO) * (prev_action == 2) * (prev_reward == 0) ;; (phase == D1) * (ep_trial == 0)",
+  "better_short_terms_test_r2_beyond_timing": 0.6877
+ },
+ "final_label": "Rises in proportion to belief that S2 is good (strongest at GO), and at GO after an unrewarded a2.",
+ "original_short_terms": "(1 + 3*(phase == GO)) * np.tanh(belief_lo) ;; (phase == GO) * (prev_action == 2) ;; (phase == D1) * (ep_trial == 0)",
+ "original_test_scores": {
+  "gate": "unit_candidate",
+  "feature": 23,
+  "terms": [
+   "(1 + 3*(phase == GO)) * np.tanh(belief_lo)",
+   "(phase == GO) * (prev_action == 2)",
+   "(phase == D1) * (ep_trial == 0)"
+  ],
+  "weights": [
+   -0.010880886338252396,
+   0.014199219176607946,
+   0.26601739794345663
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6052320832331083,
+  "r2": 0.7123931811071885,
+  "r2_timing_only": 0.2714534117962739
+ },
+ "terms_from": "skeptic"
+}

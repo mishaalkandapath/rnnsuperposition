@@ -1,0 +1,63 @@
+{
+  "label": "D2 of a2->S2 common, late episode, scaled by ramp x a1-ward policy logit",
+  "terms": "(phase == D2) * (action == 2) * (state == 2) * np.clip(ep_trial-70,0,None) * np.clip(choice+2.5, 0, None) ;; (phase == D2) * (action == 2) * (state == 2) * np.clip(ep_trial-70,0,None) * np.clip(choice+2.5, 0, None) * (prev_action == 1) ;; (phase == D2) * (action == 2) * (state == 2) * np.clip(ep_trial-70,0,None) * np.clip(choice+2.5, 0, None) * (prev_reward == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Sparse feature (0.5% of steps), active only at D2 after choosing a2 and commonly reaching S2, and only late in the episode (trials 70+). Its magnitude is the product of a linear ramp in episode trial beyond ~70 and the model policy logit(a1)-logit(a2) at that D2 step, shifted and clipped (clip(choice+2.5,0)). So it is larger when the network already leans back toward a1 after the a2 choice. It is also larger when the previous trial was an a1 choice and when the previous trial was rewarded. Nothing fires at D1 or GO, and rare transitions do not drive it. Dev R^2 beyond timing: a2-S2 late indicator alone 0.03; with policy-logit gating about 0.47-0.64; the full 3 terms 0.72 dev and 0.73 test. The profile all ceiling was 0.12 because the additive cue tables miss the multiplicative ramp x logit structure. Every variable used is observable at D2: action and state are known by then, and choice is the model output.",
+  "gate": "hidden",
+  "feature": 37,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 37,
+    "terms": [
+      "(phase == D2) * (action == 2) * (state == 2) * np.clip(ep_trial-70,0,None) * np.clip(choice+2.5, 0, None)",
+      "(phase == D2) * (action == 2) * (state == 2) * np.clip(ep_trial-70,0,None) * np.clip(choice+2.5, 0, None) * (prev_action == 1)",
+      "(phase == D2) * (action == 2) * (state == 2) * np.clip(ep_trial-70,0,None) * np.clip(choice+2.5, 0, None) * (prev_reward == 1)"
+    ],
+    "weights": [
+      0.005495369022844449,
+      0.004000403980576035,
+      0.0057042002822597455
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7336560319988796,
+    "r2": 0.7461166266825194,
+    "r2_timing_only": 0.04678384412890957
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 37,
+    "terms": [
+      "(phase == D2) * (action == 2) * (state == 2) * np.clip(ep_trial-70,0,None) * np.clip(choice+2.5, 0, None)",
+      "(phase == D2) * (action == 2) * (state == 2) * np.clip(ep_trial-70,0,None) * np.clip(choice+2.5, 0, None) * (prev_action == 1)",
+      "(phase == D2) * (action == 2) * (state == 2) * np.clip(ep_trial-70,0,None) * np.clip(choice+2.5, 0, None) * (prev_reward == 1)"
+    ],
+    "weights": [
+      0.005495369022844449,
+      0.004000403980576035,
+      0.0057042002822597455
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7176887959004566,
+    "r2": 0.7288552263247609,
+    "r2_timing_only": 0.03955362118878891
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claim holds. On test, the 3 terms score 0.734 beyond timing. Ramp x clipped logit alone scores 0.661 on test. The late a2-S2 indicator alone scores 0.037 on test, and the ramp alone 0.055. So the product structure is real, and the additive ceiling of 0.12 is not a fair comparison.",
+      "The 'larger when the previous trial was rewarded' claim is too broad. With B = D2*a2*S2*ramp*clip(choice+2.5), splitting the reward term by previous state gives B*(prev_state==1)*(prev_reward==1) -> +0.010 and B*(prev_state==2)*(prev_reward==1) -> +0.001. The 8 per-pattern B*last_is terms give a2 S2 r -> +0.000, while a1 S1 r -> +0.017 and a2 S1 r -> +0.016. So the reward boost comes only from a reward in S1 on the previous trial, not from any reward. Swapping in (prev_state==1)*(prev_reward==1) matches or slightly beats the original on test (0.744 vs 0.734).",
+      "The 'larger when the previous trial was an a1 choice' claim is not robust. Once ramp-scaled history indicators are added, B*(prev_action==1) drops to -0.001. The positive history effect is carried by MR*last_is('a1 S1 u') at +0.015 (common unrewarded a1, after which a model-based agent switches to a2), while MR*last_is('a2 S2 u') is negative at -0.006.",
+      "misses on the original terms shows a systematic error class: D2 after a2 S2 u is over-predicted (-0.012, the largest error). Worst-fit windows also include large under-predictions (e.g. t98, previous trial a2 S1 rare rewarded: actual 0.675 vs predicted 0.029), where the clipped logit is near zero but the feature still fires. Adding history terms lifts test R^2 beyond timing from 0.734 to 0.784.",
+      "The 'choice' term is the policy logit read out at D2. That logit is computed from the same hidden state this candidate feature feeds into, so the 'a1-ward logit' factor is partly circular: it describes the network's state rather than an input-side cause. It is allowed as a model-output variable, but the label should not present it as an external driver. A history-only version (8 ramp x last-pattern terms, no choice) reaches just 0.46 on test.",
+      "Checks that held up: firing is restricted to D2 (zero residual at D1/GO). Rare a2->S1 trials add nothing (0.662 vs 0.661 with that term). Shifting the ramp onset to 60 is worse (0.628), so the onset near 70 is supported. No future variables are used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 of a2->S2 common, late episode (ramp from trial ~70) x a1-ward D2 policy logit; boosted when the previous trial was rewarded in S1 or was a1->S1 unrewarded, damped after a2->S2 unrewarded (not after any reward)",
+    "better_terms": "MR=(phase == D2)*(action == 2)*(state == 2)*np.clip(ep_trial-70,0,None); C=np.clip(choice+2.5,0,None). Terms: MR*C ;; MR*C*(prev_state==1)*(prev_reward==1) ;; MR*C*(prev_action==1) ;; MR*C*last_is('a2 S2 r') ;; MR*C*last_is('a2 S2 u') ;; MR*last_is('a1 S1 u') ;; MR ;; MR*(prev_action==1)   (dev 0.784, test 0.784). A smaller 6-term version, MR*C ;; MR*C*(prev_state==1)*(prev_reward==1) ;; MR*C*(prev_action==1) ;; MR*last_is('a1 S1 u') ;; MR*last_is('a2 S2 u') ;; MR*C**2, scores 0.781 on test. All terms are observed at D2; no future variables.",
+    "better_terms_test_r2_beyond_timing": 0.784
+  },
+  "final_label": "D2 of a2->S2 common, late episode (ramp from trial ~70) x a1-ward D2 policy logit; boosted when the previous trial was rewarded in S1 or was a1->S1 unrewarded, damped after a2->S2 unrewarded (not after any reward)"
+}

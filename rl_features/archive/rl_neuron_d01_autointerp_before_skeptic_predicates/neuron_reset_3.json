@@ -1,0 +1,64 @@
+{
+  "label": "GO after an unrewarded a2->S2 (common) trial, agent moderately re-choosing a2, episode trials 3-54",
+  "predicate": "(phase == GO) & (prev_reward == 0) & (choice < -4.4) & (choice > -9) & (prev_state != 1) & (prev_action != 1) & (ep_trial >= 3) & (ep_trial < 55)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO (100% of mass), and only when the D1 reward input was 0 (prev_reward==0 holds 99.9% of mass), the previous trial was a2 reaching S2 by a common transition (or the window has no previous trial), and the agent is choosing a2 again (model_act==2 holds 100% of mass; the choice logit is in a moderate-to-strong a2 band, -9 to -4.4, which holds 96% of mass). It is heavily gated by episode time: no firing on trials 0-2, and almost none after trial ~55 (zero after 60), which suggests a slowly drifting hidden state rather than any task variable. Never fires at D1 or D2, after a rewarded trial, after an a1 trial, or after a rare transition. Without the choice band (just model_act==2) dev F1 is 0.71 at the same recall (precision 0.55); the band raises precision to 0.78. All variables are observed or are the agent own policy at that step, so no future variable is used. Activation magnitudes are tiny and nearly uniform (max ~0.001); I did not check what modulates magnitude.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 3,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (choice < -4.4) & (choice > -9) & (prev_state != 1) & (prev_action != 1) & (ep_trial >= 3) & (ep_trial < 55)",
+    "split": "test",
+    "precision": 0.7670260679677904,
+    "recall": 0.9088703808522681,
+    "f1": 0.831945523851819,
+    "mass_recall": 0.9592315759597817,
+    "correlation": 0.7753732247493177,
+    "n_active": 12367,
+    "n_predicted": 14654,
+    "coverage_by_activation_quartile": [
+      0.6875808538163001,
+      0.9938551099611902,
+      0.9925614489003881,
+      0.9615011323196376
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 3,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (choice < -4.4) & (choice > -9) & (prev_state != 1) & (prev_action != 1) & (ep_trial >= 3) & (ep_trial < 55)",
+    "split": "dev",
+    "precision": 0.7780099040544723,
+    "recall": 0.9207875457875457,
+    "f1": 0.8433987585975506,
+    "mass_recall": 0.9631992524463925,
+    "correlation": 0.7862477135784509,
+    "n_active": 10920,
+    "n_predicted": 12924,
+    "coverage_by_activation_quartile": [
+      0.7366300366300367,
+      0.989010989010989,
+      0.9967032967032967,
+      0.9608058608058608
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 3,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The factual claims hold up. The unit fires only at GO (100% of mass). prev_reward==1 has precision 0.0002 and recall 0.004. prev_common==0 and prev_action==1 at GO both score 0 recall. ep_trial<3 and ep_trial>=60 both score 0 recall, and ep_trial>=55 gives recall 0.005. model_act==2 holds 100% of mass. The [-9, -4.44) choice bin holds 96% of mass.",
+      "Systematic false-positive class: steps where the model's own value output is low. Restricting the original predicate to value<7.73 drops precision to 0.48 (dev), while value>7.73 raises it to 0.97. Most of the remaining false positives are explained by value, not scattered noise.",
+      "The ep_trial window (3-54) works mainly as a weak stand-in for value. Restricting the predicate to ep_trial>=45 gives precision 0.49. Swapping the ep_trial bounds for a value threshold (value>7.68) beats the original on both precision and F1 (see the better predicate). So the explanation's 'slowly drifting hidden state, not a task variable' points at the wrong thing: the gap is tracked by the agent's value estimate, which the tool does provide.",
+      "'Activations nearly uniform' is misleading. Absolute magnitudes are tiny (max about 0.001), but relative to the max they range from about 0.02 to 1.0. The original predicate covers only 69% of the lowest activation quartile, against at least 96% of the other three. The weak misses follow a pattern: GO steps after a second unrewarded a2->S2 trial in a row (activation about 0.1-0.2 of max). The strongest activations come right after the first unrewarded trial that follows rewarded ones.",
+      "Smaller points: the start_high==0 / good==2 skew (75% of mass) seems to follow from the agent choosing a2 more often in those episodes, not from a separate condition (precision within the predicate is 0.83 for good==2 vs 0.66 for good==1). The original predicate does not use future variables, which is correct; value and model_act are the model's own outputs at that step."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step after an unrewarded a2->S2 (common) trial (or no previous trial in the window), agent re-choosing a2 with a moderate-to-strong logit while its value estimate is still high (value > ~7.68); fires most strongly after the first unrewarded trial following rewards, weakly after repeated losses",
+    "better_predicate": "(phase == GO) & (prev_reward == 0) & (prev_state != 1) & (prev_action != 1) & (model_act==2) & (value>7.68) & (choice<-5) & (choice>-9.5)",
+    "better_predicate_test_f1": 0.87
+  },
+  "final_label": "GO step after an unrewarded a2->S2 (common) trial (or no previous trial in the window), agent re-choosing a2 with a moderate-to-strong logit while its value estimate is still high (value > ~7.68); fires most strongly after the first unrewarded trial following rewards, weakly after repeated losses"
+}

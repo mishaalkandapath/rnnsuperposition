@@ -1,0 +1,79 @@
+{
+  "label": "late-episode ramp; late GO a2-leaning policy, low value, D2 S1 raise it",
+  "terms": "(ep_dec == 9) * (ep_trial % 10) ;; (ep_dec == 8) * (ep_trial % 10) ;; (ep_dec == 9) * (ep_trial % 10)**2 ;; np.clip(ep_trial - 70, 0, 30) * value ;; np.clip(ep_trial - 70, 0, 30) * (phase == D2) * table(state, {1: 1, 2: -1}) ;; (phase == D1) * prev_reward ;; np.clip(ep_trial - 70, 0, 30) * (phase == GO) * choice",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw GRU candidate n of unit 14 sits near -1 for most of the episode and ramps steeply toward positive values over the last ~20-30 trials (timing alone R^2 0.88). Its magnitude beyond the per-decile baseline is mostly (a) the continued within-decile ramp in deciles 8-9 (finer timing, about 0.15 of dev R^2 on its own), and (b) content effects that grow with episode time (gated by clip(ep_trial-70,0,30)): lower model value -> higher activation on all phases; at GO a policy leaning to a2 (negative choice logit) -> higher; at D2 reaching S1 -> higher, S2 -> lower; plus a small ungated boost at D1 after a rewarded previous trial. The value and GO-policy terms each matter (dropping the choice term lowers dev R^2 from 0.51 to 0.33). Ungated history tables are weak (last trial 0.12, all-cue ceiling 0.21); worst-fit windows show whole-window offsets in late episodes, i.e. a slow per-episode drift not captured by trial history. Observed-only substitute (late-gated recent rewards and previous choices instead of value/policy) gives dev 0.33. Test R^2 beyond timing 0.49 (dev 0.51); value and choice are model internals, no future variables used.",
+  "gate": "unit_candidate",
+  "feature": 14,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 14,
+    "terms": [
+      "(ep_dec == 9) * (ep_trial % 10)",
+      "(ep_dec == 8) * (ep_trial % 10)",
+      "(ep_dec == 9) * (ep_trial % 10)**2",
+      "np.clip(ep_trial - 70, 0, 30) * value",
+      "np.clip(ep_trial - 70, 0, 30) * (phase == D2) * table(state, {1: 1, 2: -1})",
+      "(phase == D1) * prev_reward",
+      "np.clip(ep_trial - 70, 0, 30) * (phase == GO) * choice"
+    ],
+    "weights": [
+      0.04680148394739142,
+      0.04569579533717091,
+      0.0011813127592872578,
+      -0.002301531978140528,
+      0.006155993390916895,
+      0.038064364958326866,
+      -0.001286577746321827
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.49123714725944345,
+    "r2": 0.937968634971686,
+    "r2_timing_only": 0.8780741072305708
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 14,
+    "terms": [
+      "(ep_dec == 9) * (ep_trial % 10)",
+      "(ep_dec == 8) * (ep_trial % 10)",
+      "(ep_dec == 9) * (ep_trial % 10)**2",
+      "np.clip(ep_trial - 70, 0, 30) * value",
+      "np.clip(ep_trial - 70, 0, 30) * (phase == D2) * table(state, {1: 1, 2: -1})",
+      "(phase == D1) * prev_reward",
+      "np.clip(ep_trial - 70, 0, 30) * (phase == GO) * choice"
+    ],
+    "weights": [
+      0.04680148394739142,
+      0.04569579533717091,
+      0.0011813127592872578,
+      -0.002301531978140528,
+      0.006155993390916895,
+      0.038064364958326866,
+      -0.001286577746321827
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5057277290139495,
+    "r2": 0.9380741750571371,
+    "r2_timing_only": 0.8747131316524722
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The headline number holds up. The original 7 terms give test R^2 beyond timing 0.491, and timing alone gives R^2 0.878. Several core claims also check out on test. Value has a negative weight in every phase: per-phase weights at D1/GO/D2 are -0.0023/-0.0025/-0.0021. The GO choice term has a negative weight (-0.0013), so a policy leaning a2 raises the activation. Dropping the choice term lowers test R^2 from 0.491 to 0.347. The D2 effect follows the reached state, not the action: the profile residuals for a1S1/a1S2/a2S1/a2S2 are +0.043/-0.040/+0.042/-0.040.",
+      "The claim of a 'small boost at D1 after a rewarded previous trial, with no time scaling' is wrong. Scaling the D1 prev_reward term by clip(ep_trial-70,0,30) raises test R^2 from 0.491 to 0.522. Without that D1 term at all, test R^2 is 0.478, so the unscaled version adds only about 0.01.",
+      "The explanation misses a reward effect at GO that has the opposite sign. With a time-scaled (phase==GO)*prev_reward term the weight is -0.0051 while the D1 weight is +0.0064, and test R^2 rises to 0.540. So prev_reward raises the activation at D1 and lowers it at GO, and both effects grow late in the episode. The label mentions neither.",
+      "Misses on the original terms show a systematic error that tracks prev_reward with a sign flip by phase. GO after an unrewarded trial is under-predicted: a1 S2 u +0.076, a2 S2 u +0.073, a2 S1 u +0.056. GO after a rewarded trial is over-predicted: a1 S1 r -0.049, a2 S1 r -0.050. D1 after an unrewarded trial is over-predicted: a2 S2 u -0.071, a1 S2 u -0.038.",
+      "The 'finer timing' part is unstable. With the three within-decile terms alone (test 0.140), the decile-9 linear weight is negative (-0.039) and only the quadratic term is positive. With the content terms added, the linear weight flips to +0.047. So the claim that the ramp 'keeps rising within deciles 8 and 9' at about 0.15 is confounded with the value term.",
+      "The time scaling is probably closer to quadratic than linear. Replacing the decile-9 quadratic term with clip(ep_trial-70,0,30)**2 * value gives test 0.576. The remaining worst windows are still whole-window offsets late in the episode (e.g. runs of a1 S1c at t87-97, under-predicted by about 0.4-0.5)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "late-episode ramp; growing late: low value, a2-leaning GO policy, D2 S1 raise it; previous reward raises it at D1 but lowers it at GO",
+    "better_terms": "(ep_dec == 9) * (ep_trial % 10) ;; (ep_dec == 8) * (ep_trial % 10) ;; np.clip(ep_trial - 70, 0, 30) * value ;; np.clip(ep_trial - 70, 0, 30) * (phase == D2) * table(state, {1: 1, 2: -1}) ;; np.clip(ep_trial - 70, 0, 30)*(phase == D1) * prev_reward ;; np.clip(ep_trial - 70, 0, 30)*(phase == GO) * prev_reward ;; np.clip(ep_trial - 70, 0, 30) * (phase == GO) * choice ;; np.clip(ep_trial - 70, 0, 30)**2 * value",
+    "better_terms_test_r2_beyond_timing": 0.5758
+  },
+  "final_label": "late-episode ramp; growing late: low value, a2-leaning GO policy, D2 S1 raise it; previous reward raises it at D1 but lowers it at GO"
+}

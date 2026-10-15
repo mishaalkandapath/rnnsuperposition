@@ -1,0 +1,64 @@
+{
+  "label": "GO step late in the episode (episode-clock feature), boosted by previous reward",
+  "predicate": "(phase == GO) & ((ep_trial >= 88) | ((ep_trial >= 70) & (prev_reward == 1)))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires almost only at the GO step (99.9% of activation mass), and only late in the 100-trial episode: never before trial ~45, then rising steadily (GO rate about 4% at trials 60-69, 11% at 70-79, 22% at 80-89, 30% at 90-99). Within a window the activation climbs trial by trial, so it works like an elapsed-time / episode-clock signal (it also tracks the low value-head output late in the episode). A reward seen at that trial D1 (prev_reward=1) moves onset earlier and raises magnitude (88% of mass). After an unrewarded trial it fires weakly or not at all unless the episode is very late. Does not fire at D1 or D2 and does not depend on choice, transition, this trial reward, stay/switch or the good state, apart from small side effects of a1/S1. Uses only observed variables (episode position, previous reward). Dev: P 0.75, R 0.89, F1 0.81, mass recall 0.97; the simpler (phase == GO) & (ep_trial >= 75) gets F1 0.75.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 89,
+    "predicate": "(phase == GO) & ((ep_trial >= 88) | ((ep_trial >= 70) & (prev_reward == 1)))",
+    "split": "test",
+    "precision": 0.7546208656811656,
+    "recall": 0.8912404541800643,
+    "f1": 0.8172604033493429,
+    "mass_recall": 0.9752114505005612,
+    "correlation": 0.706101693052071,
+    "n_active": 79616,
+    "n_predicted": 94030,
+    "coverage_by_activation_quartile": [
+      0.6598673633440515,
+      0.9075060289389068,
+      0.997588424437299,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 89,
+    "predicate": "(phase == GO) & ((ep_trial >= 88) | ((ep_trial >= 70) & (prev_reward == 1)))",
+    "split": "dev",
+    "precision": 0.7532569815902602,
+    "recall": 0.88606096478248,
+    "f1": 0.8142796329580928,
+    "mass_recall": 0.9730284812767023,
+    "correlation": 0.7061565498097142,
+    "n_active": 77717,
+    "n_predicted": 91419,
+    "coverage_by_activation_quartile": [
+      0.6493566649511066,
+      0.8997375057903134,
+      0.9952133408821864,
+      0.9999485305471203
+    ]
+  },
+  "gate": "reset",
+  "feature": 89,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The claim that choice adds only 'small a1/S1 biases' does not hold. At late GO steps the agent's upcoming choice moves firing a lot. GO & ep_trial>=70 & model_act==1 has precision 0.82, while model_act==2 has 0.44. For ep_trial 70-84, a1 has precision 0.69 and a2 has 0.17. For ep_trial>=85, a1 has 0.97 and a2 has 0.73. Overall the profile shows a firing rate of 0.275 for model_act=1 against 0.141 for model_act=2, a ratio of 2x.",
+      "The false positives of the original predicate are systematic, not scattered. In the test-split misses the false-positive windows are almost all a2 choices at late GO steps where the feature stays silent. The predicate has 23073 false positives against 8659 misses, and the misses hold only 2.5% of the activation mass.",
+      "Choice and previous reward together shift when the feature switches on. It starts around trial 66 for a1 after a reward, around 85 for a1 after no reward or a2 after a reward, and around 94 for a2 after no reward. Some evidence: ep>=90 & a2 & prev_reward=1 has precision 1.0, ep>=90 & a1 & prev_reward=0 has 0.99, and ep>=90 & a2 & prev_reward=0 has only 0.40.",
+      "These claims check out: about 99.9% of activation mass is at GO, it never fires before trial ~40, the firing rate rises with episode trial, it tracks low value output (GO & value<6.5 gives F1 0.745), and D1/D2 firing is negligible.",
+      "Minor: firing is also suppressed for about 20 trials after a reversal of the good state. At ep_trial>=70 only 2214 GO steps have since_rev 0-19, so this hardly affects the scores, but it fits the feature tracking confidence or value rather than pure elapsed time."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO-step episode-clock feature (late in the episode). It switches on about 15-20 trials earlier when the agent is about to choose a1 and when the previous trial was rewarded.",
+    "better_predicate": "(phase == GO) & (((ep_trial >= 66)&(model_act==1)&(prev_reward==1)) | ((ep_trial >= 85)&(model_act==2)&(prev_reward==1)) | ((ep_trial >= 85)&(model_act==1)&(prev_reward==0)) | ((ep_trial >= 94)&(model_act==2)&(prev_reward==0)))",
+    "better_predicate_test_f1": 0.894
+  },
+  "final_label": "GO-step episode-clock feature (late in the episode). It switches on about 15-20 trials earlier when the agent is about to choose a1 and when the previous trial was rewarded."
+}

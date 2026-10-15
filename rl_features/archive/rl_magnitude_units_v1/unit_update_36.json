@@ -1,0 +1,78 @@
+{
+  "label": "GO: rises with unrewarded streak x p(a2), growing late in episode; D2: lower when policy favours a1",
+  "terms": "(phase == GO) * ((prev_reward == 0) + (prev_reward == 0) * (tv(\"reward\", -2) == 0) + (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0)) * (ep_trial / 100) ** 3 / (1 + np.exp(choice)) ;; (phase == GO) * ((prev_reward == 0) + (prev_reward == 0) * (tv(\"reward\", -2) == 0) + (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0)) / (1 + np.exp(choice)) ;; (phase == D2) * np.maximum(choice, 0) ;; (phase == D2) * np.minimum(choice, 0) ;; (phase == D2) * table(prev_state, {1: 1, 2: -1}) ;; (phase == GO) * table(prev_state, {1: 1, 2: -1}) * (prev_reward == 0) ;; (phase == D2) * (common == 0) * table(state, {1: 1, 2: -1})",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 36. Timing dominates (R^2 1.00): near 0 at D1/GO and ~0.82-0.96 at D2, all rising late in the episode. Beyond timing: (1) at GO it spikes (up to ~0.5 vs ~0.08 baseline) when the agent has a run of unrewarded trials (count of consecutive r=0 over the last 1-3 trials) and its policy favours a2 (p(a2)=1/(1+exp(choice))); the effect grows steeply with episode trial (cubic in ep_trial/100), plus a smaller non-time-scaled version and a bump when the unrewarded previous trial reached S1 (e.g. after a2 S1 u). (2) at D2 it is lower when the policy logit favours a1 (strongest slope for choice>0), higher when the previous trial reached S1 than S2, and slightly higher after a rare transition into S1 (a2->S1) than into S2 (a1->S2). D1 residual is negligible. Value and hidden good state add little. Uses only observed inputs plus the model policy (no future variables). Dev R^2 beyond timing 0.60, test 0.58 (all ceiling 0.64, all-observed 0.51).",
+  "gate": "unit_update",
+  "feature": 36,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 36,
+    "terms": [
+      "(phase == GO) * ((prev_reward == 0) + (prev_reward == 0) * (tv(\"reward\", -2) == 0) + (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0)) * (ep_trial / 100) ** 3 / (1 + np.exp(choice))",
+      "(phase == GO) * ((prev_reward == 0) + (prev_reward == 0) * (tv(\"reward\", -2) == 0) + (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0)) / (1 + np.exp(choice))",
+      "(phase == D2) * np.maximum(choice, 0)",
+      "(phase == D2) * np.minimum(choice, 0)",
+      "(phase == D2) * table(prev_state, {1: 1, 2: -1})",
+      "(phase == GO) * table(prev_state, {1: 1, 2: -1}) * (prev_reward == 0)",
+      "(phase == D2) * (common == 0) * table(state, {1: 1, 2: -1})"
+    ],
+    "weights": [
+      0.09412477387627224,
+      0.009024458095247184,
+      -0.014220847280000129,
+      -0.004922386443936087,
+      0.010791115843117463,
+      0.009257929159760358,
+      0.00565177239331133
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5840794770825619,
+    "r2": 0.9983071078385981,
+    "r2_timing_only": 0.9959297700687446
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 36,
+    "terms": [
+      "(phase == GO) * ((prev_reward == 0) + (prev_reward == 0) * (tv(\"reward\", -2) == 0) + (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0)) * (ep_trial / 100) ** 3 / (1 + np.exp(choice))",
+      "(phase == GO) * ((prev_reward == 0) + (prev_reward == 0) * (tv(\"reward\", -2) == 0) + (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0)) / (1 + np.exp(choice))",
+      "(phase == D2) * np.maximum(choice, 0)",
+      "(phase == D2) * np.minimum(choice, 0)",
+      "(phase == D2) * table(prev_state, {1: 1, 2: -1})",
+      "(phase == GO) * table(prev_state, {1: 1, 2: -1}) * (prev_reward == 0)",
+      "(phase == D2) * (common == 0) * table(state, {1: 1, 2: -1})"
+    ],
+    "weights": [
+      0.09412477387627224,
+      0.009024458095247184,
+      -0.014220847280000129,
+      -0.004922386443936087,
+      0.010791115843117463,
+      0.009257929159760358,
+      0.00565177239331133
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6017320969102709,
+    "r2": 0.9983590799026049,
+    "r2_timing_only": 0.9958798585458054
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The 'unrewarded streak (count of consecutive no-reward trials over last 1-3)' claim is a numpy artifact. In the terms, (prev_reward==0) + (A)*(B) + ... is boolean +/* on arrays, which numpy evaluates as logical OR/AND, so the expression reduces to just (prev_reward==0). Evidence: the GO term with the 'streak' scores exactly the same as (phase==GO)*(prev_reward==0)*(ep_trial/100)**3/(1+exp(choice)), test 0.14834 in both cases. A real numeric count (1.0*...) does slightly worse: 0.1452 alone and 0.5812 in the full set versus 0.584. Separate streak indicators add only about 0.008 (0.148 -> 0.156). So 'streak' should not be in the label.",
+      "The GO spike is systematically under-predicted. In misses, every worst-fit window is a late-episode (t71-t99) GO step after unrewarded a2 trials where actual z is 0.3-0.56 and the prediction is 0.07-0.18 (e.g. t85 0.453 vs 0.112, t86 0.559 vs 0.114). p(a2) = 1/(1+exp(choice)) caps out at 1, so it cannot follow how strongly the logit favours a2. An unbounded shape scores better: (phase==GO)*(ep/100)^3*(prev_reward==0)*max(-choice,0) gets test 0.185 versus 0.148 for p(a2).",
+      "The claim about the smaller GO term that does not scale with time is weak. Its weight is 0.009 against 0.094 for the time-scaled term, and on its own it scores 0.098, mostly through overlap with the main term.",
+      "The D2 claims hold. D2 choice terms alone give test 0.376; adding the prev_state S1-vs-S2 term gives 0.415. The rare-into-S1 term adds about 0.003 (0.563 -> 0.565), and a full action x state table at D2 does slightly better (0.585).",
+      "Reproduced the agent's scores: test 0.584. No future variables are used at GO. At D2, action, state and common are already observed."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO: after an unrewarded trial, rises with how strongly the policy favours a2 (unbounded in -logit), steeply late in the episode (more after unrewarded S1); D2: lower when policy favours a1, higher after previous S1",
+    "better_terms": "(phase == GO) * (ep_trial / 100) ** 3 * (prev_reward==0) * np.maximum(-choice,0) ;; (phase == GO) * (ep_trial / 100) ** 3 * (prev_reward==0) * np.maximum(-choice,0)**2 ;; (phase == GO) * (ep_trial / 100) ** 3 * (prev_reward==0) * table(prev_state,{1:1,2:-1}) ;; (phase == GO) * (prev_reward==0) * np.maximum(-choice,0) ;; (phase == D2) * np.maximum(choice, 0) ;; (phase == D2) * np.minimum(choice, 0) ;; (phase == D2) * table(prev_state, {1: 1, 2: -1}) ;; (phase == D2) * table(10*action+state, {11:1,12:2,21:3,22:4})",
+    "better_terms_test_r2_beyond_timing": 0.646
+  },
+  "final_label": "GO: after an unrewarded trial, rises with how strongly the policy favours a2 (unbounded in -logit), steeply late in the episode (more after unrewarded S1); D2: lower when policy favours a1, higher after previous S1"
+}

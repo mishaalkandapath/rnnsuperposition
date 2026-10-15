@@ -1,0 +1,82 @@
+{
+  "label": "D2 after a1 reaches S1, largest when previous trial unrewarded and a2 (switch); fades late in episode",
+  "terms": "(phase == D2) * (action == 1) * (state == 1) ;; (phase == D2) * (action == 1) * (state == 1) * (prev_reward == 0) ;; (phase == D2) * (action == 1) * (state == 1) * (prev_action == 2) ;; (phase == D2) * (action == 1) * (state == 1) * (prev_reward == 0) * (prev_action == 2) ;; (phase == D2) * (action == 1) * (state == 1) * (tv(\"reward\", -2) == 0) ;; (phase == D2) * (action == 1) * (state == 1) * (prev_reward == 0) * ep_trial ;; (phase == D2) * (action == 1) * (state == 1) * (prev_reward == 0) * (ep_trial >= 85) ;; (phase == D2) * (action == 1) * (state == 2) * (prev_reward == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Zero at D1 and GO; active only at D2. Magnitude is set by the current trial reaching S1 after choosing a1 (common a1 transition, observed at D2): a1->S1 with the previous trial unrewarded gives ~+1.2, plus ~+0.85 more if the previous choice was a2 (an a2-unrewarded -> a1 switch gives the biggest activations, ~2-2.5), +0.24 for a previous a2 alone and +0.2 if the trial two back was also unrewarded. After a rewarded previous trial a1->S1 is near zero. a1->S2 (rare) and all a2 trials stay near zero (a small bump for a1->S2 after no reward). The unrewarded-a1->S1 response weakens through the episode (graded ep_trial term) and is close to zero after trial ~85, which is more than the additive timing baseline captures. Value and hidden good state add little. All terms use only observed variables (the action and state are known at D2). Test R^2 beyond timing 0.74 (dev 0.74), above the all-cue additive ceiling of 0.59.",
+  "gate": "reset",
+  "feature": 56,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 56,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 1)",
+      "(phase == D2) * (action == 1) * (state == 1) * (prev_reward == 0)",
+      "(phase == D2) * (action == 1) * (state == 1) * (prev_action == 2)",
+      "(phase == D2) * (action == 1) * (state == 1) * (prev_reward == 0) * (prev_action == 2)",
+      "(phase == D2) * (action == 1) * (state == 1) * (tv(\"reward\", -2) == 0)",
+      "(phase == D2) * (action == 1) * (state == 1) * (prev_reward == 0) * ep_trial",
+      "(phase == D2) * (action == 1) * (state == 1) * (prev_reward == 0) * (ep_trial >= 85)",
+      "(phase == D2) * (action == 1) * (state == 2) * (prev_reward == 0)"
+    ],
+    "weights": [
+      -0.06379329693995148,
+      1.2174596577884336,
+      0.24343245484068804,
+      0.8651005472452753,
+      0.20870200038017334,
+      -0.005349096903821342,
+      -0.4784621119760229,
+      0.17641281283191537
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7409624960775952,
+    "r2": 0.7684639969420191,
+    "r2_timing_only": 0.10616802759442123
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 56,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 1)",
+      "(phase == D2) * (action == 1) * (state == 1) * (prev_reward == 0)",
+      "(phase == D2) * (action == 1) * (state == 1) * (prev_action == 2)",
+      "(phase == D2) * (action == 1) * (state == 1) * (prev_reward == 0) * (prev_action == 2)",
+      "(phase == D2) * (action == 1) * (state == 1) * (tv(\"reward\", -2) == 0)",
+      "(phase == D2) * (action == 1) * (state == 1) * (prev_reward == 0) * ep_trial",
+      "(phase == D2) * (action == 1) * (state == 1) * (prev_reward == 0) * (ep_trial >= 85)",
+      "(phase == D2) * (action == 1) * (state == 2) * (prev_reward == 0)"
+    ],
+    "weights": [
+      -0.06379329693995148,
+      1.2174596577884336,
+      0.24343245484068804,
+      0.8651005472452753,
+      0.20870200038017334,
+      -0.005349096903821342,
+      -0.4784621119760229,
+      0.17641281283191537
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7365225989672051,
+    "r2": 0.7644816638615136,
+    "r2_timing_only": 0.10611560909859041
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core story holds. Activity is confined to D2 a1->S1 trials, boosted after an unrewarded previous trial and most of all after switching from an unrewarded a2 trial. Reproduced test R^2 beyond timing is 0.741.",
+      "The claim that a previous unrewarded trial adds about +1.2 is overstated for staying on a1. A per-pattern table for a1->S1 at D2 gives about +0.56 after 'a1 S1 u' and +0.93 after 'a1 S2 u', against +2.04 after 'a2 S2 u' and +1.68 after 'a2 S1 u'. Misses on the original terms show the largest systematic over-prediction at D2 after 'a1 S1 u' (-0.23). Adding the term U*last_is('a1 S1 u') gets weight -0.41.",
+      "Saying the response is 'close to zero after trial ~85' overclaims. With the terms U*(ep_trial>=85) (-0.71) and U*(ep_trial>=85)*(prev_action==2) (-0.22), an unrewarded a1->S1 trial late in the episode still gives about 0.5 when staying on a1 and about 1.5 when switching from a2. Worst-fit dev windows include late trials (t85-t88) with activations of 2.2-2.8 where the model predicts about 0.29. The fade is real but partial (the ep_dec==9 interaction gets weight -0.85 against a main effect of 0.95). It is not a drop to zero.",
+      "There is a fit artifact. The original terms predict -0.039 at every D1/GO step, where the feature is exactly 0, and over-predict all D2 cells that are not a1->S1 by about 0.1-0.12. Adding the term (phase != D2) raises test R^2 from 0.74 to 0.81, so the score understates how cleanly the feature is gated.",
+      "The a1->S2 'small bump' claim checks out (+0.18). Value, the policy logit and the hidden good state each add 0.01 or less, as claimed. No future variables are used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 a1->S1 after an unrewarded trial: peaks on switches from a2, weaker on a1 stays; fades partly late",
+    "better_terms": "(phase == D2) * (action == 1) * (state == 1) ;; (phase == D2) * (action == 1) * (state == 1) * (prev_reward == 0) ;; (phase == D2) * (action == 1) * (state == 1) * (prev_reward == 0) * (prev_action == 2) ;; (phase == D2) * (action == 1) * (state == 1) * (tv('reward', -2) == 0) ;; (phase == D2) * (action == 1) * (state == 1) * (prev_reward == 0) * ep_trial ;; (phase == D2) * (action == 1) * (state == 2) * (prev_reward == 0) ;; (phase == D2) * (action == 1) * (state == 1) * (prev_reward == 0) * last_is('a1 S1 u') ;; (phase != D2)",
+    "better_terms_test_r2_beyond_timing": 0.807
+  },
+  "final_label": "D2 a1->S1 after an unrewarded trial: peaks on switches from a2, weaker on a1 stays; fades partly late"
+}

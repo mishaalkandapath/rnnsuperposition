@@ -1,0 +1,65 @@
+{
+  "label": "D2 arriving at S1 in the first two trials of an episode",
+  "predicate": "(phase == D2) & (state == S1) & (ep_trial <= 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2, only when the state input is S1, and only at the very start of an episode (ep_trial 0-1; there is a weak tail at trials 2-9). It never fires at D1 or GO, on S2, or after trial 9. Magnitude is set mainly by episode position. On trial 0 it is near max (all of the top quartile; ~86% of the mass), and in practice that is almost always a2 then a rare transition to S1, because the untrained-prior first choice is nearly always a2. On trial 1 it is weak (~0.04-0.1 of max). On trial 1 it is silent when the previous reward was 1: adding prev_reward == 0 gives precision 1.0 but lowers recall (dev F1 0.84 vs 0.86), so the simpler predicate was recorded. All variables used are observed at D2 (state is shown and ep_trial is position), so uses_future is false. It is best read as a reached-S1 detector at episode onset, active before the hidden state has built up.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 29,
+    "predicate": "(phase == D2) & (state == S1) & (ep_trial <= 1)",
+    "split": "test",
+    "precision": 0.8411497730711044,
+    "recall": 0.8938906752411575,
+    "f1": 0.8667186282151208,
+    "mass_recall": 0.9810554887732145,
+    "correlation": 0.611515545609673,
+    "n_active": 622,
+    "n_predicted": 661,
+    "coverage_by_activation_quartile": [
+      0.8461538461538461,
+      0.8076923076923077,
+      0.9225806451612903,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 29,
+    "predicate": "(phase == D2) & (state == S1) & (ep_trial <= 1)",
+    "split": "dev",
+    "precision": 0.8174846625766872,
+    "recall": 0.9033898305084745,
+    "f1": 0.85829307568438,
+    "mass_recall": 0.9808009713183949,
+    "correlation": 0.5882430337824709,
+    "n_active": 590,
+    "n_predicted": 652,
+    "coverage_by_activation_quartile": [
+      0.9054054054054054,
+      0.75,
+      0.9591836734693877,
+      1.0
+    ]
+  },
+  "gate": "reset",
+  "feature": 29,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold on dev. Every activation is at D2 (D1 and GO: 0 of 590 active). There are no activations on S2 at D2 and none at ep_trial > 9. ep_trial==0 & D2 & S1 has precision 1.0 and holds 86% of the activation mass (test: 87%). The 8 trial-0 a1-to-S1 common cases also all fire, so the trial-0 response is to the S1 arrival itself, not to the rare transition.",
+      "The explanation says the feature is 'silent when the previous reward was 1' at trial 1. That is false. With ep_trial==1 & D2 & S1 & prev_reward==1, precision is 0.478, so about half of those steps fire. With tv('reward',-1)==1, precision is 0.489 on dev and 0.480 on test.",
+      "The real rule at trial 1 is narrower. The feature is silent only when trial 0 reached S1 and was rewarded: tv('state',-1)==S1 & tv('reward',-1)==1 gives precision 0.0 (71 steps). It fires in every other trial-1 case: previous trial rewarded at S2 gives precision 1.0 (68 steps); previous trial unrewarded gives precision 1.0 whether the previous state was S1 (26) or S2 (116). In the silent case the agent usually repeats a1 and lands on S1 by a common transition; 71 of the 72 a1 cases are silent.",
+      "This silent case is a systematic false-positive class: about 71 of the predicate's 119 false positives on dev. The original predicate's trial-1 component has precision of only 0.75 on dev and 0.77 on test.",
+      "The weak tail at ep_trial 2-9 is real but small: about 10% of active steps and 2% of the mass. It is scattered, with precision of about 0.015 even when restricted to a2 choices, so it is acceptable noise.",
+      "None of the variables used is a future variable (state at D2, ep_trial, and the previous trial's state and reward are all observed)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 arrival at S1 at the start of an episode (trial 0, strongly), or at trial 1 unless trial 0 already reached S1 and was rewarded",
+    "better_predicate": "(phase == D2) & (state == S1) & ((ep_trial == 0) | ((ep_trial == 1) & ~((tv('state',-1)==S1) & (tv('reward',-1)==1))))",
+    "better_predicate_test_f1": 0.914
+  },
+  "final_label": "D2 arrival at S1 at the start of an episode (trial 0, strongly), or at trial 1 unless trial 0 already reached S1 and was rewarded"
+}

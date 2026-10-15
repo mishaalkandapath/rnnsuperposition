@@ -1,0 +1,63 @@
+{
+  "label": "GO step, confidently choosing a2 after a rewarded common trial (stay-on-a2), episode trials < 80",
+  "predicate": "(phase == GO) & (action == 2) & (prev_reward == 1) & (prev_common != 0) & (ep_trial < 80)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at the GO step, and almost only when the agent picks a2 (99.85% of activations; model_act==2 and policy logit strongly toward a2, choice < -4.4). Within those steps it is gated by the previous trial being rewarded (97% of mass) and common (rare-rewarded previous trials mostly do not fire), so it looks like a model-based stay-on-a2 signal. It is silent at D1 and D2, on a1 choices, and almost entirely silent in late episode (ep_trial >= 80; rate falls from ~13% to 0), which suggests drift in the hidden state over the episode rather than anything the agent observes. Missed activations are mostly weak (low quartile, ~4% of mass), e.g. a2 choices after unrewarded or rare trials. Magnitude: the top windows are a2 GO steps after common-rewarded a2 trials. The predicate uses only the agent own GO choice and observed history; ep_trial is a time index the agent does not see directly. Dev F1 0.90 (0.89 without the prev_common clause; 0.78 without the ep_trial clause).",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 17,
+    "predicate": "(phase == GO) & (action == 2) & (prev_reward == 1) & (prev_common != 0) & (ep_trial < 80)",
+    "split": "test",
+    "precision": 0.9467962139056093,
+    "recall": 0.8495015018540805,
+    "f1": 0.8955139213350455,
+    "mass_recall": 0.9552886587033238,
+    "correlation": 0.8782561017298235,
+    "n_active": 102207,
+    "n_predicted": 91704,
+    "coverage_by_activation_quartile": [
+      0.4724874765184721,
+      0.9274420788979336,
+      0.9985911083281153,
+      0.9994912136511291
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 17,
+    "predicate": "(phase == GO) & (action == 2) & (prev_reward == 1) & (prev_common != 0) & (ep_trial < 80)",
+    "split": "dev",
+    "precision": 0.9480363536215919,
+    "recall": 0.8606230311515576,
+    "f1": 0.9022173297688316,
+    "mass_recall": 0.9586472516743247,
+    "correlation": 0.8780804072324986,
+    "n_active": 99995,
+    "n_predicted": 90775,
+    "coverage_by_activation_quartile": [
+      0.4962998519940798,
+      0.9480379215168607,
+      0.998519940797632,
+      0.9996399711976958
+    ]
+  },
+  "gate": "hidden",
+  "feature": 17,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Core claims hold. Activity is GO-only (D1 and D2: 0 of 380,619 steps each). 99,991 of 99,995 active steps have model_act==2. prev_reward==1 carries 97.4% of activation mass. At ep_trial>=80 the rate falls to about 0: a2, prev_reward==1, ep_trial>=80 gives precision 0.005 over 27k steps. Test scores for the original predicate reproduce: P 0.949, R 0.849, F1 0.896.",
+      "Small factual slip: the explanation says 99.85% of activations have choice < -4.4. The profile gives 99,037 of 99,995 active steps (99.0%), which is 99.8% of activation mass, not 99.85% of activations.",
+      "The 'model-based stay on a2' reading in the explanation goes too far. The one stay that is specifically model-based, a2 again after a rare-unrewarded a2 trial (prev_action==2, prev_common==0, prev_reward==0), never fires: test precision 0.000 over 22,913 steps. Meanwhile a2 again after a rare-rewarded a2 trial, a model-free stay that a model-based agent would switch away from, fires at 36% (test). So the feature tracks 'a2 again after a2 was rewarded in S2 via a common transition'. That is consistent with both model-free and model-based strategies, not a model-based signature. The label wording ('after a rewarded common trial, stay-on-a2') is accurate; only the explanation's model-based framing is wrong.",
+      "The ep_trial cutoff is gradual, not a clean step. At ep_trial 70-79, a2 after a reward has precision 0.64 against 0.95 overall, and the firing rate already falls from trial 50 on. Moving the cutoff barely changes test F1 (ep_trial<78: 0.899; <82: 0.887). The ep_trial term is an unobserved drift variable, which the explanation openly says.",
+      "Remaining misses are weak and look like scattered noise: mostly the bottom activation quartile (about 4.5% of mass), e.g. a2 after unrewarded trials (activation about 0.2) and rare-rewarded trials. Some false positives are a2 switches after a rewarded a1 trial (precision 0.21) and rel -3 steps where prev_common is unknown in the window (precision 0.92). Adding prev_action != 1 does not change test F1 (0.8966)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

@@ -1,0 +1,111 @@
+{
+ "label": "Higher when belief favours S1, the latest choice was a1, and at D1 after no reward.",
+ "short_terms": "belief ;; np.where(phase==D2, action, prev_action)==1 ;; (phase==D1)*(prev_reward==0) - (phase==D1)*last_is('a1 S1 r')",
+ "terms": "belief_lo ;; (phase==D2)*belief_lo ;; (phase!=D2)*(prev_action==1) ;; (phase==D1)*(prev_reward==0) ;; (phase==D1)*(prev_action==1)*(prev_reward==0) ;; (phase==D2)*(action==1) ;; (phase==D2)*(state==1) ;; (phase==D1)*(prev_state==2)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Raw reset gate r15 is graded by three observed things: (1) the ideal-observer log-odds that S1 is good (higher when S1 is believed good, lower for S2, in every phase, strongest at D2); (2) the most recent choice the agent made being a1 (the previous trial choice at D1/GO, this trial choice once it is known at D2); (3) at D1, the previous trial being unrewarded (a large bump, biggest after an unrewarded a1). The free fit adds a D1 interaction of a1 with no reward, an extra D2 belief slope, and the D2 reached state (S1 raises it), lifting dev R^2 from 0.74 to 0.82. Future reward and trials since reversal add nothing.",
+ "full_test_scores": {
+  "gate": "unit_reset",
+  "feature": 15,
+  "terms": [
+   "belief_lo",
+   "(phase==D2)*belief_lo",
+   "(phase!=D2)*(prev_action==1)",
+   "(phase==D1)*(prev_reward==0)",
+   "(phase==D1)*(prev_action==1)*(prev_reward==0)",
+   "(phase==D2)*(action==1)",
+   "(phase==D2)*(state==1)",
+   "(phase==D1)*(prev_state==2)"
+  ],
+  "weights": [
+   0.02980805643075499,
+   0.01171334616515317,
+   0.08757821460550394,
+   0.17205608916655393,
+   0.09714403454925366,
+   0.09786119691846855,
+   0.11775944046656105,
+   -0.01161256318645612
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.8133747879140766,
+  "r2": 0.8279295409602566,
+  "r2_timing_only": 0.07798921101549205
+ },
+ "gate": "unit_reset",
+ "feature": 15,
+ "test_scores": {
+  "gate": "unit_reset",
+  "feature": 15,
+  "terms": [
+   "belief",
+   "np.where(phase==D2, action, prev_action)==1",
+   "(phase==D1)*(prev_reward==0) - (phase==D1)*last_is('a1 S1 r')"
+  ],
+  "weights": [
+   0.23367804362048308,
+   0.15715527198047083,
+   0.16401701123559423
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7842014791755746,
+  "r2": 0.8010314355529817,
+  "r2_timing_only": 0.07798921101549205
+ },
+ "dev_scores": {
+  "gate": "unit_reset",
+  "feature": 15,
+  "terms": [
+   "belief",
+   "np.where(phase==D2, action, prev_action)==1",
+   "(phase==D1)*(prev_reward==0) - (phase==D1)*last_is('a1 S1 r')"
+  ],
+  "weights": [
+   0.23367804362048308,
+   0.15715527198047083,
+   0.16401701123559423
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.7910958157054079,
+  "r2": 0.8076977637674614,
+  "r2_timing_only": 0.07947159181187946
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": true,
+  "issues": [
+   "The claims check out. On test, the recorded short form scores 0.738 beyond timing. Dropping any one term costs a lot: without the D1 no-reward term it falls to 0.630, without the a1 term to 0.665, and without belief to 0.635. Extending the no-reward bump to GO lowers it to 0.713, so the bump really is at D1 only. Adding an extra belief slope at D2 raises it to 0.754, which supports 'steepest at D2'. Probability belief does slightly better than log-odds (0.744): the response saturates.",
+   "There is a systematic miss that the label hides. The original short form overpredicts at D1 after rewarded trials that reached S1: by 0.152 after a2 S1 r and by 0.128 after a1 S1 r. The worst-fit windows are long a1->S1 rewarded streaks with belief saturated toward S1. There the actual D1 value is about 0.28 against a prediction of about 0.62, and GO is about 0.53 against 0.74. So the gate does not just rise at D1 after no reward. It also dips well below baseline after a rewarded a1->S1 trial, even though belief and the a1 term both push the prediction up.",
+   "Other residual errors are moderate and scattered: about -0.15 at D1 after a2 S1 r even after the fix, about -0.1 at GO after a1 S2 r, and about +0.07 at GO after a2 S2 u. Making the D1 bump specific to unrewarded a1 trials scores worse (0.683), so the explanation's claim that the bump is 'biggest after unrewarded a1' adds little in short form.",
+   "Better short form: belief ;; np.where(phase==D2, action, prev_action)==1 ;; (phase==D1)*(prev_reward==0) - (phase==D1)*last_is('a1 S1 r'). It passes --short and scores test R^2 0.784 beyond timing, against 0.738 recorded and a free fit of 0.813. It removes most of the D1 phase bias (mean D1 error goes from -0.039 to -0.011)."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Higher when belief favours S1 and latest choice was a1; at D1 up after no reward, down after rewarded a1->S1.",
+  "better_short_terms": "belief ;; np.where(phase==D2, action, prev_action)==1 ;; (phase==D1)*(prev_reward==0) - (phase==D1)*last_is('a1 S1 r')",
+  "better_short_terms_test_r2_beyond_timing": 0.7842014791755746
+ },
+ "final_label": "Higher when belief favours S1 and latest choice was a1; at D1 up after no reward, down after rewarded a1->S1.",
+ "original_short_terms": "belief_lo ;; np.where(phase==D2, action, prev_action)==1 ;; (phase==D1)*(prev_reward==0)",
+ "original_test_scores": {
+  "gate": "unit_reset",
+  "feature": 15,
+  "terms": [
+   "belief_lo",
+   "np.where(phase==D2, action, prev_action)==1",
+   "(phase==D1)*(prev_reward==0)"
+  ],
+  "weights": [
+   0.031198780765953345,
+   0.14044544333865538,
+   0.1820857204903885
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7382963476577442,
+  "r2": 0.7587064090237894,
+  "r2_timing_only": 0.07798921101549205
+ },
+ "terms_from": "skeptic"
+}

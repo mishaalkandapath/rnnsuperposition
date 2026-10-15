@@ -1,0 +1,102 @@
+{
+  "label": "GO after an unrewarded common a2->S2 trial (before ~trial 85)",
+  "predicate": "((phase==GO)&(prev_reward==0)&(ep_trial<85)) & (((prev_state==2)&(prev_common==1)) | ((rel==-3)&(choice<-3.5)&(choice>-9)))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO steps (never D1/D2), when the previous trial was a2 with a common transition to S2 and was unrewarded (equivalent to prev_action==2 & prev_common==1, since S2 common means a2). All conditions are already observed at GO. Rare previous transitions (a2->S1 or a1->S2) carry about 1% of the mass, and rewarded previous trials carry almost none. The feature fades late in the episode: it is weaker around trials 80-89 and silent at trials 90-99, so the ep_trial<85 term raises dev precision from 0.75 to 0.89. Most of the missed activations are GO steps on the window first trial (rel -3), where the previous trial is outside the window and prev_* is unknown. At those steps the feature fires mainly when the model is about to choose a2 (model_act==2). Activity is concentrated where the policy logit strongly favours a2 (choice in [-8.9,-4.4]), so the feature tracks an agent that keeps choosing a2 despite an unrewarded common S2 outcome. The low-activation quartile is covered less well (0.71) than the higher quartiles (0.83-0.84).",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 242,
+    "predicate": "((phase==GO)&(prev_reward==0)&(ep_trial<85)) & (((prev_state==2)&(prev_common==1)) | ((rel==-3)&(choice<-3.5)&(choice>-9)))",
+    "split": "test",
+    "precision": 0.863365793443972,
+    "recall": 0.9212351822040099,
+    "f1": 0.891362220334183,
+    "mass_recall": 0.9698420547799211,
+    "correlation": 0.8574706862107923,
+    "n_active": 34165,
+    "n_predicted": 36455,
+    "coverage_by_activation_quartile": [
+      0.7415125263404355,
+      0.948952113335675,
+      0.9985950122936424,
+      0.9959021191897904
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 242,
+    "predicate": "((phase==GO)&(prev_reward==0)&(ep_trial<85)) & (((prev_state==2)&(prev_common==1)) | ((rel==-3)&(choice<-3.5)&(choice>-9)))",
+    "split": "dev",
+    "precision": 0.8654812647114957,
+    "recall": 0.92,
+    "f1": 0.8919082818415748,
+    "mass_recall": 0.9706972518161238,
+    "correlation": 0.8610339562700203,
+    "n_active": 29575,
+    "n_predicted": 31438,
+    "coverage_by_activation_quartile": [
+      0.7308628617798215,
+      0.9544225047335677,
+      0.9978360833107925,
+      0.9968889490058163
+    ]
+  },
+  "gate": "hidden",
+  "feature": 242,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The factual claims hold. On the dev split all activation mass is at GO, with none at D1 or D2. A rare previous transition carries 0.7% of the mass. A rewarded previous trial carries 22 of 29575 active steps, so almost none. The episode fade is real: test precision is 0.93-0.95 for ep_trial < 50, 0.86 for 50-79, 0.52 for 80-84, 0.10 for 85-89 and 0.00 for 90 and later. The reported test scores reproduce exactly: P 0.887, R 0.803, F1 0.843, mass recall 0.830.",
+      "The common-transition term is needed. Without prev_common==1, (GO & prev_reward==0 & prev_state==2 & ep_trial<85) drops to test precision 0.52 and F1 0.64.",
+      "There is one systematic miss class: GO steps on the window's first trial (rel -3), where prev_state and prev_common are unknown (-1). They hold about 16% of active steps and of activation mass. This comes from the window, not from the feature, and the explanation already says so. On those steps an observed-variable fallback works: prev_reward==0 with the policy logit choice in (-9, -3.5). Adding it raises test F1 from 0.843 to 0.891 and mass recall from 0.83 to 0.97.",
+      "The false positives are GO steps that meet the predicate but where the agent then switches to a1. Within the predicate, choice>-2 has test precision 0.63 and choice<0 has 0.97. Adding action==2 raises precision to 0.966 but cuts recall to 0.69, so F1 falls to 0.81. The explanation already notes that the feature tracks continuing to choose a2, so the label does not overclaim, though it could mention the upcoming a2 choice."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "((phase==GO)&(prev_reward==0)&(ep_trial<85)) & (((prev_state==2)&(prev_common==1)) | ((rel==-3)&(choice<-3.5)&(choice>-9)))",
+    "better_predicate_test_f1": 0.891
+  },
+  "original_predicate": "(phase == GO) & (prev_reward == 0) & (prev_state == 2) & (prev_common == 1) & (ep_trial < 85)",
+  "original_test_scores": {
+    "gate": "hidden",
+    "feature": 242,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (prev_state == 2) & (prev_common == 1) & (ep_trial < 85)",
+    "split": "test",
+    "precision": 0.8873362445414847,
+    "recall": 0.8029269720474169,
+    "f1": 0.8430239704978487,
+    "mass_recall": 0.8304075455611212,
+    "correlation": 0.7956031935572965,
+    "n_active": 34165,
+    "n_predicted": 30915,
+    "coverage_by_activation_quartile": [
+      0.6950362912666823,
+      0.8456855169183937,
+      0.8353822737384381,
+      0.8356164383561644
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "hidden",
+    "feature": 242,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (prev_state == 2) & (prev_common == 1) & (ep_trial < 85)",
+    "split": "dev",
+    "precision": 0.8885050133313305,
+    "recall": 0.8,
+    "f1": 0.8419329585082912,
+    "mass_recall": 0.8288554856687131,
+    "correlation": 0.7973124568682939,
+    "n_active": 29575,
+    "n_predicted": 26629,
+    "coverage_by_activation_quartile": [
+      0.6871787936164457,
+      0.8428455504463078,
+      0.8394644306194211,
+      0.8305153523603409
+    ]
+  },
+  "predicate_from": "skeptic"
+}

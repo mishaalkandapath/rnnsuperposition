@@ -1,0 +1,83 @@
+{
+  "label": "z dips when belief favours S1 / after a1 (esp. a1->S2), amplified late in episode",
+  "terms": "table(phase, {0: 0.5, 1: 1.0, 2: 0.2}) * np.clip(belief_lo, -4, 4) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == GO) * (prev_action == 1) * (1 - last_is(\"a1 S2 r\")) ;; (phase == D2) * (action == 1) ;; ((ep_trial - 70).clip(0) / 30) * table(phase, {0: 0.5, 1: 1.0, 2: 0.2}) * np.clip(belief_lo, -4, 4) ;; ((ep_trial - 70).clip(0) / 30) * (np.where(phase == D2, action, prev_action) == 1) ;; ((ep_trial - 70).clip(0) / 30) * (prev_reward == 0) ;; (phase == D1) * last_is(\"a1 S1 u\")",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate of unit 28 sits near 1 (mean 0.986) and dips below it. Beyond timing (which itself captures a strong late-episode drop), the dips are driven by (1) the ideal-observer belief that S1 is good: higher belief_lo lowers z, strongest at GO, about half as strong at D1, weak at D2; (2) the last action being a1: at D1 a dip of ~0.023 after a1 that reached S2 (a1 S2 u and a1 S2 r both), plus ~0.008 after a1 S1 u; at GO ~0.007 lower after any a1 trial except a1 S2 r; at D2 ~0.005 lower when the choice just made was a1. a2 histories / S2 belief raise it. (3) All of this is amplified in the last ~30 trials of the episode, where z drops further after a1, with S1 belief, and after unrewarded trials (late x prev_reward==0). Observed-only only: no value/policy terms. Test R^2 beyond timing 0.614 (dev 0.615), vs observed-cue additive ceiling 0.64 and full ceiling 0.70; the model policy decile alone reaches 0.58, so belief plus last-trial history recovers about as much as the policy did, losing little. Residual worst fits are late-episode runs of very low z that the terms under-predict. Future vars (this reward) add nothing (0.01).",
+  "gate": "unit_update",
+  "feature": 28,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 28,
+    "terms": [
+      "table(phase, {0: 0.5, 1: 1.0, 2: 0.2}) * np.clip(belief_lo, -4, 4)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == GO) * (prev_action == 1) * (1 - last_is(\"a1 S2 r\"))",
+      "(phase == D2) * (action == 1)",
+      "((ep_trial - 70).clip(0) / 30) * table(phase, {0: 0.5, 1: 1.0, 2: 0.2}) * np.clip(belief_lo, -4, 4)",
+      "((ep_trial - 70).clip(0) / 30) * (np.where(phase == D2, action, prev_action) == 1)",
+      "((ep_trial - 70).clip(0) / 30) * (prev_reward == 0)",
+      "(phase == D1) * last_is(\"a1 S1 u\")"
+    ],
+    "weights": [
+      -0.0019300221930022027,
+      -0.022875971518661175,
+      -0.007321468313568718,
+      -0.004983583183329361,
+      -0.004151308610014602,
+      -0.0035561420527602523,
+      -0.005463731597833707,
+      -0.00786238873834053
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6138286410999243,
+    "r2": 0.7675461579648177,
+    "r2_timing_only": 0.39805519835216174
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 28,
+    "terms": [
+      "table(phase, {0: 0.5, 1: 1.0, 2: 0.2}) * np.clip(belief_lo, -4, 4)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == GO) * (prev_action == 1) * (1 - last_is(\"a1 S2 r\"))",
+      "(phase == D2) * (action == 1)",
+      "((ep_trial - 70).clip(0) / 30) * table(phase, {0: 0.5, 1: 1.0, 2: 0.2}) * np.clip(belief_lo, -4, 4)",
+      "((ep_trial - 70).clip(0) / 30) * (np.where(phase == D2, action, prev_action) == 1)",
+      "((ep_trial - 70).clip(0) / 30) * (prev_reward == 0)",
+      "(phase == D1) * last_is(\"a1 S1 u\")"
+    ],
+    "weights": [
+      -0.0019300221930022027,
+      -0.022875971518661175,
+      -0.007321468313568718,
+      -0.004983583183329361,
+      -0.004151308610014602,
+      -0.0035561420527602523,
+      -0.005463731597833707,
+      -0.00786238873834053
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.620217428382849,
+    "r2": 0.7724750734291985,
+    "r2_timing_only": 0.4009074044604567
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor factual imprecision: at D1 the explanation says z falls 'about 0.023 after an a1 trial that reached S2 (rewarded or not)'. The residual table shows a1 S2 u at -0.0276 and a1 S2 r at -0.0153, so the pooled term overstates the drop after rewarded trials. misses confirms it: 'D1 after a1 S2 r' is the most under-predicted cell, at +0.006. Splitting the two cases (table term) fixes it.",
+      "The late-episode ramp is concentrated in the last ~20 trials rather than spread over ~30. Replacing (ep_trial-70)/30 with ((ep_trial-80)/20)**2 raises test R^2 beyond timing from 0.614 to 0.631 with the same terms. The worst-fit windows (t92-t99, actual z 0.84-0.88 vs predicted 0.93-0.97) are all late-episode runs, which the explanation already admits.",
+      "The phase scaling of belief is roughly right. With free per-phase weights D1 is about 0.6x GO and D2 about 0.37x GO, against the claimed 0.5 and 0.2. The fixed table costs almost nothing (0.375 vs 0.384 test for belief alone).",
+      "The 'unrewarded trials drop z further late' claim is weak. Adding the late prev_reward==0 term to the non-late set gives only +0.012 (0.543 to 0.555 test), and a global prev_reward==0 term does about as well as the late-gated one (0.6148 vs 0.6138).",
+      "No large systematic error class remains. The phase means of the residual are 0, and the largest misses by phase x previous trial are at most 0.006, compared with effects of 0.01-0.03. Test R^2 0.614 reproduces exactly (my improved set reaches 0.633) against an observed-only additive ceiling of 0.64, so the observed-only claim that little is lost relative to policy decile (0.58) holds."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "z dips with S1 belief and after a1 (most after a1->S2 unrewarded), much stronger in the last ~20 trials",
+    "better_terms": "table(phase, {0: 0.5, 1: 1.0, 2: 0.2}) * np.clip(belief_lo, -4, 4) ;; (phase == D1) * table(prev_action*100 + prev_state*10 + prev_reward, {110: -0.6, 121: -1.5, 120: -2.8}) ;; (phase == GO) * (prev_action == 1) * (1 - last_is(\"a1 S2 r\")) ;; (phase == D2) * (action == 1) ;; ((ep_trial - 80).clip(0) / 20)**2 * table(phase, {0: 0.5, 1: 1.0, 2: 0.2}) * np.clip(belief_lo, -4, 4) ;; ((ep_trial - 80).clip(0) / 20)**2 * (np.where(phase == D2, action, prev_action) == 1) ;; ((ep_trial - 80).clip(0) / 20)**2 * (prev_reward == 0)",
+    "better_terms_test_r2_beyond_timing": 0.6328
+  },
+  "final_label": "z dips with S1 belief and after a1 (most after a1->S2 unrewarded), much stronger in the last ~20 trials"
+}

@@ -1,0 +1,82 @@
+{
+  "label": "D1 dip after a1 reached rare S2, deeper if repeated and late in episode",
+  "terms": "(phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a1 S2 r\") ;; (phase == D1) * belief_lo ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * ((tv(\"action\", -2) == 1) & (tv(\"state\", -2) == 2)) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * ep_dec ;; (phase == D1) * (prev_state == 1) ;; (phase == D1) * (prev_action == 1) * (prev_reward == 0) * (1 - belief) ;; (phase != D1) * belief_lo",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 43 sits near 1 (keep the old hidden state) and only drops at D1. The drop comes after the previous trial was a1 that reached the rare state S2: about -0.10 if it was unrewarded, -0.05 if rewarded. It gets about 0.045 deeper if the trial before was also a1->S2, and deeper still later in the episode (about -0.008 per episode decile). At D1 it is slightly higher after reaching S1 (+0.027), lower after unrewarded a1 trials when belief favours S2, and it falls a little as the ideal-observer belief that S1 is good rises. GO and D2 barely vary; only a tiny belief term there. No future, hidden or model-output variables are used. Dev R^2 beyond timing is 0.69. The reference scores are 0.66 for the last-trial table alone, 0.71 for all observed cues and 0.74 for all cues; the model-based policy decile alone was 0.36, so using only observed quantities loses essentially nothing. Residual errors: D1 dips on a window first trial, where the previous trial is not in the window.",
+  "gate": "unit_update",
+  "feature": 43,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 43,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * belief_lo",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * ((tv(\"action\", -2) == 1) & (tv(\"state\", -2) == 2))",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * ep_dec",
+      "(phase == D1) * (prev_state == 1)",
+      "(phase == D1) * (prev_action == 1) * (prev_reward == 0) * (1 - belief)",
+      "(phase != D1) * belief_lo"
+    ],
+    "weights": [
+      -0.10496488440083392,
+      -0.05053229228061009,
+      -0.004306668280075595,
+      -0.044761186917536326,
+      -0.0083790206334256,
+      0.02744136759639161,
+      -0.025747349797000895,
+      -0.0007275083793238192
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6842194838917481,
+    "r2": 0.7214889565183191,
+    "r2_timing_only": 0.11802334446053897
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 43,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * belief_lo",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * ((tv(\"action\", -2) == 1) & (tv(\"state\", -2) == 2))",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * ep_dec",
+      "(phase == D1) * (prev_state == 1)",
+      "(phase == D1) * (prev_action == 1) * (prev_reward == 0) * (1 - belief)",
+      "(phase != D1) * belief_lo"
+    ],
+    "weights": [
+      -0.10496488440083392,
+      -0.05053229228061009,
+      -0.004306668280075595,
+      -0.044761186917536326,
+      -0.0083790206334256,
+      0.02744136759639161,
+      -0.025747349797000895,
+      -0.0007275083793238192
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6940570801564492,
+    "r2": 0.729777503513309,
+    "r2_timing_only": 0.11675518876242041
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the quoted effect sizes are partial coefficients from correlated terms, not the size of the dip itself. The raw D1 residuals are -0.165 after a1 S2 u and -0.098 after a1 S2 r. The fitted -0.105 / -0.051 only add up to that once the ep_dec term (-0.008 per decile, also applied to a1->S2) and the (prev_action==1)(prev_reward==0)(1-belief) term (-0.026) are included. The weights are unstable: dropping last_is('a1 S2 u') flips the a1 S2 r weight to +0.02 and the fit still reaches test R^2 0.62. So the numbers in the explanation should not be read as standalone dip sizes.",
+      "Reproduced the result: test R^2 beyond timing is 0.684. Dropping one term at a time on test gives: a1S2u 0.62, (prev_state==1) 0.63, D1 belief_lo 0.65, ep_dec*a1S2 0.668, a1S2r 0.671, repeat 0.675, a1-unrewarded*(1-belief) 0.679. Dropping (phase!=D1)*belief_lo also lands at about 0.68, so that term adds only about 0.005. Every claimed effect contributes, with the sign stated.",
+      "The remaining misses are the error class the explanation already names. The worst windows are D1 dips of about -0.3 on a window's first trial, where the previous trial is missing. Adding (prev_action==-1)*ep_dec adds 0.000. Besides these there are a few isolated late-episode D1 dips after a2 S2 unrewarded (t83, t85, t97). A last_is('a2 S2 u')*ep_dec term adds nothing (0.683), and the mean residual for that cell is +0.006, so this is not systematic. The mean error by phase x previous trial is at most 0.016 in every cell (D1 after a2 S1 u is over-predicted by 0.016).",
+      "Eight replacement terms all came within +/-0.002 of 0.684 on test: a1S2 x belief_lo, a1S2 x belief, a1S2 x (ep_dec>=8), a1S2u x repeat, a1S2 x (10-belief_cover), (prev_state==2)(prev_reward==0) x belief_lo, an a1-on-the-trial-before term, and a D2 a1->S2 term. Given the 0.71 ceiling for all observed cues, no large systematic gap remains.",
+      "Claims checked as consistent: GO and D2 barely vary (their residual tables are at most about 0.01). The gate is higher at D1 after reaching S1 (residuals +0.016 to +0.028). It falls as belief rises (D1 by belief decile goes from +0.026 to -0.047). The claim that going observed-only loses little is fair: 0.684 against an observed ceiling of 0.71 and an all-cue ceiling of 0.74, and no future, hidden or model-output variables are used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_terms": null,
+    "better_terms_test_r2_beyond_timing": null
+  }
+}

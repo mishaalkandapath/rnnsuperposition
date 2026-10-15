@@ -1,0 +1,84 @@
+{
+  "label": "update gate z9: low after a1 (esp. unrewarded) trials at D1, high on reaching S2",
+  "terms": "(phase == D1) * (-0.02*last_is(\"a1 S1 r\") - 0.075*last_is(\"a1 S1 u\") - 0.052*last_is(\"a1 S2 r\") - 0.13*last_is(\"a1 S2 u\") + 0.06*last_is(\"a2 S2 r\") + 0.06*last_is(\"a2 S1 r\") + 0.023*last_is(\"a2 S1 u\")) ;; (phase == D1) * belief_lo ;; (phase == GO) * (last_is(\"a1 S2 u\") + 0.6*last_is(\"a1 S2 r\")) ;; (phase == D2) * (prev_state == S2) * (prev_reward == 0) ;; (phase == D2) * (state == S2) ;; (phase == D2) * (action == 1) * (state == S2) ;; (phase != D2) * (ep_trial%10)*ep_dec ;; (phase == D2) * (ep_trial%10)*ep_dec",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate z of GRU unit 9 (always on, mean 0.77). Timing explains most of its variance (R^2 0.86): it is high early and falls steeply late in the episode, with D2 lowest. Beyond timing, only observed quantities are used. At D1 it depends on the previous trial: lower after a1 trials, most of all a1 S2 unrewarded (about -0.13) and a1 S1 unrewarded (-0.075), and higher after rewarded a2 trials (+0.06). On top of that it falls with the ideal-observer belief that S1 is good (belief_lo, graded, negative). At GO it is lower after a1 S2 trials (unrewarded more than rewarded). At D2 it rises when S2 is reached (more so after an a1 rare transition) and falls when the previous trial was S2 unrewarded. A within-decile late-episode drift term (trial position within the decile times the decile) captures the part of timing that the coarse per-decile baseline misses; it adds about 0.08 to 0.09 dev R^2 by itself. Test R^2 beyond timing is 0.587, against an all-cue ceiling of 0.64 (all observed 0.61). The earlier explanation used the model policy (the policy decile alone scores 0.40). Observed history plus belief recovers about as much, so the observed-only version loses little. Future reward, hidden good state and since_rev add little (reference scores 0.01, 0.13, 0.00). Remaining errors are whole-window offsets late in the episode.",
+  "gate": "unit_update",
+  "feature": 9,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 9,
+    "terms": [
+      "(phase == D1) * (-0.02*last_is(\"a1 S1 r\") - 0.075*last_is(\"a1 S1 u\") - 0.052*last_is(\"a1 S2 r\") - 0.13*last_is(\"a1 S2 u\") + 0.06*last_is(\"a2 S2 r\") + 0.06*last_is(\"a2 S1 r\") + 0.023*last_is(\"a2 S1 u\"))",
+      "(phase == D1) * belief_lo",
+      "(phase == GO) * (last_is(\"a1 S2 u\") + 0.6*last_is(\"a1 S2 r\"))",
+      "(phase == D2) * (prev_state == S2) * (prev_reward == 0)",
+      "(phase == D2) * (state == S2)",
+      "(phase == D2) * (action == 1) * (state == S2)",
+      "(phase != D2) * (ep_trial%10)*ep_dec",
+      "(phase == D2) * (ep_trial%10)*ep_dec"
+    ],
+    "weights": [
+      0.8048587871791449,
+      -0.005510102055014672,
+      -0.05164638175864586,
+      -0.05568725565667653,
+      0.057380932370669414,
+      0.014837371403597215,
+      -0.0005255860541779288,
+      -0.0012808990145674003
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5867469776587881,
+    "r2": 0.9428318503217539,
+    "r2_timing_only": 0.8616630814836631
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 9,
+    "terms": [
+      "(phase == D1) * (-0.02*last_is(\"a1 S1 r\") - 0.075*last_is(\"a1 S1 u\") - 0.052*last_is(\"a1 S2 r\") - 0.13*last_is(\"a1 S2 u\") + 0.06*last_is(\"a2 S2 r\") + 0.06*last_is(\"a2 S1 r\") + 0.023*last_is(\"a2 S1 u\"))",
+      "(phase == D1) * belief_lo",
+      "(phase == GO) * (last_is(\"a1 S2 u\") + 0.6*last_is(\"a1 S2 r\"))",
+      "(phase == D2) * (prev_state == S2) * (prev_reward == 0)",
+      "(phase == D2) * (state == S2)",
+      "(phase == D2) * (action == 1) * (state == S2)",
+      "(phase != D2) * (ep_trial%10)*ep_dec",
+      "(phase == D2) * (ep_trial%10)*ep_dec"
+    ],
+    "weights": [
+      0.8048587871791449,
+      -0.005510102055014672,
+      -0.05164638175864586,
+      -0.05568725565667653,
+      0.057380932370669414,
+      0.014837371403597215,
+      -0.0005255860541779288,
+      -0.0012808990145674003
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5896732921707344,
+    "r2": 0.9435912123676843,
+    "r2_timing_only": 0.8625271361673414
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "belief_lo is described as a D1 driver, but it adds little: removing it drops test R^2 only from 0.587 to 0.569. Nearly all of its effect is already carried by the previous-trial table.",
+      "Without the drift terms the score is 0.492 on test (the explanation says about 0.50 on dev). The drift terms alone score only 0.069, but they add 0.095 on top of the others. That is slightly more than the 0.08-0.09 claimed, and it confirms the history and belief terms fall short of 0.6 on their own.",
+      "At D2, the extra effect of a1 when S2 is reached is small (weight +0.015, against +0.057 for reaching S2 at all). 'More so after an a1 rare transition' is true but minor. Raw residuals at D2 are -0.037 for a1 S1, +0.045 for a1 S2, -0.048 for a2 S1 and +0.035 for a2 S2, so the state reached, not the choice, carries the effect.",
+      "The misses show no large systematic error class. Mean error by phase is at most 0.007, and the worst (phase x previous trial) cells are about 0.02 (GO after a2 S1 u +0.020, D2 after a1 S2 r -0.021). The worst windows are whole-window offsets at trials 87-99, as the explanation itself says.",
+      "The history effects are somewhat multiplicative with episode time. Adding the D1 history term times exp(ep_trial/15) raises test R^2 to 0.600, and the term times ep_dec gives 0.5996. These are small gains, so the additive label is adequate.",
+      "Checked and ruled out as missing structure: an a1 count over the last 3 trials (0.570), two-back a1-unrewarded (0.573), prev_action at GO/D2 (0.570), and belief_lo in all phases instead of D1 only (0.585)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "z9 low after a1 (esp. unrewarded) trials at D1, high on reaching S2",
+    "better_terms": "(phase == D1) * (-0.02*last_is(\"a1 S1 r\") - 0.075*last_is(\"a1 S1 u\") - 0.052*last_is(\"a1 S2 r\") - 0.13*last_is(\"a1 S2 u\") + 0.06*last_is(\"a2 S2 r\") + 0.06*last_is(\"a2 S1 r\") + 0.023*last_is(\"a2 S1 u\")) ;; (phase == GO) * (last_is(\"a1 S2 u\") + 0.6*last_is(\"a1 S2 r\")) ;; (phase == D2) * (prev_state == S2) * (prev_reward == 0) ;; (phase == D2) * (state == S2) ;; (phase == D2) * (action == 1) * (state == S2) ;; (phase != D2) * (ep_trial%10)*ep_dec ;; (phase == D2) * (ep_trial%10)*ep_dec ;; [same D1 history term] * np.exp(ep_trial/15.0)",
+    "better_terms_test_r2_beyond_timing": 0.6003
+  },
+  "final_label": "z9 low after a1 (esp. unrewarded) trials at D1, high on reaching S2"
+}

@@ -1,0 +1,84 @@
+{
+  "label": "S2-good belief signal (high when S2 believed good), D1 dominated by last reward",
+  "terms": "(phase == D1) * (prev_reward == 0) ;; (phase == D1) * (prev_action == 2) ;; (phase == D1) * ((prev_reward == 1) == (prev_state == 2)) * (prev_state > 0) ;; (phase == GO) * (prev_action == 2) ;; (phase == D2) * (state == 2) ;; (phase == D2) * (prev_reward == 0) ;; (phase == GO) * (belief - 0.5) ;; (phase == D2) * (belief - 0.5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw candidate n of unit 19 encodes an a2 / S2-good signal from observed history. At GO and D2 it falls steeply with the ideal-observer belief that S1 is good (weights about -0.9 at GO and -1.2 at D2 on belief-0.5): high when S2 is believed good, low when S1 is. At D2 it is also higher when S2 is the reached state (+0.43) and lower after an unrewarded previous trial (-0.27). At GO it is a little higher after a previous a2 choice (+0.15). At D1 the main driver is the reward just shown: about -0.9 after an unrewarded trial. On top of that it is higher after a previous a2 choice (+0.45) and slightly higher after S2-favouring outcomes (S2 rewarded or S1 unrewarded, +0.13). D1 belief adds almost nothing. No future, hidden or model-output variables are used. Dev R^2 beyond timing is 0.78 against an all-observed ceiling of 0.89 and an all-cue ceiling of 0.93. Belief alone (decile table) reaches 0.52 and the model policy decile reaches 0.61, so the observed-only belief plus trial-history terms lose essentially nothing relative to the model-policy explanation. Remaining misses: D1 after a2 S1 u and a1 S1 r is under-predicted, and D1 after a1 S2 u is over-predicted.",
+  "gate": "unit_candidate",
+  "feature": 19,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 19,
+    "terms": [
+      "(phase == D1) * (prev_reward == 0)",
+      "(phase == D1) * (prev_action == 2)",
+      "(phase == D1) * ((prev_reward == 1) == (prev_state == 2)) * (prev_state > 0)",
+      "(phase == GO) * (prev_action == 2)",
+      "(phase == D2) * (state == 2)",
+      "(phase == D2) * (prev_reward == 0)",
+      "(phase == GO) * (belief - 0.5)",
+      "(phase == D2) * (belief - 0.5)"
+    ],
+    "weights": [
+      -0.8919107599761519,
+      0.4530788203367475,
+      0.1339868938046303,
+      0.15051967094178573,
+      0.4304616908408599,
+      -0.2741485632135094,
+      -0.8854275419715543,
+      -1.2150085408399347
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7730680175650713,
+    "r2": 0.8018601668947667,
+    "r2_timing_only": 0.1268756788741815
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 19,
+    "terms": [
+      "(phase == D1) * (prev_reward == 0)",
+      "(phase == D1) * (prev_action == 2)",
+      "(phase == D1) * ((prev_reward == 1) == (prev_state == 2)) * (prev_state > 0)",
+      "(phase == GO) * (prev_action == 2)",
+      "(phase == D2) * (state == 2)",
+      "(phase == D2) * (prev_reward == 0)",
+      "(phase == GO) * (belief - 0.5)",
+      "(phase == D2) * (belief - 0.5)"
+    ],
+    "weights": [
+      -0.8919107599761519,
+      0.4530788203367475,
+      0.1339868938046303,
+      0.15051967094178573,
+      0.4304616908408599,
+      -0.2741485632135094,
+      -0.8854275419715543,
+      -1.2150085408399347
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7806305410022017,
+    "r2": 0.8087832232914575,
+    "r2_timing_only": 0.12833455676953787
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The headline score reproduces: the 8 terms give test R^2 beyond timing 0.773, with weights matching the explanation (D1 prev_reward==0 -0.89, D1 prev a2 +0.45, D1 S2-favouring +0.13, GO prev a2 +0.15, D2 state S2 +0.43, D2 prev_reward==0 -0.27, GO belief -0.89, D2 belief -1.22). The GO/D2 belief claim holds: in the profile the residual falls monotonically by belief decile, from +0.47 to -0.57 at GO and +0.65 to -0.70 at D2.",
+      "The D1 claim 'slightly higher after outcomes that favour S2 (S2 rewarded or S1 unrewarded)' is half wrong. The D1 residual by previous trial is a1 S1 r +0.25 vs a1 S2 r +0.07, and a2 S1 r +0.51 vs a2 S2 r +0.48. So S2-rewarded is NOT higher than S1-rewarded. The +0.13 comes only from the unrewarded side (a1 S1 u -0.95 vs a1 S2 u -1.21; a2 S1 u +0.01 vs a2 S2 u -0.64).",
+      "D1 has a real interaction that the additive terms miss: after a2 S1 u the residual is about 0 (+0.01), while after the other unrewarded patterns it is -0.6 to -1.2. In the original fit's misses, D1 after a2 S1 u is under-predicted by +0.35, D1 after a1 S1 r by +0.28 and D1 after a1 S2 u is over-predicted by -0.29, giving a D1 mean error of +0.10. A full D1 last-trial table removes most of this (D1 cell errors drop to about 0.15) and raises test R^2 to 0.795.",
+      "'Belief at D1 adds almost nothing' overclaims. Swapping the S2-favouring term for (phase==D1)*(belief-0.5) scores the same (0.772 vs 0.773; weight -0.14). The profile's D1 residual by belief decile spans +0.39 to -0.36. Belief and the S2-favouring term are interchangeable at D1, so neither is uniquely the driver.",
+      "The phrase 'loses essentially nothing compared with the earlier model-policy explanation' is not backed by the numbers given. 0.61 is the score of the policy-decile table alone, not of the earlier explanation, so the size of the loss is not established. The observed-only additive ceiling is 0.89, so a gap of about 0.1 to 0.12 remains.",
+      "Remaining errors after better terms: D2 by previous trial is still off by about 0.2 (under-predicted after a2 S2 u by +0.21, over-predicted after a1 S1 u by -0.22). D2 mean error is -0.08 to -0.09 and D1 mean error is +0.09 with every term set tried. Neither D2 prev_action nor D2 action terms fixed this (test 0.778 to 0.797)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Signal that S2 is good: at GO/D2 it tracks the ideal-observer belief against S1 (plus the S2 state at D2); at D1 it follows the last trial's outcome (low after no reward, except near 0 after a2 S1 u; higher after a previous a2 choice)",
+    "better_terms": "(phase == D1) * (0.25*last_is('a1 S1 r') - 0.95*last_is('a1 S1 u') + 0.07*last_is('a1 S2 r') - 1.21*last_is('a1 S2 u') + 0.48*last_is('a2 S2 r') - 0.64*last_is('a2 S2 u') + 0.51*last_is('a2 S1 r') + 0.01*last_is('a2 S1 u')) ;; (phase == D1) * (belief - 0.5) ;; (phase == GO) * (prev_action == 2) ;; (phase == D2) * (state == 2) ;; (phase == D2) * (action == 2) ;; (phase == D2) * (prev_reward == 0) ;; (phase == GO) * (belief - 0.5) ;; (phase == D2) * (belief - 0.5)",
+    "better_terms_test_r2_beyond_timing": 0.797
+  },
+  "final_label": "Signal that S2 is good: at GO/D2 it tracks the ideal-observer belief against S1 (plus the S2 state at D2); at D1 it follows the last trial's outcome (low after no reward, except near 0 after a2 S1 u; higher after a previous a2 choice)"
+}

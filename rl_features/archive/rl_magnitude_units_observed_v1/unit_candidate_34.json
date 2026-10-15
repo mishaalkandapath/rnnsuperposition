@@ -1,0 +1,52 @@
+{
+  "label": "late-episode ramp unit; small last-outcome x state modulation, grows late",
+  "terms": "(phase == D1) * table((prev_action*100 + prev_state*10 + prev_reward), {111:-0.076, 110:-0.037, 121:-0.012, 120:0.057, 221:0.040, 220:0.117, 211:-0.065, 210:-0.005}) * np.exp((ep_trial - 99) / 30.0) ;; (phase == GO) * table((prev_action*100 + prev_state*10 + prev_reward), {111:0.048, 110:-0.012, 121:0.020, 120:-0.047, 221:-0.003, 220:-0.062, 211:0.036, 210:-0.020}) * np.exp((ep_trial - 99) / 30.0) ;; (phase == D2) * table((prev_action*100 + prev_state*10 + prev_reward), {110:-0.049, 121:-0.040, 120:-0.070, 221:0.040, 220:-0.025, 211:0.032, 210:0.012}) * np.exp((ep_trial - 99) / 30.0) ;; (phase == D2) * (state == 2) * np.exp((ep_trial - 99) / 30.0)",
+  "verdict": "partially_explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "GRU candidate n34 sits near -1 for most of the episode and ramps strongly over the last ~20 trials; timing alone gives R^2 0.90. Beyond timing, the residual is a modulation by the previous trial's choice/state/reward, scaled up late in the episode (multiplier exp((ep_trial-99)/30)) because the unit is saturated early. D1: higher after S2 unrewarded (a2 S2 u, a1 S2 u) and lower after S1 rewarded (a1 S1 r, a2 S1 r). GO: roughly the opposite sign (higher after S1 rewarded, lower after S2 unrewarded). D2: higher when the reached state is S2 (observed at D2) and lower when it is S1, plus a small previous-pattern table. Ideal-observer belief_lo (and its magnitude, belief_cover) adds less than 0.01; window sums of past rewards, choices and rare transitions add nothing. These 4 observed-only terms reach dev R^2 beyond timing 0.30 (with belief terms 0.29 on test), above the additive 'all' ceiling of 0.25 (all observed 0.22) only because of the late-episode scaling. The rest is a slow drift that persists across a whole window (some late episodes ramp earlier or later than others) which none of the observed history terms capture. The model policy decile alone scored 0.09, about what the observed last-trial table gives, so dropping model outputs loses little here.",
+  "gate": "unit_candidate",
+  "feature": 34,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 34,
+    "terms": [
+      "(phase == D1) * table((prev_action*100 + prev_state*10 + prev_reward), {111:-0.076, 110:-0.037, 121:-0.012, 120:0.057, 221:0.040, 220:0.117, 211:-0.065, 210:-0.005}) * np.exp((ep_trial - 99) / 30.0)",
+      "(phase == GO) * table((prev_action*100 + prev_state*10 + prev_reward), {111:0.048, 110:-0.012, 121:0.020, 120:-0.047, 221:-0.003, 220:-0.062, 211:0.036, 210:-0.020}) * np.exp((ep_trial - 99) / 30.0)",
+      "(phase == D2) * table((prev_action*100 + prev_state*10 + prev_reward), {110:-0.049, 121:-0.040, 120:-0.070, 221:0.040, 220:-0.025, 211:0.032, 210:0.012}) * np.exp((ep_trial - 99) / 30.0)",
+      "(phase == D2) * (state == 2) * np.exp((ep_trial - 99) / 30.0)"
+    ],
+    "weights": [
+      3.25979595556949,
+      3.8625116207328416,
+      2.6820635368657015,
+      0.1885010748172309
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.2901399790585609,
+    "r2": 0.9319301239355767,
+    "r2_timing_only": 0.9041080296730237
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 34,
+    "terms": [
+      "(phase == D1) * table((prev_action*100 + prev_state*10 + prev_reward), {111:-0.076, 110:-0.037, 121:-0.012, 120:0.057, 221:0.040, 220:0.117, 211:-0.065, 210:-0.005}) * np.exp((ep_trial - 99) / 30.0)",
+      "(phase == GO) * table((prev_action*100 + prev_state*10 + prev_reward), {111:0.048, 110:-0.012, 121:0.020, 120:-0.047, 221:-0.003, 220:-0.062, 211:0.036, 210:-0.020}) * np.exp((ep_trial - 99) / 30.0)",
+      "(phase == D2) * table((prev_action*100 + prev_state*10 + prev_reward), {110:-0.049, 121:-0.040, 120:-0.070, 221:0.040, 220:-0.025, 211:0.032, 210:0.012}) * np.exp((ep_trial - 99) / 30.0)",
+      "(phase == D2) * (state == 2) * np.exp((ep_trial - 99) / 30.0)"
+    ],
+    "weights": [
+      3.25979595556949,
+      3.8625116207328416,
+      2.6820635368657015,
+      0.1885010748172309
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.2995765107453624,
+    "r2": 0.931855936298438,
+    "r2_timing_only": 0.902710196406922
+  },
+  "final_verdict": "partially_explained",
+  "observed_only": true
+}

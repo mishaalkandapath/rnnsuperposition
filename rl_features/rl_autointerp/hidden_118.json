@@ -1,0 +1,105 @@
+{
+  "label": "D1 after a reward, when the agent is about to choose a1",
+  "predicate": "(phase == D1) & (in_rew == 1) & (action == 1) & (prev_state != 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (never at GO or D2), and only when the reward input is 1 (the previous trial was rewarded), and almost only when the agent is about to choose a1 (action at D1 is the agent own upcoming choice, which it computes; it is not an unknowable random outcome). Policy logit choice > 0 gives nearly the same F1 (0.90 vs 0.92 dev). The fully observed-history version (rewarded and previous state S1) reaches only F1 0.78, because the feature also fires after rare-rewarded S2 trials when the agent still plans to choose a1. It does not fire after unrewarded trials or when the agent will choose a2 (under 0.1% of mass). Magnitude: strongest on the first rewarded D1 after an unrewarded trial, and it decays steadily over a streak of consecutive rewards (e.g. 1.00, 0.81, 0.69). Most false positives are late in long reward streaks, where it falls to zero. Dev: P 0.86, R 0.99, F1 0.92, mass recall 0.999.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 118,
+    "predicate": "(phase == D1) & (in_rew == 1) & (action == 1) & (prev_state != 2)",
+    "split": "test",
+    "precision": 0.9012080901316682,
+    "recall": 0.9930399058692141,
+    "f1": 0.9448980269556101,
+    "mass_recall": 0.9986710288676244,
+    "correlation": 0.8145136178280603,
+    "n_active": 100286,
+    "n_predicted": 110505,
+    "coverage_by_activation_quartile": [
+      0.9739948947032546,
+      0.998604020421187,
+      0.9997606796697379,
+      0.9998005663914483
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 118,
+    "predicate": "(phase == D1) & (in_rew == 1) & (action == 1) & (prev_state != 2)",
+    "split": "dev",
+    "precision": 0.9049538540108708,
+    "recall": 0.9939997395546384,
+    "f1": 0.9473890233481794,
+    "mass_recall": 0.9989515087177103,
+    "correlation": 0.8145236291528392,
+    "n_active": 99829,
+    "n_predicted": 109652,
+    "coverage_by_activation_quartile": [
+      0.9774020354195048,
+      0.9990383459550427,
+      0.9996794486516809,
+      0.9998797932443804
+    ]
+  },
+  "gate": "hidden",
+  "feature": 118,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The explanation's main reason for preferring the action-based predicate is false. It says the feature 'also fires after rare-rewarded S2 trials when the agent still plans to choose a1'. In fact (phase==D1)&(in_rew==1)&(prev_state==2)&(action==1) covers 6357 steps with precision 0.0 and mass recall 0.0. The feature never fires after a rewarded S2 visit, whatever the upcoming choice.",
+      "The observed-history predicate only reached F1 0.78 because of how the window is built, not because of what the feature encodes. prev_state is -1 on the window's first trial, and those first-trial D1 steps hold 23% of the activations (recall 0.229 for prev_state==-1 & rewarded). The predicate that requires prev_state==1 misses all of them.",
+      "The rewarded D1 steps that action==1 wrongly counts are mostly D1 after a rare-rewarded S2 visit followed by a choice of a1. This shows up throughout the test misses output, e.g. 'a1 S2R' followed by '*r1*' with no activation. These are systematic false positives, not noise.",
+      "Prior state matters along with the upcoming choice. After a rewarded S1 visit, the feature is almost silent when the next choice is a2 (12324 steps, mass 0.0007). After a rewarded S2 visit it is fully silent even when the next choice is a1. So the feature is the conjunction of (rewarded at S1) and (about to choose a1), not 'rewarded and about to choose a1'.",
+      "These claims hold: the feature fires only at D1 (phase!=D1 gives 0 recall). It almost never fires after unrewarded trials (mass 8e-6) or before a choice of a2 (mass 0.001). Original scores reproduce: dev F1 0.919, test F1 0.916.",
+      "Better predicate: (phase==D1)&(in_rew==1)&(action==1)&(prev_state!=2), i.e. require prev_state==1 except on the window's first trial, where prev_state is unknown. Dev: P 0.905, R 0.994, F1 0.947. Test: P 0.901, R 0.993, F1 0.945, mass recall 0.999. It beats the original on both splits."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a rewarded visit to S1, when the agent is about to choose a1 again (never after a rewarded S2 visit)",
+    "better_predicate": "(phase == D1) & (in_rew == 1) & (action == 1) & (prev_state != 2)",
+    "better_predicate_test_f1": 0.945
+  },
+  "final_label": "D1 after a rewarded visit to S1, when the agent is about to choose a1 again (never after a rewarded S2 visit)",
+  "original_predicate": "(phase == D1) & (in_rew == 1) & (action == 1)",
+  "original_test_scores": {
+    "gate": "hidden",
+    "feature": 118,
+    "predicate": "(phase == D1) & (in_rew == 1) & (action == 1)",
+    "split": "test",
+    "precision": 0.8502578375794003,
+    "recall": 0.9930498773507768,
+    "f1": 0.916123156742436,
+    "mass_recall": 0.9986716974762772,
+    "correlation": 0.7887066307287566,
+    "n_active": 100286,
+    "n_predicted": 117128,
+    "coverage_by_activation_quartile": [
+      0.9740347798340778,
+      0.998604020421187,
+      0.9997606796697379,
+      0.9998005663914483
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "hidden",
+    "feature": 118,
+    "predicate": "(phase == D1) & (in_rew == 1) & (action == 1)",
+    "split": "dev",
+    "precision": 0.8553646699825014,
+    "recall": 0.9939997395546384,
+    "f1": 0.9194859107293433,
+    "mass_recall": 0.9989515834977747,
+    "correlation": 0.7894443636104123,
+    "n_active": 99829,
+    "n_predicted": 116009,
+    "coverage_by_activation_quartile": [
+      0.9774020354195048,
+      0.9990383459550427,
+      0.9996794486516809,
+      0.9998797932443804
+    ]
+  },
+  "predicate_from": "skeptic"
+}

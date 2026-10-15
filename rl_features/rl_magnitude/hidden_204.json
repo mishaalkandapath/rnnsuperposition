@@ -1,0 +1,111 @@
+{
+ "label": "Fires at D2 when a2 reaches S1 (rare), growing through the episode; silent on a1->S2.",
+ "short_terms": "(in_state == 1) * (in_action == 2) ;; (in_action == 1) * ep_trial ;; (in_state == 1) * (in_action == 2) * ep_trial",
+ "terms": "(phase == D2) * (action == 2) * (state == 1) ;; (phase == D2) * (action == 2) * (state == 1) * ep_trial ;; (phase == D2) * (action == 2) * (state == 1) * ep_trial ;; (phase == D2) * (action == 2) * (state == 2) * ep_trial ;; (phase == D2) * (action == 1) * (state == 1) * ep_trial ;; (phase == D2) * (action == 2) * (state == 1) * belief_lo ;; (phase == D2) * (action == 2) * (state == 2) * belief_lo ;; (phase == D2) * belief_lo",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "D2-only feature whose magnitude is set by the current trial transition, observed at D2 (in_action, in_state): large (about 2 above baseline, rising with ep_trial to about 4-5 late) when a2 led to S1 (rare), zero on a1->S2, and the per-decile D2 baseline (growing late-episode drift) carries the common a1->S1/a2->S2 level; the a1->S2*ep_trial term removes that drift where the feature stays silent. Within the situation where the model needs it (D2 after a previous a2 S1 rewarded trial) the grading is the same: it is high if the agent repeated a2 and again landed on S1 (rare), low if a2 went to S2 (common) or a1 was chosen; multiplying the a2->S1 term by last_is(a2 S1 r) raises within-situation R^2 contribution from 0.001 (situation mean) to 0.042 of total variance, i.e. the current transition, not the previous-trial pattern, drives it. The free fit adds belief_lo terms (lower when the observer believes S1 is good, i.e. larger when S1 reached against an S2 belief) for a small gain (0.89 vs 0.86 dev). Previous reward and history beyond the current transition add little.",
+ "full_test_scores": {
+  "gate": "hidden",
+  "feature": 204,
+  "terms": [
+   "(phase == D2) * (action == 2) * (state == 1)",
+   "(phase == D2) * (action == 2) * (state == 1) * ep_trial",
+   "(phase == D2) * (action == 2) * (state == 1) * ep_trial",
+   "(phase == D2) * (action == 2) * (state == 2) * ep_trial",
+   "(phase == D2) * (action == 1) * (state == 1) * ep_trial",
+   "(phase == D2) * (action == 2) * (state == 1) * belief_lo",
+   "(phase == D2) * (action == 2) * (state == 2) * belief_lo",
+   "(phase == D2) * belief_lo"
+  ],
+  "weights": [
+   2.0521003602681542,
+   0.007626421991434178,
+   0.007626421991133177,
+   -0.000461005836043772,
+   -0.003900058053080552,
+   0.09051934320373509,
+   0.20949734774239645,
+   -0.16574502159686064
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.8908092808428376,
+  "r2": 0.9355881225199452,
+  "r2_timing_only": 0.41009750666314027
+ },
+ "gate": "hidden",
+ "feature": 204,
+ "test_scores": {
+  "gate": "hidden",
+  "feature": 204,
+  "terms": [
+   "(in_state == 1) * (in_action == 2)",
+   "(in_action == 1) * ep_trial",
+   "(in_state == 1) * (in_action == 2) * ep_trial"
+  ],
+  "weights": [
+   2.2273399361315627,
+   -0.01226875655904576,
+   0.015255013541878144
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.9173603872712058,
+  "r2": 0.9512506864028918,
+  "r2_timing_only": 0.41009750666314027
+ },
+ "dev_scores": {
+  "gate": "hidden",
+  "feature": 204,
+  "terms": [
+   "(in_state == 1) * (in_action == 2)",
+   "(in_action == 1) * ep_trial",
+   "(in_state == 1) * (in_action == 2) * ep_trial"
+  ],
+  "weights": [
+   2.2273399361315627,
+   -0.01226875655904576,
+   0.015255013541878144
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.9175099748402806,
+  "r2": 0.950755008146814,
+  "r2_timing_only": 0.4030188285451901
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The recorded short form's third term (a2->S1 x ep_trial) adds very little. a2->S1 alone scores 0.788 test, and adding a2->S1 x ep_trial brings it only to 0.802. Almost all of the gain up to 0.865 comes from the negative a1->S2 x ep_trial term (a2->S1 plus that term: 0.851). So 'growing through the episode' on a2->S1 is a minor effect, and the a1->S2 term is a fitted correction for baseline drift, not a description of what the feature does.",
+   "Running misses on the recorded short form shows a large systematic error. Late in the episode (t90+), common a1->S1 at D2 is predicted at about 2.87 but the actual value is about 0.9-1.7. D2 after any a1 trial is over-predicted by about -0.31 to -0.36. The D2 timing baseline (about 3.0 in the last decile) comes from a2 trials. The feature's late-episode rise happens on a2 trials only; both a1 transitions stay low.",
+   "The label leaves out the late-episode activity on common a2->S2, which the earlier firing label already noted (fires after about trial 40, up to about 0.5 of max). It also implies the only graded variable is ep_trial on a2->S1.",
+   "Making the correction an a1-specific drift, (in_action == 1) * ep_trial, fixes the error. a2->S1 plus a1 x ep_trial scores 0.903 test, and adding a2->S1 x ep_trial scores 0.917 test, above the free fit (0.891) and the additive ceiling (0.91). After this change the remaining errors are small (phase means between -0.10 and +0.05)."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "D2 only: strong on rare a2->S1; grows late-episode on a2 choices, stays low after a1.",
+  "better_short_terms": "(in_state == 1) * (in_action == 2) ;; (in_action == 1) * ep_trial ;; (in_state == 1) * (in_action == 2) * ep_trial",
+  "better_short_terms_test_r2_beyond_timing": 0.9173603872712058
+ },
+ "final_label": "D2 only: strong on rare a2->S1; grows late-episode on a2 choices, stays low after a1.",
+ "original_short_terms": "(in_state == 1) * (in_action == 2) ;; (in_state == 2) * (in_action == 1) * ep_trial ;; (in_state == 1) * (in_action == 2) * ep_trial",
+ "original_test_scores": {
+  "gate": "hidden",
+  "feature": 204,
+  "terms": [
+   "(in_state == 1) * (in_action == 2)",
+   "(in_state == 2) * (in_action == 1) * ep_trial",
+   "(in_state == 1) * (in_action == 2) * ep_trial"
+  ],
+  "weights": [
+   2.292047756504359,
+   -0.01647969299945949,
+   0.01525501354187815
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.8654868930293598,
+  "r2": 0.9206503828115316,
+  "r2_timing_only": 0.41009750666314027
+ },
+ "terms_from": "skeptic"
+}

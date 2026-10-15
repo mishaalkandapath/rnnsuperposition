@@ -1,0 +1,113 @@
+{
+ "label": "In the last trials of an episode, the gate drops when S1 is reached (most after a1) and after no reward.",
+ "short_terms": "(in_state == 1) * (action == 1) * np.exp((ep_trial - 99) / 4) ;; (in_state == 1) * np.exp((ep_trial - 99) / 4) ;; (phase != D2) * ((prev_action == 1) | (prev_reward == 0)) * np.exp((ep_trial - 99) / 4)",
+ "terms": "(in_state == 1) * (action == 1) * np.exp((ep_trial - 99) / 3) ;; (phase != D2) * (prev_reward == 0) * np.exp((ep_trial - 99) / 3) ;; (in_state == 1) * np.exp((ep_trial - 99) / 3) ;; (phase == D1) * (prev_state == S2) * (prev_action == 1) ;; (phase == D2) * belief_lo ;; (phase == D2) * (action == 1) * (state == S1) ;; (phase == D2) * (prev_reward == 0) * np.exp((ep_trial - 99) / 3) ;; np.exp((ep_trial - 99) / 3) * (tv(\"state\", -1) == 1) * (phase != D2)",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "The update gate z of unit 35 stays near 1 (it holds its state) for most of the episode. Beyond the timing baseline, it drops sharply in the last ~10 trials of the episode, with a ramp that grows roughly exponentially toward trial 99. The drop is largest at D2 when S1 is shown, especially after an a1 choice (common a1->S1), and at D1/GO after an unrewarded trial. Away from the episode end the effects are small: about -0.01 at D1 after a1->S2 (rare), and a weak negative dependence on belief_lo at D2 (lower when the observer favours S1). The free fit adds these small terms plus a carry-over from the last trial reaching S1, going from about 0.42 to 0.48 on dev. Every term is observed (in_state and action are known at D2), so no future variables are used. The profile additive ceiling is only 0.17 because it has no term for the late-episode interaction; that interaction is the main finding.",
+ "full_test_scores": {
+  "gate": "unit_update",
+  "feature": 35,
+  "terms": [
+   "(in_state == 1) * (action == 1) * np.exp((ep_trial - 99) / 3)",
+   "(phase != D2) * (prev_reward == 0) * np.exp((ep_trial - 99) / 3)",
+   "(in_state == 1) * np.exp((ep_trial - 99) / 3)",
+   "(phase == D1) * (prev_state == S2) * (prev_action == 1)",
+   "(phase == D2) * belief_lo",
+   "(phase == D2) * (action == 1) * (state == S1)",
+   "(phase == D2) * (prev_reward == 0) * np.exp((ep_trial - 99) / 3)",
+   "np.exp((ep_trial - 99) / 3) * (tv(\"state\", -1) == 1) * (phase != D2)"
+  ],
+  "weights": [
+   -0.16923137722738696,
+   -0.056002449858495756,
+   -0.08969600166679109,
+   -0.012894525413289379,
+   -0.001188631001440308,
+   -0.006172989242456766,
+   -0.006697886343121805,
+   -0.006667245707773314
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.48378040748085616,
+  "r2": 0.7179443041374749,
+  "r2_timing_only": 0.4536129586130243
+ },
+ "gate": "unit_update",
+ "feature": 35,
+ "test_scores": {
+  "gate": "unit_update",
+  "feature": 35,
+  "terms": [
+   "(in_state == 1) * (action == 1) * np.exp((ep_trial - 99) / 4)",
+   "(in_state == 1) * np.exp((ep_trial - 99) / 4)",
+   "(phase != D2) * ((prev_action == 1) | (prev_reward == 0)) * np.exp((ep_trial - 99) / 4)"
+  ],
+  "weights": [
+   -0.17379646752830874,
+   -0.0694690494746126,
+   -0.04169071655504536
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.4442656271666049,
+  "r2": 0.6963539402305148,
+  "r2_timing_only": 0.4536129586130243
+ },
+ "dev_scores": {
+  "gate": "unit_update",
+  "feature": 35,
+  "terms": [
+   "(in_state == 1) * (action == 1) * np.exp((ep_trial - 99) / 4)",
+   "(in_state == 1) * np.exp((ep_trial - 99) / 4)",
+   "(phase != D2) * ((prev_action == 1) | (prev_reward == 0)) * np.exp((ep_trial - 99) / 4)"
+  ],
+  "weights": [
+   -0.17379646752830874,
+   -0.0694690494746126,
+   -0.04169071655504536
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.4313889851157573,
+  "r2": 0.6993825637445739,
+  "r2_timing_only": 0.4713126752976715
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": true,
+  "issues": [
+   "The recorded short form reproduces: test R^2 beyond timing 0.424 (weights -0.195 for S1 after a1, -0.059 for unrewarded at D1/GO, -0.085 for S1), which is 88% of the free fit's 0.484. The D2 S1 drop is real: dropping the in_state==1 term costs about 0.016, and dropping the a1 interaction costs 0.08 (0.341 without it). So 'S1, most after a1' holds: the summed weight is -0.28 for common a1->S1 and -0.085 for rare a2->S1.",
+   "The label's D1/GO claim ('after no reward') is incomplete. Swapping the reward term for (phase != D2)*(prev_action == 1)*ramp scores better (0.437 vs 0.424 on test). With both in the fit their weights are about equal (-0.040 and -0.046; 4-term test score 0.454). So at D1 and GO the drop follows a previous a1 choice as much as a previous non-reward.",
+   "The time constant is not tuned: /4 scores slightly better than /3 (0.432 vs 0.424), and /2 is worse (0.374). The ramp shape is robust, not curve fitting.",
+   "Misses show no large systematic class. The mean error by phase is at most 0.001, and the biggest cells are about 0.01 (D1 after a1->S2 over-predicted by about -0.012, D2 after a2 under-predicted by about +0.007). These are small next to the late-episode drops of 0.1 to 0.3.",
+   "The worst-fit windows are all late episodes (t92-99) with long a1->S1 streaks. There the gate sits about 0.05-0.1 below the prediction even at GO, so the drop builds up across a run of trials in a way the per-step terms do not capture. This is a remaining limitation, not a refutation.",
+   "No future variables are used: in_state and action are only used at D2, where they are observed."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "In the last ~10 trials the gate drops at S1 (most after a1), and at D1/GO after an a1 choice or no reward.",
+  "better_short_terms": "(in_state == 1) * (action == 1) * np.exp((ep_trial - 99) / 4) ;; (in_state == 1) * np.exp((ep_trial - 99) / 4) ;; (phase != D2) * ((prev_action == 1) | (prev_reward == 0)) * np.exp((ep_trial - 99) / 4)",
+  "better_short_terms_test_r2_beyond_timing": 0.444
+ },
+ "final_label": "In the last ~10 trials the gate drops at S1 (most after a1), and at D1/GO after an a1 choice or no reward.",
+ "original_short_terms": "(in_state == 1) * (action == 1) * np.exp((ep_trial - 99) / 3) ;; (phase != D2) * (prev_reward == 0) * np.exp((ep_trial - 99) / 3) ;; (in_state == 1) * np.exp((ep_trial - 99) / 3)",
+ "original_test_scores": {
+  "gate": "unit_update",
+  "feature": 35,
+  "terms": [
+   "(in_state == 1) * (action == 1) * np.exp((ep_trial - 99) / 3)",
+   "(phase != D2) * (prev_reward == 0) * np.exp((ep_trial - 99) / 3)",
+   "(in_state == 1) * np.exp((ep_trial - 99) / 3)"
+  ],
+  "weights": [
+   -0.19470833505720042,
+   -0.059043420295214366,
+   -0.0852349285402686
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.42388724105363007,
+  "r2": 0.6852194541340051,
+  "r2_timing_only": 0.4536129586130243
+ },
+ "terms_from": "skeptic"
+}

@@ -15,10 +15,11 @@ token output one step earlier (token k-1) and the model outputs token k. Token j
    outputs the oldest token still in memory, and a token leaves memory only when it is fed back ("pop"). Skipping a
    copy step delays the rest of the output by one; it never skips.
 2. **The circuit has four stages**, all in candidate features:
-   - **write:** a sparse "input g"-type feature plus dense token-set features pick the token up;
-   - **relay:** dense features hold it and hand it on each step;
-   - **read-out:** dense features write it into the logit at its output step;
-   - **pop:** the fed-back token cancels its own stored copy in the candidate's next write.
+   - **write:** mostly sparse "input X" features (68% of the flow at the write step), plus dense token-set features;
+   - **relay:** dense features hold it and hand it on each step (90% of the flow after the write step);
+   - **read-out:** dense "flipper" features write it into the logit at its output step;
+   - **pop:** the fed-back token cancels its own stored copy in the candidate's next write; for most tokens one
+     token-specific "fed-back X" feature carries this.
 
    About 10 candidate features per step (of 512) are both sufficient and necessary to carry a token from input i to
    output L + i, even with the rest of the model held fixed (§3, minimal circuit).
@@ -28,9 +29,13 @@ token output one step earlier (token k-1) and the model outputs token k. Token j
 4. **The gates only do timing.** Update-gate features clock how fast memory turns over. Reset-gate features clock how
    much memory the candidate reads, and matter mainly for longer sequences. Both are computed from candidate features
    (mainly the `<DEL>` feature 123 and the positional part of the dense relay features). Neither carries token content.
-5. **Most of the circuit runs on dense candidate features** (active in almost every sequence). Their information is in
-   their magnitude, so they needed magnitude explanations. Many of them merge a timing signal with a token set, which
-   is a transcoder-training issue.
+5. **After the write step the circuit runs on dense candidate features** (active in almost every sequence). Their
+   information is in their magnitude, so they needed magnitude explanations; most of these can be said in a sentence
+   ("a signed tally of recent inputs; in the copy phase, of the queue"), and their predicted effects hold when the
+   features are clamped. Many of them merge a timing signal with a token set, which is a transcoder-training issue.
+6. **Labels are not use.** Measured where each feature takes part, 190 of 512 candidate features cost ≥ 20%, most of
+   them sparse (an average over all sequences found 22); 226 (44%) do nothing measurable, mostly low-norm duplicates
+   of a used feature with the same label (§3).
 
 ---
 
@@ -55,6 +60,9 @@ stated, results use sequences with distinct tokens and the real GRU. Outputs are
 | `circuit/copy_task/rotation_edges.py` | rotation by edges, feature angles (keepers / flippers), sign test, reversal decomposition, reversal interventions | `rotation_edges_L4.json`, `rotation_phases_L4.json`, `reversal_tests_L4.json` |
 | `circuit/copy_task/gate_features.py` | what drives the gate features, which reads / writes they open | `gate_features_L4.json` |
 | `circuit/copy_task/circuit_sufficiency.py` | minimal circuit: sufficiency and necessity patching (free and clamped) against circuit size | `circuit_sufficiency_L4.json` |
+| `circuit/copy_task/clamp_tests.py` | per-feature clamp tests: does each feature have the effect its firing or magnitude explanation predicts? | `clamp_tests.json` |
+| `circuit/copy_task/verbal_rules.py` | a magnitude explanation as a verbal rule with nothing fitted, scored by rank correlation (feature 145) | `verbal_rules_145.json` |
+| `circuit/copy_task/conditional_analyses.py` | importance, pop clamps and carrier flows measured only where a feature takes part, not averaged over all sequences | `conditional_{importance,pop,flows}.json` |
 | `circuit/copy_task/circuit_extras.py` | trace cosine, pop split, early feedback, dense-carrier drops, token-conditional ablation | `circuit_extras.json` |
 | `circuit/copy_task/autointerp_plots.py` | figures: subcommands `circuits`, `feature_circuit`, `token_circuit`, `rotation_wheel`, `circuit_summary` | `features/copy_circuits/plots/` |
 
@@ -150,15 +158,21 @@ at first misled us.
 - **Help as infrastructure.** Freezing the gates makes the GRU exactly linear in what it writes. That exactness is what
   the contrastive flow (DeepLIFT rescale), the gate-feature splits (`gate_scores`, `gate_features.py`), and the
   rotation / reversal decompositions are built on.
+- **Findings that came from the graph's edges.** The rotation itself was first seen in the trace in h, but *which
+  features turn it* came from the graph: keepers and flippers are the angles of each feature's write in the
+  step-to-step feature→feature edges, and the cause of the reversal (flippers read the keepers with the opposite sign)
+  was read off those edges before the interventions confirmed it (`rotation_edges.py`). These used the edges' signs
+  and angles, not the features' labels.
 - **Where they misled or fell short.** Single graphs gave partner credit (+57 from a token that has no effect;
   feature effects of ±60–110 cancelling each other); this needed swap tests, contrast and the rescale to fix. Pruned
-  graphs were never used; the diagrams come from flows averaged over 300 sequences. The main mechanisms came from
-  elsewhere: the queue and pop from behavioural tests (kind 1), the rotation and rewrite from the trace in h,
-  keepers / flippers from the angle analysis, the cancellation from splitting the GRU step, and the gates' roles from
+  graphs were never used; the diagrams come from flows averaged over 300 sequences. A graph explains one run, not
+  what the model does on other inputs, so the queue rules (pop by match, a frozen step delays and never skips) came
+  from behavioural tests (kind 1); the cancellation came from splitting the GRU step, and the gates' roles from
   interventions (kind 2).
 
-In short: the graphs gave an exact account of *where* effects flow once used contrastively; *how* copying works came
-mostly from counterfactuals and interventions, with the graph decompositions attributing those findings to features.
+In short: used contrastively, the graphs gave an exact account of *where* effects flow, and their edges gave the
+keeper / flipper account of the rotation; the queue's behaviour and the causal checks came from counterfactuals and
+interventions.
 
 ---
 
@@ -252,12 +266,141 @@ The clamped modes above hold the circuit at its values too.
 
 *Code:* `circuit_sufficiency.py`; output `circuit_sufficiency_L4.json`.
 
+### Does each feature do what its explanation says? (per-feature clamp tests)
+
+Kind 2: one candidate feature is clamped in the real GRU, in the situation its explanation describes, and the effect
+the explanation implies is checked. L = 4 and 7, 1000 sequences each. The prediction comes from the label alone:
+
+| explanation | clamp | predicted effect |
+|---|---|---|
+| firing "input X" (e.g. 120 "input g in the first five positions") | **on** (mean active value) at a step where the label's other conditions hold but the input is not X | that slot's output moves towards X |
+| | **off** (0) where the label holds | X's logit at that slot's output drops |
+| firing "copy input X" (the fed-back token) | **off** where X is fed back | X is not popped: the next output repeats X |
+| | **on** at a copy step before X's own output | X is popped early: X's logit at its output drops |
+| magnitude (raising set S+, lowering set S−) | **boost / suppress** by 1.5 std at every input step | outputs move towards S+ / S− |
+
+Control: the rank of X among all 30 tokens by logit change (1 = moved most in the predicted direction), or, for
+magnitude features, the same change for 200 random token sets of the same sizes.
+
+Tested: the 6 sparse features that matter most alone (120, 36, 215, 408, 95, 316), a random 25 other explained "input X"
+features, a random 15 explained "copy input X" features, and the 16 magnitude features that matter most alone.
+
+| features | as predicted | weaker / less specific | no effect | opposite sign |
+|---|---|---|---|---|
+| firing "input X" (29) | 13 (incl. 120, 36, 215, 408): X ranks 1st, logit ±8 … 20 | 9 (X ranks 2nd–20th, or small effects) | 4 (250, 275, 358, 370) | 3 (245, 292, 431) |
+| firing "copy input X" (17) | 6 (95, 316, 304, 484, 345, 193): on → X's logit −11 … −42; off → X repeated (up to 71% for 316) | 1 | 10 | 0 |
+| magnitude (16) | 15: boost moves the S+/S− logit gap by +9 … +27, z ≈ 4–5 against random sets, same sign in 97–100% of sequences; suppress the other way | | 1 (440) | |
+
+What this says:
+- **Most labels predict their feature's effect**, including magnitude labels. The one magnitude failure, 440, has the
+  odd structure (it reads older memory, and a fresh input counts the other way), so a whole-input-phase boost is the
+  wrong test of it.
+- **A correct firing label does not mean the feature is used.** About a third of the "explained" token features have
+  no effect or the opposite effect: they fire exactly as labelled but the model reads them weakly, or reads them as
+  "not X".
+- **There are token-specific pop features.** For some tokens (u, k, l, q, v, 3 in this sample) one "fed-back X"
+  feature carries the pop: switch it off and X is output again, switch it on early and X is erased. Other fed-back
+  features for the same tokens (e.g. 203 and 304 are both "fed-back k"; only 304 acts) do nothing. These are where the
+  input-weight cancellation of §6 shows up in the transcoder's basis. The earlier pop-feature test missed them because
+  it ranked features by pop flow averaged over all tokens (§6).
+
+*Code:* `clamp_tests.py`; output `clamp_tests.json`.
+
+### Measuring a feature where it matters, not averaged over every sequence
+
+Several earlier rankings averaged a feature's effect over all sequences. A feature that matters only when its token is
+present then looks unimportant. Three of them, redone with the average taken only where the feature takes part
+(kind 2, real GRU; new figures, the earlier ones are unchanged):
+
+**1. Single-feature importance.** Each candidate feature mean-ablated alone, 2000 sequences per length. Measured three
+ways: the accuracy drop over all sequences (the earlier ranking); over only the sequences where the feature is active;
+and on the outputs of the one token it hurts most (this treats dense and sparse features alike).
+
+| | L = 4 | L = 7 |
+|---|---|---|
+| features with drop ≥ 5% over all sequences | 7 | 22 |
+| … ≥ 20% on the sequences where they are active | 34 (all sparse) | 79 |
+| … ≥ 20% on their worst output token: dense / sparse | 18 / 27 | 26 / 32 |
+
+- **The averaged ranking picks dense features only because dense features are never diluted.** Ranked by the drop over
+  all sequences, the features costing ≥ 5% at L = 4 or 7 were 16 of the 70 dense magnitude features (0, 32, 54, 79, 91,
+  140, 145, 162, 266, 274, 280, 283, 284, 440, 487, 488) plus 6 sparse ones (36, 95, 120, 215, 316, 408). Sparse
+  token features are the single biggest points of failure: removing 94 "first input b or f" breaks 50–70% of the
+  outputs of the sequences it is active in (overall: 4%); 465 "first input x", 299 "first input m", 321, 120, 36 and
+  467 all reach 39–62%. No dense feature exceeds 26% on its sequences.
+- **Dense features are token-specific too.** On their worst output token, 162 ("o trace") drops accuracy by 70–79%,
+  145, 283, 487, 284 and 488 by 45–58%; their overall drops (≤ 26%) hid this as well.
+- In total **115 candidate features** (26 dense, 89 sparse) drop accuracy by ≥ 20% on their own sequences or their
+  worst token at L = 4 or 7; 21 of the 22 from the earlier ranking are among them. With zero / time-shift ablations
+  and L = 9 added (item 4 below), 190.
+
+![conditional importance](figures/circuits/feature_importance_conditional.png)
+
+**2. Pop features, every token.** The clamp test (above) on all 210 features labelled "copy-phase input X".
+
+- **For most tokens, one feature carries the pop**, often with a second one for the first copy steps: switch it off
+  and X is output again, up to 58–70% for u (316), n (28) and g (89); switch it on before X's turn and X's logit drops
+  by 20–42. Second features: 462 (u), 506 (n), 479 (g), 510 (z), 364 (2), 150 (k), mostly labelled "1st or 2nd copy
+  step".
+- **For about 8 tokens (b, f, 1, v, h, j, x, i) no single feature does it** (≤ 9% repeats), so their pop is spread out.
+- **The other ~5–10 features per token with the same label do nothing** (56 of 210 have a measurable effect). They
+  fire exactly like the active one but write almost nothing: decoder norm × mean activation is 0.03–0.56 (median 0.13)
+  for the 154 inert ones and 0.76–2.89 (median 1.8) for the 56 that act, with no overlap. E.g. 304, 112, 261 and 276 are all "fed-back k, recall_idx ≥ 2";
+  only 304 acts. Labels cannot tell them apart; only an effect test can.
+
+![pop features by token](figures/circuits/pop_features_by_token_conditional.png)
+
+**3. Carrier flows and write angles.** The exact contrastive flow of each slot's token (300 sequences × 4 slots, L = 4),
+averaged per feature over all (sequence, slot) pairs, as the circuit diagrams and supernodes did, and over only the
+pairs the feature takes part in (|flow| > 0.1).
+
+- **Sparse token features carry 3–7× more than any dense feature when they take part** (94 and 299: 21–22 per pair;
+  120, 465, 443, 414, 408: 11–13; the top dense feature 8: 3.4). Averaged over all pairs none of them made the top 20.
+- **They act at the write step only, writing at 0°** (the token's code as written): they carry 68% of the |flow| at
+  the write step, and 8–10% at each later step. The rotation, relay and read-out stay dense, as in §5.
+- So the write → relay → read-out picture holds, but the write is mostly sparse token features, which the averaged
+  diagrams understated.
+
+![carrier flow conditional](figures/circuits/carrier_flow_conditional_L4.png)
+![rotation wheel conditional](figures/circuits/rotation_wheel_conditional_L4.png)
+
+**4. Which features are inert, and why.** Mean ablation cannot remove a feature that has the same value in every
+sequence at a step (§9), and features for late positions only exist in long sequences. So every candidate feature was
+also zero-ablated and time-shifted (given its per-step mean from the step before or after), at L = 4, 7 and 9. Best
+effect of the three ablations, on its own sequences or its worst output token:
+
+| group | n | ≥ 20% | 5–20% | 1–5% | < 1% |
+|---|---|---|---|---|---|
+| copy-phase input X (pop candidates) | 208 | 40 | 15 | 3 | 150 |
+| input X (write) | 178 | 95 | 29 | 19 | 35 |
+| dense (active in ≥ 90% of sequences at some length) | 99 | 52 | 16 | 8 | 23 |
+| other sparse | 23 | 3 | 3 | 3 | 14 |
+| too sparse / never fire | 4 | 0 | 0 | 0 | 4 |
+| **all** | **512** | **190** | **63** | **33** | **226** |
+
+- **Zero / time-shift found the timing features mean ablation missed**: `<DEL>` 123 (85%), 397 "copy phase" (77%), 81,
+  114, 138. Zeroing dense features also costs more than mean-ablating them (≥ 20%: 48 vs 26 at L = 4/7), because it
+  removes their timing part as well as their token content.
+- **L = 9 found 18 more**, all for late positions or long sequences (e.g. 55 "u at position ≥ 5": 27%; 267, 412: 21%).
+- **Inert features write almost nothing.** Decoder norm × mean activation: inert features have medians of 0.15–0.23 in
+  every group; used sparse features 1.1–2.0. Only 3 inert features write more than 0.76 (137 "`<DEL>` of L = 3–4", 277 and
+  505, late positions), each specific to a length not tested. Dense features are the exception: the used ones also
+  write little per step (median 0.47) but are active at every step.
+- So about **226 of 512 candidate features (44%) do nothing measurable**, and most of them are low-norm near-duplicates of
+  a used feature with the same label. That is a transcoder training issue, like the merged features in §4.
+
+*Code:* `conditional_analyses.py` (`--sections importance ablations pop flows`); outputs
+`conditional_{importance,ablations,pop,flows}.json`, L = 9 in `features/copy_circuits/L9/`; figures:
+`autointerp_plots.py conditional`.
+
 ---
 
 ## 4. The dense carriers
 
 **Most carriers are dense.** In the `g` example, 18 of 20 carriers are active in 97–100% of sequences; only 120
-("input g") and 411 are sparse (10–15% of sequences). Firing labels ("copy phase", F1 0.96) are right about *when* they
+("input g") and 411 are sparse (10–15% of sequences). By count the carriers are dense; by size the write step is not:
+when a sparse token feature takes part it carries 3–7× more than any dense one, and sparse features carry 68% of the
+flow at the write step (§3, "Measuring a feature where it matters"). Firing labels ("copy phase", F1 0.96) are right about *when* they
 fire but say nothing about what they carry.
 
 **Magnitude explanations.** For the 70 candidate features that fire on ≥ 20% of steps (65 of them active in ≥ 90% of
@@ -274,6 +417,34 @@ sequences), activation ≈ timing (mean per L, t) + additive token tables. Held-
 
 The dense gate features are purely positional (timing alone R² ≈ 1.0). *Code:* `magnitude_scores.py`,
 `autointerp_magnitude.py`; records in `features/copy_gru_v1_candiff_magnitude/`.
+
+**"Explained" here does not mean "said in words".** The agent explanations fit a weight per term and use token tables
+copied from fitted tables. Anthropic's standard is a verbal description that lets a reader (or Claude) predict the
+activations from the words alone (simulation scoring by rank correlation, *Towards Monosemanticity*), checked by
+specificity and by steering (*Scaling Monosemanticity*). To test ours against it, feature 145 (the most important
+dense feature alone) was given a rule written in words, scored with only the numbers the words state (nothing fitted),
+by rank correlation with activation minus timing on test sequences (`verbal_rules.py`):
+
+| explanation of 145 | Spearman | R² beyond timing (one fitted scale) |
+|---|---|---|
+| as first stated: "builds up while c/3/t/2 arrive early, decays over ~3 steps; in the copy phase dips while they are output" | 0.38 | 0.19 |
+| + "b/m/s/0 push it down at half strength" | 0.50 | 0.34 |
+| + "in the copy phase, +½ per c/3/t/2 still waiting in the next 3 outputs" | 0.54 | 0.39 |
+| both, plus the same for b/m/s/0 in the queue, and a ½ dip | **0.59** | **0.44** |
+| fitted agent explanation (6 terms, 13-token table) | 0.75 | 0.68 |
+
+The input-phase half was right as first stated (Spearman 0.59 there; fitted 0.81); the copy-phase half was not (0.15):
+the feature is *raised* by its tokens still waiting in the queue, and the dip is minor. A one-sentence rule ("a running
+tally of recent early inputs: c/3/t/2 up, b/m/s/0 down by half, fading over ~3 steps; in the copy phase the same tally
+over the tokens still waiting") keeps about 80% of the fitted rank correlation. What it loses is detail: a graded token
+scale (c ≈ 3× v), a boost early in the sequence, extra when several arrive together.
+
+The other 15 dense features that matter most alone were judged by reading their explanations and tables, not scored:
+about 12 follow the same template ("signed token tally over recent inputs; copy phase: the same over the queue"), 162
+"o", 488 "p/q" and 140 "s/y" being near-concepts; 91, 274 and 440 need one or two extra clauses; 54 (rectified, lasting
+suppression) is too nonlinear for a sentence to keep much. Long token lists (8 up, 8 down) are near the limit of what
+counts as words. The token sets themselves have no meaning ({c,3,t,2} is not a concept); the structure (which history
+positions, which phase, signed, queue reads) is what a sentence carries.
 
 **They are needed.** Kind 3: candidate transcoder spliced into the GRU, features mean-ablated, lengths 3–9:
 
@@ -338,6 +509,45 @@ because it is a blend that shifts from keepers to flippers.
 
 ![angle wheel](figures/circuits/rotation_wheel_L4.png)
 
+**When the flip happens.** Write angle (and in-plane weight) by steps since the token was read in, L = 4
+(`rotation_phases_L4.json`):
+
+| features | 0 (just read) | 1 | 2 | 3 | 4 (output step) |
+|---|---|---|---|---|---|
+| memory flippers (8, 348, 387, 426, 328, 212, 388) | −13 … −23° (0.01–0.03) | −18 … +8° (≈ 0.01) | **151 … 163°** (0.02–0.04) | 153 … 161° (0.04–0.08) | 152 … 161° (0.07–0.15) |
+| 440 | −14° | **147°** (one step earlier) | 161° | 161° | 162° |
+| copy-phase flippers (34, 77, 177, 163) | off | off | off | 151 … 156° | 154 … 159° |
+| keepers (487, 283, 145) | 30 … 39° | 29 … 39° | 22 … 35° | 11 … 28° | −7 … +49°, fading |
+
+So a flipper active at a given step writes *every* stored token at once, each at its own stage: the token read in
+now and the one before it weakly and unflipped, all older ones flipped, more strongly as their output step nears.
+
+**"Flipper" names the direction a feature writes in, not the flipping.** The flip happens once, in the memory flippers,
+2 steps after the read. After that the code still has to be rewritten every step (only 30–60% survives a step, above),
+and anything rewriting a flipped token writes it flipped. So every feature holding tokens late shows up as a flipper.
+
+**Two kinds of flippers.** Both are dense across sequences (active in 99–100% of them); they differ in when they are on
+and what they track (magnitude labels, §4):
+
+| kind | features | on at (share of sequences, per step) | tracks |
+|---|---|---|---|
+| memory flippers | 8, 348, 387, 426, 440, 328 (212, 388 on about half the steps) | from the 2nd input to the end (0.65–1.00 per step) | a signed token scale over what is held, weighted by slot (e.g. 426: orig 0 > 1 > …); the queue head in the copy phase |
+| copy-phase flippers | 34, 77, 177, 163 | output steps only (0.80–1.00), off at `<DEL>` | a signed token scale over the token being output (weight ≈ 1), the next one (≈ 0.5), the one after (small) |
+
+The copy-phase flippers switch on when every stored token is already ≥ 2 steps old, so they never flip anything. They
+rewrite the head of the queue, which moves on after each pop. They are the main read-out features at the output step
+(§3) and carry the most pop flow averaged over tokens (about a third of the cancellation, §6). Ablating one (kind 2):
+mean ablation (token content removed, average level kept) costs 0–26% on its worst output token; zero ablation costs
+67–85%; neither causes repeats. So their token content is shared with the others, their copy-phase level matters (why
+is untested), and they do not do the matching.
+
+The keepers are not read-out features, but several are among the most important features overall (145, 487, 283, 488:
+20–26% each at L = 7): they hold the token until the memory flippers flip it.
+
+**One token, start to end:** a sparse "input X" feature writes it at 0° (§3) → keepers hold it near that orientation
+→ memory flippers flip it after 2 steps and keep rewriting it → in the copy phase the copy-phase flippers rewrite the
+queue head and read it out → X's pop feature erases it once it is fed back (§6).
+
 **Flippers store the token as the opposite of how they read it as input.** Correlation between a flipper's input code
 (encoder weights for the token) and its memory code (how the stored token moves it), by steps since the write:
 
@@ -391,9 +601,22 @@ token's memory term are added inside the candidate's tanh and cancel. This is th
 
 ![early feedback](figures/circuits/early_feedback_L4.png)
 
-**No separate pop features** (kind 2). The features with the largest pop flow (177, 77, 163, 34, 347, …) are the read-out
-features. Removing 10 of them breaks outputs (31–48% with resampling) but causes no repeats (≤ 2%). They make up about
-a third of the cancellation; the rest is spread out.
+**No token-general pop features, but token-specific ones** (kind 2). The features with the largest pop flow averaged
+over all tokens (177, 77, 163, 34, 347, …) are the read-out features. Removing 10 of them breaks outputs (31–48% with
+resampling) but causes no repeats (≤ 2%). They make up about a third of the cancellation; the rest is spread out. The
+per-feature clamp tests (§3) found what that ranking misses: for most tokens a single "fed-back X" feature carries the
+pop (316 "fed-back u" off → u is output again 62–71% of the time; on before u's turn → u is erased). The per-token map
+of all 210 such features is in §3 ("Measuring a feature where it matters").
+
+**What a pop feature does.** It is how the transcoder represents the input-weight part of the cancellation for one token:
+it fires when X is fed back (its encoder reads the input), and its decoder writes a direction that lowers X (direct
+effect on X's logit −20 … −26 per step for 304, 316 and 28). It is X's eraser: without it X stays and is output again;
+switched on early it erases X before its turn.
+
+The match may need nothing more. An eraser removes only its own token's code; if the fed-back token Y is not the stored
+head, Y's eraser has nothing to cancel there, the head stays and is output again (the 82–93% repeats of §1, and early
+feedback cancelling its own token above). This is inferred, not tested: whether a pop feature fires less when its token
+is not stored is untested (§10).
 
 *Kind 1 for the pop split, match test and early feedback; kind 2 for the pop-feature ablations. Code:* `circuit_extras.py` (`pop_split`, `early_feedback`), `circuit_tests.py` (`match`, `pop`).
 
@@ -451,6 +674,10 @@ more damaging in 2 of 4 gate × length cases. (`gate_mechanism.py`)
 - **Mean or same-step resample ablation cannot remove a timing feature** (it already has that value at that step). Use
   zero or a time-shift instead.
 - **"Dense"** means active across many sequences; firing on many steps within a sequence is expected.
+- **Averaging a feature's effect over all sequences hides token-specific features** (pop and write features looked
+  unimportant; §3, "Measuring a feature where it matters"). Measure on the sequences or output tokens it takes part in.
+- **A correct label does not mean a feature is used**: many features share a label with a used one but write almost
+  nothing. Test effects, and test at the lengths a feature's label refers to.
 
 ## 10. Open questions
 
@@ -459,4 +686,12 @@ more damaging in 2 of 4 gate × length cases. (`gate_mechanism.py`)
 - Whether the pop permanently erases a token fed back early (teacher forcing stalls the queue, so this was not testable).
 - Update-gate time-shifts at L = 7 (reset features mattered much more there).
 - Lengths beyond 4 for the full feature circuit; L = 3 was checked for graphs and swaps only.
-- A better-trained candidate transcoder that separates timing from token sets.
+- A better-trained candidate transcoder that separates timing from token sets, and does not learn low-norm duplicates
+  (44% of candidate features do nothing measurable, §3).
+- Whether a pop feature fires less when its token is not the stored head (if not, the match comes from cancellation
+  alone).
+- Why most tokens have two pop features, one for the first copy steps and one for later ones (a token is always
+  popped the same number of steps after its write, so it is not the code's age).
+- Why zeroing a copy-phase flipper costs far more than mean-ablating it (a baseline the read-out needs, or an effect
+  through the gates?).
+- Whether the flip stays at 2 steps after the read at longer lengths (measured at L = 4 only).

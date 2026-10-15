@@ -1,0 +1,103 @@
+{
+  "label": "D2 after a2 -> S2 common transition, late in episode (trial >= 60), previous trial rewarded",
+  "predicate": "(phase == D2) & (action == 2) & (common == 1) & (ep_trial >= 60) & (((prev_reward == 1) & (prev_state != 1)) | (value < 6))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (100% of mass), only when the agent chose a2 and reached S2 by the common transition (in_action=2, in_state=2). It never fires on a1, S1, rare transitions, D1 or GO, and it is effectively silent before episode trial ~50; its rate rises steadily from trial 50 to 99. Within that set it needs the previous trial to be rewarded: prev_reward=1 carries 92% of the mass, and after an unrewarded trial activations are weak (~0.1-0.4 of max). Magnitude is largest after a run of rewarded a2->S2 common trials while S2 is good, and grows across consecutive such trials. It is negatively related to the model value (no activity above value 8.1) and goes with a strongly a2-leaning policy. All variables are observed at D2. Adding (value < 6) as an alternative to prev_reward=1 raises dev F1 to 0.88, but I kept the simpler predicate. Dev: P 0.86, R 0.82, F1 0.84, mass recall 0.92.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 111,
+    "predicate": "(phase == D2) & (action == 2) & (common == 1) & (ep_trial >= 60) & (((prev_reward == 1) & (prev_state != 1)) | (value < 6))",
+    "split": "test",
+    "precision": 0.8435226547543075,
+    "recall": 0.9243787589164996,
+    "f1": 0.8821017039640521,
+    "mass_recall": 0.9837032799518625,
+    "correlation": 0.7656847472087747,
+    "n_active": 42898,
+    "n_predicted": 47010,
+    "coverage_by_activation_quartile": [
+      0.7413519813519813,
+      0.9578554778554779,
+      0.9983215218202164,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 111,
+    "predicate": "(phase == D2) & (action == 2) & (common == 1) & (ep_trial >= 60) & (((prev_reward == 1) & (prev_state != 1)) | (value < 6))",
+    "split": "dev",
+    "precision": 0.8632290934645116,
+    "recall": 0.9253731343283582,
+    "f1": 0.8932215329379416,
+    "mass_recall": 0.9843137314313568,
+    "correlation": 0.7763404264520268,
+    "n_active": 42478,
+    "n_predicted": 45536,
+    "coverage_by_activation_quartile": [
+      0.7421845574387947,
+      0.9606403013182674,
+      0.998681608437706,
+      1.0
+    ]
+  },
+  "gate": "reset",
+  "feature": 111,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most factual claims check out on dev. 100% of activation mass is at D2, and the feature has zero activations at D1/GO, on action a1, state S1 or rare transitions. It has 0 activations with value > 8.1. Only 4 activations fall before ep_trial 50. Precision of the base (D2,a2,common) set rises from 0.03 at trials 50-54 to 0.13 (55-59), 0.43 (60-64), 0.66 (80-84) and 0.84 (90-94). prev_reward=1 holds 0.922 of the mass. Reported dev/test scores reproduce (test P 0.843, R 0.809, F1 0.826, mass recall 0.911).",
+      "Systematic false-positive class: the condition is not just 'previous trial rewarded' but 'previous reward came from S2' (or the previous state is unknown at the window start). Within the predicate, steps whose previous trial reached S1 and was rewarded have precision 0.335 (about 4.1k predicted steps, about 2.7k of them inactive), which is roughly half of the predicate's ~5.7k false positives. Test-split misses show this directly: several false positives are the trial after a rare-rewarded a2->S1 core trial, or an a1 -> a2 switch after an S1 reward.",
+      "Adding prev_state != 1 raises dev precision from 0.86 to 0.92 (F1 0.848) and test precision from 0.843 to 0.911 (F1 0.837). So the feature is better described as S2-specific reward evidence: S2 reached by a2 again after S2 paid off. A generic previous reward is not enough.",
+      "Most misses come from steps after an unrewarded trial where model value is low. As the explanation notes, they are weak. Adding a (value < 6) alternative captures them: test F1 rises to 0.882 when combined with prev_state != 1. The ep_trial >= 60 cutoff is a soft threshold on a steadily rising rate, not a sharp boundary. The label's 'late in episode' wording is fine, but the feature is not 'off' between trials 55 and 60."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after a2 -> S2 common transition, late in episode (trial >= ~60, rising), when the previous reward came from S2 (not S1) or value is low",
+    "better_predicate": "(phase == D2) & (action == 2) & (common == 1) & (ep_trial >= 60) & (((prev_reward == 1) & (prev_state != 1)) | (value < 6))",
+    "better_predicate_test_f1": 0.882
+  },
+  "final_label": "D2 after a2 -> S2 common transition, late in episode (trial >= ~60, rising), when the previous reward came from S2 (not S1) or value is low",
+  "original_predicate": "(phase == D2) & (action == 2) & (common == 1) & (ep_trial >= 60) & (prev_reward == 1)",
+  "original_test_scores": {
+    "gate": "reset",
+    "feature": 111,
+    "predicate": "(phase == D2) & (action == 2) & (common == 1) & (ep_trial >= 60) & (prev_reward == 1)",
+    "split": "test",
+    "precision": 0.843356813213505,
+    "recall": 0.8093850529162199,
+    "f1": 0.8260217918827616,
+    "mass_recall": 0.9114348433371509,
+    "correlation": 0.7578855895169903,
+    "n_active": 42898,
+    "n_predicted": 41170,
+    "coverage_by_activation_quartile": [
+      0.6460606060606061,
+      0.7194405594405594,
+      0.8720626631853786,
+      1.0
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "reset",
+    "feature": 111,
+    "predicate": "(phase == D2) & (action == 2) & (common == 1) & (ep_trial >= 60) & (prev_reward == 1)",
+    "split": "dev",
+    "precision": 0.860584176291643,
+    "recall": 0.819153444135788,
+    "f1": 0.839357865663181,
+    "mass_recall": 0.9181086903579216,
+    "correlation": 0.7682345963054595,
+    "n_active": 42478,
+    "n_predicted": 40433,
+    "coverage_by_activation_quartile": [
+      0.6589453860640301,
+      0.7266478342749529,
+      0.8910443544589886,
+      1.0
+    ]
+  },
+  "predicate_from": "skeptic"
+}

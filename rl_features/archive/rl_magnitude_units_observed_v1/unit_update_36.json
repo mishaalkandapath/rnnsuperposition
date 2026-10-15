@@ -1,0 +1,68 @@
+{
+  "label": "GO: late-episode loss streak toward a2/S2 belief; D2: last-trial outcome and transition",
+  "terms": "(phase == GO) * (prev_reward == 0) * (1 + (tv(\"reward\", -2) == 0) * (1 + (tv(\"reward\", -3) == 0) * (1 + (tv(\"reward\", -4) == 0)))) * ep_trial * (1 - belief)**2 ;; (phase == GO) * (prev_reward == 0) * (1 + (tv(\"reward\", -2) == 0) * (1 + (tv(\"reward\", -3) == 0) * (1 + (tv(\"reward\", -4) == 0)))) * ep_trial * belief ;; (phase == GO) * belief_lo ;; (phase == GO) * last_is(\"a2 S1 u\") ;; (phase == D2) * belief_lo ;; (phase == D2) * table(3*action+state, {5:-1, 7:1}) ;; (phase == D2) * table(prev_action*100 + prev_state*10 + prev_reward, {111: 3, 110: -12, 121: -30, 120: -69, 221: 16, 220: -9, 211: 37, 210: 19}) ;; (phase == D2) * table(prev_action*100 + prev_state*10 + prev_reward, {111: 3, 110: -12, 121: -30, 120: -69, 221: 16, 220: -9, 211: 37, 210: 19}) * ep_trial",
+  "verdict": "partially_explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 36. Timing dominates (D2 about 0.82-0.96, D1/GO about 0.01-0.07, all rising with episode trial), so this concerns residual magnitude only. GO: the gate grows over a run of consecutive unrewarded trials (count of trailing losses up to 4), scaled by episode trial and by (1-belief)^2. So it is strongest late in the episode when losses pile up while the ideal observer leans toward S2 being good, typically during a2 runs (GO values climb from 0.2 to 0.56 over successive losses). It is also higher when belief_lo is low (S2 favoured) and after a2->S1 unrewarded. D2: a fixed per-last-trial table (lowest after a1 S2 unrewarded / a1 S2 rewarded; highest after a2 S1 rewarded and a2 S2 rewarded), with an ep_trial-scaled copy, plus this trial's transition (a1->S2 rare lowers it, a2->S1 rare raises it) and lower values when belief favours S1. D1 effects are negligible. Dev R^2 beyond timing 0.52, test about 0.50; 'all observed' reference 0.52, 'all' ceiling 0.64, policy decile alone 0.43. The observed-only terms reach about the observed-cue ceiling, so dropping the model's policy/value costs roughly 0.1 to 0.14 against the full ceiling. The remaining gap is mostly the graded GO response, which the model's choice logit tracks better than belief plus loss streak. No future variables are used.",
+  "gate": "unit_update",
+  "feature": 36,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 36,
+    "terms": [
+      "(phase == GO) * (prev_reward == 0) * (1 + (tv(\"reward\", -2) == 0) * (1 + (tv(\"reward\", -3) == 0) * (1 + (tv(\"reward\", -4) == 0)))) * ep_trial * (1 - belief)**2",
+      "(phase == GO) * (prev_reward == 0) * (1 + (tv(\"reward\", -2) == 0) * (1 + (tv(\"reward\", -3) == 0) * (1 + (tv(\"reward\", -4) == 0)))) * ep_trial * belief",
+      "(phase == GO) * belief_lo",
+      "(phase == GO) * last_is(\"a2 S1 u\")",
+      "(phase == D2) * belief_lo",
+      "(phase == D2) * table(3*action+state, {5:-1, 7:1})",
+      "(phase == D2) * table(prev_action*100 + prev_state*10 + prev_reward, {111: 3, 110: -12, 121: -30, 120: -69, 221: 16, 220: -9, 211: 37, 210: 19})",
+      "(phase == D2) * table(prev_action*100 + prev_state*10 + prev_reward, {111: 3, 110: -12, 121: -30, 120: -69, 221: 16, 220: -9, 211: 37, 210: 19}) * ep_trial"
+    ],
+    "weights": [
+      0.0006918102349195707,
+      2.977913216185543e-05,
+      -0.0018882421859205693,
+      0.004382527250465409,
+      0.0007563487095760798,
+      0.022871514588326862,
+      0.0013736950172817115,
+      -8.717907812975734e-06
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5083940848119607,
+    "r2": 0.9979990508896195,
+    "r2_timing_only": 0.9959297700687446
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 36,
+    "terms": [
+      "(phase == GO) * (prev_reward == 0) * (1 + (tv(\"reward\", -2) == 0) * (1 + (tv(\"reward\", -3) == 0) * (1 + (tv(\"reward\", -4) == 0)))) * ep_trial * (1 - belief)**2",
+      "(phase == GO) * (prev_reward == 0) * (1 + (tv(\"reward\", -2) == 0) * (1 + (tv(\"reward\", -3) == 0) * (1 + (tv(\"reward\", -4) == 0)))) * ep_trial * belief",
+      "(phase == GO) * belief_lo",
+      "(phase == GO) * last_is(\"a2 S1 u\")",
+      "(phase == D2) * belief_lo",
+      "(phase == D2) * table(3*action+state, {5:-1, 7:1})",
+      "(phase == D2) * table(prev_action*100 + prev_state*10 + prev_reward, {111: 3, 110: -12, 121: -30, 120: -69, 221: 16, 220: -9, 211: 37, 210: 19})",
+      "(phase == D2) * table(prev_action*100 + prev_state*10 + prev_reward, {111: 3, 110: -12, 121: -30, 120: -69, 221: 16, 220: -9, 211: 37, 210: 19}) * ep_trial"
+    ],
+    "weights": [
+      0.0006918102349195707,
+      2.977913216185543e-05,
+      -0.0018882421859205693,
+      0.004382527250465409,
+      0.0007563487095760798,
+      0.022871514588326862,
+      0.0013736950172817115,
+      -8.717907812975734e-06
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5185011801074628,
+    "r2": 0.9980161567520149,
+    "r2_timing_only": 0.9958798585458054
+  },
+  "final_verdict": "partially_explained",
+  "observed_only": true
+}

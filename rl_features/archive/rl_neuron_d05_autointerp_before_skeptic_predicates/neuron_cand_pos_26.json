@@ -1,0 +1,62 @@
+{
+  "label": "D2 after a2 led rarely to S1 (a2 -> S1 rare transition)",
+  "predicate": "(phase == D2) & (action == 2) & (state == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires almost only at D2 (99.8% of mass) when the agent chose a2 and the rare transition took it to S1 (in_action=2, in_state=1); both are observed inputs at D2. Dev F1 0.85, mass recall 0.98; top three activation quartiles are fully covered. Missed activations are weak (lowest quartile, 1.6% of mass), mostly on a2 -> S2 common D2 steps right after a recent a2->S1 rare trial. False positives (~13%) tend to be a2->S1 rare when the agent had just switched to a2 or was mostly choosing a1 (adding prev_action != 1 lifts precision to 0.91, F1 0.86, so it is weaker when a2 is not the established choice). Never fires at GO, essentially never at D1, never on a1 trials (a1->S2 rare does not drive it). Reward is not involved (it is future at D2).",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 26,
+    "predicate": "(phase == D2) & (action == 2) & (state == 1)",
+    "split": "test",
+    "precision": 0.8621944604832642,
+    "recall": 0.8335645172203803,
+    "f1": 0.8476378054339507,
+    "mass_recall": 0.984348001990278,
+    "correlation": 0.8840866065884737,
+    "n_active": 59116,
+    "n_predicted": 57153,
+    "coverage_by_activation_quartile": [
+      0.3383855470600176,
+      0.9958725218215034,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 26,
+    "predicate": "(phase == D2) & (action == 2) & (state == 1)",
+    "split": "dev",
+    "precision": 0.8727824248552256,
+    "recall": 0.8280860267569029,
+    "f1": 0.8498469469953279,
+    "mass_recall": 0.9839659575840694,
+    "correlation": 0.8904753482644969,
+    "n_active": 57331,
+    "n_predicted": 54395,
+    "coverage_by_activation_quartile": [
+      0.3153561710737459,
+      0.9969999302309356,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 26,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The central claims hold on test. Mass by phase: D2 holds 99.85% (recall 0.993), D1 holds 0.15% and GO holds 0. a1->S2 rare D2 has zero activations (P = R = 0). a1->S1 D2 has precision 0.005. Test F1 0.848 and mass recall 0.984 match the report, and the top three activation quartiles are covered (0.996, 1, 1).",
+      "One detail in the explanation is overstated. a2->S2 D2 steps do account for most misses (about 8,700 of 9,839 test misses, which are weak and carry 1.6% of the mass). But only about 2,400 of those come within 2 trials after an a2->S1 rare trial, so 'shortly after a rare a2->S1 trial' covers a minority of them. The rest are a weak, diffuse residual at a2->S2 D2 (precision 0.055).",
+      "The false positives cluster in two places. (1) Switch trials (prev_action == 1): 3,807 predicted with precision 0.23, roughly 37% of all false positives. The explanation already says this, and adding prev_action != 1 gives test P 0.907 / F1 0.861. (2) Trials after an unrewarded trial (prev_reward == 0): precision 0.69, against 0.96 when prev_reward == 1. Most of this comes from the switch trials. With prev_action == 2, prev_reward == 0 still gives precision 0.74-0.82. So the unit also scales with the previous reward, an observed variable, which the explanation does not mention. 'Reward plays no part' is only true of the current, future reward.",
+      "Neither modulation is a class of steps the predicate wrongly includes. They lower the activation's size within the predicted class, and restricting the predicate costs recall (for example prev_reward == 1 & prev_action != 1 gives P 0.986 but F1 0.72). The simple predicate is still the best compact description."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == D2) & (action == 2) & (state == 1) & (prev_action != 1)",
+    "better_predicate_test_f1": 0.861
+  }
+}

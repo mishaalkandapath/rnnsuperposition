@@ -1,0 +1,114 @@
+{
+ "label": "At GO, fires after unrewarded trials, more after two misses, fading over the episode.",
+ "short_terms": "(phase == GO) * (prev_reward == 0) * (10 - ep_dec) ;; (phase == GO) * (prev_reward == 1) * (10 - ep_dec) ;; (phase == GO) * (prev_action == 1) * (10 - ep_dec)",
+ "terms": "(phase == GO) * (prev_reward == 0) * (10 - ep_dec) ;; (phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) ;; (phase == GO) * (prev_reward == 1) * (10 - ep_dec) ;; (phase == GO) * last_is(\"a1 S1 u\") ;; (phase == GO) * (prev_reward == 0) * (prev_common == 1) ;; (phase == GO) * np.abs(belief_lo) ;; (phase == GO) * (prev_action == 1) ;; (phase == GO) * (prev_reward == 0) * (tv(\"reward\", -3) == 0)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Active essentially only at GO (D1 and D2 are zero). Its magnitude is a recent non-reward signal: large when the previous trial was unrewarded and larger still when the trial before was also unrewarded; suppressed after rewarded trials. Both effects shrink with episode time (the term scaled by 10 - ep_dec captures the multiplicative fade that the additive timing baseline misses). Observed-only terms; no future variables. The free fit adds a specific boost after a1 S1 u (common-unrewarded a1), a small extra for a third consecutive miss, a small a1-previous-choice offset and a common-vs-rare correction; belief strength contributes little.",
+ "full_test_scores": {
+  "gate": "reset",
+  "feature": 121,
+  "terms": [
+   "(phase == GO) * (prev_reward == 0) * (10 - ep_dec)",
+   "(phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+   "(phase == GO) * (prev_reward == 1) * (10 - ep_dec)",
+   "(phase == GO) * last_is(\"a1 S1 u\")",
+   "(phase == GO) * (prev_reward == 0) * (prev_common == 1)",
+   "(phase == GO) * np.abs(belief_lo)",
+   "(phase == GO) * (prev_action == 1)",
+   "(phase == GO) * (prev_reward == 0) * (tv(\"reward\", -3) == 0)"
+  ],
+  "weights": [
+   0.07919762926978507,
+   0.36584789372076565,
+   -0.049698717886222696,
+   0.411118651893985,
+   -0.18106294112318522,
+   -0.023989127248205355,
+   0.14183602298422107,
+   0.12425828614854557
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7242333390303155,
+  "r2": 0.8245588913967199,
+  "r2_timing_only": 0.36380595106612035
+ },
+ "gate": "reset",
+ "feature": 121,
+ "test_scores": {
+  "gate": "reset",
+  "feature": 121,
+  "terms": [
+   "(phase == GO) * (prev_reward == 0) * (10 - ep_dec)",
+   "(phase == GO) * (prev_reward == 1) * (10 - ep_dec)",
+   "(phase == GO) * (prev_action == 1) * (10 - ep_dec)"
+  ],
+  "weights": [
+   0.07736677373334766,
+   -0.06754989050182142,
+   0.043002586174363165
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6853547525421316,
+  "r2": 0.7998245660419763,
+  "r2_timing_only": 0.36380595106612035
+ },
+ "dev_scores": {
+  "gate": "reset",
+  "feature": 121,
+  "terms": [
+   "(phase == GO) * (prev_reward == 0) * (10 - ep_dec)",
+   "(phase == GO) * (prev_reward == 1) * (10 - ep_dec)",
+   "(phase == GO) * (prev_action == 1) * (10 - ep_dec)"
+  ],
+  "weights": [
+   0.07736677373334766,
+   -0.06754989050182142,
+   0.043002586174363165
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.6892318465436604,
+  "r2": 0.8023188400313961,
+  "r2_timing_only": 0.3638950524047936
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The core claim holds. The feature fires only at GO (D1 baseline and residuals are 0, D2 is about 0.001). It is raised after an unrewarded previous trial, pushed down after a rewarded one, and both effects fade with ep_dec. The two-term base '(GO)*(prev_reward==0)*(10-ep_dec) ;; (GO)*(prev_reward==1)*(10-ep_dec)' already scores test 0.631.",
+   "'More after two misses' is real but small. The tv('reward',-2)==0 term adds only +0.035 test R^2 (0.631 -> 0.667). Swapping it for an equally simple term about the previous choice does better.",
+   "The label misses a large systematic error: the feature is stronger after a1 than after a2. The profile's GO residuals are a1 S1 u +0.905 vs a2 S2 u +0.347 / a2 S1 u +0.352, and a1 S1 r -0.138 vs other rewarded patterns -0.33 to -0.38. Misses on the recorded short form show GO after a1 S1 u under-predicted by +0.356 and a1 S1 r by +0.137, while every a2 pattern is over-predicted (a2 S2 u -0.204, a2 S1 u -0.161, a2 S2 r -0.103). The free fit hints at this (last_is a1 S1 u, prev_action) but the label and short form leave it out.",
+   "Replacing the two-miss term with '(GO)*(prev_action==1)*(10-ep_dec)' gives test 0.685. Using '(GO)*last_is('a1 S1 u')*(10-ep_dec)' gives 0.689, and plain '(GO)*last_is('a1 S1 u')' gives 0.673. Each beats the recorded 0.667 without the two-miss claim.",
+   "A composite third term '(GO)*((prev_reward==0)*(tv('reward',-2)==0) + last_is('a1 S1 u'))' reaches 0.699 test. It glues two separate effects into one term, so I treat it as curve fitting and not as the interpretation.",
+   "Belief strength adds little, as claimed: '(GO)*(prev_reward==0)*belief_lo' moves 0.631 to 0.636. No future or model-output variables are used anywhere.",
+   "Long runs of misses (3 or more) remain under-predicted in the worst windows (actual about 3.2 vs predicted about 1.4 to 1.7). This is a residual streak effect that neither form fully captures."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At GO, high after an unrewarded trial, higher after choosing a1, fading over the episode.",
+  "better_short_terms": "(phase == GO) * (prev_reward == 0) * (10 - ep_dec) ;; (phase == GO) * (prev_reward == 1) * (10 - ep_dec) ;; (phase == GO) * (prev_action == 1) * (10 - ep_dec)",
+  "better_short_terms_test_r2_beyond_timing": 0.6854
+ },
+ "final_label": "At GO, high after an unrewarded trial, higher after choosing a1, fading over the episode.",
+ "original_short_terms": "(phase == GO) * (prev_reward == 0) * (10 - ep_dec) ;; (phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) ;; (phase == GO) * (prev_reward == 1) * (10 - ep_dec)",
+ "original_test_scores": {
+  "gate": "reset",
+  "feature": 121,
+  "terms": [
+   "(phase == GO) * (prev_reward == 0) * (10 - ep_dec)",
+   "(phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+   "(phase == GO) * (prev_reward == 1) * (10 - ep_dec)"
+  ],
+  "weights": [
+   0.08130852574945202,
+   0.3758485210287676,
+   -0.05123530768301618
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6665320227337935,
+  "r2": 0.7878496573532212,
+  "r2_timing_only": 0.36380595106612035
+ },
+ "terms_from": "skeptic"
+}

@@ -1,0 +1,113 @@
+{
+ "label": "Update gate dips late in episodes at D2 after choosing a1, when S1 is believed good, and after a1-S2-unrewarded trials.",
+ "short_terms": "(phase == D2) * (action == 1) * ep_trial ;; (phase != GO) * last_is(\"a1 S2 u\") * ep_trial ;; (phase == D2) * belief_lo * ep_trial",
+ "terms": "(phase == D2) * (action == 1) * ep_dec ;; (phase == D2) * last_is(\"a1 S2 u\") * ep_dec ;; (phase == D2) * belief_lo * ep_dec ;; (phase == D2) * (action == 1) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * ep_dec ;; (phase == D2) * last_is(\"a1 S2 u\") ;; (tv(\"action\",-1) == 1) * ep_dec ;; (phase != D2) * belief_lo * ep_dec",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Raw z of unit 34 sits near 1 (barely updates) and dips mostly at D2, more and more as the episode goes on. Beyond timing it is lower when the agent just chose a1 (at D2; a1->S1 lowest, a2 trials raise it), when the observer belief favours S1 (graded, strongest at D2), and after an a1-S2-unrewarded previous trial (at D1, GO and especially D2). All three effects grow with episode trial, so they are scaled by ep_trial in the short form. The free fit adds small D1/GO terms (a1->S2 previous trial at D1, belief at D1/GO, previous a1 choice) and unscaled offsets. Only observed variables are used; this trial's reward, the next choice and the hidden good state add little. The worst misses are late-episode runs of a1 choices where the dip is deeper than any of the terms predict.",
+ "full_test_scores": {
+  "gate": "unit_update",
+  "feature": 34,
+  "terms": [
+   "(phase == D2) * (action == 1) * ep_dec",
+   "(phase == D2) * last_is(\"a1 S2 u\") * ep_dec",
+   "(phase == D2) * belief_lo * ep_dec",
+   "(phase == D2) * (action == 1)",
+   "(phase == D1) * (prev_action == 1) * (prev_state == 2) * ep_dec",
+   "(phase == D2) * last_is(\"a1 S2 u\")",
+   "(tv(\"action\",-1) == 1) * ep_dec",
+   "(phase != D2) * belief_lo * ep_dec"
+  ],
+  "weights": [
+   -0.00011335513783273608,
+   -0.007670335670200477,
+   -0.0008556691408236757,
+   -0.008648833188657936,
+   -0.00607323882384639,
+   -0.0002913597107139666,
+   0.00017643670837203445,
+   -0.00020616408921611228
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5082383462640369,
+  "r2": 0.6502043885466955,
+  "r2_timing_only": 0.28868871983841815
+ },
+ "gate": "unit_update",
+ "feature": 34,
+ "test_scores": {
+  "gate": "unit_update",
+  "feature": 34,
+  "terms": [
+   "(phase == D2) * (action == 1) * ep_trial",
+   "(phase != GO) * last_is(\"a1 S2 u\") * ep_trial",
+   "(phase == D2) * belief_lo * ep_trial"
+  ],
+  "weights": [
+   -0.00013553851840662423,
+   -0.0006582635925608308,
+   -8.097689120410654e-05
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.47057606791458606,
+  "r2": 0.6234147851201459,
+  "r2_timing_only": 0.28868871983841815
+ },
+ "dev_scores": {
+  "gate": "unit_update",
+  "feature": 34,
+  "terms": [
+   "(phase == D2) * (action == 1) * ep_trial",
+   "(phase != GO) * last_is(\"a1 S2 u\") * ep_trial",
+   "(phase == D2) * belief_lo * ep_trial"
+  ],
+  "weights": [
+   -0.00013553851840662423,
+   -0.0006582635925608308,
+   -8.097689120410654e-05
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.47783588391215737,
+  "r2": 0.6297235773852663,
+  "r2_timing_only": 0.29088114022671974
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": true,
+  "issues": [
+   "On test the recorded short form reproduces at 0.463 beyond timing, against an observed-only additive ceiling of 0.52, so it reaches about 89% of the ceiling. Every term carries a negative weight, so all three conditions lower z, as the label says.",
+   "Claims that check out: (1) Scaling by ep_trial matters: the same three terms without ep_trial score 0.375 on test. (2) a1 -> S1 is the lowest D2 cell (residual -0.027, against -0.007 for a1 -> S2 and +0.016 / +0.019 for a2 trials). (3) The belief effect is monotone at D2 (decile 0 +0.020 down to decile 9 -0.030), and log-odds fits better than raw belief (0.463 vs 0.415). (4) Restricting the belief term to D2 is right: belief at all phases gives 0.429, and belief_lo * (action == 1) gives 0.406.",
+   "Systematic miss: at D1, a previous a1 -> S2 trial lowers z whether or not it was rewarded (residuals: a1 S2 r -0.027, a1 S2 u -0.030). The 'a1-S2-unrewarded' term misses the rewarded case, and misses shows D1 after a1 S2 r as the most over-predicted cell (-0.030). The reward only matters at D2 (a1 S2 r +0.012 vs a1 S2 u -0.055). The label oversimplifies this.",
+   "The claim that the a1-S2-u effect 'counts at all phases' is weak at GO (residual -0.009, under-predicted by +0.014). Leaving GO out of that term, (phase != GO) * last_is(\"a1 S2 u\") * ep_trial, raises test R^2 slightly, to 0.471.",
+   "The 'chose a1' term is partly a 'reached S1' term: (phase == D2) * (state == S1) * ep_trial scores 0.466, about the same as action == 1. The table shows both matter, with choice the larger effect (a1 vs a2 differ by about 0.03).",
+   "The largest remaining misses are late-episode windows (t > 90) where z sits low across all phases (0.6-0.8 against a predicted ~0.9), during runs of a1 choices. The explanation already admits this. The miss is large in size but limited to late episodes."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Update gate dips late in episodes: at D2 after choosing a1 or when S1 is believed good, and outside GO after a1-S2-unrewarded trials.",
+  "better_short_terms": "(phase == D2) * (action == 1) * ep_trial ;; (phase != GO) * last_is(\"a1 S2 u\") * ep_trial ;; (phase == D2) * belief_lo * ep_trial",
+  "better_short_terms_test_r2_beyond_timing": 0.4706
+ },
+ "final_label": "Update gate dips late in episodes: at D2 after choosing a1 or when S1 is believed good, and outside GO after a1-S2-unrewarded trials.",
+ "original_short_terms": "(phase == D2) * (action == 1) * ep_trial ;; last_is(\"a1 S2 u\") * ep_trial ;; (phase == D2) * belief_lo * ep_trial",
+ "original_test_scores": {
+  "gate": "unit_update",
+  "feature": 34,
+  "terms": [
+   "(phase == D2) * (action == 1) * ep_trial",
+   "last_is(\"a1 S2 u\") * ep_trial",
+   "(phase == D2) * belief_lo * ep_trial"
+  ],
+  "weights": [
+   -0.0001677317116927577,
+   -0.0005183297285487341,
+   -8.035021708225815e-05
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.4633584842568468,
+  "r2": 0.6182808364488861,
+  "r2_timing_only": 0.28868871983841815
+ },
+ "terms_from": "skeptic"
+}

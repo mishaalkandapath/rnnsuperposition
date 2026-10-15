@@ -1,0 +1,67 @@
+{
+  "label": "D2 a2->S2 common after unrewarded rare a2->S1, mid-episode, stronger when S2 believed good",
+  "terms": "(phase == D2) * last_is(\"a2 S1 u\") * (action == 2) * (state == 2) * table(ep_dec, {2: 0.01, 3: 0.12, 4: 0.31, 5: 0.47, 6: 0.55, 7: 0.39, 8: 0.05}) ;; (phase == D2) * last_is(\"a2 S1 u\") * (action == 2) * (state == 2) * table(ep_dec, {2: 0.01, 3: 0.12, 4: 0.31, 5: 0.47, 6: 0.55, 7: 0.39, 8: 0.05}) * np.maximum(-belief_lo, 0) ;; (phase == D2) * (prev_action == -1) * (action == 2) * (state == 2) * table(ep_dec, {2: 0.01, 3: 0.12, 4: 0.31, 5: 0.47, 6: 0.55, 7: 0.39, 8: 0.05}) * np.maximum(-belief_lo, 0) ;; (phase == D2) * (prev_action == -1) * (action == 2) * (state == 2) * table(ep_dec, {2: 0.01, 3: 0.12, 4: 0.31, 5: 0.47, 6: 0.55, 7: 0.39, 8: 0.05})",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Sparse feature (1.2% of steps), active only at D2. It fires at D2 when the agent just chose a2 and reached S2 via the common transition, and the previous trial was a2 -> S1 (rare) and unrewarded. That trial history fits S2 being good, so a model-based agent stays. Its magnitude depends strongly on the pattern x episode-position interaction. Near 0 before trial 20, rising through trials 30-49, peaking at trials 50-69 (about 0.5-0.7), then fading after trial 80. The additive timing baseline cannot capture this, so the pattern term is weighted by an episode-decile shape. Within the pattern it is larger when the ideal observer is confident S2 is good (positive weight on max(-belief_lo, 0)). Two smaller terms cover the window first trial, where the previous trial is outside the window: the same a2->S2 D2 step scaled by the S2 belief. Remaining misses are mostly those first-trial firings. All terms are observed at D2: the choice and reached state are both known by then. The phase-additive reference tables reach only 0.25 (all observed) / 0.28 (all), so the gain comes from the multiplicative ep-decile x pattern interaction. Test R^2 beyond timing is 0.65 (dev 0.66). Pattern x ep-decile alone (dev, one indicator per decile) gives 0.62; without the belief terms the pattern-only fit was 0.32. Compared with the earlier model-based explanation (a2 policy preference): the belief log-odds takes the role of the policy strength, and the observed-only fit loses nothing obvious at this level.",
+  "gate": "update",
+  "feature": 61,
+  "test_scores": {
+    "gate": "update",
+    "feature": 61,
+    "terms": [
+      "(phase == D2) * last_is(\"a2 S1 u\") * (action == 2) * (state == 2) * table(ep_dec, {2: 0.01, 3: 0.12, 4: 0.31, 5: 0.47, 6: 0.55, 7: 0.39, 8: 0.05})",
+      "(phase == D2) * last_is(\"a2 S1 u\") * (action == 2) * (state == 2) * table(ep_dec, {2: 0.01, 3: 0.12, 4: 0.31, 5: 0.47, 6: 0.55, 7: 0.39, 8: 0.05}) * np.maximum(-belief_lo, 0)",
+      "(phase == D2) * (prev_action == -1) * (action == 2) * (state == 2) * table(ep_dec, {2: 0.01, 3: 0.12, 4: 0.31, 5: 0.47, 6: 0.55, 7: 0.39, 8: 0.05}) * np.maximum(-belief_lo, 0)",
+      "(phase == D2) * (prev_action == -1) * (action == 2) * (state == 2) * table(ep_dec, {2: 0.01, 3: 0.12, 4: 0.31, 5: 0.47, 6: 0.55, 7: 0.39, 8: 0.05})"
+    ],
+    "weights": [
+      -0.16721889376107232,
+      0.3620568845836409,
+      0.04879923480070601,
+      0.020494171571845722
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6519378655563175,
+    "r2": 0.6684722962423378,
+    "r2_timing_only": 0.047504250103068024
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 61,
+    "terms": [
+      "(phase == D2) * last_is(\"a2 S1 u\") * (action == 2) * (state == 2) * table(ep_dec, {2: 0.01, 3: 0.12, 4: 0.31, 5: 0.47, 6: 0.55, 7: 0.39, 8: 0.05})",
+      "(phase == D2) * last_is(\"a2 S1 u\") * (action == 2) * (state == 2) * table(ep_dec, {2: 0.01, 3: 0.12, 4: 0.31, 5: 0.47, 6: 0.55, 7: 0.39, 8: 0.05}) * np.maximum(-belief_lo, 0)",
+      "(phase == D2) * (prev_action == -1) * (action == 2) * (state == 2) * table(ep_dec, {2: 0.01, 3: 0.12, 4: 0.31, 5: 0.47, 6: 0.55, 7: 0.39, 8: 0.05}) * np.maximum(-belief_lo, 0)",
+      "(phase == D2) * (prev_action == -1) * (action == 2) * (state == 2) * table(ep_dec, {2: 0.01, 3: 0.12, 4: 0.31, 5: 0.47, 6: 0.55, 7: 0.39, 8: 0.05})"
+    ],
+    "weights": [
+      -0.16721889376107232,
+      0.3620568845836409,
+      0.04879923480070601,
+      0.020494171571845722
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6602057799030063,
+    "r2": 0.6763349293434024,
+    "r2_timing_only": 0.0474674037592282
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold. The feature only carries magnitude at D2, on a2->S2 common after a2 S1 u: residual +0.14 in that D2 cell and about -0.015 in every other cell. Pattern alone scores 0.295 on test; pattern x ep_dec scores 0.610. Free per-decile weights reproduce the table (0.01, 0.12, 0.31, 0.47, 0.55, 0.39, 0.05), so the mid-episode peak is real. The S2-believed-good claim also holds. Splitting the pattern by belief_lo bins (<-3, -3..-1.5, -1.5..0, >=0) gives weights 1.11 / 0.68 / 0.31 / 0.003, so the feature is essentially zero when the observer favours S1.",
+      "Large systematic gap: the first-trial firings were treated as unexplainable, but most of them can be predicted from observed inputs. The first-trial terms only conditioned on prev_action == -1. prev_reward (the reward input at D1) is still observed when the previous trial falls outside the window. Adding (prev_reward == 0) to the two first-trial terms, with nothing else changed, raises test R^2 from 0.652 to 0.738. The worst-fit windows under the original terms are exactly these: actual 0.70-0.80, predicted 0.05-0.10 on the window's first trial.",
+      "The label leaves out a dependence on the trial before the previous one. If trial -2 was a1 (so the a2 S1 u trial was a switch), the feature barely fires (weight 0.02 vs 1.02 for the a2-a2 history). If trial -2 was a2 S2 u, it is also weak (0.14 vs 1.16 after a2 S2 r).",
+      "Systematic false positives remain after streaks of repeated a2 S1 u (for example t64-t66 a2 S1R u then S2c: predicted 0.67, actual 0). The fit weight drops to about 0.40 when trials -2 and -3 were both a2 S1 u. The belief term pushes the other way, because a streak makes the observer more sure S2 is good. So 'larger when the ideal observer is more confident' overstates the case for long streaks.",
+      "Observed-only cost was not measured. No model-output version was scored, so the remark 'appears to lose little' is unsupported. The old firing label's 'strong a2 preference' seems to be mostly the a2-a2 choice history (trial -2 == a2), which is observed."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 a2->S2 common right after an unrewarded rare a2->S1, when the trial before was also a2 (best after a2 S2 r, weak after a2 S2 u or a run of a2 S1 u), mid-episode (peak trials 50-69), larger when the observer believes S2 is good; on a window's first trial it is still predicted by the unrewarded D1 input",
+    "better_terms": "P = (phase == D2) * last_is(\"a2 S1 u\") * (action == 2) * (state == 2) * table(ep_dec, {2: 0.01, 3: 0.12, 4: 0.31, 5: 0.47, 6: 0.55, 7: 0.39, 8: 0.05}); F = (phase == D2) * (prev_action == -1) * (action == 2) * (state == 2) * table(ep_dec, {same}); terms: P * (tv('action',-2)!=1) ;; P * (tv('action',-2)!=1) * np.maximum(-belief_lo,0) ;; P * U2 * U3 ;; P * (tv('action',-2)==2) * (tv('state',-2)==2) * (tv('reward',-2)==0) ;; F * (prev_reward==0) ;; F * (prev_reward==0) * np.maximum(-belief_lo,0), where U2 / U3 = trial -2 / -3 was a2 S1 unrewarded (tv action==2, state==1, reward==0). Test 0.765, dev 0.772. Observed-only, no future variables.",
+    "better_terms_test_r2_beyond_timing": 0.7653
+  },
+  "final_label": "D2 a2->S2 common right after an unrewarded rare a2->S1, when the trial before was also a2 (best after a2 S2 r, weak after a2 S2 u or a run of a2 S1 u), mid-episode (peak trials 50-69), larger when the observer believes S2 is good; on a window's first trial it is still predicted by the unrewarded D1 input"
+}

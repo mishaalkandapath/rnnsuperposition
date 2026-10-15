@@ -1,0 +1,76 @@
+{
+  "label": "D1 after a2->S2 rewarded: ~1.0, weaker when belief favours S1 and late in episode",
+  "terms": "(phase == D1) ;; (phase == D1) * last_is(\"a2 S2 r\") ;; (phase == D1) * last_is(\"a2 S2 r\") * np.clip((ep_trial - 65) / 20, 0, 1) ;; (phase == D1) * (prev_action == -1) * (in_rew == 1) * (belief < 0.5) ;; (phase == D1) * (prev_action == -1) * (in_rew == 1) * (belief >= 0.5) * (1 - belief) ;; (phase == D1) * last_is(\"a2 S2 r\") * np.clip(belief_lo, -3, 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1; zero at GO and D2. At D1 its magnitude is close to on/off: about 1.0 right after an a2 -> S2 (common) rewarded trial, near 0 after anything else, including a2 -> S2 unrewarded and a2 -> S1 rare rewarded. Within a2 S2 r trials it is lower when the ideal-observer belief favours S1 (clipped belief_lo, negative weight) and fades over episode trials ~65-85. When the window does not show the previous trial, a rewarded D1 with belief < 0.5 (S2 likely good) stands in for a2 S2 r, and with belief >= 0.5 it is weighted by (1 - belief). Uses observed quantities only (reward input, last choice/state, belief, episode time); no future, hidden or model-output terms. Test R^2 beyond timing 0.584 (dev 0.603). That is above the all-cue additive ceiling of 0.57 and the all-observed reference of 0.45, so leaving out the model policy (policy-decile reference 0.41) loses nothing. Main gap: some a2 S2 r D1 steps early in an S2 run reach ~1.0 while belief is still weak, and the graded belief term under-predicts them.",
+  "gate": "hidden",
+  "feature": 230,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 230,
+    "terms": [
+      "(phase == D1)",
+      "(phase == D1) * last_is(\"a2 S2 r\")",
+      "(phase == D1) * last_is(\"a2 S2 r\") * np.clip((ep_trial - 65) / 20, 0, 1)",
+      "(phase == D1) * (prev_action == -1) * (in_rew == 1) * (belief < 0.5)",
+      "(phase == D1) * (prev_action == -1) * (in_rew == 1) * (belief >= 0.5) * (1 - belief)",
+      "(phase == D1) * last_is(\"a2 S2 r\") * np.clip(belief_lo, -3, 3)"
+    ],
+    "weights": [
+      -0.1432957445035356,
+      0.104482869629364,
+      -0.5198278340363499,
+      0.4541694236633444,
+      0.43581847380960814,
+      -0.1823345910692737
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5841623447068991,
+    "r2": 0.6572999054340296,
+    "r2_timing_only": 0.17588008155629853
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 230,
+    "terms": [
+      "(phase == D1)",
+      "(phase == D1) * last_is(\"a2 S2 r\")",
+      "(phase == D1) * last_is(\"a2 S2 r\") * np.clip((ep_trial - 65) / 20, 0, 1)",
+      "(phase == D1) * (prev_action == -1) * (in_rew == 1) * (belief < 0.5)",
+      "(phase == D1) * (prev_action == -1) * (in_rew == 1) * (belief >= 0.5) * (1 - belief)",
+      "(phase == D1) * last_is(\"a2 S2 r\") * np.clip(belief_lo, -3, 3)"
+    ],
+    "weights": [
+      -0.1432957445035356,
+      0.104482869629364,
+      -0.5198278340363499,
+      0.4541694236633444,
+      0.43581847380960814,
+      -0.1823345910692737
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6031179532306259,
+    "r2": 0.677285140639534,
+    "r2_timing_only": 0.18687463444776642
+  },
+  "final_verdict": "partially_explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The headline claim 'about 1.0 right after an a2 -> S2 rewarded trial' overclaims. The D1 residual after a2 S2 r averages only +0.34 over a ~0.2 baseline, so the mean is around 0.5. In other words, roughly half of a2 S2 r D1 steps are near 0.",
+      "Systematic error the label misses: the trial before the a2 S2 r trial matters. Within last_is('a2 S2 r') I fitted separate terms for each pattern of the trial before (test). On top of a -0.10 D1 offset the weights were: trial before a1 (rewarded or not) about -0.01 / -0.06, so the feature is OFF; a2 S2 u -0.04, also OFF; a2 S2 r +0.55; a2 S1 r +0.44; a2 S1 u +0.29; outside the window +0.44. The feature mostly needs a second consecutive a2 that was not just an a2 S2 u. The misses output shows this: a2 S2 r D1 steps with actual 0 against predictions of 0.65-1.0 (e.g. t45 after a2 S1R r -> a2 S2c r, and t29-30).",
+      "The belief claim ('weaker when belief favours S1') is mostly standing in for that trial-before effect. With the two trial-before terms added, the belief_lo weight drops from -0.18 to -0.09. Removing belief entirely then costs only 0.005 test R^2 (0.614 -> 0.609).",
+      "The belief term also partly encodes belief_cover / position in the window. The worst under-predictions are a2 S2 r chains at the start of the window (actual ~1.05, predicted 0.16-0.5), where belief has decayed toward 0.5 for lack of history rather than favouring S1.",
+      "Claims that check out on test: zero at GO and D2; near 0 after a2 S2 u, a2 S1 r and all a1 patterns (residuals -0.13 to -0.14); late-episode fade (the ep_trial 65-85 ramp adds ~0.09; with an ep_dec table, deciles 6-7 drop ~0.2 and >=8 drop ~0.5). The window-start terms (prev unknown, rewarded) add ~0.125.",
+      "Reported scores reproduce: 0.584 test. Much of that comes from the (phase == D1) term (it cancels the fixed timing baseline; without it 0.47). Even the future upcoming choice (action == 2) instead of belief gets only 0.58, so about 0.39 of the variance is still unexplained by any of these cues."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "D1 after a2->S2 rewarded when the trial before was also a2 (not a2->S2 unrewarded): ~0.5-1.0; off after a switch from a1; fades after episode trial ~65",
+    "better_terms": "(phase == D1) ;; (phase == D1) * last_is('a2 S2 r') ;; (phase == D1) * last_is('a2 S2 r') * np.clip((ep_trial - 65) / 20, 0, 1) ;; (phase == D1) * (prev_action == -1) * (in_rew == 1) * (belief < 0.5) ;; (phase == D1) * (prev_action == -1) * (in_rew == 1) * (belief >= 0.5) * (1 - belief) ;; (phase == D1) * last_is('a2 S2 r') * np.clip(belief_lo, -3, 3) ;; (phase == D1) * last_is('a2 S2 r') * (tv('action',-2)==1) ;; (phase == D1) * last_is('a2 S2 r') * (tv('action',-2)==2)*(tv('state',-2)==2)*(tv('reward',-2)==0)",
+    "better_terms_test_r2_beyond_timing": 0.6139
+  },
+  "final_label": "D1 after a2->S2 rewarded when the trial before was also a2 (not a2->S2 unrewarded): ~0.5-1.0; off after a switch from a1; fades after episode trial ~65"
+}

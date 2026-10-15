@@ -1,0 +1,78 @@
+{
+  "label": "high when policy favours a2; at D2 high after rare a2->S1, low after rare a1->S2; low at GO after no reward",
+  "terms": "(phase == D1) * np.tanh(choice) ;; (phase == GO) * np.tanh(choice) ;; (phase == D2) * (3*action+state == 5) ;; (phase == D2) * (3*action+state == 7) ;; (phase == D2) * (action == 2) ;; (phase == GO) * (prev_reward == 0) ;; (phase == D2) * (prev_reward == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r28 has a strong timing profile (D1 ~0.88, GO ~0.71, D2 ~0.29; timing R^2 0.87). Beyond timing, the gate tracks the agent own choice preference: at D1 and GO it rises as the policy logit favours a2 (graded tanh(choice), weight about -0.07 per unit toward a1). At D2 it depends on the choice x reached state: a2 -> S1 (rare) is much higher (+0.23), a1 -> S2 (rare) much lower (-0.16), with a small a2 offset; common transitions are near baseline. At GO it is markedly lower after an unrewarded previous trial (-0.11; strongest after a1 unrewarded), with a smaller drop at D2. Using the upcoming action (future) at D1/GO instead of the policy logit scored lower (dev 0.60 vs 0.70), so the observed policy version is recorded. Hidden good state, trials since reversal and value add little. Dev R^2 beyond timing 0.75; all-cue ceiling 0.88.",
+  "gate": "unit_reset",
+  "feature": 28,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 28,
+    "terms": [
+      "(phase == D1) * np.tanh(choice)",
+      "(phase == GO) * np.tanh(choice)",
+      "(phase == D2) * (3*action+state == 5)",
+      "(phase == D2) * (3*action+state == 7)",
+      "(phase == D2) * (action == 2)",
+      "(phase == GO) * (prev_reward == 0)",
+      "(phase == D2) * (prev_reward == 0)"
+    ],
+    "weights": [
+      -0.06727703164170708,
+      -0.07649737265928813,
+      -0.15620855620975566,
+      0.22561937035289903,
+      -0.055773314233588625,
+      -0.11323470096394862,
+      -0.024947809382764363
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7388278257855176,
+    "r2": 0.9665941891734071,
+    "r2_timing_only": 0.8720927643725206
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 28,
+    "terms": [
+      "(phase == D1) * np.tanh(choice)",
+      "(phase == GO) * np.tanh(choice)",
+      "(phase == D2) * (3*action+state == 5)",
+      "(phase == D2) * (3*action+state == 7)",
+      "(phase == D2) * (action == 2)",
+      "(phase == GO) * (prev_reward == 0)",
+      "(phase == D2) * (prev_reward == 0)"
+    ],
+    "weights": [
+      -0.06727703164170708,
+      -0.07649737265928813,
+      -0.15620855620975566,
+      0.22561937035289903,
+      -0.055773314233588625,
+      -0.11323470096394862,
+      -0.024947809382764363
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7478037210931607,
+    "r2": 0.9675651741858158,
+    "r2_timing_only": 0.8713905456703208
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the D2 'smaller drop after no reward' term is weak (weight -0.025). Swapping it for (phase==D2)*np.tanh(choice) scores better on test (0.767 vs 0.739), so the policy logit also shapes D2 and the label leaves this out.",
+      "Minor: the GO no-reward drop is graded by streak length. Adding (phase==GO)*(prev_reward==0)*(tv('reward',-2)==0) raises test to 0.754 alone and to 0.782 with the D2 policy term. The worst-fit windows are runs of unrewarded trials where GO is ~0.42 but predicted ~0.69.",
+      "Minor: the claim 'most after an unrewarded a1' rests on raw residuals that are confounded with choice. In the raw table GO after a2 S1 u is +0.036, not a drop. Splitting the GO no-reward term by prev_action scored worse on test (0.750 vs 0.767), so it does not support an a1-specific effect.",
+      "Minor: the tanh(choice) scale is too sharp. Using tanh(choice/2) at D1, GO and D2 lifts test to 0.800.",
+      "Each claim checks out on test. The choice terms alone score 0.32, the D2 action x state terms alone 0.28, and the reward terms alone 0.12; all signs and sizes match. Misses show only small leftover errors, all within about 0.05: D1 over-predicted by about -0.02 on average, GO after a2 S1 u +0.05, GO after a1 S2 u -0.05. There is no large systematic error class."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "high when policy favours a2 (D1/GO/D2); D2 rare a2->S1 high, a1->S2 low; GO low after no reward, lower after 2 misses",
+    "better_terms": "(phase == D1) * np.tanh(choice/2) ;; (phase == GO) * np.tanh(choice/2) ;; (phase == D2) * (3*action+state == 5) ;; (phase == D2) * (3*action+state == 7) ;; (phase == D2) * (action == 2) ;; (phase==D2)*np.tanh(choice/2) ;; (phase==GO)*(prev_reward==0) ;; (phase==GO)*(prev_reward==0)*(tv('reward',-2)==0)",
+    "better_terms_test_r2_beyond_timing": 0.8
+  },
+  "final_label": "high when policy favours a2 (D1/GO/D2); D2 rare a2->S1 high, a1->S2 low; GO low after no reward, lower after 2 misses"
+}

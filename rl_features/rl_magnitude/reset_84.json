@@ -1,0 +1,112 @@
+{
+ "label": "Fires at GO after unrewarded common a2->S2, stronger when belief favours S2 and the trial before was rewarded.",
+ "short_terms": "(phase == GO) * last_is('a2 S2 u') ;; (phase == GO) * last_is('a2 S2 u') * belief_lo ;; (phase == GO) * last_is('a2 S2 u') * (ep_dec >= 8)",
+ "terms": "(phase == GO) * last_is(\"a2 S2 u\") ;; (phase == GO) * last_is(\"a2 S2 u\") * belief_lo ;; (phase == GO) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 0) ;; (phase == GO) * last_is(\"a2 S2 u\") * (tv(\"action\", -2) == 2) ;; (phase == GO) * last_is(\"a2 S2 u\") * np.abs(belief_lo) ;; (phase == GO) * (prev_action == -1) ;; (phase == GO) * (prev_action == -1) * belief_lo ;; (phase == GO) * last_is(\"a2 S2 u\") * (belief_cover)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Active only at GO. The dominant driver is the previous trial being a2 -> S2 (common) unrewarded: that single indicator gives dev R^2 0.54 beyond timing (residual +1.38 vs about -0.15 for every other pattern). Within those trials magnitude is graded: higher when the ideal observer belief favours S2 (negative weight on belief_lo) and lower when the trial before was also unrewarded (two losses in a row). The free fit adds only a little (the trial before being a2, cover, first-window-trial terms) for 0.62 dev vs 0.61 for the short form. No future variables are used; the choice being made adds little on its own.",
+ "full_test_scores": {
+  "gate": "reset",
+  "feature": 84,
+  "terms": [
+   "(phase == GO) * last_is(\"a2 S2 u\")",
+   "(phase == GO) * last_is(\"a2 S2 u\") * belief_lo",
+   "(phase == GO) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 0)",
+   "(phase == GO) * last_is(\"a2 S2 u\") * (tv(\"action\", -2) == 2)",
+   "(phase == GO) * last_is(\"a2 S2 u\") * np.abs(belief_lo)",
+   "(phase == GO) * (prev_action == -1)",
+   "(phase == GO) * (prev_action == -1) * belief_lo",
+   "(phase == GO) * last_is(\"a2 S2 u\") * (belief_cover)"
+  ],
+  "weights": [
+   1.664514793411006,
+   -0.18993516126427834,
+   -0.5499984201062704,
+   0.3533493060123415,
+   -0.03476513077517857,
+   0.008376745639902514,
+   -0.015293393319153421,
+   -0.026305163893863507
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6225102745750308,
+  "r2": 0.6530725979207609,
+  "r2_timing_only": 0.08096200051888491
+ },
+ "gate": "reset",
+ "feature": 84,
+ "test_scores": {
+  "gate": "reset",
+  "feature": 84,
+  "terms": [
+   "(phase == GO) * last_is('a2 S2 u')",
+   "(phase == GO) * last_is('a2 S2 u') * belief_lo",
+   "(phase == GO) * last_is('a2 S2 u') * (ep_dec >= 8)"
+  ],
+  "weights": [
+   1.8292182291769494,
+   -0.2714237585089204,
+   -1.2177039560855776
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6794135381752091,
+  "r2": 0.7053688594638152,
+  "r2_timing_only": 0.08096200051888491
+ },
+ "dev_scores": {
+  "gate": "reset",
+  "feature": 84,
+  "terms": [
+   "(phase == GO) * last_is('a2 S2 u')",
+   "(phase == GO) * last_is('a2 S2 u') * belief_lo",
+   "(phase == GO) * last_is('a2 S2 u') * (ep_dec >= 8)"
+  ],
+  "weights": [
+   1.8292182291769494,
+   -0.2714237585089204,
+   -1.2177039560855776
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.6744438283685018,
+  "r2": 0.6991216196384387,
+  "r2_timing_only": 0.0758019457787148
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The recorded claims hold on test: last_is('a2 S2 u') at GO alone gives 0.539. Adding belief_lo (weight -0.24, i.e. higher when belief favours S2) gives 0.603. Adding 'trial before unrewarded' (weight -0.46) gives the full short form at 0.615.",
+   "The short form misses a large interaction with episode time. The baseline is additive, so it cannot capture that the a2-S2-u response is much weaker late in the episode. Swapping the third term for (phase == GO) * last_is('a2 S2 u') * (ep_dec >= 8) (weight -1.22) raises test R^2 beyond timing to 0.679. That is above the recorded 0.615, the free fit's 0.623 and the stated additive ceiling of 0.65. ep_dec == 9 alone gives 0.661 and ep_dec >= 7 gives 0.663. In misses, predicted ~1.9 vs actual 0 at t97/t99 after a2 S2 u.",
+   "The 'trial before unrewarded' term is the weakest of the three. It adds only about 0.012 on top of belief_lo, so it is a minor refinement next to the late-episode suppression.",
+   "Remaining systematic errors are small and structural. At GO, every other previous-trial pattern is over-predicted by about 0.13, because the baseline and intercept average in the a2-S2-u spikes. Large activations on the first trial of a window cannot be predicted, because the previous trial falls outside the window.",
+   "No future, hidden or model-output variables are used, so that part of the explanation is correct."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Fires at GO after unrewarded common a2->S2, stronger when belief favours S2, weak in the last ~20 trials",
+  "better_short_terms": "(phase == GO) * last_is('a2 S2 u') ;; (phase == GO) * last_is('a2 S2 u') * belief_lo ;; (phase == GO) * last_is('a2 S2 u') * (ep_dec >= 8)",
+  "better_short_terms_test_r2_beyond_timing": 0.679
+ },
+ "final_label": "Fires at GO after unrewarded common a2->S2, stronger when belief favours S2, weak in the last ~20 trials",
+ "original_short_terms": "(phase == GO) * last_is(\"a2 S2 u\") ;; (phase == GO) * last_is(\"a2 S2 u\") * belief_lo ;; (phase == GO) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 0)",
+ "original_test_scores": {
+  "gate": "reset",
+  "feature": 84,
+  "terms": [
+   "(phase == GO) * last_is(\"a2 S2 u\")",
+   "(phase == GO) * last_is(\"a2 S2 u\") * belief_lo",
+   "(phase == GO) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 0)"
+  ],
+  "weights": [
+   1.7002289802282937,
+   -0.24075457545125065,
+   -0.45926556139994074
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6149573845016919,
+  "r2": 0.6461312049374588,
+  "r2_timing_only": 0.08096200051888491
+ },
+ "terms_from": "skeptic"
+}

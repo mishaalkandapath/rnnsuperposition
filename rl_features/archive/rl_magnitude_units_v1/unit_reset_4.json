@@ -1,0 +1,82 @@
+{
+  "label": "D1 reset tracks last trial's a1/S1-reward evidence, growing over the episode",
+  "terms": "(phase == D1) * (0.095*last_is(\"a1 S1 r\") + 0.026*last_is(\"a1 S1 u\") + 0.045*last_is(\"a1 S2 r\") - 0.028*last_is(\"a1 S2 u\") - 0.025*last_is(\"a2 S2 r\") - 0.126*last_is(\"a2 S2 u\") + 0.016*last_is(\"a2 S1 r\") - 0.081*last_is(\"a2 S1 u\")) ;; (phase == D1) * (0.095*last_is(\"a1 S1 r\") + 0.026*last_is(\"a1 S1 u\") + 0.045*last_is(\"a1 S2 r\") - 0.028*last_is(\"a1 S2 u\") - 0.025*last_is(\"a2 S2 r\") - 0.126*last_is(\"a2 S2 u\") + 0.016*last_is(\"a2 S1 r\") - 0.081*last_is(\"a2 S1 u\")) * ep_trial ;; (phase == GO) * (-0.014*last_is(\"a1 S1 r\") + 0.062*last_is(\"a1 S1 u\") + 0.023*last_is(\"a1 S2 u\") - 0.025*last_is(\"a2 S2 r\") - 0.026*last_is(\"a2 S1 r\") + 0.056*last_is(\"a2 S1 u\")) ;; (phase == GO) * (-0.014*last_is(\"a1 S1 r\") + 0.062*last_is(\"a1 S1 u\") + 0.023*last_is(\"a1 S2 u\") - 0.025*last_is(\"a2 S2 r\") - 0.026*last_is(\"a2 S1 r\") + 0.056*last_is(\"a2 S1 u\")) * ep_trial ;; (phase == D1) * (tv(\"reward\", -2) == 0) * (tv(\"action\", -2) == 2) ;; (phase == D1) * (tv(\"reward\", -2) == 1) * (tv(\"action\", -2) == 1) ;; (phase == D2) * (action == 1) * (state == 2) ;; (phase == D2) * (action == 2) * (state == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r[4]: timing dominates (high at D1/D2, low at GO, declining over the episode). Beyond timing, the D1 value is set by the previous trial: highest after a1 S1 rewarded (+0.095), also up after a1 S2 r / a1 S1 u; lowest after a2 S2 unrewarded (-0.126) and a2 S1 u (-0.08), i.e. a signed a1-vs-a2 / reward axis (rewarded a1 up, unrewarded a2 down). This D1 effect scales up strongly with episode trial (fitted ~0.18x at trial 0 to ~1.6x at trial 99), so long late-episode unrewarded a2 runs push it far below baseline. At GO it is higher after unrewarded trials that reached S1 (a1 S1 u, a2 S1 u, +0.06), slightly lower after rewarded ones; this GO effect shrinks over the episode. Smaller: trial-before (a2 unrewarded lowers D1, a1 rewarded raises it), and at D2 rare transitions (a1->S2 lower, a2->S1 higher). Value and hidden good state add little. 8 terms (two use fixed-shape last-trial tables from the profile residuals), all observed: test R^2 beyond timing 0.667 vs 'all' ceiling 0.69 (dev 0.669); last-trial table alone 0.55 dev.",
+  "gate": "unit_reset",
+  "feature": 4,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 4,
+    "terms": [
+      "(phase == D1) * (0.095*last_is(\"a1 S1 r\") + 0.026*last_is(\"a1 S1 u\") + 0.045*last_is(\"a1 S2 r\") - 0.028*last_is(\"a1 S2 u\") - 0.025*last_is(\"a2 S2 r\") - 0.126*last_is(\"a2 S2 u\") + 0.016*last_is(\"a2 S1 r\") - 0.081*last_is(\"a2 S1 u\"))",
+      "(phase == D1) * (0.095*last_is(\"a1 S1 r\") + 0.026*last_is(\"a1 S1 u\") + 0.045*last_is(\"a1 S2 r\") - 0.028*last_is(\"a1 S2 u\") - 0.025*last_is(\"a2 S2 r\") - 0.126*last_is(\"a2 S2 u\") + 0.016*last_is(\"a2 S1 r\") - 0.081*last_is(\"a2 S1 u\")) * ep_trial",
+      "(phase == GO) * (-0.014*last_is(\"a1 S1 r\") + 0.062*last_is(\"a1 S1 u\") + 0.023*last_is(\"a1 S2 u\") - 0.025*last_is(\"a2 S2 r\") - 0.026*last_is(\"a2 S1 r\") + 0.056*last_is(\"a2 S1 u\"))",
+      "(phase == GO) * (-0.014*last_is(\"a1 S1 r\") + 0.062*last_is(\"a1 S1 u\") + 0.023*last_is(\"a1 S2 u\") - 0.025*last_is(\"a2 S2 r\") - 0.026*last_is(\"a2 S1 r\") + 0.056*last_is(\"a2 S1 u\")) * ep_trial",
+      "(phase == D1) * (tv(\"reward\", -2) == 0) * (tv(\"action\", -2) == 2)",
+      "(phase == D1) * (tv(\"reward\", -2) == 1) * (tv(\"action\", -2) == 1)",
+      "(phase == D2) * (action == 1) * (state == 2)",
+      "(phase == D2) * (action == 2) * (state == 1)"
+    ],
+    "weights": [
+      0.1777192779944655,
+      0.01443575026662215,
+      1.5131932633550913,
+      -0.010076302927013801,
+      -0.0246184886408336,
+      0.019744650864667163,
+      -0.03000080833480836,
+      0.022388026628829244
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6665342779574825,
+    "r2": 0.9923260234841316,
+    "r2_timing_only": 0.9769872103529429
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 4,
+    "terms": [
+      "(phase == D1) * (0.095*last_is(\"a1 S1 r\") + 0.026*last_is(\"a1 S1 u\") + 0.045*last_is(\"a1 S2 r\") - 0.028*last_is(\"a1 S2 u\") - 0.025*last_is(\"a2 S2 r\") - 0.126*last_is(\"a2 S2 u\") + 0.016*last_is(\"a2 S1 r\") - 0.081*last_is(\"a2 S1 u\"))",
+      "(phase == D1) * (0.095*last_is(\"a1 S1 r\") + 0.026*last_is(\"a1 S1 u\") + 0.045*last_is(\"a1 S2 r\") - 0.028*last_is(\"a1 S2 u\") - 0.025*last_is(\"a2 S2 r\") - 0.126*last_is(\"a2 S2 u\") + 0.016*last_is(\"a2 S1 r\") - 0.081*last_is(\"a2 S1 u\")) * ep_trial",
+      "(phase == GO) * (-0.014*last_is(\"a1 S1 r\") + 0.062*last_is(\"a1 S1 u\") + 0.023*last_is(\"a1 S2 u\") - 0.025*last_is(\"a2 S2 r\") - 0.026*last_is(\"a2 S1 r\") + 0.056*last_is(\"a2 S1 u\"))",
+      "(phase == GO) * (-0.014*last_is(\"a1 S1 r\") + 0.062*last_is(\"a1 S1 u\") + 0.023*last_is(\"a1 S2 u\") - 0.025*last_is(\"a2 S2 r\") - 0.026*last_is(\"a2 S1 r\") + 0.056*last_is(\"a2 S1 u\")) * ep_trial",
+      "(phase == D1) * (tv(\"reward\", -2) == 0) * (tv(\"action\", -2) == 2)",
+      "(phase == D1) * (tv(\"reward\", -2) == 1) * (tv(\"action\", -2) == 1)",
+      "(phase == D2) * (action == 1) * (state == 2)",
+      "(phase == D2) * (action == 2) * (state == 1)"
+    ],
+    "weights": [
+      0.1777192779944655,
+      0.01443575026662215,
+      1.5131932633550913,
+      -0.010076302927013801,
+      -0.0246184886408336,
+      0.019744650864667163,
+      -0.03000080833480836,
+      0.022388026628829244
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6693308335501824,
+    "r2": 0.9925197155769894,
+    "r2_timing_only": 0.9773783431236674
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The label's phrase 'a1/S1-reward evidence' is a bit loose. The D1 table is mainly an a1-vs-a2 axis plus a reward axis, not evidence about S1. a1 S2 r raises it (+0.045). a2 S2 u, which is evidence that S1 is good, gives the lowest value (-0.126). a2 S1 r is slightly positive (+0.016). The explanation text describes this correctly; only the label is imprecise.",
+      "The scores reproduce. The 8 terms give test R^2 0.6665 against an 'all' ceiling of 0.69. The four table terms alone, with their episode-trial scaling, give 0.632; the same tables without the scaling give 0.554. That confirms the claim that the episode-trial scaling is the main gain. The fitted D1 scale runs 0.178 + 0.0144*ep_trial (about 0.18x to 1.6x) and the GO scale runs 1.51 - 0.010*ep_trial (it shrinks), both matching the explanation.",
+      "A simple signed version (prev_action as +1/-1, prev_reward, each also times ep_trial) reaches only 0.44. The action-sign effect fits almost entirely through its ep_trial interaction (weight 0.001 per trial, main effect about 0), so the a1-vs-a2 part really appears late in the episode. This supports 'growing over the episode'.",
+      "misses shows no systematic error class. Mean error by phase is about 0, and the worst (phase, previous trial) cells are within +/-0.015 (D2 after unrewarded trials +0.015; D1 after a1 S2 u -0.012). The worst windows are late-episode runs of repeated a2 choices, where D1 r keeps falling (0.63, 0.61, 0.44, 0.38) faster than the model predicts and GO is under-predicted (0.29 vs 0.13). Adding a2-run terms, trial-2 choice terms, ep_trial^2, or the model's choice logit did not beat 0.667 (0.633 to 0.655), so this is not a recoverable gap.",
+      "The smaller claims check out against the profile and the fitted weights. D2 rare transitions: a1 to S2 -0.030, a2 to S1 +0.022. Trial before: a2 unrewarded -0.025, a1 rewarded +0.020. GO is higher after unrewarded trials that reached S1 (+0.062 / +0.056), while after S2-unrewarded trials it is only +0.023 / +0.004."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 reset tracks the last trial's choice (a1 up, a2 down) and reward, an effect that grows over the episode",
+    "better_terms": null,
+    "better_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "D1 reset tracks the last trial's choice (a1 up, a2 down) and reward, an effect that grows over the episode"
+}

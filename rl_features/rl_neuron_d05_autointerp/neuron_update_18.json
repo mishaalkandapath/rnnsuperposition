@@ -1,0 +1,106 @@
+{
+  "label": "GO step, committing to a2 after a rewarded a2 trial (win-stay on a2), mid-episode",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (action == 2) & (prev_action != 1) & (prev_common != 0) & (ep_trial >= 20) & (ep_trial < 80)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": true,
+  "explanation": "Fires only at GO (never D1/D2), only when the previous trial was rewarded (prev_reward=1 for 99.96% of activations), and only when the agent is about to choose a2 with a strongly negative policy logit (all activations have choice < -4.4; 86% of mass in choice < -8.9). Nearly all activations follow a previous a2 choice (win-stay on a2); it does not fire on a1 choices, unrewarded previous trials, or switches to a2 from a1. The only future variable is action, the upcoming choice of the agent itself (legitimate); the observed-only equivalent using the policy logit (choice < -8.91 & prev_reward == 1 & ep_trial window) scores dev F1 0.83. Strong unexplained dependence on episode time: almost silent in trials 0-19 and 80-99, so ep_trial 20-79 is included (raises dev F1 from 0.64 to 0.81). Magnitude is largest on the first rewarded a2 GO after an unrewarded trial and decays over consecutive rewarded a2 trials (e.g. 0.82, 0.51, 0.38, 0.33), from example inspection only. The good state is mostly S2 when it fires (85% of mass), consistent with a2 being the chosen good action.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 18,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (action == 2) & (prev_action != 1) & (prev_common != 0) & (ep_trial >= 20) & (ep_trial < 80)",
+    "split": "test",
+    "precision": 0.7541552486263925,
+    "recall": 0.9513271261812117,
+    "f1": 0.8413436057363638,
+    "mass_recall": 0.9706041639071044,
+    "correlation": 0.7341444037679357,
+    "n_active": 57568,
+    "n_predicted": 72619,
+    "coverage_by_activation_quartile": [
+      0.901473040578099,
+      0.9433713173985547,
+      0.9746386881600889,
+      0.9858254585881046
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 18,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (action == 2) & (prev_action != 1) & (prev_common != 0) & (ep_trial >= 20) & (ep_trial < 80)",
+    "split": "dev",
+    "precision": 0.7723316347610522,
+    "recall": 0.9523801436747449,
+    "f1": 0.8529579521343341,
+    "mass_recall": 0.9702443142794317,
+    "correlation": 0.7419228741338743,
+    "n_active": 58883,
+    "n_predicted": 72610,
+    "coverage_by_activation_quartile": [
+      0.9068677399633177,
+      0.9454520752666259,
+      0.974118606072957,
+      0.9830842391304347
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 18,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Missing condition that explains a systematic false-positive class. When the previous trial was a rewarded a2 trial with a RARE transition (prev_common == 0: a2 led to S1 and S1 paid), the unit is completely silent. The predicate '(phase==GO)&(prev_reward==1)&(action==2)&(prev_action!=1)&(prev_common==0)' gets precision 0.000 on 7377 dev steps and 0.000 on 13642 test steps (test count without the trial window). So the unit is not general 'win-stay on a2'. It is model-based win-stay: a2 was chosen, it reached S2 by the common transition, and S2 paid.",
+      "Adding (prev_common != 0) to the original predicate raises test precision from 0.677 to 0.754 at the same recall (0.951) and mass recall (0.971). Test F1 rises from 0.791 to 0.841, which clears the 0.8 bar. So the reported shortfall below the bar came from this missing condition, not from scattered noise.",
+      "The GO rate at rel +1 is half that of the other trial positions (0.072 vs ~0.17). This is the same issue: core trials are balanced over the four transition/reward patterns, so about half of rel +1 trials follow a rare core trial. Under the original predicate, precision at rel +1 is 0.458. Once prev_common != 0 is added it is 0.789, the same as at the other positions.",
+      "The unit is just as silent when the reward came from S2 reached rarely through a1 (prev_action==1, prev_state==2, prev_reward==1, action==2): precision 0.001 on 5131 steps. So it needs both conditions together: the previous choice was a2 AND a2 reached S2 by the common transition and was rewarded. A reward in S2 alone is not enough.",
+      "The other factual claims check out. All activation is at GO (none at D1 or D2). 25 of 58883 activations have prev_reward = 0. Every activation has choice < -4.44, and 86% of the mass has choice < -8.91. Only 4 activations follow an a1 choice. 85% of the mass falls where good == S2. Magnitude is larger after an unrewarded trial two back (tv('reward',-2)==0: recall 0.108 but mass recall 0.171), which fits the claimed decay over runs of rewarded trials.",
+      "The dependence on episode position is real and still unexplained. Even with the corrected predicate, precision is 0.176 in trials 10-19, 0.025 in trials 80-89, and the rate in 90-99 is zero. The cutoff near trial 80 is sharp. The label should keep this as an open caveat rather than present it as understood.",
+      "Observed-only check: '(phase==GO)&(prev_reward==1)&(choice<-4.44)&(prev_state!=1)&(ep_trial>=20)&(ep_trial<80)' gets test F1 0.836 (P 0.746, R 0.952, mass recall 0.971). This is essentially equal to the version that uses action, so the label can say it uses only observed history plus the agent's own a2-leaning policy logit."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step committing to a2 right after a2 led to S2 by the common transition and was rewarded (model-based win-stay on a2), in trials ~20-79 of the episode; silent after rare-rewarded trials; why it depends on episode position is unexplained",
+    "better_predicate": "(phase == GO) & (prev_reward == 1) & (action == 2) & (prev_action != 1) & (prev_common != 0) & (ep_trial >= 20) & (ep_trial < 80)",
+    "better_predicate_test_f1": 0.841
+  },
+  "final_label": "GO step committing to a2 right after a2 led to S2 by the common transition and was rewarded (model-based win-stay on a2), in trials ~20-79 of the episode; silent after rare-rewarded trials; why it depends on episode position is unexplained",
+  "original_predicate": "(phase == GO) & (prev_reward == 1) & (action == 2) & (prev_action != 1) & (ep_trial >= 20) & (ep_trial < 80)",
+  "original_test_scores": {
+    "gate": "neuron_update",
+    "feature": 18,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (action == 2) & (prev_action != 1) & (ep_trial >= 20) & (ep_trial < 80)",
+    "split": "test",
+    "precision": 0.6771182354323018,
+    "recall": 0.9513271261812117,
+    "f1": 0.7911360862122514,
+    "mass_recall": 0.9706041639071044,
+    "correlation": 0.6928877352124685,
+    "n_active": 57568,
+    "n_predicted": 80881,
+    "coverage_by_activation_quartile": [
+      0.901473040578099,
+      0.9433713173985547,
+      0.9746386881600889,
+      0.9858254585881046
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_update",
+    "feature": 18,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (action == 2) & (prev_action != 1) & (ep_trial >= 20) & (ep_trial < 80)",
+    "split": "dev",
+    "precision": 0.7011014289822096,
+    "recall": 0.9523801436747449,
+    "f1": 0.8076474400518471,
+    "mass_recall": 0.9702443142794317,
+    "correlation": 0.7042792613696628,
+    "n_active": 58883,
+    "n_predicted": 79987,
+    "coverage_by_activation_quartile": [
+      0.9068677399633177,
+      0.9454520752666259,
+      0.974118606072957,
+      0.9830842391304347
+    ]
+  },
+  "predicate_from": "skeptic"
+}

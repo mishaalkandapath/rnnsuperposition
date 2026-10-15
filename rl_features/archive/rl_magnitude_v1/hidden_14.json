@@ -1,0 +1,71 @@
+{
+  "label": "D2 surge after previous trial a1 -> S1 unrewarded, growing over the episode",
+  "terms": "(phase == D2) * last_is(\"a1 S1 u\") ;; (phase == D2) * last_is(\"a2 S1 u\") ;; (phase == D2) * (prev_state == 2) ;; (phase == D2) * last_is(\"a1 S1 u\") * ep_dec ;; (phase == D2) * (prev_state == 2) * ep_dec",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2. Its magnitude is set almost entirely by the previous trial (observed). If that trial was a1 -> S1 (common) and unrewarded, the activation is large (about +1.2 above timing), and this effect grows with episode time (+0.08 per episode decile). If it was a2 -> S1 (rare) unrewarded, it is mildly raised (+0.16). If the previous trial reached S2, it is suppressed below the timing baseline, more so later in the episode. Previous S1 rewarded is about baseline. Smaller extras that were checked but left out (dev R^2 0.64 -> 0.68): two unrewarded trials in a row, or S1 reached twice in a row. This trial own choice/state, the future reward, the hidden good state and value add little. Dev R^2 beyond timing is 0.67, close to the all ceiling of 0.71. No future variables are used.",
+  "gate": "hidden",
+  "feature": 14,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 14,
+    "terms": [
+      "(phase == D2) * last_is(\"a1 S1 u\")",
+      "(phase == D2) * last_is(\"a2 S1 u\")",
+      "(phase == D2) * (prev_state == 2)",
+      "(phase == D2) * last_is(\"a1 S1 u\") * ep_dec",
+      "(phase == D2) * (prev_state == 2) * ep_dec"
+    ],
+    "weights": [
+      0.8377973286732792,
+      0.15680019026211495,
+      -0.0826408798470118,
+      0.07872780944474046,
+      -0.022612415572224716
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6710180405790368,
+    "r2": 0.7210079526393727,
+    "r2_timing_only": 0.15195335375934438
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 14,
+    "terms": [
+      "(phase == D2) * last_is(\"a1 S1 u\")",
+      "(phase == D2) * last_is(\"a2 S1 u\")",
+      "(phase == D2) * (prev_state == 2)",
+      "(phase == D2) * last_is(\"a1 S1 u\") * ep_dec",
+      "(phase == D2) * (prev_state == 2) * ep_dec"
+    ],
+    "weights": [
+      0.8377973286732792,
+      0.15680019026211495,
+      -0.0826408798470118,
+      0.07872780944474046,
+      -0.022612415572224716
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6663635441822338,
+    "r2": 0.7174232520590773,
+    "r2_timing_only": 0.1530399540772388
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The main claim holds. A D2 surge after an unrewarded a1 -> S1 trial (D2 residual +1.2) that grows with episode decile (+0.079 per decile) reproduces on test: R^2 beyond timing 0.671, against an 'all' ceiling of 0.71.",
+      "The 'a2 -> S1 unrewarded: mildly higher, about +0.16' claim is wrong. Adding (D2)*last_is('a2 S1 u')*ep_dec turns the base weight negative (-0.22) with a slope of +0.081 per decile, so the effect starts below baseline early in the episode and becomes large late. Test R^2 rises from 0.671 to 0.692.",
+      "The a2 -> S1 unrewarded effect also depends on the trial before. If that trial was an a1 choice, (D2)*last_is('a2 S1 u')*(tv('action',-2)==1) gets weight +0.81 (test 0.679 alone). The worst-fit windows show D2 values of 1.6-2.0 after a2 S1 u where the model predicts about 0.3-0.46.",
+      "Two unrewarded S1 trials in a row (prev and prev-2 both S1, unrewarded) add +0.40 (test 0.689 alone). The explanation drops this 'extra' as adding only a little, but in combination with the other two terms it matters.",
+      "The 'S1 reached and rewarded: about at baseline' claim is only true for a1 -> S1. After a2 -> S1 rewarded the D2 residual is -0.128, close to the S2 cases. misses shows this as the largest remaining systematic over-prediction (-0.126 for D2 after a2 S1 r).",
+      "Adding 3 terms (8 in total) gives test R^2 beyond timing 0.714, above the 0.71 additive ceiling. So about 0.04 of systematic, explainable structure was missed, all of it in the a2 -> S1 history."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 surge after an unrewarded previous trial that reached S1 (strongest for a1 -> S1, growing over the episode); after a rare a2 -> S1 unrewarded trial it is below baseline early and grows late, especially if the trial before was a1 or also S1-unrewarded; suppressed after S2 or a2 -> S1 rewarded",
+    "better_terms": "(phase == D2) * last_is('a1 S1 u') ;; (phase == D2) * last_is('a2 S1 u') ;; (phase == D2) * (prev_state == 2) ;; (phase == D2) * last_is('a1 S1 u') * ep_dec ;; (phase == D2) * (prev_state == 2) * ep_dec ;; (phase == D2) * last_is('a2 S1 u') * ep_dec ;; (phase == D2) * last_is('a2 S1 u') * (tv('action',-2)==1) ;; (phase == D2) * (prev_state==1) * (prev_reward==0) * (tv('state',-2)==1) * (tv('reward',-2)==0)",
+    "better_terms_test_r2_beyond_timing": 0.714
+  },
+  "final_label": "D2 surge after an unrewarded previous trial that reached S1 (strongest for a1 -> S1, growing over the episode); after a rare a2 -> S1 unrewarded trial it is below baseline early and grows late, especially if the trial before was a1 or also S1-unrewarded; suppressed after S2 or a2 -> S1 rewarded"
+}

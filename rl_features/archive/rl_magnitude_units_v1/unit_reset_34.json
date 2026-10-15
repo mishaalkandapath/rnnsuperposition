@@ -1,0 +1,78 @@
+{
+  "label": "D2: high when S1 reached (esp. after a rewarded trial); GO: high for a2 / after S2",
+  "terms": "(phase == D2) * (state == S1) ;; (phase == GO) * choice ;; (phase == D2) * (action == 1) ;; (phase == GO) * (prev_state == S1) ;; (phase == D2) * (prev_reward == 1) ;; (phase == GO) * (prev_reward == 1) ;; (phase == D2) * (state == S1) * (prev_reward == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r34 is dominated by timing (GO ~0.4, D2 ~0.2, D1 ~0.06; timing R^2 0.76). Beyond timing: at D2 it tracks the reached state: higher when S1 is shown (+0.10), much more so if the previous trial was rewarded (S1 x prev_reward +0.13), lower when the choice was a1 (-0.05), and lower after a rewarded trial otherwise (-0.06). So S1 reached after a rare a2 transition is highest, and S2 is lowest. At GO it is higher when the policy leans to a2 (graded, choice logit weight -0.005 per logit unit), lower after the previous trial reached S1 (-0.065), and slightly higher after reward (+0.03). D1 barely varies. All terms use observed inputs or the model policy; no future or hidden variables. Value and hidden good state add little. Dev R^2 beyond timing 0.745, test 0.735 (all ceiling 0.93, all observed 0.91).",
+  "gate": "unit_reset",
+  "feature": 34,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 34,
+    "terms": [
+      "(phase == D2) * (state == S1)",
+      "(phase == GO) * choice",
+      "(phase == D2) * (action == 1)",
+      "(phase == GO) * (prev_state == S1)",
+      "(phase == D2) * (prev_reward == 1)",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == D2) * (state == S1) * (prev_reward == 1)"
+    ],
+    "weights": [
+      0.09719419819303898,
+      -0.004883686164566031,
+      -0.04948899455219657,
+      -0.06500395270664507,
+      -0.0640872385829536,
+      0.029103928171685323,
+      0.13435131566396424
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.734890978074704,
+    "r2": 0.9360558737933449,
+    "r2_timing_only": 0.7588006407994908
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 34,
+    "terms": [
+      "(phase == D2) * (state == S1)",
+      "(phase == GO) * choice",
+      "(phase == D2) * (action == 1)",
+      "(phase == GO) * (prev_state == S1)",
+      "(phase == D2) * (prev_reward == 1)",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == D2) * (state == S1) * (prev_reward == 1)"
+    ],
+    "weights": [
+      0.09719419819303898,
+      -0.004883686164566031,
+      -0.04948899455219657,
+      -0.06500395270664507,
+      -0.0640872385829536,
+      0.029103928171685323,
+      0.13435131566396424
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7454651261558596,
+    "r2": 0.9382346195633456,
+    "r2_timing_only": 0.7573402044920758
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The original terms leave a systematic phase-level bias. Every D2 term is a dummy with a nonzero D2 mean, and no term is a plain D2 or GO offset, so the fitted weights get pulled to make up for it. In misses the mean error by phase is D2 -0.018 and GO +0.010, where it should be about 0. Adding just '(phase==D2)' to the 7 original terms lifts test R^2 beyond timing from 0.735 to 0.864.",
+      "Once the D2 offset is in, the reward claims at D2 fall apart. 'Much higher if the previous trial was also rewarded (S1 x prev_reward, +0.13)' shrinks to +0.04. 'Lower after a rewarded previous trial (-0.06)' flips sign to +0.03 (and +0.049 in the 8-term set below). These numbers are distortions from the mis-specified fit, not real effects.",
+      "Under the original terms, misses show a large systematic gap: GO after S2-unrewarded is under-predicted by about 0.07 (a1 S2 u +0.071, a2 S2 u +0.068), and D2 after an unrewarded previous trial is over-predicted (a2 S1 u -0.072, a2 S2 u -0.061). Adding one term for D2 x S2 x prev_unrewarded gives 0.864, which shows the reward x state structure was mis-modelled.",
+      "The GO claim 'rises as the policy leans toward a2' is weak. The choice logit weight drops to about -0.003 once prev_action and a GO offset are in. The GO pattern is mostly 'lower after the previous trial reached S1' (-0.085 to -0.097) plus slightly higher after a previous a2 choice (+0.03). Choice alone scores 0.155 and prev_state==S1 alone 0.122.",
+      "The verdict 'explained' still holds, and the main claims (D2 higher when S1 is reached, lower for an a1 choice so rare a2->S1 is highest; GO lower after S1) check out. A simpler set of 6 terms (D2 offset, D2 x S1, D2 x a1, GO offset, GO x prev_S1, GO x choice) already scores 0.837 test, above the original 0.735."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2: tracks the state just reached (S1 high, S2 low, about +0.21), slightly lower for an a1 choice (so rare a2->S1 is highest) and slightly higher after a rewarded previous trial. GO: lower when the previous trial reached S1, a bit higher after a previous a2. D1: flat.",
+    "better_terms": "(phase==D2) ;; (phase==D2)*(state==S1) ;; (phase==D2)*(action==1) ;; (phase==GO) ;; (phase==GO)*(prev_state==S1) ;; (phase==GO)*choice ;; (phase==D2)*(prev_reward==1) ;; (phase==GO)*(prev_action==2)",
+    "better_terms_test_r2_beyond_timing": 0.879
+  },
+  "final_label": "D2: tracks the state just reached (S1 high, S2 low, about +0.21), slightly lower for an a1 choice (so rare a2->S1 is highest) and slightly higher after a rewarded previous trial. GO: lower when the previous trial reached S1, a bit higher after a previous a2. D1: flat."
+}

@@ -1,0 +1,112 @@
+{
+ "label": "Higher when belief favors S2, at D2 after reaching S1; lower after unrewarded a1.",
+ "short_terms": "belief_lo ;; (phase == D2) * (state == S1) ;; (phase != D1) * (prev_reward == 0)",
+ "terms": "(phase == D1) * belief_lo ;; (phase == GO) * belief_lo ;; (phase == D2) * belief_lo ;; (phase == D2) * (state == S1) ;; (phase == D2) * (action == 2) ;; (phase == GO) * (prev_reward == 0) * (prev_action == 1) ;; (phase == GO) * (prev_reward == 1) * (prev_action == 2) ;; (phase == D1) * (prev_action == 2)",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Reset gate r28 (timing: high at D1, mid at GO, low at D2) is graded by the ideal-observer belief: higher when the observer believes S2 is good (negative belief_lo), at all phases. At D2 it is raised by the reached state S1 (state input). At GO and D2 it drops after an unrewarded a1 trial (a1 S1 u / a1 S2 u are the most negative GO cells). The free fit adds phase-specific belief slopes, a negative a2-choice term at D2 (so a2->S1 rare is highest), a GO boost after rewarded a2, and a D1 boost after a2. Remaining misses: long unrewarded streaks pull GO lower than predicted even after a2. No future variables used; value/choice not used (observed-only run).",
+ "full_test_scores": {
+  "gate": "unit_reset",
+  "feature": 28,
+  "terms": [
+   "(phase == D1) * belief_lo",
+   "(phase == GO) * belief_lo",
+   "(phase == D2) * belief_lo",
+   "(phase == D2) * (state == S1)",
+   "(phase == D2) * (action == 2)",
+   "(phase == GO) * (prev_reward == 0) * (prev_action == 1)",
+   "(phase == GO) * (prev_reward == 1) * (prev_action == 2)",
+   "(phase == D1) * (prev_action == 2)"
+  ],
+  "weights": [
+   -0.013854121410115584,
+   -0.012717086394470875,
+   -0.03212620530874206,
+   0.14974406055458506,
+   -0.07305758797515254,
+   -0.13752749129526456,
+   0.09001678400844237,
+   0.049552406262073224
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6548211651744733,
+  "r2": 0.9558491294403526,
+  "r2_timing_only": 0.8720927643725206
+ },
+ "gate": "unit_reset",
+ "feature": 28,
+ "test_scores": {
+  "gate": "unit_reset",
+  "feature": 28,
+  "terms": [
+   "belief_lo",
+   "(phase == D2) * (state == S1)",
+   "(phase != D1) * (prev_reward == 0)"
+  ],
+  "weights": [
+   -0.02126906907777676,
+   0.12424125657902432,
+   -0.07846422965880594
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5659666267679113,
+  "r2": 0.9444839910598135,
+  "r2_timing_only": 0.8720927643725206
+ },
+ "dev_scores": {
+  "gate": "unit_reset",
+  "feature": 28,
+  "terms": [
+   "belief_lo",
+   "(phase == D2) * (state == S1)",
+   "(phase != D1) * (prev_reward == 0)"
+  ],
+  "weights": [
+   -0.02126906907777676,
+   0.12424125657902432,
+   -0.07846422965880594
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.5754613427982027,
+  "r2": 0.9454003149554221,
+  "r2_timing_only": 0.8713905456703208
+ },
+ "final_verdict": "partially_explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The a1-specific claim in the third term is not supported. Replacing (phase != D1)*(prev_reward==0)*(prev_action==1) with the simpler (phase != D1)*(prev_reward==0) raises test R^2 beyond timing from 0.540 to 0.566 (dev 0.575; weight -0.078). So the drop at GO/D2 follows any unrewarded previous trial; the 'after an unrewarded a1' wording mostly reflects the belief/prev-action confound. A GO-only version of the a1 term scores 0.522, and the generic GO-only prev_reward==0 term scores 0.507.",
+   "A systematic error remains in both short forms: a previous-action effect at D1/GO. Misses on the improved form under-predict GO after a2 S1 r (+0.087), D1 after a2 S2 u (+0.063) and D1 after a2 S1 r (+0.051), and over-predict D1 after a1 S1 u (-0.079) and GO after a1 S2 u (-0.067). The raw residual table shows the same: D1 is about -0.04 to -0.08 after a1 and +0.05 to +0.07 after a2. Neither short form models this. I tried folding prev_action into the 3 terms (prev_reward + (prev_action==2), combined indicators); every variant scored worse (0.28-0.53).",
+   "Mean error by phase is also systematic for the original short form: GO +0.024, D2 -0.035. The worst windows are long unrewarded runs where activation sits well below prediction at all phases, including D1 (e.g. 0.63-0.75 actual vs 0.87-0.93 predicted). The explanation's stated main miss names only GO, but the D1 miss exists too.",
+   "The explanation says the free fit's 'negative a2-choice term at D2' makes a2 the highest D2 cell, which reads as contradictory. The raw D2 residuals put a2 above a1 (a2 S1 +0.18 vs a1 S1 +0.03; a2 S2 -0.045 vs a1 S2 -0.144). The a2 weight only turns negative (-0.06 to -0.07) after conditioning on belief_lo, so it is a belief-adjusted correction, not a direct effect.",
+   "The belief and D2-reached-S1 claims hold: belief_lo weight -0.019 to -0.021, D2 S1 weight +0.12, and the residual-by-belief-decile table is monotone in every phase (weaker at D2). No future or model-output variables were used."
+  ],
+  "revised_verdict": "partially_explained",
+  "revised_label": "Higher when belief favors S2 and at D2 after reaching S1; lower after any unrewarded trial.",
+  "better_short_terms": "belief_lo ;; (phase == D2) * (state == S1) ;; (phase != D1) * (prev_reward == 0)",
+  "better_short_terms_test_r2_beyond_timing": 0.566
+ },
+ "final_label": "Higher when belief favors S2 and at D2 after reaching S1; lower after any unrewarded trial.",
+ "original_short_terms": "belief_lo ;; (phase == D2) * (state == S1) ;; (phase != D1) * (prev_reward == 0) * (prev_action == 1)",
+ "original_test_scores": {
+  "gate": "unit_reset",
+  "feature": 28,
+  "terms": [
+   "belief_lo",
+   "(phase == D2) * (state == S1)",
+   "(phase != D1) * (prev_reward == 0) * (prev_action == 1)"
+  ],
+  "weights": [
+   -0.01917048595244403,
+   0.1230822859820375,
+   -0.10740906103886609
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5396379940233897,
+  "r2": 0.9411163684276106,
+  "r2_timing_only": 0.8720927643725206
+ },
+ "terms_from": "skeptic"
+}

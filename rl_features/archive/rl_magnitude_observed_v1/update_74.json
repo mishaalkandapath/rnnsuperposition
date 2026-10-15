@@ -1,0 +1,68 @@
+{
+  "label": "late-episode D1 after a1 S1 r then rare a1 S2 r; grows toward episode end",
+  "terms": "(phase == D1) * last_is(\"a1 S2 r\") * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 1) * (ep_trial >= 90) ;; (phase == D1) * last_is(\"a1 S2 r\") * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 1) * (ep_trial >= 90) * (ep_trial - 90) ;; (phase == D1) * last_is(\"a1 S2 r\") * (ep_trial >= 90) ;; (phase == D1) * last_is(\"a1 S2 r\") * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 1) * (ep_trial >= 90) * (tv(\"action\", -3) == 2)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Very sparse feature (nonzero on 0.1% of steps), only at D1. It fires when the last trial was a rare a1->S2 rewarded trial and the trial before it was a1->S1 rewarded, and only in the last ~10 trials of the episode (ep_trial >= 90). Within that window its magnitude rises roughly linearly with ep_trial (about +0.04 per trial, up to ~0.5-0.7 near trial 98-99). It is much weaker (~0.02) after a1 S2 r late in the episode without the a1 S1 r trial before, and it is suppressed when the trial three back was an a2 choice. GO and D2 are always 0. Uses only observed trial history and episode time; the ideal-observer belief_lo adds nothing beyond history (the belief-decile table scores 0.00), so dropping model outputs costs nothing here: the profile reference scores give all observed 0.04 and all 0.05 because those additive tables cannot express the conjunction. Remaining errors are mostly window-first trials where the history is outside the window. Test R^2 beyond timing 0.65 (dev 0.64).",
+  "gate": "update",
+  "feature": 74,
+  "test_scores": {
+    "gate": "update",
+    "feature": 74,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 r\") * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 1) * (ep_trial >= 90)",
+      "(phase == D1) * last_is(\"a1 S2 r\") * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 1) * (ep_trial >= 90) * (ep_trial - 90)",
+      "(phase == D1) * last_is(\"a1 S2 r\") * (ep_trial >= 90)",
+      "(phase == D1) * last_is(\"a1 S2 r\") * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 1) * (ep_trial >= 90) * (tv(\"action\", -3) == 2)"
+    ],
+    "weights": [
+      0.12690239393048017,
+      0.042246458589166445,
+      0.021030656631097294,
+      -0.2773196816553886
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6526299463686567,
+    "r2": 0.6572916818594257,
+    "r2_timing_only": 0.01342008455258592
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 74,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 r\") * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 1) * (ep_trial >= 90)",
+      "(phase == D1) * last_is(\"a1 S2 r\") * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 1) * (ep_trial >= 90) * (ep_trial - 90)",
+      "(phase == D1) * last_is(\"a1 S2 r\") * (ep_trial >= 90)",
+      "(phase == D1) * last_is(\"a1 S2 r\") * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 1) * (ep_trial >= 90) * (tv(\"action\", -3) == 2)"
+    ],
+    "weights": [
+      0.12690239393048017,
+      0.042246458589166445,
+      0.021030656631097294,
+      -0.2773196816553886
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6360350765508738,
+    "r2": 0.6406868568975586,
+    "r2_timing_only": 0.012780847952605034
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced the claimed scores: dev 0.636 and test 0.653 R^2 beyond timing. Misses show no systematic error class. Mean error is about 0 in every phase, and the largest per-cell bias is about 0.001. The worst windows are mostly ones where the feature fires on the window's first trial, so the history it needs falls outside the window.",
+      "The 'grows about linearly to 0.5-0.7 by trials 98-99' claim overstates the shape. Fitting the core conjunction separately for each pair of ep_trial values gives 88-89: 0.03, 90-91: 0.10, 92-93: 0.26, 94-95: 0.41, 96-97: 0.44, 98-99: 0.42. The rise levels off at about 0.4 from trial 94 on, and the strongest single activations (about 0.6-0.7) are outliers, not the mean.",
+      "The ep_trial >= 90 cutoff is not quite strict. There is weak firing (about 0.03) at ep_trial 88-89.",
+      "The suppression from an earlier a2 is not limited to the trial three back. An a2 four trials back also strongly suppresses it (weight 0.06 vs 0.34 when trials 3 and 4 back were both a1). So it is better described as 'a run of a1 choices before the a1 S1 r trial'. Also, after a2 three back the drop is near-total if that a2 trial was rewarded (about 0) and partial if it was unrewarded (about 0.05).",
+      "The 2-back requirement checks out. Late a1 S2 r preceded by a1 S1 u, a1 S2 r/u or a2 gives about 0, while a1 S1 r gives about 0.31.",
+      "Belief: adding belief_lo inside the conjunction raises dev a little (0.678 to 0.685) but lowers test (0.684 to 0.682). The claim that belief adds nothing beyond history holds."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "late-episode D1 (from ~trial 88) after a1 S1 r then rare a1 S2 r, within an a1 run; ramps up and plateaus ~0.4 by trial 94; killed by an a2 3-4 trials back",
+    "better_terms": "B=(phase == D1)*last_is('a1 S2 r')*(ep_trial>=88); C=B*(tv('action',-2)==1)*(tv('state',-2)==1)*(tv('reward',-2)==1); R=(np.minimum(ep_trial,95)-88). Terms: C ;; C*R ;; C*(tv('action',-3)==2) ;; C*(tv('action',-4)==2) ;; B*(tv('action',-2)==-9) ;; B*(tv('action',-2)==-9)*R ;; B",
+    "better_terms_test_r2_beyond_timing": 0.6839
+  },
+  "final_label": "late-episode D1 (from ~trial 88) after a1 S1 r then rare a1 S2 r, within an a1 run; ramps up and plateaus ~0.4 by trial 94; killed by an a2 3-4 trials back"
+}

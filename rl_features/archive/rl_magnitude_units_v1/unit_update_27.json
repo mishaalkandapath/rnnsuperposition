@@ -1,0 +1,79 @@
+{
+  "label": "Lower after rewarded trials, higher after S1 / unrewarded, at D1 and GO",
+  "terms": "(phase == D1) * (prev_reward == 1) ;; (phase == GO) * (prev_reward == 1) ;; (phase == D1) * (prev_state == 1) ;; (phase == D1) * (prev_reward == 1) * (prev_state == 2) ;; (phase == GO) * (prev_action == 2) ;; (phase == GO) * (prev_reward == 1) * (prev_action == 1) ;; (phase == D1) * value",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 27 is dominated by timing (it is near 1 early in the episode and decays toward 0 late, most at D1/GO; timing alone R^2 0.89). Beyond timing, the last trial drives it at D1 and GO only (D2 has almost no residual). At D1 it is lowered by a rewarded last trial (strongest after a rewarded S2: a1 S2 r, a2 S2 r about -0.12 to -0.13) and raised when the last reached state was S1, most of all after unrewarded S1 (a1 S1 u +0.19). At GO it is lowered by a previous reward (most after a1 rewarded) and raised after a previous a2 choice. A small positive D1 value term adds a little. The trial before, rewards summed over earlier trials, and late-episode scaling of these terms added nothing. Test R^2 beyond timing 0.55 (dev 0.55), 83% of the all-cues ceiling 0.66 (last trial alone 0.58).",
+  "gate": "unit_update",
+  "feature": 27,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 27,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == D1) * (prev_state == 1)",
+      "(phase == D1) * (prev_reward == 1) * (prev_state == 2)",
+      "(phase == GO) * (prev_action == 2)",
+      "(phase == GO) * (prev_reward == 1) * (prev_action == 1)",
+      "(phase == D1) * value"
+    ],
+    "weights": [
+      -0.09632768931356119,
+      -0.06554645247800543,
+      0.08245816635575105,
+      -0.08855593617270352,
+      0.062044152420645336,
+      -0.011314401660146503,
+      0.006288810025112918
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5483513034238252,
+    "r2": 0.9523257587611808,
+    "r2_timing_only": 0.8944439747081645
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 27,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == D1) * (prev_state == 1)",
+      "(phase == D1) * (prev_reward == 1) * (prev_state == 2)",
+      "(phase == GO) * (prev_action == 2)",
+      "(phase == GO) * (prev_reward == 1) * (prev_action == 1)",
+      "(phase == D1) * value"
+    ],
+    "weights": [
+      -0.09632768931356119,
+      -0.06554645247800543,
+      0.08245816635575105,
+      -0.08855593617270352,
+      0.062044152420645336,
+      -0.011314401660146503,
+      0.006288810025112918
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5543099684422872,
+    "r2": 0.953415730246405,
+    "r2_timing_only": 0.8954783224772154
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The D1 claim that last reaching S1 raises the gate is wrong after a rare rewarded trial. The profile's D1 residual for a2 S1 r is -0.053, against +0.058 for a1 S1 r and +0.186 for a1 S1 u. Misses on the claimed terms put D1 after a2 S1 r as the largest systematic over-prediction, at -0.092. Adding one term, (phase==D1)*last a2 S1 r, lifts test R^2 beyond timing from 0.548 to 0.572.",
+      "At D1 the real pattern is an action x state x reward interaction, not a reward effect plus an S1 effect. Residuals: a1S1r +0.058, a1S1u +0.186, a1S2r -0.121, a1S2u +0.051, a2S2r -0.134, a2S2u +0.030, a2S1r -0.053, a2S1u +0.096. Unrewarded trials raise the gate, more after reaching S1. Rewarded trials lower it, except a common rewarded a1 S1 trial, which raises it slightly.",
+      "At GO, 'a previous a2 choice raises it' holds only after unrewarded trials: a2S2u +0.068 and a2S1u +0.118, but a2S2r -0.007 and a2S1r -0.002. The rewarded-trial drop is really specific to a1 (a1S1r -0.064, a1S2r -0.096). Remaining GO misses with the claimed terms: under-predicted after a1 S1 u (+0.058) and a2 S1 u (+0.046).",
+      "The claim that scaling up late in the episode added nothing holds only for reward-only scaling (0.527, no gain). Scaling the full last-trial tables by ep_dec and ep_dec^2 raises test R^2 from 0.577 to 0.611, so the last-trial effect does change over the episode.",
+      "The value term is real but small: dropping it takes test R^2 from 0.548 to 0.524. No future variables are used, as claimed.",
+      "The claimed terms reach 0.548 on test, below the plain last-trial reference of 0.58. A better set of 8 terms reaches 0.621, close to the all-observed ceiling of 0.63, and its misses fall to |0.02| or less in every phase x previous-trial cell."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "At D1 and GO, set by the last trial's choice x state x reward: lower after rewarded S2 trials (and after a rewarded a1 at GO), higher after unrewarded trials, most after reaching S1; the effect changes across the episode",
+    "better_terms": "K=np.where(prev_action>0, 4*prev_action+2*prev_state+(1-prev_reward), -1); D1T=table(K,{6:0.058,7:0.186,8:-0.121,9:0.051,12:-0.134,13:0.030,10:-0.053,11:0.096}); GOT=table(K,{6:-0.064,7:0.067,8:-0.096,9:-0.003,12:-0.007,13:0.068,10:-0.002,11:0.118}); terms: (phase==D1)*D1T ;; (phase==GO)*GOT ;; (phase==D1)*D1T*ep_dec ;; (phase==GO)*GOT*ep_dec ;; (phase==D1)*D1T*ep_dec**2 ;; (phase==GO)*GOT*ep_dec**2 ;; (phase==GO)*choice ;; (phase==D1)*choice  (choice is the model's policy logit, a model output; observed-only tables + scaling, 6 terms, reach 0.611)",
+    "better_terms_test_r2_beyond_timing": 0.6207
+  },
+  "final_label": "At D1 and GO, set by the last trial's choice x state x reward: lower after rewarded S2 trials (and after a rewarded a1 at GO), higher after unrewarded trials, most after reaching S1; the effect changes across the episode"
+}

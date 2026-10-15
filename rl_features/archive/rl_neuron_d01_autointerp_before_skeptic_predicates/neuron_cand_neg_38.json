@@ -1,0 +1,64 @@
+{
+  "label": "D1 after a rare-rewarded a2 trial (a2 -> S1 -> reward) while the policy still leans a2",
+  "predicate": "(phase == D1) & (prev_reward == 1) & (prev_action == 2) & (prev_common == 0) & (choice < -1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires almost only at D1 (99.8% of mass) with reward input 1, when the previous trial was a2 that hit the rare state S1 and was rewarded (rare-rewarded a2). The base condition (D1 & prev rare-rewarded a2) gets F1 0.69 / mass recall 0.91; its false positives are mostly trials where the agent then switches to a1 (the model-based response). Adding the upcoming choice action==2 (agent will perseverate on a2) gives F1 0.80; the recorded version uses the observed policy logit at D1 instead (choice < -1, i.e. leaning a2), F1 0.86, precision 0.92 on dev. So it marks a rare-rewarded a2 outcome that the agent is NOT acting on with a model-based switch. Never fires at D2, almost never at GO (tiny activations), never after a1 trials, after common transitions or after unrewarded trials. Activations are lower on the window first trial (rel -3, where the previous trial is outside the window); I did not check magnitude any further. Rate rises right after reversals (since_rev 1).",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 38,
+    "predicate": "(phase == D1) & (prev_reward == 1) & (prev_action == 2) & (prev_common == 0) & (choice < -1)",
+    "split": "test",
+    "precision": 0.9065989847715736,
+    "recall": 0.8099439313984169,
+    "f1": 0.8555502329834952,
+    "mass_recall": 0.8955499783634396,
+    "correlation": 0.8694679042563965,
+    "n_active": 12128,
+    "n_predicted": 10835,
+    "coverage_by_activation_quartile": [
+      0.512203166226913,
+      0.908641160949868,
+      0.9096306068601583,
+      0.9093007915567283
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 38,
+    "predicate": "(phase == D1) & (prev_reward == 1) & (prev_action == 2) & (prev_common == 0) & (choice < -1)",
+    "split": "dev",
+    "precision": 0.9241599013462132,
+    "recall": 0.8057521727443777,
+    "f1": 0.8609036951943329,
+    "mass_recall": 0.8958223981606259,
+    "correlation": 0.8820057203786271,
+    "n_active": 11161,
+    "n_predicted": 9731,
+    "coverage_by_activation_quartile": [
+      0.5001791472590469,
+      0.9014336917562724,
+      0.907168458781362,
+      0.9143369175627241
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 38,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Main scores reproduce. Dev: P 0.924, R 0.806, F1 0.861, mass recall 0.896. Test: P 0.907, R 0.81, F1 0.856, mass recall 0.896. Base condition without the choice term: dev F1 0.686, mass recall 0.905. With action==2: F1 0.803. All match the claims.",
+      "The negative claims hold. D2: 0 active steps. GO: 616 active steps carrying 0.2% of mass, and the predicate restricted to GO gets F1 0.000. After a1 trials: R 0.01. After common transitions: R 0.01. After unrewarded trials: R 0.00. After common-rewarded a2 trials: R 0.0.",
+      "The 'weaker on the window's first trial' claim is mis-framed. At rel -3 D1 the unit fires about as often as later in the window (lift 1.3x vs 1.5x at rel -2) and with large activations (0.63 to 0.85 in the miss examples). It isn't weaker there. The predicate just can't see prev_action/prev_common on that trial. These rel -3 D1 steps are almost all of the missed 10% mass on both dev and test, and no observed variable recovers them: adding prev_action == -1 with choice < -1, -2 or -3 lowers F1 to 0.42, 0.45 and 0.78. This is an unavoidable gap, not a systematic counterexample.",
+      "The since_rev 1 claim is marginally true (5.5x lift) but probably confounded. Within the base rare-rewarded-a2 condition, precision at since_rev == 1 is 0.53, versus 0.58 overall, so reversals add no firing beyond the condition.",
+      "Minor refinement: the 'leans a2' band is moderate. 96% of mass falls at choice in [-4.4, -1.5], and very strong a2 leans (choice < -4.4) carry almost no mass. Adding an upper bound (choice > -4.5) leaves F1 unchanged at 0.86, so the label is fine as written.",
+      "The false positives in the test misses are scattered rel +1 and rel 0 D1 steps after rare-rewarded a2 trials. No phase, good-state or pattern class dominates them."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "label": "late-episode D1 collapse, deeper after S2 outcomes, shallower when value is high",
+  "terms": "(phase == D1) * np.exp((ep_trial - 99) / 6.0) ;; (phase == D1) * np.exp((ep_trial - 99) / 6.0) * value ;; (phase == D1) * np.exp((ep_trial - 99) / 6.0) * (prev_state == 2) ;; (phase == D1) * np.exp((ep_trial - 99) / 6.0) * last_is(\"a1 S2 u\") ;; (phase == D1) * np.exp((ep_trial - 99) / 6.0) * last_is(\"a1 S2 r\") ;; (phase == D1) * (prev_state == 2) * (prev_action == 1) ;; (phase == GO) * np.exp((ep_trial - 99) / 6.0)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 42 is about 1 almost everywhere. It falls mainly at D1 near the end of the episode (mean about 0.82 in trials 90-99, as low as about 0.3), with a much smaller dip at GO. Timing alone gives R^2 0.59. Beyond timing, the D1 drop grows roughly exponentially toward trial 99 (tau about 6 trials, which captures within-decile timing) and is deeper when the previous trial reached S2, most of all after a rare a1->S2 transition, rewarded or not. It is shallower when the model's value output is high: value x lateness lifts dev R^2 from 0.48 to 0.62. The profile's additive cue tables reach only 0.17 ('all'). An observed-only reward-history proxy in place of value scores 0.48 on dev. Chosen action, the hidden good state and trials since reversal add little. The value term is a model readout, not a future variable.",
+  "gate": "unit_update",
+  "feature": 42,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 42,
+    "terms": [
+      "(phase == D1) * np.exp((ep_trial - 99) / 6.0)",
+      "(phase == D1) * np.exp((ep_trial - 99) / 6.0) * value",
+      "(phase == D1) * np.exp((ep_trial - 99) / 6.0) * (prev_state == 2)",
+      "(phase == D1) * np.exp((ep_trial - 99) / 6.0) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * np.exp((ep_trial - 99) / 6.0) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * (prev_state == 2) * (prev_action == 1)",
+      "(phase == GO) * np.exp((ep_trial - 99) / 6.0)"
+    ],
+    "weights": [
+      -0.33916568966696,
+      0.12089700473631249,
+      -0.2038591722801842,
+      -0.2856859835663004,
+      -0.23853421042191314,
+      -0.023856922488008626,
+      -0.010860609904127268
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6090187000602632,
+    "r2": 0.837926874994691,
+    "r2_timing_only": 0.5854709035181738
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 42,
+    "terms": [
+      "(phase == D1) * np.exp((ep_trial - 99) / 6.0)",
+      "(phase == D1) * np.exp((ep_trial - 99) / 6.0) * value",
+      "(phase == D1) * np.exp((ep_trial - 99) / 6.0) * (prev_state == 2)",
+      "(phase == D1) * np.exp((ep_trial - 99) / 6.0) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * np.exp((ep_trial - 99) / 6.0) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * (prev_state == 2) * (prev_action == 1)",
+      "(phase == GO) * np.exp((ep_trial - 99) / 6.0)"
+    ],
+    "weights": [
+      -0.33916568966696,
+      0.12089700473631249,
+      -0.2038591722801842,
+      -0.2856859835663004,
+      -0.23853421042191314,
+      -0.023856922488008626,
+      -0.010860609904127268
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.623449506354302,
+    "r2": 0.8488708589158034,
+    "r2_timing_only": 0.5986484053679233
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor omission: at D1 the policy logit (choice) and its interaction with prev_state==2 add about 0.065 test R^2 (0.609 -> 0.674, from adding E*choice and E*choice*(prev_state==2) in place of the GO term). Higher a1 preference at D1 goes with a deeper drop, which matches the profile's D1 policy-decile residuals (+0.017 at deciles 1-2, -0.017 at decile 8). The label leaves this out.",
+      "'Deeper after S2 outcomes' really means mostly after rare a1->S2. Profile residuals at D1 are a1 S2 r -0.037 and a1 S2 u -0.043, against only a2 S2 r -0.003 and a2 S2 u -0.013. The generic prev_state==2 term still matters, though: dropping it together with the non-lateness a1-S2 term lowers test R^2 to 0.466. Adding last_is('a2 S2 u') gives +0.014 (0.623).",
+      "There is a small window-edge artifact. On the first trial of a window prev_state is -1, so the S2 terms cannot fire, and adding E*(prev_state==-1) gives +0.022 (0.631). Several of the worst-fit windows are first-trial (rel -3) D1 drops to about 0.4-0.5 where the model predicts about 0.85.",
+      "About 35-40% of the variance beyond timing is still unexplained, as large isolated single-step D1 drops (actual about 0.35, predicted about 0.70). They do not form a systematic class: misses by phase x previous trial are all within +/-0.009. Terms for two-trials-back history (state/reward), RPE-like value*in_rew, value^2, stay and good state each add at most 0.015.",
+      "The value claim holds up: removing value lowers test R^2 from 0.609 to 0.463, and its weight is positive (higher value means a shallower drop). The time constant also checks out: tau 6 (0.585) beats tau 4 (0.544) and tau 9 (0.568) on the 6-term variant. The test score reproduces exactly at 0.609, and the small GO dip is confirmed."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "late-episode D1 collapse, deepest after rare a1->S2 (milder after a2->S2), shallower when value is high, deeper when the D1 policy leans to a1",
+    "better_terms": "(phase == D1) * np.exp((ep_trial - 99) / 6.0) ;; (phase == D1) * np.exp((ep_trial - 99) / 6.0) * value ;; (phase == D1) * np.exp((ep_trial - 99) / 6.0) * (prev_state == 2) ;; (phase == D1) * np.exp((ep_trial - 99) / 6.0) * last_is(\"a1 S2 u\") ;; (phase == D1) * np.exp((ep_trial - 99) / 6.0) * last_is(\"a1 S2 r\") ;; (phase == D1) * (prev_state == 2) * (prev_action == 1) ;; (phase == D1) * np.exp((ep_trial - 99) / 6.0) * choice ;; (phase == D1) * np.exp((ep_trial - 99) / 6.0) * choice * (prev_state==2)",
+    "better_terms_test_r2_beyond_timing": 0.6738
+  },
+  "final_label": "late-episode D1 collapse, deepest after rare a1->S2 (milder after a2->S2), shallower when value is high, deeper when the D1 policy leans to a1"
+}

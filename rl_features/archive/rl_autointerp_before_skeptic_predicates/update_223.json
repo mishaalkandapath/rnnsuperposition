@@ -1,0 +1,64 @@
+{
+  "label": "D2 after a1 -> S1 (common) following a rewarded trial, late in the episode (trials ~60-91)",
+  "predicate": "(phase == D2) & (action == 1) & (state == 1) & (ep_trial >= 60) & (ep_trial < 92) & (prev_reward == 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2, and almost only when the agent chose a1 and reached S1 by the common transition (100% of mass is in_state S1, 99.8% in_action a1). It is silent before episode trial ~58, strongest at trials 60-89, and weaker at 90-99, so the feature looks like an a1/S1-common detector that is gated by episode time. It also needs the previous trial to have been rewarded: 92% of mass has prev_reward=1, and adding that condition raises precision from 0.54 to 0.75. It is silent at D1/GO, on S2, on a2 choices, and on rare transitions. Activation is larger in long a1->S1 rewarded streaks while S1 is good (since_rev=20 holds 59% of mass); the top windows are runs of rewarded a1 S1c. All the variables used are observed at D2 (ep_trial is position in the episode, which the agent can only track implicitly), so no future variables are used. The time gate is the least natural part of the predicate. Dropping the upper bound on ep_trial gives dev F1 0.81, and dropping prev_reward gives dev F1 0.70 with recall 0.99.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 223,
+    "predicate": "(phase == D2) & (action == 1) & (state == 1) & (ep_trial >= 60) & (ep_trial < 92) & (prev_reward == 1)",
+    "split": "test",
+    "precision": 0.8357743097238896,
+    "recall": 0.8548924674595657,
+    "f1": 0.845225293974817,
+    "mass_recall": 0.8916806939978658,
+    "correlation": 0.774162426611942,
+    "n_active": 28503,
+    "n_predicted": 29155,
+    "coverage_by_activation_quartile": [
+      0.7531574515857423,
+      0.8337075498175694,
+      0.9052764524277295,
+      0.9274385964912281
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 223,
+    "predicate": "(phase == D2) & (action == 1) & (state == 1) & (ep_trial >= 60) & (ep_trial < 92) & (prev_reward == 1)",
+    "split": "dev",
+    "precision": 0.8434523401630919,
+    "recall": 0.8512102351313969,
+    "f1": 0.8473135304443602,
+    "mass_recall": 0.8944003692047157,
+    "correlation": 0.7828606470333374,
+    "n_active": 28920,
+    "n_predicted": 29186,
+    "coverage_by_activation_quartile": [
+      0.729460580912863,
+      0.8276625172890733,
+      0.9179806362378976,
+      0.9297372060857538
+    ]
+  },
+  "gate": "update",
+  "feature": 223,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most factual claims check out on dev. 100% of activation mass is at D2, 0 activations at D1 or GO, 100% on in_state S1 and 99.8% on a1. The feature is essentially silent on a2->S1 rare (P 0.002). prev_reward=1 holds 91.9% of mass. Adding prev_reward lifts precision from 0.544 to 0.745. since_rev=20 holds 59%. Reported test numbers reproduce: P 0.836, R 0.855, F1 0.845.",
+      "Systematic false-positive class: the condition that matters is the PREVIOUS STATE, not the previous reward. When the previous trial reached S2 and was rewarded, the label's predicate fires but the feature never does (dev n=1705, precision 0.000). When the previous trial reached S2 and was unrewarded, precision is 0.031. When the previous trial reached S1 and was unrewarded, precision is 0.54, a sizeable class the label excludes. So 'following a rewarded trial' is the wrong gloss. The feature needs consecutive S1 visits (previous trial not in S2), with reward helping.",
+      "The time-gate edges are off. Precision by ep_trial (D2, a1->S1, prev_reward=1): 58-60 is 0.10, 60-63 is 0.37, 63-66 is 0.75, 66-92 is 0.84-0.94, 92-95 is 0.46, 95-100 is 0.03. It ramps on around trial 62 and off around trial 93. It is not 'strongest from trial 60'. Using 62-93 instead of 60-92 raises test F1 from 0.845 to 0.862.",
+      "Replacing prev_reward==1 with prev_state!=2, plus allowing reward or a previous S1 visit, raises test F1 from 0.845 to 0.897 (P 0.865, R 0.932, mass recall 0.971). This shows the label's reward condition is a correlate of the real condition, which is the previous trial having reached S1.",
+      "Only observed variables are used: the previous state and reward and the current action and state at D2. ep_trial is episode position, which the agent tracks only implicitly. No future variables are used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after a1 -> S1 (common), when the previous trial also reached S1 (not S2), mostly when it was rewarded, late in the episode (trials ~62-92)",
+    "better_predicate": "(phase == D2) & (action == 1) & (state == 1) & (ep_trial >= 62) & (ep_trial < 93) & (prev_state != 2) & ((prev_reward == 1) | (prev_state == 1))",
+    "better_predicate_test_f1": 0.897
+  },
+  "final_label": "D2 after a1 -> S1 (common), when the previous trial also reached S1 (not S2), mostly when it was rewarded, late in the episode (trials ~62-92)"
+}

@@ -1,0 +1,74 @@
+{
+  "label": "a1-choice unit: high when (upcoming) choice is a1; raised at D1 by prior loss and a1->S2",
+  "terms": "(action == 1) ;; (phase == D1) * (prev_reward == 0) ;; (phase == D1) * (prev_state==2) * (prev_action==1) ;; (phase == D2) * (state == 1) ;; (phase == GO) * (prev_reward == 0) ;; (phase == D2) * (prev_action == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": true,
+  "explanation": "Raw reset gate r15 tracks the agent choice of a1 vs a2. Largest term: this trial choice is a1 (+0.25 on all phases; FUTURE at D1/GO, i.e. the upcoming choice). At D1 it is further raised after an unrewarded previous trial (+0.20) and after a previous a1 that reached S2 (rare, +0.14); at GO a previous loss adds +0.09; at D2 reaching S1 adds +0.14 and a previous a1 a little (+0.04). Value output does not matter (value decile reference 0.01); this trial reward and trials since reversal add nothing. Test R^2 beyond timing 0.85 (dev 0.85) vs all ceiling 0.95. Observed-only version (D2 action==1, GO model_act==1 i.e. the agent own computed policy argmax, D1 prev_action/prev_reward/prev_state, D2 state, GO prev_reward, D2 prev_action; 8 terms) scores test 0.80, so the future dependence is mostly the agent own upcoming choice, which it already represents by GO.",
+  "gate": "unit_reset",
+  "feature": 15,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 15,
+    "terms": [
+      "(action == 1)",
+      "(phase == D1) * (prev_reward == 0)",
+      "(phase == D1) * (prev_state==2) * (prev_action==1)",
+      "(phase == D2) * (state == 1)",
+      "(phase == GO) * (prev_reward == 0)",
+      "(phase == D2) * (prev_action == 1)"
+    ],
+    "weights": [
+      0.25278800369593335,
+      0.20216521815146912,
+      0.13732003977144097,
+      0.13663698415549036,
+      0.09325188475038046,
+      0.04119829341615732
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8459260465311437,
+    "r2": 0.8579421526002174,
+    "r2_timing_only": 0.07798921101549205
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 15,
+    "terms": [
+      "(action == 1)",
+      "(phase == D1) * (prev_reward == 0)",
+      "(phase == D1) * (prev_state==2) * (prev_action==1)",
+      "(phase == D2) * (state == 1)",
+      "(phase == GO) * (prev_reward == 0)",
+      "(phase == D2) * (prev_action == 1)"
+    ],
+    "weights": [
+      0.25278800369593335,
+      0.20216521815146912,
+      0.13732003977144097,
+      0.13663698415549036,
+      0.09325188475038046,
+      0.04119829341615732
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8533616825139407,
+    "r2": 0.8650152630251735,
+    "r2_timing_only": 0.07947159181187946
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the 'previous a1 at D2 (+0.04)' term is fragile. When the action term is split by phase (D1 0.22, GO 0.27, D2 0.30), its weight falls to 0.01. The single action weight of +0.25 is also an average across phases, not a constant.",
+      "Minor: the D1 a1->S2 effect really is specific to a1. Adding prev a2->S2 gets weight -0.02, and a generic prev_state==2 term scores slightly lower. Replacing the a1->S2 term with plain prev_action==1 gives a test R^2 of 0.83, down from 0.846.",
+      "The future-action dependence is real. Restricting action==1 to D2 drops test R^2 to 0.53. Observed-only proxies recover most of it: tanh(choice logit) at D1/GO gives 0.785, model_act gives 0.72. The 0.80 observed-only figure in the explanation is plausible, and the label correctly marks the choice as upcoming.",
+      "Remaining errors are moderate, not a large systematic class. D1 after a2 S1 r is over-predicted by 0.107. D1 after a1 S1 u and after a1 S2 r are under-predicted by about 0.065. D1 during long rewarded a1 S1 streaks is over-predicted by about 0.2 in the worst windows. Adding a last_is('a2 S1 r') term or a two-trial reward-streak term each gains at most 0.006 in test R^2 (0.852 / 0.849).",
+      "The reference scores check out: value decile 0.01, this reward 0.00, trials since reversal 0.00. The recorded terms reproduce a test R^2 of 0.846."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "a1-choice unit: high when this trial's choice is a1 (upcoming choice at D1/GO, for which the agent's own policy logit is a good stand-in); raised at D1 by a prior loss and by a1->S2, and at D2 by reaching S1",
+    "better_terms": "(action == 1) ;; (phase == D1) * (prev_reward == 0) ;; (phase == D1) * (prev_state==2) * (prev_action==1) ;; (phase == D2) * (state == 1) ;; (phase == GO) * (prev_reward == 0) ;; (phase == D2) * (prev_action == 1) ;; (phase==D1)*last_is('a2 S1 r')",
+    "better_terms_test_r2_beyond_timing": 0.852
+  },
+  "final_label": "a1-choice unit: high when this trial's choice is a1 (upcoming choice at D1/GO, for which the agent's own policy logit is a good stand-in); raised at D1 by a prior loss and by a1->S2, and at D2 by reaching S1"
+}

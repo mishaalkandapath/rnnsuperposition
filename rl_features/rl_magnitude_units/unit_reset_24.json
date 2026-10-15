@@ -1,0 +1,112 @@
+{
+ "label": "Up at D1 after reward, down after no reward (more so late); up late after a2.",
+ "short_terms": "(phase == D1) * (prev_reward == 0) ;; (phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_common == 0) * (prev_state == S1)",
+ "terms": "(phase == D1) * (prev_reward == 0) * ep_dec ;; (phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_state == S1) * (prev_action == 2) ;; (prev_action == 2) * ep_dec ;; (phase == D1) * (prev_state == S2) * (prev_action == 1) ;; (phase != D1) * belief_lo ;; (phase == D1) * (prev_reward == 0) ;; (phase == D1) * (prev_state == S1) * (prev_reward == 1)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Raw reset gate r24 is mainly a D1 reward readout: at D1 it is higher when the previous trial was rewarded and lower when it was not, and the unrewarded dip deepens with episode progress (the unit rises strongly late in episodes, so the reward contrast scales with ep_dec). Separately, the unit is higher on all phases late in the episode after an a2 choice. GO/D2 carry only small effects. The free fit adds a D1 boost after the rare a2->S1 transition (strongest after a2 S1 r, and a2 S1 u is less negative than other unrewarded patterns), a D1 drop after a1->S2, and a weak negative belief_lo term at GO/D2 (higher when the observer favours S2), raising dev R^2 beyond timing from 0.66 to 0.84. No future, hidden or model-output variables used.",
+ "full_test_scores": {
+  "gate": "unit_reset",
+  "feature": 24,
+  "terms": [
+   "(phase == D1) * (prev_reward == 0) * ep_dec",
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D1) * (prev_state == S1) * (prev_action == 2)",
+   "(prev_action == 2) * ep_dec",
+   "(phase == D1) * (prev_state == S2) * (prev_action == 1)",
+   "(phase != D1) * belief_lo",
+   "(phase == D1) * (prev_reward == 0)",
+   "(phase == D1) * (prev_state == S1) * (prev_reward == 1)"
+  ],
+  "weights": [
+   -0.00568345845779334,
+   0.06833076163616775,
+   0.09974345595991699,
+   0.0010365937709736024,
+   -0.036002296343381486,
+   -0.008609312284628544,
+   -0.1382593665584607,
+   0.020194378646392952
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.845459049916758,
+  "r2": 0.9556380936578326,
+  "r2_timing_only": 0.7129440040437673
+ },
+ "gate": "unit_reset",
+ "feature": 24,
+ "test_scores": {
+  "gate": "unit_reset",
+  "feature": 24,
+  "terms": [
+   "(phase == D1) * (prev_reward == 0)",
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D1) * (prev_common == 0) * (prev_state == S1)"
+  ],
+  "weights": [
+   -0.17439678888327068,
+   0.07403061988777462,
+   0.11452361101746107
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.765845149999727,
+  "r2": 0.9327844463251893,
+  "r2_timing_only": 0.7129440040437673
+ },
+ "dev_scores": {
+  "gate": "unit_reset",
+  "feature": 24,
+  "terms": [
+   "(phase == D1) * (prev_reward == 0)",
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D1) * (prev_common == 0) * (prev_state == S1)"
+  ],
+  "weights": [
+   -0.17439678888327068,
+   0.07403061988777462,
+   0.11452361101746107
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.7555262654168582,
+  "r2": 0.9314196961060661,
+  "r2_timing_only": 0.7194778244343025
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The claim that the unrewarded dip is deeper late in the episode is a fitting artefact. With no ep_dec, '(phase == D1)*(prev_reward == 0) ;; (phase == D1)*(prev_reward == 1)' scores test 0.694. The recorded two-term version with ep_dec scores only 0.616. Adding r0*ep_dec on top of the plain indicators gets weight -0.005 and test 0.698 (+0.004). The baseline already carries the unit's late rise; the dip after no reward is roughly constant (weight about -0.15).",
+   "Unrewarded and rewarded are not complements, because prev_reward also takes other values (the '?' category and -1 penalty). That is why the D1 reward effect needs two separate indicator terms: linear prev_reward alone scores only 0.31.",
+   "'Up late after a2' ((prev_action == 2)*ep_dec) is a weak correction: weight 0.006 per decile. On top of the plain reward indicators it adds about 0.03 (0.721). belief_lo adds more (0.757), and the D1 rare a2->S1 term adds more still (0.766).",
+   "Misses on the recorded short form show a systematic D1 error by previous state. Under-predicted: D1 after a2 S1 r (+0.10) and a2 S1 u (+0.04). Over-predicted: D1 after a2 S2 u (-0.07), a1 S2 u (-0.06), a1 S2 r (-0.05). The rare a2->S1 transition raises r24 at D1. The label leaves this out.",
+   "With the revised short form, the misses leave only small errors (<=0.05), mostly at GO/D2: higher after a2 and lower after a1, matching the weak belief_lo / prev_action effect."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At D1: up after reward, down after no reward, extra up after rare a2->S1.",
+  "better_short_terms": "(phase == D1) * (prev_reward == 0) ;; (phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_common == 0) * (prev_state == S1)",
+  "better_short_terms_test_r2_beyond_timing": 0.7658
+ },
+ "final_label": "At D1: up after reward, down after no reward, extra up after rare a2->S1.",
+ "original_short_terms": "(phase == D1) * (prev_reward == 0) * ep_dec ;; (phase == D1) * (prev_reward == 1) ;; (prev_action == 2) * ep_dec",
+ "original_test_scores": {
+  "gate": "unit_reset",
+  "feature": 24,
+  "terms": [
+   "(phase == D1) * (prev_reward == 0) * ep_dec",
+   "(phase == D1) * (prev_reward == 1)",
+   "(prev_action == 2) * ep_dec"
+  ],
+  "weights": [
+   -0.02528413840750722,
+   0.08708603680983215,
+   0.006085889151740192
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6626617740342036,
+  "r2": 0.9031650395712796,
+  "r2_timing_only": 0.7129440040437673
+ },
+ "terms_from": "skeptic"
+}

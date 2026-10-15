@@ -1,0 +1,65 @@
+{
+  "label": "GO step, late episode, choosing a1 again after a rewarded common a1 trial (reward streak on a1)",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (prev_action != 2) & (prev_common != 0) & (action == 1) & (ep_trial >= 50) & (tv(\"prev_reward\", -1) != 0)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO (100% of mass), and only when the previous trial was a1 -> S1 (common) and rewarded, the trial before that was also rewarded (or lies outside the window), and the agent is about to choose a1 again (model_act a1, choice logit > 8 in 79% of mass). It is never active at D1/D2, after an unrewarded trial, after a2 or a rare transition, and almost never when the policy prefers a2. It is strongly gated by episode time: silent before trial ~40 and rising through trials 50-90, which looks like a slow drift in the hidden state rather than anything the task signals. Magnitude grows over consecutive rewarded a1 GO steps (in the windows it goes 0.06 -> 0.09 -> 0.12 -> 0.15 and up to about 1.0 on long streaks), and it is higher at low-to-mid value. The predicate uses action == 1, which is the agent own upcoming choice and so legitimate. It uses no future random outcomes. Dev: P 0.81, R 0.90, F1 0.85, mass recall 0.97. False positives are mostly the early steps of a streak, where activation is near zero.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 44,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (prev_action != 2) & (prev_common != 0) & (action == 1) & (ep_trial >= 50) & (tv(\"prev_reward\", -1) != 0)",
+    "split": "test",
+    "precision": 0.7987685484441719,
+    "recall": 0.9004334760524426,
+    "f1": 0.8465596559655965,
+    "mass_recall": 0.9726024832172027,
+    "correlation": 0.7625484787250342,
+    "n_active": 37603,
+    "n_predicted": 42389,
+    "coverage_by_activation_quartile": [
+      0.6741835974896287,
+      0.9486224869694714,
+      0.9807467290713754,
+      0.9981914893617021
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 44,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (prev_action != 2) & (prev_common != 0) & (action == 1) & (ep_trial >= 50) & (tv(\"prev_reward\", -1) != 0)",
+    "split": "dev",
+    "precision": 0.8125670319421776,
+    "recall": 0.8952451899612114,
+    "f1": 0.8519048142851904,
+    "mass_recall": 0.971373801428162,
+    "correlation": 0.7720694191254517,
+    "n_active": 38929,
+    "n_predicted": 42890,
+    "coverage_by_activation_quartile": [
+      0.656940306174869,
+      0.9462597616111796,
+      0.978832716810522,
+      0.9989724619810934
+    ]
+  },
+  "gate": "update",
+  "feature": 44,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced the test scores: P 0.799, R 0.900, F1 0.847, mass recall 0.973. The 3744 missed steps hold only 2.7% of activation mass. Nearly all are weak (<0.1) GO activations right after a common rewarded a1 trial whose own previous trial was unrewarded. Requiring prev-prev reward == 0 scores P 0.13, so excluding that case is correct.",
+      "The phase claim holds: 100% of activation mass is at GO, none at D1 or D2.",
+      "The exclusions hold. After a rewarded a2 trial, F1 is 0.005. After a rewarded rare a1 trial (prev_common == 0), F1 is 0.0. With the right history but action == 2, F1 is 0.003. With ep_trial < 40, F1 is 0.0. After an unrewarded previous trial, no activation mass.",
+      "The episode-time claim holds: no activation before trial 30, 0.8% of mass in trials 40-49, and the rest from trial 50 on. Lowering the cutoff to 45 or 47 shifts precision against recall (F1 about 0.834-0.843) without beating 50.",
+      "The false positives are mostly early-streak GO steps where the activation is near zero, which fits the claim that magnitude ramps up over a streak. A second class is rel -3 GO steps, where prev_action is -1 because the window starts there: precision at rel -3 is about 0.64. This comes from the window cut-off (the agent did see that history), not from a missing variable.",
+      "Minor overclaim: 'reward streak on a1' implies the trial two back was also an a1 choice, but the predicate only requires it to be rewarded. Cases where it was rewarded but an a2 choice are rare (367 steps), so this has almost no effect on the scores.",
+      "action == 1 is the agent's own upcoming choice. Replacing it with model_act == 1 gives identical scores, so no future random outcome is used. Restricting to good == 1 lowers F1 to 0.764: the feature follows the observed a1 reward history, not the hidden good state."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "label": "D1: high after last trial reached S2 (esp. rare a1->S2), low after S1; D2: rare-transition sign",
+  "terms": "(phase == D1) * (last_is(\"a1 S2 u\") + 0.73*last_is(\"a1 S2 r\") + 0.5*last_is(\"a2 S2 u\") - 0.25*last_is(\"a1 S1 r\") - 0.68*last_is(\"a2 S1 r\") - 0.6*last_is(\"a2 S1 u\")) ;; (phase == D2) * (prev_reward == 0) ;; (phase == D2) * table(3*action+state, {5: 1, 7: -1}) ;; (phase == D2) * (prev_action == 2) * (prev_reward == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw candidate n of GRU unit 41. Timing alone gives R^2 0.73 (strongly negative at GO, rising with episode time at D1/D2). Beyond timing it is driven mainly at D1 by the previous trial: positive when the last trial reached S2 (a1 S2 u +0.98, a1 S2 r +0.71, a2 S2 u +0.50) and negative when it reached S1 (a2 S1 r -0.66, a2 S1 u -0.58, a1 S1 r -0.24). So it roughly encodes last state S2 vs S1, made stronger by a rare transition and, for S2, by no reward. At D2 it is positive after an unrewarded previous trial (+0.20), and carries the sign of the current rare transition (a1->S2 +0.33, a2->S1 -0.33), slightly lower after a rewarded a2 trial. GO residuals are tiny. The trial before last, good state and since-reversal add little. Remaining misses: the first trial of a window (previous trial unknown) and saturation late in the episode. 4 observed-only terms (D2 terms use this trial choice/state, observed at D2): dev 0.74 beyond timing; all ceiling 0.83, all observed 0.77.",
+  "gate": "unit_candidate",
+  "feature": 41,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 41,
+    "terms": [
+      "(phase == D1) * (last_is(\"a1 S2 u\") + 0.73*last_is(\"a1 S2 r\") + 0.5*last_is(\"a2 S2 u\") - 0.25*last_is(\"a1 S1 r\") - 0.68*last_is(\"a2 S1 r\") - 0.6*last_is(\"a2 S1 u\"))",
+      "(phase == D2) * (prev_reward == 0)",
+      "(phase == D2) * table(3*action+state, {5: 1, 7: -1})",
+      "(phase == D2) * (prev_action == 2) * (prev_reward == 1)"
+    ],
+    "weights": [
+      0.9746707720901668,
+      0.20392103305787612,
+      0.3312235728153569,
+      -0.12126947138276678
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7391647877568363,
+    "r2": 0.929765805524283,
+    "r2_timing_only": 0.7307334624351212
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 41,
+    "terms": [
+      "(phase == D1) * (last_is(\"a1 S2 u\") + 0.73*last_is(\"a1 S2 r\") + 0.5*last_is(\"a2 S2 u\") - 0.25*last_is(\"a1 S1 r\") - 0.68*last_is(\"a2 S1 r\") - 0.6*last_is(\"a2 S1 u\"))",
+      "(phase == D2) * (prev_reward == 0)",
+      "(phase == D2) * table(3*action+state, {5: 1, 7: -1})",
+      "(phase == D2) * (prev_action == 2) * (prev_reward == 1)"
+    ],
+    "weights": [
+      0.9746707720901668,
+      0.20392103305787612,
+      0.3312235728153569,
+      -0.12126947138276678
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7413709970562729,
+    "r2": 0.9304618343168815,
+    "r2_timing_only": 0.7311277355144552
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The scores reproduce: the 4 terms give test R^2 beyond timing 0.739, against an 'all observed' ceiling of 0.77. No future variables are used. Misses show no large systematic class: mean error by phase is +0.005 at D1, +0.014 at GO and -0.019 at D2, and the worst (phase x last trial) cells are only about +/-0.1 (D2 after a1 S2 u +0.115, D2 after a2 S1 u -0.104). The worst single windows are first-trial D1 steps where the previous trial is unknown, as the explanation says.",
+      "The headline 'high after S2, low after S1' misreads the D1 effect. A factorial fit puts almost no weight on the state reached: (D1)*(prev_state==S2) gets +0.03 to +0.07. The weight sits on the rare transition signed by state: rare->S2 minus rare->S1 gets +0.73 (test R^2 0.70 for the factorial set vs 0.739). The D1 residuals agree: after common trials the activation is near zero, a2 S2 r -0.03 and a1 S1 u +0.05. Only rare trials go strongly in each direction: a1 S2 +0.98/+0.71, a2 S1 -0.66/-0.58.",
+      "Being unrewarded raises the activation after any common trial, not just after S2 as the explanation implies (a1 S1 u +0.05 vs a1 S1 r -0.24; a2 S2 u +0.50 vs a2 S2 r -0.03). In the factorial fit the unrewarded term gets +0.19, and the unrewarded a2->S2 interaction adds another +0.32.",
+      "The label says 'esp. rare a1->S2' but leaves out that rare a2->S1 gives the most negative values. The D1 code is symmetric in the rare transition, not an S2-specific effect.",
+      "Small points: adding the trial before last or (D2)*(prev_action==action) adds at most 0.005 (0.744). The internal policy logit 'choice' at D1/D2 adds about 0.05 (0.789), but it is a model-output cue, not an observed one. The D2 claims hold (prev unrewarded +0.20; current rare transition a1->S2 +0.33, a2->S1 -0.33)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1: signed by the last trial's rare transition (high after rare a1->S2, low after rare a2->S1; near 0 after common), raised by no reward; D2: high on this trial's rare a1->S2, low on rare a2->S1, and higher after an unrewarded trial",
+    "better_terms": "(phase == D1) * (last_is('a1 S2 u') + 0.73*last_is('a1 S2 r') + 0.5*last_is('a2 S2 u') - 0.25*last_is('a1 S1 r') - 0.68*last_is('a2 S1 r') - 0.6*last_is('a2 S1 u')) ;; (phase == D2) * (prev_reward == 0) ;; (phase == D2) * table(3*action+state, {5: 1, 7: -1}) ;; (phase == D2) * (prev_action == 2) * (prev_reward == 1) ;; (phase==D1)*(tv('action',-2)==1)*(prev_action>0) ;; (phase==D2)*(prev_action==action)",
+    "better_terms_test_r2_beyond_timing": 0.744
+  },
+  "final_label": "D1: signed by the last trial's rare transition (high after rare a1->S2, low after rare a2->S1; near 0 after common), raised by no reward; D2: high on this trial's rare a1->S2, low on rare a2->S1, and higher after an unrewarded trial"
+}

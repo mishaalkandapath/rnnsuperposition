@@ -1,0 +1,78 @@
+{
+  "label": "D1 after unrewarded S2 visit, larger after repeated S2 failures, early episode",
+  "terms": "(phase == D1) * (prev_state == 2) * (prev_reward == 0) ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv(\"state\", -2) == 2) * (tv(\"reward\", -2) == 0) ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv(\"reward\", -2) == 1) ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * ep_dec ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * choice ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv(\"action\", -2) == 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (zero at GO and D2), and only when the previous trial reached S2 and went unrewarded (a1 S2 u or a2 S2 u, regardless of choice or transition). Base size is about 0.3. It roughly doubles (+0.31) when the trial before was also an unrewarded S2 visit, so it accumulates evidence that S2 is bad. It is lower when the trial before was rewarded (-0.05 to -0.09) or was an a1 choice (-0.10), and it falls about 0.04 per episode decile. It rises slightly with the D1 policy lean toward a1. After S1 outcomes or rewarded S2 it is near zero. All terms are observed (choice is the model policy logit), none are future. Test R^2 beyond timing 0.486 (dev 0.474), above the 0.33 additive all ceiling. Remaining misses: window-first trials where history is unknown, and long S2-failure streaks are under-predicted.",
+  "gate": "update",
+  "feature": 11,
+  "test_scores": {
+    "gate": "update",
+    "feature": 11,
+    "terms": [
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0)",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv(\"state\", -2) == 2) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * ep_dec",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * choice",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv(\"action\", -2) == 1)"
+    ],
+    "weights": [
+      0.2865124709113271,
+      0.31385906369792915,
+      -0.045138785289728624,
+      -0.03800434839560723,
+      0.020367262860758472,
+      -0.10336845591921942
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.48607997147300275,
+    "r2": 0.5214248720140209,
+    "r2_timing_only": 0.06877509841818019
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 11,
+    "terms": [
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0)",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv(\"state\", -2) == 2) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * ep_dec",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * choice",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv(\"action\", -2) == 1)"
+    ],
+    "weights": [
+      0.2865124709113271,
+      0.31385906369792915,
+      -0.045138785289728624,
+      -0.03800434839560723,
+      0.020367262860758472,
+      -0.10336845591921942
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.4739585326594349,
+    "r2": 0.509037254497194,
+    "r2_timing_only": 0.06668432816732417
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claim holds. The original 6 terms give test R^2 beyond timing 0.486. The feature is exactly zero at GO and D2. At D1 it fires mainly after an unrewarded S2 visit: in the profile residuals, a1 S2 u is +0.131 and a2 S2 u is +0.149, and every other previous-trial cell is about -0.03.",
+      "The 'base 0.29, roughly doubles' framing is wrong. That 0.29 is only the intercept at episode decile 0 when the ep_dec, choice and a1-two-back terms are present. In a 4-cell fit (test R^2 0.354), a single S2 failure whose previous trial was not also an S2 failure gives about 0.08 (0.083 common, 0.070 rare). Two S2 failures in a row give about 0.44 to 0.48. That is roughly 6x, so the feature is mostly a detector for consecutive S2 failures, not one that 'roughly doubles'. B + B*streak2 alone scores test 0.353, against 0.178 for B alone.",
+      "'Lower when the trial before was an a1 choice (-0.10)' is a proxy for the second-previous trial having reached S1. The term B*(tv('state',-2)==1) gets weight -0.16 and scores test 0.231 beside B, against 0.180 for B*(tv('action',-2)==1).",
+      "'Whatever the choice or transition' holds only on average: common and rare give 0.27 vs 0.25 with ep_dec added. Once the policy logit is included it fails. Misses on the original terms show a systematic split: D1 after a2 S2 u (common) is under-predicted by +0.031 and D1 after a1 S2 u (rare) is over-predicted by -0.037. Adding B*(prev_common==1) gets weight +0.28 and removes both errors.",
+      "The effect of the previous trial being rewarded (-0.05) is small, and it is not needed in the better model.",
+      "A third-back S2 failure adds a further +0.06 to +0.13 (B*F3), so effects of longer streaks are real. The label only says 'repeated'.",
+      "The first trial of each window (previous trial unknown) sometimes fires near 1.0. These are the worst-fit windows. A term for that case, (phase==D1)*(prev_state==-1)*(prev_reward==0) plus its interaction with choice, adds about 0.035 test R^2.",
+      "Leftover error: D1 after S1 or rewarded-S2 outcomes is over-predicted by about -0.025. This is an artifact of the timing baseline, since the feature is exactly 0 there. It is small.",
+      "No future variables are used. Choice and value are model outputs, not future variables. The 'early episode' claim holds (ep_dec weight -0.038 to -0.039 in every fit)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after consecutive unrewarded S2 visits (weak after a single one), stronger after a common a2->S2 failure and with a1 policy lean, early episode",
+    "better_terms": "B = (phase == D1) * (prev_state == 2) * (prev_reward == 0); U = (phase == D1) * (prev_state == -1) * (prev_reward == 0). Terms: B ;; B * (tv('state', -2) == 2) * (tv('reward', -2) == 0) ;; B * (tv('state', -3) == 2) * (tv('reward', -3) == 0) ;; B * ep_dec ;; B * choice ;; B * (prev_common == 1) ;; U ;; U * choice",
+    "better_terms_test_r2_beyond_timing": 0.551
+  },
+  "final_label": "D1 after consecutive unrewarded S2 visits (weak after a single one), stronger after a common a2->S2 failure and with a1 policy lean, early episode"
+}

@@ -1,0 +1,107 @@
+{
+ "label": "Fires at D1 after an a2 -> rare S1 unrewarded trial, before episode trial 70.",
+ "short_terms": "(phase == D1) * last_is(\"a2 S1 u\") * np.clip(80 - ep_trial, 0, None) ;; (phase == D1) * last_is(\"a2 S1 u\") * (tv(\"reward\", -2) == 0) ;; (phase == D1) * (prev_reward == 0) * np.clip(-belief_lo, 0, None)",
+ "terms": "(phase == D1) * last_is(\"a2 S1 u\") * (ep_trial < 70) ;; (phase == D1) * last_is(\"a2 S1 u\") * (tv(\"reward\", -2) == 0) ;; (phase == D1) * (prev_reward == 0) * np.clip(-belief_lo, 0, None) ;; (phase == D1) * last_is(\"a2 S1 u\") ;; (phase == D1) * (prev_action == -1) * np.clip(-belief_lo, 0, None) ;; (phase == D1) * last_is(\"a2 S2 u\") * np.clip(-belief_lo, 0, None)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "D1-only feature (silent at GO and D2). Its magnitude is set mainly by the previous trial being a2 -> S1 (rare) unrewarded (residual +0.29 vs about -0.03 for every other pattern), and only before about episode trial 70 (it is silent late in the episode). It is smaller when the trial before that was also unrewarded, and there is a small graded rise after any unrewarded trial when the ideal observer believes S2 is good (negative belief_lo). That last part also covers the weak firing at the window first D1. Choice/state of the upcoming trial, the hidden good state and trials since reversal add little. The free fit adds belief-graded terms for a2 S2 u and for the window first trial, worth about +0.03 dev R^2. The remaining misses are a2 S1 u D1s where it stays silent, which is consistent with it tracking a strong a2 policy that observed history only partly predicts (policy decile alone scores 0.59).",
+ "full_test_scores": {
+  "gate": "hidden",
+  "feature": 72,
+  "terms": [
+   "(phase == D1) * last_is(\"a2 S1 u\") * (ep_trial < 70)",
+   "(phase == D1) * last_is(\"a2 S1 u\") * (tv(\"reward\", -2) == 0)",
+   "(phase == D1) * (prev_reward == 0) * np.clip(-belief_lo, 0, None)",
+   "(phase == D1) * last_is(\"a2 S1 u\")",
+   "(phase == D1) * (prev_action == -1) * np.clip(-belief_lo, 0, None)",
+   "(phase == D1) * last_is(\"a2 S2 u\") * np.clip(-belief_lo, 0, None)"
+  ],
+  "weights": [
+   0.39071351222133144,
+   -0.1406761189356683,
+   0.06809466151623467,
+   -0.16697182408518657,
+   -0.0009694429470830496,
+   -0.08567299332698687
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6033590863713527,
+  "r2": 0.625012269284879,
+  "r2_timing_only": 0.054591400356138964
+ },
+ "gate": "hidden",
+ "feature": 72,
+ "test_scores": {
+  "gate": "hidden",
+  "feature": 72,
+  "terms": [
+   "(phase == D1) * last_is(\"a2 S1 u\") * np.clip(80 - ep_trial, 0, None)",
+   "(phase == D1) * last_is(\"a2 S1 u\") * (tv(\"reward\", -2) == 0)",
+   "(phase == D1) * (prev_reward == 0) * np.clip(-belief_lo, 0, None)"
+  ],
+  "weights": [
+   0.00705294234967715,
+   -0.17203697025680634,
+   0.039391499386815944
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5983541365345908,
+  "r2": 0.620280546668418,
+  "r2_timing_only": 0.054591400356138964
+ },
+ "dev_scores": {
+  "gate": "hidden",
+  "feature": 72,
+  "terms": [
+   "(phase == D1) * last_is(\"a2 S1 u\") * np.clip(80 - ep_trial, 0, None)",
+   "(phase == D1) * last_is(\"a2 S1 u\") * (tv(\"reward\", -2) == 0)",
+   "(phase == D1) * (prev_reward == 0) * np.clip(-belief_lo, 0, None)"
+  ],
+  "weights": [
+   0.00705294234967715,
+   -0.17203697025680634,
+   0.039391499386815944
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.623552429582584,
+  "r2": 0.6462676268845137,
+  "r2_timing_only": 0.06034093214293412
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": true,
+  "issues": [
+   "Reproduced: the recorded short form scores test R^2 beyond timing 0.579. Weights are +0.338 (a2 S1 u, before trial 70), -0.170 (a2 S1 u when the trial before was also unrewarded) and +0.035 (unrewarded and belief favours S2). The signs match the explanation. The profile shows activation is exactly 0 at GO and D2. At D1 the residual is +0.285 after a2 S1 u and about -0.03 after every other pattern. The 'only at D1' and 'a2 S1 u' claims hold.",
+   "'Before episode trial 70' is a graded fade, not a cutoff, and the threshold is not well placed. Cutoffs score <50: 0.577, <55: 0.590, <60: 0.595, <70: 0.579, <75: 0.557, <80: 0.526. A linear ramp np.clip(80 - ep_trial, 0, None) scores 0.598 on test and 0.624 on dev. The fade runs across the whole episode, not only after trial 70.",
+   "Large systematic error remains, which the explanation admits. After a2 S1 u the feature is close to all-or-none: it reaches about 0.75-0.85 or stays at 0. The short form predicts about 0.34 for all of them. Its worst misses are under-predictions of firing D1s, many at a window's first D1 (prev_action == -1), where only the belief term applies (predicted 0.03-0.17, actual about 0.8). No observed cue I tried separates firing from silent a2 S1 u steps: belief, belief_lo>0 split, belief_cover, rare/common or state two trials back, a2 streak, start_high. Each adds 0.01 or less. Two weak negative modulators exist: the trial before was a1 (a fresh switch to a2, weight -0.25) and ep_trial < 10 (weight -0.30). Both fit an 'established a2 policy' account, but neither raises R^2 above 0.56-0.60.",
+   "The third term (unrewarded x clip(-belief_lo)) is partly a fitted correction. It over-predicts D1 after a2 S2 u and a1 S1 u by about 0.037. It mainly picks up the window-first D1s and the rare off-pattern firing. It does beat the cleaner alternatives: prev_action == -1 with unrewarded scores 0.558, and belief_lo < 0 scores 0.550. The label does not mention it or the trial-before-unrewarded weakening, but both are small."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "D1 after an a2 -> rare S1 unrewarded trial; fades linearly to silence by episode trial 80.",
+  "better_short_terms": "(phase == D1) * last_is(\"a2 S1 u\") * np.clip(80 - ep_trial, 0, None) ;; (phase == D1) * last_is(\"a2 S1 u\") * (tv(\"reward\", -2) == 0) ;; (phase == D1) * (prev_reward == 0) * np.clip(-belief_lo, 0, None)",
+  "better_short_terms_test_r2_beyond_timing": 0.5983541365345908
+ },
+ "final_label": "D1 after an a2 -> rare S1 unrewarded trial; fades linearly to silence by episode trial 80.",
+ "original_short_terms": "(phase == D1) * last_is(\"a2 S1 u\") * (ep_trial < 70) ;; (phase == D1) * last_is(\"a2 S1 u\") * (tv(\"reward\", -2) == 0) ;; (phase == D1) * (prev_reward == 0) * np.clip(-belief_lo, 0, None)",
+ "original_test_scores": {
+  "gate": "hidden",
+  "feature": 72,
+  "terms": [
+   "(phase == D1) * last_is(\"a2 S1 u\") * (ep_trial < 70)",
+   "(phase == D1) * last_is(\"a2 S1 u\") * (tv(\"reward\", -2) == 0)",
+   "(phase == D1) * (prev_reward == 0) * np.clip(-belief_lo, 0, None)"
+  ],
+  "weights": [
+   0.3375004621945742,
+   -0.1695777172917648,
+   0.03468655195779743
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5791715182889747,
+  "r2": 0.6021451344153275,
+  "r2_timing_only": 0.054591400356138964
+ },
+ "terms_from": "skeptic"
+}

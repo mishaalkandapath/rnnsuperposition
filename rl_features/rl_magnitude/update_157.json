@@ -1,0 +1,92 @@
+{
+  "label": "GO after an unrewarded a2->S2 trial, late in the episode (peak trials 80-89), stronger when S2 is believed good",
+  "short_terms": "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 70) ;; (phase == GO) * last_is(\"a2 S2 u\") * (ep_dec == 8) ;; (phase == GO) * last_is(\"a2 S2 u\") * belief_lo",
+  "terms": "(phase == GO) * last_is(\"a2 S2 u\") * (ep_dec == 6) ;; (phase == GO) * last_is(\"a2 S2 u\") * (ep_dec == 7) ;; (phase == GO) * last_is(\"a2 S2 u\") * (ep_dec == 8) ;; (phase == GO) * last_is(\"a2 S2 u\") * (ep_dec == 9) ;; (phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 60) * (tv(\"reward\", -2) == 0) ;; (phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 60) * belief_lo ;; (phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 60) ;; (phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 60)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO and only late in the episode (trials 60+, peak in decile 8). Its magnitude comes almost entirely from the previous trial being a2 -> S2 (common) unrewarded: after other previous-trial patterns it is near zero, even late. Within that cell it is larger when the observer belief leans toward S2 being good (negative belief_lo) and smaller when the trial before was also unrewarded (first loss after a win is strongest). D1 and D2 are always zero. The free fit adds a per-decile episode profile and the two-back reward: test 0.55 vs 0.47 for the short form (86%). Part of the misses come from window-start trials whose previous trial is outside the window, so last_is cannot see it.",
+  "full_test_scores": {
+    "gate": "update",
+    "feature": 157,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_dec == 6)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_dec == 7)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_dec == 8)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_dec == 9)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 60) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 60) * belief_lo",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 60)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 60)"
+    ],
+    "weights": [
+      -0.18148247619558108,
+      0.019840619567838585,
+      0.24418896253641112,
+      0.04678967115377556,
+      -0.06166671852868782,
+      -0.07776907358458117,
+      0.1293367770624445,
+      0.12933677706244448
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5451372421719787,
+    "r2": 0.5853019076065727,
+    "r2_timing_only": 0.08830062418471274
+  },
+  "gate": "update",
+  "feature": 157,
+  "test_scores": {
+    "gate": "update",
+    "feature": 157,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 70)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_dec == 8)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * belief_lo"
+    ],
+    "weights": [
+      0.24371396331415363,
+      0.21052539067811682,
+      -0.03662673007485962
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.467626175148653,
+    "r2": 0.5146351161826299,
+    "r2_timing_only": 0.08830062418471274
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 157,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 70)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_dec == 8)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * belief_lo"
+    ],
+    "weights": [
+      0.24371396331415363,
+      0.21052539067811682,
+      -0.03662673007485962
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.4717745540086379,
+    "r2": 0.5153977158849988,
+    "r2_timing_only": 0.08258436280836479
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims hold. The feature is exactly zero at D1 and D2 (both the residual table and the timing baseline are 0). At GO the only previous-trial pattern with a positive residual is a2 S2 u (+0.10; every other pattern is between -0.015 and -0.003).",
+      "The belief term is real but adds only a little. Dropping it lowers test R^2 from 0.468 to 0.416. Its weight is -0.037, so the feature is larger when belief leans toward S2. The step form (belief_lo < 0) scores 0.446 and np.abs(belief_lo) scores 0.428, so the signed log-odds is the right shape. The belief-decile residual peaks at deciles 3-4 (mildly S2), not at the extreme.",
+      "The claim about the trial two back is only weakly supported. Swapping in (tv('reward',-2)==1) for belief gives a +0.04 weight (larger after a win then a loss) but a lower test score (0.426).",
+      "The timing is right. The ep_dec==8 bump term is needed: (ep_trial>=70) plus (ep_trial>=80) gives 0.440, and a linear ep_trial term gives 0.424.",
+      "One systematic miss remains, and it involves a future variable. After a2 S2 u, GO steps where the agent then chooses a1 are over-predicted (one worst-fit example predicts 0.46 against an actual 0). So the feature partly tracks the upcoming a2 choice. Using (action==2) in place of belief scores lower (0.429), so the observed-only form is kept.",
+      "Firing on the first trial of a window (no previous trial visible, e.g. t85 at 0.91 with a prediction of 0.06) is under-predicted. This is the known window-edge limit of last_is. A window-start term adds nothing (0.416)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  }
+}

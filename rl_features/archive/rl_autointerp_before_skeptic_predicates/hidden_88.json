@@ -1,0 +1,81 @@
+{
+  "label": "GO step when the agent is choosing a1",
+  "predicate": "(phase == GO) & (action == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires almost exclusively at the GO step (100% of mass; essentially silent at D1 and D2) when the agent picks a1 (97% of mass; rate 0.69 when model_act==1 vs 0.02 for a2). The action variable at GO is the agent own upcoming choice, which it computes, so this is a legitimate choice/policy feature. Equivalent to a strongly positive policy logit: (phase==GO)&(choice>5) gives dev F1 0.82 vs 0.80 for the simpler action predicate. Magnitude is larger when the previous trial was unrewarded (rate 0.14 vs 0.09 by prev_reward, top windows are a1 choices after unrewarded trials) and is weaker or absent on a1 choices after rewarded streaks with high value (no activation in the top value bin), which make up most false positives. It does not fire on a2 choices, on delay steps, or on reward/state inputs.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 88,
+    "predicate": "(phase == GO) & (action == 1)",
+    "split": "test",
+    "precision": 0.6915887331143971,
+    "recall": 0.9512959466793038,
+    "f1": 0.8009150814692786,
+    "mass_recall": 0.9671372543688529,
+    "correlation": 0.6682802074145731,
+    "n_active": 130831,
+    "n_predicted": 179961,
+    "coverage_by_activation_quartile": [
+      0.9156475480004892,
+      0.9437752231869879,
+      0.9628225510578452,
+      0.9829394319258874
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 88,
+    "predicate": "(phase == GO) & (action == 1)",
+    "split": "dev",
+    "precision": 0.6919915285682481,
+    "recall": 0.9583748399032304,
+    "f1": 0.8036849066673739,
+    "mass_recall": 0.9722555550909859,
+    "correlation": 0.6713659191383867,
+    "n_active": 126486,
+    "n_predicted": 175177,
+    "coverage_by_activation_quartile": [
+      0.9268547213964962,
+      0.9528492821453418,
+      0.9680592011637835,
+      0.9857373264602638
+    ]
+  },
+  "gate": "hidden",
+  "feature": 88,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The basic claims hold. The feature fires at GO (100% of mass; D1 and D2 rates are 0.001 or lower), and 97.3% of its mass is on action==1. Its active rate is 0.69 on model_act==a1 and 0.023 on a2. Dev P/R/F1 is 0.692/0.958/0.804; test is 0.692/0.951/0.801.",
+      "The value claim is vacuous. The predicate (phase==GO)&(model_act==1)&(value>=8.1) selects 0 steps, so no a1 GO step falls in the top value bin, and 'never fires in the top value bin' says nothing about the feature. The statement that such cases 'make up most of the false positives' is therefore false. Within a1 GO the active rate actually rises with value: 0.61 for value<7.5, 0.73 for 7.5-7.8, 0.79 for 7.8-8.0.",
+      "The false positives are systematic, not scattered. On a1 GO steps after a rewarded trial with a moderate a1 logit (prev_reward==1 & choice<9), it fires on only 23% of 53k steps. That one class is about 41k of the roughly 54k dev false positives. After reward with choice>=9 it fires on 90%; after no reward with choice<9 it fires on 78%.",
+      "The feature tracks how strongly the policy prefers a1, more than the choice itself. Within a1 GO, the active rate by logit is: 0.26 for choice<3, 0.44 for 3-6, 0.48 for 6-8, 0.50 for 8-9, 0.85 for 9-10, and 1.00 for choice>=10. The binary 'choosing a1' label hides this graded threshold structure.",
+      "Test F1 of alternative predicates: (phase==GO)&(choice>5) scores 0.813, slightly better than the recorded 0.801. (phase==GO)&(choice>9) has precision 0.935 but F1 0.750. Combining a strong a1 logit with the no-reward case brings test F1 to 0.870 (P 0.891, R 0.851, mass recall 0.927).",
+      "The predicate uses no future variables: action at GO is the agent's own choice, and prev_reward is observed at D1."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "GO step with a strong a1 preference: fires when the a1 logit is very high (choice > ~9), or when the agent picks a1 right after an unrewarded trial; weak or silent on lukewarm a1 choices after a rewarded trial",
+    "better_predicate": "(phase == GO) & (action == 1) & ((choice > 9) | (prev_reward == 0))",
+    "better_predicate_test_f1": 0.87
+  },
+  "final_label": "GO step with a strong a1 preference: fires when the a1 logit is very high (choice > ~9), or when the agent picks a1 right after an unrewarded trial; weak or silent on lukewarm a1 choices after a rewarded trial",
+  "scorecard": {
+    "format": "slot2",
+    "summary": "Graded preference over policy (model) (GO: decile 9 (9 , decile 8 (9 , decile 7 (9 ; D1: decile 8 (9 ) and last trial (GO: a2 S1 u, a1 S2 u, a1 S1 u; D1: a1 S1 u, a1 S2 u); timing cues that raise it most: phase=D2 & ep_dec=0, phase=D1 & ep_dec=0, phase=D1 & ep_dec=1.",
+    "test_f1": 0.8679153094462541,
+    "test_precision": 0.8084414513650245,
+    "test_recall": 0.9368345422720915,
+    "full_test_f1": 0.876559271994224,
+    "full_n_cues": 142,
+    "top40_test_f1": 0.8702948106430666,
+    "slot2_test_f1": 0.8679153094462541,
+    "slot2_slots": [
+      "policy (model)",
+      "last trial"
+    ],
+    "file": "scorecards/hidden_88.json"
+  }
+}

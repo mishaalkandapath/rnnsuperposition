@@ -1,0 +1,64 @@
+{
+  "label": "D1 after a rewarded a2->S2 trial, about to choose a2 again, early in the episode (trials < 40)",
+  "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial < 40) & (prev_state != 1) & (prev_action != 1) & (action == 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 and only when the reward input is 1 (in_rew==1 has 100% of the activation mass). Within that: the previous trial was a2 reaching S2 (prev_action 1 or prev_state S1, which includes rare a2->S1, gives almost no activation), the agent goes on to choose a2 again (action==2 at D1 is its own upcoming choice, which is computed rather than future-random), and the episode is at trial < 40. It is completely silent from trial 40 on, so it reads as a time-in-episode gated signal for rewarded common a2/S2 -> stay on a2. Magnitude is largest early: restricting to ep_trial < 25 covers 95-100% of the top two activation quartiles but only 25-42% of the bottom two. It also tracks the model readouts, with about 95% of mass in a narrow value band (7.54-7.73) and a moderately negative policy logit (favoring a2). Never fires at GO or D2, on unrewarded D1, or after a1 choices. Using next_action instead of action gives a slightly lower F1, and no future-random variable is needed.",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 27,
+    "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial < 40) & (prev_state != 1) & (prev_action != 1) & (action == 2)",
+    "split": "test",
+    "precision": 0.7684127609294998,
+    "recall": 0.9923702950152594,
+    "f1": 0.8661487236403996,
+    "mass_recall": 0.9980499407791126,
+    "correlation": 0.7655351192712276,
+    "n_active": 33422,
+    "n_predicted": 43163,
+    "coverage_by_activation_quartile": [
+      0.9733125897558641,
+      0.9971278123504069,
+      0.9997606223818073,
+      0.9992818671454219
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 27,
+    "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial < 40) & (prev_state != 1) & (prev_action != 1) & (action == 2)",
+    "split": "dev",
+    "precision": 0.7804043619776199,
+    "recall": 0.9931368102796674,
+    "f1": 0.8740121863608545,
+    "mass_recall": 0.9983071988155581,
+    "correlation": 0.7720576071422443,
+    "n_active": 33075,
+    "n_predicted": 42091,
+    "coverage_by_activation_quartile": [
+      0.9765388801547951,
+      0.9968557262063127,
+      0.999758132785101,
+      0.9993952588292211
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 27,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Most claims check out. Every bit of activation mass falls at D1 with in_rew==1. GO and D2 have 0 active steps, and in_rew of 0 or -1 has 0. Steps after a1 or after a rare a2->S1 trial hold only 97 active steps. Action==2 holds 33062 of 33075 active steps. 96% of mass sits at value 7.54-7.73 and 95% at choice between -4.44 and -1.52.",
+      "'Never fires from trial 40 on' is slightly overstated. Trials 40-49 still have 117 active steps on dev (rate 0.001, near-zero mass), and the cutoff is a gradual decay rather than a hard gate: the rate in trials 30-39 is 0.054 against about 0.09 in trials 0-29. Within the predicate, precision for ep_trial >= 30 is only 0.55, against 0.92 for ep_trial < 20.",
+      "For rel == -3 steps (about 25% of mass), prev_action and prev_state are -1 (outside the window). So 'after a rewarded a2->S2 trial' cannot be checked there; the predicate only admits these steps because '!= 1' lets -1 through.",
+      "Most of the 22% false positives (9243 dev / 9996 test steps) follow graded patterns, not one clean class. Precision drops when the trial two back was unrewarded (0.43 vs 0.93 when it was rewarded), when the trial two back was a1 (0.14, but only 765 steps), when start_high==1 (0.66 vs 0.83), and late in the 30-39 window. This fits a unit that accumulates a2 reward history and decays over the episode, not a strict one-trial rule. Predicates using that deeper history change test F1 very little: 0.874 with ~(r[-2]==0 & r[-3]==0) vs 0.866 for the original. Tightening to ep_trial < 35 also gives 0.867. So this is not a systematic gap a better predicate closes.",
+      "Misses are tiny and scattered (227 dev / 255 test steps, 0.2% of mass), with no pattern.",
+      "Using next_action instead of action scores worse (F1 0.838), as claimed. The predicate uses no future random variable; action at D1 is the agent's own upcoming choice."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == D1) & (in_rew == 1) & (ep_trial < 40) & (prev_state != 1) & (prev_action != 1) & (action == 2) & (~((tv('reward',-2) == 0) & (tv('reward',-3) == 0)))",
+    "better_predicate_test_f1": 0.874
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "label": "D1: last state S1 up / S2 down; GO: after a2 or unrewarded up, belief in S1 down",
+  "terms": "(phase == D1) * table(prev_state, {1: 1, 2: -1}) ;; (phase == D1) * table(prev_action, {1: -1, 2: 1}) ;; (phase == GO) * table(prev_action, {1: -1, 2: 1}) ;; (phase == GO) * (prev_reward == 0) * (prev_action > 0) ;; (phase == GO) * (prev_reward == 0) * table(prev_action, {1: -1, 2: 1}) ;; (phase == GO) * np.tanh(belief_lo/2) ;; (phase == D2) * np.tanh(belief_lo/2) ;; (phase == GO) * table(tv(\"action\", -2), {1: -1, 2: 1})",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 41: low at D1 (~0.3), mid at GO (~0.43), saturated near 0.97 at D2 (timing R^2 0.79). Beyond timing, at D1 it tracks the state the last trial reached (S1 raises by ~+0.17, S2 lowers by the same), with a small extra lift after an a2 choice. At GO it is higher after an a2 choice and especially after an unrewarded trial (+0.12), with the unrewarded-after-a2 case highest (a2 S1 u ~ +0.36 residual) and rewarded-after-a1 lowest; a graded observed belief term (tanh of ideal-observer log-odds S1 good) lowers it when S1 is believed good (weight -0.13), which takes over the role of the policy logit used in the earlier model-based explanation. The choice two trials back adds slightly at GO. D2 is near saturation with a tiny negative belief dependence. Hidden good state, since_rev and this trial reward add nothing. Observed-only 8 terms: test R^2 beyond timing 0.71 (dev 0.71) vs all-observed table ceiling 0.81 and all ceiling 0.87; the remaining gap is mostly interaction detail of the last-trial pattern at D1/GO.",
+  "gate": "unit_update",
+  "feature": 41,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 41,
+    "terms": [
+      "(phase == D1) * table(prev_state, {1: 1, 2: -1})",
+      "(phase == D1) * table(prev_action, {1: -1, 2: 1})",
+      "(phase == GO) * table(prev_action, {1: -1, 2: 1})",
+      "(phase == GO) * (prev_reward == 0) * (prev_action > 0)",
+      "(phase == GO) * (prev_reward == 0) * table(prev_action, {1: -1, 2: 1})",
+      "(phase == GO) * np.tanh(belief_lo/2)",
+      "(phase == D2) * np.tanh(belief_lo/2)",
+      "(phase == GO) * table(tv(\"action\", -2), {1: -1, 2: 1})"
+    ],
+    "weights": [
+      0.17152094385205494,
+      0.041980299285978386,
+      0.03150029501897522,
+      0.12389522357167526,
+      0.08627307994498372,
+      -0.12682048579202249,
+      -0.0278973428142782,
+      0.023345049010972063
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7070112590238142,
+    "r2": 0.9371451179742081,
+    "r2_timing_only": 0.7854699746605596
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 41,
+    "terms": [
+      "(phase == D1) * table(prev_state, {1: 1, 2: -1})",
+      "(phase == D1) * table(prev_action, {1: -1, 2: 1})",
+      "(phase == GO) * table(prev_action, {1: -1, 2: 1})",
+      "(phase == GO) * (prev_reward == 0) * (prev_action > 0)",
+      "(phase == GO) * (prev_reward == 0) * table(prev_action, {1: -1, 2: 1})",
+      "(phase == GO) * np.tanh(belief_lo/2)",
+      "(phase == D2) * np.tanh(belief_lo/2)",
+      "(phase == GO) * table(tv(\"action\", -2), {1: -1, 2: 1})"
+    ],
+    "weights": [
+      0.17152094385205494,
+      0.041980299285978386,
+      0.03150029501897522,
+      0.12389522357167526,
+      0.08627307994498372,
+      -0.12682048579202249,
+      -0.0278973428142782,
+      0.023345049010972063
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7155720991079317,
+    "r2": 0.9384524429480001,
+    "r2_timing_only": 0.7836092842545875
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The score reproduces: the 8 terms give test R^2 beyond timing 0.707 (weights match the explanation). Ablations support the main claims: D1 prev_state alone scores 0.262 (weight +0.15 to +0.17); dropping the GO belief term drops the score to 0.645; the D2 belief term (0.707 to 0.700) and the a(t-2) term (to 0.698) each add almost nothing, which the label already admits.",
+      "One error class is systematic and large. Misses show GO after 'a1 S2 r' (rare, rewarded) over-predicted by -0.116 (-0.126 even with improved terms), and GO after 'a2 S2 r' by -0.072. The profile's GO residuals are a1 S1 r -0.224 vs a1 S2 r -0.209, and a2 S1 r +0.079 vs a2 S2 r +0.075. So at GO the last reached state barely matters. Yet the belief term pushes a1 S2 r upward (belief swings to S2 good) when the gate is in fact as low as after a1 S1 r.",
+      "So 'GO: down with S1 belief' is partly a proxy for longer-run choice history, not a model-based belief signal. Adding an interaction belief x prev_action at GO gets weight -0.054 and lifts test to 0.715. An explicit GO*last_is('a1 S2 r') term gets weight -0.134 (test 0.719). The label hides this.",
+      "'Clearly higher after an unrewarded trial (+0.12)' overstates for a1. The fitted effect is +0.124+0.086 = +0.21 after a2 but only +0.04 after a1. The profile's unrewarded-minus-rewarded gaps run from +0.10 (a1 S2) to +0.28 (a2 S1).",
+      "D1 is not only the last state. The worst-fit windows are runs of unrewarded trials where D1 is about 0.12 but predicted about 0.50 (e.g. repeated a2 S1R r0). A D1 term for 'reward two trials back = 0' gets weight -0.075 and adds about +0.02 test R^2 (0.715 to 0.728). D1 belief (+0.013) and D1 prev_reward (+0.006) add nothing, which is consistent with the label.",
+      "A gap remains to the observed-only ceiling: 0.707 vs 0.81. Full phase-specific last-trial tables plus GO belief, D1 r(t-2) and D2 current action reach only 0.733, so the remaining 0.08 is not recovered by additive terms (likely interactions or a longer history)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1: last reached state (S1 up / S2 down), lowered by a second unrewarded trial back; GO: set by last choice x reward (a2/unrewarded up, rewarded a1 lowest, last state ignored), plus a belief-like term toward S1 = down that tracks choice history more than model-based inference",
+    "better_terms": "(phase == D1) * table(prev_action*100+prev_state*10+prev_reward, {111: 0.136, 110: 0.09, 121: -0.189, 120: -0.198, 221: -0.125, 220: -0.16, 211: 0.224, 210: 0.229}) ;; (phase == GO) * table(prev_action*100+prev_state*10+prev_reward, {111: -0.224, 110: -0.076, 121: -0.209, 120: -0.11, 221: 0.075, 220: 0.229, 211: 0.079, 210: 0.359}) ;; (phase == GO) * np.tanh(belief_lo/2) ;; (phase == D1) * (tv('reward', -2)==0) ;; (phase == D2) * table(action, {1: -1, 2: 1})",
+    "better_terms_test_r2_beyond_timing": 0.7324
+  },
+  "final_label": "D1: last reached state (S1 up / S2 down), lowered by a second unrewarded trial back; GO: set by last choice x reward (a2/unrewarded up, rewarded a1 lowest, last state ignored), plus a belief-like term toward S1 = down that tracks choice history more than model-based inference"
+}

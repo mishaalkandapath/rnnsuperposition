@@ -1,0 +1,62 @@
+{
+  "label": "D1 after reward: grows with the policy a1 logit lead above ~3",
+  "terms": "(phase == D1) * (in_rew == 1) * np.clip(choice - 3, 0, None) ;; (phase == D1) * (in_rew == 1) * np.clip(choice - 4, 0, None) ;; (phase == D1) * (in_rew == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1, and only when the reward input is 1. Its size is set by how strongly the model already favours a1 at that step: it scales roughly linearly with the policy logit difference choice = logit(a1) - logit(a2) once that exceeds about 3, with a slightly steeper slope above 4. In a probe after a1 S1 r, bins of choice below 3 gave about 0, 3-4 gave +0.09, 4-5 gave +0.6 and 5-6 gave +1.06. A third term, D1 with no reward, removes the timing baseline. Test R^2 beyond timing is 0.71, above the 0.47 all-cue additive ceiling. The history-pattern view (mostly after a1 S1 r, smaller after consecutive rewards, an a1 S1 r lookup) explains much less: an observed-only history model scores 0.29 on test. The graded policy logit captures the magnitude better than trial patterns do. No future variables are used; choice is the model internal policy output. Without the reward gate, choice alone scores 0.14 on dev.",
+  "gate": "update",
+  "feature": 21,
+  "test_scores": {
+    "gate": "update",
+    "feature": 21,
+    "terms": [
+      "(phase == D1) * (in_rew == 1) * np.clip(choice - 3, 0, None)",
+      "(phase == D1) * (in_rew == 1) * np.clip(choice - 4, 0, None)",
+      "(phase == D1) * (in_rew == 0)"
+    ],
+    "weights": [
+      0.32025337176714086,
+      0.21651074091381453,
+      -0.07342002987955443
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7055090499349541,
+    "r2": 0.7340161211138809,
+    "r2_timing_only": 0.09680117902648722
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 21,
+    "terms": [
+      "(phase == D1) * (in_rew == 1) * np.clip(choice - 3, 0, None)",
+      "(phase == D1) * (in_rew == 1) * np.clip(choice - 4, 0, None)",
+      "(phase == D1) * (in_rew == 0)"
+    ],
+    "weights": [
+      0.32025337176714086,
+      0.21651074091381453,
+      -0.07342002987955443
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7065927094848686,
+    "r2": 0.7359179321018636,
+    "r2_timing_only": 0.09994715047982972
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold. I reproduced test R^2 beyond timing of 0.7055 (dev 0.7066). The feature is zero at GO and D2. It is positive only at D1 when in_rew == 1, and the in_rew == 1 x clip(choice-3) shape alone scores 0.68 on test.",
+      "Large systematic gap: the choice slope fades strongly over the episode, and the label leaves this out. Adding the term D1*rew*clip(choice-3)*ep_dec raises test R^2 from 0.71 to 0.86. Its fitted weight is -0.082 against a base slope of +0.68, so the slope is near zero by about decile 8. The timing baseline is additive per (phase, decile), so it cannot absorb a time-dependent gain.",
+      "The misses output shows the same thing: the worst-fit dev windows are all late in the episode (t78-t94). There the model predicts 0.5-1.1 and the actual activation is 0. The worst over-predictions by phase x previous trial are all at D1 after a rewarded trial (a1 S2 r -0.083, a2 S2 r -0.073, a2 S1 r -0.061).",
+      "Past-trial history adds nothing once choice is in the model. Adding D1*rew*clip(choice-3)*last_is('a1 S1 r') leaves test R^2 at 0.7055, and a prev_state term gives 0.707. So the history contrast in the profile (after a1 S1 r +0.24, other patterns about -0.09) runs through choice, which is consistent with the explanation.",
+      "No future variables are used. 'choice' at D1 is the model's own policy logit at that step, not the upcoming GO choice."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after reward: grows with the policy a1 logit lead above ~3, with a gain that fades to near zero late in the episode",
+    "better_terms": "(phase == D1) * (in_rew == 1) * np.clip(choice - 3, 0, None) ;; (phase == D1) * (in_rew == 1) * np.clip(choice - 4, 0, None) ;; (phase == D1) * (in_rew == 0) ;; (phase == D1) * (in_rew == 1) * np.clip(choice - 3, 0, None) * ep_dec ;; (phase == D1) * (in_rew == 1) * np.clip(choice - 4, 0, None) * ep_dec",
+    "better_terms_test_r2_beyond_timing": 0.8665
+  },
+  "final_label": "D1 after reward: grows with the policy a1 logit lead above ~3, with a gain that fades to near zero late in the episode"
+}

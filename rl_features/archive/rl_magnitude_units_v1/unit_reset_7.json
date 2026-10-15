@@ -1,0 +1,75 @@
+{
+  "label": "a2-preference (negative policy logit) plus previous-reward boost at D1",
+  "terms": "(phase==D1)*choice ;; (phase==GO)*choice ;; (phase==D2)*choice ;; (phase==D1)*(prev_reward==1) ;; (phase==D2)*(prev_reward==1) ;; (phase==GO)*last_is(\"a2 S1 u\")",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r7 mostly tracks the agent policy: it rises when the policy logit favours a2 (negative choice = logit(a1)-logit(a2)) and falls when it favours a1, at every phase, most steeply at D2 (weight per logit unit about -0.029 at D1, -0.012 at GO, -0.046 at D2). On top of that, a reward on the previous trial raises it at D1 (+0.12) and lowers it slightly at D2 (-0.06), and at GO it is extra high after an a2 -> S1 unrewarded trial (+0.16). The policy terms alone give dev R^2 beyond timing 0.68; adding the reward terms gives 0.86 dev, 0.85 test (ceiling all 0.91). Observed-only version (previous / current action a2, previous reward, a2 S1 patterns, no model output) gets 0.61 dev. Hidden good state, value and trials since reversal add little. Remaining misses: long rewarded a1-S1 streaks late in the episode, where D1 is under-predicted.",
+  "gate": "unit_reset",
+  "feature": 7,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 7,
+    "terms": [
+      "(phase==D1)*choice",
+      "(phase==GO)*choice",
+      "(phase==D2)*choice",
+      "(phase==D1)*(prev_reward==1)",
+      "(phase==D2)*(prev_reward==1)",
+      "(phase==GO)*last_is(\"a2 S1 u\")"
+    ],
+    "weights": [
+      -0.028780355113104547,
+      -0.011899212180866856,
+      -0.04598602237753513,
+      0.12101796309491608,
+      -0.060122311990000364,
+      0.16477208134236168
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8542659035933085,
+    "r2": 0.9321554914722429,
+    "r2_timing_only": 0.5344637239975234
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 7,
+    "terms": [
+      "(phase==D1)*choice",
+      "(phase==GO)*choice",
+      "(phase==D2)*choice",
+      "(phase==D1)*(prev_reward==1)",
+      "(phase==D2)*(prev_reward==1)",
+      "(phase==GO)*last_is(\"a2 S1 u\")"
+    ],
+    "weights": [
+      -0.028780355113104547,
+      -0.011899212180866856,
+      -0.04598602237753513,
+      0.12101796309491608,
+      -0.060122311990000364,
+      0.16477208134236168
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8611109099173507,
+    "r2": 0.9344074066982408,
+    "r2_timing_only": 0.5277340123495177
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The headline numbers reproduce: 0.861 on dev and 0.854 on test, against a ceiling of 0.91. The policy terms alone score 0.668 on test, and the fitted weights match the ones claimed (-0.029, -0.012, -0.046, +0.121, -0.060, +0.165). The core claim (r7 rises when the policy favours a2, most steeply at D2) checks out.",
+      "The stated main remaining miss is not supported. 'Long rewarded a1-S1 streaks late, D1 under-predicted' does not show up among the systematic errors. The misses output instead shows D1 errors by previous trial: after a2 S1 r +0.090, after a2 S2 u -0.099, after a1 S2 r -0.088, after a1 S1 u -0.057.",
+      "The D1 reward boost depends on the state that was reached, so it is not one uniform previous-reward effect. With the D1 reward term split by state, the weight is +0.151 after rewarded S1 and +0.074 after rewarded S2. Adding (phase==D1)*(prev_reward==1)*(prev_state==S1) and (phase==D1)*(prev_action==1) gives weights +0.093 and -0.065 and raises test R^2 from 0.854 to 0.872.",
+      "Even after that fix, a systematic error remains at D1 after a2 S2 u (-0.103, over-predicted). GO after unrewarded trials is under-predicted by about +0.04 to +0.06, and the GO phase mean error is +0.019 to +0.023.",
+      "The D2 prev_reward weight of -0.06 is fitted alongside a strong D2 choice term. In an observed-only fit it falls to -0.016, so the claim that a previous reward lowers the gate slightly at D2 is fragile.",
+      "My observed-only version (previous action, this action at D2, previous reward, a2 S1 patterns) scores 0.557 on test. This roughly matches the 0.61 claimed on dev, so most of the explanatory power comes from the model policy logit."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "a2-preference (negative policy logit, steepest at D2) plus a D1 boost after a rewarded trial, about twice as large when S1 was rewarded, and a GO boost after a2->S1 unrewarded",
+    "better_terms": "(phase==D1)*choice ;; (phase==GO)*choice ;; (phase==D2)*choice ;; (phase==D1)*(prev_reward==1) ;; (phase==D2)*(prev_reward==1) ;; (phase==GO)*last_is(\"a2 S1 u\") ;; (phase==D1)*(prev_reward==1)*(prev_state==S1) ;; (phase==D1)*(prev_action==1)",
+    "better_terms_test_r2_beyond_timing": 0.8719
+  },
+  "final_label": "a2-preference (negative policy logit, steepest at D2) plus a D1 boost after a rewarded trial, about twice as large when S1 was rewarded, and a GO boost after a2->S1 unrewarded"
+}

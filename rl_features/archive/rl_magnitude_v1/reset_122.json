@@ -1,0 +1,70 @@
+{
+  "label": "D2 a1->S1 common late in episode, ramps with trial; larger after a1 S2 u, smaller after a1 S1 u / a2",
+  "terms": "(phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 80, 0, None) ;; (phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 80, 0, None) * last_is(\"a1 S2 u\") ;; (phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 80, 0, None) * last_is(\"a1 S1 u\") ;; (phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 80, 0, None) * (prev_action == 2) ;; (phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 80, 0, None) * value",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Silent at D1 and GO. Fires only at D2 after an a1 -> S1 common transition, and only late in the episode: magnitude ramps roughly linearly with ep_trial above ~80 (to ~2-4 by trial 95-99). Gated by that ramp: larger when the previous trial was a1 S2 unrewarded (rare unrewarded, i.e. a model-based stay), smaller when the previous trial was a1 S1 unrewarded or an a2 choice (switch to a1), and smaller at higher model value. D2 a2 or rare (S2) steps stay near zero. The late a1 S1 ramp alone gives dev R^2 beyond timing 0.49; adding the previous-trial modulators and value gives 0.66 dev. All terms are observed at D2 (action and state are known by then; value is a model output). The additive-table ceiling is only 0.11 because the effect is an interaction of trial index with D2 a1 S1.",
+  "gate": "reset",
+  "feature": 122,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 122,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 80, 0, None)",
+      "(phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 80, 0, None) * last_is(\"a1 S2 u\")",
+      "(phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 80, 0, None) * last_is(\"a1 S1 u\")",
+      "(phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 80, 0, None) * (prev_action == 2)",
+      "(phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 80, 0, None) * value"
+    ],
+    "weights": [
+      0.17060121314008478,
+      0.11719570436809038,
+      -0.048488648981630675,
+      -0.03977573224281901,
+      -0.02450261867041115
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6705216048144075,
+    "r2": 0.7319792305234334,
+    "r2_timing_only": 0.18653006269017247
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 122,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 80, 0, None)",
+      "(phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 80, 0, None) * last_is(\"a1 S2 u\")",
+      "(phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 80, 0, None) * last_is(\"a1 S1 u\")",
+      "(phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 80, 0, None) * (prev_action == 2)",
+      "(phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 80, 0, None) * value"
+    ],
+    "weights": [
+      0.17060121314008478,
+      0.11719570436809038,
+      -0.048488648981630675,
+      -0.03977573224281901,
+      -0.02450261867041115
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6607601348943489,
+    "r2": 0.7260041810150368,
+    "r2_timing_only": 0.19232423082224914
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Scores reproduce: the claimed 5 terms give test R^2 beyond timing 0.67 (test r2 0.732, timing 0.187) and dev 0.66. The late ramp alone gives 0.44 on test, not 0.49.",
+      "Large systematic error the terms leave in place: misses shows D2 after an a2 choice is over-predicted on every previous-trial pattern (a2 S1 r -0.056, a2 S2 r -0.047, a2 S1 u -0.046, a2 S2 u -0.037). The timing baseline adds +0.48 to every late D2 step (decile 9), and nothing in the terms cancels it on non-a1->S1 steps, even though the label says those steps stay near zero. Adding (phase==D2)*(not a1S1)*clip(ep_trial-80) on its own lifts ramp-only from 0.44 to 0.59 on test.",
+      "A dominant modifier is missing: the policy logit 'choice' at D2. Ramp + ramp*choice alone gives test r2 0.680, i.e. about 0.61 beyond timing, with 2 terms. That is close to the 5-term label's 0.67. The activation is larger when the policy favours a1 more strongly.",
+      "Not a clean linear ramp: there are many big under-predictions at t91-92 (e.g. 3.68 actual vs 1.3 predicted, 3.89 vs 1.42). Within a run of a1->S1 trials the activation drops (3.2 -> 2.2 -> 2.0 -> 1.5 -> 0.4), and it is high when the previous reward was 0 (r0). The label's history story (a1 S2 u raises it, a1 S1 u lowers it) only partly captures this. A prev_reward==0 term helps (ramp + it: 0.50 test).",
+      "The label overclaims: it calls the magnitude explained and says D2 steps after a2 or rare outcomes stay near zero, but its terms predict about 0.47 there. A better 8-term set reaches 0.90 on test, so the recorded explanation leaves about a third of the explainable variance."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 a1->S1 only, late episode (trial>~80) ramp; scaled up by a1-favouring policy logit and prev unrewarded trial; zero on other late D2 steps",
+    "better_terms": "(phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 80, 0, None) ;; (phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 80, 0, None) * choice ;; (phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 80, 0, None) * last_is(\"a1 S2 u\") ;; (phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 80, 0, None) * (prev_reward == 0) ;; (phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 80, 0, None) * value ;; (phase == D2) * (action == 1) * (state == 1)*(ep_trial>=90) ;; (phase == D2) * (1 - (action == 1) * (state == 1)) * np.clip(ep_trial - 80, 0, None) ;; (phase == D2) * (1 - (action == 1) * (state == 1))*(ep_trial>=90)",
+    "better_terms_test_r2_beyond_timing": 0.9008
+  },
+  "final_label": "D2 a1->S1 only, late episode (trial>~80) ramp; scaled up by a1-favouring policy logit and prev unrewarded trial; zero on other late D2 steps"
+}

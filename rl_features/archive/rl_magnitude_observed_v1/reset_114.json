@@ -1,0 +1,79 @@
+{
+  "label": "D1 after reaching S2 (esp. a1 S2 unrewarded), growing late in episode",
+  "terms": "(phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a1 S2 r\") ;; (phase == D1) * last_is(\"a2 S2 u\") ;; (phase == D1) * (prev_state == 1) ;; (phase == D1) * (prev_state == 2) * (ep_trial/100.)**4 ;; (phase == D1) * (prev_state == 1) * (ep_trial/100.)**4 ;; (phase == D1) * (prev_state == 2) * belief_lo",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Active only at D1 (zero at GO and D2). Its size is set by the previous trial: largest after a1 -> S2 (rare) unrewarded, then a1 -> S2 rewarded, a little after a2 -> S2 unrewarded, and pushed down after reaching S1. Within the S2 cases it grows steeply toward the end of the episode (shape (ep_trial/100)^4; late-episode D1 activations reach about 5-6) and rises with the ideal-observer belief that S1 is good (belief_lo). Read in model-based terms, it is strongest when the outcome points to switching to a1. Observed-only terms only (no value or policy). Dev R^2 beyond timing 0.626. This is above the profile ceiling all=0.60 and all-observed=0.57, so dropping the model value/policy terms (policy decile alone 0.27) loses essentially nothing. Remaining misses: very large late-episode D1 activations after S1 or a2 S2 trials, which are under-predicted; these probably track the upcoming a1 choice.",
+  "gate": "reset",
+  "feature": 114,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 114,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * (prev_state == 1)",
+      "(phase == D1) * (prev_state == 2) * (ep_trial/100.)**4",
+      "(phase == D1) * (prev_state == 1) * (ep_trial/100.)**4",
+      "(phase == D1) * (prev_state == 2) * belief_lo"
+    ],
+    "weights": [
+      1.8151819822441957,
+      1.1239965967876204,
+      -0.1724014428218374,
+      -0.20289339080736768,
+      1.248446805635189,
+      -1.1471326839977245,
+      0.1760255117543166
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6110912332448502,
+    "r2": 0.6716650514703677,
+    "r2_timing_only": 0.15575328561223656
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 114,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * (prev_state == 1)",
+      "(phase == D1) * (prev_state == 2) * (ep_trial/100.)**4",
+      "(phase == D1) * (prev_state == 1) * (ep_trial/100.)**4",
+      "(phase == D1) * (prev_state == 2) * belief_lo"
+    ],
+    "weights": [
+      1.8151819822441957,
+      1.1239965967876204,
+      -0.1724014428218374,
+      -0.20289339080736768,
+      1.248446805635189,
+      -1.1471326839977245,
+      0.1760255117543166
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6261653771141553,
+    "r2": 0.6833764020752208,
+    "r2_timing_only": 0.15303832619734548
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most of the claimed facts check out. The original terms reproduce test R^2 beyond timing 0.611. The feature is exactly 0 at GO and D2. The residual table puts a1 S2 u (+2.63) above a1 S2 r (+1.46), and S1 trials sit at about -0.43. On the original 7 terms the S1-late weight is -1.15 against +1.25 for S2-late.",
+      "The belief_lo claim is mis-specified. The effect is a late-episode effect, not a flat one. Adding (prev_state==2)*belief_lo*(ep_trial/100)^2 sends the plain belief_lo weight from 0.18 to 0.01, the interaction takes 0.55, and test R^2 goes from 0.611 to 0.683 (dev 0.692). Saying 'after S2 trials it also rises with belief_lo' as a separate, timing-free effect is therefore wrong.",
+      "The late rise after S2 is mainly an a1->S2 (rare) effect, not one shared by all S2 trials. When the S2*ep^4 term is split by previous action, the weights are a1: 3.57 and a2: 0.58, and test R^2 rises to 0.648. Splitting by reward instead gives unrewarded 2.68 and rewarded 0.40. The label's 'growing late in episode' for all S2 trials is too broad.",
+      "The a2 S2 u term gets a negative weight (-0.17), but its raw residual is +0.18. Dropping it causes systematic over-prediction at D1 after a2 S2 u (-0.25), so it works as a correction inside the fit. It does not support the raw claim that a2 S2 u raises the feature.",
+      "The description of the misses is wrong. In the worst-fit windows, the big under-predicted D1 cells (actual 5-6, predicted about 1.2) are mostly the window's first trial, where prev_state is unknown ('?'), and late D1s after a2->S2. Late D1s after S1 trials are not the main source. Misses by phase x previous trial show no large systematic class apart from 'D1 after ?' (-0.065)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after reaching S2, mainly after a1->S2 (rare). Larger if unrewarded; it rises steeply late in the episode, scaled by late-episode belief that S1 is good.",
+    "better_terms": "(phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a1 S2 r\") ;; (phase == D1) * last_is(\"a2 S2 u\") ;; (phase == D1) * (prev_state == 1) ;; (phase == D1) * (prev_state == 2) * (ep_trial/100.)**4 ;; (phase == D1) * (prev_state == 1) * (ep_trial/100.)**4 ;; (phase == D1) * (prev_state == 2) * belief_lo ;; (phase == D1) * (prev_state == 2) * belief_lo * (ep_trial/100.)**2",
+    "better_terms_test_r2_beyond_timing": 0.6831
+  },
+  "final_label": "D1 after reaching S2, mainly after a1->S2 (rare). Larger if unrewarded; it rises steeply late in the episode, scaled by late-episode belief that S1 is good."
+}

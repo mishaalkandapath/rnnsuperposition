@@ -1,0 +1,82 @@
+{
+  "label": "Late-episode D1 after an unrewarded rare trial, about to choose a1",
+  "predicate": "(phase == D1) & (prev_reward == 0) & (ep_trial >= 85) & (action == 1) & (prev_common != 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": true,
+  "explanation": "Fires only at D1, only when the reward input is 0 (previous trial unrewarded), and only late in the episode (no activity before trial ~78; 87% of mass in trials 90-99). It is strongly selective for an upcoming a1 choice (99.6% of mass) and for the previous transition being rare (prev_common==0 has 3.5x lift; common previous trials have almost no activity). prev_common != 1 also admits the window-first trial, where prev_common is unknown. Rare-unrewarded is the case where model-based logic says stay, and the previous choice was mostly a1, so this is a late-episode stay-on-a1 after rare-unrewarded signal. The only FUTURE variable is action at D1, which is the agent own upcoming choice (choice logit 2.8-8 holds 99% of mass); swapping it for prev_action==1 gives a similar result (dev F1 0.71 with prev_common==0). Activity is concentrated where model value is low (<5.2 holds 88% of mass). Never fires at GO or D2, never after a rewarded trial, almost never before an a2 choice. Dev F1 0.81, mass recall 0.94; using ep_trial>=80 instead raises recall but lowers precision (F1 0.72). The late-episode dependence suggests it partly encodes time in the episode.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 60,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (ep_trial >= 85) & (action == 1) & (prev_common != 1)",
+    "split": "test",
+    "precision": 0.7678672449556855,
+    "recall": 0.8144,
+    "f1": 0.7904493836746579,
+    "mass_recall": 0.9247452136879589,
+    "correlation": 0.7488001875330158,
+    "n_active": 5000,
+    "n_predicted": 5303,
+    "coverage_by_activation_quartile": [
+      0.5336,
+      0.8072,
+      0.9232,
+      0.9936
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 60,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (ep_trial >= 85) & (action == 1) & (prev_common != 1)",
+    "split": "dev",
+    "precision": 0.7748267898383372,
+    "recall": 0.8378772112382934,
+    "f1": 0.8051194880511947,
+    "mass_recall": 0.9387811581239197,
+    "correlation": 0.7526819393059017,
+    "n_active": 4805,
+    "n_predicted": 5196,
+    "coverage_by_activation_quartile": [
+      0.5565723793677204,
+      0.861781848459617,
+      0.9367194004995837,
+      0.9966694421315571
+    ]
+  },
+  "gate": "hidden",
+  "feature": 60,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The label overclaims 'after an unrewarded rare trial'. The feature only responds to a rare trial that started with a1 (a1 leading to S2, unrewarded). After a rare trial that started with a2 (a2 leading to S1, unrewarded), it is completely silent: (D1)&(prev_reward==0)&(ep_trial>=85)&(prev_common==0)&(prev_action==2) gives precision 0.0 on 4431 steps. Dropping prev_action from the observed predicate leaves recall at exactly 0.709 but drops precision from 0.85 to 0.40. So the real condition is 'previous trial was a1 reaching S2, unrewarded', not rare in general.",
+      "The upcoming a1 choice is mostly redundant. Inside the window, (D1)&(prev_reward==0)&(ep_trial>=85)&(prev_action==1)&(prev_state==2) has precision 0.85 (dev). The FUTURE variable action==1 only helps on the window's first trial (rel -3), where prev_action and prev_common are -1 (unknown) and the predicate leans on prev_common != 1. That is a limit of the 5-trial window, not something the feature computes. rel -3 holds 12.5% of the activation mass.",
+      "The observed-only score is misreported. The explanation says dev F1 0.71, but prev_action==1 & prev_common==0 (or prev_state==2) scores dev F1 0.774 and test F1 0.764 with precision 0.85. The only gap to the future-variable predicate is the unknown-history first trial of each window.",
+      "The episode-time dependence is a gradual ramp, not a cutoff at trial 85. With the other conditions fixed, precision rises steadily with ep_trial: 0.42 at trial 85, 0.50 at 86, 0.61 at 87, 0.69 at 88, 0.73 at 89, 0.81 at 90, 0.89 at 95, 1.0 at 98. Most false positives (about 1170 dev / 1231 test) are rare-a1-unrewarded D1 steps in trials 85-89 where the feature stays off. 'value < 5.22' is the same thing: it only happens at ep_trial >= 80.",
+      "A small systematic class of misses is not covered: D1 after a common-unrewarded trial, especially a2 to S2 unrewarded (good=S1) followed by a switch to a1, and a1 to S1 unrewarded. Activations reach up to 0.86 of max. prev_common==1 holds 4.3% of the mass.",
+      "Test F1 is 0.790, below the 0.8 bar. Recording 'explained' from dev F1 alone (0.805) is not justified. I tried variants and none clears the bar on test: choice>2.78 in place of action==1 gives test F1 0.798, and ep_trial>=84 with prev_action!=2 gives 0.780.",
+      "Confirmed claims: D1 only (0 activations at GO or D2), never after a rewarded trial (0 of 740k steps with prev_reward==1), 99.6% of the mass before an a1 choice, nothing before trial 70 (9 steps in trials 70-79), and 87% of the mass in trials 90-99."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "Late-episode D1 (ramping up from about trial 85) after an a1 choice reached S2 and went unrewarded; the agent then repeats a1",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "Late-episode D1 (ramping up from about trial 85) after an a1 choice reached S2 and went unrewarded; the agent then repeats a1",
+  "scorecard": {
+    "format": "top40",
+    "summary": "Weighted combination of 40 cues. Raise it: phase=D1 & value_bin=decile 0 (9 = highest) (+4.67), phase=D1 & ep_dec=9 (+4.04), phase=D1 & choice_bin=decile 8 (9 = most a1) (+3.29), phase=D1 & choice_bin=decile 7 (9 = most a1) (+3.08), phase=D1 & ep_dec=8 (+2.84), ep_dec=9 (+2.32). Lower it: in_rew=1 (-6.48), prev_state=1 (-3.13), action=2 (-2.72), rel=1 (-2.17).",
+    "test_f1": 0.8009644892590969,
+    "test_precision": 0.8860329776915616,
+    "test_recall": 0.7308,
+    "full_test_f1": 0.8006121556624398,
+    "full_n_cues": 44,
+    "top40_test_f1": 0.8009644892590969,
+    "slot2_test_f1": 0.7573879457468786,
+    "slot2_slots": [
+      "last trial",
+      "policy (model)"
+    ],
+    "file": "scorecards/hidden_60.json"
+  }
+}

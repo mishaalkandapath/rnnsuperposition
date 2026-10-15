@@ -1,0 +1,67 @@
+{
+  "label": "End-of-episode D1 after first a2-S2 unrewarded trial, stronger when belief favours S2",
+  "terms": "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) != 0) * (ep_trial >= 94) ;; (phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) != 0) * (ep_trial >= 94) * belief_lo ;; (phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) != 0) * (ep_trial >= 90) * (ep_trial < 94) ;; (phase == D1) * (trial == 0) * (prev_reward == 0) * (ep_trial >= 94)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Very sparse feature (nonzero on 0.1% of steps), active only at D1 in the last few episode trials. Its magnitude (up to ~0.28) is set by: previous trial a2 -> S2 common and unrewarded, where the trial before was not also unrewarded (a second unrewarded a2-S2 in a row barely fires), and ep_trial >= 94 (small at 90-93, zero earlier). Within those events it is larger the more the ideal observer believes S2 is good (negative weight on belief_lo), i.e. a surprising omission at the believed-good state near the end of the episode. A small term covers window-start D1 with no reward shown late in the episode (the previous trial is unknown there, so it is only partly predictable). GO and D2 are always zero. Observed-only terms give dev R^2 beyond timing 0.62; the profile ceilings are low (all = all observed = 0.04) because its cues are not conjunctive. The earlier model-based label (low value, policy toward a2) is replaced here by belief_lo plus the late-episode window, and observed-only loses nothing measurable on dev. Remaining misses are mostly windows where the previous trial is unknown, or late a2-S2 omissions that do not fire.",
+  "gate": "update",
+  "feature": 113,
+  "test_scores": {
+    "gate": "update",
+    "feature": 113,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) != 0) * (ep_trial >= 94)",
+      "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) != 0) * (ep_trial >= 94) * belief_lo",
+      "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) != 0) * (ep_trial >= 90) * (ep_trial < 94)",
+      "(phase == D1) * (trial == 0) * (prev_reward == 0) * (ep_trial >= 94)"
+    ],
+    "weights": [
+      0.14740079076028628,
+      -0.0474110562425999,
+      0.03469968699331766,
+      0.02468190286623767
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6022408265580765,
+    "r2": 0.6176478097475433,
+    "r2_timing_only": 0.03873445093961181
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 113,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) != 0) * (ep_trial >= 94)",
+      "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) != 0) * (ep_trial >= 94) * belief_lo",
+      "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) != 0) * (ep_trial >= 90) * (ep_trial < 94)",
+      "(phase == D1) * (trial == 0) * (prev_reward == 0) * (ep_trial >= 94)"
+    ],
+    "weights": [
+      0.14740079076028628,
+      -0.0474110562425999,
+      0.03469968699331766,
+      0.02468190286623767
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6181767770061796,
+    "r2": 0.6327067824729233,
+    "r2_timing_only": 0.038054273788838855
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The claim 'a second unrewarded a2-S2 in a row barely fires' is too literal. The tv('reward',-2) != 0 factor stands in for belief, and the real rule depends on which state the earlier trial reached. Splitting it (test, ep_trial >= 94, previous trial a2 S2 u) gives these weights. Two trials back S2 unrewarded: about 0 (-0.008). S1 unrewarded: +0.057. S2 rewarded: +0.165. S1 rewarded: only +0.038. So after an unrewarded S1 visit it still fires strongly, and after a rewarded S1 visit it barely fires. misses shows this directly: an unrewarded a2 S1R followed by an unrewarded a2 S2c fires 0.20 at t96 and 0.16 at t99, while the prediction is 0.008.",
+      "The tv(-2) factor adds little once belief is included. Dropping it (last_is a2 S2 u x time ramp x belief terms) still gives 0.59 test, against 0.60 with it. Belief, not the trial before, carries this effect. The belief effect itself is real: removing the belief_lo term drops test from 0.60 to 0.43. It works more like a step at belief < 0.5 than a graded effect: weights by belief bin are about 0.15-0.20 for 0.2-0.5 and 0.05 for >= 0.5.",
+      "Timing is a ramp, not a step at trial 94. Fitted per-bin weights for the event (test) are: 84-87: 0.000, 88-89: 0.002, 90-91: 0.012, 92: 0.049, 93: 0.067, 94-95: 0.122, 96-97: 0.142, 98-99: 0.140. Calling trials 90-93 'about 0.035' hides a rise from 0.01 to 0.07. misses shows a t93 event at 0.27 predicted as 0.04.",
+      "A systematic error class remains: D1 at the window start (trial 0, no reward shown, late in the episode). These cells reach about 0.25-0.28 but are predicted at 0.03-0.06. They lead the worst-fit list both with the original terms and with mine. The explanation admits this, but it is a concentrated class, not scattered noise.",
+      "Smaller points that do check out: activity only at D1, GO and D2 always zero, nonzero on 0.1% of steps, belief favouring S2 raises it. Test R^2 0.60 reproduces exactly."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Late-episode D1 after an unrewarded common a2->S2 trial when the ideal observer still favours S2 (belief < 0.5); ramps up from trial ~90 to a plateau at 94+",
+    "better_terms": "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) != 0) * np.clip(ep_trial - 89, 0, 6) ;; (phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) != 0) * np.clip(ep_trial - 89, 0, 6) * belief_lo ;; (phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) != 0) * (ep_trial >= 90) * (belief < 0.5) ;; (phase == D1) * (trial == 0) * (prev_reward == 0) * np.clip(ep_trial - 89, 0, 6) ;; (phase == D1) * (trial == 0) * (prev_reward == 0) * np.clip(ep_trial - 89, 0, 6) * (belief < 0.5) ;; (phase == D1) * (trial == 0) * (prev_reward == 0) * np.clip(ep_trial - 89, 0, 6) * belief_lo",
+    "better_terms_test_r2_beyond_timing": 0.637
+  },
+  "final_label": "Late-episode D1 after an unrewarded common a2->S2 trial when the ideal observer still favours S2 (belief < 0.5); ramps up from trial ~90 to a plateau at 94+"
+}

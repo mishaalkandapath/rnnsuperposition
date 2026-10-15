@@ -1,0 +1,114 @@
+{
+ "label": "Late-episode D1 activation grows after recent S1 visits via a1 and S1-favouring belief.",
+ "short_terms": "(phase == D1) * (prev_action + prev_state + tv('action', -2) + tv('state', -2) == 4) * np.exp((ep_trial - 99) / 10) ;; (phase == D1) * (prev_state == 2) * np.exp((ep_trial - 99) / 10) ;; (phase == D1) * belief_lo * np.exp((ep_trial - 99) / 10)",
+ "terms": "(phase == D1) * (prev_state == 1) * np.exp((ep_trial - 99) / 8) ;; (phase == D1) * (prev_state == 1) * (tv(\"state\", -2) == 1) * np.exp((ep_trial - 99) / 8) ;; (phase == D1) * (prev_state == 1) * (prev_action == 1) * np.exp((ep_trial - 99) / 8) ;; (phase == D1) * (prev_state == 1) * (tv(\"action\", -2) == 1) * np.exp((ep_trial - 99) / 8) ;; (phase == D1) * (prev_state == 1) * (ep_trial >= 85) ;; (phase == D1) * (prev_state == 1) * (tv(\"state\", -2) == 1) * (ep_trial >= 85) ;; (phase == D1) * belief_lo * np.exp((ep_trial - 99) / 8) ;; (phase == D1) * (tv(\"state\", -2) == 1) * np.exp((ep_trial - 99) / 8)",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Fires only at D1 and only in the last ~20 trials of the episode (timing baseline ramps steeply toward trial 99). Beyond timing, its magnitude is gated by the recent history: large when the previous trial was a1 reaching S1 and when the last two trials both reached S1, and it scales with the ideal-observer log-odds that S1 is good; after reaching S2 it is near zero. Reward of the previous trial adds little once state/choice are known. The interaction with an exponential late-episode ramp is essential (plain additive history tables score only ~0.1). The free fit adds the trial-before choice and a step at trial 85 for ~0.07 more R^2. No GO/D2 activity.",
+ "full_test_scores": {
+  "gate": "hidden",
+  "feature": 222,
+  "terms": [
+   "(phase == D1) * (prev_state == 1) * np.exp((ep_trial - 99) / 8)",
+   "(phase == D1) * (prev_state == 1) * (tv(\"state\", -2) == 1) * np.exp((ep_trial - 99) / 8)",
+   "(phase == D1) * (prev_state == 1) * (prev_action == 1) * np.exp((ep_trial - 99) / 8)",
+   "(phase == D1) * (prev_state == 1) * (tv(\"action\", -2) == 1) * np.exp((ep_trial - 99) / 8)",
+   "(phase == D1) * (prev_state == 1) * (ep_trial >= 85)",
+   "(phase == D1) * (prev_state == 1) * (tv(\"state\", -2) == 1) * (ep_trial >= 85)",
+   "(phase == D1) * belief_lo * np.exp((ep_trial - 99) / 8)",
+   "(phase == D1) * (tv(\"state\", -2) == 1) * np.exp((ep_trial - 99) / 8)"
+  ],
+  "weights": [
+   -0.3359887212088091,
+   1.2451256373394022,
+   1.0627143153824345,
+   -0.5866384990491506,
+   -0.020353505104428557,
+   0.21640028444267914,
+   0.10432795252118407,
+   -0.5691469488854181
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.47556042759065864,
+  "r2": 0.5798982118035196,
+  "r2_timing_only": 0.19895101304716567
+ },
+ "gate": "hidden",
+ "feature": 222,
+ "test_scores": {
+  "gate": "hidden",
+  "feature": 222,
+  "terms": [
+   "(phase == D1) * (prev_action + prev_state + tv('action', -2) + tv('state', -2) == 4) * np.exp((ep_trial - 99) / 10)",
+   "(phase == D1) * (prev_state == 2) * np.exp((ep_trial - 99) / 10)",
+   "(phase == D1) * belief_lo * np.exp((ep_trial - 99) / 10)"
+  ],
+  "weights": [
+   1.169609111975165,
+   -0.39359261563375925,
+   0.08192045701752015
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5124426925847559,
+  "r2": 0.6094427128135671,
+  "r2_timing_only": 0.19895101304716567
+ },
+ "dev_scores": {
+  "gate": "hidden",
+  "feature": 222,
+  "terms": [
+   "(phase == D1) * (prev_action + prev_state + tv('action', -2) + tv('state', -2) == 4) * np.exp((ep_trial - 99) / 10)",
+   "(phase == D1) * (prev_state == 2) * np.exp((ep_trial - 99) / 10)",
+   "(phase == D1) * belief_lo * np.exp((ep_trial - 99) / 10)"
+  ],
+  "weights": [
+   1.169609111975165,
+   -0.39359261563375925,
+   0.08192045701752015
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.5189740292664097,
+  "r2": 0.6191244128693307,
+  "r2_timing_only": 0.20820161425002992
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The recorded short form leaves a systematic error after S2. Its misses show D1 over-predicted after every S2 outcome: a1 S2 u -0.067, a2 S2 u -0.055, a1 S2 r -0.045. The second and third terms (two-back S1, belief_lo) still give a positive prediction on the D1 right after an S2 visit, when the actual value is ~0. Example: t96 a1 S1c, then t97 a1 S2R gives actual 0 vs predicted 0.6. The explanation says the feature is near zero after S2, but the short form does not encode that.",
+   "Replacing the recorded short form helps a lot. Using 'last two trials both a1->S1' plus an explicit S2-suppression term, with ramp scale 10, gives test 0.512. That is above the recorded 0.405 and above the claimed free fit of 0.476. The recorded form is not the best short description.",
+   "The 'two S1 visits' term is really about a1 reaching S1. On test, prev_state==1 alone scores 0.13, while prev_action+prev_state==2 (a1 reached S1) scores 0.32. Previous a2 reaching S1 (rare) has a negative residual (-0.035 rewarded, -0.047 unrewarded). Requiring a1 too (prev_action + prev_state + tv('state',-2) == 3) gives 0.509, against 0.464 for the pure two-S1-states version.",
+   "The belief_lo claim is weak. belief_lo*ramp alone scores 0.22 on test, but that largely overlaps with recent S1 visits. In the improved form belief_lo is a minor term (weight 0.08 vs 1.17 for the history term); dropping it costs 0.512 -> 0.463.",
+   "The claim that previous reward adds little checks out. Adding a1 S1 rewarded as a term lowered test R^2 (0.392 vs 0.440). Using a prev_reward ramp term instead of belief also scored lower (0.486).",
+   "The ramp shape is fitted. Scale 8 vs 10 vs 12 changes test by ~0.01-0.03. The ramp is a plausible description of the late-episode onset, but the exact constant is a fitted choice.",
+   "Remaining misses with the improved form are small and spread out. The largest are D1 after a2 S1 r at -0.039 and after a1 S2 u at -0.034, and mean D1 error is -0.001."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Late-episode D1: high after two consecutive a1->S1 trials, suppressed right after reaching S2.",
+  "better_short_terms": "(phase == D1) * (prev_action + prev_state + tv('action', -2) + tv('state', -2) == 4) * np.exp((ep_trial - 99) / 10) ;; (phase == D1) * (prev_state == 2) * np.exp((ep_trial - 99) / 10) ;; (phase == D1) * belief_lo * np.exp((ep_trial - 99) / 10)",
+  "better_short_terms_test_r2_beyond_timing": 0.5124426925847559
+ },
+ "final_label": "Late-episode D1: high after two consecutive a1->S1 trials, suppressed right after reaching S2.",
+ "original_short_terms": "(phase == D1) * (prev_action + prev_state == 2) * np.exp((ep_trial - 99) / 8) ;; (phase == D1) * (prev_state + tv(\"state\", -2) == 2) * np.exp((ep_trial - 99) / 8) ;; (phase == D1) * belief_lo * np.exp((ep_trial - 99) / 8)",
+ "original_test_scores": {
+  "gate": "hidden",
+  "feature": 222,
+  "terms": [
+   "(phase == D1) * (prev_action + prev_state == 2) * np.exp((ep_trial - 99) / 8)",
+   "(phase == D1) * (prev_state + tv(\"state\", -2) == 2) * np.exp((ep_trial - 99) / 8)",
+   "(phase == D1) * belief_lo * np.exp((ep_trial - 99) / 8)"
+  ],
+  "weights": [
+   0.49983464205927314,
+   0.6401554779551396,
+   0.10564594167773192
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.4054301306880569,
+  "r2": 0.5237204085149889,
+  "r2_timing_only": 0.19895101304716567
+ },
+ "terms_from": "skeptic"
+}

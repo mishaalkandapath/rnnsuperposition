@@ -1,0 +1,114 @@
+{
+ "label": "Fires at D2 after choosing a1, mainly reaching S1, when recent trials went unrewarded.",
+ "short_terms": "(in_action == 1) * (in_state == 1) * (prev_reward == 0) ;; (in_action == 1) * (in_state > 0) * last_is(\"a2 S2 u\") ;; (in_action == 1) * (in_state > 0) * (tv(\"reward\", -2) == 0)",
+ "terms": "(in_state == 1) * (in_action == 1) * (prev_reward == 0) ;; (in_state == 2) * (in_action == 1) * (prev_reward == 0) ;; (in_state == 1) * (in_action == 1) ;; (in_state > 0) * (in_action == 1) * (prev_action == 1) ;; (in_state > 0) * (in_action == 1) * (prev_state == 2) ;; (in_state > 0) * (in_action == 1) * (tv(\"reward\", -2) == 0) ;; (in_state > 0) * (in_action == 1) * (prev_reward == 0) * (prev_action == 1) * (prev_state == 1) ;; (in_state > 0) * (in_action == 1) * ep_dec",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Zero at D1 and GO; only active at D2. The dominant driver is choosing a1 and reaching S1 (common) when the previous trial was unrewarded (weight ~1, vs ~0 when previously rewarded). Reaching S2 after a1 with previous unrewarded gives a weaker response; after choosing a2 it stays near zero. An unrewarded trial two back adds further. Belief log-odds adds nothing beyond these. The free fit adds small corrections (lower if previous trial was also a1, higher if previous state was S2, slight decay over the episode). All terms are observed at D2 (this trial choice and reached state are inputs).",
+ "full_test_scores": {
+  "gate": "reset",
+  "feature": 56,
+  "terms": [
+   "(in_state == 1) * (in_action == 1) * (prev_reward == 0)",
+   "(in_state == 2) * (in_action == 1) * (prev_reward == 0)",
+   "(in_state == 1) * (in_action == 1)",
+   "(in_state > 0) * (in_action == 1) * (prev_action == 1)",
+   "(in_state > 0) * (in_action == 1) * (prev_state == 2)",
+   "(in_state > 0) * (in_action == 1) * (tv(\"reward\", -2) == 0)",
+   "(in_state > 0) * (in_action == 1) * (prev_reward == 0) * (prev_action == 1) * (prev_state == 1)",
+   "(in_state > 0) * (in_action == 1) * ep_dec"
+  ],
+  "weights": [
+   1.0236701938779822,
+   0.35957275667673416,
+   0.1408420244496832,
+   -0.18585171341936815,
+   0.09222290624611966,
+   0.29096570859122184,
+   -0.3374456816630176,
+   -0.018398450550409885
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6939602057907371,
+  "r2": 0.7264518471073371,
+  "r2_timing_only": 0.10616802759442123
+ },
+ "gate": "reset",
+ "feature": 56,
+ "test_scores": {
+  "gate": "reset",
+  "feature": 56,
+  "terms": [
+   "(in_action == 1) * (in_state == 1) * (prev_reward == 0)",
+   "(in_action == 1) * (in_state > 0) * last_is(\"a2 S2 u\")",
+   "(in_action == 1) * (in_state > 0) * (tv(\"reward\", -2) == 0)"
+  ],
+  "weights": [
+   0.8409998663248692,
+   1.0928035664625129,
+   0.1207814735961647
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7024835976232335,
+  "r2": 0.734070327240563,
+  "r2_timing_only": 0.10616802759442123
+ },
+ "dev_scores": {
+  "gate": "reset",
+  "feature": 56,
+  "terms": [
+   "(in_action == 1) * (in_state == 1) * (prev_reward == 0)",
+   "(in_action == 1) * (in_state > 0) * last_is(\"a2 S2 u\")",
+   "(in_action == 1) * (in_state > 0) * (tv(\"reward\", -2) == 0)"
+  ],
+  "weights": [
+   0.8409998663248692,
+   1.0928035664625129,
+   0.1207814735961647
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.698999010088303,
+  "r2": 0.7309399134720614,
+  "r2_timing_only": 0.10611560909859041
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The label leaves out the main driver: switching to a1 after an a2 -> S2 unrewarded trial. In the profile's D2 residuals, choice x state code 4 (a1 to S1) is +0.28, and the previous-trial rows 'a1 S2 u' (+0.67) and 'a2 S2 u' (+0.22) are the only large positive cells. In the worst-fit examples, a1 S1c after a2 S2 u has actual activation of about 2.5-2.9 while the recorded form predicts about 1.0-1.3. After a1 S1 u the activation is only about 1.0.",
+   "Misses on the recorded short form show systematic errors. It under-predicts D2 after a2 S2 u (+0.095) and over-predicts D2 after a1 S1 u (-0.286). It treats every unrewarded previous trial the same, but what matters is which state went unrewarded.",
+   "Adding the term (in_action==1)*(in_state>0)*last_is('a2 S2 u') to the first term alone gives test 0.696 (weights 0.86 and 1.16). That beats the recorded 0.611 and matches the free fit's 0.694. The recorded second term, the generic 'a1 after an unrewarded trial' term, then gets a weight of about 0.05 and does nothing.",
+   "Once last_is('a2 S2 u') is in the fit, the claim that 'a1 leading to S2 after an unrewarded trial fires more weakly' falls apart: the in_state==2 term's weight drops to 0.046. Firing on a1 -> S2 mostly reflects switches after S2 went unrewarded.",
+   "A previous-state-only version also helps: (in_action==1)*(prev_state==2)*(prev_reward==0) scores 0.617-0.643 on test. The full previous pattern (a2 S2 u) is better.",
+   "The claim that the trial two back adds a little holds up. Added to the new form it raises test R^2 only from 0.696 to 0.702 (weight 0.12). Belief log-odds adds nothing (0.589 vs 0.611), as the explanation says.",
+   "No future variables are used. Every term is observable at D2."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At D2 after choosing a1 and reaching S1 following an unrewarded trial; strongest after a2-S2-unrewarded.",
+  "better_short_terms": "(in_action == 1) * (in_state == 1) * (prev_reward == 0) ;; (in_action == 1) * (in_state > 0) * last_is(\"a2 S2 u\") ;; (in_action == 1) * (in_state > 0) * (tv(\"reward\", -2) == 0)",
+  "better_short_terms_test_r2_beyond_timing": 0.7025
+ },
+ "final_label": "At D2 after choosing a1 and reaching S1 following an unrewarded trial; strongest after a2-S2-unrewarded.",
+ "original_short_terms": "(in_state == 1) * (in_action == 1) * (prev_reward == 0) ;; (phase == D2) * (in_action == 1) * (prev_reward == 0) ;; (phase == D2) * (in_action == 1) * (tv(\"reward\", -2) == 0)",
+ "original_test_scores": {
+  "gate": "reset",
+  "feature": 56,
+  "terms": [
+   "(in_state == 1) * (in_action == 1) * (prev_reward == 0)",
+   "(phase == D2) * (in_action == 1) * (prev_reward == 0)",
+   "(phase == D2) * (in_action == 1) * (tv(\"reward\", -2) == 0)"
+  ],
+  "weights": [
+   0.8124634563994342,
+   0.12601906213390757,
+   0.2212653186886242
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6106098978522809,
+  "r2": 0.6519506769620944,
+  "r2_timing_only": 0.10616802759442123
+ },
+ "terms_from": "skeptic"
+}

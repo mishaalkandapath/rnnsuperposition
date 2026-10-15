@@ -1,0 +1,79 @@
+{
+  "label": "D1 update-gate dip after a1 led rarely to S2, scaled by a1 preference",
+  "terms": "(phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a1 S2 r\") ;; (phase == D1) * last_is(\"a1 S2 u\") * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 2) ;; (phase == D1) * isin(prev_state,[1]) ;; (phase == D1) * (prev_action==1) * (prev_state==2) * ep_trial ;; (phase == D1) * choice ;; (phase == D1) * (prev_action == 1) * (prev_state==2) * choice",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw update gate z43 sits near 1 (mean 0.987); GO and D2 barely vary. Its magnitude is set at D1 by the previous trial: after a1 led rarely to S2, z drops a lot (about -0.17 if unrewarded, -0.10 if rewarded, relative to timing). The drop is deeper when the trial before was also a1 -> S2, and it grows later in the episode. After the previous trial reached S1, z is slightly higher (+0.02). Other histories (a2 trials, a1 S1) give little change. Within a1 -> S2 histories, the D1 dip scales with the model policy logit at D1 (a stronger a1 preference means lower z); a main D1 policy term adds a little more. Two prev-trial indicators alone give dev R^2 0.61 beyond timing; adding the a1 S2 repeat, the S1 term and the ep_trial slope (observed cues only) gives 0.66 dev; adding the D1 policy-logit terms (model output, not future) gives 0.76 dev / 0.753 test, above the additive all ceiling of 0.74. No future variables used. Remaining misses: D1 dips on the first trial of a window, where the previous trial is unknown.",
+  "gate": "unit_update",
+  "feature": 43,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 43,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 2)",
+      "(phase == D1) * isin(prev_state,[1])",
+      "(phase == D1) * (prev_action==1) * (prev_state==2) * ep_trial",
+      "(phase == D1) * choice",
+      "(phase == D1) * (prev_action == 1) * (prev_state==2) * choice"
+    ],
+    "weights": [
+      0.1628860411079739,
+      0.023791727001852045,
+      -0.037091521043365674,
+      0.025854121884811874,
+      -0.0008548220876979036,
+      -0.004446795207446693,
+      -0.04496647966893194
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7525848154772,
+    "r2": 0.7817855830249022,
+    "r2_timing_only": 0.11802334446053897
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 43,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 2)",
+      "(phase == D1) * isin(prev_state,[1])",
+      "(phase == D1) * (prev_action==1) * (prev_state==2) * ep_trial",
+      "(phase == D1) * choice",
+      "(phase == D1) * (prev_action == 1) * (prev_state==2) * choice"
+    ],
+    "weights": [
+      0.1628860411079739,
+      0.023791727001852045,
+      -0.037091521043365674,
+      0.025854121884811874,
+      -0.0008548220876979036,
+      -0.004446795207446693,
+      -0.04496647966893194
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7585440794656801,
+    "r2": 0.7867353110454687,
+    "r2_timing_only": 0.11675518876242041
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the dip comes from the interaction of the a1->S2 indicator with the D1 policy logit, not from the indicator alone. The fitted weight on last_is('a1 S2 u') is +0.163 and the weight on (prev a1->S2)*choice is -0.045. 'Scaled by a1 preference' is accurate, but the policy logit is a model output, so the explanation is partly in terms of the network's own output. Without the logit terms, observed-only terms reach 0.652 on test, against an all-observed ceiling of 0.70.",
+      "Checked each claim on test. The two a1->S2 indicators alone give 0.594. Adding the two-in-a-row a1->S2 term gives 0.602 (+0.007), the slope over episode trial 0.609 (+0.015), the prev-state S1 term 0.630 (+0.036), and the logit terms 0.674. All have the claimed effect, but the two-in-a-row and episode-trial effects are small.",
+      "The residual tables match the stated numbers: at D1, a1 S2 u -0.165 and a1 S2 r -0.098; after S1 about +0.02; a2 histories +0.006 to +0.028. At GO, and at D2 apart from small effects after a1 histories (down to -0.01 after a1 S2 u), magnitudes stay within about 0.01.",
+      "Misses: mean error by phase is at most 0.005. The worst (phase, previous trial) cells are D1 after a2 S1 u (-0.022 over-predicted) and D1 after a2 S2 r / a1 S1 r (+0.009). The largest single misses are deep D1 dips (around 0.65 vs 0.93 predicted) on a window's first trial, where the previous trial is unknown. The D1 policy logit does not predict these either: adding (prev unknown)*max(choice,0) leaves test R^2 at 0.753.",
+      "A few dips after a2 S2 trials appear in the misses (e.g. 0.74 after a2 S2 common unrewarded). Adding an a2->S2 x policy-logit term only reaches 0.757 on test, so this is not a large systematic class.",
+      "Reported test R^2 of 0.7526 reproduced exactly. It is above the additive ceiling of 0.74. No future variables are used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 update-gate dip after a1 led rarely to S2 (deeper if unrewarded), scaled by the D1 a1 policy logit (model output)",
+    "better_terms": "(phase == D1) * last_is('a1 S2 u') ;; (phase == D1) * last_is('a1 S2 r') ;; (phase == D1) * last_is('a1 S2 u') * (tv('action', -2) == 1) * (tv('state', -2) == 2) ;; (phase == D1) * isin(prev_state,[1]) ;; (phase == D1) * (prev_action==1) * (prev_state==2) * ep_trial ;; (phase == D1) * choice ;; (phase == D1) * (prev_action == 1) * (prev_state==2) * choice ;; (phase==D1)*(prev_action==1)*(prev_state==2)*np.maximum(choice,0)**2",
+    "better_terms_test_r2_beyond_timing": 0.759
+  },
+  "final_label": "D1 update-gate dip after a1 led rarely to S2 (deeper if unrewarded), scaled by the D1 a1 policy logit (model output)"
+}

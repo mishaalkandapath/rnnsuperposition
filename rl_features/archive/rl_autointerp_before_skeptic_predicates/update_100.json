@@ -1,0 +1,63 @@
+{
+  "label": "GO step late in episode (trial >= ~83) after a rewarded trial, when the policy strongly favors a2",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (choice < -8) & (ep_trial >= 83)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO (never D1/D2), only when the previous trial was rewarded (in_rew=0 at GO, prev_reward=1 in 18647/18652), only when the agent is about to choose a2 (action=2 in all but 1 activation; policy logit a1-a2 < -8 for ~97%), and only late in the episode (ep_trial >= 80, essentially none before trial 79; rate jumps after ~82, so it behaves like a time-in-episode clock combined with a confident rewarded-a2 policy). Uses only observed variables: prev_reward, the model own policy logit at GO, and trial index; the upcoming action==2 version (F1 0.85) is weaker than the policy-logit version. Magnitude grows with consecutive rewarded a2 trials (activations ramp within a window across successive rewarded a2 GO steps) and with low value. Does not fire after unrewarded trials, on a1 choices, or on any trial before ~79. Dev: P 0.92 R 0.93 F1 0.93 mass recall 0.98.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 100,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (choice < -8) & (ep_trial >= 83)",
+    "split": "test",
+    "precision": 0.9141615356754799,
+    "recall": 0.9451666399186861,
+    "f1": 0.929405576012625,
+    "mass_recall": 0.9805708538208613,
+    "correlation": 0.8189201453451362,
+    "n_active": 18693,
+    "n_predicted": 19327,
+    "coverage_by_activation_quartile": [
+      0.8354728284124947,
+      0.9728225979028461,
+      0.9779584849133319,
+      0.9944361224053071
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 100,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (choice < -8) & (ep_trial >= 83)",
+    "split": "dev",
+    "precision": 0.924997344098587,
+    "recall": 0.9336264207591679,
+    "f1": 0.929291851219382,
+    "mass_recall": 0.9802173529973988,
+    "correlation": 0.8307186327122104,
+    "n_active": 18652,
+    "n_predicted": 18826,
+    "coverage_by_activation_quartile": [
+      0.7834012438344413,
+      0.9749088569590393,
+      0.9800557580956466,
+      0.9961398241475445
+    ]
+  },
+  "gate": "update",
+  "feature": 100,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Every factual claim held up. All activation is at GO (D1 and D2 have 0 of 380619 each). 18647 of 18652 activations have prev_reward==1. action==2 on 18651 of 18652. Choice is below -8.91 on 81% and below -4.44 on all but 4. There are 0 activations before trial 70 and 99 in trials 70-79. Dev F1 is 0.929 and test F1 is 0.929, matching the reported scores.",
+      "The threshold is tuned but robust. ep_trial>=80 gives F1 0.886 and >=85 gives 0.909. choice<-6 gives 0.899. Using action==2 instead of the logit gives 0.855, as claimed.",
+      "The 'late in episode' part is better captured by the model's value output than by the trial index. Replacing ep_trial>=83 with value<6.2 raises test F1 from 0.929 to 0.953 (precision 0.943, recall 0.963, mass recall 0.984). At GO, value<6.2 never occurs before trial 70 (0 steps predicted), so the two variables are confounded. Value probably acts as a countdown to the end of the episode. Treat 'episode clock' as interchangeable with 'low predicted value', which fits the 89%-of-mass-in-the-lowest-value-bin observation.",
+      "Misses and false positives on the test split look like scattered noise rather than a pattern. 1025 missed steps hold only 1.9% of the activation mass; they are mostly weak activations (0.02-0.35 of max) at window edges or with borderline logits. The 1659 false positives are a2 GO steps after a reward that sit near the thresholds. No systematic class by phase, transition, reward pattern or good state remains.",
+      "The magnitude claim (activation rises over consecutive rewarded a2 GO steps) is supported by the example windows but was not fit, as the explanation itself says. This does not overclaim."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == GO) & (prev_reward == 1) & (choice < -8) & (value < 6.2)",
+    "better_predicate_test_f1": 0.953
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "label": "D2 dip after choosing a1, deeper when belief favours S1; D1 dip after a1->S2",
+  "terms": "(phase == D2) * (action == 2) ;; (phase == D2) * np.tanh(belief_lo/2) ;; (phase == D2) * (action == 2) * np.tanh(belief_lo/2) ;; (phase == D1) * (prev_action == 2) ;; (phase == D1) * last_is(\"a1 S2 r\") + (phase == D1) * last_is(\"a1 S2 u\") ;; (phase != D2) * np.tanh(belief_lo/2) ;; (phase == D2) * (prev_reward == 1) ;; (phase == D2) * last_is(\"a1 S1 u\")",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 18: near 0.92-0.97 at D1/GO, dips to ~0.65 at D2 (timing R^2 0.59). Beyond timing, the D2 value is set mainly by the choice just made (observed at D2) and the ideal-observer belief: after choosing a1 z drops further, steeply with belief that S1 is good (tanh(belief_lo/2) slope ~-0.24); after a2 it stays high and is nearly belief-independent (slope ~-0.04). D2 is also higher when the previous trial was rewarded and lower after an a1->S1 unrewarded previous trial. At D1, z is lower after the previous trial was a1->S2 (either reward) and slightly higher after a2; at D1/GO a small negative belief slope. Observed-only 8 terms: test R^2 beyond timing 0.84 (dev 0.85), vs all-observed ceiling 0.90 and all ceiling 0.97; the policy-decile table alone gave 0.83, so dropping model outputs loses essentially nothing. No future variables used; the hidden good state or since_rev add nothing beyond belief.",
+  "gate": "unit_update",
+  "feature": 18,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 18,
+    "terms": [
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * np.tanh(belief_lo/2)",
+      "(phase == D2) * (action == 2) * np.tanh(belief_lo/2)",
+      "(phase == D1) * (prev_action == 2)",
+      "(phase == D1) * last_is(\"a1 S2 r\") + (phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase != D2) * np.tanh(belief_lo/2)",
+      "(phase == D2) * (prev_reward == 1)",
+      "(phase == D2) * last_is(\"a1 S1 u\")"
+    ],
+    "weights": [
+      0.09608414721154239,
+      -0.24294480196519636,
+      0.19949675979948833,
+      0.03582357601203362,
+      -0.08556362124901419,
+      -0.01992022018362698,
+      0.06590726714234027,
+      -0.14293037565511194
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8408123049917318,
+    "r2": 0.9344197103336007,
+    "r2_timing_only": 0.5880316649914865
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 18,
+    "terms": [
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * np.tanh(belief_lo/2)",
+      "(phase == D2) * (action == 2) * np.tanh(belief_lo/2)",
+      "(phase == D1) * (prev_action == 2)",
+      "(phase == D1) * last_is(\"a1 S2 r\") + (phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase != D2) * np.tanh(belief_lo/2)",
+      "(phase == D2) * (prev_reward == 1)",
+      "(phase == D2) * last_is(\"a1 S1 u\")"
+    ],
+    "weights": [
+      0.09608414721154239,
+      -0.24294480196519636,
+      0.19949675979948833,
+      0.03582357601203362,
+      -0.08556362124901419,
+      -0.01992022018362698,
+      0.06590726714234027,
+      -0.14293037565511194
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.849607062526905,
+    "r2": 0.9375514094759524,
+    "r2_timing_only": 0.584763808904128
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the explanation calls the D1 'slightly higher after a previous a2 choice' effect small, but it matters. Its weight is only +0.036, yet dropping it lowers test R^2 beyond timing from 0.841 to 0.733, the second-largest loss of any term. (The largest is the D2 action x belief interaction: dropping it gives 0.542.)",
+      "Minor: the residual misses are small but structured. The worst-fit windows are runs of unrewarded a1 trials, where actual z sits well below prediction in every phase (D2 about 0.36-0.44 actual vs 0.68-0.86 predicted). By (phase, previous trial), the largest systematic error is D2 after a1 S2 u at -0.055, and the next is D2 on the window's first trial ('?') at -0.030.",
+      "Swapping the last term (phase == D2) * last_is('a1 S1 u') for (phase == D2) * (prev_action == 1) * (prev_reward == 0) raises test R^2 only slightly, from 0.841 to 0.847. Streak terms, belief_cover and other belief scalings (tanh(belief_lo/k) with k = 1 or 4) give at most about 0.847. No large systematic gap remains: the observed-only ceiling is 0.90.",
+      "The factual claims check out on the test split. Timing alone gives R^2 0.59. At D2 the belief weight after choosing a1 is -0.243, and the net slope after a2 is about -0.04. The D1 effect after a previous a1->S2 trial is -0.086. The D2 weight for a previous reward is +0.066 and for a previous a1->S1 unrewarded trial is -0.143. The weight on belief outside D2 is -0.020. The policy-decile reference score is 0.83. No future variables are used: action and state are only used at D2, where they are already observed."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 dip after choosing a1, deeper when belief favours S1 (and after an unrewarded a1 trial); D1 dip after a1->S2, rise after a2",
+    "better_terms": "(phase == D2) * (action == 2) ;; (phase == D2) * np.tanh(belief_lo/2) ;; (phase == D2) * (action == 2) * np.tanh(belief_lo/2) ;; (phase == D1) * (prev_action == 2) ;; (phase == D1) * last_is('a1 S2 r') + (phase == D1) * last_is('a1 S2 u') ;; (phase != D2) * np.tanh(belief_lo/2) ;; (phase == D2) * (prev_reward == 1) ;; (phase == D2) * (prev_action == 1) * (prev_reward == 0)",
+    "better_terms_test_r2_beyond_timing": 0.8466
+  },
+  "final_label": "D2 dip after choosing a1, deeper when belief favours S1 (and after an unrewarded a1 trial); D1 dip after a1->S2, rise after a2"
+}

@@ -1,0 +1,83 @@
+{
+  "label": "late-episode update-gate drop, deeper when policy favours a1 / after a1 S2 u",
+  "terms": "np.maximum(ep_trial-80,0)**2*(phase==D2) ;; np.maximum(ep_trial-80,0)**2*(phase==GO) ;; np.maximum(ep_trial-80,0)*(phase==GO)*choice ;; np.maximum(ep_trial-80,0)*(phase==D2)*choice ;; (phase!=D1)*last_is(\"a1 S2 u\") ;; (phase==D2)*table(action,{1:-1,2:1}) ;; np.maximum(ep_trial-80,0)**2*(phase==D1) ;; np.maximum(ep_trial-80,0)*(phase==D1)*choice",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw z of unit 20 stays near 1 (saturated) for most of the episode. In the last ~20 trials it falls, most at D2, then GO, and least at D1. Timing alone gives R^2 0.58. The part beyond timing has three pieces. (1) A steeper within-decile ramp late in the episode, max(ep_trial-80,0)^2 per phase. (2) A late-episode interaction with the model policy logit(a1)-logit(a2): the more the policy favours a1, the lower z, strongest at D2. This is a model-internal quantity, not a future one. (3) Two history/choice effects that do not depend on episode time: z is lower at GO and D2 after a1 S2 unrewarded (about -0.06), and higher at D2 after choosing a2 than a1. Reward of the trial before, value, and the hidden good state add little; the good-state residual is mostly the choice effect. An observed-only version that replaces the policy logit with the action and the previous action scored dev 0.46. The 8 terms score dev 0.55 and test 0.57 beyond timing. This is above the additive all ceiling of 0.33 because the late-episode interactions are outside that ceiling. Many large residuals at t90-99 are left unexplained and look like episode-level variation.",
+  "gate": "unit_update",
+  "feature": 20,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 20,
+    "terms": [
+      "np.maximum(ep_trial-80,0)**2*(phase==D2)",
+      "np.maximum(ep_trial-80,0)**2*(phase==GO)",
+      "np.maximum(ep_trial-80,0)*(phase==GO)*choice",
+      "np.maximum(ep_trial-80,0)*(phase==D2)*choice",
+      "(phase!=D1)*last_is(\"a1 S2 u\")",
+      "(phase==D2)*table(action,{1:-1,2:1})",
+      "np.maximum(ep_trial-80,0)**2*(phase==D1)",
+      "np.maximum(ep_trial-80,0)*(phase==D1)*choice"
+    ],
+    "weights": [
+      -0.0008404605082703122,
+      -0.00023622242004640252,
+      -0.0007409307684586214,
+      -0.00419511057135497,
+      -0.0644195356852724,
+      0.026544903567882878,
+      -0.00010088623137477796,
+      -0.0009678642253154033
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5676342983123887,
+    "r2": 0.8175143530628948,
+    "r2_timing_only": 0.5779368108413167
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 20,
+    "terms": [
+      "np.maximum(ep_trial-80,0)**2*(phase==D2)",
+      "np.maximum(ep_trial-80,0)**2*(phase==GO)",
+      "np.maximum(ep_trial-80,0)*(phase==GO)*choice",
+      "np.maximum(ep_trial-80,0)*(phase==D2)*choice",
+      "(phase!=D1)*last_is(\"a1 S2 u\")",
+      "(phase==D2)*table(action,{1:-1,2:1})",
+      "np.maximum(ep_trial-80,0)**2*(phase==D1)",
+      "np.maximum(ep_trial-80,0)*(phase==D1)*choice"
+    ],
+    "weights": [
+      -0.0008404605082703122,
+      -0.00023622242004640252,
+      -0.0007409307684586214,
+      -0.00419511057135497,
+      -0.0644195356852724,
+      0.026544903567882878,
+      -0.00010088623137477796,
+      -0.0009678642253154033
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5483752345541695,
+    "r2": 0.8156338726184738,
+    "r2_timing_only": 0.5917714406128161
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The original 8 terms reproduce as claimed: 0.568 test R^2 beyond timing. Timing alone gives 0.578.",
+      "The 'finer timing ramp' caveat is overstated. The three max(ep_trial-80,0)^2 ramps on their own add only 0.020 beyond timing on test. Nearly all the gain comes from the late x policy-logit interaction: ramps plus late*choice give 0.478. Without the late weighting, choice gives only 0.222. So the policy claim holds.",
+      "A systematic gap was missed: a late-episode drop at GO after any unrewarded previous trial. Adding late*(GO)*(prev_reward==0) and late*(D2)*(prev_reward==0) raises the score from 0.478 to 0.553 (test). With the best 8-term set, the GO-unrewarded weight is -0.013 per trial past 80, about -0.25 by trial 99, and the generic GO ramp weight falls to about 0. The late GO drop is therefore mostly an 'after no reward' drop, not a pure timing ramp. The explanation's claim that the 'reward of the trial before adds little' is wrong for the previous trial's reward at GO.",
+      "Misses on the original terms point to the same gap. The most over-predicted cells are GO after a2 S2 u (-0.027), GO after a1 S2 u (-0.027) and GO after a1 S1 u (-0.019). The most under-predicted are GO after a2 S1 r, a1 S1 r and a2 S2 r (+0.018, +0.017, +0.013). The profile residuals also show that GO after any unrewarded trial is lower and after any rewarded trial is higher, so the effect is not specific to a1 S2 u.",
+      "The a1 S2 u effect checks out. It does not depend on episode time: a flat term gives 0.568 and a late-weighted one 0.561. It still holds (weight -0.056) after adding the general late-unrewarded terms. The D2 action effect also holds: dropping it lowers test R^2 to 0.526.",
+      "Large window-level misses at trials 90-99 remain in both term sets: GO actual 0.2-0.3 against predicted 0.6-0.7, and D1 actual 0.5-0.7 against predicted about 0.93. These look like episode-level variation that none of the variables capture, so confidence should stay medium."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "late-episode z drop (D2>GO>D1), deeper when policy favours a1 and, at GO, after an unrewarded trial; extra drop after a1 S2 u",
+    "better_terms": "np.maximum(ep_trial-80,0)**2*(phase==D2) ;; np.maximum(ep_trial-80,0)**2*(phase==GO) ;; np.maximum(ep_trial-80,0)*(phase==GO)*choice ;; np.maximum(ep_trial-80,0)*(phase==D2)*choice ;; np.maximum(ep_trial-80,0)*(phase==GO)*(prev_reward==0) ;; np.maximum(ep_trial-80,0)*(phase==D2)*(prev_reward==0) ;; (phase!=D1)*last_is(\"a1 S2 u\") ;; (phase==D2)*table(action,{1:-1,2:1})",
+    "better_terms_test_r2_beyond_timing": 0.6122
+  },
+  "final_label": "late-episode z drop (D2>GO>D1), deeper when policy favours a1 and, at GO, after an unrewarded trial; extra drop after a1 S2 u"
+}

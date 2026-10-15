@@ -1,0 +1,93 @@
+{
+  "label": "Late in the episode, D1 update gate drops sharply after reaching S2, less if rewarded.",
+  "short_terms": "(phase == D1) * (prev_state == 2) * np.exp((ep_trial-99)/4) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D1) * (prev_reward == 1) * np.exp((ep_trial-99)/4)",
+  "terms": "(phase == D1) * (prev_state == 2) * np.exp((ep_trial-99)/4) ;; (phase == D1) * (prev_action == 1) * np.exp((ep_trial-99)/4) ;; (phase == D1) * (prev_reward == 1) * np.exp((ep_trial-99)/4) ;; (phase == D1) * (tv(\"state\", -2) == 2) * np.exp((ep_trial-99)/4) ;; (phase == D1) * belief_lo * np.exp((ep_trial-99)/4) ;; (phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a1 S2 r\") ;; (phase == GO) * np.exp((ep_trial-99)/4) * (prev_state==2)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw z of unit 42 sits near 1 almost always; its variance is a D1 dip in the last ~10 trials of the episode (timing baseline). Beyond timing, the dip is much deeper when the previous trial reached S2 (the S2-state effect grows roughly exponentially toward trial 99), and somewhat smaller when the previous trial was rewarded; throughout the episode there is also a small constant D1 drop after an a1->S2 (rare) trial. GO and D2 barely vary. Belief, the choice being made and hidden/future variables add little. The free fit adds a few points with the state two trials back (fitted weight positive: S2 two trials back slightly offsets the dip late), belief_lo and a GO-phase late S2 term. Observed-only; the profile additive ceiling (0.17) is below this because it lacks the lateness interaction.",
+  "full_test_scores": {
+    "gate": "unit_update",
+    "feature": 42,
+    "terms": [
+      "(phase == D1) * (prev_state == 2) * np.exp((ep_trial-99)/4)",
+      "(phase == D1) * (prev_action == 1) * np.exp((ep_trial-99)/4)",
+      "(phase == D1) * (prev_reward == 1) * np.exp((ep_trial-99)/4)",
+      "(phase == D1) * (tv(\"state\", -2) == 2) * np.exp((ep_trial-99)/4)",
+      "(phase == D1) * belief_lo * np.exp((ep_trial-99)/4)",
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase == GO) * np.exp((ep_trial-99)/4) * (prev_state==2)"
+    ],
+    "weights": [
+      -0.36820517717334056,
+      -0.0125872752177995,
+      0.09290291553299954,
+      0.07675164785220102,
+      -0.008254175273157846,
+      -0.02954830532656184,
+      -0.028431804195608593,
+      -0.013946591472047737
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.45636265355124217,
+    "r2": 0.7746465019628188,
+    "r2_timing_only": 0.5854709035181738
+  },
+  "gate": "unit_update",
+  "feature": 42,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 42,
+    "terms": [
+      "(phase == D1) * (prev_state == 2) * np.exp((ep_trial-99)/4)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D1) * (prev_reward == 1) * np.exp((ep_trial-99)/4)"
+    ],
+    "weights": [
+      -0.3240853500093146,
+      -0.03175399639692066,
+      0.10063409019150722
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.41731662454717,
+    "r2": 0.7584607868385576,
+    "r2_timing_only": 0.5854709035181738
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 42,
+    "terms": [
+      "(phase == D1) * (prev_state == 2) * np.exp((ep_trial-99)/4)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D1) * (prev_reward == 1) * np.exp((ep_trial-99)/4)"
+    ],
+    "weights": [
+      -0.3240853500093146,
+      -0.03175399639692066,
+      0.10063409019150722
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.43645160483739565,
+    "r2": 0.773818952949141,
+    "r2_timing_only": 0.5986484053679233
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Main claims hold on test. Short form 0.417. The late-S2 term alone gives 0.306. Adding the late-reward term gives 0.363 (weight +0.10, so a reward does make the dip smaller). The free fit gives 0.456, and a wider 8-term fit tops out at about 0.478, so the short form gets most of what is available.",
+      "The explanation says the a1->S2 (rare) drop is a 'small fixed D1 drop throughout the episode'. That is misleading. Splitting the term by trial gives weight -0.021 before trial 80 and -0.080 from trial 80 on (test 0.453). With a late a1->S2 interaction, that term's weight is -0.195 and the fixed part falls to -0.026 (0.462). So late in the episode the dip after rare a1->S2 is deeper (about -0.47) than after common a2->S2 (about -0.27). The rare effect is mostly a lateness effect, not a constant one.",
+      "The label leaves out the rare-transition part, even though the short form has a term for it. Dropping that term costs 0.055 test R^2 (0.417 to 0.363).",
+      "An alternative short form, (D1)*(prev_state==2)*E ;; (D1)*(prev_state>prev_action)*E ;; (D1)*(prev_reward==1)*E, scores 0.431 on test. But misses shows it over-predicts the dip by about -0.02 after a1 S2 r and a1 S2 u. The recorded form has no systematic error larger than about 0.012 (under-predicted D1 after S1 trials), so I kept the recorded form.",
+      "Misses on the recorded form: the mean error by phase is at most 0.004. The worst windows are single very deep D1 dips (about 0.35-0.40) around trials 94-97 that the exponential shape under-predicts. These look like spread in how deep the dip goes, not a pattern in the previous trial. Time constants 3 and 6 score 0.410 and 0.411 against 0.417 for 4, so the choice of 4 is not tuned to a sharp optimum.",
+      "Belief adds little in short forms: swapping belief_lo*lateness in for the reward term gives 0.389 versus 0.417, so the claim that belief adds little holds. No future variables are used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Late-episode D1 update gate dips after reaching S2, deeper after rare a1->S2, shallower if rewarded.",
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "Late-episode D1 update gate dips after reaching S2, deeper after rare a1->S2, shallower if rewarded."
+}

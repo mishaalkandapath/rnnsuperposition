@@ -1,0 +1,72 @@
+{
+  "label": "update gate drops late in episode with a1-leaning policy and unrewarded trials",
+  "terms": "(phase == GO) * choice * (ep_trial/100.0)**4 ;; (phase != GO) * choice * (ep_trial/100.0)**4 ;; (phase == GO) * choice ;; (prev_reward == 0) * (ep_trial/100.0)**4 ;; (phase == D1) * last_is(\"a1 S2 u\")",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw z of unit 31 sits near 1 (mean 0.994) and dips mainly at GO and in the last ~20 trials of the episode (timing baseline). Beyond timing, the dip scales with the model policy logit toward a1 (choice): more a1-leaning means lower z, strongest at GO and greatly amplified late in the episode (choice x (ep_trial/100)^4, weaker but present at D1/D2); a2-leaning raises it. Unrewarded previous trials lower it further late in the episode, and D1 after a1 S2 unrewarded has an extra drop. Replacing choice with the actual action/prev_action tables scores lower (dev 0.45 vs 0.50); counting a1 runs over the last 3 trials adds ~0. No future variables used (choice is the model own policy output). Test R^2 beyond timing 0.50, above the additive all ceiling 0.35 because of the late-episode interaction.",
+  "gate": "unit_update",
+  "feature": 31,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 31,
+    "terms": [
+      "(phase == GO) * choice * (ep_trial/100.0)**4",
+      "(phase != GO) * choice * (ep_trial/100.0)**4",
+      "(phase == GO) * choice",
+      "(prev_reward == 0) * (ep_trial/100.0)**4",
+      "(phase == D1) * last_is(\"a1 S2 u\")"
+    ],
+    "weights": [
+      -0.0019313596497848068,
+      -0.0015151578802268446,
+      -0.00030340705759354094,
+      -0.005866422533645791,
+      -0.005241939695085367
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.4983171106330344,
+    "r2": 0.7886796258423054,
+    "r2_timing_only": 0.5787769951166897
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 31,
+    "terms": [
+      "(phase == GO) * choice * (ep_trial/100.0)**4",
+      "(phase != GO) * choice * (ep_trial/100.0)**4",
+      "(phase == GO) * choice",
+      "(prev_reward == 0) * (ep_trial/100.0)**4",
+      "(phase == D1) * last_is(\"a1 S2 u\")"
+    ],
+    "weights": [
+      -0.0019313596497848068,
+      -0.0015151578802268446,
+      -0.00030340705759354094,
+      -0.005866422533645791,
+      -0.005241939695085367
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.48831445640603865,
+    "r2": 0.7954271902315745,
+    "r2_timing_only": 0.6001981835727599
+  },
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The reported score reproduces: the claimed terms give test R^2 beyond timing 0.498. The direction of every claim also holds. Policy leaning to a1 lowers z, the effect grows late in the episode, and an unrewarded previous trial and D1 after 'a1 S2 u' both lower z. Using the actual action instead of choice drops the test score to 0.33.",
+      "The late-episode shape (ep_trial/100)^4 is too shallow. Using ^8 lifts the test score to 0.540, and exp(ep_trial/10) to 0.546. All of the worst-fit windows fall at t92-99, and the model under-predicts their dips: at GO, actual z is 0.85-0.88 where the fit predicts 0.93-0.94.",
+      "Most of the effect is late in the episode. The main term (phase==GO)*choice gets a weight of only -0.0003, against about -0.0019 for the late-episode interaction. So 'the dip grows with policy toward a1' is really a late-episode effect, not a general one.",
+      "'Weaker but still there at D1 and D2' understates the late-episode effect at D1. Fitted per phase, the late slope on choice is -0.00189 at GO, -0.00167 at D1 and -0.00105 at D2, so D1 is nearly as strong as GO in logit units.",
+      "The choice effect is lopsided. Splitting choice by sign (times exp(ep_trial/10)) gives a GO slope of about -1.75e-7 on the a1 side and -0.99e-7 on the a2 side. Leaning to a1 lowers z more than leaning to a2 raises it.",
+      "The label overweights the reward terms. On their own, (prev_reward==0)*late scores 0.035 test and (phase==D1)*last_is('a1 S2 u') scores 0.033. Dropping both from the claimed set lowers the test score from 0.498 to 0.453.",
+      "A systematic error class remains after improvement. Some late-episode windows sit 0.03-0.06 below the prediction at every phase, including trials where the agent chose a2. Example: t92-96 with a2 choices, actual 0.91 vs predicted 0.96-0.98 at D1 and GO. No observed or policy term tested captures this episode-level drift. The errors by phase x previous trial are small (at most 0.003)."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "z dips in the last ~10 trials of the episode, scaled by how strongly the policy leans to a1 (at GO and almost as much at D1), with small extra dips after unrewarded trials; some episode-level late drift is unexplained",
+    "better_terms": "(phase == GO) * np.maximum(choice,0) * np.exp(ep_trial/10.0) ;; (phase == GO) * np.minimum(choice,0) * np.exp(ep_trial/10.0) ;; (phase != GO) * np.maximum(choice,0) * np.exp(ep_trial/10.0) ;; (phase != GO) * np.minimum(choice,0) * np.exp(ep_trial/10.0) ;; (phase == GO) * choice ;; (prev_reward == 0) * np.exp(ep_trial/10.0) ;; (phase == D1) * last_is(\"a1 S2 u\") ;; (tv(\"action\",-1)==1)*(tv(\"action\",-2)==1)*np.exp(ep_trial/10.0)",
+    "better_terms_test_r2_beyond_timing": 0.576
+  },
+  "final_label": "z dips in the last ~10 trials of the episode, scaled by how strongly the policy leans to a1 (at GO and almost as much at D1), with small extra dips after unrewarded trials; some episode-level late drift is unexplained"
+}

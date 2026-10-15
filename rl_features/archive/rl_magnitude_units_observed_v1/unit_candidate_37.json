@@ -1,0 +1,83 @@
+{
+  "label": "D1 drop grows with unrewarded-trial streak late in episode; GO tracks belief/S2 reward",
+  "terms": "(phase == D1) * ((prev_reward == 0) * (1 + (tv(\"reward\", -2) == 0) * (1 + (tv(\"reward\", -3) == 0) * (1 + (tv(\"reward\", -4) == 0))))) * ep_trial / 100 ;; (phase == GO) * ((prev_reward == 0) * (1 + (tv(\"reward\", -2) == 0) * (1 + (tv(\"reward\", -3) == 0) * (1 + (tv(\"reward\", -4) == 0))))) * ep_trial / 100 ;; (phase == D1) * (prev_reward == 0) * (prev_state == 1) ;; (phase == D1) * (prev_reward == 1) * (prev_state == 2) ;; (phase == GO) * np.clip(belief_lo, -4, 4) ;; (phase == GO) * table(prev_state, {1: 1, 2: -1}) * (prev_reward == 1) ;; (phase == D2) * ((prev_reward == 0) * (1 + (tv(\"reward\", -2) == 0) * (1 + (tv(\"reward\", -3) == 0) * (1 + (tv(\"reward\", -4) == 0))))) * ep_trial / 100 ;; (phase == GO) * last_is(\"a1 S2 r\")",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw candidate n of unit 37 is ~+0.9 at D1/D2 and ~-0.8 at GO (timing R^2 0.99). Beyond timing, the main driver is a run of unrewarded trials: at D1 the value falls with the number of consecutive unrewarded trials just before (counted up to 4), and the drop gets bigger later in the episode (streak x ep_trial; it can reach about -1 below baseline). The same streak pulls GO and D2 down a little. At D1, an unrewarded S1 visit lowers it further (about -0.14) and a rewarded S2 visit raises it (+0.09). At GO it follows the observed belief: higher when the ideal observer favours S2 (negative belief_lo), higher after a rewarded S2 visit (especially a1 S2 r, the rare one), lower after a rewarded S1 visit. Uses only observed quantities, no model outputs or future variables. Test R^2 beyond timing 0.66 (dev 0.67), vs all-observed ceiling 0.70 and all ceiling 0.75. Compared with the earlier policy-based story (policy decile alone 0.41), the observed-only explanation loses nothing; the reward-streak history accounts for more than the policy does. What is left over is mostly windows whose unrewarded streak started before the 5-trial window.",
+  "gate": "unit_candidate",
+  "feature": 37,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 37,
+    "terms": [
+      "(phase == D1) * ((prev_reward == 0) * (1 + (tv(\"reward\", -2) == 0) * (1 + (tv(\"reward\", -3) == 0) * (1 + (tv(\"reward\", -4) == 0))))) * ep_trial / 100",
+      "(phase == GO) * ((prev_reward == 0) * (1 + (tv(\"reward\", -2) == 0) * (1 + (tv(\"reward\", -3) == 0) * (1 + (tv(\"reward\", -4) == 0))))) * ep_trial / 100",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 1)",
+      "(phase == D1) * (prev_reward == 1) * (prev_state == 2)",
+      "(phase == GO) * np.clip(belief_lo, -4, 4)",
+      "(phase == GO) * table(prev_state, {1: 1, 2: -1}) * (prev_reward == 1)",
+      "(phase == D2) * ((prev_reward == 0) * (1 + (tv(\"reward\", -2) == 0) * (1 + (tv(\"reward\", -3) == 0) * (1 + (tv(\"reward\", -4) == 0))))) * ep_trial / 100",
+      "(phase == GO) * last_is(\"a1 S2 r\")"
+    ],
+    "weights": [
+      -0.11372742700991564,
+      -0.01483406502972259,
+      -0.13558785061241277,
+      0.08396393485107606,
+      -0.018379044361943427,
+      -0.05818642868671917,
+      -0.0175678330733229,
+      0.11499737488691132
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6638028605956887,
+    "r2": 0.9952699253950499,
+    "r2_timing_only": 0.9859306518391825
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 37,
+    "terms": [
+      "(phase == D1) * ((prev_reward == 0) * (1 + (tv(\"reward\", -2) == 0) * (1 + (tv(\"reward\", -3) == 0) * (1 + (tv(\"reward\", -4) == 0))))) * ep_trial / 100",
+      "(phase == GO) * ((prev_reward == 0) * (1 + (tv(\"reward\", -2) == 0) * (1 + (tv(\"reward\", -3) == 0) * (1 + (tv(\"reward\", -4) == 0))))) * ep_trial / 100",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 1)",
+      "(phase == D1) * (prev_reward == 1) * (prev_state == 2)",
+      "(phase == GO) * np.clip(belief_lo, -4, 4)",
+      "(phase == GO) * table(prev_state, {1: 1, 2: -1}) * (prev_reward == 1)",
+      "(phase == D2) * ((prev_reward == 0) * (1 + (tv(\"reward\", -2) == 0) * (1 + (tv(\"reward\", -3) == 0) * (1 + (tv(\"reward\", -4) == 0))))) * ep_trial / 100",
+      "(phase == GO) * last_is(\"a1 S2 r\")"
+    ],
+    "weights": [
+      -0.11372742700991564,
+      -0.01483406502972259,
+      -0.13558785061241277,
+      0.08396393485107606,
+      -0.018379044361943427,
+      -0.05818642868671917,
+      -0.0175678330733229,
+      0.11499737488691132
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6674831329656205,
+    "r2": 0.9954603961154687,
+    "r2_timing_only": 0.9863477485367321
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the 'late in episode' interaction is real but small. Dropping ep_trial from the streak terms lowers test R^2 only from 0.664 to 0.649, and a squared ep_trial gives 0.661.",
+      "Minor: the D1 outcome terms are incomplete. Adding a general D1 rewarded raise (prev_reward==1 and prev_reward==1 x ep_trial), with the unrewarded effect signed S1 vs S2 instead of an S1-only flag, raises test R^2 from 0.664 to 0.686 (dev 0.692). So the D1 lift after a reward is not specific to S2.",
+      "Emphasis: the explanation calls the streak the 'main driver', but the GO terms on their own reach test 0.288 and the D1 terms on their own 0.374. The GO belief/last-trial component is nearly as large as the D1 streak.",
+      "Remaining error: the worst misses are D1 cells on early window trials where the actual value is near -0.1 against a predicted ~0.7. That fits the explanation's own reading, a streak that began before the window. A flag for 'streak runs off the window edge' gives only a small gain (dev 0.688). After the improved terms, the per-pattern residuals are all under 0.05, so no large systematic class remains.",
+      "'Costs nothing' versus model outputs is roughly supported: observed-only 0.664-0.686 against an observed ceiling of 0.70 and an all ceiling of 0.75. No future variables are used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 drops with an unrewarded-trial streak (more so late in the episode) and rises after any reward; GO tracks belief toward S2 and the last rewarded state (largest after rare a1 S2 r)",
+    "better_terms": "(phase == D1) * STK * ep_trial / 100 ;; (phase == D1) * table(prev_state,{1:1,2:-1}) * (prev_reward==0) ;; (phase == D1) * (prev_reward == 1) * (ep_trial/100) ;; (phase == D1) * (prev_reward == 1) ;; (phase == GO) * STK * ep_trial / 100 ;; (phase == GO) * np.clip(belief_lo, -4, 4) ;; (phase == GO) * table(prev_state, {1: 1, 2: -1}) * (prev_reward == 1) ;; (phase == GO) * last_is('a1 S2 r')   [STK = ((prev_reward == 0) * (1 + (tv('reward', -2) == 0) * (1 + (tv('reward', -3) == 0) * (1 + (tv('reward', -4) == 0)))))]",
+    "better_terms_test_r2_beyond_timing": 0.6857
+  },
+  "final_label": "D1 drops with an unrewarded-trial streak (more so late in the episode) and rises after any reward; GO tracks belief toward S2 and the last rewarded state (largest after rare a1 S2 r)"
+}

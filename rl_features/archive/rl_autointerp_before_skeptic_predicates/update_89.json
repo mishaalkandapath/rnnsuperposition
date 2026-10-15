@@ -1,0 +1,64 @@
+{
+  "label": "GO step near episode end (low value), after a rewarded trial, committing strongly to a2",
+  "predicate": "(phase == GO) & (value < 4) & (prev_reward == 1) & (choice < -5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO steps, only in the last ~10 trials of the 100-trial episode (ep_trial 90-99; essentially zero before trial 80), which shows up as the model value head dropping below ~4. It fires only when the previous trial was rewarded (reward input 1 at D1) and the agent is choosing a2 with a strong policy logit (choice < -5; it never fires for a1 choices). Most activations come after a previous a2 choice with a common transition (an a2 win-stay), but prev_action is not required. Magnitude grows across consecutive late-episode trials (e.g. 0.13 -> 0.88 -> 1.00 over a run of rewarded a2 trials) and is larger at lower value: value < 3.5 raises precision to 0.89 and keeps 94% of mass. It does not fire at D1 or D2, after unrewarded trials, on a1 choices, or earlier in the episode. Uses only observed or model-internal variables (the upcoming choice and the policy logit are the agent own computation), so no future variable is needed. A simpler version, (phase==GO)&(value<4)&(prev_reward==1)&(action==2), gets dev F1 0.80.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 89,
+    "predicate": "(phase == GO) & (value < 4) & (prev_reward == 1) & (choice < -5)",
+    "split": "test",
+    "precision": 0.6581061919016858,
+    "recall": 0.9909845788849347,
+    "f1": 0.790948683961371,
+    "mass_recall": 0.9970084901912449,
+    "correlation": 0.6779864227837659,
+    "n_active": 4215,
+    "n_predicted": 6347,
+    "coverage_by_activation_quartile": [
+      0.9753320683111955,
+      0.9886148007590133,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 89,
+    "predicate": "(phase == GO) & (value < 4) & (prev_reward == 1) & (choice < -5)",
+    "split": "dev",
+    "precision": 0.7259432582626499,
+    "recall": 0.9959871589085072,
+    "f1": 0.8397902216207072,
+    "mass_recall": 0.9992095447417945,
+    "correlation": 0.7303410436366669,
+    "n_active": 4984,
+    "n_predicted": 6838,
+    "coverage_by_activation_quartile": [
+      0.9847512038523274,
+      0.9991974317817014,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 89,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Systematic false-positive class: GO steps right after a REWARDED RARE trial, where the previous reached state was S1. Adding (prev_common==0) to the original predicate leaves only 0.106 dev precision (73 hits out of 687 predicted). The explanation says 'a2 win-stay after a common transition is not required', but in practice the feature needs the rewarded state on the previous trial to have been S2. A rare a1 -> S2 reward followed by a2 counts, and those cases even show up among the misses. An a2 -> S1 rare reward does not count.",
+      "Adding (prev_state != 1) raises dev F1 from 0.840 to 0.880 and test F1 from 0.791 to 0.850, with test mass recall still 0.997. The original predicate fails the 0.8 bar on test (F1 0.791), so on these numbers it is not 'explained'.",
+      "The claim that 'late episode shows up as value < 4' overclaims. Replacing value<4 with ep_trial>=90 drops dev precision to 0.42 (F1 0.59). Value carries more than episode position, and that is the source of most of the precision. ep_trial>=93 gets closer (dev F1 0.84 with the original terms), but it still loses to value on test once the prev_state term is added (0.705 vs 0.850).",
+      "'Never fires on a1' holds on dev (0 a1 activations) but not exactly on test: there are a few tiny a1 activations (~0.04 of max). This is negligible noise.",
+      "Unmentioned skew: 92.5% of activation mass is in episodes that started with S1 good (start_high=1) and 80% falls where good==S2. Precision is 0.54 for start_high=0 vs 0.76 for start_high=1. This fits the feature tracking late-episode reward from S2 / the belief that S2 is good. Leftover false positives are scattered over value 3-4 and the ep_trial 90-94 range rather than forming one more clean class."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step in the last ~10 trials of the episode (low value), after a trial rewarded in S2, committing strongly to a2 (an S2 win-stay)",
+    "better_predicate": "(phase == GO) & (value < 4) & (prev_reward == 1) & (choice < -5) & (prev_state != 1)",
+    "better_predicate_test_f1": 0.85
+  },
+  "final_label": "GO step in the last ~10 trials of the episode (low value), after a trial rewarded in S2, committing strongly to a2 (an S2 win-stay)"
+}

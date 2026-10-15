@@ -1,0 +1,60 @@
+{
+  "label": "GO late in episode after rewarded a2->S2, belief favours S2, ramps with trial",
+  "terms": "(phase == GO) * ((prev_reward == 1) & isin(prev_action, [2, -1]) & isin(prev_state, [2, -1])) * (belief_lo < 0) * np.clip(ep_trial - 84, 0, 15) ;; (phase == GO) * np.clip(ep_trial - 84, 0, 15)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Active only at GO in the last ~15 trials of the episode. Magnitude is about 0.1 per trial past trial 84 (reaching ~2 by trial 99) when the previous trial was a2 -> S2 rewarded (or the previous trial is outside the window but the D1 reward input was 1) AND the ideal-observer belief says S2 is good (belief_lo < 0). Otherwise it is ~0, with a small negative general late-episode ramp correcting the timing baseline. Unrewarded trials, a1 trials, and rare a2->S1 rewarded trials do not drive it. D1 and D2 are always 0. Gating on belief is what matters: the same late-ramp term without the belief gate scored dev 0.58; adding the gate gave dev 0.85, test 0.80 R^2 beyond timing, well above the profile additive ceiling (all 0.09, all observed 0.08), because the effect is an interaction of reward-history x belief x episode time. Observed-only loses essentially nothing compared with a model value/policy description: belief stands in for the model internal S2-good estimate. Not tested: whether belief magnitude past the sign adds anything (a graded -belief_lo version scored slightly worse).",
+  "gate": "hidden",
+  "feature": 96,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 96,
+    "terms": [
+      "(phase == GO) * ((prev_reward == 1) & isin(prev_action, [2, -1]) & isin(prev_state, [2, -1])) * (belief_lo < 0) * np.clip(ep_trial - 84, 0, 15)",
+      "(phase == GO) * np.clip(ep_trial - 84, 0, 15)"
+    ],
+    "weights": [
+      0.1353792792828147,
+      -0.036341901797664534
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8045929958149902,
+    "r2": 0.8502934047180357,
+    "r2_timing_only": 0.23387293149316535
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 96,
+    "terms": [
+      "(phase == GO) * ((prev_reward == 1) & isin(prev_action, [2, -1]) & isin(prev_state, [2, -1])) * (belief_lo < 0) * np.clip(ep_trial - 84, 0, 15)",
+      "(phase == GO) * np.clip(ep_trial - 84, 0, 15)"
+    ],
+    "weights": [
+      0.1353792792828147,
+      -0.036341901797664534
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8483296083127397,
+    "r2": 0.887860608660632,
+    "r2_timing_only": 0.2606375569293973
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The scores reproduce: the claimed terms give dev 0.848 and test 0.805 R^2 beyond timing, with weights +0.135 and -0.036.",
+      "The belief gate matters as claimed. Removing it drops test to 0.672. Moving the threshold off zero is worse: belief_lo<1 gives 0.788 and belief_lo<-1 gives 0.763. An extra term for prev rewarded a2->S2 with belief_lo>=0 gets weight about 0.01 (test 0.806), so the feature really is quiet when belief favours S1.",
+      "The claim that rare-rewarded a2->S1 trials do not drive it holds: adding last_is('a2 S1 r') x belief x ramp gets weight 0.003 and no gain. a1 S2 r is the largest under-predicted cell in misses, but only +0.011, and adding a term for it gets weight 0.022 with no gain (0.8055).",
+      "Misses show no large systematic error. Mean error by phase is within +/-0.003 and every phase x previous-trial cell is within +/-0.011. D1 and D2 are exactly 0, which matches 'always 0 at D1 and D2'.",
+      "Minor point on shape: the ramp is somewhat concave, not purely linear. Some windows are already at 1.1 to 2.0 by trials 90-94 while the linear term predicts 0.2 to 1.4. A saturating extra term, clip(ep_trial-84,0,6), lifts test to 0.820. Starting the ramp at trial 80 instead of 84 is worse (0.748). This small refinement does not undercut the label.",
+      "About 0.18 of the variance beyond timing is left unexplained and looks like scattered per-window noise (for example, single GO steps at 0 where the terms predict 1.5). It does not form a phase or previous-trial class. Graded belief (clip(-belief_lo,0,5)), belief_cover and a two-back rewarded-S2 condition each add 0.005 or less."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO late in episode (trial ~85+) after rewarded a2->S2 while belief favours S2; ramps with trial, saturating somewhat",
+    "better_terms": "(phase == GO) * ((prev_reward == 1) & isin(prev_action, [2, -1]) & isin(prev_state, [2, -1])) * (belief_lo < 0) * np.clip(ep_trial - 84, 0, 15) ;; (phase == GO) * np.clip(ep_trial - 84, 0, 15) ;; (phase == GO) * ((prev_reward == 1) & isin(prev_action, [2, -1]) & isin(prev_state, [2, -1])) * (belief_lo < 0) * np.clip(ep_trial - 84, 0, 6)",
+    "better_terms_test_r2_beyond_timing": 0.8202
+  },
+  "final_label": "GO late in episode (trial ~85+) after rewarded a2->S2 while belief favours S2; ramps with trial, saturating somewhat"
+}

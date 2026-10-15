@@ -1,0 +1,103 @@
+{
+  "label": "D2 step early in the episode (first ~20-30 trials), extended later only after choosing a2 / unrewarded",
+  "predicate": "(phase == D2) & (ep_trial >= 1) & ((ep_trial < 10) | ((ep_trial < 20) & (action == 2)) | ((ep_trial < 30) & (action == 2) & (prev_reward == 0)))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (reached state shown), never at D1 or GO, and only in the early part of an episode. It fires on about 86% of D2 steps in trials 0-9 (none on trial 0), drops to about 55% in trials 10-19 and 20% in 20-29, and is essentially silent after trial 40. As it fades it narrows to D2 steps after choosing a2 (84% of activation mass is on a2 trials, mostly reaching S2), and in trials 20-29 to a2 trials where the previous trial was unrewarded. Magnitude is highest in the very first trials of the episode (top windows sit at trials 1-3, where the good state is still unknown) and on a2->S2 common transitions; it is lowest late in the window and on a1/S1 trials. It does not depend on this trial's (future) reward or on whether the transition is common or rare. All variables used are observed at D2 (the action is known by then). Episode time is not an explicit input, so the feature is presumably tracking an internal early-episode or uncertainty signal; this matches its anti-correlation with since_rev=20 and its association with high value. Recorded the 3-clause early-episode predicate (dev F1 0.85, mass recall 0.93). Simpler D2 & ep_trial<20 gets F1 0.73.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 142,
+    "predicate": "(phase == D2) & (ep_trial >= 1) & ((ep_trial < 10) | ((ep_trial < 20) & (action == 2)) | ((ep_trial < 30) & (action == 2) & (prev_reward == 0)))",
+    "split": "test",
+    "precision": 0.8661943018671427,
+    "recall": 0.8501934871495327,
+    "f1": 0.8581193116916614,
+    "mass_recall": 0.9222892896832784,
+    "correlation": 0.7230163630036104,
+    "n_active": 54784,
+    "n_predicted": 53772,
+    "coverage_by_activation_quartile": [
+      0.711813668224299,
+      0.828490070093458,
+      0.8847108644859814,
+      0.9757593457943925
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 142,
+    "predicate": "(phase == D2) & (ep_trial >= 1) & ((ep_trial < 10) | ((ep_trial < 20) & (action == 2)) | ((ep_trial < 30) & (action == 2) & (prev_reward == 0)))",
+    "split": "dev",
+    "precision": 0.857212828902255,
+    "recall": 0.8582385249117301,
+    "f1": 0.857725370266906,
+    "mass_recall": 0.9258288007037645,
+    "correlation": 0.7129464191287805,
+    "n_active": 50980,
+    "n_predicted": 51041,
+    "coverage_by_activation_quartile": [
+      0.7309533150255002,
+      0.8359356610435464,
+      0.8928991761475088,
+      0.9731659474303649
+    ]
+  },
+  "gate": "update",
+  "feature": 142,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The factual claims check out on dev. The feature fires only at D2 (0 activations at D1 or GO). Trial 0 never fires (0 of 525 D2 steps). Trials 1-9 fire on 88% of D2 steps. In trials 10-19 the rate is 55%: a2 trials fire 86%, a1 trials 19%. Trials 20-29 fire about 20%: a2 with prev_reward 0 fires 77%, a2 with prev_reward 1 fires 7.5%, a1 fires 5.6%. Trials 30 and later fire 0.6%, and nothing fires from trial 50 on. a2 trials hold 84% of the activation mass.",
+      "Minor overclaim: 'does not depend on whether the transition is common or rare' is true overall (both fire at 4.4-4.5%), but within the later window, a2 trials that reach S1 (rare) fire less than a2 trials that reach S2 (common). In trials 10-19 the rates are 71% vs about 92%. In trials 20-29 with prev_reward 0 they are 60% vs 84%. The reached state matters somewhat, as the 'mostly ones that reach S2' clause already admits.",
+      "The a2 bias is there from the start, not only in the fade. In trials 1-9, a2 trials fire 100% and a1 trials 74%, and a1 firing falls from 89% in trials 1-4 to 69% in trials 5-9. The feature is a graded early-episode signal that decays faster on a1 and rewarded trials. The 3-clause predicate is a thresholded version of that decay. Moving the cutoffs (8/20/33, 8/22/33) did not beat it.",
+      "Systematic misses or false positives: none found beyond the edges of the graded decay. Missed activations on the test split carry only 7.8% of the activation mass and are mostly weak firings near the cutoffs. The since_rev pattern (silent at since_rev 20) is a side effect of episode time: since_rev 1-19 never fires at trial 50 or later.",
+      "Small fix: adding (ep_trial >= 1) removes trial 0, which never fires. Test F1 rises from 0.854 to 0.858, which is not a material change."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == D2) & (ep_trial >= 1) & ((ep_trial < 10) | ((ep_trial < 20) & (action == 2)) | ((ep_trial < 30) & (action == 2) & (prev_reward == 0)))",
+    "better_predicate_test_f1": 0.858
+  },
+  "original_predicate": "(phase == D2) & ((ep_trial < 10) | ((ep_trial < 20) & (action == 2)) | ((ep_trial < 30) & (action == 2) & (prev_reward == 0)))",
+  "original_test_scores": {
+    "gate": "update",
+    "feature": 142,
+    "predicate": "(phase == D2) & ((ep_trial < 10) | ((ep_trial < 20) & (action == 2)) | ((ep_trial < 30) & (action == 2) & (prev_reward == 0)))",
+    "split": "test",
+    "precision": 0.8574558173784977,
+    "recall": 0.8501934871495327,
+    "f1": 0.8538092095615193,
+    "mass_recall": 0.922289368623322,
+    "correlation": 0.7191553411264541,
+    "n_active": 54784,
+    "n_predicted": 54320,
+    "coverage_by_activation_quartile": [
+      0.711813668224299,
+      0.828490070093458,
+      0.8847108644859814,
+      0.9757593457943925
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "update",
+    "feature": 142,
+    "predicate": "(phase == D2) & ((ep_trial < 10) | ((ep_trial < 20) & (action == 2)) | ((ep_trial < 30) & (action == 2) & (prev_reward == 0)))",
+    "split": "dev",
+    "precision": 0.8484854361400923,
+    "recall": 0.8582385249117301,
+    "f1": 0.8533341134710277,
+    "mass_recall": 0.9258287148788259,
+    "correlation": 0.7091083791120215,
+    "n_active": 50980,
+    "n_predicted": 51566,
+    "coverage_by_activation_quartile": [
+      0.7309533150255002,
+      0.8359356610435464,
+      0.8928991761475088,
+      0.9731659474303649
+    ]
+  },
+  "predicate_from": "skeptic"
+}

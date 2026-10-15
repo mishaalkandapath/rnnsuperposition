@@ -1,0 +1,65 @@
+{
+  "label": "GO after unrewarded trial (esp. a1 S2 u), growing with lateness past trial 60",
+  "terms": "(phase == GO) * last_is(\"a1 S2 u\") * np.maximum(ep_trial - 60, 0) ;; (phase == GO) * (prev_reward == 0) * np.maximum(ep_trial - 60, 0) * np.clip(choice,0,None) ;; (phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * np.maximum(ep_trial - 60, 0) ;; (phase == GO) * (prev_reward == 1) * np.maximum(ep_trial - 60, 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO (zero at D1/D2). Magnitude is a product of lateness in the episode (ramp beyond trial ~60; ramps from trial 30-40 fit worse) and an unrewarded previous trial. The largest drive is after a1 S2 u (rare, unrewarded a1 trial). Other unrewarded trials add in proportion to the positive part of the policy logit toward a1, and a second consecutive unrewarded trial adds a bit more (activation rises over a loss streak, e.g. 1.7 -> 3.1 -> 3.9). A rewarded previous trial suppresses it late in the episode. Value and the hidden good state add nothing. Only observed and model-internal cues are used (choice is the model logit at GO). Test R^2 beyond timing 0.77 (dev 0.79), above the additive all ceiling of 0.27 because the late-episode x history interaction is multiplicative.",
+  "gate": "update",
+  "feature": 150,
+  "test_scores": {
+    "gate": "update",
+    "feature": 150,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S2 u\") * np.maximum(ep_trial - 60, 0)",
+      "(phase == GO) * (prev_reward == 0) * np.maximum(ep_trial - 60, 0) * np.clip(choice,0,None)",
+      "(phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * np.maximum(ep_trial - 60, 0)",
+      "(phase == GO) * (prev_reward == 1) * np.maximum(ep_trial - 60, 0)"
+    ],
+    "weights": [
+      0.046736471917518084,
+      0.0055130874374056575,
+      0.003612485389203533,
+      -0.011334233065404193
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7721280920663333,
+    "r2": 0.7964027217429094,
+    "r2_timing_only": 0.10652752196046211
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 150,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S2 u\") * np.maximum(ep_trial - 60, 0)",
+      "(phase == GO) * (prev_reward == 0) * np.maximum(ep_trial - 60, 0) * np.clip(choice,0,None)",
+      "(phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * np.maximum(ep_trial - 60, 0)",
+      "(phase == GO) * (prev_reward == 1) * np.maximum(ep_trial - 60, 0)"
+    ],
+    "weights": [
+      0.046736471917518084,
+      0.0055130874374056575,
+      0.003612485389203533,
+      -0.011334233065404193
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.793666266226916,
+    "r2": 0.8148953012981854,
+    "r2_timing_only": 0.1028868846749803
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Several core claims hold. The feature fires only at GO: the profile shows timing and residuals of exactly 0 at D1 and D2. The biggest driver is a previous a1 S2 u trial (GO residual +0.82; that term alone gives test R^2 0.62). The effect ramps late in the episode. A rewarded previous trial lowers it (dropping that term takes test R^2 from 0.770 to 0.704).",
+      "The losing-streak claim is not supported by the terms. The tv('reward',-2)==0 term adds only 0.002 test R^2 (0.7699 without it vs 0.7721 with it). Misses shows streaks still badly under-predicted: after a2 S2c u, a2 S2c u the actual values are 1.6 then 3.1 vs predicted 0.43 then 0.59. Streaks ending in an a1 choice reach 3.9 actual vs 1.7 predicted. The quoted 1.7 / 3.1 / 3.9 climb comes from the data, not from the fit.",
+      "Systematic over-prediction after a1 S1 u at GO (mean error -0.23, the largest error class), plus a2 S1 u at -0.095. The term 'other unrewarded trials scale with the positive part of the a1 logit' wrongly treats every unrewarded previous trial as raising the feature. When each unrewarded pattern gets its own weight, a1 S1 u comes out negative (-0.040) and a2 S2 u near zero (+0.002), against +0.024 for a1 S2 u.",
+      "With per-pattern lateness terms plus streak terms the test R^2 rises from 0.77 to 0.85. The originally reported terms therefore leave a structured gap in the data: the specific unrewarded pattern matters, and so does the length of the unrewarded streak."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO only, late in the episode (ramp after trial 60): highest after an a1 S2 u trial (rare, unrewarded). It climbs over consecutive unrewarded trials (2 and 3 in a row) and with the a1 policy logit. It is suppressed after a1 S1 u and after rewarded trials.",
+    "better_terms": "(phase==GO)*last_is('a1 S2 u')*np.maximum(ep_trial - 60, 0) ;; (phase==GO)*last_is('a1 S1 u')*np.maximum(ep_trial - 60, 0) ;; (phase==GO)*last_is('a2 S2 u')*np.maximum(ep_trial - 60, 0) ;; (phase==GO)*last_is('a2 S1 u')*np.maximum(ep_trial - 60, 0) ;; (phase == GO) * (prev_reward == 1) * np.maximum(ep_trial - 60, 0) ;; (phase == GO) * (prev_reward == 0) * np.maximum(ep_trial - 60, 0) * np.clip(choice,0,None) ;; (phase==GO)*(tv('reward',-1)==0)*(tv('reward',-2)==0)*np.maximum(ep_trial - 60, 0) ;; (phase==GO)*(tv('reward',-1)==0)*(tv('reward',-2)==0)*(tv('reward',-3)==0)*np.maximum(ep_trial - 60, 0)",
+    "better_terms_test_r2_beyond_timing": 0.8528
+  },
+  "final_label": "GO only, late in the episode (ramp after trial 60): highest after an a1 S2 u trial (rare, unrewarded). It climbs over consecutive unrewarded trials (2 and 3 in a row) and with the a1 policy logit. It is suppressed after a1 S1 u and after rewarded trials."
+}

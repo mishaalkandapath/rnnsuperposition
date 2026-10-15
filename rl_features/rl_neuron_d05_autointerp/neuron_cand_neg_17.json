@@ -1,0 +1,105 @@
+{
+  "label": "D2 after a2 led to S2 (common), early in the episode only",
+  "predicate": "((phase == D2) & (in_state == 2) & (in_action == 2) & (ep_trial < 33)) | ((phase == D1) & (prev_action == 2) & (prev_state == 2) & (prev_reward == 0) & (ep_trial < 33))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires mainly at DELAY_2 when the agent chose a2 and reached S2 by the common transition (about 90% of activation mass is at D2 with S2 input; in_action==2 raises precision a lot). It never fires at GO or at D2 after reaching S1. It is also strongly tied to time in the episode: the rate is highest in trials 0-29, drops in 30-39, and is zero from trial 40 on, so the low end of this candidate coordinate slowly drifts out of range during the episode. That makes it look like a transient early-episode signal plus a common a2->S2 detector. Smaller secondary firing (about 10% of mass) at the next D1 when the a2->S2 trial went unrewarded (r0). Adding that D1 clause raises mass recall to 0.92 on dev but leaves F1 flat (0.798 vs 0.795), so the simpler predicate was recorded. Magnitude is largest on the earliest trials and on a2->S2c trials, and lower after S1R rare transitions. Only observed inputs plus trial count are used.",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 17,
+    "predicate": "((phase == D2) & (in_state == 2) & (in_action == 2) & (ep_trial < 33)) | ((phase == D1) & (prev_action == 2) & (prev_state == 2) & (prev_reward == 0) & (ep_trial < 33))",
+    "split": "test",
+    "precision": 0.8193366751356177,
+    "recall": 0.7940638205836356,
+    "f1": 0.8065023065614493,
+    "mass_recall": 0.9149978465640434,
+    "correlation": 0.7811882957133234,
+    "n_active": 60106,
+    "n_predicted": 58252,
+    "coverage_by_activation_quartile": [
+      0.47215012976642046,
+      0.771943834431357,
+      0.9428324237987489,
+      0.9893517902302675
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 17,
+    "predicate": "((phase == D2) & (in_state == 2) & (in_action == 2) & (ep_trial < 33)) | ((phase == D1) & (prev_action == 2) & (prev_state == 2) & (prev_reward == 0) & (ep_trial < 33))",
+    "split": "dev",
+    "precision": 0.8330170424946044,
+    "recall": 0.7946365185290359,
+    "f1": 0.8133742687933727,
+    "mass_recall": 0.9133469019872521,
+    "correlation": 0.7873790434666763,
+    "n_active": 56344,
+    "n_predicted": 53748,
+    "coverage_by_activation_quartile": [
+      0.4801930995314497,
+      0.7692744569075678,
+      0.9415731932415164,
+      0.9875053244356098
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 17,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Factual claims hold. In the dev profile the unit never fires at GO (0 of 380,619 steps, P=0). D2 holds 89.7% of the activation mass and D1 holds 10.3%. D2 when the agent chose a2 but landed in S1 (in_state 1, in_action 2, trials < 35) has precision 0.143 and 1.4% of the mass. D2 a1->S1 has precision 0.001. From trial 40 on there is 1 active step in about 600k steps.",
+      "The ep_trial cutoff is a smooth fade, not a hard boundary. Precision of the a2->S2 D2 predicate drops from 0.67 at trials 30-31 to 0.35 at 32-33, 0.14 at 34-35, 0.09 at 36-37 and 0.05 at 38-39. So 'early in the episode' is fair, but 35 is an arbitrary point on a fade. A cutoff of 33 does slightly better (test P 0.908, R 0.715, F1 0.800, versus 0.790 at 35).",
+      "The D1 second component is described a little too narrowly. a2->S2 unrewarded does carry most of it (precision 0.41, 5.6% of the mass). But D1 after an unrewarded a1->S1 trial also fires (precision 0.19, 1.2% of the mass), and so do D1 steps on the window's first trial, where the history is unknown. All of these share an unrewarded previous trial, so this is minor.",
+      "There is a little rare-transition activity at D2 (a2->S1 about 1.4% of the mass, a1->S2 rare about 1.9%), and it is weak. That is scattered, not a systematic class.",
+      "Misses on the test split show no new systematic class. Missed activations are the D1 component above plus trials just past the cutoff. False positives are a2->S2 D2 steps near the end of the fade, plus some window-start trials where good=1 (precision 0.77 when good==1, versus 0.87 when good==2). The good-state effect is modest.",
+      "Test scores reproduce the reported ones: P 0.864, R 0.728, F1 0.790, mass recall 0.860. No future variables are used: in_state and in_action are observed at D2, and ep_trial is the trial index.",
+      "Adding the D1 clause, a2->S2 unrewarded at trials < 33, gives test P 0.819, R 0.794, F1 0.807, mass recall 0.915. That is only a slight gain, so the simpler recorded predicate is a reasonable choice."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "((phase == D2) & (in_state == 2) & (in_action == 2) & (ep_trial < 33)) | ((phase == D1) & (prev_action == 2) & (prev_state == 2) & (prev_reward == 0) & (ep_trial < 33))",
+    "better_predicate_test_f1": 0.807
+  },
+  "original_predicate": "(phase == D2) & (in_state == 2) & (in_action == 2) & (ep_trial < 35)",
+  "original_test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 17,
+    "predicate": "(phase == D2) & (in_state == 2) & (in_action == 2) & (ep_trial < 35)",
+    "split": "test",
+    "precision": 0.8643311347209606,
+    "recall": 0.728180214953582,
+    "f1": 0.7904355992198222,
+    "mass_recall": 0.8604737961280381,
+    "correlation": 0.7886564927016853,
+    "n_active": 60106,
+    "n_predicted": 50638,
+    "coverage_by_activation_quartile": [
+      0.413588873361283,
+      0.6677979636654022,
+      0.8481299081591908,
+      0.9832290696126714
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 17,
+    "predicate": "(phase == D2) & (in_state == 2) & (in_action == 2) & (ep_trial < 35)",
+    "split": "dev",
+    "precision": 0.8683066193307144,
+    "recall": 0.7336007383217379,
+    "f1": 0.7952899073566336,
+    "mass_recall": 0.8609945335933118,
+    "correlation": 0.7890678895651743,
+    "n_active": 56344,
+    "n_predicted": 47603,
+    "coverage_by_activation_quartile": [
+      0.4280846230299588,
+      0.6787590515405367,
+      0.8471532017606134,
+      0.9804060769558427
+    ]
+  },
+  "predicate_from": "skeptic"
+}

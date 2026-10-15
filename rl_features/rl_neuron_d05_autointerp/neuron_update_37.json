@@ -1,0 +1,49 @@
+{
+  "label": "a2 streak: D2 after a2->S2 common, or GO choosing a2 after no reward (early/mid episode)",
+  "predicate": "((phase == D2) & (in_state == 2) & (in_action == 2) | (phase == GO) & (model_act == 2) & (prev_reward == 0)) & (prev_action != 1) & (ep_trial < 60)",
+  "verdict": "partially_explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Update-gate unit tied to action a2. It never fires at D1 or whenever the reward input is 1. It fires at D2 only when the agent chose a2 and reached S2 (common), and at GO only when the agent is about to choose a2 (model_act == 2, the agent own policy output, used in place of the future action variable; scores are the same) after an unrewarded trial. stay=0 (switching into a2) almost never fires; it needs the previous choice also to be a2, and activation grows over a run of consecutive a2 trials (e.g. 0.38 -> 0.52 -> 0.58 -> 1.0 across unrewarded a2 trials). There is strong episode-time modulation: none in trials 0-2, peak in trials 10-50, gone after about trial 70, so the predicate restricts ep_trial < 60. Activity also tracks high model value and a strongly negative choice logit (leaning a2). Recall and mass recall are high (~0.96 dev), but precision is only ~0.45: many matching a2-streak steps are silent, which points to a slow internal state (streak length, time in episode) setting a threshold that the predicate does not capture. The best predicate uses only observed variables plus the agent own choice.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 37,
+    "predicate": "((phase == D2) & (in_state == 2) & (in_action == 2) | (phase == GO) & (model_act == 2) & (prev_reward == 0)) & (prev_action != 1) & (ep_trial < 60)",
+    "split": "test",
+    "precision": 0.4394826137035769,
+    "recall": 0.9591181615911136,
+    "f1": 0.6027678004365716,
+    "mass_recall": 0.9659654032214682,
+    "correlation": 0.5305169432936966,
+    "n_active": 58877,
+    "n_predicted": 128492,
+    "coverage_by_activation_quartile": [
+      0.9368206521739131,
+      0.954276785107684,
+      0.9838304232624498,
+      0.9615463006997758
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 37,
+    "predicate": "((phase == D2) & (in_state == 2) & (in_action == 2) | (phase == GO) & (model_act == 2) & (prev_reward == 0)) & (prev_action != 1) & (ep_trial < 60)",
+    "split": "dev",
+    "precision": 0.45070157033734387,
+    "recall": 0.9609779113658605,
+    "f1": 0.6136155683010109,
+    "mass_recall": 0.9679120046120605,
+    "correlation": 0.5397159601511741,
+    "n_active": 57224,
+    "n_predicted": 122012,
+    "coverage_by_activation_quartile": [
+      0.93680973018314,
+      0.9589682650636097,
+      0.9842723332867328,
+      0.9638613169299595
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 37,
+  "final_verdict": "partially_explained"
+}

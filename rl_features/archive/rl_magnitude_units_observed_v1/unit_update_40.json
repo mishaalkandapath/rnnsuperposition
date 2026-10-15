@@ -1,0 +1,84 @@
+{
+  "label": "update gate high when observed evidence favours S2 / last chose a2 (GO, D1)",
+  "terms": "(phase == GO) * np.tanh(belief_lo) ;; (phase == D1) * np.tanh(belief_lo) ;; (phase == GO) * table(prev_action, {1: -1, 2: 1}) ;; (phase == D1) * table(prev_action, {1: -1, 2: 1}) ;; (phase == GO) * table(prev_state, {1: -1, 2: 1}) ;; (phase == D1) * table(prev_state, {1: -1, 2: 1}) ;; (phase == GO) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 40. Timing: ~1.0 (saturated) at D2 with no meaningful variation, ~0.52 at GO, ~0.25 at D1 falling late in the episode; timing alone R^2 0.59. Beyond timing the magnitude is an a1-vs-a2 axis at GO (largest, ~+/-0.4) and D1 (~+/-0.15): high when the ideal-observer belief says S2 is good (graded tanh(belief_lo), weight -0.28 at GO, -0.12 at D1) and when the previous choice was a2 (+0.13 GO, +0.09 D1); small extra effects of last reached state (S2 raises at GO, lowers at D1) and a lower value after a rewarded previous trial. Not driven by future reward or time since reversal. Observed-only terms score test R^2 beyond timing 0.78 (dev 0.80) vs all-observed table reference 0.90 and all ceiling 0.96; the model policy decile alone reaches 0.93, so dropping the model own choice logit costs ~0.15, i.e. the unit tracks the agent upcoming a2 tendency more tightly than the ideal-observer belief plus last trial can.",
+  "gate": "unit_update",
+  "feature": 40,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 40,
+    "terms": [
+      "(phase == GO) * np.tanh(belief_lo)",
+      "(phase == D1) * np.tanh(belief_lo)",
+      "(phase == GO) * table(prev_action, {1: -1, 2: 1})",
+      "(phase == D1) * table(prev_action, {1: -1, 2: 1})",
+      "(phase == GO) * table(prev_state, {1: -1, 2: 1})",
+      "(phase == D1) * table(prev_state, {1: -1, 2: 1})",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == D1) * (prev_reward == 1)"
+    ],
+    "weights": [
+      -0.2842583770689976,
+      -0.11853431311656386,
+      0.12927621323517008,
+      0.09226733684309298,
+      0.03626469598691348,
+      -0.06789014417290773,
+      -0.0656139148516387,
+      -0.025871492241613163
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7807094929845556,
+    "r2": 0.9108193953954581,
+    "r2_timing_only": 0.5933220921493834
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 40,
+    "terms": [
+      "(phase == GO) * np.tanh(belief_lo)",
+      "(phase == D1) * np.tanh(belief_lo)",
+      "(phase == GO) * table(prev_action, {1: -1, 2: 1})",
+      "(phase == D1) * table(prev_action, {1: -1, 2: 1})",
+      "(phase == GO) * table(prev_state, {1: -1, 2: 1})",
+      "(phase == D1) * table(prev_state, {1: -1, 2: 1})",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == D1) * (prev_reward == 1)"
+    ],
+    "weights": [
+      -0.2842583770689976,
+      -0.11853431311656386,
+      0.12927621323517008,
+      0.09226733684309298,
+      0.03626469598691348,
+      -0.06789014417290773,
+      -0.0656139148516387,
+      -0.025871492241613163
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7972030704336586,
+    "r2": 0.9163019022059554,
+    "r2_timing_only": 0.5872812375758172
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The scores reproduce. On test the 8 terms give R^2 beyond timing 0.7807 (total 0.911, timing alone 0.593), and the fitted weights match the stated ones (GO tanh(belief_lo) -0.284, D1 -0.119, prev_action a2 +0.129 / +0.092, prev_state S2 +0.036 at GO / -0.068 at D1, prev_reward +1 -0.066 / -0.026).",
+      "The direction claims hold in the profile residuals. GO residual by belief decile runs from +0.41 (S2 favoured) to -0.47 (S1 favoured). At D1 it runs from +0.25 to -0.17. D2 residuals are about 0.005 or smaller, consistent with saturation. Trials since reversal (0.01) and this trial's reward (0.00) add nothing, as claimed.",
+      "The comparison to 'all observed 0.90' is misleading. That reference includes 'this choice x state', which at D1 and GO is the UPCOMING choice, a future variable. Upcoming action alone, (phase==GO)*table(action) + (phase==D1)*table(action), scores 0.797 on test. So the truly observed ceiling is nearer the belief decile (0.73) plus last trial (0.66) combination, and the terms are close to it. The 'about 81% of the ceiling' framing understates how close the terms are to what observed variables allow.",
+      "A residual systematic error remains at GO after switch-type or ambiguous trials. Misses show under-prediction at GO after a1 S2 r (+0.152), a2 S2 u (+0.128) and a1 S1 u (+0.084), and over-prediction at D1 after a1 S1 u (-0.118). Adding last_is indicators for those patterns only raises test R^2 to 0.791. The gap looks like the agent's upcoming switch decision, which observed variables do not capture.",
+      "None of my attempts beat the original by much. Removing prev_state and prev_reward gives 0.752. A signed model-based last-trial evidence term gives 0.773. A full last-trial lookup table plus belief gives 0.776. Adding belief x cover and the choice two trials back gives 0.778. Summed recent-choice history gives 0.772. Belief x prev_action gives 0.776. Two-slope belief gives 0.766. So the 8 terms are near-optimal for observed-only additive shapes.",
+      "The prev_state and prev_reward effects are small (weights 0.03-0.07). The explanation calls them small, so this is not an overclaim."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "update gate high at GO (and weaker at D1) when observed evidence favours S2 and the last choice was a2; tracks the a2 tendency",
+    "better_terms": "(phase == GO) * np.tanh(belief_lo) ;; (phase == D1) * np.tanh(belief_lo) ;; (phase == GO) * table(prev_action, {1: -1, 2: 1}) ;; (phase == D1) * table(prev_action, {1: -1, 2: 1}) ;; (phase == GO) * table(prev_state, {1: -1, 2: 1}) ;; (phase == D1) * table(prev_state, {1: -1, 2: 1}) ;; (phase == GO) * (last_is('a1 S2 r') + last_is('a2 S2 u') + last_is('a1 S1 u')) ;; (phase == D1) * (last_is('a1 S1 u'))",
+    "better_terms_test_r2_beyond_timing": 0.7912
+  },
+  "final_label": "update gate high at GO (and weaker at D1) when observed evidence favours S2 and the last choice was a2; tracks the a2 tendency"
+}

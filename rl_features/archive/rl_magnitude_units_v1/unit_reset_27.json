@@ -1,0 +1,82 @@
+{
+  "label": "D1 reset: up after reward and after reaching S1; unrewarded D1 sinks late in episode",
+  "terms": "(phase == D1) * table(prev_state, {1: 1, 2: -1}) * (2*prev_reward-1) ;; (phase == D1) * (prev_reward == 1) ;; (phase == D1) * table(prev_state, {1: 1, 2: -1}) ;; (phase == D1) * table(prev_action, {1: 1, 2: -1}) ;; (phase == GO) * (prev_reward == 1) ;; (phase == GO) * choice ;; (phase == D2) * choice ;; (phase == D1) * (prev_reward == 0) * ep_trial",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r27 (mean 0.83, always on; timing alone R^2 0.32). Beyond timing, the variation is mostly at D1 and is set by the last trial outcome. At D1 the gate is higher after a rewarded trial (+0.08) and higher when the last trial reached S1 rather than S2 (+/-0.13 on a +/-1 code, with that state effect a bit weaker after reward). It is lower after an a1 choice than after a2 (-0.04 on the +/-1 code), so the lowest values come after a1 S2 u and a2 S2 u (residuals -0.36 / -0.24) and the highest after a2 S1 r and a1 S1 r. After unrewarded trials the D1 value keeps falling through the episode (about -0.0019 per episode trial, so around -0.19 by trial 99), more steeply than the timing baseline, which explains the very low values (about 0.2) late in episodes. At GO and D2 the effects are small: the gate is slightly lower when the policy logit favours a1 (graded choice term) and slightly lower at GO after a reward. The trial before, value, the hidden good state and trials since reversal add little. No future variables used (choice is the model own policy output). Test R^2 beyond timing 0.787 (dev 0.791) vs the all ceiling of 0.83 (all observed 0.79; last-trial table alone 0.74).",
+  "gate": "unit_reset",
+  "feature": 27,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 27,
+    "terms": [
+      "(phase == D1) * table(prev_state, {1: 1, 2: -1}) * (2*prev_reward-1)",
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * table(prev_state, {1: 1, 2: -1})",
+      "(phase == D1) * table(prev_action, {1: 1, 2: -1})",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == GO) * choice",
+      "(phase == D2) * choice",
+      "(phase == D1) * (prev_reward == 0) * ep_trial"
+    ],
+    "weights": [
+      -0.03520465231492827,
+      0.07640293826876551,
+      0.13420624371655707,
+      -0.04114546470530709,
+      -0.028743453232133214,
+      -0.008998010890526174,
+      -0.008933473367145391,
+      -0.0019355614685213527
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7872759544122686,
+    "r2": 0.855419546631494,
+    "r2_timing_only": 0.32033798544472347
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 27,
+    "terms": [
+      "(phase == D1) * table(prev_state, {1: 1, 2: -1}) * (2*prev_reward-1)",
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * table(prev_state, {1: 1, 2: -1})",
+      "(phase == D1) * table(prev_action, {1: 1, 2: -1})",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == GO) * choice",
+      "(phase == D2) * choice",
+      "(phase == D1) * (prev_reward == 0) * ep_trial"
+    ],
+    "weights": [
+      -0.03520465231492827,
+      0.07640293826876551,
+      0.13420624371655707,
+      -0.04114546470530709,
+      -0.028743453232133214,
+      -0.008998010890526174,
+      -0.008933473367145391,
+      -0.0019355614685213527
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7911966189286077,
+    "r2": 0.8579213022922076,
+    "r2_timing_only": 0.31955748523433203
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The 'unrewarded D1 sinks late in episode' claim (about -0.0019/trial, roughly -0.19 by trial 99, 'accounts for the very low values late in episodes') is an artifact. The timing baseline uses fixed means and the terms have no phase intercept, so (phase==D1)*(prev_reward==0)*ep_trial was mostly acting as a D1 offset. Evidence: swapping it for a plain (phase==D1)*(prev_reward==0) indicator gives test 0.806, above 0.787. Swapping it for (prev_reward==0)*(ep_trial>0) gives 0.807, and np.minimum(ep_trial,10) gives 0.806. Once a (phase==D1) intercept is in, the ep_trial slope falls to -0.0005 and adds only 0.002 (0.784 -> 0.786). No real late-episode decline beyond baseline remains.",
+      "The fitted magnitudes in the explanation are biased by the missing D1 intercept. With a D1 intercept, the reward effect at D1 is about +0.20 (weight 0.196), not +0.08. This matches the residual table: a1 S1 r +0.136 vs a1 S1 u +0.007, and a1 S2 r -0.096 vs a1 S2 u -0.356.",
+      "'At GO and D2 the effects are small' undersells them. GO+D2 choice alone scores test R^2 0.19 beyond timing. Adding the choice terms to a 3-cell D1 table raises it from 0.405 to 0.577. With a GO intercept, the GO reward effect is -0.08, not -0.03.",
+      "Misses on the original terms show a systematic GO under-prediction after unrewarded trials (+0.07 after a1 S2 u, +0.056 after a2 S2 u, +0.048 after a1 S1 u) and mean phase errors of GO +0.018 and D2 -0.011. These are intercept/centering gaps. A (phase==GO) intercept closes them, taking test R^2 to 0.834, which is the 'all' ceiling of 0.83.",
+      "The D1 claims hold up: higher after S1 than S2, a weaker state effect after reward (interaction -0.035), a1 lower than a2 (about -0.04), and the lowest cells being a1 S2 u and a2 S2 u. All are consistent with the residual table."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 reset: high after reward (+0.2) and after reaching S1, lowest after unrewarded S2 trials (a1 more than a2); GO lower after reward and when the policy favours a1; no extra late-episode effect",
+    "better_terms": "(phase == D1) * table(prev_state, {1: 1, 2: -1}) * (2*prev_reward-1) ;; (phase == D1) * (prev_reward == 1) ;; (phase == D1) * table(prev_state, {1: 1, 2: -1}) ;; (phase == D1) * table(prev_action, {1: 1, 2: -1}) ;; (phase == GO) * (prev_reward == 1) ;; (phase != D1) * choice ;; (phase == D1)*1.0 ;; (phase == GO)*1.0",
+    "better_terms_test_r2_beyond_timing": 0.8335
+  },
+  "final_label": "D1 reset: high after reward (+0.2) and after reaching S1, lowest after unrewarded S2 trials (a1 more than a2); GO lower after reward and when the policy favours a1; no extra late-episode effect"
+}

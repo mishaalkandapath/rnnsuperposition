@@ -1,0 +1,64 @@
+{
+  "label": "D2 after a rewarded repeat of a2, early/mid episode",
+  "predicate": "(phase == D2) & (action == 2) & (prev_action != 1) & (prev_reward == 1) & (ep_trial < 55)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (DELAY_2), and only when this trial chose a2. It also needs the previous trial to have been a2 too (a stay; it never fires after a1, prev_action == 1) and rewarded (prev_reward == 1 holds 95% of the mass). It is also strongly gated by episode time: rate is about 10% in trials 3-49, falls off by 50-59, and is zero after trial ~65. The agent gets no clock input, so this must reflect slow drift in its hidden state (or a dependence on how confident it is in a2), not an observed variable. All variables are observed at D2. Magnitude: the largest activations (~1.0) come on rare transitions to S1 after a rewarded a2 trial; common S2 steps sit around 0.2-0.5. It never fires at D1 or GO, after an a1 choice, or late in the episode. Dev F1 0.80 (P 0.75, R 0.86, mass recall 0.94). Dropping the episode-time condition cuts F1 to 0.54. The misses are mostly low-amplitude D2 steps where the previous trial was unrewarded.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 31,
+    "predicate": "(phase == D2) & (action == 2) & (prev_action != 1) & (prev_reward == 1) & (ep_trial < 55)",
+    "split": "test",
+    "precision": 0.737931236198248,
+    "recall": 0.8667250678484317,
+    "f1": 0.7971594903512721,
+    "mass_recall": 0.9458879886083786,
+    "correlation": 0.7364825583114274,
+    "n_active": 58218,
+    "n_predicted": 68379,
+    "coverage_by_activation_quartile": [
+      0.6392992098935074,
+      0.8436276193747853,
+      0.9843342036553525,
+      0.9996564518345472
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 31,
+    "predicate": "(phase == D2) & (action == 2) & (prev_action != 1) & (prev_reward == 1) & (ep_trial < 55)",
+    "split": "dev",
+    "precision": 0.7541429369911024,
+    "recall": 0.8607389782582459,
+    "f1": 0.8039228316531933,
+    "mass_recall": 0.9430724839956314,
+    "correlation": 0.7439408038729388,
+    "n_active": 57999,
+    "n_predicted": 66197,
+    "coverage_by_activation_quartile": [
+      0.6320689655172413,
+      0.8278620689655173,
+      0.9833103448275862,
+      0.9997241189047521
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 31,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The explanation leaves out a large systematic class of false positives. When the previous a2 trial was rewarded after a RARE transition (prev_common == 0, so it reached S1 and was paid), the unit is silent. Adding prev_common==0 to the original predicate gives dev precision 0.0017 over 6052 predicted steps (test precision 0.003 over 6749 steps), about a third of all its false positives. The unit needs the previous a2 trial to have been COMMON and rewarded (prev_common==1 subset: precision 0.84). The label 'after a rewarded repeat of a2' therefore overclaims.",
+      "The predicate's main time condition checks out. The unit fires only at D2 and only on a2 trials, and is essentially never active after prev_action==a1 (17 of 58k active steps). It is zero after trial 70, about 0.002 at trials 60-69 and 0.022 at 50-59, with prev_reward==1 carrying 95% of the activation mass. Dropping the time condition is clearly worse (prev_reward==1 at ep_trial>=55 has precision 0.02).",
+      "Smaller systematic false positives: when the hidden good state is S1 (the agent keeps choosing a2 after a reversal), precision is 0.36 (5482 predicted). The unit is also silent at maximal a2 confidence: no activity at all for choice < -8.91. This probably also explains why long runs of rewarded a2 trials stay inactive in the false-positive windows.",
+      "The cutoff ep_trial < 55 is a little loose. With the prev_common fix, < 50 gives a higher test F1 (0.858 vs 0.842).",
+      "No future variables are used, which is correct. The magnitude claim (the largest activations are rare S1 arrivals after a rewarded a2 trial, and common S2 arrivals sit around 0.2-0.5) matches the top windows."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 of an a2 trial after a common-rewarded a2 trial (an outcome that confirms a2), early or mid episode only (trials < ~50); silent after rare-rewarded a2 trials",
+    "better_predicate": "(phase == D2) & (action == 2) & (prev_action != 1) & (prev_reward == 1) & (prev_common != 0) & (ep_trial < 50)",
+    "better_predicate_test_f1": 0.858
+  },
+  "final_label": "D2 of an a2 trial after a common-rewarded a2 trial (an outcome that confirms a2), early or mid episode only (trials < ~50); silent after rare-rewarded a2 trials"
+}

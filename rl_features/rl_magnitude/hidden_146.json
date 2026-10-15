@@ -1,0 +1,109 @@
+{
+ "label": "At GO after a1 reached S2 unrewarded, stronger the more the observer believes S1 is good.",
+ "short_terms": "(phase == GO) * last_is('a1 S2 u') ;; (phase == GO) * last_is('a2 S2 u') * belief_lo ;; (phase == GO) * (prev_state > 0)",
+ "terms": "(phase == GO) * last_is(\"a1 S2 u\") ;; (phase == GO) * last_is(\"a2 S2 u\") ;; (phase == GO) * last_is(\"a1 S2 u\") * belief_lo ;; (phase == GO) * last_is(\"a1 S2 u\") * tv(\"reward\", -2) ;; (phase == GO) * last_is(\"a1 S2 u\") * (tv(\"action\", -2) == 1) ;; (phase == GO) * last_is(\"a2 S2 u\") * belief_lo ;; (phase == GO) * (prev_reward == 0) * (prev_state == 2)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Fires only at GO. Magnitude is dominated by the previous trial being a1 -> S2 (rare) unrewarded (residual +2.8, the model-based stay-with-a1 case); a2 -> S2 common unrewarded gives a small activation (+0.2); all other last-trial patterns give ~0. Within a1 S2 u, activation grows with the ideal-observer log-odds that S1 is good (belief_lo). Phases D1 and D2 are silent. The free fit adds the trial before (a1 chosen two trials back raises it) and belief scaling for a2 S2 u, gaining ~0.04 R^2. Remaining misses are mostly window-first trials with unknown previous trial. No future variables used.",
+ "full_test_scores": {
+  "gate": "hidden",
+  "feature": 146,
+  "terms": [
+   "(phase == GO) * last_is(\"a1 S2 u\")",
+   "(phase == GO) * last_is(\"a2 S2 u\")",
+   "(phase == GO) * last_is(\"a1 S2 u\") * belief_lo",
+   "(phase == GO) * last_is(\"a1 S2 u\") * tv(\"reward\", -2)",
+   "(phase == GO) * last_is(\"a1 S2 u\") * (tv(\"action\", -2) == 1)",
+   "(phase == GO) * last_is(\"a2 S2 u\") * belief_lo",
+   "(phase == GO) * (prev_reward == 0) * (prev_state == 2)"
+  ],
+  "weights": [
+   0.9148852986936981,
+   -0.4032980518243313,
+   0.32879292480646033,
+   -0.050935513072715294,
+   0.44651628905433594,
+   0.38258444446241596,
+   0.5115872468693703
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6999725072029684,
+  "r2": 0.7233165577249601,
+  "r2_timing_only": 0.0778063713573871
+ },
+ "gate": "hidden",
+ "feature": 146,
+ "test_scores": {
+  "gate": "hidden",
+  "feature": 146,
+  "terms": [
+   "(phase == GO) * last_is('a1 S2 u')",
+   "(phase == GO) * last_is('a2 S2 u') * belief_lo",
+   "(phase == GO) * (prev_state > 0)"
+  ],
+  "weights": [
+   3.133806487917095,
+   0.43845440562490956,
+   -0.2909659349592334
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7486722591207464,
+  "r2": 0.7682271586600107,
+  "r2_timing_only": 0.0778063713573871
+ },
+ "dev_scores": {
+  "gate": "hidden",
+  "feature": 146,
+  "terms": [
+   "(phase == GO) * last_is('a1 S2 u')",
+   "(phase == GO) * last_is('a2 S2 u') * belief_lo",
+   "(phase == GO) * (prev_state > 0)"
+  ],
+  "weights": [
+   3.133806487917095,
+   0.43845440562490956,
+   -0.2909659349592334
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.7550844410395751,
+  "r2": 0.7742289670535358,
+  "r2_timing_only": 0.07816786363113126
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The label's main claim is that after a1 -> S2 unrewarded the feature grows with belief that S1 is good. The data barely support it. Adding the a1-S2-u * belief_lo term to the a1-S2-u + a2-S2-u model only takes test R^2 from 0.6558 to 0.6579. With an offset for 'previous trial known' it goes from 0.6871 to 0.6892.",
+   "Belief matters after the other case, a2 -> S2 unrewarded. In the form [a1 S2 u ;; a2 S2 u * belief_lo ;; prev_state > 0], test R^2 is 0.749. The recorded short form scores 0.658, and the recorded free fit 0.70. Fitted weights: about +3.13 for a1 S2 u, +0.44 per log-odds unit for a2 S2 u, and -0.29 when the previous trial is known.",
+   "Misses on the recorded short form show one systematic error. At GO, steps whose previous trial is known and is not S2-unrewarded are over-predicted by about 0.26. The cause is the first trial of each window (previous trial '?'): the feature fires there at about the average rate, which inflates the GO timing baseline. The term (phase == GO) * (prev_state > 0) removes this error (mean GO error -0.156 -> -0.007). It is a correction for how windows are cut, not for the agent's behaviour, but it is not arbitrary curve fitting.",
+   "Claims that check out: the feature is silent at D1 and D2, there is a large residual (+2.84) after a1 S2 u, a small one (+0.22) after a2 S2 u, and about 0 after every other previous trial. The large misses on the first window trial are also real. After the correction above, the remaining systematic miss is GO after a2 S2 u (+0.30, under-predicted, because there is no separate intercept for that case)."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "GO-only: strong after a1->S2 unrewarded; after a2->S2 unrewarded, scales with belief S1 is good.",
+  "better_short_terms": "(phase == GO) * last_is('a1 S2 u') ;; (phase == GO) * last_is('a2 S2 u') * belief_lo ;; (phase == GO) * (prev_state > 0)",
+  "better_short_terms_test_r2_beyond_timing": 0.7487
+ },
+ "final_label": "GO-only: strong after a1->S2 unrewarded; after a2->S2 unrewarded, scales with belief S1 is good.",
+ "original_short_terms": "(phase == GO) * last_is(\"a1 S2 u\") ;; (phase == GO) * last_is(\"a2 S2 u\") ;; (phase == GO) * last_is(\"a1 S2 u\") * belief_lo",
+ "original_test_scores": {
+  "gate": "hidden",
+  "feature": 146,
+  "terms": [
+   "(phase == GO) * last_is(\"a1 S2 u\")",
+   "(phase == GO) * last_is(\"a2 S2 u\")",
+   "(phase == GO) * last_is(\"a1 S2 u\") * belief_lo"
+  ],
+  "weights": [
+   1.8811118054427933,
+   0.29895520681536414,
+   0.31346729946177737
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6579179521404692,
+  "r2": 0.6845341149909234,
+  "r2_timing_only": 0.0778063713573871
+ },
+ "terms_from": "skeptic"
+}

@@ -1,0 +1,62 @@
+{
+  "label": "D2 after rare a2->S1, scaled by D2 policy lean to a1 and earlier in episode",
+  "terms": "(phase==D2)*(action==2)*(state==1) ;; (phase==D2)*(action==2)*(state==1)*choice ;; (phase==D2)*(action==2)*(state==1)*ep_trial",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 on trials where the agent chose a2 and reached S1 via a rare transition; zero at D1/GO and on every other choice x state combination. Within those steps the magnitude rises with the model D2 policy logit (a1 - a2): the more the agent already leans toward a1 (the action whose common state is S1), the larger it gets. It also falls across the episode (ep_trial term negative, so it is near zero late in episodes). The indicator alone gives dev R^2 0.14 beyond timing; adding the policy logit brings it to 0.66, ep_trial to 0.75 dev / 0.76 test. Value adds little once ep_trial is in (0.756 vs 0.754). Previous-trial patterns (e.g. after a2 S2 u it is larger) without the policy logit reach only 0.35. No future variables used: action and state are observed at D2, and choice is the model output at that step. Profile all ceiling is 0.53, so this beats the additive ceiling.",
+  "gate": "update",
+  "feature": 209,
+  "test_scores": {
+    "gate": "update",
+    "feature": 209,
+    "terms": [
+      "(phase==D2)*(action==2)*(state==1)",
+      "(phase==D2)*(action==2)*(state==1)*choice",
+      "(phase==D2)*(action==2)*(state==1)*ep_trial"
+    ],
+    "weights": [
+      1.4085721811837584,
+      0.16734267826874338,
+      -0.00474739007973604
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7628588614634316,
+    "r2": 0.769662048145423,
+    "r2_timing_only": 0.028688344519111286
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 209,
+    "terms": [
+      "(phase==D2)*(action==2)*(state==1)",
+      "(phase==D2)*(action==2)*(state==1)*choice",
+      "(phase==D2)*(action==2)*(state==1)*ep_trial"
+    ],
+    "weights": [
+      1.4085721811837584,
+      0.16734267826874338,
+      -0.00474739007973604
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.754165673769584,
+    "r2": 0.7609343594025539,
+    "r2_timing_only": 0.027533525267849246
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold. The terms reproduce test R^2 0.770 (dev 0.75). The a2->S1 indicator plus choice gives 0.676 on test; indicator plus ep_trial gives only 0.234, so choice carries most of the effect. Adding value (0.773), choice^2 (0.770), relu(choice) (0.769), last_is('a2 S2 u') (0.771), or since_rev plus prev_reward (0.771) adds almost nothing, which matches the explanation.",
+      "There is a systematic late-episode error. Every worst-fit dev window from misses is a late-episode a2->S1 D2 step (t76-t97) where the actual activation is 0 but the model predicts 0.8-1.2, for example t87 S1R actual 0 vs predicted 1.071 and t85 actual 0.05 vs predicted 1.199. The explanation says the feature is 'near zero late in episodes', but the linear ep_trial term (-0.005 per trial) cannot produce that.",
+      "The cause is a missing interaction: the choice slope itself fades across the episode. Adding C*choice*ep_trial raises test R^2 from 0.770 to 0.860 (+0.09). The fitted weights become choice +0.289 and choice*ep_trial -0.003, so the slope falls from about 0.29 at the start of an episode to about 0 near trial 95. Episode-decile steps (ep_trial>=80, ep_dec 7/8/9) give little beyond that (0.861-0.863). ep_trial^2 alone gives only 0.775.",
+      "The label 'scaled by D2 policy lean to a1 and earlier in episode' treats the two effects as additive. In fact the policy scaling is gated by episode time: it is strong early and gone late. The +0.167 slope the explanation reports is an average over the whole episode.",
+      "Minor: the D2 mean error is -0.015 and spread evenly across previous-trial patterns. This is a small offset outside the a2->S1 cell (other D2 cells sit at about -0.025 relative to the timing baseline) and is not a history effect. No future variables are used, so no observed-only substitute is needed."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after rare a2->S1; size grows with D2 policy lean to a1, a slope that fades over the episode (strong early, near zero late)",
+    "better_terms": "(phase==D2)*(action==2)*(state==1) ;; (phase==D2)*(action==2)*(state==1)*choice ;; (phase==D2)*(action==2)*(state==1)*ep_trial ;; (phase==D2)*(action==2)*(state==1)*choice*ep_trial",
+    "better_terms_test_r2_beyond_timing": 0.86
+  },
+  "final_label": "D2 after rare a2->S1; size grows with D2 policy lean to a1, a slope that fades over the episode (strong early, near zero late)"
+}

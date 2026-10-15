@@ -1,0 +1,61 @@
+{
+  "label": "GO step after a rewarded trial, choosing a1 (or any choice early in the episode); fades late in episode",
+  "predicate": "(phase == GO) & (prev_reward == 1) & ((model_act == 1) | (ep_trial < 30)) & (ep_trial < 80)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO steps and only when the previous trial was rewarded (prev_reward==1 covers 99.99% of activations; never at D1/D2 or after unrewarded trials). Within that, it fires mostly when the agent is choosing a1 (84% of mass; strongest when the a1-a2 policy logit is large and value is high), while a2 choices activate it weakly and mainly early in the episode. Activity decays with episode time and is nearly absent after trial ~80. The base predicate GO & prev_reward==1 has recall 1.0 but precision 0.53 (F1 0.69); adding the agent own current choice (model_act, the GO-step policy argmax, equivalent to action) and episode time raises dev F1 to 0.90. Recorded model_act rather than the FUTURE action variable since it is the agent own computed choice at this step (identical scores). Magnitude is highest for confident a1 choices after reward; it does not fire on fixation steps, D2 state presentation, or post-unrewarded GO steps.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 91,
+    "predicate": "(phase == GO) & (prev_reward == 1) & ((model_act == 1) | (ep_trial < 30)) & (ep_trial < 80)",
+    "split": "test",
+    "precision": 0.9039233527806027,
+    "recall": 0.8825777937048319,
+    "f1": 0.8931230522240061,
+    "mass_recall": 0.9139763305144314,
+    "correlation": 0.7456276561301911,
+    "n_active": 133944,
+    "n_predicted": 130781,
+    "coverage_by_activation_quartile": [
+      0.7943916860777639,
+      0.9067968703338709,
+      0.9062294690318342,
+      0.9228931493758585
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 91,
+    "predicate": "(phase == GO) & (prev_reward == 1) & ((model_act == 1) | (ep_trial < 30)) & (ep_trial < 80)",
+    "split": "dev",
+    "precision": 0.9043558387605616,
+    "recall": 0.8897032273925035,
+    "f1": 0.896969696969697,
+    "mass_recall": 0.9213495763754754,
+    "correlation": 0.7487376260104701,
+    "n_active": 130167,
+    "n_predicted": 128058,
+    "coverage_by_activation_quartile": [
+      0.7994284309507713,
+      0.9157396595169319,
+      0.9149714215475385,
+      0.9286745951261486
+    ]
+  },
+  "gate": "hidden",
+  "feature": 91,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the episode-time cutoffs are hard lines drawn on a gradual trend. Firing rate falls smoothly from about 20% (trials 0-29) to about 10% (trials 30-79), then to 2.6% (trials 80-89) and 0.1% (trials 90-99). After reward with an a2 choice, precision is 0.97 at ep_trial<10, 0.79 at 10-29 and 0.12 at >=30. So 'a2 choices activate weakly, mainly early' is right, but the change at trial 30 is gradual. Moving the cutoffs (30->35, 80->85) leaves F1 at about 0.893.",
+      "Remaining misses are mostly weak a2-choice GO activations after reward later in the episode (lowest activation quartile coverage is 0.79; misses hold 8.6% of activation mass on test). Remaining false positives are a1 or a2 GO steps after reward with zero activation. They look like episode-level magnitude variation: activation is nearly constant across trials within a window. No discrete variable separates them. I tried choice, value, start_high, good and finer ep_trial bins, and none raised F1 by more than about 0.002 (best 0.898 dev with an added choice>-8 & value>7.7 clause).",
+      "All the factual claims check out. Firing is GO-only (D1 and D2 have 0 activations), prev_reward==1 covers 99.99% of activations, and GO & prev_reward==1 gives recall 1.0, precision 0.53, F1 0.69. model_act==1 carries 84% of activation mass. Activation is highest at large choice logit (>8.07: rate 0.61) and high value. The top value bin (>8.10) is never reached at GO steps, so this is not a contradiction. The predicate scores test P 0.904, R 0.883, F1 0.893, matching the report. It uses no FUTURE variables (model_act is the agent's own computed choice)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

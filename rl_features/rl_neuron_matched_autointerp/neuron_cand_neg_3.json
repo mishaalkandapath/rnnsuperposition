@@ -1,0 +1,104 @@
+{
+  "label": "D2 after a2->S2 common, previous trial rewarded and not in S1, mid-episode (trials ~36-73) only",
+  "predicate": "(phase == D2) & (state == S2) & (common == 1) & (prev_reward == 1) & (ep_trial >= 36) & (ep_trial < 74) & (prev_state != 1) & (prev_action != 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (100% of mass), and only when the input is a2 reaching S2 through a common transition (in_action=2, in_state=2; it essentially never fires on S1 or on rare transitions). Within that it needs the previous trial to have been rewarded (prev_reward=1 holds 96% of mass) and the previous state to not be S1 (prev_state != 1, which includes the window first trial where it is unknown). So it is a: another rewarded a2->S2 common trial, continuing a rewarded S2 run. It has an odd episode-time window: zero activity before episode trial ~30 and after ~80, peaking at trials 40-69. Presumably slow drift in the hidden state crossing the threshold, since the agent has no clock input; ep_trial is a proxy for that drift and not something it observes. All variables used are known at D2. Misses (5% of mass) are weak firings on S2c steps after an unrewarded trial; false positives are mostly S2c-after-reward steps right after a reversal to good=S1 or at the edges of the episode window. It is stronger when good=S2 and value/choice strongly favour a2 (choice < -4.4 holds 68% of mass), but I did not check a clean magnitude trend beyond that.",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 3,
+    "predicate": "(phase == D2) & (state == S2) & (common == 1) & (prev_reward == 1) & (ep_trial >= 36) & (ep_trial < 74) & (prev_state != 1) & (prev_action != 1)",
+    "split": "test",
+    "precision": 0.850642461393375,
+    "recall": 0.866318506512996,
+    "f1": 0.8584089219330856,
+    "mass_recall": 0.9436715795413839,
+    "correlation": 0.826935582793894,
+    "n_active": 33318,
+    "n_predicted": 33932,
+    "coverage_by_activation_quartile": [
+      0.6380552220888356,
+      0.827250900360144,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 3,
+    "predicate": "(phase == D2) & (state == S2) & (common == 1) & (prev_reward == 1) & (ep_trial >= 36) & (ep_trial < 74) & (prev_state != 1) & (prev_action != 1)",
+    "split": "dev",
+    "precision": 0.8558648696368666,
+    "recall": 0.8767106770362332,
+    "f1": 0.8661623682172851,
+    "mass_recall": 0.9491164029186768,
+    "correlation": 0.8287367897372356,
+    "n_active": 33174,
+    "n_predicted": 33982,
+    "coverage_by_activation_quartile": [
+      0.6661442006269592,
+      0.8408488063660478,
+      0.9998794163752562,
+      1.0
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 3,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most factual claims hold. Test scores reproduce (P0.811 R0.866 F0.838 M0.944). The unit is active only at D2 (100% of mass, 0 active steps at D1/GO). It fires on 0 S1 steps and on 2 rare steps. prev_reward=1 holds 95.6% of the mass. Without prev_state it scores F0.806, and S2-common within the window scores F0.684.",
+      "The episode-time window is real and sharp. For the predicate restricted to 4-trial ep_trial bins, precision is 0.07 at trials 30-33, 0.33 at 34-37, 0.71 at 38-41, 0.88-0.91 from 42 to 69, 0.68 at 70-73, 0.09 at 74-77 and 0.00 at 78-81. Activity peaks around trials 54-61 (mass 0.15 per bin). 'Peaks at 40-69' is roughly right. 'Hidden-state drift' is a guess, not something these scores test.",
+      "Systematic false-positive class: the clause prev_state != 1 is the wrong variable. It lets in switch trials where the previous trial was a1 with a rare transition to S2 and the agent now chooses a2. On the test misses output these are the top false positives ('r1 a1 S2R | r1 a2 *S2c*'). Adding (stay == 0) or (prev_action == 1) to the predicate gives precision 0.001 over 1353 dev steps, so the unit essentially never fires on a switch into a2. That is about 22% of all dev false positives. The real condition is that the previous trial was also an a2 choice (a repeat of a2), not merely 'previous state not S1'.",
+      "Adding (prev_action != 1) improves the predicate to dev F1 0.866 / test F1 0.858 (precision 0.851, mass recall 0.944, unchanged). Adding the policy-logit condition choice < -1.5 as well gives test F1 0.864.",
+      "Misses (5.6% of mass on test) are mostly weaker firings on a2->S2 common steps inside a long a2 run where the previous trial was unrewarded. The activation shrinks after a non-reward but does not always cross back under the threshold. This was acknowledged. Also, about 13.6% of the predicate's mass falls on good=-1 (between reversals). Firing with good=S1 is rare (2142 predicted steps, precision 0.38)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 of a repeated a2 choice reaching S2 by a common transition, after a rewarded a2 trial (an ongoing rewarded a2/S2 run), only mid-episode (trials ~36-73); never on a switch into a2",
+    "better_predicate": "(phase == D2) & (state == S2) & (common == 1) & (prev_reward == 1) & (ep_trial >= 36) & (ep_trial < 74) & (prev_state != 1) & (prev_action != 1)",
+    "better_predicate_test_f1": 0.858
+  },
+  "final_label": "D2 of a repeated a2 choice reaching S2 by a common transition, after a rewarded a2 trial (an ongoing rewarded a2/S2 run), only mid-episode (trials ~36-73); never on a switch into a2",
+  "original_predicate": "(phase == D2) & (state == S2) & (common == 1) & (prev_reward == 1) & (ep_trial >= 36) & (ep_trial < 74) & (prev_state != 1)",
+  "original_test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 3,
+    "predicate": "(phase == D2) & (state == S2) & (common == 1) & (prev_reward == 1) & (ep_trial >= 36) & (ep_trial < 74) & (prev_state != 1)",
+    "split": "test",
+    "precision": 0.8107060607762736,
+    "recall": 0.8663785341256979,
+    "f1": 0.8376182461842029,
+    "mass_recall": 0.9437328561359157,
+    "correlation": 0.8066583634869797,
+    "n_active": 33318,
+    "n_predicted": 35606,
+    "coverage_by_activation_quartile": [
+      0.6380552220888356,
+      0.8274909963985594,
+      1.0,
+      1.0
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 3,
+    "predicate": "(phase == D2) & (state == S2) & (common == 1) & (prev_reward == 1) & (ep_trial >= 36) & (ep_trial < 74) & (prev_state != 1)",
+    "split": "dev",
+    "precision": 0.823121550870242,
+    "recall": 0.8767408211249774,
+    "f1": 0.8490855216102993,
+    "mass_recall": 0.94915765783534,
+    "correlation": 0.8122005781866267,
+    "n_active": 33174,
+    "n_predicted": 35335,
+    "coverage_by_activation_quartile": [
+      0.6661442006269592,
+      0.8408488063660478,
+      1.0,
+      1.0
+    ]
+  },
+  "predicate_from": "skeptic"
+}

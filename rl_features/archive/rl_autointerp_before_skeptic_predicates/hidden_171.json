@@ -1,0 +1,65 @@
+{
+  "label": "GO step, late in episode (trial >= ~75), after a rewarded trial, when the agent is strongly committed to repeating a2",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (prev_action != 1) & (ep_trial >= 75) & (choice < -5)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO steps (never D1/D2). Every activation follows a rewarded previous trial (prev_reward == 1); essentially all follow a previous a2 choice (or the window start), and the agent then chooses a2 with a strongly a2-leaning policy logit (choice < -5; 97% of mass at choice < -8.9). In other words it is a win-stay-on-a2 signal. It is also strictly late-episode: it never fires before episode trial 60, and the rate climbs from trial 70 to a peak at 80-99. That suggests the GRU tracks elapsed time in its hidden state. All variables used are observed or computed by the agent: previous reward, previous action, its own policy logit, and episode position; no future outcome is used. It is concentrated where S2 is good (82% of mass) because that is when a2 is chosen confidently. It does not fire on a1 choices, after unrewarded trials, or after a switch. Dev scores: F1 0.86, mass recall 0.98 (a trial cutoff of 70 instead of 75 gives recall 0.99 and precision 0.68). False positives are mostly the same context with zero activation, so the gating on episode time and confidence is soft. Magnitude was not checked beyond quartile coverage.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 171,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (prev_action != 1) & (ep_trial >= 75) & (choice < -5)",
+    "split": "test",
+    "precision": 0.7943352491029753,
+    "recall": 0.9534626672256736,
+    "f1": 0.8666551186558116,
+    "mass_recall": 0.9847713894323541,
+    "correlation": 0.7992849002029002,
+    "n_active": 26237,
+    "n_predicted": 31493,
+    "coverage_by_activation_quartile": [
+      0.8417682926829269,
+      0.9722518676627535,
+      0.9998475377344107,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 171,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (prev_action != 1) & (ep_trial >= 75) & (choice < -5)",
+    "split": "dev",
+    "precision": 0.7922744288111527,
+    "recall": 0.9505943392573664,
+    "f1": 0.864243597641468,
+    "mass_recall": 0.9835724993902125,
+    "correlation": 0.7938250004269417,
+    "n_active": 25827,
+    "n_predicted": 30988,
+    "coverage_by_activation_quartile": [
+      0.8367663001393836,
+      0.9677868979402199,
+      0.9978318104382841,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 171,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Systematic false-positive class the label leaves out: the feature never fires after a rare-rewarded a2 trial (a2 led to S1 and paid off). Restricting the original predicate to prev_common == 0 gives 2686 predicted steps on test with precision 0.0, about 40% of all false positives. The profile agrees: when prev_common == 0, only 21 of 25827 active steps fall there. The agent often still picks a2 with choice < -5 after these trials, so the choice < -5 condition does not cover them. The feature really needs the previous trial to be a2, then S2 (common), then rewarded, i.e. 'rewarded in S2 last trial'. It is not just 'after a rewarded trial'.",
+      "Adding (prev_common != 0) raises test precision from 0.794 to 0.868 and test F1 from 0.867 to 0.909. Recall is unchanged at 0.953 and mass recall at 0.985, so nothing is lost.",
+      "Claims that check out: GO-only (D1 and D2 have 0 active steps); prev_reward == 1 for 100% of active steps; action == a2 for all but 1 active step; no activations at trials 0-59, 175 at trials 60-69, then a rise to a peak at trials 80-99; 97.3% of mass has choice < -8.91; 82% of mass where good == S2. No future variable is used.",
+      "The prev_action != 1 term passes 23% of the mass at the window's first trial (prev_action == -1), where the window does not record the previous trial. That is a data artifact, not a property of the feature. The previous trial there is presumably also a2 to S2, common, rewarded.",
+      "Also unexplained: all activations have value < 7.13 (low value-head output). It does not add precision beyond the other conditions, but it is a notable correlate the explanation does not mention.",
+      "The remaining test false positives are mostly the same context (a2 to S2, common, rewarded, then a2 again) with zero or near-zero activation. That looks like soft gating, consistent with the explanation."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step late in the episode (trial >= ~75), when the previous trial was a2, went to S2 by a common transition and was rewarded, and the agent is strongly committed to repeating a2 (win-stay on a2 after a common, rewarded trial; silent after rare-rewarded a2 trials)",
+    "better_predicate": "(phase == GO) & (prev_reward == 1) & (prev_action != 1) & (prev_common != 0) & (ep_trial >= 75) & (choice < -5)",
+    "better_predicate_test_f1": 0.909
+  },
+  "final_label": "GO step late in the episode (trial >= ~75), when the previous trial was a2, went to S2 by a common transition and was rewarded, and the agent is strongly committed to repeating a2 (win-stay on a2 after a common, rewarded trial; silent after rare-rewarded a2 trials)"
+}

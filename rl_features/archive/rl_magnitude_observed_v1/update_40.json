@@ -1,0 +1,75 @@
+{
+  "label": "GO after a2->rare S1 rewarded; larger mid-episode, when belief favours S2",
+  "terms": "(phase == GO) * last_is(\"a2 S1 r\") ;; (phase == GO) * last_is(\"a2 S1 r\") * np.clip(belief_lo, -4, 4) ;; (phase == GO) * last_is(\"a2 S1 r\") * (tv(\"reward\", -2) == 1) ;; (phase == GO) * last_is(\"a2 S1 r\") * (tv(\"state\", -2) == 2) ;; (phase == GO) * last_is(\"a2 S1 r\") * np.clip(ep_trial - 10, 0, 40) / 40 ;; (phase == GO) * last_is(\"a2 S1 r\") * np.clip(ep_trial - 70, 0, 20) / 20",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO, and essentially only when the previous trial was a2 -> rare S1 -> rewarded (the trial that tells a model-based agent to switch to a1, unless it believes S2 is good). That indicator alone gives dev R^2 beyond timing 0.36, which is roughly the profile ceiling (all 0.40, all observed 0.38). Within that pattern the magnitude follows a hump over episode time: near zero in the first ~10 trials, rising until about trial 50 and falling again after trial 70. This interaction with episode time is not captured by the per-decile timing baseline and is the largest gain (dev 0.47 -> 0.72). The magnitude is also larger when the ideal-observer belief favours S2 (negative belief_lo, i.e. the rare reward on S1 should be discounted and a2 kept, which matches the earlier stick-with-a2 policy label), when the trial before was rewarded, and when the trial before reached S2. No activity at D1 or D2, and none after any other previous-trial pattern. Test R^2 beyond timing is 0.70 (0.65 without the belief term). Observed-only terms reach and exceed the additive ceiling, so dropping the model value/policy appears to cost little here. Misses: windows whose first trial has no visible previous trial cannot be predicted.",
+  "gate": "update",
+  "feature": 40,
+  "test_scores": {
+    "gate": "update",
+    "feature": 40,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S1 r\")",
+      "(phase == GO) * last_is(\"a2 S1 r\") * np.clip(belief_lo, -4, 4)",
+      "(phase == GO) * last_is(\"a2 S1 r\") * (tv(\"reward\", -2) == 1)",
+      "(phase == GO) * last_is(\"a2 S1 r\") * (tv(\"state\", -2) == 2)",
+      "(phase == GO) * last_is(\"a2 S1 r\") * np.clip(ep_trial - 10, 0, 40) / 40",
+      "(phase == GO) * last_is(\"a2 S1 r\") * np.clip(ep_trial - 70, 0, 20) / 20"
+    ],
+    "weights": [
+      -0.03944457010377332,
+      -0.026152695345543337,
+      0.03297049201204709,
+      0.01194113549617265,
+      0.2481140359574088,
+      -0.2284858491525324
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7017627798192203,
+    "r2": 0.7106079709885329,
+    "r2_timing_only": 0.029658240389818125
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 40,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S1 r\")",
+      "(phase == GO) * last_is(\"a2 S1 r\") * np.clip(belief_lo, -4, 4)",
+      "(phase == GO) * last_is(\"a2 S1 r\") * (tv(\"reward\", -2) == 1)",
+      "(phase == GO) * last_is(\"a2 S1 r\") * (tv(\"state\", -2) == 2)",
+      "(phase == GO) * last_is(\"a2 S1 r\") * np.clip(ep_trial - 10, 0, 40) / 40",
+      "(phase == GO) * last_is(\"a2 S1 r\") * np.clip(ep_trial - 70, 0, 20) / 20"
+    ],
+    "weights": [
+      -0.03944457010377332,
+      -0.026152695345543337,
+      0.03297049201204709,
+      0.01194113549617265,
+      0.2481140359574088,
+      -0.2284858491525324
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7196540512050645,
+    "r2": 0.7276125507933584,
+    "r2_timing_only": 0.02838813837868348
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the belief, previous-reward and previous-state effects scale with the episode hump rather than adding to it. Multiplying each one by the hump shape, B*hump*belief_lo etc. (5 terms), raises test R^2 beyond timing from 0.70 to 0.78. Weights: hump +0.204, hump*belief_lo -0.057, hump*prev2_rewarded +0.057, hump*prev2_S2 +0.036. So the modulators matter most mid-episode, which the label does not say.",
+      "Minor: the fall starts earlier than 'after trial 70'. Per-decile weights for B (test 0.587) are 0.002, 0.003, 0.086 (deciles 2-3), 0.187, 0.238, 0.249, 0.177 (decile 7), 0.023 (deciles 8-9). The peak is at trials 50-69, decile 7 is already lower, and the activation is near zero after 80. The hump claim itself holds: a linear ep_dec interaction gives only 0.34.",
+      "The secondary modulators are small. Each adds about 0.005-0.01 test R^2: hump+belief 0.691, +prev2 reward 0.700, +prev2 state 0.697. Their direction is confirmed: belief_lo weight -0.03 (S2-favouring belief raises it), prev2 rewarded +0.04, prev2 S2 +0.03. The belief term is a signed linear effect: |belief_lo| does worse (0.658) and a quadratic term adds nothing. belief_cover adds nothing.",
+      "Overclaim: 'past the additive ceiling, so dropping value/policy costs little' compares an interaction model against an additive ceiling (0.40). It does not compare against the earlier value/policy explanation's own interaction score, so the claimed cost of going observed-only is not measured.",
+      "The only systematic misses are windows whose first trial has no previous trial (prev = '?'). There the feature fires at about 0.37-0.39 and the fit predicts about 0. This is a limit of the data that the explanation already acknowledges. Phase errors elsewhere are at most 0.004, with no D1/D2 activity and no other previous-trial pattern."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after a2->rare S1 rewarded; hump over the episode (peak trials 40-70, ~0 before 10 and after 80); mid-episode, larger when the belief favours S2 and the trial before was rewarded / reached S2",
+    "better_terms": "(phase == GO) * last_is('a2 S1 r') ;; (phase == GO) * last_is('a2 S1 r') * (np.clip(ep_trial - 10, 0, 40) / 40 - np.clip(ep_trial - 70, 0, 20) / 20) ;; (phase == GO) * last_is('a2 S1 r') * (np.clip(ep_trial - 10, 0, 40) / 40 - np.clip(ep_trial - 70, 0, 20) / 20) * np.clip(belief_lo, -4, 4) ;; (phase == GO) * last_is('a2 S1 r') * (np.clip(ep_trial - 10, 0, 40) / 40 - np.clip(ep_trial - 70, 0, 20) / 20) * (tv('reward', -2) == 1) ;; (phase == GO) * last_is('a2 S1 r') * (np.clip(ep_trial - 10, 0, 40) / 40 - np.clip(ep_trial - 70, 0, 20) / 20) * (tv('state', -2) == 2)",
+    "better_terms_test_r2_beyond_timing": 0.7773
+  },
+  "final_label": "GO after a2->rare S1 rewarded; hump over the episode (peak trials 40-70, ~0 before 10 and after 80); mid-episode, larger when the belief favours S2 and the trial before was rewarded / reached S2"
+}

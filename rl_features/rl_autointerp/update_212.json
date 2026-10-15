@@ -1,0 +1,104 @@
+{
+  "label": "D1 after a rewarded common trial when the agent is about to choose a2 (S2-is-good, win-stay on a2), first ~70 trials of the episode",
+  "predicate": "(phase == D1) & (in_rew == 1) & (choice < -1.52) & (prev_common != 0) & (ep_trial < 72)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (never GO/D2), and almost only when the reward input is 1 (99.4% of mass). It is further restricted to trials where the agent is about to choose a2 (upcoming choice, which the agent computes; prev_action is a2 in ~all active cases, i.e. win-stay on a2), and is silent when the rewarded previous trial had a rare transition (prev_common=0: 0.1% of mass; e.g. a2 -> S1 rewarded gives ~0.02). It essentially never fires after episode trial ~72, a time-in-episode cutoff. Good state is S2 in 80% of active mass. The model policy logit at D1 is in a moderate a2-preferring band [-4.4, -1.5] for 99.9% of activations; using that band instead of action==2 raises dev F1 to 0.93, but I recorded the behavioral version (dev P 0.80, R 0.94, F1 0.86, mass recall 0.99). It does not fire on unrewarded D1s, on a1 choices, or on any GO/D2 step. No uses of future random outcomes. Magnitude claims not checked beyond: the lowest activation quartile holds most misses.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 212,
+    "predicate": "(phase == D1) & (in_rew == 1) & (choice < -1.52) & (prev_common != 0) & (ep_trial < 72)",
+    "split": "test",
+    "precision": 0.9200481948448729,
+    "recall": 0.9273239843862946,
+    "f1": 0.9236717619359623,
+    "mass_recall": 0.9907092215609317,
+    "correlation": 0.8681424598756532,
+    "n_active": 69170,
+    "n_predicted": 69717,
+    "coverage_by_activation_quartile": [
+      0.710460880124906,
+      0.9992482507372925,
+      0.9997686791579922,
+      0.9998265093684942
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 212,
+    "predicate": "(phase == D1) & (in_rew == 1) & (choice < -1.52) & (prev_common != 0) & (ep_trial < 72)",
+    "split": "dev",
+    "precision": 0.9247795830296794,
+    "recall": 0.9338672438672438,
+    "f1": 0.929301196861022,
+    "mass_recall": 0.9917461021560343,
+    "correlation": 0.8716846643221522,
+    "n_active": 69300,
+    "n_predicted": 69981,
+    "coverage_by_activation_quartile": [
+      0.7365079365079366,
+      0.9992496392496393,
+      0.9997113997113997,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 212,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most factual claims hold on dev. The feature fires only at D1 (GO and D2 have 0 active steps). in_rew=1 holds 0.994 of activation mass. action=2 holds 1.000 (12 active steps with a1). prev_common=0 holds 0.001. Rate by ep_trial falls steeply: precision of the choice-band predicate is 0.86 at trials 60-65, 0.79 at 66-69, 0.61 at 70-71, 0.31 at 72-74 and 0.003 at 75+. good=S2 holds 0.80 of mass. choice < -1.52 holds 0.999.",
+      "Systematic false-positive class in the recorded predicate. Where the predicate is true but the D1 policy logit is choice >= -1.52, there are 11,064 predicted steps (dev) at only 1.7% precision. That is about 10.9k of the ~16.1k false positives, so roughly two thirds of all false positives are one identifiable class, not scattered noise. 'About to choose a2' is a loose proxy. The feature tracks a strong, committed a2 preference at D1.",
+      "Related history signature: when the trial two back was unrewarded (tv('reward',-2)==0), the recorded predicate's precision falls to 0.51 (12,011 predicted), against 0.93 when it was rewarded. When good=S1, precision is 0.53. The feature needs accumulated confidence in a2 (a rewarded streak, S2 good), not just one rewarded a2 trial. The label's 'win-stay on a2' undersells this.",
+      "The explainer knew about this gap: they found that the choice band raises F1 to 0.93, but recorded the weaker action==2 version, and the label still says just 'about to choose a2'. With a clear systematic counterexample class left, the recorded predicate and label should not be upheld as is.",
+      "Minor: prev_common != 0 includes prev_common == -1 (the window's first trial, 24% of mass). So the label's 'after a rewarded common trial' is stated as 'not after a rare trial' in the predicate. Calling the trial-~72 cutoff a time-in-episode effect is accurate; trials 70-79 still hold 0.5% of mass."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a rewarded trial (not following a rare transition) when the agent is already strongly committed to a2 (policy logit a1-a2 < ~-1.5, typically after a rewarded a2 streak with S2 good), in roughly the first 70 trials of the episode",
+    "better_predicate": "(phase == D1) & (in_rew == 1) & (choice < -1.52) & (prev_common != 0) & (ep_trial < 72)",
+    "better_predicate_test_f1": 0.924
+  },
+  "final_label": "D1 after a rewarded trial (not following a rare transition) when the agent is already strongly committed to a2 (policy logit a1-a2 < ~-1.5, typically after a rewarded a2 streak with S2 good), in roughly the first 70 trials of the episode",
+  "original_predicate": "(phase == D1) & (in_rew == 1) & (action == 2) & (prev_common != 0) & (ep_trial < 72)",
+  "original_test_scores": {
+    "gate": "update",
+    "feature": 212,
+    "predicate": "(phase == D1) & (in_rew == 1) & (action == 2) & (prev_common != 0) & (ep_trial < 72)",
+    "split": "test",
+    "precision": 0.7796263086467623,
+    "recall": 0.9301864970362874,
+    "f1": 0.8482774987145514,
+    "mass_recall": 0.99106170900972,
+    "correlation": 0.7935454030652337,
+    "n_active": 69170,
+    "n_predicted": 82528,
+    "coverage_by_activation_quartile": [
+      0.7224888683282253,
+      0.9990169432718441,
+      0.9996530187369882,
+      0.9995951885264862
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "update",
+    "feature": 212,
+    "predicate": "(phase == D1) & (in_rew == 1) & (action == 2) & (prev_common != 0) & (ep_trial < 72)",
+    "split": "dev",
+    "precision": 0.8007972060765367,
+    "recall": 0.9363780663780664,
+    "f1": 0.8632968144053536,
+    "mass_recall": 0.992093640195666,
+    "correlation": 0.8061051446776488,
+    "n_active": 69300,
+    "n_predicted": 81033,
+    "coverage_by_activation_quartile": [
+      0.7468398268398269,
+      0.9991919191919192,
+      0.9996536796536797,
+      0.9998268398268398
+    ]
+  },
+  "predicate_from": "skeptic"
+}

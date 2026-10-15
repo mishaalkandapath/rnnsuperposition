@@ -1,0 +1,105 @@
+{
+  "label": "GO after an unrewarded trial when the agent is committing to a1 (excluding a lone common loss after a reward)",
+  "predicate": "(phase == GO) & (prev_reward == 0) & (choice > 4) & ((prev_common != 1) | (tv(\"prev_reward\", -1) != 1))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires almost only at GO (99% of activation mass), never at D2, and only when the previous trial was unrewarded (in_rew 0 at D1). It also needs the policy to favor a1: 98.5% of mass is on a1 choices, and rate rises with the logit(a1)-logit(a2) margin (7x lift in the top choice bin). Within that set it is mostly silent after a single common-transition loss that followed a rewarded trial. It fires after rare-unrewarded trials (prev_common 0 gives 3x lift, 72% of mass) and after repeated losses. Highest activations come in runs of unrewarded a1 trials while S1 is good. It does not fire after rewarded trials, at D2, or when choosing a2. Every variable used is observed or computed by the model at that step (previous reward and transition, the current policy logit), so no future variable is used. A simpler version, GO & prev_reward==0 & action==1, reaches dev F1 0.70 (mass recall 0.98). Dev F1 of the recorded predicate is 0.83, mass recall 0.97.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 125,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (choice > 4) & ((prev_common != 1) | (tv(\"prev_reward\", -1) != 1))",
+    "split": "test",
+    "precision": 0.786461716100166,
+    "recall": 0.8684818701022712,
+    "f1": 0.8254393051908706,
+    "mass_recall": 0.9468119783534097,
+    "correlation": 0.7735348359662675,
+    "n_active": 37645,
+    "n_predicted": 41571,
+    "coverage_by_activation_quartile": [
+      0.6318529536761581,
+      0.8873658484751886,
+      0.9674848581447243,
+      0.9872489639783233
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 125,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (choice > 4) & ((prev_common != 1) | (tv(\"prev_reward\", -1) != 1))",
+    "split": "dev",
+    "precision": 0.8027926643394464,
+    "recall": 0.8767182130584192,
+    "f1": 0.8381284808664632,
+    "mass_recall": 0.954461154603559,
+    "correlation": 0.7842188434236356,
+    "n_active": 37248,
+    "n_predicted": 40678,
+    "coverage_by_activation_quartile": [
+      0.6319802405498282,
+      0.9126932989690721,
+      0.9743341924398625,
+      0.9878651202749141
+    ]
+  },
+  "gate": "reset",
+  "feature": 125,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims check out on dev. 99.0% of activation mass is at GO, 1.0% at D1 and 0 at D2. Of the mass with a known previous outcome, essentially 100% follows prev_reward==0 (3 active steps after a reward). 98.5% of mass is on action a1.",
+      "The exclusion holds. GO & prev_reward==0 & choice>2.78 & a common loss right after a rewarded trial has precision 0.003 over 10,904 steps, so the feature really is silent there. A common loss after a loss is not excluded: precision 0.61, though recall there is only 0.11.",
+      "Rare-unrewarded firing comes entirely from prev_action==1, i.e. a1 led to S2 and was unrewarded. That slice has precision 0.86 and holds 71% of mass. The matching a2-rare-loss case never satisfies choice>2.78, so it is not an independent source of firing. The label could state this more sharply as 'a1 after an a1-rare loss, or after repeated losses'.",
+      "Minor systematic false positives. (a) At rel -3 the previous trial falls outside the window, so prev_common = -1 and the exclusion cannot be applied. Precision there is 0.64 against 0.80-0.82 at the other positions, which is a data limit rather than a wrong label. (b) Low-margin a1 choices fire less: choice 2.78-5 has precision 0.32 and choice 5-8 has 0.59, against 0.90 above 8. The feature is graded in the a1 margin, so a hard threshold of 2.78 is a little loose.",
+      "Raising the threshold to choice>4 helps only slightly (dev F1 0.838 vs 0.825; test F1 0.825 vs 0.809). This is not a different explanation.",
+      "The test split reproduces the reported numbers (P 0.746, R 0.885, F1 0.809, mass recall 0.961). The test misses contain no systematic class: the leftover active-but-false-predicate steps hold 3.9% of mass and are mostly D1 steps and low-magnitude a2 GO steps.",
+      "The predicate uses no future variables. choice is the model's own logit at GO."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == GO) & (prev_reward == 0) & (choice > 4) & ((prev_common != 1) | (tv(\"prev_reward\", -1) != 1))",
+    "better_predicate_test_f1": 0.825
+  },
+  "original_predicate": "(phase == GO) & (prev_reward == 0) & (choice > 2.78) & ((prev_common != 1) | (tv(\"prev_reward\", -1) != 1))",
+  "original_test_scores": {
+    "gate": "reset",
+    "feature": 125,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (choice > 2.78) & ((prev_common != 1) | (tv(\"prev_reward\", -1) != 1))",
+    "split": "test",
+    "precision": 0.74577409604836,
+    "recall": 0.8848452649754284,
+    "f1": 0.809379176284777,
+    "mass_recall": 0.9611511396973715,
+    "correlation": 0.7568879051790035,
+    "n_active": 37645,
+    "n_predicted": 44665,
+    "coverage_by_activation_quartile": [
+      0.6483212919677008,
+      0.9110615237488046,
+      0.9832111359047923,
+      0.9968122409945808
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "reset",
+    "feature": 125,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (choice > 2.78) & ((prev_common != 1) | (tv(\"prev_reward\", -1) != 1))",
+    "split": "dev",
+    "precision": 0.7693628474639195,
+    "recall": 0.8901954467353952,
+    "f1": 0.8253802305030742,
+    "mass_recall": 0.9664169004993477,
+    "correlation": 0.7708871418078233,
+    "n_active": 37248,
+    "n_predicted": 43098,
+    "coverage_by_activation_quartile": [
+      0.6471219931271478,
+      0.929553264604811,
+      0.9870060137457045,
+      0.9971005154639175
+    ]
+  },
+  "predicate_from": "skeptic"
+}

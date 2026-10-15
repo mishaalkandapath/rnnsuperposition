@@ -1,0 +1,112 @@
+{
+ "label": "Fires at D1 late in the episode (trial >= 85) after an unrewarded visit to S2.",
+ "short_terms": "(phase == D1) * last_is('a2 S2 u') * np.maximum(ep_trial - 75, 0) ;; (phase == D1) * last_is('a1 S2 u') * np.maximum(ep_trial-75,0) ;; (phase == D1) * last_is('a2 S2 u') * (tv('reward',-2)==0)",
+ "terms": "(phase == D1) * last_is(\"a2 S2 u\") * (ep_trial >= 80) ;; (phase == D1) * last_is(\"a2 S2 u\") * (ep_trial >= 85) ;; (phase == D1) * last_is(\"a2 S2 u\") * (ep_trial >= 90) ;; (phase == D1) * last_is(\"a2 S2 u\") * (ep_trial >= 95) ;; (phase == D1) * last_is(\"a1 S2 u\") * (ep_trial >= 85) ;; (phase == D1) * last_is(\"a2 S2 u\") * (ep_trial >= 85) * (tv(\"reward\", -2) == 0) ;; (phase == D1) * last_is(\"a2 S2 u\") * (ep_trial >= 85) * belief_lo ;; (phase == D1) * last_is(\"a2 S2 u\") * (ep_trial >= 85) * (tv(\"state\", -2) == 2)",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Silent at GO and D2. At D1 it fires (~2) only late in the episode, after the previous trial reached S2 and was unrewarded; strongest after common a2->S2 unrewarded, about half as strong after rare a1->S2 unrewarded; S1-unrewarded or any rewarded trial gives ~0. Magnitude ramps with episode trial (steps at ~80, 85, 90, 95). The free fit adds a boost when the trial before was also unrewarded (two losses in a row); belief log-odds and the earlier state add nothing. No future variables used.",
+ "full_test_scores": {
+  "gate": "hidden",
+  "feature": 26,
+  "terms": [
+   "(phase == D1) * last_is(\"a2 S2 u\") * (ep_trial >= 80)",
+   "(phase == D1) * last_is(\"a2 S2 u\") * (ep_trial >= 85)",
+   "(phase == D1) * last_is(\"a2 S2 u\") * (ep_trial >= 90)",
+   "(phase == D1) * last_is(\"a2 S2 u\") * (ep_trial >= 95)",
+   "(phase == D1) * last_is(\"a1 S2 u\") * (ep_trial >= 85)",
+   "(phase == D1) * last_is(\"a2 S2 u\") * (ep_trial >= 85) * (tv(\"reward\", -2) == 0)",
+   "(phase == D1) * last_is(\"a2 S2 u\") * (ep_trial >= 85) * belief_lo",
+   "(phase == D1) * last_is(\"a2 S2 u\") * (ep_trial >= 85) * (tv(\"state\", -2) == 2)"
+  ],
+  "weights": [
+   0.48178700766570265,
+   0.2227043096081984,
+   0.40802319366260226,
+   0.2226653637145347,
+   0.3641755376464159,
+   0.7723460671901463,
+   -0.04622504773367619,
+   -0.015195157084966666
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5794899270327778,
+  "r2": 0.6344694600094324,
+  "r2_timing_only": 0.1307448656073933
+ },
+ "gate": "hidden",
+ "feature": 26,
+ "test_scores": {
+  "gate": "hidden",
+  "feature": 26,
+  "terms": [
+   "(phase == D1) * last_is('a2 S2 u') * np.maximum(ep_trial - 75, 0)",
+   "(phase == D1) * last_is('a1 S2 u') * np.maximum(ep_trial-75,0)",
+   "(phase == D1) * last_is('a2 S2 u') * (tv('reward',-2)==0)"
+  ],
+  "weights": [
+   0.07112421496732023,
+   0.021511658212805755,
+   0.18213413084929425
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5759461528637233,
+  "r2": 0.6313890161178539,
+  "r2_timing_only": 0.1307448656073933
+ },
+ "dev_scores": {
+  "gate": "hidden",
+  "feature": 26,
+  "terms": [
+   "(phase == D1) * last_is('a2 S2 u') * np.maximum(ep_trial - 75, 0)",
+   "(phase == D1) * last_is('a1 S2 u') * np.maximum(ep_trial-75,0)",
+   "(phase == D1) * last_is('a2 S2 u') * (tv('reward',-2)==0)"
+  ],
+  "weights": [
+   0.07112421496732023,
+   0.021511658212805755,
+   0.18213413084929425
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.5625079549021342,
+  "r2": 0.6153411499118424,
+  "r2_timing_only": 0.12076378439724422
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The 'trial >= 85' threshold in the label is too late. Activity rises steadily from about trial 75. The misses show D1 activations of 1.5 to 2.5 at t77-t83 after S2-unrewarded trials, where the short form predicts about 0. A linear ramp max(ep_trial-75,0) times last_is('a2 S2 u') / ('a1 S2 u') reaches test R^2 0.558 with 2 terms, against 0.523 for the recorded 3-term step form. Ramp start points of 70, 78 and 80 give 0.556, 0.548 and 0.535, so 75 is the best start.",
+   "The claim that rare a1->S2 unrewarded is 'roughly half as strong' is off. In the ramp fit the weights are 0.0215 vs 0.071, about 30%. In a step fit, a1S2u at >=85 gets 0.36 against a cumulative 0.77+0.37+0.43 for a2S2u late, about 25-45% depending on trial.",
+   "The two-losses-in-a-row boost is real and fits in short form. Adding (phase==D1)*last_is('a2 S2 u')*(tv('reward',-2)==0) raises test R^2 to 0.576 (dev 0.563). The label omits it.",
+   "Claims that check out: silent at GO/D2. Specific to the previous trial reaching S2 unrewarded (D1 residual after a1S1u or a2S1u is about -0.04, after a2S2u +0.27, after a1S2u +0.06). Belief adds nothing (an |belief_lo| interaction term gives +0.001).",
+   "Remaining error: firing looks closer to all-or-none (about 2.0-2.5 when on) with an on-probability that grows with episode trial. Linear terms therefore under-predict large early-late firings (e.g. actual 2.45 vs predicted 0.70 at t83), and about 40% of the variance is left. The misses tool also shows a small uniform over-prediction (about -0.03) at D1 after all other previous-trial types, from the timing baseline absorbing the late-episode mean."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "D1 after an unrewarded S2 visit, rising from trial ~75; strongest for common a2, or two losses.",
+  "better_short_terms": "(phase == D1) * last_is('a2 S2 u') * np.maximum(ep_trial - 75, 0) ;; (phase == D1) * last_is('a1 S2 u') * np.maximum(ep_trial-75,0) ;; (phase == D1) * last_is('a2 S2 u') * (tv('reward',-2)==0)",
+  "better_short_terms_test_r2_beyond_timing": 0.5759
+ },
+ "final_label": "D1 after an unrewarded S2 visit, rising from trial ~75; strongest for common a2, or two losses.",
+ "original_short_terms": "(phase == D1) * last_is(\"a2 S2 u\") * (ep_trial >= 85) ;; (phase == D1) * last_is(\"a2 S2 u\") * (ep_trial >= 90) ;; (phase == D1) * last_is(\"a1 S2 u\") * (ep_trial >= 85)",
+ "original_test_scores": {
+  "gate": "hidden",
+  "feature": 26,
+  "terms": [
+   "(phase == D1) * last_is(\"a2 S2 u\") * (ep_trial >= 85)",
+   "(phase == D1) * last_is(\"a2 S2 u\") * (ep_trial >= 90)",
+   "(phase == D1) * last_is(\"a1 S2 u\") * (ep_trial >= 85)"
+  ],
+  "weights": [
+   0.9262194327783497,
+   0.5295905402609834,
+   0.3633732810785949
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5228244515075068,
+  "r2": 0.585212704466292,
+  "r2_timing_only": 0.1307448656073933
+ },
+ "terms_from": "skeptic"
+}

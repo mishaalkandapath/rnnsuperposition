@@ -1,0 +1,73 @@
+{
+  "label": "D1-only: large after rare a2->S1 (esp. unrewarded), graded by a2-leaning policy",
+  "terms": "(phase == D1) ;; (phase == D1) * last_is(\"a2 S1 u\") ;; (phase == D1) * last_is(\"a2 S1 r\") ;; (phase == D1) * last_is(\"a1 S1 u\") ;; (phase == D1) * (prev_action == 2) * (prev_state == 2) ;; (phase == D1) * np.clip(-choice, 0, None)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (zero at GO and D2). Its size is set by the previous trial: largest after a rare a2->S1 unrewarded trial (about +2.4 over the D1 base plus the policy term; raw residual about +3.4), next largest after a2->S1 rewarded (+1.7), a bit raised after a1->S1 unrewarded, and lowest after a2->S2 (common) trials and after trials that reached S2. It is also graded by how far the model leans toward a2 at D1 (positive part of -choice), which matches the profile, where the two most-a2 policy deciles carry about +3.6. Which choice comes next, whether the next reward comes, the hidden good state, the trial before last and start_high add little. Test R^2 beyond timing: 0.81 with the policy term (a model output, not a future variable); 0.72 using only observed previous-trial terms. The all-cue ceiling is 0.87.",
+  "gate": "reset",
+  "feature": 51,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 51,
+    "terms": [
+      "(phase == D1)",
+      "(phase == D1) * last_is(\"a2 S1 u\")",
+      "(phase == D1) * last_is(\"a2 S1 r\")",
+      "(phase == D1) * last_is(\"a1 S1 u\")",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 2)",
+      "(phase == D1) * np.clip(-choice, 0, None)"
+    ],
+    "weights": [
+      -0.5063576917460624,
+      2.393382589608006,
+      1.7424801229589868,
+      0.47578229507103054,
+      -0.7059216749030534,
+      0.3121356431573932
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8095074516325075,
+    "r2": 0.8305991060653841,
+    "r2_timing_only": 0.11072167711351777
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 51,
+    "terms": [
+      "(phase == D1)",
+      "(phase == D1) * last_is(\"a2 S1 u\")",
+      "(phase == D1) * last_is(\"a2 S1 r\")",
+      "(phase == D1) * last_is(\"a1 S1 u\")",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 2)",
+      "(phase == D1) * np.clip(-choice, 0, None)"
+    ],
+    "weights": [
+      -0.5063576917460624,
+      2.393382589608006,
+      1.7424801229589868,
+      0.47578229507103054,
+      -0.7059216749030534,
+      0.3121356431573932
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8196151216253602,
+    "r2": 0.8394616763322034,
+    "r2_timing_only": 0.11002338380950094
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor issue, not systematic. The worst-fit dev windows contain runs of D1 steps after a1 S1 r where the actual value is about 1.7-2.3 and the prediction is about 0.1. Some episodes also show 0 after a2 S1 u where 2.3 was predicted. None of the cues I tried explains this: trial before last, good state, start_high, since_rev, value, |choice|. The by-group mean errors from misses stay small (largest is D1 after a2 S2 u, +0.18), so this is a minority subgroup and not a whole error class.",
+      "The policy term (np.clip(-choice,0,None)) is a model output, not something observed. Previous-trial terms alone give test R^2 0.723, which matches the claimed 0.72. A binary (choice<0) gives 0.764 and the clipped version gives 0.81, so 'graded' is supported.",
+      "'Slightly raised after a1->S1 unrewarded' holds only relative to the other non-a2-S1 histories: its residual is -0.007 against about -0.5 for the others. It is not raised in absolute terms.",
+      "Small extra gains are available. Adding (phase==D1)*(prev_state==1)*choice gives test 0.816, and also adding last_is('a2 S1 u')*clip(-choice) gives 0.817. These change the score very little and do not change the label."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1-only: large after rare a2->S1 (esp. unrewarded), graded by a2-leaning policy (model output); previous-trial terms alone give R^2 0.72",
+    "better_terms": "(phase == D1) ;; (phase == D1) * last_is(\"a2 S1 u\") ;; (phase == D1) * last_is(\"a2 S1 r\") ;; (phase == D1) * last_is(\"a1 S1 u\") ;; (phase == D1) * (prev_action == 2) * (prev_state == 2) ;; (phase == D1) * np.clip(-choice, 0, None) ;; (phase == D1) * last_is(\"a2 S1 u\") * np.clip(-choice, 0, None) ;; (phase == D1) * (prev_state==1) * choice",
+    "better_terms_test_r2_beyond_timing": 0.8166
+  },
+  "final_label": "D1-only: large after rare a2->S1 (esp. unrewarded), graded by a2-leaning policy (model output); previous-trial terms alone give R^2 0.72"
+}

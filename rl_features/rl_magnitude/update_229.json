@@ -1,0 +1,111 @@
+{
+ "label": "Fires at D2 when a2 rarely reaches S1 right after an unrewarded a2->S1 rare trial.",
+ "short_terms": "(in_state == 1) * (action == 2) * last_is('a2 S1 u') ;; (in_state == 1) * (action == 2) * last_is('a1 S1 u') ;; (in_state == 1) * (action == 2) * (prev_action == -1)",
+ "terms": "(in_state == 1) * (action == 2) * last_is(\"a2 S1 u\") ;; (in_state == 1) * (action == 2) * (prev_reward == 0) ;; (in_state == 1) * (action == 2) * (prev_action == -1) ;; (in_state == 1) * (action == 2) * last_is(\"a2 S1 u\") * belief_lo ;; (in_state == 1) * (action == 2) * last_is(\"a2 S1 u\") * (tv(\"state\", -2) == 1) ;; (in_state == 1) * (action == 2) * last_is(\"a2 S1 u\") * (tv(\"reward\", -2) == 0) ;; (in_state == 1) * (action == 2) * (belief_lo < -1) ;; (in_state == 1) * (action == 2) * last_is(\"a2 S2 u\")",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Sparse feature (0.8% of steps), only ever active at D2. Its magnitude is almost entirely a conjunction: this trial a2 led (rarely) to S1, and the previous trial was also a2 -> S1 unrewarded (activation ~0.6-1.4); a smaller boost for a2 -> S1 after any unrewarded trial. Zero at D1/GO and at D2 for all other choice/state combinations. All terms are observed at D2 (in_state and this trial choice are inputs there). The free fit adds modest refinements: weaker when the trial before was unrewarded, stronger when it also reached S1, weaker as belief favours S1, negative after a2 S2 u, and some firing on window-first trials where the previous trial is unknown (an edge effect behind several misses). Short form dev R2 0.56 vs free fit 0.60.",
+ "full_test_scores": {
+  "gate": "update",
+  "feature": 229,
+  "terms": [
+   "(in_state == 1) * (action == 2) * last_is(\"a2 S1 u\")",
+   "(in_state == 1) * (action == 2) * (prev_reward == 0)",
+   "(in_state == 1) * (action == 2) * (prev_action == -1)",
+   "(in_state == 1) * (action == 2) * last_is(\"a2 S1 u\") * belief_lo",
+   "(in_state == 1) * (action == 2) * last_is(\"a2 S1 u\") * (tv(\"state\", -2) == 1)",
+   "(in_state == 1) * (action == 2) * last_is(\"a2 S1 u\") * (tv(\"reward\", -2) == 0)",
+   "(in_state == 1) * (action == 2) * (belief_lo < -1)",
+   "(in_state == 1) * (action == 2) * last_is(\"a2 S2 u\")"
+  ],
+  "weights": [
+   0.1234807625629538,
+   0.2392956559859701,
+   0.027712821197435837,
+   -0.09210793696774953,
+   0.10413441857666395,
+   -0.1537697291822091,
+   -0.004828033933983501,
+   -0.2480401922151697
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5797238983885078,
+  "r2": 0.5873480928325593,
+  "r2_timing_only": 0.018140918350621482
+ },
+ "gate": "update",
+ "feature": 229,
+ "test_scores": {
+  "gate": "update",
+  "feature": 229,
+  "terms": [
+   "(in_state == 1) * (action == 2) * last_is('a2 S1 u')",
+   "(in_state == 1) * (action == 2) * last_is('a1 S1 u')",
+   "(in_state == 1) * (action == 2) * (prev_action == -1)"
+  ],
+  "weights": [
+   0.6418959121656718,
+   0.13399829652926076,
+   0.10094318692903184
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5417299572585766,
+  "r2": 0.5500433966864846,
+  "r2_timing_only": 0.018140918350621482
+ },
+ "dev_scores": {
+  "gate": "update",
+  "feature": 229,
+  "terms": [
+   "(in_state == 1) * (action == 2) * last_is('a2 S1 u')",
+   "(in_state == 1) * (action == 2) * last_is('a1 S1 u')",
+   "(in_state == 1) * (action == 2) * (prev_action == -1)"
+  ],
+  "weights": [
+   0.6418959121656718,
+   0.13399829652926076,
+   0.10094318692903184
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.5638273504418139,
+  "r2": 0.57194174322386,
+  "r2_timing_only": 0.01860362585839692
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The main claim holds. When a2 reaches S1 right after an a2 S1 u trial, the D2 weight is about 0.64 (dev free fit). That term alone scores test R^2 0.522, against 0.537 for the recorded two-term short form.",
+   "The explanation says the feature 'gets a smaller boost when a2 -> S1 follows any unrewarded trial'. That is wrong. I fitted one weight per previous-trial pattern inside the a2->S1 cell: a2 S1 u +0.64, a1 S1 u +0.13, window start (previous trial unknown) +0.10, a2 S2 u -0.011, a1 S2 u ~0, and every rewarded pattern ~0. So the small boost needs an unrewarded trial at S1, not any unrewarded trial.",
+   "Because of that, the recorded second term (prev_reward == 0) creates a systematic error. The short form's largest over-prediction is at D2 after a2 S2 u (-0.031). The free fit's 'negative weight after a2 S2 u' only exists to cancel this wrong term.",
+   "Swapping the second term for last_is('a1 S1 u') and adding a window-start term (prev_action == -1) removes the a2 S2 u over-prediction in misses. Test R^2 rises to 0.542 (from 0.537); dev is 0.564.",
+   "The worst misses that remain are at the window edge. The feature fires 1.3 on the first trial of a window, where the previous trial is unknown, probably because that unseen trial was an a2 S1 u. This is an artefact of the window, not a missing variable.",
+   "Belief adds little. Inside the core cell the weight is about 0.66 when belief_lo < -2 and about 0.10 when belief_lo >= 0, but binning belief only raises dev R^2 from about 0.54 to 0.550. Whether the trial before last was rewarded changes the weight only a little (0.56 vs 0.67). Both are small refinements."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At D2, fires when a2 rarely reaches S1 right after an unrewarded trial at S1 (mostly a2->S1).",
+  "better_short_terms": "(in_state == 1) * (action == 2) * last_is('a2 S1 u') ;; (in_state == 1) * (action == 2) * last_is('a1 S1 u') ;; (in_state == 1) * (action == 2) * (prev_action == -1)",
+  "better_short_terms_test_r2_beyond_timing": 0.5417299572585766
+ },
+ "final_label": "At D2, fires when a2 rarely reaches S1 right after an unrewarded trial at S1 (mostly a2->S1).",
+ "original_short_terms": "(in_state == 1) * (action == 2) * last_is(\"a2 S1 u\") ;; (in_state == 1) * (action == 2) * (prev_reward == 0)",
+ "original_test_scores": {
+  "gate": "update",
+  "feature": 229,
+  "terms": [
+   "(in_state == 1) * (action == 2) * last_is(\"a2 S1 u\")",
+   "(in_state == 1) * (action == 2) * (prev_reward == 0)"
+  ],
+  "weights": [
+   0.5508668060971799,
+   0.09100929663056102
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5370380975418235,
+  "r2": 0.5454366516137656,
+  "r2_timing_only": 0.018140918350621482
+ },
+ "terms_from": "skeptic"
+}

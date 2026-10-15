@@ -1,0 +1,80 @@
+{
+  "label": "z~1 at D1, ~0.03 else; D2 bump on unrewarded state switch, S2, low belief",
+  "terms": "(phase == D1) * (ep_trial == 0) ;; (phase == D1) * (prev_state == S2) ;; (phase == GO) * (prev_reward == 1) ;; (phase == GO) * last_is(\"a1 S2 r\") ;; (phase == D2) * belief_lo ;; (phase == D2) * (state == S2) ;; (phase == D2) * (state != prev_state) * (prev_reward == 0)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 4 is almost fully set by phase: ~0.98 at D1 (the unit copies in new candidate at fixation), ~0.03 at GO and ~0.02 at D2, rising late in the episode (timing alone gives R^2 ~1.00; the residuals are small, a few hundredths). Beyond timing, from observed quantities only: the largest effect is the episode first trial D1, where z is ~0.41 lower. At D1 z is slightly higher (+0.02) when the previous trial reached S2. At GO z is higher after a rewarded previous trial (+0.02) and especially after a rewarded rare a1->S2 trial (+0.04 more). At D2 z rises when the reached state differs from the previous trial state and the previous trial was unrewarded (a switch after a loss; occasional spikes to 0.4-0.6 late in the episode, which are under-predicted), is higher on reaching S2 (+0.017) and higher when the ideal-observer belief favours S2 (negative weight on belief_lo). 7 terms, dev R^2 beyond timing 0.574, test 0.564, above the profile all ceiling (0.53) and all-observed (0.51), so dropping model value/policy (policy decile alone 0.20) loses essentially nothing here. Future and hidden variables were not needed. Remaining misses: large late-episode D2 spikes after runs of unrewarded S1 visits.",
+  "gate": "unit_update",
+  "feature": 4,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 4,
+    "terms": [
+      "(phase == D1) * (ep_trial == 0)",
+      "(phase == D1) * (prev_state == S2)",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == GO) * last_is(\"a1 S2 r\")",
+      "(phase == D2) * belief_lo",
+      "(phase == D2) * (state == S2)",
+      "(phase == D2) * (state != prev_state) * (prev_reward == 0)"
+    ],
+    "weights": [
+      -0.4036902144728763,
+      0.019733276369127445,
+      0.01801726240406117,
+      0.04232521462779662,
+      -0.005045096359411347,
+      0.016700248832316186,
+      0.00417064139671637
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5642131881207533,
+    "r2": 0.9989416302305109,
+    "r2_timing_only": 0.9975713588831999
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 4,
+    "terms": [
+      "(phase == D1) * (ep_trial == 0)",
+      "(phase == D1) * (prev_state == S2)",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == GO) * last_is(\"a1 S2 r\")",
+      "(phase == D2) * belief_lo",
+      "(phase == D2) * (state == S2)",
+      "(phase == D2) * (state != prev_state) * (prev_reward == 0)"
+    ],
+    "weights": [
+      -0.4036902144728763,
+      0.019733276369127445,
+      0.01801726240406117,
+      0.04232521462779662,
+      -0.005045096359411347,
+      0.016700248832316186,
+      0.00417064139671637
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5742859633799797,
+    "r2": 0.9989725082957834,
+    "r2_timing_only": 0.9975864274704813
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The 7 terms reproduce exactly: test R^2 beyond timing is 0.564, with the same weights. Most of it comes from one term. (phase==D1)*(ep_trial==0) alone scores 0.162 on test, a residual of -0.41 on the episode's first D1. The history, state and belief terms add the other ~0.40.",
+      "The GO reward effect is uneven. The profile residuals at GO are +0.014 after a1 S1 r but only +0.004 after a2 S2 r and -0.0006 after a2 S1 r. Unrewarded S2 trials are over-predicted: GO after a2 S2 u is off by -0.015 in misses. Adding (phase==GO)*(prev_reward==0)*(prev_state==S2) raises test R^2 from 0.564 to 0.582.",
+      "The D2 state==S2 and belief effects grow late in the episode. Adding (phase==D2)*(state==S2)*(-belief_lo)*ep_dec raises test R^2 from 0.564 to 0.586. Together with the GO term above, the 8-term set reaches 0.602 on test.",
+      "The late-episode D2 spikes (0.4-0.6, building over consecutive D2 steps, as at t84-86) are still not captured. I tried counts of consecutive unrewarded trials scaled by ep_dec or ep_trial>=80, and |belief| late in the episode. Each gained at most 0.0005, so these spikes look idiosyncratic rather than a systematic error class.",
+      "After the extra terms, systematic errors by phase x previous trial are all below 0.01 in size, and the mean error per phase is at most 0.002. The D2 (state != prev_state)*(prev_reward==0) term has a negligible weight (+0.004) and could be dropped.",
+      "The claims about the timing profile, the D1 S2 bump and the observed-only comparison (scoring above 'all' at 0.53 and above policy decile at 0.20) all check out."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "z~1 at D1 (except ~0.57 on the episode's first D1), ~0.03 else; small S2/belief bumps at D2 that grow late in the episode, and reward-by-state bumps at GO",
+    "better_terms": "(phase == D1) * (ep_trial == 0) ;; (phase == D1) * (prev_state == S2) ;; (phase == GO) * (prev_reward == 1) ;; (phase == GO) * last_is('a1 S2 r') ;; (phase==GO)*(prev_reward==0)*(prev_state==S2) ;; (phase == D2) * belief_lo ;; (phase == D2) * (state == S2) ;; (phase==D2)*(state==S2)*(-belief_lo)*ep_dec",
+    "better_terms_test_r2_beyond_timing": 0.6023
+  },
+  "final_label": "z~1 at D1 (except ~0.57 on the episode's first D1), ~0.03 else; small S2/belief bumps at D2 that grow late in the episode, and reward-by-state bumps at GO"
+}

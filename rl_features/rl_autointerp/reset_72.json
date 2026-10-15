@@ -1,0 +1,66 @@
+{
+  "label": "D1 after the previous trial reached S1 (first ~60 trials of the episode)",
+  "predicate": "(phase == D1) & (ep_trial < 60) & (prev_state != 2)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1, and only when the previous trial ended in state S1. prev_state != 2 also lets in the window-initial D1, where the previous state is outside the window and unknown (prev_state == -1). With the previous state known, (D1 & ep_trial<60 & prev_state==1) has precision 0.97. Activity depends strongly on time in the episode: rate is about 16% of D1 steps up to trial ~55, falls through trials 60-75, and is zero from trial 80 on. Magnitude is larger when that S1 visit was rewarded (top activations come right after a1->S1 common + reward; the mean per active step is roughly 1.2x higher for rewarded than unrewarded). It does not depend on the previous choice or transition type beyond the state reached. Never fires at GO or D2, and never at D1 after an S2 visit. All variables used are observed (previous state and reward are visible at D1; ep_trial is a time-in-episode the agent could track). Dev: P 0.80, R 0.93, F1 0.86, mass recall 0.98. Most of the remaining FPs are window-start D1s where the unknown previous state was actually S2.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 72,
+    "predicate": "(phase == D1) & (ep_trial < 60) & (prev_state != 2)",
+    "split": "test",
+    "precision": 0.7950008704230256,
+    "recall": 0.9256847492842121,
+    "f1": 0.8553801728679297,
+    "mass_recall": 0.9791028790320999,
+    "correlation": 0.7881401982304038,
+    "n_active": 118401,
+    "n_predicted": 137864,
+    "coverage_by_activation_quartile": [
+      0.7288267288267288,
+      0.9739189189189189,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 72,
+    "predicate": "(phase == D1) & (ep_trial < 60) & (prev_state != 2)",
+    "split": "dev",
+    "precision": 0.7975635784284254,
+    "recall": 0.9272377790397973,
+    "f1": 0.8575260889063061,
+    "mass_recall": 0.9799983247374232,
+    "correlation": 0.7884923638177216,
+    "n_active": 114455,
+    "n_predicted": 133064,
+    "coverage_by_activation_quartile": [
+      0.7372964283218005,
+      0.9716572307262179,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "reset",
+  "feature": 72,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Core claims hold. The feature never fires at GO or D2 (phase != D1 has precision 0 on the test split). It never fires at D1 after an S2 visit (D1 & prev_state==2 has precision 0 on dev). D1 & ep_trial<60 & prev_state==1 has precision 0.973 on dev. The reported test scores reproduce: P 0.795, R 0.926, F1 0.855, mass recall 0.979.",
+      "The false-positive claim is confirmed. Window-start D1 steps (prev_state==-1, ep<60) have precision 0.47, which accounts for about 24.6k of the roughly 26.9k dev false positives. Misses carry only 2.1% of the activation mass (test) and are low-magnitude cells, mostly in the late-episode tail.",
+      "Factual error: '16% of D1 steps up to trial ~55' is wrong. 16% is the rate over all steps in those ep_trial bins. Since only D1 fires, the true rate is about 48% of D1 steps, and about 97% of D1 steps that follow an S1 visit.",
+      "The magnitude difference is understated. Within D1 & ep<60 & prev_state==1, rewarded steps have mass_recall/recall = 0.575/0.489 and unrewarded steps 0.200/0.247. That puts the mean activation ratio at about 1.45x, not 1.2x. Reward also changes the firing rate a little: precision 0.996 rewarded vs 0.929 unrewarded.",
+      "The ep_trial cutoff is a gradual fade, not a step at 60. Precision for prev_state==1 is 0.84 at trials 55-59, 0.52 at 60-64, 0.23 at 65-69, 0.12 at 70-74 and 0.01 at 75-79. In the tail it is mostly rewarded S1 visits that keep firing (precision 0.39 rewarded vs 0.08 unrewarded at 60-74). This is consistent with the explanation, but a hard ep_trial<60 cutoff is an approximation.",
+      "Minor: ep_trial==0 D1 (525 steps) never fires, but the predicate includes it. Excluding it and moving the cutoff to 62 gives only a marginal gain (test F1 0.862 vs 0.855).",
+      "Previous choice and transition type make little difference: precision is 0.996 for prev_common==0 and about 0.96 for prev_common==1. The claim holds up.",
+      "No systematic counterexample class remains beyond the window-start unknowns, which the data cannot resolve. A variant that excludes window-start steps where good==2 and the upcoming action is a2 gets dev F1 0.89, but it uses proxies for the unobserved previous state and is not a better explanation."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

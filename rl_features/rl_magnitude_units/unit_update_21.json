@@ -1,0 +1,113 @@
+{
+ "label": "Update gate drops at D1 after a rare a1-to-S2 trial, more so late in episode.",
+ "short_terms": "(phase == D1) * (prev_action - prev_state == -1) ;; (phase == D1) * (prev_action - prev_state == -1) * ep_trial ;; (phase == D1) * (prev_state == 1) * ep_trial",
+ "terms": "(phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * ep_trial ;; (phase == D1) * belief_lo ;; (phase == D1) * (prev_reward == 0) ;; (phase == D1) * (prev_state == 1) ;; (phase == D1) * (tv(\"action\",-2) == 1) * (tv(\"state\",-2) == 2) ;; (phase != D1) * belief_lo ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * (prev_reward == 0)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "z21 sits near 1 (keep the old state) on GO and D2 and on most D1 steps. At D1 it falls by about 0.3 when the previous trial was the rare a1->S2 transition, whether or not it was rewarded, so the unit lets in a new state only after that one rare pattern; the drop gets deeper later in the episode. After trials that reached S1 it sits slightly higher at D1. Reward, belief and the trial before add little: the a1->S2 indicator alone gives dev R2 0.56 beyond timing, and the 3-term short form gives 0.68, matching or beating the 8-term free fit (0.64 without the S1 term). The misses left are late-episode D1 drops after other patterns.",
+ "full_test_scores": {
+  "gate": "unit_update",
+  "feature": 21,
+  "terms": [
+   "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+   "(phase == D1) * (prev_action == 1) * (prev_state == 2) * ep_trial",
+   "(phase == D1) * belief_lo",
+   "(phase == D1) * (prev_reward == 0)",
+   "(phase == D1) * (prev_state == 1)",
+   "(phase == D1) * (tv(\"action\",-2) == 1) * (tv(\"state\",-2) == 2)",
+   "(phase != D1) * belief_lo",
+   "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (prev_reward == 0)"
+  ],
+  "weights": [
+   -0.09504979346147562,
+   -0.0038368482847821075,
+   -0.008988133269954941,
+   -0.02346612324328941,
+   0.07540441615508525,
+   -0.022507334444117105,
+   -0.0013298138224308322,
+   0.035248635449251275
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7018763363472523,
+  "r2": 0.7645427633539128,
+  "r2_timing_only": 0.21020279383005935
+ },
+ "gate": "unit_update",
+ "feature": 21,
+ "test_scores": {
+  "gate": "unit_update",
+  "feature": 21,
+  "terms": [
+   "(phase == D1) * (prev_action - prev_state == -1)",
+   "(phase == D1) * (prev_action - prev_state == -1) * ep_trial",
+   "(phase == D1) * (prev_state == 1) * ep_trial"
+  ],
+  "weights": [
+   -0.11265685469549054,
+   -0.0038543723201596553,
+   0.0010193371868943003
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6837307120160432,
+  "r2": 0.7502113999529145,
+  "r2_timing_only": 0.21020279383005935
+ },
+ "dev_scores": {
+  "gate": "unit_update",
+  "feature": 21,
+  "terms": [
+   "(phase == D1) * (prev_action - prev_state == -1)",
+   "(phase == D1) * (prev_action - prev_state == -1) * ep_trial",
+   "(phase == D1) * (prev_state == 1) * ep_trial"
+  ],
+  "weights": [
+   -0.11265685469549054,
+   -0.0038543723201596553,
+   0.0010193371868943003
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.6957167277234337,
+  "r2": 0.7591484875166481,
+  "r2_timing_only": 0.2084628554130984
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": true,
+  "issues": [
+   "The core claim holds. In the profile's D1 residuals the gate sits about -0.30 after a previous a1->S2 trial (r: -0.297, u: -0.311), so reward really doesn't matter. Every other D1 previous-trial cell is between 0 and +0.07, and GO/D2 residuals stay within about 0.01. The a1->S2 indicator alone scores 0.547 on test, and adding its ep_trial interaction raises that to 0.612, which confirms 'deeper later in the episode'.",
+   "The label leaves out the third short-form term, D1*(prev_state==1). It is worth +0.057 test R^2 (0.612 -> 0.669), with a weight of +0.054, so a reader of the label alone would not predict the small rise after S1 trials.",
+   "The third term works better as a late-episode effect. Replacing D1*(prev_state==1) with D1*(prev_state==1)*ep_trial raises test R^2 from 0.669 to 0.684. With that change, a short form without the plain a1->S2 indicator (2 terms, both scaled by ep_trial) already scores 0.669.",
+   "There is a remaining systematic miss class. The worst-fit dev windows are late-episode (t>=90) D1 steps where z falls steadily over runs of trials that are not a1->S2, for example repeated a2 S2 common unrewarded trials (0.72 -> 0.49 -> 0.29 -> 0.18, predicted 0.83). The cell-mean errors are small (largest is D1 after a2 S2 r, +0.027), so this is a late-episode drift and not a misassigned cell. The explanation already admits it.",
+   "The term prev_action - prev_state == -1 is an opaque way to write 'previous trial was a1->S2'. It is exact, not curve fitting, and it is needed to stay within the 3-factor limit when multiplied by ep_trial.",
+   "Belief and the trial before add almost nothing, as claimed. Adding D1*belief_lo gives 0.617 and tv(-2) a1S2 gives 0.612, both against 0.612 without them. No future variables are used."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "D1 update gate drops after rare a1-to-S2 trials, deeper late; S1-reached trials raise it late.",
+  "better_short_terms": "(phase == D1) * (prev_action - prev_state == -1) ;; (phase == D1) * (prev_action - prev_state == -1) * ep_trial ;; (phase == D1) * (prev_state == 1) * ep_trial",
+  "better_short_terms_test_r2_beyond_timing": 0.6837
+ },
+ "final_label": "D1 update gate drops after rare a1-to-S2 trials, deeper late; S1-reached trials raise it late.",
+ "original_short_terms": "(phase == D1) * (prev_action - prev_state == -1) ;; (phase == D1) * (prev_action - prev_state == -1) * ep_trial ;; (phase == D1) * (prev_state == 1)",
+ "original_test_scores": {
+  "gate": "unit_update",
+  "feature": 21,
+  "terms": [
+   "(phase == D1) * (prev_action - prev_state == -1)",
+   "(phase == D1) * (prev_action - prev_state == -1) * ep_trial",
+   "(phase == D1) * (prev_state == 1)"
+  ],
+  "weights": [
+   -0.11246844887602683,
+   -0.0038543723201596484,
+   0.05354826387062202
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6687076785213724,
+  "r2": 0.7383462500706262,
+  "r2_timing_only": 0.21020279383005935
+ },
+ "terms_from": "skeptic"
+}

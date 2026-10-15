@@ -1,0 +1,104 @@
+{
+  "label": "GO step late in the episode (trial >= 80) after an unrewarded trial, choosing a2",
+  "predicate": "(phase == GO) & (ep_trial >= 70) & (prev_reward != 1) & (model_act == 2) & ((ep_trial >= 80) | (prev_state == 1))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO steps (never at D1 or D2) and only in the last part of the episode: zero activity before trial ~55, rate 1.9% at trials 70-79, 6.7% at 80-89, 13% at 90-99. Within that span it needs the previous trial to be unrewarded (95% of mass has prev_reward 0; in_rew -1 penalty trials also fire) and the agent to be choosing a2 (model_act == 2 holds 96% of mass; strong negative choice logit). Co-occurs with low value-head output (value < 7.1 covers all activations), which fits late-episode, unrewarded states. The predicate gets dev precision 0.94, mass recall 0.87, top-quartile coverage 0.99. F1 is only 0.72 because there are many weak activations outside the predicate: late-episode a2 GO steps after a rewarded trial, and trials 70-79. Magnitude grows with episode trial and is largest after no reward. It does not fire on a1 choices (4% of mass), on rewarded-previous-trial GO steps early on, or before trial ~60. Uses only observed or self-computed variables (the agent own GO choice, previous reward, and elapsed trial count), with no future variables.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 49,
+    "predicate": "(phase == GO) & (ep_trial >= 70) & (prev_reward != 1) & (model_act == 2) & ((ep_trial >= 80) | (prev_state == 1))",
+    "split": "test",
+    "precision": 0.8499905267146647,
+    "recall": 0.6559804064921773,
+    "f1": 0.7404885697779978,
+    "mass_recall": 0.8868890593139033,
+    "correlation": 0.7241209893234406,
+    "n_active": 27356,
+    "n_predicted": 21112,
+    "coverage_by_activation_quartile": [
+      0.2503289954671736,
+      0.5904371984208218,
+      0.7948530486913291,
+      0.9883023833893844
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 49,
+    "predicate": "(phase == GO) & (ep_trial >= 70) & (prev_reward != 1) & (model_act == 2) & ((ep_trial >= 80) | (prev_state == 1))",
+    "split": "dev",
+    "precision": 0.8448651452282158,
+    "recall": 0.6582211985291146,
+    "f1": 0.7399550275967021,
+    "mass_recall": 0.9005820513449749,
+    "correlation": 0.7222234469409206,
+    "n_active": 24747,
+    "n_predicted": 19280,
+    "coverage_by_activation_quartile": [
+      0.23597866494262162,
+      0.5926943591401326,
+      0.8107321803782124,
+      0.9935337859683155
+    ]
+  },
+  "gate": "hidden",
+  "feature": 49,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The factual claims hold. The feature fires only at GO (D1 and D2 have 0 active steps). It is silent before trial 50 (6 steps at 50-59). Rates are 1.9% at trials 70-79, 6.7% at 80-89 and 13.1% at 90-99. 95.7% of mass has model_act==2, a1 has 4.3%, and 94.6% of mass has prev_reward==0. Test scores reproduce: P 0.936, R 0.591, F1 0.725, mass recall 0.86. One small error: 'every activation has value < 7.1' is not exact, since 24 active steps fall in the [7.13, 7.54) value bin.",
+      "Systematic omission. The label and explanation do not mention the previous trial's transition, and that is what drives the strongest activations. Inside the predicate, one case stands out: the previous trial was a2, then a RARE transition to S1, then unrewarded, and the agent now repeats a2 (prev_state==1 & prev_action==2). This case has precision 0.995 on 6029 steps (39% of predicted steps). It holds 52% of all activation mass and 69% of the top activation quartile (test: 48% of mass, 64% of the top quartile). The other main case, a2 with a common transition to S2 then unrewarded (prev_state==2, 5754 steps), holds only 16% of mass and 8% of the top quartile. Per step it is about 3x weaker. The profile's prev_common==0 lift (1.7x, 59% of mass) points the same way. So in its strongest form the feature is 'repeat a2 after a rare-unrewarded S1 visit, late in the episode', which is the model-based stay-after-rare-unrewarded case. The label instead treats every unrewarded late a2 GO step the same.",
+      "The weak misses are systematic, not scattered. Late a2 GO steps after a REWARDED trial make up 55% of the lowest activation quartile, though only 4.8% of mass. Steps at trials 60-79 after no reward with a2 add 3.7% of mass. The explanation acknowledges both, and they are low-magnitude, so they do not overturn the main predicate.",
+      "The value-head correlation does not explain the feature better. (phase==GO)&(value<6.5)&(model_act==2)&(ep_trial>=60) has F1 0.59, and value<7.13 at GO has precision 0.22. The trial-count gating is real and is not just a stand-in for low value.",
+      "No future variables are involved. The refinement uses only observed history (prev_state, prev_action, prev_reward) and the agent's own upcoming choice."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step late in the episode (trial >= ~75) after an unrewarded trial, choosing a2. It is strongest when the agent repeats a2 after a2 led by a rare transition to S1 and was unrewarded (stay after rare-unrewarded). It is weaker after an unrewarded common a2 trial to S2, and weak or absent after rewarded trials.",
+    "better_predicate": "(phase == GO) & (ep_trial >= 70) & (prev_reward != 1) & (model_act == 2) & ((ep_trial >= 80) | (prev_state == 1))",
+    "better_predicate_test_f1": 0.74
+  },
+  "final_label": "GO step late in the episode (trial >= ~75) after an unrewarded trial, choosing a2. It is strongest when the agent repeats a2 after a2 led by a rare transition to S1 and was unrewarded (stay after rare-unrewarded). It is weaker after an unrewarded common a2 trial to S2, and weak or absent after rewarded trials.",
+  "original_predicate": "(phase == GO) & (ep_trial >= 80) & (prev_reward != 1) & (model_act == 2)",
+  "original_test_scores": {
+    "gate": "hidden",
+    "feature": 49,
+    "predicate": "(phase == GO) & (ep_trial >= 80) & (prev_reward != 1) & (model_act == 2)",
+    "split": "test",
+    "precision": 0.9364831219964102,
+    "recall": 0.5912414095628016,
+    "f1": 0.7248526676675555,
+    "mass_recall": 0.8604804171977569,
+    "correlation": 0.7779757477303635,
+    "n_active": 27356,
+    "n_predicted": 17271,
+    "coverage_by_activation_quartile": [
+      0.16040356777306625,
+      0.460008773212458,
+      0.756543354291563,
+      0.988009942974119
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "hidden",
+    "feature": 49,
+    "predicate": "(phase == GO) & (ep_trial >= 80) & (prev_reward != 1) & (model_act == 2)",
+    "split": "dev",
+    "precision": 0.9357225582293142,
+    "recall": 0.5876671919828667,
+    "f1": 0.7219340266574004,
+    "mass_recall": 0.8719857831442273,
+    "correlation": 0.7800513004755822,
+    "n_active": 24747,
+    "n_predicted": 15542,
+    "coverage_by_activation_quartile": [
+      0.14772910942298367,
+      0.44771294650072735,
+      0.7624050428317439,
+      0.9928871645651471
+    ]
+  },
+  "predicate_from": "skeptic"
+}

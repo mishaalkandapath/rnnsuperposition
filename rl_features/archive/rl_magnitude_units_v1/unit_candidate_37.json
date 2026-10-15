@@ -1,0 +1,83 @@
+{
+  "label": "D1 drops with unrewarded streaks (esp. S1 losses); GO up after S2 reward",
+  "terms": "(phase == D1) * (prev_reward == 0) * (prev_state == 1) ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0) ;; (phase == D1) * (prev_reward == 1) * (prev_state == 2) ;; (phase == GO) * (prev_reward == 1) * (prev_state == 2) ;; (phase == GO) * (prev_reward == 1) * (prev_state == 1) ;; (phase == GO) * choice ;; (phase == D1) * choice",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw candidate n of unit 37 is near +0.9 at D1/D2 and -0.8 at GO (timing gives R^2 0.99); the residual is mostly at D1. At D1 it falls after an unrewarded trial, more so if the unrewarded state was S1 (about -0.19 extra), and it keeps falling with consecutive unrewarded trials (2 and 3 in a row add about -0.08 and -0.09 each; long losing streaks reach roughly -1 below baseline). At D1 it rises after S2 rewarded (+0.08). At GO it is higher after S2 rewarded and lower after S1 rewarded, and it varies with the policy logit (higher when the policy favours a2). D2 contributes little. Test R^2 beyond timing 0.64 (dev 0.64), against an all ceiling of 0.75; without the policy-logit terms, observed history alone gives about 0.58 on dev. Hidden good state and value add little.",
+  "gate": "unit_candidate",
+  "feature": 37,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 37,
+    "terms": [
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 1)",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0)",
+      "(phase == D1) * (prev_reward == 1) * (prev_state == 2)",
+      "(phase == GO) * (prev_reward == 1) * (prev_state == 2)",
+      "(phase == GO) * (prev_reward == 1) * (prev_state == 1)",
+      "(phase == GO) * choice",
+      "(phase == D1) * choice"
+    ],
+    "weights": [
+      -0.18508454917451603,
+      -0.08408574845836529,
+      -0.0919042363265708,
+      0.08198501427605455,
+      0.08115005268424937,
+      -0.06500176448584372,
+      -0.005553015042289457,
+      -0.004917216641078307
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6370122045875211,
+    "r2": 0.9948929983282142,
+    "r2_timing_only": 0.9859306518391825
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 37,
+    "terms": [
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 1)",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0)",
+      "(phase == D1) * (prev_reward == 1) * (prev_state == 2)",
+      "(phase == GO) * (prev_reward == 1) * (prev_state == 2)",
+      "(phase == GO) * (prev_reward == 1) * (prev_state == 1)",
+      "(phase == GO) * choice",
+      "(phase == D1) * choice"
+    ],
+    "weights": [
+      -0.18508454917451603,
+      -0.08408574845836529,
+      -0.0919042363265708,
+      0.08198501427605455,
+      0.08115005268424937,
+      -0.06500176448584372,
+      -0.005553015042289457,
+      -0.004917216641078307
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6386430300612373,
+    "r2": 0.9950666637783915,
+    "r2_timing_only": 0.9863477485367321
+  },
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most of the individual claims hold up. The D1 S1-loss term gets weight -0.185. The second- and third-loss streak terms get -0.084 and -0.092. D1 after a rewarded S2 trial gets +0.082, GO after a rewarded S2 trial +0.081, and GO after a rewarded S1 trial -0.065. The profile agrees: at D1, a1 S1 u is -0.234 and a2 S1 u is -0.177, against -0.072 and -0.025 for the S2 losses. The reproduced test R^2 beyond timing is 0.637.",
+      "The biggest error is systematic: deep losing streaks are badly under-predicted. Every one of the worst-fit dev windows is a late-episode losing streak (t63 to t99, often repeated a2 -> S1 rare unrewarded). In those windows the actual D1 value is about -0.1 to -0.3 while the prediction is +0.4 to +0.6, a miss of 0.5 to 0.7 per step. The explanation says long streaks reach roughly -1 below baseline, but the terms only produce about -0.36 at most, so that claim describes the data, not the fitted model.",
+      "The policy-logit terms carry a real share of the score. Dropping both (phase*choice) terms lowers test R^2 from 0.637 to 0.577. These terms are a model output rather than observed history, which the explanation does acknowledge (0.58 on dev). The D1 choice term adds almost nothing on top of the GO one (0.627 to 0.637). At D1 the relationship to policy is not monotonic: policy deciles 1 and 2 sit at -0.21 and -0.13, deciles 3 and 4 are positive, so a linear D1*choice term is the wrong shape.",
+      "Some error remains at GO, by previous trial: after a1 S2 r (rare, rewarded) it is under-predicted by +0.090, while after a2 S2 u, a2 S1 u and a1 S1 u it is over-predicted by -0.053, -0.040 and -0.033. The profile shows GO after a1 S2 r at +0.173 versus +0.122 after a2 S2 r, so a rare rewarded S2 trial raises GO more than a common one, and the label does not say this.",
+      "The explanation says the value drops after any unrewarded trial, but no term covers a single S2 loss: it contributes nothing unless the trial before was also a loss. Adding a general D1 loss term lifts the policy-free set from 0.577 to 0.593.",
+      "The 0.637 sits clearly below the 0.75 ceiling and the 0.69 'all observed' reference, and the terms use no observed-only route to close the gap. My best rewrite (8 terms: adds a general D1 loss term and a late-episode streak term, uses one signed GO rewarded-state term) reached only 0.652 on test (0.655 dev). So the remaining variance, mostly how deep the streak drops go, is not captured by simple history shapes."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "D1 drops after losses (more for S1 losses, deeper over streaks, but deep late-episode streaks are under-fit); GO higher after rewarded S2, lower after rewarded S1, tracks the policy logit",
+    "better_terms": "(phase == D1) * (prev_reward == 0) * (prev_state == 1) ;; (phase==D1)*(prev_reward==0) ;; (phase == D1) * (tv('reward',-1)==0)*(tv('reward',-2)==0) ;; (phase == D1) * (tv('reward',-1)==0)*(tv('reward',-2)==0)*(tv('reward',-3)==0) ;; (phase==D1)*(tv('reward',-1)==0)*(tv('reward',-2)==0)*(ep_trial>=70) ;; (phase == D1) * (prev_reward == 1) * (prev_state == 2) ;; (phase == GO) * table(prev_state,{1:-1,2:1})*(prev_reward==1) ;; (phase == GO) * choice",
+    "better_terms_test_r2_beyond_timing": 0.652
+  },
+  "final_label": "D1 drops after losses (more for S1 losses, deeper over streaks, but deep late-episode streaks are under-fit); GO higher after rewarded S2, lower after rewarded S1, tracks the policy logit"
+}

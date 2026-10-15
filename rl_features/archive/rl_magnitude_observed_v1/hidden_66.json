@@ -1,0 +1,71 @@
+{
+  "label": "D1 after reward in S1: largest after rare a2->S1 reward, smaller after a1->S1 reward",
+  "terms": "(phase == D1) * last_is(\"a2 S1 r\") ;; (phase == D1) * last_is(\"a1 S1 r\") ;; (phase == D1) * last_is(\"a1 S1 r\") * (tv(\"action\", -2) == 2) ;; (phase == D1) * last_is(\"a2 S1 r\") * belief_lo ;; (phase == D1) * last_is(\"a1 S1 r\") * belief_lo",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (zero at GO and D2). Its size is set by the previous trial. After a2 -> S1 rewarded (a rare transition that paid off) it is about +1.35; one indicator for this alone gives dev R^2 beyond timing 0.66. After a1 -> S1 rewarded it is smaller (about +0.46), plus about +0.43 more when the trial before that was an a2 choice, i.e. the agent just switched to a1. Every other previous-trial pattern (unrewarded, or rewarded in S2) keeps it near zero. Within both S1-rewarded cases it is a bit lower the more the ideal observer already believes S1 is good (belief_lo weights about -0.10 and -0.13), so it reads as surprise or news that S1 pays when the agent did not expect it. Some runs of a1 S1 r keep it high (about 1.0-1.6) and these terms under-predict them. Test R^2 beyond timing is 0.70, against an all-observed ceiling of 0.72 and an all ceiling of 0.75. Observed quantities lose almost nothing compared with the earlier model-policy explanation. Future, hidden-state and model-output cues add little (good state 0.01, policy decile 0.06).",
+  "gate": "hidden",
+  "feature": 66,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 66,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S1 r\")",
+      "(phase == D1) * last_is(\"a1 S1 r\")",
+      "(phase == D1) * last_is(\"a1 S1 r\") * (tv(\"action\", -2) == 2)",
+      "(phase == D1) * last_is(\"a2 S1 r\") * belief_lo",
+      "(phase == D1) * last_is(\"a1 S1 r\") * belief_lo"
+    ],
+    "weights": [
+      1.352525365476713,
+      0.4641661093945517,
+      0.42930183637803737,
+      -0.10270256778361568,
+      -0.1304990955149822
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6982349996928918,
+    "r2": 0.7189150264154582,
+    "r2_timing_only": 0.06853023611591846
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 66,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S1 r\")",
+      "(phase == D1) * last_is(\"a1 S1 r\")",
+      "(phase == D1) * last_is(\"a1 S1 r\") * (tv(\"action\", -2) == 2)",
+      "(phase == D1) * last_is(\"a2 S1 r\") * belief_lo",
+      "(phase == D1) * last_is(\"a1 S1 r\") * belief_lo"
+    ],
+    "weights": [
+      1.352525365476713,
+      0.4641661093945517,
+      0.42930183637803737,
+      -0.10270256778361568,
+      -0.1304990955149822
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.695796360595986,
+    "r2": 0.7160532453513347,
+    "r2_timing_only": 0.0665898829975714
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The main factual claims hold up. The original 5 terms reproduce on test: R^2 beyond timing 0.698. The single a2 S1 r indicator gives 0.658. Weights: +1.35 after a2 S1 r, +0.46 after a1 S1 r, +0.43 when the trial before that was an a2 choice, belief_lo weights -0.10 and -0.13. The profile shows activation exactly 0 at GO and D2.",
+      "There is a systematic error class the explanation misses: the response after a2 S1 r collapses late in the episode. Adding (phase==D1)*last_is('a2 S1 r')*(ep_trial>=95) gets weight -1.02 (almost cancelling the +1.4) and raises test R^2 from 0.698 to 0.723. A smooth ramp, a2 S1 r * max(0, ep_trial-80), gives 0.737. Misses shows this directly: windows at t96 and t99 after a2 S1 r have actual 0.15 and 0.04 against predicted 1.43 and 1.48. Only the a2 S1 r response collapses. The same ramp on a1 S1 r gets weight about 0.",
+      "The reported 'all-observed ceiling 0.72' and 'observed quantities lose almost nothing' make the fit look closer to complete than it is. That ceiling only covers additive tables, so it misses the interaction between episode time and the previous trial. Observed-only terms reach 0.744 on test, well above the 0.72 ceiling.",
+      "The belief_lo dependence is real but not linear. Binned on test, a1 S1 r gives about +0.67 at belief_lo in [-2,-0.5), +0.44 in [-0.5,0.5), +0.18 in [0.5,2) and about 0 above 2. For a2 S1 r the bins give 1.46, 1.28 and 1.04. So after a1 S1 r the activation is mostly gone once the observer already strongly believes S1 is good. This is a stronger effect than 'a bit lower' suggests.",
+      "Runs of a1 S1 r trials where activation stays at 1.0-1.6 remain under-predicted. None of these lift it more than 0.01 on test: an a2 S1 r two or three trials back, ep_dec, reward two back, action three back. a1 S1 r * belief_cover adds about +0.007. This part looks like persistence from history outside the window. The explanation does acknowledge it."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after an S1 reward: largest after rare a2->S1 reward (fading to ~0 in the last ~15 trials of the episode), smaller after a1->S1 reward (more if the agent just switched from a2, ~0 once the observer strongly believes S1 is good)",
+    "better_terms": "(phase == D1) * last_is(\"a2 S1 r\") ;; (phase == D1) * last_is(\"a1 S1 r\") ;; (phase == D1) * last_is(\"a1 S1 r\") * (tv(\"action\", -2) == 2) ;; (phase == D1) * last_is(\"a2 S1 r\") * belief_lo ;; (phase == D1) * last_is(\"a1 S1 r\") * belief_lo ;; (phase==D1)*last_is(\"a2 S1 r\")*np.maximum(0, ep_trial-80) ;; (phase==D1)*last_is(\"a1 S1 r\")*belief_cover",
+    "better_terms_test_r2_beyond_timing": 0.744
+  },
+  "final_label": "D1 after an S1 reward: largest after rare a2->S1 reward (fading to ~0 in the last ~15 trials of the episode), smaller after a1->S1 reward (more if the agent just switched from a2, ~0 once the observer strongly believes S1 is good)"
+}

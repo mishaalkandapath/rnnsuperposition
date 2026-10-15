@@ -1,0 +1,69 @@
+{
+  "label": "GO after a1->S2 unrewarded, shut off in the last ~20 episode trials",
+  "terms": "(phase == GO) * last_is(\"a1 S2 u\") ;; (phase == GO) * last_is(\"a1 S2 u\") * (ep_trial >= 80) ;; (phase == GO) * last_is(\"a1 S2 u\") * (ep_trial >= 90) ;; (phase == GO) * (prev_reward == 0) * (belief_lo > 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO (D1 and D2 are zero). Its magnitude is set by the previous trial: about +1.6 at GO after a1 -> S2 unrewarded (a rare transition with no reward, the case where a model-based agent stays with a1), and near zero after every other pattern (a2 S2 u gets only about +0.06). The a1 S2 u response weakens sharply late in the episode: about -0.94 from trial 80 and another -0.75 from trial 90, so it is nearly gone in the last 10 trials. That drop is more than the per-decile timing baseline captures. A smaller graded part (+0.3) is added after any unrewarded trial when the ideal-observer belief favours S1 (belief_lo > 0). Scaling by graded belief_lo or by the reward two trials back added nothing. Test R^2 beyond timing is 0.687 using observed quantities only (dev 0.70). The previous trial alone gives 0.61 on dev. The profile ceilings are 0.68 (all observed) and 0.71 (all, including model outputs), so dropping the model value / policy costs little: about 0.02.",
+  "gate": "update",
+  "feature": 206,
+  "test_scores": {
+    "gate": "update",
+    "feature": 206,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S2 u\")",
+      "(phase == GO) * last_is(\"a1 S2 u\") * (ep_trial >= 80)",
+      "(phase == GO) * last_is(\"a1 S2 u\") * (ep_trial >= 90)",
+      "(phase == GO) * (prev_reward == 0) * (belief_lo > 0)"
+    ],
+    "weights": [
+      1.6124500706578035,
+      -0.9363845506247779,
+      -0.7502311671553239,
+      0.2941174682669253
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6873762752476006,
+    "r2": 0.7116912353385942,
+    "r2_timing_only": 0.07777707885174512
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 206,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S2 u\")",
+      "(phase == GO) * last_is(\"a1 S2 u\") * (ep_trial >= 80)",
+      "(phase == GO) * last_is(\"a1 S2 u\") * (ep_trial >= 90)",
+      "(phase == GO) * (prev_reward == 0) * (belief_lo > 0)"
+    ],
+    "weights": [
+      1.6124500706578035,
+      -0.9363845506247779,
+      -0.7502311671553239,
+      0.2941174682669253
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6991758193327149,
+    "r2": 0.722592247268252,
+    "r2_timing_only": 0.07784090987498093
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The 'smaller graded part' is misread. The term (phase==GO)*(prev_reward==0)*(belief_lo>0) is almost entirely a window-edge proxy. Restricted to the window's first trial (prev_action == -1, where last_is cannot see the previous trial), it gets weight +0.86 and test R^2 0.718. Restricted to trials whose previous trial is known, it gets only +0.09 and test R^2 0.662, against 0.659 without it. So the agent's belief adds essentially nothing once the previous trial is known. The claim '+0.3 after any unrewarded trial when the belief favours S1' is not a real effect of belief.",
+      "Misses on the claimed terms show the belief term over-predicting at GO after every other unrewarded pattern: after a1 S1 u by -0.33, and about -0.13 after a2 S1 u, a1 S2 r, a1 S1 r and a2 S2 r. This is the sign of a proxy term, not a graded effect.",
+      "Belief does not modulate the a1 S2 u response itself. Adding a1 S2 u * (belief_lo > 0) or a1 S2 u * belief_lo gives test 0.659-0.660, against 0.659 for the a1 S2 u and late-episode terms alone.",
+      "The size of the a1 S2 u effect is understated. Once the window-edge cases are modelled separately, the weight is +1.90, not +1.6; the 1.6 is pulled down by the shared intercept and the belief proxy.",
+      "Confirmed claims: the feature is zero at D1 and D2. At GO the residual is +1.61 after a1 S2 u and about +0.06 after a2 S2 u. The late-episode drop is real: -0.94 from trial 80 and another -0.75 from trial 90, the same on test. The previous trial alone gives test 0.59.",
+      "Remaining errors are small: a uniform intercept offset of about +0.05 at D1/D2 and -0.1 at GO, plus a residual +0.10 after a2 S2 u. Whether the agent then picks a2 (a future variable) lowers activation after a1 S2 u by about 1.2, but test R^2 only rises from 0.738 to 0.740, so it is not needed.",
+      "Better observed-only terms (6) reach test 0.738, above the reported 'all observed' profile ceiling of 0.68. The original 0.687 understates what observed quantities can explain."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after a1->S2 unrewarded (~+1.9), shut off in the last ~20 episode trials; belief adds nothing beyond the previous trial",
+    "better_terms": "(phase == GO) * last_is(\"a1 S2 u\") ;; (phase == GO) * last_is(\"a1 S2 u\") * (ep_trial >= 80) ;; (phase == GO) * last_is(\"a1 S2 u\") * (ep_trial >= 90) ;; (phase == GO) * (prev_reward == 0) * (prev_action == -1) * belief_lo ;; (phase == GO) * (prev_reward == 0) * (prev_action == -1) ;; (phase == GO) * (prev_reward == 0) * (prev_action == -1) * (ep_trial>=80)",
+    "better_terms_test_r2_beyond_timing": 0.738
+  },
+  "final_label": "GO after a1->S2 unrewarded (~+1.9), shut off in the last ~20 episode trials; belief adds nothing beyond the previous trial"
+}

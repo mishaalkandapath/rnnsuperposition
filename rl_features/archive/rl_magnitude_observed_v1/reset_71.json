@@ -1,0 +1,76 @@
+{
+  "label": "GO after unrewarded a2-rare-S1 trial, scaled by late-episode time (peak trials 70-89)",
+  "terms": "(phase == GO) * last_is(\"a2 S1 u\") * (ep_dec == 6) ;; (phase == GO) * last_is(\"a2 S1 u\") * (ep_dec == 7) ;; (phase == GO) * last_is(\"a2 S1 u\") * (ep_dec == 8) ;; (phase == GO) * last_is(\"a2 S1 u\") * (ep_dec == 9) ;; (phase == GO) * last_is(\"a2 S1 u\") * (ep_trial >= 55) * (tv(\"action\", -2) == 2) * (tv(\"state\", -2) == 1) ;; (phase == GO) * last_is(\"a2 S1 u\") * (ep_trial >= 55) * (tv(\"prev_reward\", -1) == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "reset/71 is active only at GO, and almost only when the previous trial was a2 -> S1 (rare) unrewarded (the model-based 'stay on a2' case). Its size depends strongly on how far into the episode the trial is: fitted weights about 0 in trials 50-59, 0.21 in 60-69, 0.58 in 70-79, 0.83 in 80-89 and 0.33 in 90-99. These interactions with episode decile matter: the plain last_is indicator scores only 0.19 beyond timing, a ramp in ep_trial 0.52, and per-decile terms 0.61 (dev). Two small modifiers: it is weaker (-0.16) when the trial before was also a2 -> S1, so repeated a2-rare-S1 trials give a smaller activation, and slightly stronger (+0.09) when that earlier trial was rewarded. Belief / belief_lo, belief_cover, the hidden good state and the upcoming choice add nothing once the pattern x time terms are in. Test R^2 beyond timing 0.638 (dev 0.625), well above the profile's additive 'all' ceiling of 0.26 (the ceiling has no pattern x time interaction). This run uses observed variables only. The earlier explanation using the model's policy / value adds nothing here: the policy-decile table alone gave 0.06, and the observed pattern x time terms are enough.",
+  "gate": "reset",
+  "feature": 71,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 71,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S1 u\") * (ep_dec == 6)",
+      "(phase == GO) * last_is(\"a2 S1 u\") * (ep_dec == 7)",
+      "(phase == GO) * last_is(\"a2 S1 u\") * (ep_dec == 8)",
+      "(phase == GO) * last_is(\"a2 S1 u\") * (ep_dec == 9)",
+      "(phase == GO) * last_is(\"a2 S1 u\") * (ep_trial >= 55) * (tv(\"action\", -2) == 2) * (tv(\"state\", -2) == 1)",
+      "(phase == GO) * last_is(\"a2 S1 u\") * (ep_trial >= 55) * (tv(\"prev_reward\", -1) == 1)"
+    ],
+    "weights": [
+      0.20515507101290462,
+      0.5790033454833586,
+      0.8257865333798525,
+      0.3273118176396144,
+      -0.1622899669687247,
+      0.08843415462209135
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6378196094628574,
+    "r2": 0.6654421353745796,
+    "r2_timing_only": 0.07626731494423467
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 71,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S1 u\") * (ep_dec == 6)",
+      "(phase == GO) * last_is(\"a2 S1 u\") * (ep_dec == 7)",
+      "(phase == GO) * last_is(\"a2 S1 u\") * (ep_dec == 8)",
+      "(phase == GO) * last_is(\"a2 S1 u\") * (ep_dec == 9)",
+      "(phase == GO) * last_is(\"a2 S1 u\") * (ep_trial >= 55) * (tv(\"action\", -2) == 2) * (tv(\"state\", -2) == 1)",
+      "(phase == GO) * last_is(\"a2 S1 u\") * (ep_trial >= 55) * (tv(\"prev_reward\", -1) == 1)"
+    ],
+    "weights": [
+      0.20515507101290462,
+      0.5790033454833586,
+      0.8257865333798525,
+      0.3273118176396144,
+      -0.1622899669687247,
+      0.08843415462209135
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6251711446474368,
+    "r2": 0.6536906566592036,
+    "r2_timing_only": 0.07608675694122158
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claim holds. On test, the six claimed terms score R^2 beyond timing 0.638, the same as reported. In the profile residuals, GO after 'a2 S1 u' is +0.213 and every other previous-trial pattern is about -0.02. D1 and D2 are exactly 0. Belief_lo and belief_cover interactions inside the pattern add nothing (0.6377 and 0.6378).",
+      "The time shape is described wrongly at the end of the episode. 'Peak trials 70-89' and 'decile 9 = 0.33' suggest a decline across trials 90-99, but the drop is steep and inside that decile. Adding a within-decile slope for decile 9 gives weight 0.80 for decile 9 and slope -0.133 per trial, test R^2 0.666. Five per-decile terms plus slopes beat the claimed four-decile terms.",
+      "A finer time shape does better than the decile terms. A piecewise-linear ramp (rising from trial ~58, turning down after ~84 and again after ~92) plus two trial-before modifiers reaches test R^2 0.709 (dev 0.703), against 0.638 claimed.",
+      "The trial-before modifier is incomplete. When the GO pattern term is split by the trial two back, 'a1 before' (the agent has just switched to a2) gets the most negative weight: -0.26 to -0.29. The repeated 'a2 S1' case gets -0.15 to -0.22, and 'a2 S2' before is the high baseline. The explanation mentions only the repeated a2->S1 suppression.",
+      "There is a missed edge case. On each window's first trial the previous trial is unknown (prev_action == -1), so the worst misses are activations of about 1.1 predicted as about 0.09. Adding (phase==GO)*(prev_action==-1)*(prev_reward==0)*late adds about 0.025 on test (0.638 to 0.662). This is a limit of the data window, not a wrong mechanism.",
+      "The '+0.09 when the earlier trial was rewarded' modifier is real but small: weight 0.09-0.15, and it adds almost no R^2."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after an unrewarded a2-rare-S1 trial; grows from trial ~60 to a peak near trial 85-90, then drops; weaker if the agent just switched to a2 or the a2->S1 outcome repeats",
+    "better_terms": "G=(phase == GO) * last_is(\"a2 S1 u\"):  G*np.clip(ep_trial-58,0,30) ;; G*np.clip(ep_trial-84,0,20) ;; G*np.clip(ep_trial-92,0,20) ;; G*(ep_trial>=55)*(tv('action',-2)==1) ;; G*(ep_trial>=55)*(tv('action',-2)==2)*(tv('state',-2)==1) ;; (phase == GO)*(prev_action == -1)*(prev_reward == 0)*np.clip(ep_trial-58,0,30)",
+    "better_terms_test_r2_beyond_timing": 0.709
+  },
+  "final_label": "GO after an unrewarded a2-rare-S1 trial; grows from trial ~60 to a peak near trial 85-90, then drops; weaker if the agent just switched to a2 or the a2->S1 outcome repeats"
+}

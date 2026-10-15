@@ -1,0 +1,64 @@
+{
+  "label": "D2 after a1 -> S2 rare transition, late in the episode (trial >= ~85)",
+  "predicate": "(phase == D2) & (action == 1) & (state == 2) & (ep_trial >= 85)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2, and only when the agent chose a1 and was shown S2 (an a1 rare transition): 99.8% of activations have in_action=1 and in_state=2. It never fires on D1 or GO, on a2 choices, or on S1. It is also gated by position in the episode. It is silent before trial ~78, turns on over trials 80-89, and is strongest in trials 90-99. Magnitude grows with ep_trial: trials 95+ hold 29% of the activations but 52% of the mass. Requiring ep_trial >= 85 gives dev F1 0.92 (P 0.90, R 0.95, mass recall 0.99), against F1 0.24 without the time condition. Every variable is observed at D2 (the choice and the reached state are inputs; episode time is something the agent can track implicitly). Value is low on the steps where it fires, which follows from the rare transition and the late timing.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 245,
+    "predicate": "(phase == D2) & (action == 1) & (state == 2) & (ep_trial >= 85)",
+    "split": "test",
+    "precision": 0.9024753951685058,
+    "recall": 0.9520213937391852,
+    "f1": 0.9265865421419277,
+    "mass_recall": 0.9935220903774543,
+    "correlation": 0.8037487826547566,
+    "n_active": 6357,
+    "n_predicted": 6706,
+    "coverage_by_activation_quartile": [
+      0.8169811320754717,
+      0.9911894273127754,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 245,
+    "predicate": "(phase == D2) & (action == 1) & (state == 2) & (ep_trial >= 85)",
+    "split": "dev",
+    "precision": 0.9019179791049431,
+    "recall": 0.9461802715524292,
+    "f1": 0.9235190803129489,
+    "mass_recall": 0.9904173915047843,
+    "correlation": 0.7967674212996922,
+    "n_active": 6113,
+    "n_predicted": 6413,
+    "coverage_by_activation_quartile": [
+      0.8064094179202093,
+      0.9803664921465969,
+      0.9980366492146597,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 245,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "All factual claims check out on the dev profile. The feature fires 0/380619 times at D1 and 0/380619 at GO, and all 6113 activations are at D2. 6098 of 6113 have action=1, and the other 15 are a2 to S2 common, which is negligible. All activations have in_state=2 and in_rew=0. There are 4 activations in trials 70-79 and 0 before that; trials 80-89 hold 11% of the mass and trials 90-99 hold 89%.",
+      "Test score reproduces: P 0.902, R 0.952, F1 0.927, mass recall 0.994. A threshold sweep on test gives F1 0.82 at trial 80, 0.90 at 83, 0.927 at 85, 0.92 at 87 and 0.80 at 90, so 85 is about optimal. The turn-on is soft (magnitude ramps up), which accounts for the remaining imprecision.",
+      "Test misses (305 steps, 0.6% of mass) are low-magnitude a1 to S2R cases in trials 78-84 below the cutoff. False positives (654) are a1 to S2R steps near the cutoff that stay silent. Neither shows a systematic phase, reward, history or good-state pattern.",
+      "The predicate is not biased by the good state. Precision is about 0.90-0.91 whether good is S1, S2 or unknown, so the feature does not track whether the rare state is the good one.",
+      "No future variables are used: action and state are both inputs at D2.",
+      "Minor: the critic value is an internal correlate. (phase==D2)&(action==1)&(state==2)&(value<5.5) gives test P 0.999, R 0.836, F1 0.91. This is consistent with the late-episode explanation, not a refutation."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

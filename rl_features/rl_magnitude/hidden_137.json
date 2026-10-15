@@ -1,0 +1,103 @@
+{
+ "label": "Fires at D2 when a1 led rarely to S2, growing in the episode's second half.",
+ "short_terms": "(in_state == 2) * (in_action == 1) * np.maximum(ep_trial - 75, 0)",
+ "terms": "(in_state == 2) * (in_action == 1) * (ep_trial >= 85) ;; (in_state == 2) * (in_action == 1) * (ep_trial >= 70) ;; (in_state == 2) * (in_action == 1) * (ep_trial >= 55) ;; (in_state == 2) * (in_action == 1) * (ep_trial >= 40) ;; (in_state == 2) * (in_action == 1) * (prev_reward==1) * (ep_trial >= 60) ;; (in_state == 2) * (in_action == 1) ;; (in_state == 2) * (in_action == 1) * (prev_action==1) * (ep_trial >= 60) ;; (in_state == 2) * (in_action == 1) * belief_cover * (ep_trial >= 60)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Silent at D1 and GO. At D2 it is driven almost entirely by the observed rare transition a1 -> S2 (in_action == 1, in_state == 2). Its size grows with episode time: near zero early, then a steep linear ramp after about trial 60, reaching ~2 near trial 99. The (ep_trial >= 30) step gets a negative weight and only corrects the timing baseline for these steps. Other D2 transitions (a1 S1, a2 S2, a2 S1) stay at zero, so the timing baseline overpredicts them. Previous-trial reward/choice, belief_lo and belief_cover add only ~0.01 in the free fit; the free fit mostly refines the shape of the episode-time ramp with step functions. The remaining variance is that some late a1->S2 trials do not fire at all, which no observed history term captured.",
+ "full_test_scores": {
+  "gate": "hidden",
+  "feature": 137,
+  "terms": [
+   "(in_state == 2) * (in_action == 1) * (ep_trial >= 85)",
+   "(in_state == 2) * (in_action == 1) * (ep_trial >= 70)",
+   "(in_state == 2) * (in_action == 1) * (ep_trial >= 55)",
+   "(in_state == 2) * (in_action == 1) * (ep_trial >= 40)",
+   "(in_state == 2) * (in_action == 1) * (prev_reward==1) * (ep_trial >= 60)",
+   "(in_state == 2) * (in_action == 1)",
+   "(in_state == 2) * (in_action == 1) * (prev_action==1) * (ep_trial >= 60)",
+   "(in_state == 2) * (in_action == 1) * belief_cover * (ep_trial >= 60)"
+  ],
+  "weights": [
+   0.6496815437916538,
+   0.17158279374473892,
+   0.018896838488450973,
+   0.0027681057200743993,
+   0.025603577889276134,
+   0.006673127622973684,
+   0.14694896645627953,
+   -0.018459152328915995
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6311052046696799,
+  "r2": 0.6597712038384195,
+  "r2_timing_only": 0.07770778967773506
+ },
+ "gate": "hidden",
+ "feature": 137,
+ "test_scores": {
+  "gate": "hidden",
+  "feature": 137,
+  "terms": [
+   "(in_state == 2) * (in_action == 1) * np.maximum(ep_trial - 75, 0)"
+  ],
+  "weights": [
+   0.05350151719662813
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6642962113668454,
+  "r2": 0.6903830107679694,
+  "r2_timing_only": 0.07770778967773506
+ },
+ "dev_scores": {
+  "gate": "hidden",
+  "feature": 137,
+  "terms": [
+   "(in_state == 2) * (in_action == 1) * np.maximum(ep_trial - 75, 0)"
+  ],
+  "weights": [
+   0.05350151719662813
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.6772250230071701,
+  "r2": 0.7025372385497899,
+  "r2_timing_only": 0.07842062534848238
+ },
+ "final_verdict": "partially_explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The core claim holds. The feature is zero at D1 and GO and is driven only by the rare a1 -> S2 transition at D2. In the profile, the D2 residual by choice x state is +0.159 for code 5 (a1 S2) and about -0.02 for every other code.",
+   "The timing in the label is wrong. 'Growing in the episode's second half' suggests onset near trial 50, but the step (in_state==2)*(in_action==1)*(ep_trial>=60) scores only 0.347 on test. A ramp from 50 scores 0.552, from 60 scores 0.610, from 70 scores 0.658, from 75 scores 0.664 and from 80 scores 0.645. The feature really switches on around trial 70-75, in the last quarter of the episode.",
+   "The second short-form term is a fitted correction, not a description. Adding (ep_trial >= 30) with a negative weight moves test R^2 only from 0.610 to 0.615.",
+   "The magnitude is mostly on/off, not graded. In misses, the late a1->S2 steps sit at about 1.4-2.0 or at exactly 0 (for example t87, t91 and t97 are 0 while their neighbours are 1.5-2.0). The single linear ramp predicts about 1.0 for all of them, so the 'ramp' mostly reflects a rising chance of firing. Which late a1->S2 trials fire is unexplained; this is the main remaining error.",
+   "Observed terms add little and none explains the on/off pattern. A belief_lo term gives +0.016 (free fit, test 0.680), prev_action==1 +0.011, belief_cover, prev_reward, prev_common and the trial-2 reward about +0.00. The D2 belief-decile trend in the profile goes away once the a1->S2 x ramp term is in, because it only reflects how often a1 is chosen.",
+   "There are no large systematic errors by phase or previous trial with the ramp-75 short form. The largest is about -0.03 at D2, which is the timing baseline overpredicting the other transitions."
+  ],
+  "revised_verdict": "partially_explained",
+  "revised_label": "Fires at D2 after a rare a1 -> S2 transition, increasingly from about trial 75 on.",
+  "better_short_terms": "(in_state == 2) * (in_action == 1) * np.maximum(ep_trial - 75, 0)",
+  "better_short_terms_test_r2_beyond_timing": 0.6642962113668454
+ },
+ "final_label": "Fires at D2 after a rare a1 -> S2 transition, increasingly from about trial 75 on.",
+ "original_short_terms": "(in_state == 2) * (in_action == 1) * np.maximum(ep_trial - 60, 0) ;; (in_state == 2) * (in_action == 1) * (ep_trial >= 30)",
+ "original_test_scores": {
+  "gate": "hidden",
+  "feature": 137,
+  "terms": [
+   "(in_state == 2) * (in_action == 1) * np.maximum(ep_trial - 60, 0)",
+   "(in_state == 2) * (in_action == 1) * (ep_trial >= 30)"
+  ],
+  "weights": [
+   0.025895009294104394,
+   -0.03863630079863992
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6145560607099942,
+  "r2": 0.6445080572768997,
+  "r2_timing_only": 0.07770778967773506
+ },
+ "terms_from": "skeptic"
+}

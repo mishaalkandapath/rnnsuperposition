@@ -1,0 +1,109 @@
+{
+ "label": "Late-episode D2 at S2 after a rewarded a2->S2 trial, ramping up toward episode end; stronger when S2 believed good.",
+ "short_terms": "(in_state == 2) * last_is('a2 S2 r') * np.maximum(ep_trial - 89, 0) ;; (in_state == 2) * (ep_dec == 9) * belief_lo ;; (in_state == 2) * (ep_dec == 9)",
+ "terms": "(phase == D2) * (ep_dec == 9) * (action == 2) * (state == 2) * (prev_reward == 1) * (prev_action != 1) ;; (phase == D2) * (ep_dec == 9) * (action == 2) * (state == 2) * (prev_reward == 1) * (prev_action != 1) * belief_lo ;; (phase == D2) * (ep_dec == 9) * (action == 2) * (state == 2) * (prev_reward == 1) * (prev_action != 1) * (ep_trial-90) ;; (phase == D2) * (ep_dec == 9) * (action == 2) * (state == 2) * (prev_reward == 1) * (prev_action != 1) * (tv(\"reward\",-2)==1) ;; (phase == D2) * (ep_dec == 9) * (action == 2) * (state == 2) * (prev_reward == 1) * (prev_action != 1) * (tv(\"action\",-2)==2) ;; (phase == D2) * (ep_dec == 9) * (action == 2) * (state == 2) * (prev_reward == 1) * (prev_action != 1) * belief_cover",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Sparse feature (0.4% of steps), zero at D1 and GO. At D2 in the last 10 trials of the episode it fires (~0.2-0.35) when the agent chose a2 and reached S2 (common) and the previous trial was a rewarded a2 choice (a2->S2 rewarded); a preceding unrewarded trial or a rare transition this trial gives ~0. Within the last decile magnitude rises with ep_trial and is larger when the ideal observer is more confident S2 is good (more negative belief_lo). The free fit adds the trial-before (rewarded, a2) and belief cover as minor modifiers. All terms use observed D2 inputs (this trial choice and state are visible at D2); no future variables.",
+ "full_test_scores": {
+  "gate": "update",
+  "feature": 111,
+  "terms": [
+   "(phase == D2) * (ep_dec == 9) * (action == 2) * (state == 2) * (prev_reward == 1) * (prev_action != 1)",
+   "(phase == D2) * (ep_dec == 9) * (action == 2) * (state == 2) * (prev_reward == 1) * (prev_action != 1) * belief_lo",
+   "(phase == D2) * (ep_dec == 9) * (action == 2) * (state == 2) * (prev_reward == 1) * (prev_action != 1) * (ep_trial-90)",
+   "(phase == D2) * (ep_dec == 9) * (action == 2) * (state == 2) * (prev_reward == 1) * (prev_action != 1) * (tv(\"reward\",-2)==1)",
+   "(phase == D2) * (ep_dec == 9) * (action == 2) * (state == 2) * (prev_reward == 1) * (prev_action != 1) * (tv(\"action\",-2)==2)",
+   "(phase == D2) * (ep_dec == 9) * (action == 2) * (state == 2) * (prev_reward == 1) * (prev_action != 1) * belief_cover"
+  ],
+  "weights": [
+   -0.04062275616958934,
+   -0.033935799963648955,
+   0.025064242364825514,
+   0.029791743121229886,
+   -0.04301963939415712,
+   -0.006790166052373742
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5046431435918726,
+  "r2": 0.5484381723266845,
+  "r2_timing_only": 0.08841106803764265
+ },
+ "gate": "update",
+ "feature": 111,
+ "test_scores": {
+  "gate": "update",
+  "feature": 111,
+  "terms": [
+   "(in_state == 2) * last_is('a2 S2 r') * np.maximum(ep_trial - 89, 0)",
+   "(in_state == 2) * (ep_dec == 9) * belief_lo",
+   "(in_state == 2) * (ep_dec == 9)"
+  ],
+  "weights": [
+   0.024227102438255852,
+   -0.0055440939928291235,
+   -0.0173686351842802
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.4609107867622261,
+  "r2": 0.5085722398721502,
+  "r2_timing_only": 0.08841106803764265
+ },
+ "dev_scores": {
+  "gate": "update",
+  "feature": 111,
+  "terms": [
+   "(in_state == 2) * last_is('a2 S2 r') * np.maximum(ep_trial - 89, 0)",
+   "(in_state == 2) * (ep_dec == 9) * belief_lo",
+   "(in_state == 2) * (ep_dec == 9)"
+  ],
+  "weights": [
+   0.024227102438255852,
+   -0.0055440939928291235,
+   -0.0173686351842802
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.4689106764519634,
+  "r2": 0.5293615075327874,
+  "r2_timing_only": 0.11382422579495943
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The core claim holds, and one term carries almost all of the score. (in_state == 2) * last_is('a2 S2 r') * np.maximum(ep_trial - 89, 0) alone gets test R^2 0.426 beyond timing. The full recorded form gets 0.458. The same feature at S1 gets 0.008, and the rare a1->S2 version of the term is fitted at weight 0.0, so it does not occur in this data.",
+   "The belief claim is close to empty. Adding (in_state == 2) * (ep_dec == 9) * belief_lo to the ramp term moves test R^2 from 0.426 to 0.428. It only adds about 0.017 when paired with the negative in_action correction (0.441 -> 0.458). Restricted to the pattern steps (last_is * belief_lo), the form scores 0.436, below the recorded form. The weight of -0.008 mostly acts on S2 steps outside the pattern, so 'stronger when S2 believed good' is not supported as a claim about when the feature fires.",
+   "The third term is a fitted correction, not a description. (in_state == 2) * (ep_dec == 9) * (in_action == 2) gets weight -0.022 and only offsets the decile-9 D2 baseline of 0.031 on S2 steps that do not fit the pattern. Swapping in a plain (in_state == 2) * (ep_dec == 9) offset scores 0.461, slightly higher than the recorded 0.458, which shows the in_action factor adds nothing.",
+   "'Ramping up toward episode end' describes the average, not each step. Per-trial weights for the pattern are about 0 at t90-91, 0.04 at t92, 0.10 at t93, 0.14 at t94, 0.18 at t95, 0.20-0.21 at t96-97, then fall to 0.18 at t98 and 0.15 at t99. So it peaks at t96-97 and is not monotone.",
+   "There is a large systematic error. Misses show the feature acts like an on/off switch at about 0.28-0.36. It is already fully on at t90-93 in runs of rewarded a2->S2 trials, where the ramp predicts only 0.02-0.13. It is also fully off (0) at t98-99 after a rewarded a2->S2 trial when an unrewarded trial came shortly before, where the ramp predicts 0.23-0.25. Within an on-run the value even declines slightly (0.31 -> 0.25 over t96-99). The ramp fits how often it is on, not how strongly it fires.",
+   "Recent reward history does not account for the on/off pattern within the window. Requiring the trial two back to be rewarded scores 0.318 (free fit, worse). Using tv('reward', -2) != 0 scores 0.437, and adding the trial three back scores 0.423. The rest of the variance looks like hidden history beyond the 5-trial window or internal state."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "D2 at S2 after a rewarded a2->S2 trial, last ~10 episode trials; on-rate rises toward t96-97",
+  "better_short_terms": "(in_state == 2) * last_is('a2 S2 r') * np.maximum(ep_trial - 89, 0) ;; (in_state == 2) * (ep_dec == 9) * belief_lo ;; (in_state == 2) * (ep_dec == 9)",
+  "better_short_terms_test_r2_beyond_timing": 0.4609
+ },
+ "final_label": "D2 at S2 after a rewarded a2->S2 trial, last ~10 episode trials; on-rate rises toward t96-97",
+ "original_short_terms": "(in_state == 2) * last_is(\"a2 S2 r\") * np.maximum(ep_trial - 89, 0) ;; (in_state == 2) * (ep_dec == 9) * belief_lo ;; (in_state == 2) * (ep_dec == 9) * (in_action == 2)",
+ "original_test_scores": {
+  "gate": "update",
+  "feature": 111,
+  "terms": [
+   "(in_state == 2) * last_is(\"a2 S2 r\") * np.maximum(ep_trial - 89, 0)",
+   "(in_state == 2) * (ep_dec == 9) * belief_lo",
+   "(in_state == 2) * (ep_dec == 9) * (in_action == 2)"
+  ],
+  "weights": [
+   0.023655950625138512,
+   -0.008243207354581313,
+   -0.022109932150682014
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.4576851071701249,
+  "r2": 0.5056317460579338,
+  "r2_timing_only": 0.08841106803764265
+ },
+ "terms_from": "skeptic"
+}

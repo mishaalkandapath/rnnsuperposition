@@ -1,0 +1,65 @@
+{
+  "label": "GO step after a rewarded trial when the agent is choosing a1, early-to-mid episode",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (action == 1) & (ep_trial < 60)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO (never D1/D2), only when the previous trial was rewarded (prev_reward==1: 73704 of 73743 activations), and about 92% of its mass falls on GO steps where the agent picks a1 (model_act==1; strong policy logit for a1, choice>8 has 7x lift). It also depends strongly on episode time: the rate stays around 10-11% through trial ~50, then falls off, and the feature is essentially silent after trial 70. Without the ep_trial cutoff the predicate has F1 0.70 (precision 0.58); adding ep_trial<60 raises it to F1 0.885 on dev. The action at GO is the agent own upcoming choice, which is legitimate, and model_act==1 scores the same, so no unobservable future variable is used. Magnitude: highest on the first rewarded a1 choice after a2 or after an unrewarded trial (~1.0 of max), then it decays over a run of consecutive rewarded a1 trials (e.g. 0.98, 0.91, 0.84, 0.81) and is lower later in the episode (checked in the example windows). It does not fire after unrewarded trials or at any non-GO step, and only weakly when choosing a2 after reward (~8% of mass, mostly low activations).",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 38,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (action == 1) & (ep_trial < 60)",
+    "split": "test",
+    "precision": 0.917939670381686,
+    "recall": 0.8410124319920099,
+    "f1": 0.8777938564305847,
+    "mass_recall": 0.890617733819348,
+    "correlation": 0.814209479539805,
+    "n_active": 76094,
+    "n_predicted": 69717,
+    "coverage_by_activation_quartile": [
+      0.676829268292683,
+      0.8308452481076535,
+      0.9296115228933396,
+      0.9267728539136835
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 38,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (action == 1) & (ep_trial < 60)",
+    "split": "dev",
+    "precision": 0.9170046665794409,
+    "recall": 0.8553761034945689,
+    "f1": 0.8851189223321405,
+    "mass_recall": 0.9024231232436772,
+    "correlation": 0.8160265816607165,
+    "n_active": 73743,
+    "n_predicted": 68787,
+    "coverage_by_activation_quartile": [
+      0.701073985680191,
+      0.847255369928401,
+      0.9382729442395313,
+      0.9349064279902359
+    ]
+  },
+  "gate": "reset",
+  "feature": 38,
+  "final_verdict": "explained",
+  "skeptic": {
+    "revised_verdict": "explained",
+    "upheld": false,
+    "issues": [
+      "The upcoming action is a correlate, not the real variable. What the feature tracks is the previous trial's reached STATE: reward at S1 versus reward at S2. GO & prev_reward==1 & action==1 & prev_state==2 & ep_trial<60 has precision 0.000 on test, so the feature never fires on an a1 choice after a reward collected at S2. GO & prev_reward==1 & action==2 & prev_state==1 & ep_trial<60 has precision 0.87, so it does fire on a2 choices after a reward at S1.",
+      "The 'rewarded-then-a2' misses (about 8-9% of mass) are not scattered weak noise. Every one comes after a reward at S1, and most follow a rare-rewarded a2 trial. GO & prev_reward==1 & action==2 & prev_state==2 has precision 0.0.",
+      "Within trials whose previous state is visible in the window (rel > -3), prev_state==1 beats action==1. prev_state==1 gives precision 0.968 and recall 0.733 of all activations; action==1 gives 0.907 and 0.645 (test).",
+      "action==1 only helps at rel -3, the window's first trial, where prev_state is outside the window (encoded -1). It stands in there for a variable the agent did observe at the previous D2.",
+      "The other claims check out. The feature fires only at GO (100% of mass) and only after a rewarded trial (73704 of 73743 activations). Its firing rate falls off after trial ~55 and it is silent after trial ~80. model_act==1 scores the same as action==1 (test F1 0.877).",
+      "The ep_trial cutoff stays unexplained: an episode-time decay, also seen as a value-head band. Value between 7.3 and 8.1 can stand in for it, but the fit is a little worse (test F1 0.864 vs 0.878)."
+    ],
+    "revised_label": "GO step after a trial rewarded in state S1 (S1 reward input), early-to-mid episode; it does not fire after reward in S2, whatever the upcoming choice",
+    "better_predicate": "(phase == GO) & (prev_reward == 1) & ((prev_state == 1) | ((prev_state == -1) & (action == 1))) & (ep_trial < 60)",
+    "better_predicate_test_f1": 0.947
+  },
+  "final_label": "GO step after a trial rewarded in state S1 (S1 reward input), early-to-mid episode; it does not fire after reward in S2, whatever the upcoming choice"
+}

@@ -1,0 +1,109 @@
+{
+ "label": "At D2, update gate is higher after choosing a2 and when belief favors S2.",
+ "short_terms": "(phase == D2) * (action == 2) ;; (phase == D2) * belief ;; (phase != D2) * belief",
+ "terms": "(phase == D2) * (action == 2) ;; (phase == D2) * np.tanh(belief_lo) ;; (phase != D2) * belief_lo ;; (phase == D2) * (state == 2) ;; (phase == D2) * (action == 2) * belief_lo ;; (phase == D2)*(action==2)*(prev_action==2) ;; (phase==GO)*(prev_reward==0)*(prev_action==1)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Raw z of unit 12 is near 1 at D1/GO and drops at D2 (dropping further late in the episode; this is timing). Beyond timing, almost all the variance is at D2: z is about 0.25 higher when the just-made choice was a2 (observed at D2 as in_action) than a1, and it rises graded with the ideal-observer belief that S2 is good (negative belief_lo). At D1/GO there is a small (~0.015) shift with the same belief sign. The reached state, reward history and the trial before add little: the 7-term free fit (adds the reached state, choice x belief, repeated a2, GO after an unrewarded a1) reaches 0.84 dev vs 0.82 for the short form. No future variables are used.",
+ "full_test_scores": {
+  "gate": "unit_update",
+  "feature": 12,
+  "terms": [
+   "(phase == D2) * (action == 2)",
+   "(phase == D2) * np.tanh(belief_lo)",
+   "(phase != D2) * belief_lo",
+   "(phase == D2) * (state == 2)",
+   "(phase == D2) * (action == 2) * belief_lo",
+   "(phase == D2)*(action==2)*(prev_action==2)",
+   "(phase==GO)*(prev_reward==0)*(prev_action==1)"
+  ],
+  "weights": [
+   0.1349974609667539,
+   -0.23098835823341632,
+   -0.0038276149430061857,
+   -0.00548228671120296,
+   0.03592602335659877,
+   0.004470426564560822,
+   -0.020003238854872575
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.8305496671538439,
+  "r2": 0.9538977594388763,
+  "r2_timing_only": 0.7279306579882621
+ },
+ "gate": "unit_update",
+ "feature": 12,
+ "test_scores": {
+  "gate": "unit_update",
+  "feature": 12,
+  "terms": [
+   "(phase == D2) * (action == 2)",
+   "(phase == D2) * belief",
+   "(phase != D2) * belief"
+  ],
+  "weights": [
+   0.25901122885807887,
+   -0.2884857629942763,
+   -0.023994672407943004
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.8958471230073152,
+  "r2": 0.9716631952879707,
+  "r2_timing_only": 0.7279306579882621
+ },
+ "dev_scores": {
+  "gate": "unit_update",
+  "feature": 12,
+  "terms": [
+   "(phase == D2) * (action == 2)",
+   "(phase == D2) * belief",
+   "(phase != D2) * belief"
+  ],
+  "weights": [
+   0.25901122885807887,
+   -0.2884857629942763,
+   -0.023994672407943004
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.8988008080474038,
+  "r2": 0.97225861845643,
+  "r2_timing_only": 0.7258734876404485
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "Wrong belief shape. Using belief_lo (log-odds) in the short form gives test 0.819. Swapping in the probability belief, i.e. '(phase == D2) * (action == 2) ;; (phase == D2) * belief ;; (phase != D2) * belief', gives test 0.896, which beats the 7-term free fit (0.831). The D2 belief-decile residuals run +0.26, +0.26, +0.24, +0.20, +0.10, -0.08, -0.19, -0.25, -0.26, -0.28. They change fastest near belief 0.5 and flatten at both ends. That matches a linear function of the probability and does not match 'rises steadily with log-odds'. tanh(belief_lo) does no better (0.808).",
+   "Systematic errors in the recorded short form. Misses shows a per-phase bias: D1 +0.015, GO +0.015, D2 -0.029. It also over-predicts D2 after unrewarded a1 trials: a1 S1 u by -0.115 and a1 S2 u by -0.092. With the belief-probability form these shrink to -0.045 and -0.062, and the per-phase mean bias drops to about 0.003 or less.",
+   "The label is incomplete. It does not mention the small (about 0.03 range) belief effect at D1/GO, which is the short form's third term. It also implies a monotone log-odds relation. One sub-claim does hold: choice and belief both matter at D2. Choice alone scores 0.48, belief_lo alone 0.77, belief probability alone 0.37, and choice plus probability 0.89, so the two effects combine.",
+   "Checked and minor: adding reached state, choice x belief, or ep_dec interactions at D2 each changes test R^2 by under 0.005. The remaining worst misses are late-episode windows where the timing baseline falls steeply."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At D2, update gate higher after choosing a2 and as P(S1 good) falls; small same-sign effect elsewhere.",
+  "better_short_terms": "(phase == D2) * (action == 2) ;; (phase == D2) * belief ;; (phase != D2) * belief",
+  "better_short_terms_test_r2_beyond_timing": 0.896
+ },
+ "final_label": "At D2, update gate higher after choosing a2 and as P(S1 good) falls; small same-sign effect elsewhere.",
+ "original_short_terms": "(phase == D2) * (action == 2) ;; (phase == D2) * belief_lo ;; (phase != D2) * belief_lo",
+ "original_test_scores": {
+  "gate": "unit_update",
+  "feature": 12,
+  "terms": [
+   "(phase == D2) * (action == 2)",
+   "(phase == D2) * belief_lo",
+   "(phase != D2) * belief_lo"
+  ],
+  "weights": [
+   0.0893199106463824,
+   -0.06670916824590253,
+   -0.0040989658463562425
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.8191380440968798,
+  "r2": 0.9507930066624821,
+  "r2_timing_only": 0.7279306579882621
+ },
+ "terms_from": "skeptic"
+}

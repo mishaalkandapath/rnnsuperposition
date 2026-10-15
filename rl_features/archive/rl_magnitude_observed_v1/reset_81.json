@@ -1,0 +1,84 @@
+{
+  "label": "late-episode GO ramp, steeper after a2 choice and after no reward",
+  "terms": "(phase == GO) * (ep_trial >= 90) * (ep_trial - 90) ;; (phase == GO) * (ep_trial >= 90) * (prev_reward == 0) ;; (phase == GO) * (ep_trial >= 90) * np.clip(-belief_lo, -4, 4) ;; (phase == GO) * (ep_trial >= 90) * (prev_action == 2) ;; (phase == GO) * (ep_trial >= 90) * (prev_reward == 0) * (prev_action == 2) ;; (phase == GO) * (ep_trial >= 90) * (tv(\"reward\", -2) == 0) ;; (phase == GO) * (ep_trial >= 90) * (prev_reward == 0) * (ep_trial - 90) ;; (phase == GO) * (ep_trial >= 90) * (prev_action == 2) * (ep_trial - 90)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires essentially only at GO in the last ~10 trials of the episode (timing alone R^2 0.42). Within trials 90-99 its magnitude is a ramp in ep_trial whose slope depends on the previous trial: steep (~+0.38/trial) after an a2 choice, a further ~+0.23/trial after an unrewarded trial, and nearly flat after a rewarded a1 trial; so it acts like a rectified ramp whose onset is earlier after a2 and no reward. A belief term (ideal-observer log-odds toward S2 good, i.e. evidence for a2) adds positively, as does an unrewarded trial two back. D1 and D2 carry nothing. The fit is multiplicative (ramp x condition); the additive per-phase tables in the profile score only 0.03 (the all ceiling), because they miss the interaction with the late-episode ramp. Observed-only terms, no model outputs: test R^2 beyond timing 0.59 (dev 0.65). The earlier value/policy-based label (low-value signal, choosing a2) is matched here by prev_action == 2, prev_reward == 0 and belief_lo, so the observed-only version gives up little; I did not score a direct comparison against model value/policy.",
+  "gate": "reset",
+  "feature": 81,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 81,
+    "terms": [
+      "(phase == GO) * (ep_trial >= 90) * (ep_trial - 90)",
+      "(phase == GO) * (ep_trial >= 90) * (prev_reward == 0)",
+      "(phase == GO) * (ep_trial >= 90) * np.clip(-belief_lo, -4, 4)",
+      "(phase == GO) * (ep_trial >= 90) * (prev_action == 2)",
+      "(phase == GO) * (ep_trial >= 90) * (prev_reward == 0) * (prev_action == 2)",
+      "(phase == GO) * (ep_trial >= 90) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * (ep_trial >= 90) * (prev_reward == 0) * (ep_trial - 90)",
+      "(phase == GO) * (ep_trial >= 90) * (prev_action == 2) * (ep_trial - 90)"
+    ],
+    "weights": [
+      -0.005453592731121354,
+      -0.7759599016858708,
+      0.2731261981428018,
+      -1.8949555548326023,
+      1.1943530332495247,
+      0.18431655593789856,
+      0.2300826053398754,
+      0.3793417597188175
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5867185008224898,
+    "r2": 0.7596805729416698,
+    "r2_timing_only": 0.4185091093199177
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 81,
+    "terms": [
+      "(phase == GO) * (ep_trial >= 90) * (ep_trial - 90)",
+      "(phase == GO) * (ep_trial >= 90) * (prev_reward == 0)",
+      "(phase == GO) * (ep_trial >= 90) * np.clip(-belief_lo, -4, 4)",
+      "(phase == GO) * (ep_trial >= 90) * (prev_action == 2)",
+      "(phase == GO) * (ep_trial >= 90) * (prev_reward == 0) * (prev_action == 2)",
+      "(phase == GO) * (ep_trial >= 90) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * (ep_trial >= 90) * (prev_reward == 0) * (ep_trial - 90)",
+      "(phase == GO) * (ep_trial >= 90) * (prev_action == 2) * (ep_trial - 90)"
+    ],
+    "weights": [
+      -0.005453592731121354,
+      -0.7759599016858708,
+      0.2731261981428018,
+      -1.8949555548326023,
+      1.1943530332495247,
+      0.18431655593789856,
+      0.2300826053398754,
+      0.3793417597188175
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6544054752595476,
+    "r2": 0.7985202729962866,
+    "r2_timing_only": 0.4170054425629913
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The 8 terms really contain only 7 independent directions. Adding tv('reward',-2)==0 on top of the six prev_action/prev_reward ramp terms plus belief gives exactly the same test R^2 (0.5867) as the original set, so that term adds nothing a reparameterisation doesn't. Swapping it for a quadratic ramp (ep_trial-90)**2 lifts test R^2 to 0.611, over the 0.6 bar, so the ramp is slightly convex rather than linear.",
+      "The 'explained' verdict leans on the 80%-of-ceiling rule against an additive 'all' ceiling of 0.03. That ceiling cannot capture the ramp x condition interaction, so it means nothing here. The verdict therefore really rests on 0.59, which is just under 0.6. The 0.611 alternative above clears the bar, so the verdict survives.",
+      "'Starts at zero and switches on earlier after a2' is loose. The fitted offsets are large and negative (prev_action==2: -1.89, prev_reward==0: -0.78) alongside the steeper slopes (+0.38, +0.23 per trial). After a2 the prediction is lower than after a1 in trials 90-94 and only overtakes it later. That is a steeper ramp crossing over, not an earlier onset.",
+      "Checked components each carry a real share. Test R^2 is 0.39 for the prev_action ramp alone, 0.28 for the prev_reward ramp, 0.22 for the belief ramp, and 0.52 for the prev-trial terms combined. Dropping belief (keeping the quadratic ramp) gives 0.554 against 0.611. Using the future current choice (action==2) instead of prev_action does no better (0.40 against 0.39), so the observed-only choice proxy loses nothing.",
+      "No large systematic error class remains. Mean errors by phase are under 0.01 and the largest phase x previous-trial biases are GO after a1 S2 r (-0.06) and GO after a2 S2 r... more precisely GO after a2 S1 r (+0.04), both small against a feature std of 0.36. The leftover variance shows up as on/off variability within late a2 streaks: actual 5-6 against predicted 2.5, or actual 0 against predicted 3. No prev-trial or belief term tracks it.",
+      "'D1 and D2 carry nothing' is slightly overstated. D2 activations up to about 1 appear late in the episode (examples show D2 values of 0.3-0.99). They are small and rare."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "late-episode GO ramp (trials 90-99), steeper (but offset lower) after an a2 choice and after no reward, plus an S2-favouring belief term",
+    "better_terms": "(phase == GO) * (ep_trial >= 90) * (ep_trial - 90) ;; (phase == GO) * (ep_trial >= 90) * (prev_action == 2) * (ep_trial - 90) ;; (phase == GO) * (ep_trial >= 90) * (prev_reward == 0) * (ep_trial - 90) ;; (phase == GO) * (ep_trial >= 90) * (prev_action==2) ;; (phase == GO) * (ep_trial >= 90) * (prev_reward==0) ;; (phase == GO) * (ep_trial >= 90) * (prev_action==2)*(prev_reward==0) ;; (phase == GO) * (ep_trial >= 90) * np.clip(-belief_lo,-4,4) ;; (phase == GO) * (ep_trial >= 90) * (ep_trial - 90)**2",
+    "better_terms_test_r2_beyond_timing": 0.6106
+  },
+  "final_label": "late-episode GO ramp (trials 90-99), steeper (but offset lower) after an a2 choice and after no reward, plus an S2-favouring belief term"
+}

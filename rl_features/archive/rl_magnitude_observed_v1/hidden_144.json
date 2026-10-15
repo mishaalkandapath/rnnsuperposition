@@ -1,0 +1,85 @@
+{
+  "label": "late-episode GO ramp scaled by S1 belief and last reward (esp. after a1 S1 r)",
+  "terms": "(phase == GO) * np.clip(ep_trial - 65, 0, 20) ;; (phase == GO) * np.clip(ep_trial - 65, 0, 20) * last_is(\"a1 S1 r\") ;; (phase == GO) * np.clip(ep_trial - 65, 0, 20) * belief ;; (phase == GO) * np.clip(ep_trial - 65, 0, 20) * (prev_reward == 1) ;; (phase == GO) * np.clip(ep_trial - 65, 0, 20) * (trial == 0) ;; (phase == GO) * np.clip(ep_trial - 65, 0, 20) * last_is(\"a1 S2 r\") ;; (phase == GO) * np.clip(ep_trial - 65, 0, 20) * last_is(\"a2 S1 u\") ;; (phase == GO) * np.clip(ep_trial - 65, 0, 20) * last_is(\"a2 S1 r\")",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO and only late in the episode (from ~trial 65, growing to trial 85+); D1/D2 are always 0. Its magnitude is a late-episode ramp L = clip(ep_trial-65,0,20) multiplied by observed history: it grows with the ideal-observer belief that S1 is good, with a reward on the previous trial, and most of all after a1 S1 rewarded (common rewarded a1 - the agent will repeat a1); smaller boosts after a2 S1 unrewarded and on the window's first trial, and a reduction after a2 S1 rewarded. The bare ramp gets a negative weight, so late GO steps with S2 belief and no reward stay near 0. Every term is the ramp times an observed cue (no future, hidden or model-output variables). Additive phase tables cap at 0.19 (all) / 0.18 (all observed) because the effect is a time x history interaction; this 8-term interaction model reaches dev R^2 beyond timing 0.64, test 0.63 (timing alone 0.21). belief_cover added nothing. Compared with the earlier firing label (late GO after reward, choosing a1), belief plus last-trial pattern stand in for the a1 choice / policy without an obvious loss.",
+  "gate": "hidden",
+  "feature": 144,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 144,
+    "terms": [
+      "(phase == GO) * np.clip(ep_trial - 65, 0, 20)",
+      "(phase == GO) * np.clip(ep_trial - 65, 0, 20) * last_is(\"a1 S1 r\")",
+      "(phase == GO) * np.clip(ep_trial - 65, 0, 20) * belief",
+      "(phase == GO) * np.clip(ep_trial - 65, 0, 20) * (prev_reward == 1)",
+      "(phase == GO) * np.clip(ep_trial - 65, 0, 20) * (trial == 0)",
+      "(phase == GO) * np.clip(ep_trial - 65, 0, 20) * last_is(\"a1 S2 r\")",
+      "(phase == GO) * np.clip(ep_trial - 65, 0, 20) * last_is(\"a2 S1 u\")",
+      "(phase == GO) * np.clip(ep_trial - 65, 0, 20) * last_is(\"a2 S1 r\")"
+    ],
+    "weights": [
+      -0.02181593589005076,
+      0.016913817348257993,
+      0.016767607735605435,
+      0.012715583949862354,
+      0.006193788438631107,
+      0.00183941865859553,
+      0.011569957103161449,
+      -0.007533347356314495
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6258895216282698,
+    "r2": 0.7033633360670934,
+    "r2_timing_only": 0.20708806333364105
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 144,
+    "terms": [
+      "(phase == GO) * np.clip(ep_trial - 65, 0, 20)",
+      "(phase == GO) * np.clip(ep_trial - 65, 0, 20) * last_is(\"a1 S1 r\")",
+      "(phase == GO) * np.clip(ep_trial - 65, 0, 20) * belief",
+      "(phase == GO) * np.clip(ep_trial - 65, 0, 20) * (prev_reward == 1)",
+      "(phase == GO) * np.clip(ep_trial - 65, 0, 20) * (trial == 0)",
+      "(phase == GO) * np.clip(ep_trial - 65, 0, 20) * last_is(\"a1 S2 r\")",
+      "(phase == GO) * np.clip(ep_trial - 65, 0, 20) * last_is(\"a2 S1 u\")",
+      "(phase == GO) * np.clip(ep_trial - 65, 0, 20) * last_is(\"a2 S1 r\")"
+    ],
+    "weights": [
+      -0.02181593589005076,
+      0.016913817348257993,
+      0.016767607735605435,
+      0.012715583949862354,
+      0.006193788438631107,
+      0.00183941865859553,
+      0.011569957103161449,
+      -0.007533347356314495
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6411167110904935,
+    "r2": 0.7199597471350794,
+    "r2_timing_only": 0.21968990610890882
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The reported score reproduces: test R^2 beyond timing is 0.626 with the 8 claimed terms. Timing alone explains 0.207. The factual claims hold: the feature is 0 at D1 and D2 in every residual table; the GO residual rises steadily with belief decile (-0.049 to +0.083); after a1 S1 r the GO residual is +0.111, the largest of any previous-trial pattern.",
+      "One term does almost nothing: L*last_is('a1 S2 r') gets weight +0.002. With it and L*(trial==0) both dropped, the 6 remaining terms still score 0.626.",
+      "L*(trial==0) is mostly a window artifact, not a real effect. On a window's first trial the previous trial is unknown ('?'), so the last_is terms are all 0. The misses show first-step GO cells with actual about 1.07 against a predicted 0.28 to 0.37 inside long a1 S1 r runs. 'Raised on the window's first trial' is about the data window, not the agent.",
+      "Systematic gap: history two trials back matters and the model leaves it out. Example: at t98-t99, after an earlier unrewarded rare trial (a1 S2), the actual value is 0 even though the last trial was a1 S1 r, while the model predicts 0.52-0.68. Inside long a1 S1 r runs the model under-predicts the plateau (actual about 1.1, predicted about 0.68). Adding L*a1S1r*(reward two back is 1 or unknown) and L*a1S1r*belief raises test R^2 from 0.626 to 0.691. A two-trial a1 S1 r streak term alone gives +0.04 on dev.",
+      "The feature is also clearly active on some a2 choices: 0.4-0.6 at GO after a rare-rewarded a1 S2 trial. The firing label ('choosing a1') and the magnitude label do not mention this; the model under-predicts these cells (about 0.27).",
+      "'Keeps growing through trial 85 and later' overstates the ramp. The term is clipped at 85, and the activation looks saturated by about trial 85. Ramp shapes clip(ep_trial-68,0,12) and clip(ep_trial-70,0,15) fit about as well.",
+      "Ablations: L*belief alone scores 0.28 on test and L*prev_reward alone 0.17. Most of the score comes from the last-trial a1 S1 r interaction (0.41 dev with the ramp alone). 'Scaled by belief' is therefore a secondary effect, not the main driver."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Late-episode GO feature (from about trial 65, saturating by about 85), driven mainly by a recent run of a1 S1 rewarded trials and scaled up by the ideal-observer belief that S1 is good; an unrewarded trial two back suppresses it",
+    "better_terms": "L = (phase == GO) * np.clip(ep_trial - 65, 0, 20); terms: L ;; L*last_is('a1 S1 r') ;; L*belief ;; L*(prev_reward==1) ;; L*last_is('a1 S1 r')*belief ;; L*last_is('a1 S1 r')*isin(tv('reward',-2),[1,-9]) ;; L*(trial==0) ;; L*last_is('a2 S1 u')",
+    "better_terms_test_r2_beyond_timing": 0.691
+  },
+  "final_label": "Late-episode GO feature (from about trial 65, saturating by about 85), driven mainly by a recent run of a1 S1 rewarded trials and scaled up by the ideal-observer belief that S1 is good; an unrewarded trial two back suppresses it"
+}

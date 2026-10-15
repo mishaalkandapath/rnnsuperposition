@@ -1,0 +1,64 @@
+{
+  "label": "early-episode D2: S1 reached while the policy favours a2",
+  "predicate": "(phase == D2) & (state == S1) & (choice < -4.4) & (ep_trial < 27)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (zero at D1/GO) and only when the shown state is S1 (zero for S2). Inside that it needs two more things: the model policy logit at that step favours a2 strongly (choice < -4.4; mostly a2 chosen and S1 reached by a rare transition, though high-magnitude cases also include a1->S1 common trials when the agent is otherwise biased toward a2), and the step is early in the episode (ep_trial < ~27; never fires after trial ~30, rate highest in trials 1-9). So it reads as S1 arriving against an a2-leaning agent, gated by an early-episode hidden-state regime that the agent cannot observe directly but that its hidden state drifts through. Dev P=0.82 R=0.83 F1=0.83, mass recall 0.89. Simpler versions: D2&S1 alone gives F1 0.12, D2&S1&ep_trial<30 gives 0.38, D2&S1&action==2&ep_trial<30 gives 0.70. Magnitude is small in absolute terms (max 0.002) and was not modelled further. All variables are observed or internal (choice is the model own logit), so no future variable is used.",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 2,
+    "predicate": "(phase == D2) & (state == S1) & (choice < -4.4) & (ep_trial < 27)",
+    "split": "test",
+    "precision": 0.8029923102641258,
+    "recall": 0.8236454046639232,
+    "f1": 0.8131877433553412,
+    "mass_recall": 0.8855404333334767,
+    "correlation": 0.7494552535932343,
+    "n_active": 11664,
+    "n_predicted": 11964,
+    "coverage_by_activation_quartile": [
+      0.7071330589849109,
+      0.7544581618655692,
+      0.8652263374485597,
+      0.967764060356653
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 2,
+    "predicate": "(phase == D2) & (state == S1) & (choice < -4.4) & (ep_trial < 27)",
+    "split": "dev",
+    "precision": 0.8231117953981695,
+    "recall": 0.8306430729391454,
+    "f1": 0.8268602852723835,
+    "mass_recall": 0.8851086938814003,
+    "correlation": 0.7563236749145117,
+    "n_active": 11585,
+    "n_predicted": 11691,
+    "coverage_by_activation_quartile": [
+      0.7266137383500173,
+      0.7817679558011049,
+      0.8466850828729282,
+      0.9675414364640884
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 2,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The factual claims hold up. The unit never fires at D1 or GO (0 of 380,619 steps each) and never when S2 is shown (0 of 590,160). Firing is zero after trial 39, with only 16 active steps in trials 30-39. The active rate is highest in trials 1-9 (5.6-8x lift), but in raw count trials 10-19 carry slightly more activation mass (0.47) than trials 0-9 (0.44).",
+      "Reported scores reproduce exactly: dev P 0.823 / R 0.831 / F1 0.827 / mass recall 0.885, test P 0.803 / R 0.824 / F1 0.813 / mass recall 0.886. The predicate covers 97% of the top activation quartile.",
+      "Each condition does real work. D2&S1&choice<-4.4 without the trial limit gives F1 0.32. D2&S1&ep_trial<27 has recall 0.989 but precision 0.26. With both conditions and choice<-4.4, adding ep_trial>=27 keeps only 1% recall.",
+      "There is one systematic miss class, and the explanation understates it. Early a1->S1 common trials where choice is between -4.4 and 0 hold about 15.6% of active steps and 11% of the activation mass (test R 0.156). These are mostly low-activation steps, and precision inside this class is only 0.16, so it cannot be cleanly added. Only about a quarter of the a1->S1 activations pass choice<-4.4. The a2 lean is graded, not a sharp cutoff.",
+      "False positives are not scattered noise. They sit mainly in trials 20-26, where firing fades out (precision 0.60 there vs 0.89 for ep_trial<20). They also cluster in trials after an unrewarded trial (prev_reward==0, precision 0.62 vs 0.87 after a reward) and in steps where S1 is the good state (precision 0.65). Both edges, the trial number and the choice value, behave like soft graded thresholds.",
+      "Moving the thresholds helps only a little: (phase==D2)&(state==S1)&(choice<-3.5)&(ep_trial<25) gives test F1 0.830 and mass recall 0.930, against 0.813 and 0.886. No qualitatively different counterexample class remains, so the label stands. The explanation is right that ep_trial is not observable and that choice is the model's own logit. No future variable is used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == D2) & (state == S1) & (choice < -3.5) & (ep_trial < 25)",
+    "better_predicate_test_f1": 0.83
+  }
+}

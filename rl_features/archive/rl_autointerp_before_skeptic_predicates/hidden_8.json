@@ -1,0 +1,65 @@
+{
+  "label": "D1 after a rewarded visit to S2 (reward credited to S2)",
+  "predicate": "(phase == D1) & (in_rew == 1) & ((prev_state == 2) | ((prev_state == -1) & (action == 2)))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": true,
+  "explanation": "Fires only at D1 (never GO or D2), only when the reward input is 1, and almost only when the previous trial reached S2. In other words it fires on reward credited to S2. Observed-only core (in_rew==1 & prev_state==2): dev precision 0.99, but recall is only 0.77 because the first trial of each window (rel -3) has prev_state unknown, even though the agent did see that trial. For those steps I used the agent own upcoming choice (action==2) as a stand-in, which gives dev F1 0.98. That stand-in is the only FUTURE variable, it is the agent own computed choice, and it applies only at the window boundary. The observed-only alternative (prev_state==2 or unknown) scores dev F1 0.90. Magnitude: largest after rare rewarded trials (a1 led to S2 and was rewarded; 9% of active steps, 26% of mass, top quartile), when a model-based agent would switch to a2. Common rewarded a2 to S2 trials give low or medium activations that grow over a run of rewarded S2 trials. Silent after unrewarded trials and after rewarded S1 visits.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 8,
+    "predicate": "(phase == D1) & (in_rew == 1) & ((prev_state == 2) | ((prev_state == -1) & (action == 2)))",
+    "split": "test",
+    "precision": 0.9734378436115736,
+    "recall": 0.9852461883336778,
+    "f1": 0.979306421409439,
+    "mass_recall": 0.9824383581247871,
+    "correlation": 0.7446788949065106,
+    "n_active": 125798,
+    "n_predicted": 127324,
+    "coverage_by_activation_quartile": [
+      0.9627344992050875,
+      0.9999046104928457,
+      0.9997456198925244,
+      0.9786002734586156
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 8,
+    "predicate": "(phase == D1) & (in_rew == 1) & ((prev_state == 2) | ((prev_state == -1) & (action == 2)))",
+    "split": "dev",
+    "precision": 0.9767870302137067,
+    "recall": 0.9847378791304628,
+    "f1": 0.980746340678784,
+    "mass_recall": 0.9829412029692934,
+    "correlation": 0.7487402723411076,
+    "n_active": 123836,
+    "n_predicted": 124844,
+    "coverage_by_activation_quartile": [
+      0.9598178235731128,
+      0.9995800897961821,
+      0.9999353984301819,
+      0.9796182047223747
+    ]
+  },
+  "gate": "hidden",
+  "feature": 8,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "None of the claims could be refuted. Phase: on the dev split all 123,836 active steps are at D1 and none are at GO or D2.",
+      "Reward input: when in_rew==1, 49.8% of steps are active and they carry 100% of the activation mass. Only 930 active steps have in_rew==0 (about 0% of the mass), and none have in_rew==-1.",
+      "Credit to S2 versus S1: in_rew==1 & prev_state==1 at D1 has precision 0.0, so the feature never fires after a rewarded visit to S1. Observed-only core in_rew==1 & prev_state==2: dev precision 0.986, recall 0.774, matching the claim.",
+      "Window-boundary proxy: at rel -3, in_rew==1 & action==2 has precision 0.944. The alternative action==1 has precision 0.028 and covers 0.6% of active steps, so the remaining misses sit mostly at rel -3. The proxy holds up because S2-rewarded trials lead the agent to choose a2 next, whether the transition was common (stay) or rare (switch). Using the hidden good state instead of the upcoming choice (good==2 at rel -3) is worse: dev F1 0.946.",
+      "Observed-only alternative (prev_state != 1, i.e. S2 or unknown) on test: precision 0.815, recall 0.991, F1 0.895, consistent with the reported 0.90. The future-variable predicate is therefore justified only at the window boundary, as the explanation says.",
+      "Magnitude claims hold. After rare rewarded S2 trials: 9.2% of active steps, 26.5% of activation mass, precision 0.997. After common rewarded S2 trials preceded by another rewarded S2 trial, activations sit in the upper quartiles. Without that run, 39% of these steps fall in the bottom quartile (mass recall 0.085), which supports 'grows over a run of rewarded S2 trials'.",
+      "Test misses for the recorded predicate (1,856 steps, 1.8% of mass) and false positives (3,382) are concentrated at the rel -3 boundary or are scattered steps with zero or near-zero activation. No systematic class remains. Recorded test scores reproduce: precision 0.973, recall 0.985, F1 0.979, mass recall 0.982."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

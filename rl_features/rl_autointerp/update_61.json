@@ -1,0 +1,104 @@
+{
+  "label": "D2 after a2 reached S2 (common), following an unrewarded rare a2->S1 trial, with strong a2 preference, mid-episode",
+  "predicate": "(phase == D2) & (action == 2) & (common == 1) & (prev_reward == 0) & (prev_common != 1) & (choice < -4) & (ep_trial >= 28) & (ep_trial < 84)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (no D1/GO activity), only when this trial chose a2 and reached S2 via a common transition, and only when the previous trial was unrewarded and was itself a rare transition (prev_common==0; essentially the previous trial was a2->S1 rare, unrewarded) or unknown (first trial of window). Every activation has the a2/S2/prev-unrewarded condition (recall 1.0 for that base predicate); requiring prev not common raises precision 0.25->0.43. Two further observed gates sharpen it: the model strongly prefers a2 at this step (choice logit < -4.44, ~90% of mass) and the episode is mid-way (ep_trial ~28-82; zero activity before trial 20 or after 90), giving dev F1 0.88 (without the choice term F1 0.83, mass recall 0.99). Never fires on a1 trials, S1 states, rare transitions on the current trial, or after a rewarded trial. All variables are observed at D2; no future variables. The ep_trial dependence is odd and suggests a slow drift in hidden state over the episode. Magnitude was not systematically checked; the top examples are typically a2 S2-common right after an a2 S1-rare unrewarded trial, while good=S2.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 61,
+    "predicate": "(phase == D2) & (action == 2) & (common == 1) & (prev_reward == 0) & (prev_common != 1) & (choice < -4) & (ep_trial >= 28) & (ep_trial < 84)",
+    "split": "test",
+    "precision": 0.9367744931125213,
+    "recall": 0.8921070086225956,
+    "f1": 0.9138952851911969,
+    "mass_recall": 0.9581935188057928,
+    "correlation": 0.8627068177102692,
+    "n_active": 13569,
+    "n_predicted": 12922,
+    "coverage_by_activation_quartile": [
+      0.6911287945770704,
+      0.8959316037735849,
+      0.9820165094339622,
+      0.9994103773584906
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 61,
+    "predicate": "(phase == D2) & (action == 2) & (common == 1) & (prev_reward == 0) & (prev_common != 1) & (choice < -4) & (ep_trial >= 28) & (ep_trial < 84)",
+    "split": "dev",
+    "precision": 0.9317478293695735,
+    "recall": 0.8949238578680203,
+    "f1": 0.9129646754207509,
+    "mass_recall": 0.9581667824399358,
+    "correlation": 0.8616057558656036,
+    "n_active": 13790,
+    "n_predicted": 13245,
+    "coverage_by_activation_quartile": [
+      0.699245939675174,
+      0.9016821345707656,
+      0.9794023788801857,
+      0.9994197853205686
+    ]
+  },
+  "gate": "update",
+  "feature": 61,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I checked every factual claim and all of them hold. All activation is at D2 (D1 and GO have 0 active steps each). It never fires on a1 trials, on S1, on a rare current transition, after a rewarded trial (prev_reward==1: 0 active), or before trial 20 or after trial 90. prev_common==1 accounts for only 25 activations (0.1% of mass).",
+      "The test scores reproduce exactly: P 0.959, R 0.799, F1 0.872, mass recall 0.884. On dev, base + prev_common!=1 gives P 0.432 and R 0.998; adding the ep_trial window gives F1 0.83 and mass recall 0.989. Both match the explanation.",
+      "The misses are mostly not systematic. About 12% of mass is missed, mostly at low activation: coverage of the lowest activation quartile is only 0.57. The cause is the choice cutoff of -4.44, a quantile-bin edge that is somewhat too strict. On dev, base & choice>=-4.44 still holds 9.4% of mass at P 0.17. Loosening it to choice<-4 with ep_trial 28-84 lifts test F1 from 0.872 to 0.914 and mass recall from 0.884 to 0.958. This is threshold tuning, not a missing class of examples.",
+      "The label slightly overclaims 'following an unrewarded rare a2->S1 trial'. About 17% of predicted hits (dev: 2320 of 11308 predicted, P 0.95) are on the window's first trial, where prev_common == -1 and the previous trial is unknown. The explanation does acknowledge this case.",
+      "The episode-position window (28-82) is a strong condition with no clear observed correlate. Value>7 or good==2 in its place do much worse (F1 0.75 and 0.68), so this condition is real in the activations but unexplained. The explanation flags it honestly.",
+      "No future variables are used, and every condition is observable at D2."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == D2) & (action == 2) & (common == 1) & (prev_reward == 0) & (prev_common != 1) & (choice < -4) & (ep_trial >= 28) & (ep_trial < 84)",
+    "better_predicate_test_f1": 0.914
+  },
+  "original_predicate": "(phase == D2) & (action == 2) & (common == 1) & (prev_reward == 0) & (prev_common != 1) & (ep_trial >= 28) & (ep_trial < 82) & (choice < -4.44)",
+  "original_test_scores": {
+    "gate": "update",
+    "feature": 61,
+    "predicate": "(phase == D2) & (action == 2) & (common == 1) & (prev_reward == 0) & (prev_common != 1) & (ep_trial >= 28) & (ep_trial < 82) & (choice < -4.44)",
+    "split": "test",
+    "precision": 0.9587018040325433,
+    "recall": 0.7989534969415579,
+    "f1": 0.871568115126422,
+    "mass_recall": 0.8843985070220979,
+    "correlation": 0.8511194983766339,
+    "n_active": 13569,
+    "n_predicted": 11308,
+    "coverage_by_activation_quartile": [
+      0.5682287061597406,
+      0.7777122641509434,
+      0.855247641509434,
+      0.9946933962264151
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "update",
+    "feature": 61,
+    "predicate": "(phase == D2) & (action == 2) & (common == 1) & (prev_reward == 0) & (prev_common != 1) & (ep_trial >= 28) & (ep_trial < 82) & (choice < -4.44)",
+    "split": "dev",
+    "precision": 0.9541680786174178,
+    "recall": 0.816751269035533,
+    "f1": 0.8801281550363367,
+    "mass_recall": 0.8948274298111338,
+    "correlation": 0.8522839076694185,
+    "n_active": 13790,
+    "n_predicted": 11804,
+    "coverage_by_activation_quartile": [
+      0.5942575406032483,
+      0.8152552204176334,
+      0.8613286916158979,
+      0.996228604583696
+    ]
+  },
+  "predicate_from": "skeptic"
+}

@@ -1,0 +1,78 @@
+{
+  "label": "D1 update gate drops after a1->S2 (rare) trials and a2 switches; rises after a2->S1",
+  "terms": "(phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D1) * (prev_action == 2) * (prev_state == 1) ;; (phase == D1) * (tv(\"stay\", -1) == 0) * (prev_action == 2) ;; (phase == D1) * choice ;; (phase == D1) * np.maximum(value - np.percentile(value[phase == D1], 70), 0) ;; (phase == GO) * last_is(\"a1 S1 r\") ;; (phase == GO) * choice",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 17 is high (~0.92, near 1 at D2), so magnitude variation is mostly at D1 and GO. Main driver: at D1, after the previous trial was a1 reaching S2 (rare), z drops by ~0.19 regardless of reward; after a2 reaching S1 (rare) it rises ~0.08. Additional D1 drop (~0.11) when the previous trial was a switch to a2; D1 also drops when the model value is high (top 30% hinge) and slightly with the policy logit toward a1. At GO, z is lower after a1 S1 rewarded (~-0.05) and decreases as the policy favours a1 (graded choice term), i.e. higher for a2 choices. Reward on its own matters little; future reward/hidden state not used. Residual misses are isolated large D1 dips (~0.4) in some windows after action switches not fully captured. Dev R^2 beyond timing 0.69, test 0.68 (ceiling all 0.82, all observed 0.72; last-trial table alone 0.61).",
+  "gate": "unit_update",
+  "feature": 17,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 17,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 1)",
+      "(phase == D1) * (tv(\"stay\", -1) == 0) * (prev_action == 2)",
+      "(phase == D1) * choice",
+      "(phase == D1) * np.maximum(value - np.percentile(value[phase == D1], 70), 0)",
+      "(phase == GO) * last_is(\"a1 S1 r\")",
+      "(phase == GO) * choice"
+    ],
+    "weights": [
+      -0.186956955615287,
+      0.07584571510458908,
+      -0.11356610774182731,
+      -0.003503961987403397,
+      -0.2881672278649207,
+      -0.0482204505118943,
+      -0.005494454105555593
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6785326396846834,
+    "r2": 0.8090857164741647,
+    "r2_timing_only": 0.40611611910281087
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 17,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 1)",
+      "(phase == D1) * (tv(\"stay\", -1) == 0) * (prev_action == 2)",
+      "(phase == D1) * choice",
+      "(phase == D1) * np.maximum(value - np.percentile(value[phase == D1], 70), 0)",
+      "(phase == GO) * last_is(\"a1 S1 r\")",
+      "(phase == GO) * choice"
+    ],
+    "weights": [
+      -0.186956955615287,
+      0.07584571510458908,
+      -0.11356610774182731,
+      -0.003503961987403397,
+      -0.2881672278649207,
+      -0.0482204505118943,
+      -0.005494454105555593
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6890174958613345,
+    "r2": 0.8146227927078805,
+    "r2_timing_only": 0.40389827458119376
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Large systematic gap the label misses. Running misses on the original terms puts the top under-predicted cells at 'D1 after a1 S1 r' (+0.050) and 'D1 after a1 S1 u' (+0.046). The profile shows the same thing: D1 residuals are +0.040 and +0.043 after a1->S1. Adding a single term, (phase == D1) * (prev_action == 1) * (prev_state == 1), raises test R^2 beyond timing from 0.679 to 0.758 (weight about +0.08). That is more than the 0.72 'all observed' reference and closes over half the gap to the 0.82 ceiling. So z is also raised after common a1->S1 trials, rewarded or not, and the label leaves this out.",
+      "Because the original terms have no a1->S1 indicator, a1->S1 trials share the reference level with a2->S2 trials and unknown previous trials. That makes the quoted effect sizes depend on that reference. Once the a1->S1 term is included, the a1->S2 drop falls from -0.19 to about -0.13 to -0.15, the a2->S1 rise from +0.08 to about +0.05, and the 'switch to a2' term from -0.11 to about -0.10. Its value also shrinks: dropping it costs only 0.758 -> 0.749 on test, against 0.679 -> 0.661 without the a1->S1 term.",
+      "The 'slight' D1 policy effect is not slight. With the a1->S1 term in, its weight triples (-0.0035 to -0.012) and dropping it costs 0.028 test R^2. The profile also shows D1 residuals of +0.10 at policy deciles 1-2 and -0.11 at decile 8.",
+      "Claims that check out on test: removing the a1->S2 term drops R^2 to 0.49. The a1->S2 dip is the same whether rewarded or not (-0.206 r, -0.203 u in the residual table). The value hinge matters (without it, 0.659). GO choice matters (without it, 0.564). GO after a1 S1 r matters (without it, 0.656). D2 is flat. Adding prev_reward adds nothing. No future variables are used.",
+      "Remaining worst misses are slow, multi-trial D1 dips (0.45-0.6 actual vs about 0.82 predicted) that persist over consecutive trials, often late in the episode (t84-99). They follow neither a single previous-trial pattern nor the two-back trial: an a1->S2 term for two trials back adds +0.0001. The explanation's mention of 'isolated D1 dips after action switches' undersells this."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 update gate encodes previous choice x state: drops after a1->S2 (rare), raised after a1->S1 and a2->S1; lowered by high value; GO z tracks policy (higher for a2)",
+    "better_terms": "(phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D1) * (prev_action == 2) * (prev_state == 1) ;; (phase == D1) * (prev_action == 1) * (prev_state == 1) ;; (phase == D1) * (tv('stay', -1) == 0) * (prev_action == 2) ;; (phase == D1) * choice ;; (phase == D1) * np.maximum(value - np.percentile(value[phase == D1], 70), 0) ;; (phase == GO) * last_is('a1 S1 r') ;; (phase == GO) * choice",
+    "better_terms_test_r2_beyond_timing": 0.758
+  },
+  "final_label": "D1 update gate encodes previous choice x state: drops after a1->S2 (rare), raised after a1->S1 and a2->S1; lowered by high value; GO z tracks policy (higher for a2)"
+}

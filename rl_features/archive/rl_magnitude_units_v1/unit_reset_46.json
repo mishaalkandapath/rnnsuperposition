@@ -1,0 +1,83 @@
+{
+  "label": "a1-vs-a2 choice axis plus rare-transition sign at D2, raised after no reward",
+  "terms": "(phase == D2) * (action == 1) * (state == 2) ;; (phase == D2) * (action == 2) * (state == 1) ;; (phase == D1) * choice ;; (phase == GO) * choice ;; (phase == D2) * choice ;; (phase == GO) * (prev_reward == 0) ;; (phase == D2) * (prev_reward == 0) ;; (phase == D1) * (prev_common == 0) * table(prev_action, {1: 1, 2: -1})",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r46 has a strong timing profile (high at D2, low at GO, decaying over the episode; timing R^2 0.81). Beyond timing it is signed by action: higher when the agent leans or chooses a1, lower for a2. The largest effect is at D2 after a rare transition: a1->S2 raises it by about +0.16 and a2->S1 lowers it by about -0.18 (common transitions are near baseline). The policy logit (a1 minus a2) is a graded term at every phase, strongest at D1. Not being rewarded on the previous trial raises it at GO (+0.05) and D2 (+0.06). At D1, a rare transition on the previous trial carries over with the same sign (a1 S2 up, a2 S1 down, about +-0.05). Value, hidden good state and trials since reversal add little. The terms use only observed inputs and the model policy, with no future variables. Test R^2 beyond timing is 0.88 (dev 0.88), against an all ceiling of 0.93 and an all-observed table score of 0.84. Without the policy logit (observed tables only) the score was about 0.52-0.63.",
+  "gate": "unit_reset",
+  "feature": 46,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 46,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 2)",
+      "(phase == D2) * (action == 2) * (state == 1)",
+      "(phase == D1) * choice",
+      "(phase == GO) * choice",
+      "(phase == D2) * choice",
+      "(phase == GO) * (prev_reward == 0)",
+      "(phase == D2) * (prev_reward == 0)",
+      "(phase == D1) * (prev_common == 0) * table(prev_action, {1: 1, 2: -1})"
+    ],
+    "weights": [
+      0.16019988009841657,
+      -0.1801975760717439,
+      0.019358229121638395,
+      0.006941233862478527,
+      0.010024092117664904,
+      0.04938880853243673,
+      0.06391081408575638,
+      0.051752124994642594
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8792857773006318,
+    "r2": 0.977513562750727,
+    "r2_timing_only": 0.8137217243632165
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 46,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 2)",
+      "(phase == D2) * (action == 2) * (state == 1)",
+      "(phase == D1) * choice",
+      "(phase == GO) * choice",
+      "(phase == D2) * choice",
+      "(phase == GO) * (prev_reward == 0)",
+      "(phase == D2) * (prev_reward == 0)",
+      "(phase == D1) * (prev_common == 0) * table(prev_action, {1: 1, 2: -1})"
+    ],
+    "weights": [
+      0.16019988009841657,
+      -0.1801975760717439,
+      0.019358229121638395,
+      0.006941233862478527,
+      0.010024092117664904,
+      0.04938880853243673,
+      0.06391081408575638,
+      0.051752124994642594
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8862769947106797,
+    "r2": 0.9783939239291085,
+    "r2_timing_only": 0.8100113867381191
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor wording issue: the label says the policy-logit term is 'strongest at D1'. That is true of the fitted weights per unit logit (D1 +0.019, GO +0.007, D2 +0.010). By variance it is wrong: dropping the GO choice term cuts test R^2 from 0.879 to 0.634, while dropping the D1 term gives 0.759 and the D2 term 0.740. The logit's range is largest at GO.",
+      "The test R^2 of 0.879 reproduces (timing only 0.814). Every term is needed: leave-one-out test R^2 runs from 0.634 to 0.863, and the D2 a1->S2 term is the weakest at 0.863.",
+      "The weights back the claims: D2 a1->S2 +0.160 and a2->S1 -0.180; profile D2 residuals are near zero for common transitions (+0.017, +0.006); unrewarded previous trial +0.049 at GO and +0.064 at D2; previous rare transition at D1 +0.052 with action sign.",
+      "Misses show no large systematic error class. Mean error by phase is at most 0.008. The largest bias by phase x previous trial is D1 after a1 S2 r at +0.066: the D1 rare carry-over is a bit larger when that rare trial was rewarded, which the symmetric term misses. The others are under 0.03.",
+      "Some worst-fit dev windows show GO under-predicted by about 0.15-0.3 for a2 choices after runs of unrewarded trials. None of my tests captured it: a two-loss streak scores 0.884 (+0.005), |choice| or policy-uncertainty at GO scores 0.852-0.866 (worse), and (1 - value) scores 0.878. So it looks idiosyncratic, not a systematic class.",
+      "The policy logit is a model output, not an observed input. The label says so and gives the weaker observed-only attempts (0.46-0.63 dev against an all-observed reference of 0.84). That disclosure is adequate, but the observed-only story is clearly less complete."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "a1-vs-a2 choice axis (policy logit, carries most variance at GO) plus rare-transition sign at D2, raised after no reward",
+    "better_terms": "(phase == D2) * (action == 1) * (state == 2) ;; (phase == D2) * (action == 2) * (state == 1) ;; (phase == D1) * choice ;; (phase == GO) * choice ;; (phase == D2) * choice ;; (phase == D2) * (prev_reward == 0) ;; (phase == D1) * (prev_common == 0) * table(prev_action, {1: 1, 2: -1}) ;; (phase == GO) * (prev_reward == 0) * (1 + (tv('prev_reward', -1) == 0))",
+    "better_terms_test_r2_beyond_timing": 0.884
+  },
+  "final_label": "a1-vs-a2 choice axis (policy logit, carries most variance at GO) plus rare-transition sign at D2, raised after no reward"
+}

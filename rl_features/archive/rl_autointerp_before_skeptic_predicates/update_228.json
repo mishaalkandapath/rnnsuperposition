@@ -1,0 +1,65 @@
+{
+  "label": "GO after a reward, choosing a2, late in the episode (trial >= ~70)",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (ep_trial >= 70)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at the GO step, only when the previous trial was rewarded (reward input 1 at D1), only when the agent is choosing a2 (policy logit strongly favors a2, choice < ~-6; 99.9% of mass on a2 choices), and only late in the episode (essentially never before trial 60, ramps up over 60-70, active through 70-99). Late-episode clock plus reward plus a2 choice. Never fires at D1 or D2, after an unrewarded trial, or on a1 choices. Magnitude: the top activation quartile is enriched (40% vs 14% in the bottom quartile) for the first rewarded trial after an unrewarded one; in example windows the activation falls over a run of consecutive rewarded trials (~1.0 then ~0.6). Remaining false positives are late rewarded a2 GO steps that stay silent, often in the middle of long rewarded runs. Every variable is observable: model_act is the agent own choice being computed at GO. Dev: P 0.78, R 0.95, F1 0.86, mass recall 0.99. Using a stronger a2 logit (choice < -6) and ep_trial >= 68 gave F1 0.865, so I kept the simpler predicate.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 228,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (ep_trial >= 70)",
+    "split": "test",
+    "precision": 0.7846388776216268,
+    "recall": 0.9532436662994956,
+    "f1": 0.8607624756245992,
+    "mass_recall": 0.9865757085578701,
+    "correlation": 0.7727091009588244,
+    "n_active": 34498,
+    "n_predicted": 41911,
+    "coverage_by_activation_quartile": [
+      0.8444057971014493,
+      0.9708985507246377,
+      0.9976808905380334,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 228,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (ep_trial >= 70)",
+    "split": "dev",
+    "precision": 0.7775251228636397,
+    "recall": 0.950473742415638,
+    "f1": 0.8553445586099306,
+    "mass_recall": 0.9859611888823157,
+    "correlation": 0.7699807970378949,
+    "n_active": 33457,
+    "n_predicted": 40899,
+    "coverage_by_activation_quartile": [
+      0.8327555289898386,
+      0.9716642754662841,
+      0.9977283596365375,
+      0.9997608799617408
+    ]
+  },
+  "gate": "update",
+  "feature": 228,
+  "final_verdict": "explained",
+  "skeptic": {
+    "revised_verdict": "explained",
+    "upheld": false,
+    "issues": [
+      "Most of the factual claims hold. On dev, 100% of activation mass is at GO and none at D1 or D2. It never fires when prev_reward==0 or when in_rew==1. a1 choices carry 0.1% of mass (117 steps). The ep_trial bins show 0 activations before trial 50, 9 in trials 50-59, 1566 in 60-69, and most of the mass in 70-99. Test scores match the report: P 0.785, R 0.953, F1 0.861.",
+      "There is one systematic false-positive class the explanation does not mention: switching TO a2 after a rewarded a1 trial. Adding (prev_action == 1) to the predicate gives test precision 0.11 on 2175 predicted steps, which is roughly a fifth of all false positives. On dev the same slice has precision 0.085. So the feature is really about repeating a2 after a reward (or a2 on the window's first trial, where prev_action is unknown: precision 0.86). It is not about choosing a2 in general. The explanation says the remaining false positives are 'often in the middle of long rewarded runs', which misses this class.",
+      "There is a weaker gradient by prior transition. After a rewarded a2 that went through a rare transition, precision is 0.60 (n=4787). After a common one it is 0.84 (n=26653). Excluding the rare case costs too much recall (F1 0.857), so this is a magnitude or reliability effect rather than a separate class.",
+      "Precision also depends on how strong the a2 logit is. With choice < -9, precision is 0.90. With a weaker a2 preference (choice >= -9), it drops to 0.47.",
+      "'Late in the episode' is interchangeable with low value. Swapping ep_trial >= 70 for value < 7.2 gives nearly identical scores (dev F1 0.853 vs 0.855). The 'late' part of the label is therefore equally well described as low predicted value, which falls late in the episode. Both variables are observable to the agent, so this is not a problem for the predicate.",
+      "No future variables are involved. The a2-choice condition comes from model_act and choice, the agent's own policy output at GO."
+    ],
+    "revised_label": "GO step late in the episode (or at low value) after a rewarded trial, when the agent repeats a2 with a strongly a2-favouring logit; silent when it switches to a2 from a rewarded a1",
+    "better_predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (ep_trial >= 70) & (prev_action != 1)",
+    "better_predicate_test_f1": 0.879
+  },
+  "final_label": "GO step late in the episode (or at low value) after a rewarded trial, when the agent repeats a2 with a strongly a2-favouring logit; silent when it switches to a2 from a rewarded a1"
+}

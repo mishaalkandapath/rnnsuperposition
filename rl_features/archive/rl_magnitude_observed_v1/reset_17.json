@@ -1,0 +1,77 @@
+{
+  "label": "GO after a2-S1-unrewarded; larger early in episode and after prior reward",
+  "terms": "(phase == GO) * last_is(\"a2 S1 u\") ;; (phase == GO) * last_is(\"a2 S1 u\") * np.clip(ep_trial,0,60) ;; (phase == GO) * last_is(\"a2 S1 u\") * (tv(\"reward\", -2) == 1) ;; (phase == GO) * last_is(\"a2 S1 u\") * (tv(\"action\", -2) == 1) ;; (phase == GO) * last_is(\"a2 S1 u\") * (tv(\"action\", -2) == -9) ;; (phase == GO) * last_is(\"a2 S1 u\") * belief_lo",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO, and almost only when the previous trial was a2 -> rare S1, unrewarded (an additive previous-trial table gets 0.28). Magnitude within that case, all from observed quantities: about 0.9 at the start of the episode, falling about 0.019 per trial until it is near zero by trial ~50-60 (linear clip at 60 beats an exponential); +0.36 if the trial before was rewarded; -0.16 if the trial before was an a1 choice; +0.28 when the trial before is outside the window (window-start context); repeated a2-S1-u streaks decay it (absorbed by the reward(-2) term). Higher when the ideal-observer belief favours S2 (belief_lo weight -0.06; adds only ~0.004). Test R^2 beyond timing 0.584 (dev 0.603), well above the additive all-cues ceiling of 0.32 because of the interactions with the a2-S1-u gate. No model outputs used. The policy-decile reference alone was 0.09 versus 0.06 for belief, so leaving out value/policy appears to lose little; the earlier model-based score was not re-measured here.",
+  "gate": "reset",
+  "feature": 17,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 17,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S1 u\")",
+      "(phase == GO) * last_is(\"a2 S1 u\") * np.clip(ep_trial,0,60)",
+      "(phase == GO) * last_is(\"a2 S1 u\") * (tv(\"reward\", -2) == 1)",
+      "(phase == GO) * last_is(\"a2 S1 u\") * (tv(\"action\", -2) == 1)",
+      "(phase == GO) * last_is(\"a2 S1 u\") * (tv(\"action\", -2) == -9)",
+      "(phase == GO) * last_is(\"a2 S1 u\") * belief_lo"
+    ],
+    "weights": [
+      0.7077459833569509,
+      -0.018978068937240418,
+      0.3620486059964646,
+      -0.1594240666234611,
+      0.2789551570517937,
+      -0.06253412210117107
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5839721062642494,
+    "r2": 0.6097057131201072,
+    "r2_timing_only": 0.061855484315681775
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 17,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S1 u\")",
+      "(phase == GO) * last_is(\"a2 S1 u\") * np.clip(ep_trial,0,60)",
+      "(phase == GO) * last_is(\"a2 S1 u\") * (tv(\"reward\", -2) == 1)",
+      "(phase == GO) * last_is(\"a2 S1 u\") * (tv(\"action\", -2) == 1)",
+      "(phase == GO) * last_is(\"a2 S1 u\") * (tv(\"action\", -2) == -9)",
+      "(phase == GO) * last_is(\"a2 S1 u\") * belief_lo"
+    ],
+    "weights": [
+      0.7077459833569509,
+      -0.018978068937240418,
+      0.3620486059964646,
+      -0.1594240666234611,
+      0.2789551570517937,
+      -0.06253412210117107
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6026769286958877,
+    "r2": 0.6287401255645916,
+    "r2_timing_only": 0.06559698832277228
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The score reproduces: test R^2 beyond timing is 0.584 with the claimed weights (0.708, -0.019/trial, +0.362, -0.159, +0.279, -0.063). The direction of each main claim holds when you drop terms on test: gate + ep_trial alone gives 0.525, adding reward(-2) gives 0.562, adding the action(-2) terms gives 0.580. Dropping the ep_trial term falls to 0.308, so the episode-position effect is real.",
+      "The trial-before reward effect is described as a flat additive '+0.36', but it is mostly multiplicative with episode position. Adding gate*reward(-2)*clip(ep_trial) alone raises test R^2 from 0.584 to 0.617. In a fully multiplicative form with decay D = clip(1 - ep_trial/65, 0, 1), the weights are gate*D 0.36 and gate*D*reward(-2) 1.11. So early in the episode a rewarded trial-2 roughly triples the response. It is the dominant modifier, not a side bump.",
+      "'Repeated a2-S1-u streaks fade it' is not backed by any term, and testing contradicts it. Adding gate*(trial-2 also a2 S1 u) gains 0.0000 on test (0.58398 vs 0.58397). In the multiplicative model its weight is +0.19, not negative. The apparent fade within streaks in the misses windows (1.45 -> 0.97 -> 0.50 -> 0.13) is better explained by the absence of a rewarded trial-2 plus the window-edge term.",
+      "The '+0.28 if the trial before falls outside the window' term is a data-window artifact, not a behavioural driver: the agent did see that trial. It should not be reported as a property of the feature. Related: GO steps on the window's first trial with an unseen previous trial (prev_reward = 0) fire strongly but are predicted at about 0.09 (misses windows: [-3 t7] actual 1.45 vs predicted 0.086, [-3 t5] 1.46 vs 0.086). A term for that case adds +0.012 on test.",
+      "The linear clip(ep_trial, 0, 60) decline is the wrong shape. A squared term adds +0.006 on test, and a multiplicative linear decay to zero at about trial 65 fits better: 0.654 vs 0.584.",
+      "The belief claim is fine but minor: belief_lo inside the gate has weight -0.05 to -0.06 and adds about 0.005. Nonlinear belief variants add at most 0.001. The choice about to be made (future) adds 0.0002, so 'staying confidently on a2' from the earlier firing-based label is not needed for magnitude.",
+      "Remaining misses are not concentrated in any phase x previous-trial cell (mean errors about \u00b10.02, and those come from the baseline spreading over GO steps that never fire). So no large error class remains beyond the functional-form problems above. The verdict is rejected because two stated claims (the streak fade and the additive window-edge effect) are unsupported or artifacts, and the reward effect is misdescribed."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after a2 -> rare S1 unrewarded; scales with an early-episode decay (gone by about trial 65), and early in the episode it is about 3x larger when the trial before that was rewarded and weaker when that trial was an a1 choice",
+    "better_terms": "(phase == GO) * last_is('a2 S1 u')*np.clip(1-ep_trial/65,0,1) ;; (phase == GO) * last_is('a2 S1 u')*np.clip(1-ep_trial/65,0,1)*(tv('reward',-2)==1) ;; (phase == GO) * last_is('a2 S1 u')*np.clip(1-ep_trial/65,0,1)*(tv('action',-2)==1) ;; (phase == GO) * last_is('a2 S1 u')*np.clip(1-ep_trial/65,0,1)*(tv('action',-2)==-9) ;; (phase == GO) * last_is('a2 S1 u') ;; (phase == GO) * last_is('a2 S1 u')*belief_lo ;; (phase == GO) * (prev_action == -1) * (prev_reward==0)*np.clip(1-ep_trial/65,0,1)",
+    "better_terms_test_r2_beyond_timing": 0.654
+  },
+  "final_label": "GO after a2 -> rare S1 unrewarded; scales with an early-episode decay (gone by about trial 65), and early in the episode it is about 3x larger when the trial before that was rewarded and weaker when that trial was an a1 choice"
+}

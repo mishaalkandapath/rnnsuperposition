@@ -1,0 +1,64 @@
+{
+  "label": "D2: a1 chosen but rare transition to S2 (a1->S2 rare), not late in episode",
+  "predicate": "(phase == D2) & (in_action == 1) & (in_state == 2) & (ep_trial < 80)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (100% of mass), and only when the visible inputs are last action a1 and reached state S2, i.e. the rare transition after choosing a1 (99.8% of mass). It never fires on D1/GO, on S1, or on a2->S2 common trials (157 tiny exceptions). The base conjunction has recall 0.99 but precision 0.59. Most false positives are late in the episode: the feature fades after trial ~60 and is almost silent by trials 90-99, so adding ep_trial < 80 lifts dev F1 to 0.81 (precision 0.71, mass recall 0.98). A disjunction that also admits prev_reward==0 trials up to trial 85 scored 0.83, but I kept the simpler predicate. Every variable is observed at D2, so no future variables are used. On magnitude: the strongest activations in the top examples are repeated a1->S2 rare trials that come soon after another rare transition, and good==S1 has higher rate, but I did not quantify a magnitude rule.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 253,
+    "predicate": "(phase == D2) & (in_action == 1) & (in_state == 2) & (ep_trial < 80)",
+    "split": "test",
+    "precision": 0.7070952733424977,
+    "recall": 0.9534469237898339,
+    "f1": 0.8119972071278954,
+    "mass_recall": 0.9798090674013495,
+    "correlation": 0.6836331394362083,
+    "n_active": 28054,
+    "n_predicted": 37828,
+    "coverage_by_activation_quartile": [
+      0.9074707727402338,
+      0.9265754205873966,
+      0.9797518893483531,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 253,
+    "predicate": "(phase == D2) & (in_action == 1) & (in_state == 2) & (ep_trial < 80)",
+    "split": "dev",
+    "precision": 0.7077788038459449,
+    "recall": 0.956504184407576,
+    "f1": 0.8135556179950673,
+    "mass_recall": 0.9810519673079375,
+    "correlation": 0.6850497421284735,
+    "n_active": 27244,
+    "n_predicted": 36818,
+    "coverage_by_activation_quartile": [
+      0.9120540302451916,
+      0.9299662310967552,
+      0.9839964762883571,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 253,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The factual claims hold up. 100% of activation mass is at D2, with zero activations at D1 or GO. in_state==2 holds 100% of the mass and in_action==1 holds 99.8% (157 a2 exceptions). The base conjunction scores dev P 0.593, R 0.994, F1 0.743. The reported test numbers reproduce exactly: P 0.707, R 0.953, F1 0.812, mass recall 0.98.",
+      "Systematic false-positive class the label misses: the feature only fires on a1->S2 rare steps where the agent's own policy logit at D2 still favours a1 (choice > 0). On test, (D2 & a1 & S2 & ep_trial<80 & choice<=0) predicts 4335 steps at precision 0.046 and mass recall 0.001, so it is essentially silent there. Adding the choice condition takes test precision from 0.707 to 0.834 while recall stays at 0.92 and mass recall at 0.975. That makes it a large, systematic share of the predicate's 11080 test false positives, not scattered noise.",
+      "Neither the hidden good state nor reward history explains the false positives. good==1 gives dev F1 0.687 and good!=2 gives 0.712, both worse than the base conjunction. prev_reward==0 gives F1 0.576. The explanation's remark that the rate is higher when good==S1 is true as a marginal rate, but good is not what separates firing from silence within the conjunction.",
+      "'Not late in episode' (ep_trial < 80) is a crude cutoff on a gradual decline. Precision within the conjunction falls steadily: about 0.80-0.82 at trials 0-30, 0.775 at 30-50, 0.68 at 50-60, 0.57 at 60-70, 0.47 at 70-80, 0.21 at 80-90. The explanation describes this fading, but the label suggests a sharp boundary.",
+      "The agent's actual upcoming choice is a weaker modulator than its current logit. next_action!=2 & ep_trial<80 scores test F1 0.79, and stay==1 & ep_trial<80 scores test F1 0.719. So the feature tracks the agent's present preference for a1 at D2, not its realised next action."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after a1->S2 rare transition while the agent still prefers a1 (D2 policy logit favours a1), fading over the episode",
+    "better_predicate": "(phase == D2) & (in_action == 1) & (in_state == 2) & (choice > 0.5) & (ep_trial < 80)",
+    "better_predicate_test_f1": 0.876
+  },
+  "final_label": "D2 after a1->S2 rare transition while the agent still prefers a1 (D2 policy logit favours a1), fading over the episode"
+}

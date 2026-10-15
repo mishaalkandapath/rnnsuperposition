@@ -1,0 +1,105 @@
+{
+  "label": "GO step, choosing a2 after a rewarded trial (first ~60 trials of the episode)",
+  "predicate": "(phase == GO) & (prev_reward == 1) & ((prev_state==2)|((prev_state==-1)&(model_act==2))) & (ep_trial<60)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO (never D1/D2), and only when the previous trial was rewarded (prev_reward==1, 100% of mass; never after unrewarded trials). Within that it is selective for the agent choosing a2 (model_act==2 / action==2: 87% of mass; choice logit strongly negative), and it fades out late in the episode (rate drops sharply after ep_trial ~60, zero by 90-99), so ep_trial<60 lifts precision from 0.55 to 0.88. I used the model own policy argmax (model_act, observed at GO) instead of the future-marked action; they score almost identically (dev F1 0.845 vs 0.846). Magnitude: the largest activations (~0.9-1.0 of max) are switches to a2 after a rewarded trial, typically after a rare-rewarded a1 trial (model-based switch); the restricted switch subset has mean activation about 2x the overall mean (~1.05 vs 0.50), while ordinary repeats of a2 after reward sit at about 0.1-0.5. Value-head output is also high where it fires ([7.7, 8.1) bin). Misses are mostly weak activations on a1 choices after reward and on late-episode trials; false positives are rewarded a2 GO steps where it stays silent, often in the first trial of the window or late in the episode.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 246,
+    "predicate": "(phase == GO) & (prev_reward == 1) & ((prev_state==2)|((prev_state==-1)&(model_act==2))) & (ep_trial<60)",
+    "split": "test",
+    "precision": 0.9693555475648248,
+    "recall": 0.8580927342819754,
+    "f1": 0.9103370645988369,
+    "mass_recall": 0.9489356500741591,
+    "correlation": 0.8225424949972507,
+    "n_active": 84823,
+    "n_predicted": 75087,
+    "coverage_by_activation_quartile": [
+      0.6028010940299915,
+      0.8856927284730737,
+      0.9600584740167877,
+      0.983824569676963
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 246,
+    "predicate": "(phase == GO) & (prev_reward == 1) & ((prev_state==2)|((prev_state==-1)&(model_act==2))) & (ep_trial<60)",
+    "split": "dev",
+    "precision": 0.9693375878172033,
+    "recall": 0.8588901966970429,
+    "f1": 0.9107777034330126,
+    "mass_recall": 0.9504951337991216,
+    "correlation": 0.819457104277447,
+    "n_active": 82411,
+    "n_predicted": 73021,
+    "coverage_by_activation_quartile": [
+      0.5998640974615347,
+      0.8910352861233801,
+      0.9600543610153861,
+      0.984613144354917
+    ]
+  },
+  "gate": "hidden",
+  "feature": 246,
+  "final_verdict": "explained",
+  "skeptic": {
+    "revised_verdict": "explained",
+    "upheld": false,
+    "issues": [
+      "The label picks the wrong variable. The feature follows the previous trial's reached state, not the agent's a2 choice. When the previous trial was rewarded at S1 and the agent now picks a2, the feature almost never fires: (GO & prev_reward==1 & prev_state==1 & model_act==2 & ep_trial<60) has dev precision 0.019 on 6806 steps and 0.0 mass recall. When the previous trial was rewarded at S2, it fires: (GO & prev_reward==1 & prev_state==2 & ep_trial<60) has dev precision 0.979.",
+      "The test-split false positives are systematic. The silent cases are a2 GO steps after an a2->S1 rare-rewarded trial (for example '[+0*] r0 a2 S1R | [+1] r1 *a2*'). This is exactly the class where prev_state is S1.",
+      "The misses are systematic too. They include a1 stays after an a1->S2 rare-rewarded trial. Top windows show 'a1 S2R | r1 a1:0.90' and 'r1 a1:0.98', where the feature fires near its maximum with a1 chosen. (GO & prev_reward==1 & prev_common==0 & prev_action==1), meaning S2 was rewarded via a1, has precision 0.825 and covers 27% of the top quartile.",
+      "The magnitude claim is partly wrong. The near-max activations are not specifically model-based switches to a2. They follow any rewarded S2 visit reached by a1's rare transition, whether the agent then stays on a1 or switches to a2. The common factor is the rewarded S2 visit, not the switch.",
+      "model_act==2 only works as a correlate: after S2 is rewarded the agent usually picks a2. It is still needed on the window's first trial, where prev_state is unknown (-1). The original predicate's checkable factual claims did verify: GO only, prev_reward==1 holds 100% of the mass, rate is zero at trials 90-99, value bin [7.73, 8.10), and dev F1 0.845 / test F1 0.841.",
+      "Better predicate (observed variables only): test precision 0.969, recall 0.858, F1 0.910, mass recall 0.949, against the original's 0.875 / 0.809 / 0.841 / 0.85. The top activation quartile coverage rises from 0.82 to 0.98."
+    ],
+    "revised_label": "GO step after the previous trial was rewarded at state S2 (evidence that S2 is good), regardless of the current choice; fades after episode trial ~60",
+    "better_predicate": "(phase == GO) & (prev_reward == 1) & ((prev_state==2)|((prev_state==-1)&(model_act==2))) & (ep_trial<60)",
+    "better_predicate_test_f1": 0.91
+  },
+  "final_label": "GO step after the previous trial was rewarded at state S2 (evidence that S2 is good), regardless of the current choice; fades after episode trial ~60",
+  "original_predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (ep_trial < 60)",
+  "original_test_scores": {
+    "gate": "hidden",
+    "feature": 246,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (ep_trial < 60)",
+    "split": "test",
+    "precision": 0.8748932373000191,
+    "recall": 0.8091083786237223,
+    "f1": 0.8407158781880099,
+    "mass_recall": 0.8495521940212236,
+    "correlation": 0.712951089689953,
+    "n_active": 84823,
+    "n_predicted": 78445,
+    "coverage_by_activation_quartile": [
+      0.6099217202678487,
+      0.881307177213996,
+      0.9217674243138735,
+      0.8234378684272577
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "hidden",
+    "feature": 246,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (ep_trial < 60)",
+    "split": "dev",
+    "precision": 0.8823001372901046,
+    "recall": 0.8110082391913701,
+    "f1": 0.8451534176767006,
+    "mass_recall": 0.8513420872574053,
+    "correlation": 0.7133089380584632,
+    "n_active": 82411,
+    "n_predicted": 75752,
+    "coverage_by_activation_quartile": [
+      0.6061253215551133,
+      0.8871523564529438,
+      0.9232150657671213,
+      0.8275410154353946
+    ]
+  },
+  "predicate_from": "skeptic"
+}

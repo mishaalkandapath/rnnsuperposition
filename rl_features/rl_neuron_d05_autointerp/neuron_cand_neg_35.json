@@ -1,0 +1,105 @@
+{
+  "label": "D2: reached S2 unexpectedly given a1 (rare a1->S2, or a switch from a1 to a2)",
+  "predicate": "(phase == D2) & (in_state == 2) & ((in_action == 1) | ((in_action == 2) & (prev_action == 1) & (value < 7)) | (value < 5.22))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 and essentially only when the state shown is S2 (99.7% of mass; in_state==2). Within D2/S2 it is strongest when S2 was reached by a rare transition after choosing a1 (D2 & S2 & a1: precision 0.87, mass recall 0.82; covers 92% of top-quartile activations). Weaker activations occur at common a2->S2 when the previous trial chose a1 (a switch from a1), so the unit reads as S2 reached when the agent had been committed to a1/S1. Silent on D1 and GO, silent on S1, mostly silent on S2 after a run of a2 choices. Magnitude grows with ep_trial (late-episode rate higher) and is anticorrelated with the value head (low value -> more active). All variables are observed at D2 (state, this trial action, previous action), so no future variables are used.",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 35,
+    "predicate": "(phase == D2) & (in_state == 2) & ((in_action == 1) | ((in_action == 2) & (prev_action == 1) & (value < 7)) | (value < 5.22))",
+    "split": "test",
+    "precision": 0.79758631937002,
+    "recall": 0.8617530081055228,
+    "f1": 0.8284290000967961,
+    "mass_recall": 0.935455699057243,
+    "correlation": 0.7611958640457754,
+    "n_active": 59589,
+    "n_predicted": 64383,
+    "coverage_by_activation_quartile": [
+      0.6741844542891663,
+      0.8375511848023092,
+      0.9441498288245955,
+      0.9911391555346714
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 35,
+    "predicate": "(phase == D2) & (in_state == 2) & ((in_action == 1) | ((in_action == 2) & (prev_action == 1) & (value < 7)) | (value < 5.22))",
+    "split": "dev",
+    "precision": 0.8031613816170322,
+    "recall": 0.8783897857971932,
+    "f1": 0.8390928181436371,
+    "mass_recall": 0.9457150881649001,
+    "correlation": 0.7674737859952359,
+    "n_active": 56862,
+    "n_predicted": 62188,
+    "coverage_by_activation_quartile": [
+      0.6991418120427687,
+      0.8657850309510411,
+      0.9558213155117833,
+      0.9928244811818502
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 35,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold. The unit fires only at D2 (0 active steps at D1 and GO). 99.7% of its activation mass has in_state==2 (S1 has rate 0.007). On dev, D2&S2&a1 gives P 0.866, mass recall 0.824 and covers 92.5% of top-quartile activations, which matches the explanation. No future variables are used.",
+      "The second clause, 'or a switch from a1 to a2', is overclaimed. D2&S2&a2&prev_action==1 has precision 0.50, recall 0.077 and mass recall 0.063 (dev), so the unit is silent on half of these switch trials. Splitting by the good state does not change this (P 0.47 for both good==1 and good==2). The clause is a weak correlate, not a firing condition.",
+      "There is a systematic class of misses: common a2->S2 trials with no a1 in the previous trial. On dev, D2&S2&a2&prev_action==2 holds 16.4% of active steps (P 0.085), and prev_action==-1 holds another 3.9%. Together the misses are about 11-13% of activation mass (dev and test). Test windows show activation growing over a run of unrewarded a2->S2 trials (e.g. r0 a2 S2c:0.16, then 0.44, then 0.79, then 0.83; or 0.34 then 0.82). This is S2 being reached while it looks bad, and the label does not capture it.",
+      "This miss class is tracked by the model's own value output better than by any reward-history predicate. D2&S2&a2&value<5.22 has dev precision 0.60, against 0.50 for the prev_action==1 clause. A two-back unrewarded-S2-run predicate gives only P 0.50 and recall 0.03. The explanation mentions low value only in passing, not as a firing condition.",
+      "Episode position: the higher rate late in the episode checks out (ep_trial>=50 holds 74% of mass). But the unit is not silent on S2 after runs of a2 (rate 0.085, 16% of active steps), so 'mostly silent' undersells this class.",
+      "On test, the original predicate gives F1 0.780 (below 0.8). D2&S2&(a1 | value<5.22) gives F1 0.814 (P 0.795, R 0.834, MR 0.909). D2&S2&(a1 | (a2&prev_a1&value<7) | value<5.22) gives F1 0.828 (P 0.798, R 0.862, MR 0.935)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2: S2 shown when it is unexpected or unwelcome. Fires mainly on rare a1->S2 transitions, and more weakly on common a2->S2 when the model's value is low (e.g. after a run of unrewarded S2 visits, or right after switching away from a1).",
+    "better_predicate": "(phase == D2) & (in_state == 2) & ((in_action == 1) | ((in_action == 2) & (prev_action == 1) & (value < 7)) | (value < 5.22))",
+    "better_predicate_test_f1": 0.828
+  },
+  "final_label": "D2: S2 shown when it is unexpected or unwelcome. Fires mainly on rare a1->S2 transitions, and more weakly on common a2->S2 when the model's value is low (e.g. after a run of unrewarded S2 visits, or right after switching away from a1).",
+  "original_predicate": "(phase == D2) & (in_state == 2) & ((in_action == 1) | (prev_action == 1))",
+  "original_test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 35,
+    "predicate": "(phase == D2) & (in_state == 2) & ((in_action == 1) | (prev_action == 1))",
+    "split": "test",
+    "precision": 0.7949276245884792,
+    "recall": 0.7658460454110658,
+    "f1": 0.7801158994170841,
+    "mass_recall": 0.87293190494737,
+    "correlation": 0.7519537777433237,
+    "n_active": 59589,
+    "n_predicted": 57409,
+    "coverage_by_activation_quartile": [
+      0.468586387434555,
+      0.7700879371685574,
+      0.8787004094784184,
+      0.9460294018929986
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 35,
+    "predicate": "(phase == D2) & (in_state == 2) & ((in_action == 1) | (prev_action == 1))",
+    "split": "dev",
+    "precision": 0.8071200264521107,
+    "recall": 0.772712883823995,
+    "f1": 0.7895417789757412,
+    "mass_recall": 0.8871299132655553,
+    "correlation": 0.7698551695535603,
+    "n_active": 56862,
+    "n_predicted": 54438,
+    "coverage_by_activation_quartile": [
+      0.45272931907709624,
+      0.7710326392796849,
+      0.9035525852972213,
+      0.963559620119592
+    ]
+  },
+  "predicate_from": "skeptic"
+}

@@ -1,0 +1,64 @@
+{
+  "label": "D2 after a1 -> S1 (common), following a rewarded trial, late in the episode (trials ~40-89)",
+  "predicate": "(phase == D2) & (in_state == 1) & (in_action == 1) & (prev_reward == 1) & (ep_trial >= 40) & (ep_trial < 90)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2, and almost only when the shown state is S1 reached by choosing a1 (a common a1->S1 transition): 99.9% of activation mass. It needs the previous trial to have been rewarded (prev_reward==1 holds 99.9% of mass). It never fires at D1 or GO, on S2, or after a2 (52 rare a2->S1 exceptions, some of them strong). It is also strongly gated by time in the episode: silent before trial ~30, strongest at trials 50-89, and nearly silent at 90-99. Adding the window 40-89 lifts precision from 0.46 to 0.81. Magnitude builds over runs of consecutive rewarded a1->S1 trials (about 0.8 of max in long a1/S1/rewarded streaks, and weak 0.05-0.2 right after an unrewarded trial), and correlates with high value. Every variable used is observed by D2 (the previous reward, this choice, the reached state, and the trial count). The feature looks asymmetric, an S1/a1-specific signal that the choice is being confirmed, rather than a general model-based update.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 252,
+    "predicate": "(phase == D2) & (in_state == 1) & (in_action == 1) & (prev_reward == 1) & (ep_trial >= 40) & (ep_trial < 90)",
+    "split": "test",
+    "precision": 0.7913339442335384,
+    "recall": 0.9268155568048244,
+    "f1": 0.853733170134639,
+    "mass_recall": 0.9859590715928179,
+    "correlation": 0.7987882351718997,
+    "n_active": 39134,
+    "n_predicted": 45834,
+    "coverage_by_activation_quartile": [
+      0.7113654946852003,
+      0.9967293540474244,
+      0.9997955637330063,
+      0.9993866911990187
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 252,
+    "predicate": "(phase == D2) & (in_state == 1) & (in_action == 1) & (prev_reward == 1) & (ep_trial >= 40) & (ep_trial < 90)",
+    "split": "dev",
+    "precision": 0.8059010320190526,
+    "recall": 0.9158939401533758,
+    "f1": 0.8573841642228738,
+    "mass_recall": 0.9824736808025685,
+    "correlation": 0.8094708500616012,
+    "n_active": 39902,
+    "n_predicted": 45348,
+    "coverage_by_activation_quartile": [
+      0.6710104250200482,
+      0.9938853247794708,
+      0.9992982456140351,
+      0.9993984962406015
+    ]
+  },
+  "gate": "update",
+  "feature": 252,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most of the factual claims hold. On dev the feature is active only at D2 (D1 and GO are both 0/380619). Mass is 1.000 on in_state==1 and 0.999 on in_action==1, with 52 a2->S1 exceptions. prev_reward==1 holds 0.999 of mass. By ep_trial it is silent at 0-29, at about 2% at 30-39, and at 0.3% at 90-99. The original predicate reproduces: dev P 0.806 / R 0.916 / F1 0.857, test P 0.791 / R 0.927 / F1 0.854, mass recall 0.986.",
+      "There is a systematic false-positive class: the previous trial was rewarded, but it was not a common a1->S1 trial. Adding (prev_state==2) to the predicate (dev) gives 2769 predicted steps with precision exactly 0.0. Adding (prev_action==2)&(prev_state==1), a rare a2->S1 rewarded trial, gives 1677 predicted steps with precision 0.09. Adding (prev_action==1)&(prev_state==1) gives precision 0.90. So these roughly 4400 steps, about 10% of the predicate's positives, carry almost no activation. The feature does not need just 'a rewarded previous trial'. It needs the previous trial to have been a rewarded a1->S1 trial too, i.e. two consecutive rewarded a1->S1 (common) trials. The misses windows show the same thing: FPs come right after r1 from a2->S1R or a1->S2R trials.",
+      "The label 'following a rewarded trial' overclaims. The condition really is 'following a rewarded a1->S1 trial', a streak of S1/a1 confirmations. The explanation mentions streaks only as a magnitude effect, but they are a firing condition: the feature never fires after a reward earned in S2.",
+      "The 40-89 window is a bit arbitrary. Moving the lower edge to 35-38 trades precision for recall at about the same F1, which is consistent with a gradual onset that starts around trial 30. This is minor.",
+      "The remaining false positives are mostly at the window's first trial (rel -3, prev_action==-1), where the previous trial can't be seen in the window. They also include runs right after an unrewarded break (tv('prev_reward',-1)==0, precision 0.74), where magnitude is low. This is not a new systematic class."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 showing S1 reached by a1 (common), when the previous trial was also a rewarded a1->S1 trial (a run of rewarded S1 confirmations), mid-to-late episode (trials ~35-89)",
+    "better_predicate": "(phase == D2) & (in_state == 1) & (in_action == 1) & (prev_reward == 1) & (prev_action != 2) & (prev_state != 2) & (ep_trial >= 38) & (ep_trial < 90)",
+    "better_predicate_test_f1": 0.902
+  },
+  "final_label": "D2 showing S1 reached by a1 (common), when the previous trial was also a rewarded a1->S1 trial (a run of rewarded S1 confirmations), mid-to-late episode (trials ~35-89)"
+}

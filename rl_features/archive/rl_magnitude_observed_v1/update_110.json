@@ -1,0 +1,69 @@
+{
+  "label": "GO after unrewarded common a2->S2, larger while belief still favours S2",
+  "terms": "(phase == GO) * last_is(\"a2 S2 u\") ;; (phase == GO) * last_is(\"a2 S2 u\") * np.clip(belief_lo,-4,4) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * (belief < 0.5) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * np.clip(-belief_lo,0,4)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO (zero at D1 and D2). Its magnitude is set almost entirely by the previous trial being an unrewarded common a2->S2 trial (about +0.31 vs about -0.03 for every other previous-trial pattern). Within those trials it is larger the more the ideal-observer belief still favours S2 (about -0.066 per unit of belief_lo, so it peaks at belief deciles 3-4, i.e. a mildly S2-leaning belief after the loss). At the window first trial, where the previous trial pattern is not in the window, an unrewarded previous trial with belief < 0.5 stands in for it (+0.23, smaller when the belief is strongly S2). The trial before, belief_cover, this trial reward or next choice, and the hidden good state / since_rev add nothing. Test R^2 beyond timing 0.53 (dev 0.53), against an all-observed ceiling of 0.51 and an all-cue ceiling of 0.54, so the observed-only account loses almost nothing next to the model-value/policy version (policy decile alone 0.19, value 0.02).",
+  "gate": "update",
+  "feature": 110,
+  "test_scores": {
+    "gate": "update",
+    "feature": 110,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 u\")",
+      "(phase == GO) * last_is(\"a2 S2 u\") * np.clip(belief_lo,-4,4)",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0) * (belief < 0.5)",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0) * np.clip(-belief_lo,0,4)"
+    ],
+    "weights": [
+      0.308053810987688,
+      -0.06612970869226037,
+      0.22568875616884373,
+      -0.06588624032311946
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.526926500252603,
+    "r2": 0.5584151948664228,
+    "r2_timing_only": 0.0665619499520339
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 110,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 u\")",
+      "(phase == GO) * last_is(\"a2 S2 u\") * np.clip(belief_lo,-4,4)",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0) * (belief < 0.5)",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0) * np.clip(-belief_lo,0,4)"
+    ],
+    "weights": [
+      0.308053810987688,
+      -0.06612970869226037,
+      0.22568875616884373,
+      -0.06588624032311946
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5269578570484117,
+    "r2": 0.5558944764453049,
+    "r2_timing_only": 0.061171335002713656
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "better_terms": "(phase == GO) * last_is(\"a2 S2 u\") * table(ep_dec,{0:0.3,1:0.6,2:0.8,3:1,4:1,5:1,6:0.85,7:0.4,8:0,9:0}) ;; (phase == GO) * last_is(\"a2 S2 u\") * table(ep_dec,{0:0.3,1:0.6,2:0.8,3:1,4:1,5:1,6:0.85,7:0.4,8:0,9:0}) * np.clip(belief_lo,-4,4) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * (belief < 0.5) * table(ep_dec,{0:0.3,1:0.6,2:0.8,3:1,4:1,5:1,6:0.85,7:0.4,8:0,9:0}) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * np.clip(-belief_lo,0,4) * table(ep_dec,{0:0.3,1:0.6,2:0.8,3:1,4:1,5:1,6:0.85,7:0.4,8:0,9:0}) ;; (phase == GO)",
+    "better_terms_test_r2_beyond_timing": 0.755,
+    "issues": [
+      "The reported numbers reproduce. The original 4 terms score test R^2 beyond timing 0.527, weights +0.308 / -0.066 / +0.226 / -0.066. The parts are also right: GO only, a large rise after a2 S2 u (last_is alone scores 0.433), and a lower response as belief_lo rises (binned weights 0.38 / 0.35 / 0.29 / 0.15 going from belief_lo -2..-1 up to >1). These claims hold.",
+      "There is a large gap the explanation leaves out. How big the a2 S2 u response is depends strongly on when in the episode it happens, and the additive timing baseline cannot capture that. Fitting the a2 S2 u term separately for each episode decile gives weights 0.135 (decile 0), 0.276, 0.368, 0.467 (deciles 3-5), 0.395 (6), 0.175 (7), 0.011 (8) and 0.008 (9). The response disappears in the last 20 trials. Adding the single term last_is('a2 S2 u')*isin(ep_dec,[8,9]) (weight -0.329) lifts test R^2 from 0.527 to 0.641. The explanation instead says time in the episode is fully handled by the baseline.",
+      "Applying the same episode-time shape to the first-trial stand-in terms, and adding a (phase==GO) calibration term, raises test R^2 to 0.755 (dev 0.757). The original terms are far from complete.",
+      "The original fit is miscalibrated in every phase. Misses shows mean error D1 +0.009, GO -0.017 and D2 +0.009, and every other GO previous-trial pattern is over-predicted by about 0.021. Adding (phase==GO) alone lifts R^2 from 0.527 to 0.558.",
+      "'About 98% of the ceiling' overclaims. The 0.54 ceiling only covers additive cue tables, and an interaction with episode time beats it by a wide margin (0.755).",
+      "The worst remaining misses are first-trial windows, where the previous trial is not in the data (actual 0.65 against predicted 0.04 or less). Nothing observed in the window can recover that, so this gap is expected but should be stated.",
+      "The claim that this loses almost nothing against the value/policy version is fine. The observed-only terms already beat the policy-decile reference score of 0.19."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after unrewarded common a2->S2. The response is strongest mid-episode (deciles 3-6), weak early and absent in the last 20 trials, and larger while belief still favours S2.",
+    "upheld": false
+  },
+  "final_label": "GO after unrewarded common a2->S2. The response is strongest mid-episode (deciles 3-6), weak early and absent in the last 20 trials, and larger while belief still favours S2."
+}

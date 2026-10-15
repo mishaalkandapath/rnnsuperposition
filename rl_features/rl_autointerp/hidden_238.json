@@ -1,0 +1,105 @@
+{
+  "label": "GO after an unrewarded rare transition, committing strongly to a1 (stay)",
+  "predicate": "(phase == GO) & (prev_reward == 0) & (((prev_action == 1) & (prev_common == 0)) | ((prev_common == -1) & (choice > 8)))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires almost only at GO (99% of mass; never at D2, a little at D1). Its core trigger is that the previous trial was a1 -> S2 (rare) and went unrewarded, so the model-based response is to stay with a1. The policy logit is strongly toward a1 (93% of mass has choice > 8). The feature essentially never fires after a2 or after a reward input. The narrow predicate GO & prev_action==1 & prev_common==0 & prev_reward==0 gets dev F1 0.76 and mass recall 0.80. Most of the missed mass is at the window first trial (rel -3), where the previous trial is outside the window (prev_common = -1). That is why the recorded predicate uses prev_common != 1 and requires a strong a1 policy (choice > 5): dev P 0.75, R 0.90, F1 0.82, mass recall 0.98. All variables are observed or are the agent own policy, so it uses no future variables. Magnitude is lower in the weakest quartile, which is partly common-unrewarded or late-context cases that the predicate covers less well (52% coverage of the bottom quartile versus 82% of the top). Residual false positives are rare-unrewarded a1 GO steps where the feature stays silent, mostly when the context had several recent rewards.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 238,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (((prev_action == 1) & (prev_common == 0)) | ((prev_common == -1) & (choice > 8)))",
+    "split": "test",
+    "precision": 0.778822517207473,
+    "recall": 0.887496060786442,
+    "f1": 0.8296155671570955,
+    "mass_recall": 0.968162339016903,
+    "correlation": 0.7644376218836874,
+    "n_active": 28559,
+    "n_predicted": 32544,
+    "coverage_by_activation_quartile": [
+      0.6376750700280112,
+      0.9352941176470588,
+      0.9799719887955182,
+      0.9970584115422328
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 238,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (((prev_action == 1) & (prev_common == 0)) | ((prev_common == -1) & (choice > 8)))",
+    "split": "dev",
+    "precision": 0.789847278984728,
+    "recall": 0.888243831640058,
+    "f1": 0.8361607651144256,
+    "mass_recall": 0.9709933081384937,
+    "correlation": 0.7714702483554198,
+    "n_active": 28938,
+    "n_predicted": 32543,
+    "coverage_by_activation_quartile": [
+      0.632480995162405,
+      0.9423635107118176,
+      0.981061653303843,
+      0.9970970417473044
+    ]
+  },
+  "gate": "hidden",
+  "feature": 238,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Factual claims check out on dev. GO holds 99.1% of the activation mass, D1 0.9% (2086 steps) and D2 has 0 activations. prev_reward==1 has only 140 active steps (about 0% of mass). prev_action==2 holds 1.0% of mass. Choice >= 8.07 holds 93.1% of mass. The trigger is specific to a1 -> S2: GO & prev_reward==0 & prev_action==2 & prev_common==0 has 0 activations, and GO & prev_reward==0 & prev_action==1 & prev_common==1 & choice>5 has 0 of 9161 steps active.",
+      "Recorded predicate reproduces: dev P 0.751 / R 0.898 / F1 0.818 / mass recall 0.980; test P 0.739 / R 0.897 / F1 0.81 / mass recall 0.976.",
+      "The magnitude claim mixes up two predicates. '52% of the weakest quartile versus 82% of the top' is the narrow predicate. The recorded predicate covers [0.64, 0.96, 1.00, 1.00] by quartile.",
+      "choice>5 is effectively a proxy for the unknown previous trial at rel -3 (prev_common == -1), not a real condition. Within the a1-rare-unrewarded group it removes only 617 steps (precision 0.05 there). It matters only where the window hides the previous trial: GO & prev_reward==0 & prev_common==-1 has P 0.21 without it and P 0.60 with it. The rel -3 GO firing rate (0.064) matches the other positions, so the feature most likely fires on the same condition at rel -3 and the predicate simply cannot check it.",
+      "The leftover false positives lean in one direction. Among a1 -> S2 rare-unrewarded GO steps, the feature is silent more often when the two earlier trials were rewarded (precision 0.67, and almost none of the top-quartile mass) than when the trial two back was also unrewarded (precision 0.91, 37% of top-quartile coverage). So activation is modulated by a run of recent omitted rewards. This refines the label rather than refuting it: the feature still fires on most such steps.",
+      "Small scattered misses: weak activations (about 0.1-0.2 of max) at GO after a2 -> S2 common unrewarded, when the agent switches to a1. Their mass is negligible."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after an unrewarded a1 -> S2 (rare) trial, where the agent stays with a1 (strongest after several unrewarded trials in a row)",
+    "better_predicate": "(phase == GO) & (prev_reward == 0) & (((prev_action == 1) & (prev_common == 0)) | ((prev_common == -1) & (choice > 8)))",
+    "better_predicate_test_f1": 0.83
+  },
+  "final_label": "GO after an unrewarded a1 -> S2 (rare) trial, where the agent stays with a1 (strongest after several unrewarded trials in a row)",
+  "original_predicate": "(phase == GO) & (prev_reward == 0) & (prev_common != 1) & (choice > 5)",
+  "original_test_scores": {
+    "gate": "hidden",
+    "feature": 238,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (prev_common != 1) & (choice > 5)",
+    "split": "test",
+    "precision": 0.7386242471398519,
+    "recall": 0.8974754017997829,
+    "f1": 0.8103382864369271,
+    "mass_recall": 0.9760838121626358,
+    "correlation": 0.7457987294126566,
+    "n_active": 28559,
+    "n_predicted": 34701,
+    "coverage_by_activation_quartile": [
+      0.650140056022409,
+      0.9473389355742297,
+      0.9935574229691877,
+      0.9988793948732315
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "hidden",
+    "feature": 238,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (prev_common != 1) & (choice > 5)",
+    "split": "dev",
+    "precision": 0.7506858017383269,
+    "recall": 0.8983689266708135,
+    "f1": 0.8179143922352089,
+    "mass_recall": 0.9796799741935458,
+    "correlation": 0.7540034700442545,
+    "n_active": 28938,
+    "n_predicted": 34631,
+    "coverage_by_activation_quartile": [
+      0.6418797512093988,
+      0.9557705597788528,
+      0.9958529167818634,
+      1.0
+    ]
+  },
+  "predicate_from": "skeptic"
+}

@@ -1,0 +1,73 @@
+{
+  "label": "GO-phase a1-vs-a2 preference: tracks belief S1 good (saturating) plus previous choice",
+  "terms": "(phase == GO) * np.tanh(belief_lo) ;; (phase == GO) * np.tanh(belief_lo/3) ;; (phase == GO) * table(prev_action, {1: 1, 2: -1}) ;; (phase == D1) * np.tanh(belief_lo) ;; (phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a1 S1 u\")",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw candidate n of unit 0. Timing alone gives R^2 0.40: about -0.82 at D1, near 0 at GO, saturated at -1 at D2, so beyond timing there is almost nothing at D2. The magnitude beyond timing comes almost entirely from GO, where the unit reads out the a1-vs-a2 preference. It goes up (to about +0.9 residual) when the ideal-observer belief says S1 is good and down (to about -0.8) when it says S2 is good. The relation saturates: two tanh(belief_lo) shapes plus a smaller sign(previous choice) term (perseveration, positive after a1) capture it. At D1 there is a smaller effect: a positive bump after an unrewarded a1 trial (a1 S2 u +0.70, a1 S1 u +0.34) plus a weak belief term. Test R^2 beyond timing is 0.79 (dev 0.80). Ceilings: all-observed 0.91, all 0.96. The earlier model-based explanation can use the policy decile, which alone reaches 0.92. Using observed belief instead loses about 0.13. The remaining misses are windows where the agent policy disagrees with the ideal observer, e.g. GO after rare-rewarded a1 or common-unrewarded a2 is over-predicted, and GO after rewarded trials is under-predicted. Adding last-trial reward x state terms, the trial before, or belief_cover gating each added less than 0.003. No future or hidden variables are used.",
+  "gate": "unit_candidate",
+  "feature": 0,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 0,
+    "terms": [
+      "(phase == GO) * np.tanh(belief_lo)",
+      "(phase == GO) * np.tanh(belief_lo/3)",
+      "(phase == GO) * table(prev_action, {1: 1, 2: -1})",
+      "(phase == D1) * np.tanh(belief_lo)",
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * last_is(\"a1 S1 u\")"
+    ],
+    "weights": [
+      0.24558673843567266,
+      0.5272679289283344,
+      0.223848841182473,
+      0.08680835769182613,
+      0.6986471565913032,
+      0.3444423316510098
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7860963358156079,
+    "r2": 0.8718232128508825,
+    "r2_timing_only": 0.4007732984011676
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 0,
+    "terms": [
+      "(phase == GO) * np.tanh(belief_lo)",
+      "(phase == GO) * np.tanh(belief_lo/3)",
+      "(phase == GO) * table(prev_action, {1: 1, 2: -1})",
+      "(phase == D1) * np.tanh(belief_lo)",
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * last_is(\"a1 S1 u\")"
+    ],
+    "weights": [
+      0.24558673843567266,
+      0.5272679289283344,
+      0.223848841182473,
+      0.08680835769182613,
+      0.6986471565913032,
+      0.3444423316510098
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.800180558115792,
+    "r2": 0.8803904700393348,
+    "r2_timing_only": 0.4014119505449476
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor factual error: the claim that adding last-trial reward terms 'each added less than 0.003' is wrong. Adding (phase==GO)*prev_reward and (phase==D1)*prev_reward raises test R^2 beyond timing from 0.786 to 0.802 (+0.016). That fixes some of the under-prediction at GO after rewarded trials and the over-prediction at D1 after rewarded trials (a1 S1 r -0.13, a2 S1 r -0.15).",
+      "The 'all-observed ceiling 0.91' needs a caveat. It appears to include the 'this choice x state' cue, and at GO 'action' is the agent's upcoming (future) choice. That cue alone scores 0.80, and adding table(action) at GO/D1 to the observed terms brings the fit to 0.88. Without the upcoming choice I could not get past about 0.80: a full GO last-trial table, the trial before (action, state x reward), belief_cover gating and a sharper tanh(3*belief_lo) each added 0.000-0.016. So the gap between the explanation and the 0.91 'ceiling' is mostly the agent's own upcoming choice, not a missing observed variable. The explanation is close to the observed-only limit, and the loss compared with the policy is about 0.12-0.13, as stated.",
+      "The other claims check out. Timing R^2 is 0.40. The D2 residual is about 0. GO residual by belief decile runs from -0.83 to +0.94 and saturates. The perseveration weight is +0.22, and dropping it costs 0.03 (0.786 -> 0.756). The D1 bumps are a1 S2 u +0.70 and a1 S1 u +0.34 (residual table: +0.76 / +0.34). The D1 belief term is weak (+0.09). The misses match what the explanation says: GO after a1 S2 r -0.33 and after a2 S2 u -0.32 are over-predicted, and GO after a2 S1 r +0.23 and a1 S1 r +0.13 are under-predicted. These errors are moderate and come from how the agent's policy departs from the ideal observer. Observed history variables did not remove them."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO-phase a1-vs-a2 preference: tracks the ideal-observer belief that S1 is good (saturating), plus previous choice and a small effect of the previous reward. At D1 it rises after unrewarded a1 trials.",
+    "better_terms": "(phase == GO) * np.tanh(belief_lo) ;; (phase == GO) * np.tanh(belief_lo/3) ;; (phase == GO) * table(prev_action, {1: 1, 2: -1}) ;; (phase == GO) * prev_reward ;; (phase == D1) * prev_reward ;; (phase == D1) * np.tanh(belief_lo) ;; (phase == D1) * last_is('a1 S2 u') ;; (phase == D1) * last_is('a1 S1 u')",
+    "better_terms_test_r2_beyond_timing": 0.802
+  },
+  "final_label": "GO-phase a1-vs-a2 preference: tracks the ideal-observer belief that S1 is good (saturating), plus previous choice and a small effect of the previous reward. At D1 it rises after unrewarded a1 trials."
+}

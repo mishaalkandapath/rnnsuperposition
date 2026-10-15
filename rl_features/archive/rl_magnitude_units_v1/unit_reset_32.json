@@ -1,0 +1,84 @@
+{
+  "label": "D1 reset gate dips after a1 reached S2 (rare), deeper with repeats, a1 lean, late episode",
+  "terms": "(phase == D1) * (prev_action==1)*(prev_state==2) ;; (phase == D1) * (prev_action==1)*(prev_state==2) * (prev_reward==1) ;; (phase == D1) * (prev_action==1)*(prev_state==2) * (tv(\"action\", -2) == 1)*(tv(\"state\", -2) == 2) ;; (phase == D1) * (prev_action==1)*(prev_state==2) * ep_trial ;; (phase == D2) * (action==1)*(state==1) ;; (phase == D1) * choice ;; (phase == D1) * table(tv(\"action\",-2)*3+tv(\"state\",-2), {4:1, 5:0.5, 7:-0.5, 8:-1}) ;; (phase == D1) * (prev_action==1)*(prev_state==2) * choice",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw reset gate r of unit 32 sits near 1 (mean 0.97); nearly all of the variance beyond timing is at D1. At D1 it drops sharply (about -0.15 to -0.2, as low as about 0.45) when the previous trial was a1 that reached S2 (a rare transition), whether rewarded or not. The drop is larger when the trial before was also a1 to S2 (repeated a1-S2 trials pile up), larger later in the episode, and, after a1-S2-unrewarded, scales with the model policy lean toward a1 at D1 (choice). Smaller effects: a slight D1 drop when the model leans a1 in general; the trial before (a1 S1 lowers, a2 S1 / a2 S2 raises slightly); a small D2 dip when a1 reached S1. GO is essentially flat. Hidden good state, since_rev and future reward add little. 8 terms reach test R^2 beyond timing 0.62 (dev 0.64); all ceiling 0.75, all observed 0.68. Without the model choice terms, observed-only history terms give about 0.58 on dev. No future variables used; choice is a model output.",
+  "gate": "unit_reset",
+  "feature": 32,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 32,
+    "terms": [
+      "(phase == D1) * (prev_action==1)*(prev_state==2)",
+      "(phase == D1) * (prev_action==1)*(prev_state==2) * (prev_reward==1)",
+      "(phase == D1) * (prev_action==1)*(prev_state==2) * (tv(\"action\", -2) == 1)*(tv(\"state\", -2) == 2)",
+      "(phase == D1) * (prev_action==1)*(prev_state==2) * ep_trial",
+      "(phase == D2) * (action==1)*(state==1)",
+      "(phase == D1) * choice",
+      "(phase == D1) * table(tv(\"action\",-2)*3+tv(\"state\",-2), {4:1, 5:0.5, 7:-0.5, 8:-1})",
+      "(phase == D1) * (prev_action==1)*(prev_state==2) * choice"
+    ],
+    "weights": [
+      0.12828787368553768,
+      -0.16297656357126358,
+      -0.04319095819657835,
+      -0.0010315584739349507,
+      -0.021156754882151727,
+      -0.006497719971586546,
+      0.009870053396025858,
+      -0.04432088815491569
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6206520073862499,
+    "r2": 0.7243533594269682,
+    "r2_timing_only": 0.2733673409636478
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 32,
+    "terms": [
+      "(phase == D1) * (prev_action==1)*(prev_state==2)",
+      "(phase == D1) * (prev_action==1)*(prev_state==2) * (prev_reward==1)",
+      "(phase == D1) * (prev_action==1)*(prev_state==2) * (tv(\"action\", -2) == 1)*(tv(\"state\", -2) == 2)",
+      "(phase == D1) * (prev_action==1)*(prev_state==2) * ep_trial",
+      "(phase == D2) * (action==1)*(state==1)",
+      "(phase == D1) * choice",
+      "(phase == D1) * table(tv(\"action\",-2)*3+tv(\"state\",-2), {4:1, 5:0.5, 7:-0.5, 8:-1})",
+      "(phase == D1) * (prev_action==1)*(prev_state==2) * choice"
+    ],
+    "weights": [
+      0.12828787368553768,
+      -0.16297656357126358,
+      -0.04319095819657835,
+      -0.0010315584739349507,
+      -0.021156754882151727,
+      -0.006497719971586546,
+      0.009870053396025858,
+      -0.04432088815491569
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6372053813183678,
+    "r2": 0.7346622430021839,
+    "r2_timing_only": 0.26862818979500513
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claim holds. On test, the single term (phase==D1)*(prev a1 reached S2) gets R^2 0.508 beyond timing (weight -0.197), and the residual table shows a1 S2 r -0.16 and a1 S2 u -0.203 at D1. GO is flat (|resid| < 0.01) and D2 is small.",
+      "The modifiers add little. Rewarded vs unrewarded: 0.508 -> 0.513. Repeat a1 S2 at trial -2: -> 0.522. a1S2 x ep_trial: -> 0.520-0.525. a1S2 x choice: -> 0.542. So 'deeper with repeats, a1 lean, late episode' are real but minor (about +0.01 to +0.03 each). The label lists them as if they carry the explanation.",
+      "The explanation says the choice modulation applies 'after a1-S2-unrewarded'. The term is not reward-specific. Splitting it by prev_reward gives weights -0.073 (unrewarded) and -0.038 (rewarded), and test R^2 0.544 vs 0.542. Both kinds of trial are modulated.",
+      "The fitted weights are hard to read. The base a1S2 term has weight +0.128 and the a1S2-rewarded term -0.163. The net dip comes from the ep_trial and choice interactions offsetting each other, so the sizes of the individual terms should not be read off the weights.",
+      "Systematic miss: misses on the claimed terms shows D1 under-predicted after every previous trial that reached S1 (a2 S1 r +0.043, a1 S1 r +0.040, a1 S1 u +0.027, a2 S1 u +0.020) and over-predicted after a2 S2 u (-0.023). In the residual table, every S1-reached history sits at +0.024 to +0.054 at D1. The explanation credits this to the trial two back ('a2 states raise it slightly' via tv -2). Adding (phase==D1)*(prev_state==1) fixes it: with the D2 and tv(-2)-table terms swapped for prev_state==1, value and max(choice,0), test R^2 goes 0.62 -> 0.70, and the D1 errors by previous-trial pattern fall to about 0.02 or less.",
+      "The value head matters at D1: value deciles 7-8 have residuals -0.09 and -0.13. The explanation leaves it out, and (phase==D1)*value adds about +0.015 to +0.02.",
+      "Worst-fit windows: the deepest dips (0.52-0.56) come late in the episode after a2 S2 common unrewarded trials repeated, or after a1 S1 common, and are predicted at about 0.85-0.90. The label's a1->S2 story does not cover them. The value/choice terms help with these only in part."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 reset gate dips sharply after a1 reached S2 (rare), rewarded or not; it sits slightly higher after any trial that reached S1. The dip is a bit deeper with repeated a1-S2, late in the episode, at high value and with a strong a1 lean. GO and D2 are nearly flat.",
+    "better_terms": "(phase == D1) * (prev_action==1)*(prev_state==2) ;; (phase == D1) * (prev_action==1)*(prev_state==2)*(prev_reward==1) ;; (phase == D1) * (prev_action==1)*(prev_state==2)*(tv('action', -2) == 1)*(tv('state', -2) == 2) ;; (phase == D1) * (prev_action==1)*(prev_state==2)*ep_trial ;; (phase == D1) * (prev_action==1)*(prev_state==2)*choice ;; (phase==D1)*(prev_state==1) ;; (phase==D1)*value ;; (phase==D1)*np.maximum(choice,0)",
+    "better_terms_test_r2_beyond_timing": 0.7015
+  },
+  "final_label": "D1 reset gate dips sharply after a1 reached S2 (rare), rewarded or not; it sits slightly higher after any trial that reached S1. The dip is a bit deeper with repeated a1-S2, late in the episode, at high value and with a strong a1 lean. GO and D2 are nearly flat."
+}

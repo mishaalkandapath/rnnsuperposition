@@ -1,0 +1,65 @@
+{
+  "label": "D1 after a rewarded S2 visit, agent about to choose a2 (first ~55 trials of episode)",
+  "predicate": "(phase == D1) & (in_rew == 1) & (action == 2) & (prev_state != 1) & (ep_trial < 55)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": true,
+  "explanation": "Fires almost only at D1 (99.9% of mass; never at GO, rarely at D2) when the reward input is 1, the previous trial reached S2 (prev_state==2, or unknown on the window first trial), and the agent will choose a2 at this GO. Its upcoming choice is the agent's own computation; a future random outcome is not used. It essentially encodes a rewarded S2 visit leading to staying with a2. It also turns off after about episode trial 55: zero activity from trial 60 on, falling off over trials 40-59, so it is gated by time in the episode. Without that cutoff precision drops to 0.48. It does not fire after unrewarded trials, after rewards in S1, or when the upcoming choice is a1. Activation is high where the model value is about 7.5-7.7 and choice logit is about -4 to -1.5 (a moderate a2 preference). Observed-only alternative (D1, in_rew==1, prev_action!=1, prev_common!=0, ep_trial<55) scores dev F1 0.81 versus 0.90 here, so the upcoming choice was recorded. Dev: P 0.87, R 0.94, mass recall 0.99.",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 27,
+    "predicate": "(phase == D1) & (in_rew == 1) & (action == 2) & (prev_state != 1) & (ep_trial < 55)",
+    "split": "test",
+    "precision": 0.8549954284120318,
+    "recall": 0.941839225661073,
+    "f1": 0.8963186795334177,
+    "mass_recall": 0.9903635757960457,
+    "correlation": 0.8405242064301627,
+    "n_active": 58579,
+    "n_predicted": 64529,
+    "coverage_by_activation_quartile": [
+      0.7756230795493343,
+      0.9926254694434961,
+      0.999590303857972,
+      0.9995219885277247
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 27,
+    "predicate": "(phase == D1) & (in_rew == 1) & (action == 2) & (prev_state != 1) & (ep_trial < 55)",
+    "split": "dev",
+    "precision": 0.8691584308591318,
+    "recall": 0.9406784054189491,
+    "f1": 0.9035052778331011,
+    "mass_recall": 0.9902813603072095,
+    "correlation": 0.8477468574228606,
+    "n_active": 57871,
+    "n_predicted": 62633,
+    "coverage_by_activation_quartile": [
+      0.7719104230024882,
+      0.99149847940282,
+      0.9995161736245507,
+      0.9997926315061865
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 27,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "I reproduced the main claims on the test split. Recorded predicate: P 0.855, R 0.942, F1 0.896, mass recall 0.990. Never fires at GO (phase==GO: 0 active steps). D2 is negligible (0.1% of mass). After unrewarded trials (in_rew==0) it is essentially silent (P 0.001). After a reward in S1 (prev_state==1) it is essentially silent (P 0.001). With upcoming choice a1 it barely fires (P 0.04, mass 0.4%). From ep_trial>=60 it is effectively zero (P 0.0001).",
+      "The label overclaims 'after a rewarded S2 visit'. A rare rewarded visit to S2 (prev_action==1, prev_common==0, agent then picks a2) gives precision only 0.24 on test (2899 predicted steps, about 2200 false positives). The unit tracks rewarded trials where a2 led to S2 by the common transition (or the window's unknown first trial), not any rewarded S2 visit. This is a small but systematic class of false positives.",
+      "Adding prev_common != 0 to the recorded predicate fixes it: test P 0.884, R 0.930, F1 0.906. Using ep_trial < 57 instead of < 55 gives F1 0.910.",
+      "Most remaining false positives are the fade over ep_trial 40-55: precision is 0.70 in that range versus 0.92 for ep_trial < 40. The explanation already mentions this fade, so it is graded rather than a hard cutoff at 55.",
+      "The upcoming-choice term (action==2) is justified. Dropping it lowers test F1 to 0.79. The observed-only version (prev_action!=1 & prev_common!=0) gives test F1 0.81, which matches what the other agent reported.",
+      "Minor: when the hidden good state is S1 (good==1), precision is lower (0.66), but that subset is small (5936 predicted steps). Adding good != 1 does not improve F1 (0.88)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a rewarded trial where a2 led to S2 by the common transition, agent about to repeat a2 (early episode, fading over trials 40-55)",
+    "better_predicate": "(phase == D1) & (in_rew == 1) & (action == 2) & (prev_state != 1) & (prev_common != 0) & (ep_trial < 55)",
+    "better_predicate_test_f1": 0.906
+  },
+  "final_label": "D1 after a rewarded trial where a2 led to S2 by the common transition, agent about to repeat a2 (early episode, fading over trials 40-55)"
+}

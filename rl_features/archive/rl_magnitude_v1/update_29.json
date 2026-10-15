@@ -1,0 +1,76 @@
+{
+  "label": "D2 rare a1->S2 detector, larger after unrewarded a1 S1 and early in episode",
+  "terms": "(phase == D2) * (action == 1) * (state == 2) ;; (phase == D2) * (action == 1) * (state == 2) * last_is(\"a1 S1 u\") ;; (phase == D2) * (action == 1) * (state == 2) * (prev_reward == 1) ;; (phase == D2) * (action == 1) * (state == 2) * ep_dec ;; (phase == D2) * (action == 1) * (state == 2) * (prev_action == 1) ;; (phase == D2) * (action == 1) * (state == 2) * choice",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires almost only at D2 when a1 led rarely to S2 (choice and state are observed at D2); zero at D1/GO and on every other choice/state combination. Within those events its size is largest when the previous trial was a1 S1 unrewarded (+0.57), smaller when the previous trial was rewarded (-0.55) or was also an a1 choice (-0.25), and it shrinks over the episode (-0.05 per decile). A graded policy-logit term (model output) at D2 adds a little (negative weight, more active when the policy is less a1-leaning): the observed-only version without it scores dev 0.60 vs 0.65 with it. Test R^2 beyond timing about 0.67, well above the additive all ceiling of 0.30 because the terms are interactions on the rare a1->S2 event. Hidden good state, since_rev, future reward and the trial two back add nothing.",
+  "gate": "update",
+  "feature": 29,
+  "test_scores": {
+    "gate": "update",
+    "feature": 29,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 2)",
+      "(phase == D2) * (action == 1) * (state == 2) * last_is(\"a1 S1 u\")",
+      "(phase == D2) * (action == 1) * (state == 2) * (prev_reward == 1)",
+      "(phase == D2) * (action == 1) * (state == 2) * ep_dec",
+      "(phase == D2) * (action == 1) * (state == 2) * (prev_action == 1)",
+      "(phase == D2) * (action == 1) * (state == 2) * choice"
+    ],
+    "weights": [
+      1.1485667957700563,
+      0.5708511291424867,
+      -0.5496281199774745,
+      -0.048629167983486765,
+      -0.2509435444730536,
+      -0.09682591882358355
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6674658231531725,
+    "r2": 0.6762514877218974,
+    "r2_timing_only": 0.02642033565401536
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 29,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 2)",
+      "(phase == D2) * (action == 1) * (state == 2) * last_is(\"a1 S1 u\")",
+      "(phase == D2) * (action == 1) * (state == 2) * (prev_reward == 1)",
+      "(phase == D2) * (action == 1) * (state == 2) * ep_dec",
+      "(phase == D2) * (action == 1) * (state == 2) * (prev_action == 1)",
+      "(phase == D2) * (action == 1) * (state == 2) * choice"
+    ],
+    "weights": [
+      1.1485667957700563,
+      0.5708511291424867,
+      -0.5496281199774745,
+      -0.048629167983486765,
+      -0.2509435444730536,
+      -0.09682591882358355
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6468441831324516,
+    "r2": 0.6561114632650604,
+    "r2_timing_only": 0.026241335099075003
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The score reproduces: dev 0.647 and test 0.667 beyond timing. Timing alone gives 0.03 and the additive 'all' ceiling is 0.30. The D2 rare a1->S2 gating is real: the profile residual for choice x state code 5 is +0.22, every other code is about -0.03, and D1/GO are exactly 0.",
+      "The claim that it is 'smaller when the previous trial was rewarded (-0.55)' is wrong as a general statement. I gave each previous-trial pattern its own term inside the a1->S2 event, measured against prev = a1 S1 u, and scored on test. a1 S1 r: -0.52. a1 S2 r: -0.53. a1 S2 u: -0.36. a2 S2 r: +0.56. a2 S2 u: +0.66. a2 S1 r: +0.25. After a2 trials, reward barely matters (a2 S2 r is about as high as a2 S2 u). The prev_reward term is mainly encoding a1 S1 r vs a1 S1 u.",
+      "With their terms the claimed set mispredicts specific history classes. After a1 S2 u it predicts about 1.47 - 0.57 = 0.90, but the actual level is close to a1 S1 r (low). After a2 S2 r and a2 S1 r it predicts about 0.6, but the actual level is about 1.1. The R^2 cost is small only because these events are rare.",
+      "The real structure is simpler and different. The activation is high when the previous trial was any a2 trial (this a1 choice is a switch; weight +1.16) or a1 S1 unrewarded (+1.11). It is low after a1 S1 rewarded and after either a1 S2 outcome. 'Larger after a1 S1 u, smaller after reward or a1' is a compensating encoding of that pattern.",
+      "The policy-logit claim does not hold up. Once previous action is coded properly, the E*choice weight drops to about 0.001 (test 0.649 with it, vs 0.593 without ep_dec/choice). The choice term was proxying for previous-trial history, not adding graded policy information.",
+      "The episode decline is confirmed: about -0.05 per decile in every variant. A trial-two-back term adds nothing (0.668), and value adds about 0 (0.669).",
+      "Misses: the worst-fit windows are peaks of about 2.0-2.6 predicted at 0.3-1.0, in every term set. Peak magnitude is under-predicted but follows no history class, so it looks like scatter. The tool's 'mean error by phase' is the same for both term sets: D1/GO +0.009, D2 -0.019."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 rare a1->S2 detector; strong when this a1 choice follows an a2 trial (a switch, any outcome) or an unrewarded a1->S1 trial; weak after a1->S1 rewarded or any a1->S2 trial; declines over the episode",
+    "better_terms": "(phase == D2) * (action == 1) * (state == 2) ;; (phase == D2) * (action == 1) * (state == 2) * (prev_action == 2) ;; (phase == D2) * (action == 1) * (state == 2) * last_is('a1 S1 u') ;; (phase == D2) * (action == 1) * (state == 2) * (prev_action == -1) ;; (phase == D2) * (action == 1) * (state == 2) * ep_dec ;; (phase == D2) * (action == 1) * (state == 2) * last_is('a2 S1 r') ;; (phase == D2) * (action == 1) * (state == 2) * last_is('a1 S2 u')",
+    "better_terms_test_r2_beyond_timing": 0.668
+  },
+  "final_label": "D2 rare a1->S2 detector; strong when this a1 choice follows an a2 trial (a switch, any outcome) or an unrewarded a1->S1 trial; weak after a1->S1 rewarded or any a1->S2 trial; declines over the episode"
+}

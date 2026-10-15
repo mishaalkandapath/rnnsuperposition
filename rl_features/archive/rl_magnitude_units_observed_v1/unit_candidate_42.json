@@ -1,0 +1,83 @@
+{
+  "label": "GO-phase candidate: very low on episode trial 0; tracks belief S1-good, drops after a2 S1 u and loss streaks",
+  "terms": "(phase == GO) * (ep_trial == 0) ;; (phase == GO) * np.tanh(belief_lo/2) ;; (phase == GO) * last_is(\"a2 S1 u\") ;; (phase == GO) * (last_is(\"a1 S1 r\") + last_is(\"a1 S2 u\") + last_is(\"a2 S2 u\") - last_is(\"a1 S2 r\") - last_is(\"a2 S2 r\") - last_is(\"a1 S1 u\")) ;; (phase == D2) * np.tanh(belief_lo/2) ;; (phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"action\", -1) == tv(\"action\", -2)) ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) ;; (phase == GO) * np.tanh(belief_lo/2) * (prev_action == 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw GRU candidate n of unit 42 is set almost entirely by phase (about -0.98 at D1 and D2, +0.85 to +0.89 at GO; timing alone gives R^2 0.997). What is left over sits mostly at GO. (1) The largest single effect: on the episode first trial at GO the unit is about 0.84 lower (near 0 instead of +0.85). (2) At GO it rises with the ideal-observer belief that S1 is good (tanh(belief_lo/2); weight about +0.045 after an a1 trial, about +0.011 after an a2 trial). At D2 the same belief shape has a small positive weight (about +0.014). (3) Last-trial pattern at GO: strongly lower after a2 S1 u (about -0.12). Slightly higher after a1 S1 r, a1 S2 u and a2 S2 u; slightly lower after a1 S2 r, a2 S2 r and a1 S1 u (about +/-0.03). That roughly matches evidence for S1 vs S2 being good. (4) Two unrewarded trials in a row lower it at GO when the same action was repeated (about -0.03) and raise it slightly at D1 (about +0.04). The worst misses are late-episode runs of unrewarded a2 choices, where GO drops to 0.1-0.5, more than predicted. All terms are observed-only (no future, hidden or model-output terms). Test R^2 beyond timing 0.65 (dev 0.67), which is above the all-observed reference (0.59) and the all-cue reference (0.64), and above the policy-decile reference alone (0.39). So leaving out value/policy costs little or nothing here.",
+  "gate": "unit_candidate",
+  "feature": 42,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 42,
+    "terms": [
+      "(phase == GO) * (ep_trial == 0)",
+      "(phase == GO) * np.tanh(belief_lo/2)",
+      "(phase == GO) * last_is(\"a2 S1 u\")",
+      "(phase == GO) * (last_is(\"a1 S1 r\") + last_is(\"a1 S2 u\") + last_is(\"a2 S2 u\") - last_is(\"a1 S2 r\") - last_is(\"a2 S2 r\") - last_is(\"a1 S1 u\"))",
+      "(phase == D2) * np.tanh(belief_lo/2)",
+      "(phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"action\", -1) == tv(\"action\", -2))",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * np.tanh(belief_lo/2) * (prev_action == 2)"
+    ],
+    "weights": [
+      -0.8391401373459276,
+      0.04490935163637237,
+      -0.11835296271886216,
+      0.02860491020722515,
+      0.013781025842851144,
+      -0.02721328845719366,
+      0.04331681612097059,
+      -0.0340334507166777
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.653261453419343,
+    "r2": 0.9989273458422586,
+    "r2_timing_only": 0.9969064467498081
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 42,
+    "terms": [
+      "(phase == GO) * (ep_trial == 0)",
+      "(phase == GO) * np.tanh(belief_lo/2)",
+      "(phase == GO) * last_is(\"a2 S1 u\")",
+      "(phase == GO) * (last_is(\"a1 S1 r\") + last_is(\"a1 S2 u\") + last_is(\"a2 S2 u\") - last_is(\"a1 S2 r\") - last_is(\"a2 S2 r\") - last_is(\"a1 S1 u\"))",
+      "(phase == D2) * np.tanh(belief_lo/2)",
+      "(phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"action\", -1) == tv(\"action\", -2))",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * np.tanh(belief_lo/2) * (prev_action == 2)"
+    ],
+    "weights": [
+      -0.8391401373459276,
+      0.04490935163637237,
+      -0.11835296271886216,
+      0.02860491020722515,
+      0.013781025842851144,
+      -0.02721328845719366,
+      0.04331681612097059,
+      -0.0340334507166777
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6696065827783546,
+    "r2": 0.9989974770094903,
+    "r2_timing_only": 0.9969656689926204
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims check out. Re-scoring the 8 terms on test gives 0.653 beyond timing, and the fitted weights match the stated ones: ep_trial0 -0.839, belief slope +0.045 after a1 and +0.011 after a2 (interaction weight -0.034), a2 S1 u -0.118, the signed last-trial term +0.029, D2 belief +0.014, the GO repeated-loss term -0.027, the D1 two-loss term +0.043.",
+      "Most of the score comes from one term. ep_trial==0 alone gives 0.139. The first 4 terms give 0.589. The loss-streak terms add little: removing both drops test from 0.653 to 0.623, about +0.007 from the GO term and +0.023 from the D1 term. 'Loss streaks' in the label is a minor effect.",
+      "There is a known, unfixed miss class: late-episode (t70-90) runs of unrewarded a2 choices. There GO falls to about 0.15-0.4 against a prediction of about 0.73, and D1 rises to about -0.4 to -0.64 against about -0.91. It shows up in the worst windows but is not large when averaged. Mean errors by phase x previous trial are all within 0.035; the largest is GO after a1 S2 r at -0.035.",
+      "Attempts to capture that miss gained little on test. A repeated a2 S1 u x a2 S1 u term (weight about -0.12) plus loss-count^2 x ep_dec scored 0.662. Loss-count x ep_dec, x late-episode, and exp(ep_trial) variants scored 0.63-0.65. The original terms are close to the best observed-only fit I could find with the 8-term limit.",
+      "The comparison with the references holds: 0.653 is above both the all-observed reference (0.59) and the all-cue ceiling including model outputs (0.64), so dropping value and policy costs essentially nothing here."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO candidate low on episode trial 0; tracks S1-good belief (weaker after a2); drops after a2 S1 u (more after repeated a2 S1 u); small loss-streak effects",
+    "better_terms": "(phase == GO) * (ep_trial == 0) ;; (phase == GO) * np.tanh(belief_lo/2) ;; (phase == GO) * last_is('a2 S1 u') ;; (phase == GO) * (last_is('a1 S1 r') + last_is('a1 S2 u') + last_is('a2 S2 u') - last_is('a1 S2 r') - last_is('a2 S2 r') - last_is('a1 S1 u')) ;; (phase == GO) * last_is('a2 S1 u') * ((tv('action',-2)==2)*(tv('state',-2)==1)*(tv('reward',-2)==0)) ;; (phase == GO) * np.tanh(belief_lo/2) * (prev_action == 2) ;; (phase == GO) * (((prev_reward == 0)*1 + (tv('reward', -2) == 0) + (tv('reward', -3) == 0))**2) * ep_dec ;; (phase == D1) * (((prev_reward == 0)*1 + (tv('reward', -2) == 0) + (tv('reward', -3) == 0))**2) * ep_dec",
+    "better_terms_test_r2_beyond_timing": 0.662
+  },
+  "final_label": "GO candidate low on episode trial 0; tracks S1-good belief (weaker after a2); drops after a2 S1 u (more after repeated a2 S1 u); small loss-streak effects"
+}

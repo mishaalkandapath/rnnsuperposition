@@ -1,0 +1,62 @@
+{
+  "label": "D1 after an a2 choice that went rare to S1 and was unrewarded (stay-with-a2 signal)",
+  "predicate": "(phase == D1) & (prev_reward == 0) & (prev_action == 2) & (prev_common == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (never GO/D2), only when the shown reward is 0, and almost only when the previous trial was a2 -> S1 via a rare transition (precision ~0.98). This is the rare-unrewarded case for a2, after which a model-based agent repeats a2; the upcoming choice is a2 in >99% of activation mass and the policy logit is strongly toward a2 (choice in [-8.9,-4.4]). Most misses are at the window first trial (rel -3) where the previous trial is outside the window and prev_* is unknown; adding a clause (rel == -3) & prev_reward==0 & upcoming action==2 raises dev F1 to 0.87 and mass recall to 0.96, but that clause is a windowing artifact, so the simpler fully observed predicate is recorded. Remaining weak activations (lowest quartile) occur at D1 after other unrewarded trials (e.g. a1 common unrewarded) when the agent is about to switch to a2. Does not fire after rewarded trials, after a1 rare-unrewarded trials, or on any GO/D2 step. Magnitude is near max (~0.9 of max) in the core case and low (0.2-0.5) in the switch-to-a2 cases.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 79,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (prev_action == 2) & (prev_common == 0)",
+    "split": "test",
+    "precision": 0.9832709285149943,
+    "recall": 0.687465475418498,
+    "f1": 0.8091818850002828,
+    "mass_recall": 0.7716728803581353,
+    "correlation": 0.8572526426028876,
+    "n_active": 41637,
+    "n_predicted": 29111,
+    "coverage_by_activation_quartile": [
+      0.3446685878962536,
+      0.7854741089441829,
+      0.808242866749928,
+      0.811509270823326
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 79,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (prev_action == 2) & (prev_common == 0)",
+    "split": "dev",
+    "precision": 0.9850858589313812,
+    "recall": 0.7030418436599776,
+    "f1": 0.8205025927403271,
+    "mass_recall": 0.7790061171176814,
+    "correlation": 0.8626202403529455,
+    "n_active": 40962,
+    "n_predicted": 29234,
+    "coverage_by_activation_quartile": [
+      0.3949809588907333,
+      0.7892783907821502,
+      0.81669921875,
+      0.81123046875
+    ]
+  },
+  "gate": "hidden",
+  "feature": 79,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims hold up on the test split. All activation mass is at D1: GO and D2 have 0 active steps. Firing needs prev_reward == 0, since there are 0 active steps when the shown reward is 1. After a2-common-unrewarded trials the feature never fires (precision 0, n = 37427). After a1-rare-unrewarded trials it also never fires (precision 0, n = 27217).",
+      "The missed recall is mostly the window cut-off, as the other agent said. Rel -3 holds about 18.8% of the mass, and the feature fires there at the same rate as at other positions (0.098 vs 0.094). Outside rel -3, the predicate's two cases (a2-rare-unrewarded plus the weak a1-common-unrewarded case) cover almost all of the remaining mass. The only other misses come from a1-common-unrewarded trials: 4.0% of the mass, precision 0.21, and weak activations. That matches the stated secondary case (strongest when the agent switches to a2: precision 0.47, mass 3.4%).",
+      "Adding the rel -3 patch (prev_action unknown & action == 2) gives test F1 0.850 and mass recall 0.959, not the 0.87 reported on dev. This is minor. The patch only fixes the cut-off, so recording the simpler observed-only predicate is reasonable.",
+      "A small wording point. The upcoming action a2 explains 99.3% of the mass, but 'unrewarded & action == 2' alone is a poor predicate (test F1 0.65, precision 0.49). So the a2-rare history really is the trigger, and 'stay-with-a2' reads as an interpretation, not the core definition. There is no overclaim beyond that."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == D1) & (prev_reward == 0) & (((prev_action == 2) & (prev_common == 0)) | ((rel == -3) & (action == 2)))",
+    "better_predicate_test_f1": 0.85
+  }
+}

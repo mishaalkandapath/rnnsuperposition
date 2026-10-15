@@ -1,0 +1,84 @@
+{
+  "label": "late-episode S1-vs-S2 / reward-history signal, scaled up exponentially with episode time",
+  "terms": "(phase == D1) * (prev_reward == 1) * np.exp(ep_trial / 15.0) ;; (phase == D1) * (prev_action == 2) * (prev_reward == 0) * np.exp(ep_trial / 15.0) ;; (phase == GO) * table(prev_state, {1: 1, 2: -1}) * np.exp(ep_trial / 15.0) ;; (phase == GO) * (prev_reward == 1) * np.exp(ep_trial / 15.0) ;; (phase == GO) * np.clip(belief_lo,-4,4) * np.exp(ep_trial / 15.0) ;; (phase != GO) * np.clip(belief_lo,-4,4) * np.exp(ep_trial / 15.0) ;; (phase == D2) * table(state, {1: 1, 2: -1}) * np.exp(ep_trial / 15.0) ;; ((tv(\"reward\",-1)==1) + (tv(\"reward\",-2)==1) + (tv(\"reward\",-3)==1)) * np.exp(ep_trial / 15.0)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw candidate n of unit 33 sits near +1 early in the episode and falls toward negative values late (timing alone R^2 0.83). Almost all of the variance left after timing is late in the episode: every history effect grows roughly like exp(ep_trial/15), and that multiplicative scaling is the main ingredient. Unscaled, the same cues give only 0.21 dev; scaled, they give 0.52 dev / 0.485 test R^2 beyond timing, well above the additive all ceiling of 0.31. Effects, all observed: at D1, a rewarded previous trial raises it, and an unrewarded a2 trial lowers it strongly. At GO, it is higher after reaching S1 and lower after S2, and lower after a reward. At D2 it is higher when S1 is shown. In every phase it rises with the ideal-observer log-odds that S1 is good (belief_lo, clipped). A count of rewards over the last 3 trials has a small negative weight. The remaining error is mostly a persistent per-episode offset, where whole windows sit 0.3-0.6 below or above the prediction late in the episode, which these cues do not capture. No future or model-output variables are used. The model-based policy-decile table alone scored 0.13 additively, so the observed-only description loses little or nothing compared with model outputs under the additive reference.",
+  "gate": "unit_candidate",
+  "feature": 33,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 33,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1) * np.exp(ep_trial / 15.0)",
+      "(phase == D1) * (prev_action == 2) * (prev_reward == 0) * np.exp(ep_trial / 15.0)",
+      "(phase == GO) * table(prev_state, {1: 1, 2: -1}) * np.exp(ep_trial / 15.0)",
+      "(phase == GO) * (prev_reward == 1) * np.exp(ep_trial / 15.0)",
+      "(phase == GO) * np.clip(belief_lo,-4,4) * np.exp(ep_trial / 15.0)",
+      "(phase != GO) * np.clip(belief_lo,-4,4) * np.exp(ep_trial / 15.0)",
+      "(phase == D2) * table(state, {1: 1, 2: -1}) * np.exp(ep_trial / 15.0)",
+      "((tv(\"reward\",-1)==1) + (tv(\"reward\",-2)==1) + (tv(\"reward\",-3)==1)) * np.exp(ep_trial / 15.0)"
+    ],
+    "weights": [
+      0.00040081570508955576,
+      -0.0010683236828461968,
+      0.00026920829954789566,
+      -0.00013579321158926626,
+      8.53893379935832e-05,
+      7.092635614495254e-05,
+      0.0001969344688251612,
+      -7.859195676360644e-05
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.4850062120435523,
+    "r2": 0.914784003449662,
+    "r2_timing_only": 0.8345300495982981
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 33,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1) * np.exp(ep_trial / 15.0)",
+      "(phase == D1) * (prev_action == 2) * (prev_reward == 0) * np.exp(ep_trial / 15.0)",
+      "(phase == GO) * table(prev_state, {1: 1, 2: -1}) * np.exp(ep_trial / 15.0)",
+      "(phase == GO) * (prev_reward == 1) * np.exp(ep_trial / 15.0)",
+      "(phase == GO) * np.clip(belief_lo,-4,4) * np.exp(ep_trial / 15.0)",
+      "(phase != GO) * np.clip(belief_lo,-4,4) * np.exp(ep_trial / 15.0)",
+      "(phase == D2) * table(state, {1: 1, 2: -1}) * np.exp(ep_trial / 15.0)",
+      "((tv(\"reward\",-1)==1) + (tv(\"reward\",-2)==1) + (tv(\"reward\",-3)==1)) * np.exp(ep_trial / 15.0)"
+    ],
+    "weights": [
+      0.00040081570508955576,
+      -0.0010683236828461968,
+      0.00026920829954789566,
+      -0.00013579321158926626,
+      8.53893379935832e-05,
+      7.092635614495254e-05,
+      0.0001969344688251612,
+      -7.859195676360644e-05
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5194535501568746,
+    "r2": 0.917745976981978,
+    "r2_timing_only": 0.8288323157004409
+  },
+  "final_verdict": "partially_explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "I reproduced the test R^2 beyond timing exactly: 0.485. Most of the per-phase claims hold. Dropping the D1 terms cuts it to 0.221, so the D1 effects are real (residuals after a2 S2 u -0.175, a2 S1 u -0.137, a1 S1 r +0.085). The GO pattern holds (after S1 positive, after S2 rewarded negative: a1 S2 r -0.108, a2 S2 r -0.109). D2 is higher when S1 is shown (+0.043 vs -0.039). The multiplicative time scaling matters: the same cues without it give 0.237 on test.",
+      "The 'explained' verdict overclaims. About half of the variance left after timing is still unexplained (0.485). The agent itself says the remaining error is a persistent per-episode offset of 0.3 to 0.6 late in the episode, and the worst-fit windows in misses confirm whole windows sit consistently above or below the prediction. None of the observed cues I tried moved it by more than 0.005 on test: a longer evidence sum, S2 visit count, a2 count, reward count, belief_cover, |belief_lo|. Hidden diagnostics (start_high, good) did not help either. So a large systematic error class remains unaccounted for.",
+      "The terms leave a systematic error at GO after unrewarded trials. Misses shows GO is under-predicted after a1 S1 u by +0.083 and after a2 S1 u by +0.073, and over-predicted after a1 S2 r by -0.068. D1 after a1 S2 u is over-predicted by -0.063 because the D1 term only covers unrewarded a2 trials. Full per-phase previous-trial tables roughly halve these errors, but they add little R^2.",
+      "The time constant exp(ep_trial/15) is not the best fit. tau=20 gives 0.505 on test and (ep_trial/100)^3 gives 0.503, while tau=10 drops to 0.43. 'Growing exponentially' with that particular constant is a fitting choice, not a finding.",
+      "The claim that the observed-only version 'appears to lose little' is not supported. It compares a multiplicative 0.485 fit with an additive policy-decile reference of 0.13, which is not like-for-like. The cost of dropping model outputs is really unknown.",
+      "The term counting rewards over the last 3 trials adds almost nothing (about 0.003)."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "Late-episode history signal, scaled up with episode time: S1 belief and reached-S1 raise it, unrewarded a2 lowers it at D1, rewarded S2 lowers it at GO; a large per-episode offset is still unexplained",
+    "better_terms": "(phase==D1)*(0.085*last_is('a1 S1 r') -0.035*last_is('a1 S2 u') +0.069*last_is('a1 S2 r') +0.016*last_is('a2 S2 r') -0.175*last_is('a2 S2 u') +0.05*last_is('a2 S1 r') -0.137*last_is('a2 S1 u'))*(ep_trial/100.0)**3 ;; (phase==GO)*(0.064*last_is('a1 S1 r') +0.117*last_is('a1 S1 u') -0.108*last_is('a1 S2 r') +0.03*last_is('a1 S2 u') -0.109*last_is('a2 S2 r') +0.004*last_is('a2 S2 u') -0.023*last_is('a2 S1 r') +0.073*last_is('a2 S1 u'))*(ep_trial/100.0)**3 ;; (phase==D1)*np.clip(belief_lo,-4,4)*(ep_trial/100.0)**3 ;; (phase==GO)*np.clip(belief_lo,-4,4)*(ep_trial/100.0)**3 ;; (phase==D2)*np.clip(belief_lo,-4,4)*(ep_trial/100.0)**3 ;; (phase == D2) * table(state, {1: 1, 2: -1}) * (ep_trial/100.0)**3 ;; ((tv('reward',-1)==1)*1.0+(tv('reward',-2)==1)+(tv('reward',-3)==1))*(ep_trial/100.0)**3",
+    "better_terms_test_r2_beyond_timing": 0.506
+  },
+  "final_label": "Late-episode history signal, scaled up with episode time: S1 belief and reached-S1 raise it, unrewarded a2 lowers it at D1, rewarded S2 lowers it at GO; a large per-episode offset is still unexplained"
+}

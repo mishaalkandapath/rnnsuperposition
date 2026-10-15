@@ -1,0 +1,74 @@
+{
+  "label": "D2 update gate higher after choosing a2, effect grows late in episode",
+  "terms": "(phase == D2) * table(action, {1:-1, 2:1}) * ep_trial**2 ;; (phase == D2) * table(action, {1:-1, 2:1}) * ep_trial ;; (phase == D2) * table(action, {1:-1, 2:1}) ;; (phase == D2) * table(prev_action, {1:-1, 2:1}) * ep_trial ;; (phase == D2) * (prev_reward == 1) * (2*(prev_state==2)-1) * ep_trial ;; (phase == D2) * table(state, {1:-1, 2:1}) * ep_trial",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 11 sits near 1 at D1 and GO (residuals there are about 0.005, negligible). At D2 its value falls steadily over the episode (timing baseline about 0.92 early, 0.25 by trials 90-99), and the variation beyond timing is nearly all at D2. It is driven mainly by the choice just made: higher after a2, lower after a1. The size of that gap grows with episode trial, with a concave (quadratic) shape in ep_trial. Smaller D2 contributions, which also scale with episode trial: the previous choice (a2 raises it), the reached state (S2 raises it slightly), and the previous trial being rewarded at S2 (raises it) versus rewarded at S1 (lowers it). All terms are observed at D2 (the choice and state are known by then); no future or hidden variables are used. Value does not matter. Six terms: dev R^2 beyond timing 0.77, test 0.77, above the additive all ceiling of 0.76 because the episode-time interaction captures the growth in scale. Remaining misses are about 0.05 at D2 after a1 S2 r (under-predicted) and a1 S1 r (over-predicted).",
+  "gate": "unit_update",
+  "feature": 11,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 11,
+    "terms": [
+      "(phase == D2) * table(action, {1:-1, 2:1}) * ep_trial**2",
+      "(phase == D2) * table(action, {1:-1, 2:1}) * ep_trial",
+      "(phase == D2) * table(action, {1:-1, 2:1})",
+      "(phase == D2) * table(prev_action, {1:-1, 2:1}) * ep_trial",
+      "(phase == D2) * (prev_reward == 1) * (2*(prev_state==2)-1) * ep_trial",
+      "(phase == D2) * table(state, {1:-1, 2:1}) * ep_trial"
+    ],
+    "weights": [
+      -1.2442674950418454e-05,
+      0.0023222749956103715,
+      0.03859756428855336,
+      0.00022134709786341588,
+      0.0005138947694181376,
+      0.0003587532238694931
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.766944360941687,
+    "r2": 0.9319243363416154,
+    "r2_timing_only": 0.7078995216187354
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 11,
+    "terms": [
+      "(phase == D2) * table(action, {1:-1, 2:1}) * ep_trial**2",
+      "(phase == D2) * table(action, {1:-1, 2:1}) * ep_trial",
+      "(phase == D2) * table(action, {1:-1, 2:1})",
+      "(phase == D2) * table(prev_action, {1:-1, 2:1}) * ep_trial",
+      "(phase == D2) * (prev_reward == 1) * (2*(prev_state==2)-1) * ep_trial",
+      "(phase == D2) * table(state, {1:-1, 2:1}) * ep_trial"
+    ],
+    "weights": [
+      -1.2442674950418454e-05,
+      0.0023222749956103715,
+      0.03859756428855336,
+      0.00022134709786341588,
+      0.0005138947694181376,
+      0.0003587532238694931
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7714393854761823,
+    "r2": 0.9347762784018752,
+    "r2_timing_only": 0.7146327168658883
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The main claims hold. On test, the 6 terms reproduce R^2 beyond timing of 0.767. D1 and GO residuals are under 0.013 in every previous-trial cell, so the variation really is almost all at D2. The fitted signs match the explanation: a2 raises z, and the previous a2, reaching S2 and being rewarded at S2 on the previous trial each raise it.",
+      "The three action terms alone score 0.737 on test, and plain action alone scores 0.668. The secondary terms add little when each is added alone: prev_action +0.005, prev reward x prev state +0.017, reached state +0.010. Calling them 'smaller effects' is fair, but they are minor.",
+      "The shape over the episode is overstated. Linear action x ep_trial scores 0.736 versus 0.737 with the quadratic term, so the quadratic adds only 0.001. Per-decile weights for action at D2 are 0.087 (deciles 0-2), 0.106, 0.120, 0.141, 0.172, 0.216, 0.245 (decile 8), then 0.141 (decile 9). The effect peaks around trials 80-89 and falls in the last decile, where the timing baseline nears its floor of about 0.25. 'Grows late in the episode' is therefore not monotone at the very end. The fitted quadratic peaks near trial 93, so 'concave' fits, but it is not a strong finding.",
+      "No large systematic error class remains. Misses on the claimed terms: D2 after a1 S2 r +0.055, D2 after a1 S1 r -0.035, everything else 0.037 or less. Adding last_is('a1 S2 r') and last_is('a1 S1 u') x ep_trial at D2 brings test R^2 only to 0.771, and the worst cell after that is -0.033.",
+      "Other additions also gain little on test: the D2 policy logit (choice x ep_trial) gives 0.773, a late-episode D1/GO prev_action term 0.771, and extra pure-timing polynomials 0.768. The observed-only ceiling of about 0.77 appears reached, and no future variables are used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 update gate higher after choosing a2; the gap grows over the episode, peaks around trials 80-89 and shrinks slightly at the end",
+    "better_terms": "(phase == D2) * table(action, {1:-1, 2:1}) * ep_trial**2 ;; (phase == D2) * table(action, {1:-1, 2:1}) * ep_trial ;; (phase == D2) * table(action, {1:-1, 2:1}) ;; (phase == D2) * table(prev_action, {1:-1, 2:1}) * ep_trial ;; (phase == D2) * (prev_reward == 1) * (2*(prev_state==2)-1) * ep_trial ;; (phase == D2) * table(state, {1:-1, 2:1}) * ep_trial ;; (phase == D2) * choice * ep_trial",
+    "better_terms_test_r2_beyond_timing": 0.773
+  },
+  "final_label": "D2 update gate higher after choosing a2; the gap grows over the episode, peaks around trials 80-89 and shrinks slightly at the end"
+}

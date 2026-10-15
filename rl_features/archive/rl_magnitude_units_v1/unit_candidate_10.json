@@ -1,0 +1,79 @@
+{
+  "label": "D1 last-trial choice x state x reward code; D2 reached-state S1 boost",
+  "terms": "(phase == D1) * table(prev_action*10 + prev_state*2 + prev_reward, {13: -0.1, 12: 0.13, 15: -0.37, 14: -0.07, 25: -0.04, 24: 0.14, 23: 0.18, 22: 0.29}) ;; (phase == D1) * (tv(\"state\",-2)==2) ;; (phase == GO) * (prev_reward == 1) ;; (phase == D2) * (state == S1) ;; (phase == D2) * (action == 1) ;; (phase == D2) * (tv(\"state\",-1)==1) ;; (phase == D2) * (prev_reward == 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw GRU candidate n of unit 10: timing dominates (D1 ~+0.6, GO ~+0.94, D2 ~-0.88; timing R^2 0.98). Beyond timing the main driver is the previous trial at D1: lowest after a1->S2 rewarded (-0.37), lower after a1->S1 rewarded, highest after a2->S1 unrewarded (+0.29), a2->S1 rewarded, a2->S2 / a1->S1 unrewarded (+0.13..+0.18); i.e. it codes last choice x state x reward (not a clean model-based repeat/switch axis). D1 is also raised (~+0.09) if the state two trials back was S2. At GO it is slightly higher after a reward (+0.07). At D2 it is less negative when the reached state is S1 (+0.14) and after choosing a1 (+0.05), slightly lower if the last trial reached S1 or was rewarded. Policy |logit| at GO, value, consecutive losses, hidden good state add ~nothing. Unexplained: occasional large GO drops (to ~0) in late-episode runs of unrewarded a2 trials. Test R^2 beyond timing 0.67 (dev 0.68) vs all ceiling 0.81, all-observed 0.78; all terms observed.",
+  "gate": "unit_candidate",
+  "feature": 10,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 10,
+    "terms": [
+      "(phase == D1) * table(prev_action*10 + prev_state*2 + prev_reward, {13: -0.1, 12: 0.13, 15: -0.37, 14: -0.07, 25: -0.04, 24: 0.14, 23: 0.18, 22: 0.29})",
+      "(phase == D1) * (tv(\"state\",-2)==2)",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == D2) * (state == S1)",
+      "(phase == D2) * (action == 1)",
+      "(phase == D2) * (tv(\"state\",-1)==1)",
+      "(phase == D2) * (prev_reward == 1)"
+    ],
+    "weights": [
+      0.9399727116533129,
+      0.08818383205346654,
+      0.06904780532878559,
+      0.1391255251543113,
+      0.054860627679287004,
+      -0.03146840834285341,
+      -0.01911835687046583
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6657683142158454,
+    "r2": 0.9926129891276825,
+    "r2_timing_only": 0.9778985321065939
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 10,
+    "terms": [
+      "(phase == D1) * table(prev_action*10 + prev_state*2 + prev_reward, {13: -0.1, 12: 0.13, 15: -0.37, 14: -0.07, 25: -0.04, 24: 0.14, 23: 0.18, 22: 0.29})",
+      "(phase == D1) * (tv(\"state\",-2)==2)",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == D2) * (state == S1)",
+      "(phase == D2) * (action == 1)",
+      "(phase == D2) * (tv(\"state\",-1)==1)",
+      "(phase == D2) * (prev_reward == 1)"
+    ],
+    "weights": [
+      0.9399727116533129,
+      0.08818383205346654,
+      0.06904780532878559,
+      0.1391255251543113,
+      0.054860627679287004,
+      -0.03146840834285341,
+      -0.01911835687046583
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6765361725133764,
+    "r2": 0.9928808664426191,
+    "r2_timing_only": 0.977990943801358
+  },
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The D1 claims hold. The residual-by-previous-trial table matches the stated codes: a1 S2 r -0.366, a2 S1 u +0.293, a2 S1 r +0.177, a2 S2 u +0.144, a1 S1 u +0.131, a1 S1 r -0.106. The fitted weight on the table term is 0.94. The tv('state',-2)==S2 weight is +0.088 and the GO prev_reward weight is +0.069, both as stated. Test R^2 0.666 reproduces.",
+      "The D2 description is an additive simplification that misdescribes the shape. The residual by this choice x state at D2 is a1S1 +0.136, a1S2 -0.081, a2S1 +0.024, a2S2 -0.101. So the 'S1 boost' is almost all a1->S1 common, and 'after choosing a1 (+0.05)' is wrong for a1->S2, which sits about where a2->S2 does. Replacing the additive D2 terms with (state==S1)*(action==1), (state==S1)*(prev_reward==1) and (action==prev_action) raises test R^2 from 0.666 to 0.714.",
+      "The S1 boost at D2 interacts with the previous reward. Adding (phase==D2)*(state==S1)*(prev_reward==1) alone raises test R^2 from 0.666 to 0.699, with weight +0.068. So the claim 'slightly lower when the previous trial was rewarded' (weight -0.019) has the sign wrong for S1 trials. It only holds as an additive average.",
+      "A small missed term: the first trial in the window (prev_action==-1) at D1 is under-predicted (+0.036). Adding it gives 0.675.",
+      "The large GO drops during runs of unrewarded a2 trials are acknowledged as unexplained. Run-length, |choice|, choice and GO previous-trial-table terms each add at most 0.001, so they stay rare and unexplained.",
+      "With better terms a gap remains: 0.71 against an observed-only ceiling of 0.78. The remaining misses are scattered by phase x previous trial (|error| <= 0.045), with no single large class."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "D1: last-trial choice x state x reward code (lowest after a1->S2 rewarded, highest after a2->S1 unrewarded), plus two-back state. D2: less negative mainly for a1->S1 common, more so after a previous reward. Rare GO drops unexplained.",
+    "better_terms": "(phase == D1) * table(prev_action*10 + prev_state*2 + prev_reward, {13: -0.1, 12: 0.13, 15: -0.37, 14: -0.07, 25: -0.04, 24: 0.14, 23: 0.18, 22: 0.29}) ;; (phase == D1) * (tv('state',-2)==2) ;; (phase == D1) * (prev_action==-1) ;; (phase == GO) * (prev_reward == 1) ;; (phase == D2) * (state == S1) ;; (phase == D2) * (state == S1) * (prev_reward==1) ;; (phase == D2) * (action==prev_action) ;; (phase == D2) * (state==S1)*(action==1)",
+    "better_terms_test_r2_beyond_timing": 0.714
+  },
+  "final_label": "D1: last-trial choice x state x reward code (lowest after a1->S2 rewarded, highest after a2->S1 unrewarded), plus two-back state. D2: less negative mainly for a1->S1 common, more so after a previous reward. Rare GO drops unexplained."
+}

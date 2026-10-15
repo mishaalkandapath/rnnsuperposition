@@ -1,0 +1,79 @@
+{
+  "label": "D1 after a1->S1 unrewarded; larger with a1-leaning policy, value, late episode",
+  "terms": "(phase == D1) * last_is(\"a1 S1 u\") ;; (phase == D1) * last_is(\"a1 S1 u\") * value ;; (phase == D1) * last_is(\"a1 S1 u\") * choice ;; (phase == D1) * last_is(\"a1 S1 u\") * ep_dec ;; (phase == D1) * last_is(\"a1 S1 u\") * (tv(\"action\", -2) == 1) ;; (phase == D1) * last_is(\"a1 S1 u\") * (tv(\"reward\", -2) == 1) ;; (phase == D1) * (1 - last_is(\"a1 S1 u\")) * (prev_action != -1) * table(ep_dec, {3:1,4:2,5:3,6:4,7:4,8:2})",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (zero at GO and D2), almost only right after a previous trial that was a1 -> S1 (common) and unrewarded (residual +0.25 vs about -0.03 after every other pattern). Within those D1 steps the size grows with the model policy logit toward a1 (choice) at D1 and with the model value output (value only helps together with episode decile), grows later in the episode, and is larger when the trial before that one was rewarded. A small negative term for other D1 patterns in mid-to-late episode removes the timing-baseline leakage. It does not depend on the future reward or choice, the hidden good state, or trials since reversal. Scores (R^2 beyond timing): last-trial indicator plus ep_dec and the trial-before action 0.32 dev; observed-only refinements 0.32; adding the model choice and value interactions 0.52 dev; final 7 terms 0.535 dev / 0.536 test, above the additive all-cue ceiling of 0.36 because the terms are multiplicative interactions. Remaining misses: firing on the first trial of a window, where the previous trial is outside the window, and how large the a1 S1 u response is varies from one instance to the next.",
+  "gate": "update",
+  "feature": 112,
+  "test_scores": {
+    "gate": "update",
+    "feature": 112,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S1 u\")",
+      "(phase == D1) * last_is(\"a1 S1 u\") * value",
+      "(phase == D1) * last_is(\"a1 S1 u\") * choice",
+      "(phase == D1) * last_is(\"a1 S1 u\") * ep_dec",
+      "(phase == D1) * last_is(\"a1 S1 u\") * (tv(\"action\", -2) == 1)",
+      "(phase == D1) * last_is(\"a1 S1 u\") * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * (1 - last_is(\"a1 S1 u\")) * (prev_action != -1) * table(ep_dec, {3:1,4:2,5:3,6:4,7:4,8:2})"
+    ],
+    "weights": [
+      -1.5556854257643564,
+      0.1611172945103645,
+      0.09766311178390806,
+      0.08512084855694102,
+      -0.08047286080054217,
+      0.19655846334601107,
+      -0.00959974800300094
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5356805999335168,
+    "r2": 0.5666520539490234,
+    "r2_timing_only": 0.06670290754827823
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 112,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S1 u\")",
+      "(phase == D1) * last_is(\"a1 S1 u\") * value",
+      "(phase == D1) * last_is(\"a1 S1 u\") * choice",
+      "(phase == D1) * last_is(\"a1 S1 u\") * ep_dec",
+      "(phase == D1) * last_is(\"a1 S1 u\") * (tv(\"action\", -2) == 1)",
+      "(phase == D1) * last_is(\"a1 S1 u\") * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * (1 - last_is(\"a1 S1 u\")) * (prev_action != -1) * table(ep_dec, {3:1,4:2,5:3,6:4,7:4,8:2})"
+    ],
+    "weights": [
+      -1.5556854257643564,
+      0.1611172945103645,
+      0.09766311178390806,
+      0.08512084855694102,
+      -0.08047286080054217,
+      0.19655846334601107,
+      -0.00959974800300094
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5352564213744913,
+    "r2": 0.5659009526138243,
+    "r2_timing_only": 0.06593857914070611
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced: the 7 claimed terms score 0.5357 R^2 beyond timing on test, matching the report. 'Only at D1' holds: the GO and D2 residuals are exactly 0 and timing is 0 there.",
+      "Core claim holds: last_is('a1 S1 u') at D1 alone gives 0.281 on test, and the residual is +0.253 for that pattern against about -0.027 for the others. 'Almost only' is a slight overstatement: after a1 S1 r the residual is ~0 (it fires at the timing-baseline level, above other patterns), and misses lists D1 after a1 S1 r as the most under-predicted cell (+0.017). Adding (phase==D1)*last_is('a1 S1 r')*choice raises test only to 0.543.",
+      "Value claim checks out: inside the pattern, value on its own adds about nothing (0.281 -> 0.283). With ep_dec it adds 0.319 -> 0.398, and with choice it also adds (0.420 -> 0.483). So 'value only helps when combined with ep_dec' is close; more precisely value helps with ep_dec and with choice.",
+      "The label leaves out the fitted negative weight for action two trials back = a1 (-0.08). Dropping that term and the leakage term costs only about 0.015.",
+      "Largest systematic miss class: D1 on the window's first trial (rel -3, previous trial outside the window). Most of the worst-fit windows are these, with actual 0.9-1.19 against predicted ~0.03-0.06. Six first-trial terms (prev_action==-1 x prev_reward/choice/value/ep_dec) add only ~0.01 when scored alone. Adding first-trial terms, including future variables (upcoming action) or hidden ones (good state), to the core set does not raise test R^2 (0.51-0.53). This looks like missing information in the window (the trial before is unseen), not a wrong mechanism, and the explanation admits it.",
+      "Within-pattern variability (0.26-1.1 across a1 S1 u instances) is left partly unexplained. Extra interactions (since_rev, good, the upcoming action and reward, value*ep_dec, value*choice, two-back state/common, reward three back) all reach a plateau of 0.536-0.544 on test. So no simple missed driver remains, and no hidden or future variable matters (good: +0.00, reward: +0.00)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after an a1->S1 unrewarded trial; larger with a1-leaning policy logit, late episode, and value (with episode decile); weak firing after a1->S1 rewarded",
+    "better_terms": "(phase == D1) * last_is('a1 S1 u') ;; (phase == D1) * last_is('a1 S1 u') * value ;; (phase == D1) * last_is('a1 S1 u') * choice ;; (phase == D1) * last_is('a1 S1 u') * ep_dec ;; (phase == D1) * last_is('a1 S1 u') * (tv('action', -2) == 1) ;; (phase == D1) * last_is('a1 S1 u') * (tv('reward', -2) == 1) ;; (phase == D1) * (1 - last_is('a1 S1 u')) * (prev_action != -1) * table(ep_dec, {3:1,4:2,5:3,6:4,7:4,8:2}) ;; (phase==D1)*last_is('a1 S1 r')*choice",
+    "better_terms_test_r2_beyond_timing": 0.543
+  },
+  "final_label": "D1 after an a1->S1 unrewarded trial; larger with a1-leaning policy logit, late episode, and value (with episode decile); weak firing after a1->S1 rewarded"
+}

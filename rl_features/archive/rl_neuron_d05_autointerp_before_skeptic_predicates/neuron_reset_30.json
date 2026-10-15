@@ -1,0 +1,65 @@
+{
+  "label": "GO step, previous trial rewarded, agent choosing a2 (first ~50 trials of episode)",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (ep_trial < 50)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO (never D1/D2), only when the previous trial was rewarded (prev_reward == 1; zero activity after unrewarded trials) and the agent is choosing a2 (99% of mass has model_act == 2; strongest when the policy logit strongly favours a2, choice < -8.9). It also has a strong episode-time dependence: active on ~10% of steps in trials 0-49 and almost never after trial ~52, and within a window magnitude tends to decline over successive trials, so it looks like a slowly decaying clock gated by rewarded-a2 choices. Using model_act (the agent own computed choice) instead of the FUTURE action variable gives the same score (dev F1 0.914 vs 0.913). Remaining false positives cluster at the window last (rel +1) GO step and near trial 50; prev_common, good state and stay do not add much (adding prev_common == 1 raises precision to 0.98 but cuts recall to 0.69).",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 30,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (ep_trial < 50)",
+    "split": "test",
+    "precision": 0.8715596330275229,
+    "recall": 0.9449857896873731,
+    "f1": 0.9067887406253045,
+    "mass_recall": 0.9858065310641425,
+    "correlation": 0.8671826931477169,
+    "n_active": 59112,
+    "n_predicted": 64092,
+    "coverage_by_activation_quartile": [
+      0.7958451752605225,
+      0.98409798348897,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 30,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (ep_trial < 50)",
+    "split": "dev",
+    "precision": 0.8809531518114417,
+    "recall": 0.9493902758151462,
+    "f1": 0.9138922708761913,
+    "mass_recall": 0.9865636612760327,
+    "correlation": 0.8706838209139013,
+    "n_active": 57321,
+    "n_predicted": 61774,
+    "coverage_by_activation_quartile": [
+      0.8145977252110809,
+      0.9829727843684578,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 30,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold. The unit is GO-only (D1 and D2 have 0 active steps). It has zero activity when prev_reward==0. model_act==2 carries 99.0% of the activation mass. Activity stops after about trial 50: rate is 0.011 in trials 50-59 and 0 after that. Test scores reproduce exactly (P 0.872, R 0.945, F1 0.907).",
+      "The 'slowly decaying clock' description is wrong. The active rate is flat over trials 0-49 (0.100, 0.109, 0.107, 0.101, 0.093 per 10-trial bin) and then falls sharply to 0.011 in trials 50-59. That is a step cutoff, not a slow decay.",
+      "There is a systematic class of false positives that the predicate misses. On dev, precision is only 0.60 at rel==+1 (9417 predicted steps). It is 0.59 when good==1, i.e. the agent picks a2 while S1 is good. With rel<1 it is 0.93.",
+      "These false positives are explained by a variable the explanation does not mention: value, the agent's own critic estimate. All activity falls in value bins [7.54, 8.10), with 96.9% of the mass in [7.73, 8.10). There is zero activity at value < 7.54 or value >= 8.10. Adding (value > 7.68) raises dev precision from 0.87 to 0.975 while recall stays at 0.94.",
+      "ep_trial < 50 is mostly redundant with value. Using (value > 7.68) in place of the trial cutoff gives test F1 0.947 (P 0.936, R 0.957), better than the original 0.907. So the 'clock' is largely carried by the agent's value estimate.",
+      "The prev_common==1 refinement in the explanation is a poorer fix (P 0.98 but R 0.69) than the value gate."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step after a rewarded trial, agent choosing a2, while its value estimate sits in a narrow high band (about 7.7-8.1; holds only in the first ~50 trials)",
+    "better_predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (ep_trial < 50) & (value > 7.68)",
+    "better_predicate_test_f1": 0.954
+  },
+  "final_label": "GO step after a rewarded trial, agent choosing a2, while its value estimate sits in a narrow high band (about 7.7-8.1; holds only in the first ~50 trials)"
+}

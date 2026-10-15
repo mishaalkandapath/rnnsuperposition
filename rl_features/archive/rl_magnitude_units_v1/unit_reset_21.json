@@ -1,0 +1,83 @@
+{
+  "label": "D2 reached state S2 (high) vs S1; raised at D1 after reward, at GO after no reward",
+  "terms": "(phase == D2) * (state == S2) ;; (phase == D1) * (prev_reward == 1) ;; (phase == GO) * (prev_reward == 1) ;; (phase == D2) * (prev_reward == 1) ;; (phase == D2) * (prev_reward == 1) * (state == S1) ;; (phase == D1) * (prev_state == S2) ;; (phase == D2) * (action == 2) ;; (phase != D2) * (tv(\"reward\", -2) == 0) * (prev_reward == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r21 (always on, mean 0.19; falls across the episode, lowest at GO). Beyond timing the main driver is the state shown at D2: about +0.12 when S2 is reached vs S1, and lower still when S1 is reached after a rewarded trial; a small negative adjustment when the D2 choice was a2. At D1 it is higher when the previous trial was rewarded (about +0.04) and a bit lower when the previous state was S2. At GO it is slightly lower after a reward, and at D1/GO it is higher after two unrewarded trials in a row. Only observed inputs are used. The good state, time since reversal, future reward and value add little (adding D1 value gave +0.004 on dev). Dev R^2 beyond timing 0.73; additive ceiling all = 0.92 (this choice x state alone gives 0.71). What is left over is mostly GO after unrewarded trials (under-predicted) and D1 after unrewarded trials (over-predicted).",
+  "gate": "unit_reset",
+  "feature": 21,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 21,
+    "terms": [
+      "(phase == D2) * (state == S2)",
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == D2) * (prev_reward == 1)",
+      "(phase == D2) * (prev_reward == 1) * (state == S1)",
+      "(phase == D1) * (prev_state == S2)",
+      "(phase == D2) * (action == 2)",
+      "(phase != D2) * (tv(\"reward\", -2) == 0) * (prev_reward == 0)"
+    ],
+    "weights": [
+      0.14933009327287705,
+      0.05070460462739552,
+      -0.006564499542733277,
+      -0.04233889825367425,
+      -0.03205998600750148,
+      -0.030521005157034986,
+      -0.02673999818548961,
+      0.04257038475418138
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7287646374421344,
+    "r2": 0.8065218662089302,
+    "r2_timing_only": 0.28667806451751676
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 21,
+    "terms": [
+      "(phase == D2) * (state == S2)",
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == D2) * (prev_reward == 1)",
+      "(phase == D2) * (prev_reward == 1) * (state == S1)",
+      "(phase == D1) * (prev_state == S2)",
+      "(phase == D2) * (action == 2)",
+      "(phase != D2) * (tv(\"reward\", -2) == 0) * (prev_reward == 0)"
+    ],
+    "weights": [
+      0.14933009327287705,
+      0.05070460462739552,
+      -0.006564499542733277,
+      -0.04233889825367425,
+      -0.03205998600750148,
+      -0.030521005157034986,
+      -0.02673999818548961,
+      0.04257038475418138
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.731661989515942,
+    "r2": 0.8100086264221276,
+    "r2_timing_only": 0.29196995522496105
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The claim that at GO r21 'barely depends on the previous reward (-0.007)' is wrong. That weight is only small because the shared (phase != D2) two-unrewarded term soaks up the effect. Scored alone, GO*(prev_reward==0) gets +0.047; in a full fit it gets about +0.07. The profile residuals at GO run about +0.04 to +0.07 after unrewarded trials and -0.02 to -0.04 after rewarded ones.",
+      "The terms leave a lot of R^2 unexplained, and the fix is just recoding them. The fit has one intercept on top of a fixed timing baseline, so how a phase-specific term is coded matters. With the same D2 and D1 terms, swapping GO*(prev_reward==1) for GO*(prev_reward==0) raises test R^2 from 0.708 to 0.833. The original 8 terms score 0.729 on test; a recoded 8-term set scores 0.864 (ceiling 0.92).",
+      "Running misses on the original terms shows a systematic error at GO, not scattered noise. GO is under-predicted overall (mean error +0.017), worst after unrewarded trials (a1 S2 u +0.076, a1 S1 u +0.047, a2 S2 u +0.040). In the worst windows GO is about 0.22-0.25 but predicted about 0.11-0.17. The explanation mentions this residual but labels GO as reward-insensitive, which contradicts it.",
+      "'This choice x state alone reaches 0.71' points to the reference table, which is phase-specific and uses this trial's choice and state at D1 and GO, where they are future. The term actually used, (phase == D2) * (state == S2), scores only 0.393 on test by itself. So 'the state shown at D2 is the main driver' overstates its share.",
+      "The two-unrewarded effect is mostly at GO and adds on top of a single unrewarded trial. Coding it as GO*(prev_reward==0) plus GO*(tv('reward',-2)==0) works better than one shared D1+GO conjunction. Split by phase, the D1 run term weight is near zero (+0.002) once a run count is added at GO.",
+      "Minor: after my terms, a small leftover remains at D1 and GO after a1->S2 (rare) trials (+0.04 to +0.06 under-predicted). The (phase == D2) * (action == 2) term is not needed: a set without it but with a D2 S1 term and a D2 prev_reward==0 term scores higher (0.864 vs 0.842)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2: high when S2 is reached (S1 low, lower still after a rewarded trial). D1: raised after a rewarded trial. GO: raised after unrewarded trials, more after two in a row.",
+    "better_terms": "(phase == D2) * (state == S2) ;; (phase == D2) * (state == S1) ;; (phase == D2) * (prev_reward == 1) * (state == S1) ;; (phase == D2) * (prev_reward == 0) ;; (phase == D1) * (prev_reward == 1) ;; (phase == GO) * (prev_reward == 0) ;; (phase == GO) * (tv('reward', -2) == 0) ;; (phase == D1) * (prev_state == S2)",
+    "better_terms_test_r2_beyond_timing": 0.8644
+  },
+  "final_label": "D2: high when S2 is reached (S1 low, lower still after a rewarded trial). D1: raised after a rewarded trial. GO: raised after unrewarded trials, more after two in a row."
+}

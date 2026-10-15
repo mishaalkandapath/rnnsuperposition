@@ -1,0 +1,63 @@
+{
+  "label": "D2 after choosing a2, when the previous trial was unrewarded and did not end in S2",
+  "predicate": "(phase == D2) & (action == 2) & (prev_reward != 1) & (prev_state != 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (never at D1 or GO), and almost only when the in_action input is a2 (99.8% of mass). It also needs the previous trial to be unrewarded (prev_reward 1 carries 0.1% of mass) and that trial to have ended in S1, or to be unknown on the window first trial; previous trials that reached S2 unrewarded mostly stay silent. Every variable in the predicate is observed at D2: this trial choice, the reward input seen at D1, and the previous state. The simpler (D2 & a2 & prev unrewarded) gets recall 0.98 but precision 0.58 (F1 0.73). Adding prev_state != 2 raises precision to 0.82 with recall 0.91 and mass recall 0.99 (dev F1 0.86). The remaining misses are weak activations, mostly where the previous trial was unrewarded at S2. The state reached on this trial matters less (S2 has 71% of mass, S1 rare has 29%). Magnitude: in the example windows, activation rises over runs of consecutive unrewarded a2 trials (e.g. 0.5 then 0.75 then 0.95), so it seems to build up as evidence accumulates against a2 / for S1 being bad. This was seen in examples only and not quantified. Never fires after a1 choices or after rewarded trials.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 101,
+    "predicate": "(phase == D2) & (action == 2) & (prev_reward != 1) & (prev_state != 2)",
+    "split": "test",
+    "precision": 0.8089804212747665,
+    "recall": 0.9000434782608696,
+    "f1": 0.8520858630554241,
+    "mass_recall": 0.9879298808524374,
+    "correlation": 0.8228290110345033,
+    "n_active": 46000,
+    "n_predicted": 51178,
+    "coverage_by_activation_quartile": [
+      0.6007826086956521,
+      0.9994782608695653,
+      0.9999130434782608,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 101,
+    "predicate": "(phase == D2) & (action == 2) & (prev_reward != 1) & (prev_state != 2)",
+    "split": "dev",
+    "precision": 0.818948402546102,
+    "recall": 0.9078595090075782,
+    "f1": 0.86111499682567,
+    "mass_recall": 0.989596634393486,
+    "correlation": 0.8325004225039093,
+    "n_active": 44074,
+    "n_predicted": 48859,
+    "coverage_by_activation_quartile": [
+      0.6319992739813051,
+      0.999455485978764,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "reset",
+  "feature": 101,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Factual claims hold. The feature is silent at D1 and GO (it carries 100% of its mass at D2). a2 as in_action carries 99.8% of mass. prev_reward==1 carries 0.1%. prev_state==2 with prev unrewarded has 0.7% mass recall at precision 0.12. Test scores reproduce: P 0.809, R 0.900, F1 0.852, mass recall 0.988.",
+      "The label is accurate, but 'did not end in S2' hides the real structure. Previous trial a2 -> S1 (rare) and unrewarded, then a2 again: precision 0.947 on dev and 0.954 on test, with 76% of the mass. Previous trial a1 -> S1 (common) and unrewarded, then a2 (a switch): precision only 0.68 and 4.7% of the mass. In plain terms, the feature mostly fires on staying with a2 after a rare, unrewarded a2 trial. That is the model-based 'rare-unrewarded -> stay' case. The label could say this.",
+      "Main false-positive class: the window's first trial, where prev_state is -1 (unknown). Precision there is 0.60, with 18.6% of the mass. This comes from the data window, not a flaw in the explanation: the predicate falls back to 'a2 and previous unrewarded' there. It accounts for about half of all false positives.",
+      "The magnitude claim is supported qualitatively. When two or more consecutive a2 rare -> S1 unrewarded trials precede the step, coverage is concentrated in the top activation quartile: quartile coverage [0.01, 0.01, 0.01, 0.30] against [0.15, 0.73, 0.80, 0.82] for the single-step case.",
+      "Remaining misses are weak (1.2% of mass), mostly after a2 -> S2 common unrewarded trials. They look like scattered low-level noise, not a systematic class. No future variables are used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

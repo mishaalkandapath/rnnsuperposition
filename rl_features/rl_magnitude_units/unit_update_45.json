@@ -1,0 +1,94 @@
+{
+  "label": "Lower after a rewarded trial; higher at S2 and when belief favours S2.",
+  "short_terms": "prev_reward == 1 ;; (phase == D2) * (state == 2) ;; (phase != D1) * belief_lo",
+  "terms": "prev_reward == 1 ;; (tv(\"reward\", -2) == 1) + (tv(\"reward\", -3) == 1) ;; (phase == D2) * (state == 2) ;; (phase != D1) * belief_lo ;; (prev_reward == 0) * (prev_state == 1) ;; (phase == D2) * (state == prev_state) * (prev_reward==1) ;; (phase==D2)*(state==prev_state) ;; (phase == GO) * (prev_action == 2)*(prev_reward==0)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 45, dominated by a timing decline over the episode (timing R^2 0.91). Beyond timing, the main driver is the last reward: z drops about 0.06 at all phases of the trial after a rewarded trial and stays high after an unrewarded one. On top of that it is higher at D2 when S2 is reached, and at GO/D2 it is higher the more the ideal observer believes S2 is good (negative belief_lo). The free fit adds a small further drop for rewards two and three trials back (consecutive rewards push it lower), a boost after unrewarded S1 trials, and D2 terms for reaching the same state as last trial, raising test R^2 from 0.43 to 0.47 (short form is 92% of free fit). No future variables used.",
+  "full_test_scores": {
+    "gate": "unit_update",
+    "feature": 45,
+    "terms": [
+      "prev_reward == 1",
+      "(tv(\"reward\", -2) == 1) + (tv(\"reward\", -3) == 1)",
+      "(phase == D2) * (state == 2)",
+      "(phase != D1) * belief_lo",
+      "(prev_reward == 0) * (prev_state == 1)",
+      "(phase == D2) * (state == prev_state) * (prev_reward==1)",
+      "(phase==D2)*(state==prev_state)",
+      "(phase == GO) * (prev_action == 2)*(prev_reward==0)"
+    ],
+    "weights": [
+      -0.05254534906885431,
+      -0.0062317496517976965,
+      0.04883630691055967,
+      -0.0071873158216298125,
+      0.02533408401046445,
+      0.0240681270589916,
+      -0.03265434289748327,
+      0.023669822888106404
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.4655596779928375,
+    "r2": 0.9500496045516702,
+    "r2_timing_only": 0.906537000687496
+  },
+  "gate": "unit_update",
+  "feature": 45,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 45,
+    "terms": [
+      "prev_reward == 1",
+      "(phase == D2) * (state == 2)",
+      "(phase != D1) * belief_lo"
+    ],
+    "weights": [
+      -0.06320715437840253,
+      0.039858442867304306,
+      -0.008675777441679222
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.43050596831829235,
+    "r2": 0.9467733797084574,
+    "r2_timing_only": 0.906537000687496
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 45,
+    "terms": [
+      "prev_reward == 1",
+      "(phase == D2) * (state == 2)",
+      "(phase != D1) * belief_lo"
+    ],
+    "weights": [
+      -0.06320715437840253,
+      0.039858442867304306,
+      -0.008675777441679222
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.42558176058395103,
+    "r2": 0.9472622154782638,
+    "r2_timing_only": 0.9081892236302435
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Every term carries real weight on the test split. The full short form scores 0.4305. Dropping the D2 S2 term gives 0.375, dropping the belief term gives 0.326, and prev_reward alone gives 0.233. Fitted weights: prev_reward -0.063, D2*S2 +0.040, belief_lo -0.009 (so higher when belief favours S2). The label's signs match.",
+      "The label leaves out that the belief effect is absent at D1. Letting belief act at every phase lowers the test score to 0.392, and the D1 belief-decile residuals are non-monotone. The label should say 'at GO and D2'.",
+      "The explanation says the reward drop holds 'on every phase'. At D2 the residual table is mixed (D2 after a2 S2 r +0.024, after a1 S2 u -0.041). Even so, limiting the reward term to D1 and GO drops the test score to 0.30, so the reward term is needed at D2 as well.",
+      "The claim that 'runs of rewards push z lower' does not hold up in a short form. Adding rewards two and three trials back into the reward term lowers the test score to 0.321 and 0.288.",
+      "Slightly better variant: (phase == D2)*(state == 2)*prev_reward scores test 0.4424, so the S2 boost at D2 mostly comes after rewarded trials. The gain is small and makes the label more awkward, so it is not adopted.",
+      "Remaining systematic misses (dev): after an unrewarded S1 trial the short form under-predicts z by about 0.03 at D1 and GO; at D2 after a1 S2 u it over-predicts by -0.054. These come from last-trial evidence that belief_lo only partly captures. They are moderate relative to the free-fit gap (0.43 vs 0.47) and the observed-only ceiling (0.53).",
+      "The largest single-window misses come late in the episode (trials 85-91) after reward runs, with errors of about 0.2. The timing baseline falls steeply inside decile 8 there, so these look like drift within the decile rather than a missing cue. Scaling the terms by ep_dec or ep_trial did not help (0.33-0.43)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Lower after a rewarded trial; higher at D2 on reaching S2, and at GO/D2 when belief favours S2.",
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "Lower after a rewarded trial; higher at D2 on reaching S2, and at GO/D2 when belief favours S2."
+}

@@ -1,0 +1,112 @@
+{
+ "label": "At D1, drops after a rewarded S2 visit and rises after an unrewarded S1 visit.",
+ "short_terms": "(phase == D1) * (prev_reward == 1) * (prev_state == S2) ;; (phase == D1) * (prev_reward == 0) ;; (phase == D1) * (prev_reward == 0) * (prev_state == S1)",
+ "terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 1) * (prev_state == S2) ;; (phase == D1) * (prev_reward == 0) * (prev_state == S1) ;; (phase == D1) * (prev_reward == 1) * ep_dec ;; (phase == D2) * (state == S2) ;; (phase == D1) * belief_lo ;; (phase == D2) * belief_lo ;; (phase == D1) * (prev_reward==0) * ep_dec",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Reset gate r3 sits near 0.85-0.98, with a timing baseline that dips late in the episode, mostly at D1. Beyond timing, almost all of the signal is at D1 and comes from the previous trial outcome, read as state x reward: a rewarded trial that reached S2 lowers it sharply (about -0.09, and more after the rare a1->S2 route), an unrewarded trial that reached S1 raises it (about +0.10), and S1-rewarded or S2-unrewarded trials leave it near baseline. This is an interaction; additive reward + state terms reach only 0.22. GO is essentially flat. The free fit adds a scaling of the D1 reward effect with episode decile (bigger swings late in the episode) and a small D2 effect (higher when the reached state is S2 or belief favours S2), which takes dev R^2 from 0.55 to 0.65. The leftover misses are bigger effects after a1 S2 r and a2 S2 u. No future variables are used.",
+ "full_test_scores": {
+  "gate": "unit_reset",
+  "feature": 3,
+  "terms": [
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D1) * (prev_reward == 1) * (prev_state == S2)",
+   "(phase == D1) * (prev_reward == 0) * (prev_state == S1)",
+   "(phase == D1) * (prev_reward == 1) * ep_dec",
+   "(phase == D2) * (state == S2)",
+   "(phase == D1) * belief_lo",
+   "(phase == D2) * belief_lo",
+   "(phase == D1) * (prev_reward==0) * ep_dec"
+  ],
+  "weights": [
+   0.002017156857385096,
+   -0.07517752818172974,
+   0.0725254090015485,
+   -0.0018641020049918527,
+   0.008509687350010915,
+   0.000683383534688609,
+   -0.004054972729922624,
+   0.007628211066166626
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6455391021375274,
+  "r2": 0.9012068621568833,
+  "r2_timing_only": 0.7212862167904133
+ },
+ "gate": "unit_reset",
+ "feature": 3,
+ "test_scores": {
+  "gate": "unit_reset",
+  "feature": 3,
+  "terms": [
+   "(phase == D1) * (prev_reward == 1) * (prev_state == S2)",
+   "(phase == D1) * (prev_reward == 0)",
+   "(phase == D1) * (prev_reward == 0) * (prev_state == S1)"
+  ],
+  "weights": [
+   -0.08374882347442135,
+   0.04602496993135796,
+   0.060558169131773705
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6111631537050769,
+  "r2": 0.8916258115178574,
+  "r2_timing_only": 0.7212862167904133
+ },
+ "dev_scores": {
+  "gate": "unit_reset",
+  "feature": 3,
+  "terms": [
+   "(phase == D1) * (prev_reward == 1) * (prev_state == S2)",
+   "(phase == D1) * (prev_reward == 0)",
+   "(phase == D1) * (prev_reward == 0) * (prev_state == S1)"
+  ],
+  "weights": [
+   -0.08374882347442135,
+   0.04602496993135796,
+   0.060558169131773705
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.6143079632892728,
+  "r2": 0.894476675040892,
+  "r2_timing_only": 0.7264052277069658
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The explanation says 'S2-unrewarded trials stay near baseline'. That is false. The profile residual at D1 is +0.051 after a2 S2 u (+0.018 after a1 S2 u). In the better short form, S2-unrewarded gets +0.046, about half the S1-unrewarded rise (+0.046 + 0.061 = +0.107). An unrewarded previous trial raises r3 whichever state was reached. The S1/S2 difference only sets how much.",
+   "The recorded short form is not the best way to say the same thing. Swapping its first term (D1)*(prev_reward==1) for (D1)*(prev_reward==0) gives '(D1)*(r==1)*(S2) ;; (D1)*(r==0) ;; (D1)*(r==0)*(S1)', which scores test R^2 beyond timing 0.611 against 0.547 recorded. This is not just a reparameterisation. prev_reward probably has a third value ('?' at the start of a window), so the two forms differ. The new form directly encodes 'unrewarded raises, more so after S1'.",
+   "Claim checked: the rare a1->S2 rewarded drop is larger (D1 residual -0.151 vs -0.076 for a2 S2 r; the last_is('a1 S2 r') weight is about -0.075 extra). It is real but adds less than the unrewarded-S2 term (0.587 vs 0.611 test).",
+   "Systematic error that remains (misses): the worst windows are all late in the episode (t87-99). After rewarded trials, D1 values of 0.33-0.52 are predicted at 0.59-0.67, so the reward effect grows late in the episode. A short term (D1)*(r==1)*ep_dec does not capture it (0.566). The largest leftover cell is D1 after a1 S2 r, at -0.066.",
+   "The claim that D1 dominates checks out: the GO residuals are under 0.01, and D2 has only a small belief/state effect of about \u00b10.015."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At D1, rises after unrewarded trials (most after S1), drops after rewarded S2 visits.",
+  "better_short_terms": "(phase == D1) * (prev_reward == 1) * (prev_state == S2) ;; (phase == D1) * (prev_reward == 0) ;; (phase == D1) * (prev_reward == 0) * (prev_state == S1)",
+  "better_short_terms_test_r2_beyond_timing": 0.6111631537050769
+ },
+ "final_label": "At D1, rises after unrewarded trials (most after S1), drops after rewarded S2 visits.",
+ "original_short_terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 1) * (prev_state == S2) ;; (phase == D1) * (prev_reward == 0) * (prev_state == S1)",
+ "original_test_scores": {
+  "gate": "unit_reset",
+  "feature": 3,
+  "terms": [
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D1) * (prev_reward == 1) * (prev_state == S2)",
+   "(phase == D1) * (prev_reward == 0) * (prev_state == S1)"
+  ],
+  "weights": [
+   -0.010818931851048883,
+   -0.0783913138683346,
+   0.10112171681816234
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5472085330218313,
+  "r2": 0.8738007772334959,
+  "r2_timing_only": 0.7212862167904133
+ },
+ "terms_from": "skeptic"
+}

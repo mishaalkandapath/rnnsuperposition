@@ -1,0 +1,110 @@
+{
+ "label": "At D1, rises if last trial reached S2, falls if last trial was rewarded.",
+ "short_terms": "(phase == D1) * (prev_state == S2) ;; (phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 1) * (tv('reward', -2) == 1)",
+ "terms": "(phase == D1) * (prev_state == S1) * (prev_reward == 1) ;; (phase == D1) * (prev_state == S2) * (prev_reward == 0) ;; (phase == D1) * (prev_state == S2) * (prev_reward == 1) ;; (phase == D1) * belief_lo ;; (phase == GO) * last_is(\"a2 S1 u\") ;; (phase == GO) * belief_lo ;; (phase == D1) * (tv(\"reward\", -2) == 1) * (tv(\"state\", -2) == 1) ;; (phase == D1) * (ep_trial < 1)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Raw candidate n of unit 3 is saturated by phase (about +0.97 at GO, -0.98 at D2, near 0 at D1), so timing explains R^2 0.85. Beyond timing almost all variance is at D1 and set by the previous trial outcome: after S1 rewarded it drops to about -0.67, after S2 unrewarded it rises to about +0.78, with S1 unrewarded (+0.1) and S2 rewarded (+0.25) in between, i.e. roughly additive: reached state S2 pushes up, reward pushes down. The choice (a1/a2) and transition type barely matter. The free fit adds a separate S2-rewarded offset, a small trial-before S1-rewarded decrement, a GO dip after a2 S1 unrewarded, and weak belief_lo terms; together these add only about 0.03-0.04 R^2. Belief log-odds itself adds little once last-trial state x reward is in.",
+ "full_test_scores": {
+  "gate": "unit_candidate",
+  "feature": 3,
+  "terms": [
+   "(phase == D1) * (prev_state == S1) * (prev_reward == 1)",
+   "(phase == D1) * (prev_state == S2) * (prev_reward == 0)",
+   "(phase == D1) * (prev_state == S2) * (prev_reward == 1)",
+   "(phase == D1) * belief_lo",
+   "(phase == GO) * last_is(\"a2 S1 u\")",
+   "(phase == GO) * belief_lo",
+   "(phase == D1) * (tv(\"reward\", -2) == 1) * (tv(\"state\", -2) == 1)",
+   "(phase == D1) * (ep_trial < 1)"
+  ],
+  "weights": [
+   -0.5938439171190526,
+   0.8311405622907277,
+   0.12508393248415775,
+   -0.013571210104829319,
+   -0.16004352482810916,
+   0.005063711303736741,
+   -0.10836827118061734,
+   -0.02718057071861562
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6803157390707669,
+  "r2": 0.9528990425256872,
+  "r2_timing_only": 0.8526641338631956
+ },
+ "gate": "unit_candidate",
+ "feature": 3,
+ "test_scores": {
+  "gate": "unit_candidate",
+  "feature": 3,
+  "terms": [
+   "(phase == D1) * (prev_state == S2)",
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D1) * (prev_reward == 1) * (tv('reward', -2) == 1)"
+  ],
+  "weights": [
+   0.7517715207761383,
+   -0.44643218729320905,
+   -0.31065678314696454
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6889263404723969,
+  "r2": 0.9541676929411552,
+  "r2_timing_only": 0.8526641338631956
+ },
+ "dev_scores": {
+  "gate": "unit_candidate",
+  "feature": 3,
+  "terms": [
+   "(phase == D1) * (prev_state == S2)",
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D1) * (prev_reward == 1) * (tv('reward', -2) == 1)"
+  ],
+  "weights": [
+   0.7517715207761383,
+   -0.44643218729320905,
+   -0.31065678314696454
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.6942184191444057,
+  "r2": 0.955285743232717,
+  "r2_timing_only": 0.8537706010866645
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": true,
+  "issues": [
+   "The recorded claims hold. The short form scores test R^2 beyond timing 0.644 (reproduced), with weights +0.723 for S2 and -0.560 for reward. Each term alone scores much less: S2 alone 0.243, reward alone 0.156. Adding belief_lo (0.651), belief (0.644) or ep_trial<1 (0.644) gains almost nothing, so the claim that the observer's belief adds little checks out.",
+   "The explanation misses that the reward effect builds over trials. Adding one observed-only term, (phase == D1) * (prev_reward == 1) * (tv('reward', -2) == 1), lifts test R^2 to 0.689 (weight -0.31, and the single-reward weight drops to -0.45). That is above the 'last trial' additive-table ceiling of 0.68, so n sinks further after two rewards in a row. tv('reward', -2) == 1 with no condition gives 0.674. The paper-trail tv('state',-2) term adds nothing (0.644).",
+   "State and reward do not quite add. Residuals at D1: S1r -0.67, S1u about +0.1, S2r +0.14 to +0.30, S2u +0.78. So reward lowers n by about 0.78 after S1 but only about 0.5 to 0.65 after S2. Misses on the short form show this as under-prediction at D1 after a1 S2 r (+0.11) and a1 S1 u (+0.12), and over-prediction after S1 r (-0.11 to -0.14).",
+   "The claim that 'the choice barely matters' is only roughly true. At D1, a1 S2 r has residual +0.30 versus +0.14 for a2 S2 r, and a1 S1 u has +0.14 versus +0.07 for a2 S1 u.",
+   "Two smaller systematic misses remain. GO after a2 S1 u is over-predicted by -0.19: the worst windows are runs of a2 to S1 rare unrewarded trials, where GO n falls to about -0.5 while D1 climbs to about +0.8. D1 after '?' (no previous trial) is under-predicted by +0.33. Adding the GO a2 S1 u term gives only 0.653, so neither class is large in variance terms."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At D1, rises if last trial reached S2; falls after reward, further after two rewards running.",
+  "better_short_terms": "(phase == D1) * (prev_state == S2) ;; (phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 1) * (tv('reward', -2) == 1)",
+  "better_short_terms_test_r2_beyond_timing": 0.689
+ },
+ "final_label": "At D1, rises if last trial reached S2; falls after reward, further after two rewards running.",
+ "original_short_terms": "(phase == D1) * (prev_state == S2) ;; (phase == D1) * (prev_reward == 1)",
+ "original_test_scores": {
+  "gate": "unit_candidate",
+  "feature": 3,
+  "terms": [
+   "(phase == D1) * (prev_state == S2)",
+   "(phase == D1) * (prev_reward == 1)"
+  ],
+  "weights": [
+   0.7228838851878806,
+   -0.5597570575565749
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6442440585341891,
+  "r2": 0.9475843902308205,
+  "r2_timing_only": 0.8526641338631956
+ },
+ "terms_from": "skeptic"
+}

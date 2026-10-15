@@ -1,0 +1,82 @@
+{
+  "label": "D1 reset high after reaching S1, low after S2 (esp. rewarded S2, rare); grows late in episode",
+  "terms": "(phase == D1) * (prev_state == S1) ;; (phase == D1) * (prev_state == S2) * (prev_reward == 1) ;; (phase == D1) * (prev_common == 0) ;; (phase == D1) * (prev_state == S1) * np.exp(ep_trial / 20.0) ;; (phase == D1) * (prev_state == S2) * (prev_reward == 1) * np.exp(ep_trial / 20.0) ;; (phase == D1) * (prev_state == S2) * (prev_reward == 0) * np.exp(ep_trial / 20.0) ;; (phase == GO) * (prev_reward == 0) ;; (phase == D2) * (state == S1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r of unit 25. Beyond timing (r falls over the episode, lowest at D1), magnitude is driven mainly at D1 by the previous trial: higher after the previous trial reached S1, lower after it reached S2, lowest after a rewarded S2 trial; a rare previous transition lowers it further (a1->S2 below a2->S2, a2->S1 below a1->S1). These D1 effects grow strongly late in the episode (captured by exp(ep_trial/20)-scaled terms; late, unrewarded S2 is the most negative). Smaller effects: GO is slightly higher after an unrewarded trial, D2 slightly higher when S1 is shown. Observed-only terms; the trial before, hidden good state and future variables were not needed. Dev R2 beyond timing 0.735 (ceiling all 0.79, all observed 0.77).",
+  "gate": "unit_reset",
+  "feature": 25,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 25,
+    "terms": [
+      "(phase == D1) * (prev_state == S1)",
+      "(phase == D1) * (prev_state == S2) * (prev_reward == 1)",
+      "(phase == D1) * (prev_common == 0)",
+      "(phase == D1) * (prev_state == S1) * np.exp(ep_trial / 20.0)",
+      "(phase == D1) * (prev_state == S2) * (prev_reward == 1) * np.exp(ep_trial / 20.0)",
+      "(phase == D1) * (prev_state == S2) * (prev_reward == 0) * np.exp(ep_trial / 20.0)",
+      "(phase == GO) * (prev_reward == 0)",
+      "(phase == D2) * (state == S1)"
+    ],
+    "weights": [
+      0.1521919298302786,
+      -0.1159758267469924,
+      -0.04495410734221499,
+      0.0006078361299812177,
+      -0.0007493628628744402,
+      -0.0011549026365419669,
+      0.04223032138379974,
+      0.02638528596110836
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7329327227989726,
+    "r2": 0.9012047578818986,
+    "r2_timing_only": 0.6300735786371309
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 25,
+    "terms": [
+      "(phase == D1) * (prev_state == S1)",
+      "(phase == D1) * (prev_state == S2) * (prev_reward == 1)",
+      "(phase == D1) * (prev_common == 0)",
+      "(phase == D1) * (prev_state == S1) * np.exp(ep_trial / 20.0)",
+      "(phase == D1) * (prev_state == S2) * (prev_reward == 1) * np.exp(ep_trial / 20.0)",
+      "(phase == D1) * (prev_state == S2) * (prev_reward == 0) * np.exp(ep_trial / 20.0)",
+      "(phase == GO) * (prev_reward == 0)",
+      "(phase == D2) * (state == S1)"
+    ],
+    "weights": [
+      0.1521919298302786,
+      -0.1159758267469924,
+      -0.04495410734221499,
+      0.0006078361299812177,
+      -0.0007493628628744402,
+      -0.0011549026365419669,
+      0.04223032138379974,
+      0.02638528596110836
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7354634777108764,
+    "r2": 0.9017911635558136,
+    "r2_timing_only": 0.628751313450588
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "False claim: 'late on, unrewarded S2 is the most negative case'. In D1 residuals by previous trial for ep_trial >= 80, a1 S2 r is -0.236 and a2 S2 r is -0.194, while a1 S2 u is -0.137 and a2 S2 u is -0.108. For ep_trial >= 90 the values are -0.224 / -0.206 (rewarded) against -0.128 / -0.121 (unrewarded). Rewarded S2 stays the lowest case all episode. The fitted weights say the same thing: at trial 99, S2r gets -0.116 - 0.00075*141 = about -0.22, against -0.00115*141 = about -0.16 for S2u. The explanation misread its own exp-term weights.",
+      "Incomplete: the reward effect is not specific to S2. After S1, unrewarded is also higher than rewarded (a1 S1 u +0.172 vs r +0.136; a2 S1 u +0.15 vs r +0.109; late on +0.251 vs +0.185). The label only mentions rewarded S2. Adding a general D1*prev_reward term does not change R^2 (0.734), so this is a gap in the description, not in the fit.",
+      "'Grows late in episode' holds but is modest. Dropping all three exp terms takes test R^2 from 0.733 to 0.699. Early (ep_trial < 50) the D1 values are S1 about +0.09..+0.15 and S2 about -0.05..-0.20; late they are about +0.14..+0.25 and -0.11..-0.24.",
+      "Checks that passed: S1 sits above S2 at D1; rare transitions sit lower (a2 S1 < a1 S1, a1 S2 < a2 S2); GO is higher after no reward (+0.042) and D2 is higher when S1 is shown (+0.026). Test R^2 reproduces at 0.733, close to the 'all observed' ceiling of 0.77.",
+      "Remaining errors: the worst-fit windows come from late in the episode (t94-99), in stable a1->S1 rewarded runs, where D1 and GO are over-predicted by about 0.1-0.15. Reward history, value*exp and same-action history terms did not reduce this (R^2 0.731-0.732). The error is small in aggregate; the largest mean error by phase x previous trial is +0.04 (D1 after a2 S1 u)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 reset high after reaching S1, low after S2; a reward and a rare transition both lower it, so it is lowest after rewarded S2 (also late on); the S1/S2 gap widens late in the episode",
+    "better_terms": "(phase == D1) * (prev_state == S1) ;; (phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_state == S2) * (prev_reward == 1) ;; (phase == D1) * (prev_common == 0) ;; (phase == D1) * (prev_state == S1) * np.exp(ep_trial / 20.0) ;; (phase == D1) * (prev_state == S2) * np.exp(ep_trial / 20.0) ;; (phase == GO) * (prev_reward == 0) ;; (phase == D2) * (state == S1)",
+    "better_terms_test_r2_beyond_timing": 0.734
+  },
+  "final_label": "D1 reset high after reaching S1, low after S2; a reward and a rare transition both lower it, so it is lowest after rewarded S2 (also late on); the S1/S2 gap widens late in the episode"
+}

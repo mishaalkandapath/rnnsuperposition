@@ -1,0 +1,98 @@
+{
+ "label": "Fires at D1 after an unrewarded rare a2->S1 trial, late episode (peak trials ~82-94).",
+ "short_terms": "(phase == D1) * last_is('a2 S1 u') * np.maximum(0, 14 - np.abs(ep_trial - 88))",
+ "terms": "(phase == D1) * last_is(\"a2 S1 u\") * (ep_trial >= 72) * (ep_trial <= 96) ;; (phase == D1) * last_is(\"a2 S1 u\") * (ep_trial >= 72) * (ep_trial <= 96) * belief_lo ;; (phase == D1) * last_is(\"a2 S1 u\") * (ep_trial >= 72) * (ep_trial <= 96) * (tv(\"action\", -2) == 2) ;; (phase == D1) * last_is(\"a2 S1 u\") * (ep_trial >= 72) * (ep_trial <= 96) * (tv(\"reward\", -2) == 0) ;; (phase == D1) * (prev_action == -1) * (ep_trial >= 72) * (ep_trial <= 96) ;; (phase == D1) * last_is(\"a2 S1 u\") * (ep_trial >= 82) * (ep_trial <= 94)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Silent at GO and D2. At D1 its magnitude is set almost entirely by the previous trial being a2 -> S1 (rare) unrewarded, gated by episode position: weak before ~trial 72, strongest around trials 82-94, falling off in the last few trials. Other previous-trial patterns (incl. a2 S2 u) give ~0. Free fit adds that within these trials activation is larger when the observer believes S2 is good (negative belief_lo) and when the trial before was also unrewarded, plus a small gain (dev 0.61 vs 0.59). Residual misses are mostly window-first trials whose previous trial is unobserved in the window.",
+ "full_test_scores": {
+  "gate": "update",
+  "feature": 79,
+  "terms": [
+   "(phase == D1) * last_is(\"a2 S1 u\") * (ep_trial >= 72) * (ep_trial <= 96)",
+   "(phase == D1) * last_is(\"a2 S1 u\") * (ep_trial >= 72) * (ep_trial <= 96) * belief_lo",
+   "(phase == D1) * last_is(\"a2 S1 u\") * (ep_trial >= 72) * (ep_trial <= 96) * (tv(\"action\", -2) == 2)",
+   "(phase == D1) * last_is(\"a2 S1 u\") * (ep_trial >= 72) * (ep_trial <= 96) * (tv(\"reward\", -2) == 0)",
+   "(phase == D1) * (prev_action == -1) * (ep_trial >= 72) * (ep_trial <= 96)",
+   "(phase == D1) * last_is(\"a2 S1 u\") * (ep_trial >= 82) * (ep_trial <= 94)"
+  ],
+  "weights": [
+   -0.2525779792332536,
+   -0.13816379195715658,
+   -0.023915632445094776,
+   0.08225021113123367,
+   0.004907618648647443,
+   0.36111418849853527
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6330447688645535,
+  "r2": 0.6577838529559432,
+  "r2_timing_only": 0.06741717242956613
+ },
+ "gate": "update",
+ "feature": 79,
+ "test_scores": {
+  "gate": "update",
+  "feature": 79,
+  "terms": [
+   "(phase == D1) * last_is('a2 S1 u') * np.maximum(0, 14 - np.abs(ep_trial - 88))"
+  ],
+  "weights": [
+   0.04969571018680927
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6306084410468609,
+  "r2": 0.655511775470831,
+  "r2_timing_only": 0.06741717242956613
+ },
+ "dev_scores": {
+  "gate": "update",
+  "feature": 79,
+  "terms": [
+   "(phase == D1) * last_is('a2 S1 u') * np.maximum(0, 14 - np.abs(ep_trial - 88))"
+  ],
+  "weights": [
+   0.04969571018680927
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.6031453412228596,
+  "r2": 0.6292576810047449,
+  "r2_timing_only": 0.06579824428002756
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": true,
+  "issues": [
+   "Claims check out. At GO and D2 the residual is exactly 0. At D1, only the previous trial a2 S1 u has a positive residual (+0.099); every other previous-trial pattern sits around -0.01.",
+   "The two overlapping windows in the short form are a fitted step approximation of a smooth curve. Fitting one weight per ep_trial bin for D1 after a2 S1 u gives weights 0.05 (70-75), 0.22 (76-79), 0.39 (80-83), 0.59 (84-87), 0.64 (88-91), 0.46 (92-94), 0.17 (95-97) and 0.00 (98+). That bin fit scores test 0.626, so a single triangular ramp centred near trial 88 says the same thing more simply. One such term, (phase == D1) * last_is('a2 S1 u') * np.maximum(0, 14 - np.abs(ep_trial - 88)), scores test 0.631, versus 0.607 for the recorded two-window form.",
+   "The free fit's extra claims (larger when belief_lo is negative, when the trial before was also unrewarded, or when the choice two trials back was a2) add almost nothing on test. As third terms they add 0.000-0.002, and the whole 6-term free fit scores 0.633. The explanation should not stress them.",
+   "About 37% of the variance stays unexplained even at the pattern x episode-trial ceiling. Inside the window, after a2 S1 u, the feature either fires (~0.8) or stays at 0. No observed variable predicts which: belief (<0.5, <0.2), belief_cover, the action, state or reward two trials back, and stay/action (future) were all tried. Hidden variables (good, since_rev) and next_action do not predict it either.",
+   "Misses on the short form show no systematic error class. Mean error by phase is within 0.005, and by phase x previous trial within 0.009. The worst windows are scattered cases where a2 S1 u in the window did not fire, plus D1s on a window's first trial."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "D1 after an unrewarded rare a2->S1 trial, peaking near trial 88 and fading by ~76 and ~98.",
+  "better_short_terms": "(phase == D1) * last_is('a2 S1 u') * np.maximum(0, 14 - np.abs(ep_trial - 88))",
+  "better_short_terms_test_r2_beyond_timing": 0.6306
+ },
+ "final_label": "D1 after an unrewarded rare a2->S1 trial, peaking near trial 88 and fading by ~76 and ~98.",
+ "original_short_terms": "(phase == D1) * last_is(\"a2 S1 u\") * (np.abs(ep_trial - 88) <= 6) ;; (phase == D1) * last_is(\"a2 S1 u\") * (np.abs(ep_trial - 84) <= 12)",
+ "original_test_scores": {
+  "gate": "update",
+  "feature": 79,
+  "terms": [
+   "(phase == D1) * last_is(\"a2 S1 u\") * (np.abs(ep_trial - 88) <= 6)",
+   "(phase == D1) * last_is(\"a2 S1 u\") * (np.abs(ep_trial - 84) <= 12)"
+  ],
+  "weights": [
+   0.3616918549014024,
+   0.18945296178016127
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6067484974702917,
+  "r2": 0.6332604018245229,
+  "r2_timing_only": 0.06741717242956613
+ },
+ "terms_from": "skeptic"
+}

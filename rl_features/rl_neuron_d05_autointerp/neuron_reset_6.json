@@ -1,0 +1,103 @@
+{
+  "label": "D2: reached S2 while the agent is not committed to a2 (mainly a1 -> S2 rare)",
+  "predicate": "(phase == D2) & (in_state == 2) & (choice > -1.0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 and only when the state input is S2 (never on S1, D1 or GO). Within D2/S2 it fires when the agent is not strongly committed to a2: the model policy logit(a1)-logit(a2) at that step is > -1.5. Dev: P 0.89, R 1.00, F1 0.94. 86% of activation mass is the rare a1 -> S2 transition. The input-only predicate (phase == D2) & (in_state == 2) & (in_action == 1) gets dev P 0.94, R 0.77, F1 0.85. The rest is weak firing (about 0.2-0.4 of max) on common a2 -> S2 trials where the agent preference was near neutral. The logit is the agent own observed-time readout, not a future variable, but it is computed from the same hidden state, so it is partly circular. Magnitude on a1 -> S2 is largest (near max) when the previous trial was unrewarded (prev_reward 0) and lower (about 0.5-0.85) after a rewarded trial. It also tends to be larger on runs of a1 choices in S1-good blocks. It does not fire on S1 arrivals, a2 -> S1 rare trials, or any D1/GO step.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 6,
+    "predicate": "(phase == D2) & (in_state == 2) & (choice > -1.0)",
+    "split": "test",
+    "precision": 0.9330597181126913,
+    "recall": 0.971639664711924,
+    "f1": 0.9519589703638783,
+    "mass_recall": 0.9968490817214619,
+    "correlation": 0.8699690850380645,
+    "n_active": 60366,
+    "n_predicted": 62862,
+    "coverage_by_activation_quartile": [
+      0.8865624171746621,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 6,
+    "predicate": "(phase == D2) & (in_state == 2) & (choice > -1.0)",
+    "split": "dev",
+    "precision": 0.9400034470872113,
+    "recall": 0.9724520362313672,
+    "f1": 0.9559524644184253,
+    "mass_recall": 0.9972182469023471,
+    "correlation": 0.8768314937860466,
+    "n_active": 56084,
+    "n_predicted": 58020,
+    "coverage_by_activation_quartile": [
+      0.8898081449254689,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 6,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claims hold on test. (phase==D2)&(in_state==2) has recall 0.99998 and mass recall 0.99999. Scored on their own, phase==GO, phase==D1 and D2&S1 each give recall 0.0, so the unit never fires outside D2/S2.",
+      "The original predicate reproduces on test: P 0.877, R 0.995, F1 0.932, mass recall 0.9996. The 275 test misses carry 0.0% of the activation mass (scattered weak firing on a1->S2 with a low logit). False positives are 8454 steps (about 12%), mostly common a2->S2 steps where choice is between -1.5 and -1.0 and the unit stays inactive, plus a few a1->S2 steps with no firing.",
+      "The -1.5 threshold is a bit loose. Moving it to choice > -1.0 gives test P 0.933, R 0.972, F1 0.952. A combined form, D2&S2&((in_action==1)|(choice>-1.0)), gets test F1 0.948 and mass recall 0.999. These are small refinements, not a different explanation.",
+      "'Mainly a1->S2 rare' holds by activation mass: 84% on test. By count of active steps it is weaker: a1->S2 makes up only 73% of active steps, so a2->S2 is about 27% of active steps (16% of mass). Within a2->S2 the firing is almost all after an unrewarded previous trial (recall 0.251 of the 0.270). But no observed-history predicate replaces the logit: the best tried, D2&S2&((in_action==1)|(prev_reward==0)), has test F1 0.71. So the logit term is needed, and it is partly circular, as the other agent said.",
+      "The magnitude claim that firing is stronger after an unrewarded previous trial is confirmed. On a1->S2, mass per step is about 2.3e-5 after an unrewarded trial vs 1.5e-5 after a rewarded one. The unscored claim that firing is larger on runs of a1 choices in S1-good blocks is NOT supported. good==1 and good==2 give about the same mass per step on a1->S2 (1.8e-5 vs 1.65e-5). After runs of rewarded a1, mass per step is lower (1.3e-5), and some test false positives are exactly that case: rare a1->S2 after 3 rewarded a1->S1 trials with near-zero activation. That remark should be dropped."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == D2) & (in_state == 2) & (choice > -1.0)",
+    "better_predicate_test_f1": 0.952
+  },
+  "original_predicate": "(phase == D2) & (in_state == 2) & (choice > -1.5)",
+  "original_test_scores": {
+    "gate": "neuron_reset",
+    "feature": 6,
+    "predicate": "(phase == D2) & (in_state == 2) & (choice > -1.5)",
+    "split": "test",
+    "precision": 0.8766649646217813,
+    "recall": 0.9954444554881887,
+    "f1": 0.9322866163477128,
+    "mass_recall": 0.999575671239917,
+    "correlation": 0.8334150612397953,
+    "n_active": 60366,
+    "n_predicted": 68545,
+    "coverage_by_activation_quartile": [
+      0.9817784256559767,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 6,
+    "predicate": "(phase == D2) & (in_state == 2) & (choice > -1.5)",
+    "split": "dev",
+    "precision": 0.8883460381622292,
+    "recall": 0.995310605520291,
+    "f1": 0.9387912984250049,
+    "mass_recall": 0.9995350800637792,
+    "correlation": 0.8427348384787196,
+    "n_active": 56084,
+    "n_predicted": 62837,
+    "coverage_by_activation_quartile": [
+      0.981242422081164,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "predicate_from": "skeptic"
+}

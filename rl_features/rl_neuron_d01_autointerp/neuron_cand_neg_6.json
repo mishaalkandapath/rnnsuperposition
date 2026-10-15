@@ -1,0 +1,104 @@
+{
+  "label": "late-episode D2 after a rewarded a2->S2 stay, landing in S2 via common transition",
+  "predicate": "(phase == D2) & (state == 2) & (common == 1) & (prev_reward == 1) & (prev_action != 1) & (prev_common != 0) & (value < 6)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2, only when the agent chose a2 and reached S2 via a common transition, only when the previous trial was rewarded (and the previous choice was also a2, i.e. a stay; the window-first trial with unknown prev_action is allowed), and only near the end of the episode (ep_trial >= ~86; zero activation before trial ~79). All variables are observed at D2 (ep_trial is an implicit clock the GRU tracks; the model value head is low at the same steps, value < 6 gives a similar F1 of 0.84). Never fires at D1/GO, on a1/S1, on rare transitions, or after unrewarded trials. Magnitude grows along streaks of consecutive rewarded a2->S2c trials and with lateness in the episode; misses are the weak low-quartile activations around trials 80-85. False positives are mostly matching steps early in the end window or right after a rare/unrewarded break in the streak.",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 6,
+    "predicate": "(phase == D2) & (state == 2) & (common == 1) & (prev_reward == 1) & (prev_action != 1) & (prev_common != 0) & (value < 6)",
+    "split": "test",
+    "precision": 0.9363163757890828,
+    "recall": 0.8748373666406454,
+    "f1": 0.9045334289942155,
+    "mass_recall": 0.9796902067124675,
+    "correlation": 0.8804322082524523,
+    "n_active": 11529,
+    "n_predicted": 10772,
+    "coverage_by_activation_quartile": [
+      0.514047866805411,
+      0.9854267869535045,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 6,
+    "predicate": "(phase == D2) & (state == 2) & (common == 1) & (prev_reward == 1) & (prev_action != 1) & (prev_common != 0) & (value < 6)",
+    "split": "dev",
+    "precision": 0.9511254019292604,
+    "recall": 0.8804320095246194,
+    "f1": 0.9144144144144143,
+    "mass_recall": 0.9810103043980131,
+    "correlation": 0.893763466384285,
+    "n_active": 11759,
+    "n_predicted": 10885,
+    "coverage_by_activation_quartile": [
+      0.5329931972789116,
+      0.9887755102040816,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 6,
+  "final_verdict": "explained",
+  "skeptic": {
+    "revised_verdict": "explained",
+    "upheld": false,
+    "issues": [
+      "Systematic false-positive class the predicate leaves out: the previous trial reached its state by a RARE transition. On test, original predicate & (prev_common==0) predicts 1865 steps at precision 0.049 (recall 0.008). That is about 60% of the predicate's ~3100 test false positives. The unit needs the previous trial to be a COMMON rewarded a2->S2 trial, not just any rewarded a2 trial. On dev, prev_common==0 holds only 77 of 11759 activations.",
+      "Adding (prev_common != 0) raises test F1 from 0.826 to 0.885 with the ep_trial>=86 clock (P 0.882, R 0.888, mass recall 0.976). With value<6 in place of the clock it reaches 0.905 (P 0.936, R 0.875, mass recall 0.980). So the reported predicate and its numbers understate how specific the unit is.",
+      "The label 'after a rewarded a2->S2 stay' overclaims relative to the predicate. The predicate only checks prev_reward==1 and prev_action!=1. It never checks that the previous trial landed in S2, and that condition is exactly where the systematic false positives are.",
+      "Minor: 'never fires after unrewarded trials' is not literally true. On dev, 485 of 11759 activations (4.1%) have prev_reward==0, though they carry only 0.6% of the activation mass. They are weak decaying tails right after a streak breaks.",
+      "Claims that check out: active only at D2 (0 activations at D1 and GO); 0 when common==0 (the current trial is never rare); essentially 0 when prev_action==1 (10 of 11759); 4 activations in trials 70-79 and none before; reported test scores reproduce (0.767 / 0.896 / 0.826 / 0.979). Firing is also lower when good==1: 822 test predictions at precision 0.685 vs 0.898 when good==2, a secondary modulation."
+    ],
+    "revised_label": "late-episode D2 of an a2->S2 common trial that follows a rewarded a2->S2 common trial (a streak of rewarded common a2->S2 trials)",
+    "better_predicate": "(phase == D2) & (state == 2) & (common == 1) & (prev_reward == 1) & (prev_action != 1) & (prev_common != 0) & (value < 6)",
+    "better_predicate_test_f1": 0.905
+  },
+  "final_label": "late-episode D2 of an a2->S2 common trial that follows a rewarded a2->S2 common trial (a streak of rewarded common a2->S2 trials)",
+  "original_predicate": "(phase == D2) & (state == 2) & (common == 1) & (prev_reward == 1) & (prev_action != 1) & (ep_trial >= 86)",
+  "original_test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 6,
+    "predicate": "(phase == D2) & (state == 2) & (common == 1) & (prev_reward == 1) & (prev_action != 1) & (ep_trial >= 86)",
+    "split": "test",
+    "precision": 0.76662214306916,
+    "recall": 0.8960881255963223,
+    "f1": 0.8263147370525894,
+    "mass_recall": 0.9791609973383016,
+    "correlation": 0.7857882938631587,
+    "n_active": 11529,
+    "n_predicted": 13476,
+    "coverage_by_activation_quartile": [
+      0.6129032258064516,
+      0.9715475364330326,
+      1.0,
+      1.0
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 6,
+    "predicate": "(phase == D2) & (state == 2) & (common == 1) & (prev_reward == 1) & (prev_action != 1) & (ep_trial >= 86)",
+    "split": "dev",
+    "precision": 0.8120277323362156,
+    "recall": 0.8864699379198911,
+    "f1": 0.8476174987802895,
+    "mass_recall": 0.9749717909808957,
+    "correlation": 0.8171515281716302,
+    "n_active": 11759,
+    "n_predicted": 12837,
+    "coverage_by_activation_quartile": [
+      0.5850340136054422,
+      0.9615646258503401,
+      0.9993197278911564,
+      1.0
+    ]
+  },
+  "predicate_from": "skeptic"
+}

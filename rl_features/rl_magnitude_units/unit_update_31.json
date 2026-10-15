@@ -1,0 +1,111 @@
+{
+ "label": "Late in episodes, update gate drops when belief favours S1 or after a1, mostly at GO.",
+ "short_terms": "belief_lo * np.exp(ep_trial/20) ;; (phase == GO) * belief_lo * np.exp(ep_trial/20) ;; (phase==D1)*last_is('a1 S2 u')*np.exp(ep_trial/10)",
+ "terms": "belief_lo * np.exp(ep_trial/20) ;; (phase == GO) * belief_lo * np.exp(ep_trial/20) ;; (phase==GO)*(prev_action==1)*np.exp(ep_trial/20) ;; (phase==D1)*(prev_reward==0)*np.exp(ep_trial/20) ;; (phase==GO)*(tv(\"action\",-2)==1)*np.exp(ep_trial/20) ;; (phase==GO)*(tv(\"action\",-3)==1)*np.exp(ep_trial/20) ;; (phase==D1)*(prev_action==1)*(prev_state==2)*np.exp(ep_trial/20) ;; (prev_action==1)*np.exp(ep_trial/20)",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "z31 sits near 1 (saturated) and dips below 1, mostly late in the episode (the timing baseline already falls from 0.994 to 0.956 at GO in trials 90-99). Beyond timing, the dip gets deeper when the ideal observer believes S1 is good (graded belief_lo, negative weight, about 3x stronger at GO than at D1/D2) and at GO after an a1 choice. Both effects grow roughly exponentially with episode trial: exp(ep_trial/20) scaling fit clearly better than linear scaling or step terms. With an a2 choice or an S2-good belief it stays at the ceiling. The free fit adds a D1 dip after an unrewarded trial, a D1 dip after a1->S2 (rare) trials, and a longer a1 choice history (trials -2, -3) at GO, so a run of a1 choices deepens the dip. Future and hidden variables (this reward, good state, since_rev) add little. The worst-fit windows are long late-episode a1 runs where the dip is underpredicted. Short-form test 0.41 is 88% of the free fit (0.47) and above the profile additive ceiling (0.35) because of the episode-time interaction.",
+ "full_test_scores": {
+  "gate": "unit_update",
+  "feature": 31,
+  "terms": [
+   "belief_lo * np.exp(ep_trial/20)",
+   "(phase == GO) * belief_lo * np.exp(ep_trial/20)",
+   "(phase==GO)*(prev_action==1)*np.exp(ep_trial/20)",
+   "(phase==D1)*(prev_reward==0)*np.exp(ep_trial/20)",
+   "(phase==GO)*(tv(\"action\",-2)==1)*np.exp(ep_trial/20)",
+   "(phase==GO)*(tv(\"action\",-3)==1)*np.exp(ep_trial/20)",
+   "(phase==D1)*(prev_action==1)*(prev_state==2)*np.exp(ep_trial/20)",
+   "(prev_action==1)*np.exp(ep_trial/20)"
+  ],
+  "weights": [
+   -1.1106892222099696e-05,
+   -2.9312688282473635e-05,
+   -5.948419235084416e-05,
+   -4.98981798263036e-05,
+   -1.6996052157983127e-05,
+   -2.260038260070892e-05,
+   -0.00013248162286870274,
+   -2.459865859737051e-06
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.4683607027764609,
+  "r2": 0.7760612977094495,
+  "r2_timing_only": 0.5787769951166897
+ },
+ "gate": "unit_update",
+ "feature": 31,
+ "test_scores": {
+  "gate": "unit_update",
+  "feature": 31,
+  "terms": [
+   "belief_lo * np.exp(ep_trial/20)",
+   "(phase == GO) * belief_lo * np.exp(ep_trial/20)",
+   "(phase==D1)*last_is('a1 S2 u')*np.exp(ep_trial/10)"
+  ],
+  "weights": [
+   -1.1053046221830736e-05,
+   -3.981920451889794e-05,
+   -1.937021161502643e-06
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.43319049296368806,
+  "r2": 0.7612467962497369,
+  "r2_timing_only": 0.5787769951166897
+ },
+ "dev_scores": {
+  "gate": "unit_update",
+  "feature": 31,
+  "terms": [
+   "belief_lo * np.exp(ep_trial/20)",
+   "(phase == GO) * belief_lo * np.exp(ep_trial/20)",
+   "(phase==D1)*last_is('a1 S2 u')*np.exp(ep_trial/10)"
+  ],
+  "weights": [
+   -1.1053046221830736e-05,
+   -3.981920451889794e-05,
+   -1.937021161502643e-06
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.40235162984301676,
+  "r2": 0.7610590960264585,
+  "r2_timing_only": 0.6001981835727599
+ },
+ "final_verdict": "partially_explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The 'after a1' claim is weak. Taking the GO prev_action==1 term out of the recorded short form lowers test R^2 only from 0.412 to 0.392. Swapping it for a D1 dip after an a1->S2 unrewarded trial, (phase==D1)*last_is('a1 S2 u')*exp(ep_trial/10), raises test R^2 to 0.433. A D1 dip after any unrewarded trial (exp/10) also beats it, at 0.424. So the label stresses a minor effect and leaves out a bigger one.",
+   "The label says the effect is 'mostly at GO', but misses on the recorded short form show the largest systematic error is at D1: after a1 S2 u it over-predicts by -0.007 (the real dip is deeper than predicted), plus -0.003 after a1 S2 r. The worst-fit windows also contain large D1 dips after r0 late in the episode (e.g. 0.91 actual vs 0.98 predicted) that the short form does not capture.",
+   "A previous-choice error remains at GO under every short form tried. It under-predicts by +0.004 after a2 trials and over-predicts by -0.002 to -0.004 after a1 trials, so the a1/a2 history effect is only partly captured. Deep dips in long late a1 runs (0.85-0.87 actual vs about 0.93 predicted) are still under-predicted.",
+   "The time-scaling claims check out. Exponential scaling (test R^2 0.412 at /10 and /20; 0.38 at /5 and /40) beats linear ep_trial (0.33), a step at trial 90 or later (0.28) and no scaling (0.24). Graded belief_lo (0.41) beats raw belief (0.28). Previous-action-only forms (0.25) and an a1-run count (0.24) fall well short of belief_lo, so the belief claim holds."
+  ],
+  "revised_verdict": "partially_explained",
+  "revised_label": "Late in episodes the update gate dips when belief favours S1 (most at GO) and at D1 after a1->S2 unrewarded.",
+  "better_short_terms": "belief_lo * np.exp(ep_trial/20) ;; (phase == GO) * belief_lo * np.exp(ep_trial/20) ;; (phase==D1)*last_is('a1 S2 u')*np.exp(ep_trial/10)",
+  "better_short_terms_test_r2_beyond_timing": 0.43319049296368806
+ },
+ "final_label": "Late in episodes the update gate dips when belief favours S1 (most at GO) and at D1 after a1->S2 unrewarded.",
+ "original_short_terms": "belief_lo * np.exp(ep_trial/20) ;; (phase == GO) * belief_lo * np.exp(ep_trial/20) ;; (phase==GO)*(prev_action==1)*np.exp(ep_trial/20)",
+ "original_test_scores": {
+  "gate": "unit_update",
+  "feature": 31,
+  "terms": [
+   "belief_lo * np.exp(ep_trial/20)",
+   "(phase == GO) * belief_lo * np.exp(ep_trial/20)",
+   "(phase==GO)*(prev_action==1)*np.exp(ep_trial/20)"
+  ],
+  "weights": [
+   -1.379924841560068e-05,
+   -2.751932002935672e-05,
+   -7.823983599430223e-05
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.41234325665277505,
+  "r2": 0.7524654607273417,
+  "r2_timing_only": 0.5787769951166897
+ },
+ "terms_from": "skeptic"
+}

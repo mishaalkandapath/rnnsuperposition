@@ -1,0 +1,112 @@
+{
+ "label": "At GO, tracks belief that S1 is good (a1 side), plus last choice a1; D1 after unrewarded a1.",
+ "short_terms": "(phase == GO) * np.tanh(belief_lo) ;; (phase == GO) * last_is('a2 S2 u') ;; (phase == D1) * (prev_reward == 0) * (prev_action == 1)",
+ "terms": "(phase == GO) * np.tanh(belief_lo) ;; (phase == GO) * (2 * prev_action - 3) ;; (phase == GO) * (2*(prev_state==1)-1) * (2*prev_reward-1) ;; (phase == GO) * (2*(tv(\"state\",-2)==1)-1) * (2*tv(\"reward\",-2)-1) * (tv(\"reward\",-2)>=0) ;; (phase == D1) * np.tanh(belief_lo) ;; (phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a1 S1 u\") ;; (phase == GO) * (2 * prev_action - 3) * (prev_action>0) * np.tanh(belief_lo)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Raw candidate n of unit 0. Timing: about -0.8 at D1, near 0 at GO, saturated at -1 at D2 (D2 carries almost no residual). Most of the magnitude is at GO, where it is a saturating signed readout of the ideal-observer belief that S1 is good: about +0.8 when belief favours S1/a1 and -0.8 when it favours S2/a2 (tanh(belief_lo) fits much better than a step). A smaller GO term for the previous choice being a1 adds persistence. At D1 it rises after an unrewarded a1 trial (a1 S2 u +0.76, a1 S1 u +0.34). The 8-term free fit (adding last-trial model-based evidence, the trial before, and a D1 belief term) gains only about 0.02 over the short form. The remaining misses are windows where the agent keeps one choice against the observer belief, which observed-only cues cannot capture (policy decile reaches 0.92). No future variables are used.",
+ "full_test_scores": {
+  "gate": "unit_candidate",
+  "feature": 0,
+  "terms": [
+   "(phase == GO) * np.tanh(belief_lo)",
+   "(phase == GO) * (2 * prev_action - 3)",
+   "(phase == GO) * (2*(prev_state==1)-1) * (2*prev_reward-1)",
+   "(phase == GO) * (2*(tv(\"state\",-2)==1)-1) * (2*tv(\"reward\",-2)-1) * (tv(\"reward\",-2)>=0)",
+   "(phase == D1) * np.tanh(belief_lo)",
+   "(phase == D1) * last_is(\"a1 S2 u\")",
+   "(phase == D1) * last_is(\"a1 S1 u\")",
+   "(phase == GO) * (2 * prev_action - 3) * (prev_action>0) * np.tanh(belief_lo)"
+  ],
+  "weights": [
+   0.7663254511935523,
+   -0.027366151233525697,
+   0.0030951578809365636,
+   0.00446295090788729,
+   0.08343802070426447,
+   0.7440814681598609,
+   0.3873755785600238,
+   -0.13277465180867815
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7562688526036608,
+  "r2": 0.8539497884687929,
+  "r2_timing_only": 0.4007732984011676
+ },
+ "gate": "unit_candidate",
+ "feature": 0,
+ "test_scores": {
+  "gate": "unit_candidate",
+  "feature": 0,
+  "terms": [
+   "(phase == GO) * np.tanh(belief_lo)",
+   "(phase == GO) * last_is('a2 S2 u')",
+   "(phase == D1) * (prev_reward == 0) * (prev_action == 1)"
+  ],
+  "weights": [
+   0.7870592125089659,
+   -0.5488288048891249,
+   0.5872482781114708
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7621242648794706,
+  "r2": 0.8574585078533277,
+  "r2_timing_only": 0.4007732984011676
+ },
+ "dev_scores": {
+  "gate": "unit_candidate",
+  "feature": 0,
+  "terms": [
+   "(phase == GO) * np.tanh(belief_lo)",
+   "(phase == GO) * last_is('a2 S2 u')",
+   "(phase == D1) * (prev_reward == 0) * (prev_action == 1)"
+  ],
+  "weights": [
+   0.7870592125089659,
+   -0.5488288048891249,
+   0.5872482781114708
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.7787078099220098,
+  "r2": 0.8675371395815792,
+  "r2_timing_only": 0.4014119505449476
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The GO term 'prev_action == 1' barely helps. Dropping it from the 3-term form changes test R^2 only from 0.743 to about 0.736 (tested by swapping in last_is('a1 S2 u') or prev_action == 2). Belief alone at GO gets 0.664, and adding prev_action==1 lifts that to only 0.679. So 'plus last choice a1' is a minor fitted correction, but the label presents it as a main driver.",
+   "Misses on the recorded short form show a large systematic error at GO. After a2 S2 u it over-predicts by -0.49, and after a1 S2 r by -0.40. After a common-unrewarded a2 trial the belief moves toward S1, but the unit stays negative (profile residual -0.49). The +0.25 a1 bonus pushes the a1 S2 r case the wrong way. The explanation says the remaining misses are scattered 'policy against belief' windows, but this is a clean previous-trial pattern.",
+   "Replacing the prev_action term with (phase == GO) * last_is('a2 S2 u') (weight -0.55) raises test R^2 from 0.743 to 0.762 and dev R^2 to 0.779. That beats the 8-term free fit (0.756 test). The largest remaining errors drop to about 0.24 (GO after a1 S2 r -0.24, GO after a1 S1 r +0.22, D1 after a1 S1 u -0.23).",
+   "Checks that held up: tanh(belief_lo) beats tanh(2*belief_lo) (0.725). At D1 the claim 'after unrewarded a1' holds: prev_reward==0 * prev_action==1 scores 0.743, better than last_is('a1 S2 u') alone (0.736), prev_reward==0 alone (0.714), prev_state==2 * unrewarded (0.710), or a D1 belief term (0.703). No future variables are used.",
+   "There is still a gap to the observed-only additive ceiling (0.91 'all observed') and to the excluded policy-decile table (0.92). Part of the GO signal is a lag or stickiness relative to the ideal observer that 3 terms only partly capture."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At GO, signed belief S1 is good, held low after common-unrewarded a2; D1 rises after unrewarded a1.",
+  "better_short_terms": "(phase == GO) * np.tanh(belief_lo) ;; (phase == GO) * last_is('a2 S2 u') ;; (phase == D1) * (prev_reward == 0) * (prev_action == 1)",
+  "better_short_terms_test_r2_beyond_timing": 0.7621
+ },
+ "final_label": "At GO, signed belief S1 is good, held low after common-unrewarded a2; D1 rises after unrewarded a1.",
+ "original_short_terms": "(phase == GO) * np.tanh(belief_lo) ;; (phase == GO) * (prev_action == 1) ;; (phase == D1) * (prev_reward == 0) * (prev_action == 1)",
+ "original_test_scores": {
+  "gate": "unit_candidate",
+  "feature": 0,
+  "terms": [
+   "(phase == GO) * np.tanh(belief_lo)",
+   "(phase == GO) * (prev_action == 1)",
+   "(phase == D1) * (prev_reward == 0) * (prev_action == 1)"
+  ],
+  "weights": [
+   0.6935286564182399,
+   0.2498130123823322,
+   0.6349972064809895
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7429059817931153,
+  "r2": 0.8459423994690983,
+  "r2_timing_only": 0.4007732984011676
+ },
+ "terms_from": "skeptic"
+}

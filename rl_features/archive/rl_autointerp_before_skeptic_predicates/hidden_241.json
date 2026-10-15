@@ -1,0 +1,64 @@
+{
+  "label": "D2 after a common a2 -> S2 transition (before ~trial 85 of the episode)",
+  "predicate": "(phase == D2) & (action == 2) & (state == 2) & (ep_trial < 85)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2, and only when the agent chose a2 and reached S2 (a common transition; inputs in_action=2, in_state=2). It never fires at D1 or GO, on rare transitions, or after a1/S1. Within that condition it fires about 71% of the time. Most of the misses are late in the episode: activity fades after trial ~80 and is essentially zero for trials 90-99. Adding ep_trial < 85 raises dev F1 from 0.83 (precision 0.71, recall 1.0) to 0.89 while keeping 99% of the activation mass. Everything used is observed at D2. Magnitude: the top activations are the first common a2->S2 trial right after the agent switched from a1 (often after a rare-rewarded or common-unrewarded a1 trial). Activation is also higher when the model value is high (>8.1), and it drops over runs of repeated a2->S2 trials. Gating further on stay or value did not improve F1.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 241,
+    "predicate": "(phase == D2) & (action == 2) & (state == 2) & (ep_trial < 85)",
+    "split": "test",
+    "precision": 0.8189682913869618,
+    "recall": 0.9720033752276058,
+    "f1": 0.8889475565375617,
+    "mass_recall": 0.9857004479516847,
+    "correlation": 0.7213095655589905,
+    "n_active": 112585,
+    "n_predicted": 133623,
+    "coverage_by_activation_quartile": [
+      0.9335275517817174,
+      0.9711504299012294,
+      0.9903005755702409,
+      0.993036310665814
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 241,
+    "predicate": "(phase == D2) & (action == 2) & (state == 2) & (ep_trial < 85)",
+    "split": "dev",
+    "precision": 0.8190949667393632,
+    "recall": 0.976406567397827,
+    "f1": 0.8908593945937674,
+    "mass_recall": 0.9886706746769082,
+    "correlation": 0.724445678155118,
+    "n_active": 107318,
+    "n_predicted": 127929,
+    "coverage_by_activation_quartile": [
+      0.9415206857994782,
+      0.9753261274692508,
+      0.993029930299303,
+      0.9957508665995751
+    ]
+  },
+  "gate": "hidden",
+  "feature": 241,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The factual claims hold up. On dev, the feature never fires outside D2 ((phase != D2): precision 0, recall 0). It never fires on a2->S1 rare transitions (precision 0) or on any a1 trial at D2 (precision 0). The base predicate without ep_trial has recall 1.0 and precision 0.71 on both dev and test. Adding ep_trial < 85 gives test F1 0.889, which matches the reported score.",
+      "Systematic silent class the explanation misses: when the previous trial reached S1 and was rewarded, the feature is almost always off. Base & (tv('state',-1)==1) & (tv('reward',-1)==1) covers 7593 predicted dev steps at precision 0.028, recall 0.002 and mass 0.001. When the previous trial reached S1 and was unrewarded, precision is 0.64. This is a clean exception driven by observed history, not scattered noise.",
+      "Excluding that class raises F1 to 0.919 on dev and 0.918 on test (precision 0.871, recall 0.970, mass 0.985 on test), up from 0.889. That contradicts the claim that further gating on history did not improve F1. The original analysis tested stay and value but never tested the previous trial's state x reward.",
+      "Supporting evidence for the same pattern: when the previous trial reached S1, precision is 0.48 overall. When it reached S2, precision is 0.947. With prev_common == 1 it is 0.94, and with prev_common == 0 it is 0.48. So most of the remaining false positives come from the previous trial's outcome, not only from late-episode fading.",
+      "Every variable used is observed at D2 (the previous trial's state and reward are both past), so no future variable is involved. The core label is right but incomplete: it leaves out the suppression after a rewarded S1 trial."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after a common a2 -> S2 transition (before ~trial 85), silent if the previous trial reached S1 and was rewarded",
+    "better_predicate": "(phase == D2) & (action == 2) & (state == 2) & (ep_trial < 85) & ~((tv('state',-1) == 1) & (tv('reward',-1) == 1))",
+    "better_predicate_test_f1": 0.918
+  },
+  "final_label": "D2 after a common a2 -> S2 transition (before ~trial 85), silent if the previous trial reached S1 and was rewarded"
+}

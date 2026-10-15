@@ -1,0 +1,67 @@
+{
+  "label": "GO after rewarded rare a1->S2, late episode (>=75), belief not S2-committed",
+  "terms": "(phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 75) * (belief > 0.45) ;; (phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 75) * (belief > 0.45) * (ep_trial >= 85) ;; (phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 75) * (belief > 0.45) * (tv(\"action\", -2) == 1) * (tv(\"reward\", -2) == 0) ;; (phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 75) * (belief > 0.45) * (tv(\"action\", -2) == 2)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Very sparse feature (nonzero on 0.1% of steps), only at GO. It fires essentially only on the GO step after a rewarded rare a1->S2 trial, late in the episode (from about trial 75, stronger from 85), and only when the ideal-observer belief has not swung to S2 (belief P(S1 good) > 0.45, i.e. mid/ambiguous). Two trials back matters: larger when that trial was also a1 and unrewarded, much smaller when it was a2. D1 and D2 are always zero. The earlier explanation conditioned on the model policy not being committed to a2; belief > 0.45 stands in for that from observed quantities only. Remaining misses are mostly firings on the first trial of a window, where the previous trial is unknown. Test R2 beyond timing 0.51 (dev 0.51); the profile additive ceiling (all = 0.09) is far below because the effect is a conjunction. Last trial alone gives 0.08; adding late-episode gating gives 0.33; belief gating 0.45.",
+  "gate": "update",
+  "feature": 67,
+  "test_scores": {
+    "gate": "update",
+    "feature": 67,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 75) * (belief > 0.45)",
+      "(phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 75) * (belief > 0.45) * (ep_trial >= 85)",
+      "(phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 75) * (belief > 0.45) * (tv(\"action\", -2) == 1) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 75) * (belief > 0.45) * (tv(\"action\", -2) == 2)"
+    ],
+    "weights": [
+      0.055894598839906134,
+      0.3273327213615082,
+      0.18199079250848932,
+      -0.25139359388650956
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5084639015448529,
+    "r2": 0.5148082706004511,
+    "r2_timing_only": 0.012907229144589971
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 67,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 75) * (belief > 0.45)",
+      "(phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 75) * (belief > 0.45) * (ep_trial >= 85)",
+      "(phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 75) * (belief > 0.45) * (tv(\"action\", -2) == 1) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * last_is(\"a1 S2 r\") * (ep_trial >= 75) * (belief > 0.45) * (tv(\"action\", -2) == 2)"
+    ],
+    "weights": [
+      0.055894598839906134,
+      0.3273327213615082,
+      0.18199079250848932,
+      -0.25139359388650956
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.509891408074743,
+    "r2": 0.5163829285093962,
+    "r2_timing_only": 0.013245065566292347
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The scores reproduce: dev R^2 beyond timing 0.510, test 0.508.",
+      "Every factual claim held up when tested. (1) The effect is GO-only and needs the previous trial to be a1 S2 r. In the profile residual table, GO after a1 S2 r is +0.050; every other cell is about -0.002 and D1/D2 are 0. (2) Late-episode gating is real. Below trial 75 the term weight is 0.001. The step at 85 also holds (weight 0.33), and a graded (ep_trial-75) term adds only 0.01. (3) The belief > 0.45 gate is real. Previous trial plus timing reaches 0.364, and adding the gate gives 0.467. The weight below the gate is -0.002. (4) The trial before matters as claimed: a1 unrewarded raises activation (+0.18) and a2 lowers it (-0.25).",
+      "Misses show no systematic error by phase or by previous trial. Mean errors are 0.001 or less. The worst windows are all firings on the window's first trial (rel -3), where prev_action and prev_state are -1. Observed proxies cannot recover them: a term for first trial x prev_reward == 1 x late episode got weight 0 and added 0.000. So this ceiling comes from the data, not from a gap in the explanation.",
+      "Small overclaims. The comparison is apples to oranges: 'nothing is lost' compares an F1 of 0.80 with an R^2 of 0.51. The belief gate stands in for the policy gate at about +0.10 R^2, but nobody scored the model-output version under the same magnitude metric, so the size of the loss is unmeasured, not shown to be zero. The step function also hides a small graded belief effect within the gate: a belief term adds about 0.01 (test 0.521).",
+      "Further checks found little or nothing: belief_cover adds about 0; trials -3 back add about 0.01; extra belief thresholds at 0.55 and 0.65 do not help."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after a rewarded rare a1->S2 trial, late in the episode (>=75, stronger >=85), when the ideal-observer belief has not swung to S2 (P(S1 good) > 0.45); higher if the trial before was a1 unrewarded, lower if it was a2",
+    "better_terms": "(phase == GO)*last_is('a1 S2 r')*(ep_trial>=75)*(belief>0.45) ;; (phase == GO)*last_is('a1 S2 r')*(ep_trial>=75)*(belief>0.45)*(ep_trial>=85) ;; (phase == GO)*last_is('a1 S2 r')*(ep_trial>=75)*(belief>0.45)*(tv('action',-2)==1)*(tv('reward',-2)==0) ;; (phase == GO)*last_is('a1 S2 r')*(ep_trial>=75)*(belief>0.45)*(tv('action',-2)==2) ;; (phase == GO)*last_is('a1 S2 r')*(ep_trial>=75)*(belief>0.45)*belief",
+    "better_terms_test_r2_beyond_timing": 0.521
+  },
+  "final_label": "GO after a rewarded rare a1->S2 trial, late in the episode (>=75, stronger >=85), when the ideal-observer belief has not swung to S2 (P(S1 good) > 0.45); higher if the trial before was a1 unrewarded, lower if it was a2"
+}

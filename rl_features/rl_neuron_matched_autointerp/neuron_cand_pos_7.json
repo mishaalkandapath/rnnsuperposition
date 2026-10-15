@@ -1,0 +1,104 @@
+{
+  "label": "D2 arrival at S2 after a rewarded previous trial, while value is high (early episode)",
+  "predicate": "(phase == D2) & (state == S2) & (prev_reward == 1) & (value > 8.1) & (ep_trial < 45)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (100% of mass), and only when the state input is S2 (32961/32964 active steps) and the previous trial was rewarded (32958/32964). Those three conditions give recall ~1.0 but precision 0.26. The rest of the gating is the model value head being high (>8.1; 98% of mass falls in the top value bin) and, closely related, the episode trial being under about 50: it never fires after ep_trial ~50, which is odd and may be a quirk of the episode or reversal schedule, not something it encodes. Adding ep_trial<50 gives about the same F1 (0.82 vs 0.82), so the simpler value-gated predicate was recorded. All variables are observed at D2 (value is the agent's own output). Magnitude: the largest activations (0.75-1.0 of max) in the top windows are rare transitions a1->S2 right after a rewarded trial; common a2->S2 steps in a streak of S2 rewards fire more weakly (~0.1-0.3). This magnitude claim comes from the top/quartile example windows only, not from a systematic check. It does not fire at D1 or GO, at S1, after an unrewarded trial, or late in the episode.",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 7,
+    "predicate": "(phase == D2) & (state == S2) & (prev_reward == 1) & (value > 8.1) & (ep_trial < 45)",
+    "split": "test",
+    "precision": 0.7676680354441323,
+    "recall": 0.9544965962020782,
+    "f1": 0.8509482930724696,
+    "mass_recall": 0.972312790994945,
+    "correlation": 0.7596268622041593,
+    "n_active": 33492,
+    "n_predicted": 41643,
+    "coverage_by_activation_quartile": [
+      0.8865400692702735,
+      0.964289979696644,
+      0.9843544727099008,
+      0.9828018631314941
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 7,
+    "predicate": "(phase == D2) & (state == S2) & (prev_reward == 1) & (value > 8.1) & (ep_trial < 45)",
+    "split": "dev",
+    "precision": 0.785048824232762,
+    "recall": 0.9560429559519475,
+    "f1": 0.8621491492039174,
+    "mass_recall": 0.9732783827365438,
+    "correlation": 0.7695951718233057,
+    "n_active": 32964,
+    "n_predicted": 40144,
+    "coverage_by_activation_quartile": [
+      0.8913966751607815,
+      0.9680863972818833,
+      0.9832544594102658,
+      0.9814342919548599
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 7,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The claim 'Adding ep_trial < 50 gives about the same F1 (0.82 vs 0.82)' is false. On test, base & ep_trial<50 scores F1 0.700 (P 0.539), against 0.808 for the value-gated predicate. The two gates are also not interchangeable, because they add up: base & value>8.1 & ep_trial<45 scores test F1 0.851 (P 0.768, R 0.954, mass recall 0.972). Value alone leaves a systematic class of false positives in trials 45-50+ where value is still above 8.1. The profile shows the rate collapsing from 0.064 in trials 30-39 to 0.029 in 40-49 to 0.000 from trial 50 on.",
+      "The magnitude claim is wrong as a general statement: 'the largest activations are rare a1->S2 transitions right after a rewarded trial.' D2 & S2 & prev_reward==1 & action==1 has precision 0.046 and recall 0.042 (dev). Rare a1->S2 steps after a reward almost never fire. Of the top activation quartile, only 5.9% falls on action==1 steps. The unit is mostly driven by common a2->S2 (action==2 holds 94% of the activation mass). The few large rare-transition activations in the example windows are unrepresentative.",
+      "The label omits that 94% of the activation mass is on a2 (common) arrivals, so 'arrival at S2' is mostly 'common arrival at S2 after choosing a2'. Adding action==2 does not raise F1 (0.811 dev), so the predicate is fine, but the magnitude description should say this.",
+      "The remaining test false positives (about 10k with the improved predicate) are mostly a2->S2c steps after a reward that do not fire. They look like scattered noise with no single clean pattern. Adding good!=1 helps a little (dev F1 0.867), at a cost in recall.",
+      "The checks that held up: activity is 100% at D2 and 0 at D1/GO; state S2 accounts for 32961 of 32964 active steps; prev_reward==1 for 32958 of 32964; no future variables are used; the reported test scores reproduce exactly (P 0.695, R 0.966, F1 0.808)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 arrival at S2 (mostly common a2->S2) after a rewarded previous trial, early in the episode (value high and trial < ~45)",
+    "better_predicate": "(phase == D2) & (state == S2) & (prev_reward == 1) & (value > 8.1) & (ep_trial < 45)",
+    "better_predicate_test_f1": 0.851
+  },
+  "final_label": "D2 arrival at S2 (mostly common a2->S2) after a rewarded previous trial, early in the episode (value high and trial < ~45)",
+  "original_predicate": "(phase == D2) & (state == S2) & (prev_reward == 1) & (value > 8.1)",
+  "original_test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 7,
+    "predicate": "(phase == D2) & (state == S2) & (prev_reward == 1) & (value > 8.1)",
+    "split": "test",
+    "precision": 0.6947497209581867,
+    "recall": 0.9664098889286994,
+    "f1": 0.8083666333666335,
+    "mass_recall": 0.9745213919615442,
+    "correlation": 0.7182341301475801,
+    "n_active": 33492,
+    "n_predicted": 46588,
+    "coverage_by_activation_quartile": [
+      0.9335960826466022,
+      0.9648871372268004,
+      0.9843544727099008,
+      0.9828018631314941
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 7,
+    "predicate": "(phase == D2) & (state == S2) & (prev_reward == 1) & (value > 8.1)",
+    "split": "dev",
+    "precision": 0.7103386809269162,
+    "recall": 0.9671156413056667,
+    "f1": 0.8190740455269514,
+    "mass_recall": 0.9753401676526581,
+    "correlation": 0.7278049604380605,
+    "n_active": 32964,
+    "n_predicted": 44880,
+    "coverage_by_activation_quartile": [
+      0.9345953161024148,
+      0.9691784977551268,
+      0.9832544594102658,
+      0.9814342919548599
+    ]
+  },
+  "predicate_from": "skeptic"
+}

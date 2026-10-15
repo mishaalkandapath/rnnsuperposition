@@ -1,0 +1,63 @@
+{
+  "label": "GO after rewarded rare a2->S1 while policy still favors a2, stronger early in episode",
+  "terms": "(phase == GO) * last_is(\"a2 S1 r\") * (choice < 0) * (ep_trial < 70) ;; (phase == GO) * last_is(\"a2 S1 r\") * (choice < 0) * np.clip(70 - ep_trial, 0, 70) ;; (phase == GO) * last_is(\"a2 S1 r\")",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Sparse feature (0.8% of steps), only fires at GO. Magnitude is almost entirely determined by: previous trial was a2 -> S1 (rare) rewarded, AND the model policy at GO still favors a2 (choice logit < 0, i.e. not following the model-based switch to a1), with size larger earlier in the episode (declines roughly linearly with ep_trial, ~0 after trial 70). Last-trial pattern alone gives dev R^2 0.28; adding the a2-leaning policy gate and episode-time scaling raises it to 0.73 dev, well above the additive all ceiling of the profile (0.33) because the drivers interact multiplicatively. Using the future action == 2 instead of the observed policy sign scores slightly lower (0.72 dev); recorded the observed version. Other previous-trial patterns, earlier-trial rewards, hidden good state and since_rev do not matter. Remaining misses are mostly window-start trials where the previous trial is not visible in the window.",
+  "gate": "update",
+  "feature": 174,
+  "test_scores": {
+    "gate": "update",
+    "feature": 174,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S1 r\") * (choice < 0) * (ep_trial < 70)",
+      "(phase == GO) * last_is(\"a2 S1 r\") * (choice < 0) * np.clip(70 - ep_trial, 0, 70)",
+      "(phase == GO) * last_is(\"a2 S1 r\")"
+    ],
+    "weights": [
+      0.015723514918312136,
+      0.01852046424730637,
+      0.005531240449280425
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7181087771287755,
+    "r2": 0.7254236511638705,
+    "r2_timing_only": 0.025949279160198402
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 174,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S1 r\") * (choice < 0) * (ep_trial < 70)",
+      "(phase == GO) * last_is(\"a2 S1 r\") * (choice < 0) * np.clip(70 - ep_trial, 0, 70)",
+      "(phase == GO) * last_is(\"a2 S1 r\")"
+    ],
+    "weights": [
+      0.015723514918312136,
+      0.01852046424730637,
+      0.005531240449280425
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7254556744973644,
+    "r2": 0.7323064144188285,
+    "r2_timing_only": 0.024953128821445514
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims hold up. Test R^2 beyond timing: original 3 terms 0.718; GO*last_is('a2 S1 r') alone 0.256 (the explanation's 0.28 is the dev figure); adding only the (choice<0) gate 0.352; adding only the episode ramp 0.495. Both conditions are needed and they multiply, as claimed.",
+      "Swapping in the future choice (action==2) for the observed policy sign gives test 0.705 against 0.718 for the observed version, so recording the observed version is correct. Note that 'choice' is the model's own policy logit, which is a model-output quantity rather than an input history.",
+      "The episode-time claim holds. With 70 - ep_trial as the ramp, the cutoff can sit anywhere from 60 to 80 with little change (test 0.78-0.79 in the graded-choice model). A cutoff of 50 or 100 does worse (0.74-0.75).",
+      "The policy condition is graded, not a sign. Splitting by choice bin, the fitted ramp weight is +0.023 for choice<-4, +0.011 for -4..-2, +0.007 for -2..-1, +0.005 for -1..0, +0.004 for 0..1 and about 0 for choice>=1. Using the strength of the a2 preference, clip(-choice,0)*ramp, raises test R^2 from 0.718 to 0.80-0.82. The label and explanation describe this only as a threshold at choice<0, so they understate how much the policy strength matters.",
+      "Misses on the original and on the refined terms show no systematic error class by phase or previous trial (mean errors are about \u00b10.01 or smaller). The worst-fit windows are almost all GO activations on the first trial of a window, where the previous trial is not in the window, as the explanation says.",
+      "Small checks that add little: the trial two back being a2->S1 as well (test +0.000), the previous trial being missing from the window, and value at GO (+0.00 to +0.02)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after rewarded rare a2->S1, scaled by how strongly the policy still favors a2 and by earliness in the episode (fades out by ~trial 70)",
+    "better_terms": "(phase == GO) * last_is('a2 S1 r') * np.clip(-choice, 0, None) * np.clip(70 - ep_trial, 0, 70) ;; (phase == GO) * last_is('a2 S1 r') * (choice < 0) * np.clip(70 - ep_trial, 0, 70) ;; (phase == GO) * last_is('a2 S1 r') ;; (phase == GO) * last_is('a2 S1 r') * np.clip(-choice, 0, None) * np.clip(70 - ep_trial, 0, 70) * (tv('state', -2) == 1) ;; (phase == GO) * last_is('a2 S1 r') * np.clip(-choice, 0, None) * np.clip(70 - ep_trial, 0, 70) * value",
+    "better_terms_test_r2_beyond_timing": 0.82
+  },
+  "final_label": "GO after rewarded rare a2->S1, scaled by how strongly the policy still favors a2 and by earliness in the episode (fades out by ~trial 70)"
+}

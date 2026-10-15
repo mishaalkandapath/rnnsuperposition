@@ -1,0 +1,83 @@
+{
+  "label": "D1 reset gate higher after unrewarded / S2 trials, lower after S1 reward; D2 spike on invalid trials",
+  "terms": "(phase == D1) * table(prev_state*10+prev_reward, {11:-0.046, 10:0.05, 21:0.0, 20:0.063}) ;; (phase == D2) * (valid == 0) ;; (phase == GO) * choice ;; (phase==D2)*(prev_reward==0) ;; (phase==GO)*(prev_reward==0) ;; (phase==D1)*(prev_action==2) ;; (phase==D1)*(prev_reward==1)*(tv(\"reward\",-2)==1) ;; (phase==D2)*(action==1)*(state==1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw reset gate r of unit 10 is almost entirely set by phase (high ~0.86 at D1 and ~0.95 at GO, low ~0.36 at D2, all falling late in the episode); timing alone gives R^2 0.99. The residual comes mostly from the previous trial outcome read at D1: r is lower after a rewarded trial, most of all after S1 rewarded (-0.046), and higher after an unrewarded trial (+0.04 to +0.07), with S2 trials a bit higher than S1 trials at the same reward. It also drops a little more after two rewards in a row. The largest single effect is at D2 on invalid trials (fixated at GO or acted at D2): r jumps by about +0.26. Smaller effects: GO and D2 values are slightly lower after an unrewarded trial; at GO r follows the policy logit (higher when the policy favours a1); D2 is slightly higher after a1 to S1. Hidden good state, trials since reversal, value and future reward add almost nothing. Dev R^2 beyond timing 0.631, test 0.630 (all ceiling 0.73; last-trial table alone 0.67). All terms use only observed quantities.",
+  "gate": "unit_reset",
+  "feature": 10,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 10,
+    "terms": [
+      "(phase == D1) * table(prev_state*10+prev_reward, {11:-0.046, 10:0.05, 21:0.0, 20:0.063})",
+      "(phase == D2) * (valid == 0)",
+      "(phase == GO) * choice",
+      "(phase==D2)*(prev_reward==0)",
+      "(phase==GO)*(prev_reward==0)",
+      "(phase==D1)*(prev_action==2)",
+      "(phase==D1)*(prev_reward==1)*(tv(\"reward\",-2)==1)",
+      "(phase==D2)*(action==1)*(state==1)"
+    ],
+    "weights": [
+      0.9535445621040163,
+      0.2636194937041129,
+      0.0004050897617299829,
+      -0.018610690941377028,
+      -0.010963862760443258,
+      -0.007821022312258025,
+      -0.009431275160619777,
+      0.012175260714809951
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6301378597049245,
+    "r2": 0.9957568906027296,
+    "r2_timing_only": 0.9885278623167941
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 10,
+    "terms": [
+      "(phase == D1) * table(prev_state*10+prev_reward, {11:-0.046, 10:0.05, 21:0.0, 20:0.063})",
+      "(phase == D2) * (valid == 0)",
+      "(phase == GO) * choice",
+      "(phase==D2)*(prev_reward==0)",
+      "(phase==GO)*(prev_reward==0)",
+      "(phase==D1)*(prev_action==2)",
+      "(phase==D1)*(prev_reward==1)*(tv(\"reward\",-2)==1)",
+      "(phase==D2)*(action==1)*(state==1)"
+    ],
+    "weights": [
+      0.9535445621040163,
+      0.2636194937041129,
+      0.0004050897617299829,
+      -0.018610690941377028,
+      -0.010963862760443258,
+      -0.007821022312258025,
+      -0.009431275160619777,
+      0.012175260714809951
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6306947986471616,
+    "r2": 0.995753194602038,
+    "r2_timing_only": 0.9885005535194059
+  },
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The explanation says value 'adds almost nothing', but that is wrong once value is split by the previous reward at D1. Adding (phase==D1)*(prev_reward==1)*value and (phase==D1)*(prev_reward==0)*value to the label's table term plus the D2-invalid term lifts test R^2 beyond timing from 0.557 to 0.673, which beats the label's full 8-term set (0.630) with only 4 terms. The fitted weights have opposite signs: -0.0032 after a reward (r falls as value rises) and +0.0053 after no reward (r rises as value rises). The 'r drops after two rewards in a row' term is only a weak stand-in: +0.009 R^2, versus +0.041 for prev_reward*value alone.",
+      "Systematic miss in the label's own misses output: long rewarded runs late in the episode at D1 come out at about 0.66-0.69 when 0.76-0.81 is predicted (windows t94-t99, a1 S1c r1). These are exactly the cases the value interaction captures. The streak term barely moves them, and a 3-back reward count does no better (0.563).",
+      "The last-trial table is coded by state only, which mixes common and rare transitions. The residual is a1 S1 r -0.046 but a2 S1 r -0.023, and misses lists 'D1 after a2 S1 r' as the most under-predicted cell (+0.031). The label's claim that 'S2 trials sit a little higher than S1' is really a common-vs-rare effect after rewarded trials. A (phase==D1)*rare*rewarded term gets weight +0.022.",
+      "GO-phase dips are under-modelled. In repeated-a2 windows GO r reaches 0.73-0.78 against about 0.92 predicted. The linear (phase==GO)*choice term has weight about 0.0004 and adds only +0.005 R^2. A floor-shaped term, np.minimum(choice+10,0) at GO, does slightly better (+0.008). So 'rises slightly when the policy favours a1' is a weak description: the effect is a drop under strong a2 preference.",
+      "The label's reported 'ceiling 0.73' is not a real ceiling. An 8-term set with the value interaction reaches 0.737 on test.",
+      "Claims that check out: the timing profile, the D2-invalid spike (+0.26), the late-episode drop, and the D1 rewarded/unrewarded direction. No future variables are used."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "D1 r lower after reward and higher after no reward, scaled by the value read-out (more so the higher the value after a reward; rare rewards are milder); D2 spike when invalid; GO dips under strong a2 preference",
+    "better_terms": "(phase == D1) * table(prev_state*10+prev_reward, {11:-0.046, 10:0.05, 21:0.0, 20:0.063}) ;; (phase == D2) * (valid == 0) ;; (phase==D1)*(prev_reward==1)*value ;; (phase==D1)*(prev_reward==0)*value ;; (phase==D2)*(prev_reward==0) ;; (phase==GO)*(prev_reward==0) ;; (phase==GO)*np.minimum(choice+10,0) ;; (phase==D1)*(prev_action!=prev_state)*(prev_reward==1)",
+    "better_terms_test_r2_beyond_timing": 0.7367
+  },
+  "final_label": "D1 r lower after reward and higher after no reward, scaled by the value read-out (more so the higher the value after a reward; rare rewards are milder); D2 spike when invalid; GO dips under strong a2 preference"
+}

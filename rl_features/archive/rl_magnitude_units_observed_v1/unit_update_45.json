@@ -1,0 +1,75 @@
+{
+  "label": "lowered by last reward; raised at D2 by S2, by S1-unrewarded, belief toward S2",
+  "terms": "(prev_reward == 1) ;; (prev_reward==0)*(prev_state==S1)*(phase!=D2) ;; ((tv(\"reward\", -2) == 1)*1+(tv(\"reward\", -3) == 1)+(tv(\"reward\", -4) == 1)) ;; belief_lo*(phase!=D1) ;; (phase==D2)*(state==S2) ;; (phase==D2)*(prev_reward==0)*(action==1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 45. Timing dominates (R^2 0.91): high early (~0.75-0.9), decaying steeply late in the episode, highest at D2. Beyond timing, observed-only terms give test R^2 0.50 (dev 0.49) against an all-cue ceiling of 0.56 (all observed 0.53). Main driver: the previous trial reward. A rewarded last trial lowers z by about 0.06 at every phase. Earlier rewards lower it a little more (about 0.004 per reward in trials -2..-4), so runs of rewards push it lowest. An unrewarded last trial in S1 raises it by about 0.044 at D1 and GO. Ideal-observer belief log-odds that S1 is good lower it at GO and D2 (about -0.007 per unit of log-odds), so z is higher when evidence favours S2. At D2, reaching S2 raises z by about 0.049, and choosing a1 after an unrewarded trial lowers it by about 0.045. Each added term (|belief|, D1 belief, more patterns) gained under 0.005. Finer within-decile timing alone adds only 0.07, and the largest misses are late-episode windows where the decay is steeper than the decile baseline. Model value and policy are not used. The reference scores (policy decile 0.18 vs belief 0.17; all 0.56 vs all observed 0.53) suggest dropping model outputs costs about 0.03 or less. No future variables are used.",
+  "gate": "unit_update",
+  "feature": 45,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 45,
+    "terms": [
+      "(prev_reward == 1)",
+      "(prev_reward==0)*(prev_state==S1)*(phase!=D2)",
+      "((tv(\"reward\", -2) == 1)*1+(tv(\"reward\", -3) == 1)+(tv(\"reward\", -4) == 1))",
+      "belief_lo*(phase!=D1)",
+      "(phase==D2)*(state==S2)",
+      "(phase==D2)*(prev_reward==0)*(action==1)"
+    ],
+    "weights": [
+      -0.05908765085157465,
+      0.04420082279266668,
+      -0.0038432283741936775,
+      -0.006672678955362074,
+      0.048587072267908794,
+      -0.04511896573508042
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.49921634099651724,
+    "r2": 0.9531952572228443,
+    "r2_timing_only": 0.906537000687496
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 45,
+    "terms": [
+      "(prev_reward == 1)",
+      "(prev_reward==0)*(prev_state==S1)*(phase!=D2)",
+      "((tv(\"reward\", -2) == 1)*1+(tv(\"reward\", -3) == 1)+(tv(\"reward\", -4) == 1))",
+      "belief_lo*(phase!=D1)",
+      "(phase==D2)*(state==S2)",
+      "(phase==D2)*(prev_reward==0)*(action==1)"
+    ],
+    "weights": [
+      -0.05908765085157465,
+      0.04420082279266668,
+      -0.0038432283741936775,
+      -0.006672678955362074,
+      0.048587072267908794,
+      -0.04511896573508042
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.49263940949210183,
+    "r2": 0.9534188302860517,
+    "r2_timing_only": 0.9081892236302435
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The label says z is 'raised at D2 ... by S1-unrewarded', but the term is (prev_reward==0)*(prev_state==S1)*(phase!=D2), so it covers D1 and GO only. Adding a D2-only version of the term changes test R^2 from 0.4992 to 0.5002, which is nothing. The label misstates the phase.",
+      "The claim that 'runs of rewards push it lowest' is overclaimed. The term for earlier rewards (trials -2 to -4) has a weight of -0.004, and removing it lowers test R^2 only from 0.499 to 0.496. Adding tv('reward',-2) and a prev_reward x reward(-2) interaction gives 0.501.",
+      "The D2 terms (reached S2 +0.049, a1 after an unrewarded trial -0.045) mostly capture the D2 choice x state residual from the profile (a1 S1 -0.058, a2 S2 +0.050). They are fine but describe the same thing twice.",
+      "Misses show no large systematic class. Mean error by phase is within +/-0.008, and every phase x previous-trial cell is within +/-0.031 (largest: GO after a1 S2 u, -0.031; GO after a2 S1 u, -0.026 at D2). Adding GO-specific last_is terms for these raises test R^2 only to 0.510.",
+      "The worst-fit windows are all late in the episode (t85-95), where z is over-predicted by about 0.1-0.3. The cause is decay within a decile that the timing baseline misses, not missing history. Within-decile timing terms raise test R^2 to 0.56, but that is timing, not content. Letting the reward/state/belief effects scale with ep_trial adds only about 0.018 (0.518)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "lowered by last reward; raised at D1/GO after S1-unrewarded; at D2 raised by reaching S2; belief toward S2 raises it at GO/D2",
+    "better_terms": "(prev_reward == 1) ;; (prev_reward==0)*(prev_state==S1)*(phase!=D2) ;; belief_lo*(phase!=D1) ;; (phase==D2)*(state==S2) ;; (phase==D2)*(prev_reward==0)*(action==1) ;; (prev_reward==1)*ep_trial ;; (phase==D2)*(state==S2)*ep_trial ;; belief_lo*(phase!=D1)*ep_trial",
+    "better_terms_test_r2_beyond_timing": 0.518
+  },
+  "final_label": "lowered by last reward; raised at D1/GO after S1-unrewarded; at D2 raised by reaching S2; belief toward S2 raises it at GO/D2"
+}

@@ -1,0 +1,105 @@
+{
+ "label": "Fires at D1 after an unrewarded a1-to-S2 trial, stronger if the trial before was also unrewarded.",
+ "short_terms": "(phase == D1) * last_is('a1 S2 u') ;; (phase == D1) * last_is('a1 S2 u') * (tv('reward', -2) == 0) ;; (phase == D1) * last_is('a2 S2 u') * (tv('action', -2) == 1)",
+ "terms": "(phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 0) ;; (phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 0) ;; (phase == D1) * last_is(\"a2 S2 u\") * belief_lo ;; (phase == D1) * last_is(\"a1 S2 u\") * belief_lo ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Active only at D1. Its magnitude is set by the previous trial: it fires (about +1 on dev weights) after a1 led by a rare transition to S2 and went unrewarded, and is silent after every other pattern, including unrewarded S1 visits and rewarded S2 visits. If the trial before that was also unrewarded, the activation roughly doubles (+0.9 more). The previous-trial indicator alone gives dev R^2 0.46 beyond timing; adding the two-trials-back reward gives 0.53. The free fit adds belief_lo interactions, occasional firing after a2 S2 u, and longer unrewarded streaks, but only reaches 0.54, so the short form covers nearly all of it. The worst misses are occasional large activations after a2 S2 u or a1 S1 u that these terms do not capture. All terms are observed-only, with no future or model-output variables.",
+ "full_test_scores": {
+  "gate": "hidden",
+  "feature": 205,
+  "terms": [
+   "(phase == D1) * last_is(\"a1 S2 u\")",
+   "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 0)",
+   "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 0)",
+   "(phase == D1) * last_is(\"a2 S2 u\") * belief_lo",
+   "(phase == D1) * last_is(\"a1 S2 u\") * belief_lo",
+   "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0)"
+  ],
+  "weights": [
+   1.088395747047046,
+   0.8552356997109342,
+   0.06151424011678235,
+   0.017347086703039458,
+   -0.09281770472085511,
+   0.1188371555892296
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5212679610522231,
+  "r2": 0.5449292703060675,
+  "r2_timing_only": 0.04942495452330797
+ },
+ "gate": "hidden",
+ "feature": 205,
+ "test_scores": {
+  "gate": "hidden",
+  "feature": 205,
+  "terms": [
+   "(phase == D1) * last_is('a1 S2 u')",
+   "(phase == D1) * last_is('a1 S2 u') * (tv('reward', -2) == 0)",
+   "(phase == D1) * last_is('a2 S2 u') * (tv('action', -2) == 1)"
+  ],
+  "weights": [
+   0.7784799608946673,
+   0.8962090085906447,
+   0.48897148995584305
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5315231253592745,
+  "r2": 0.5546775735836139,
+  "r2_timing_only": 0.04942495452330797
+ },
+ "dev_scores": {
+  "gate": "hidden",
+  "feature": 205,
+  "terms": [
+   "(phase == D1) * last_is('a1 S2 u')",
+   "(phase == D1) * last_is('a1 S2 u') * (tv('reward', -2) == 0)",
+   "(phase == D1) * last_is('a2 S2 u') * (tv('action', -2) == 1)"
+  ],
+  "weights": [
+   0.7784799608946673,
+   0.8962090085906447,
+   0.48897148995584305
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.5452906197982051,
+  "r2": 0.5691479192598315,
+  "r2_timing_only": 0.05246713725377472
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "Most of the claims hold up. Timing puts activity only at D1 (GO and D2 baseline are 0). The residual is +0.95 at D1 after a1 S2 u and about -0.1 after every other pattern except a2 S2 u (-0.016). The short form scores 0.5158 on test; the a1 S2 u indicator alone scores 0.4458. Adding 'trial before also unrewarded' gives weights +0.78 and +0.90 on dev, so the activation roughly doubles. The two-back reward is the right variable: tv('action',-2) adds nothing (0.4458) and tv('state',-2)==1 adds only +0.003.",
+   "The label says the feature stays silent after every other pattern, and that is wrong in one systematic case: D1 after a2 S2 u when the trial before was an a1 choice, i.e. the agent had just switched to a2. Several of the worst dev misses are this case, e.g. t69 a2 S2c u after t68 a1 S1c u, where the next D1 has actual 2.53 vs predicted 0.11. The same pattern shows at t42 to t43, t64 to t65 and t66 to t67. Adding (phase == D1) * last_is('a2 S2 u') * (tv('action', -2) == 1) gets weight +0.49 and raises test R^2 from 0.5158 to 0.5315. In a free fit, splitting it by whether that a1 trial was unrewarded gives weight +0.83 to the unrewarded case and reaches 0.5417 test. Both beat the reported free fit (0.521).",
+   "The explanation calls a2 S2 u firing 'occasional', but its free fit used a2 S2 u x reward(-2) and x belief_lo terms, which barely help (0.5183 and 0.5176 test). The variable that matters is the two-back choice (a1), not belief or the two-back reward. belief_lo interactions on a1 S2 u also add almost nothing (0.5170).",
+   "Many of the remaining worst misses are on the first trial of a window, where the previous trial's choice and state are unknown and last_is cannot fire. This is a data limit, not an error in the description. No future or model-output variables are used, which is correct."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Fires at D1 after an unrewarded S2 visit by a1, or by a2 right after an a1 trial; stronger if the trial before was unrewarded.",
+  "better_short_terms": "(phase == D1) * last_is('a1 S2 u') ;; (phase == D1) * last_is('a1 S2 u') * (tv('reward', -2) == 0) ;; (phase == D1) * last_is('a2 S2 u') * (tv('action', -2) == 1)",
+  "better_short_terms_test_r2_beyond_timing": 0.5315
+ },
+ "final_label": "Fires at D1 after an unrewarded S2 visit by a1, or by a2 right after an a1 trial; stronger if the trial before was unrewarded.",
+ "original_short_terms": "(phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 0)",
+ "original_test_scores": {
+  "gate": "hidden",
+  "feature": 205,
+  "terms": [
+   "(phase == D1) * last_is(\"a1 S2 u\")",
+   "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 0)"
+  ],
+  "weights": [
+   0.7772327897228954,
+   0.8962090085906458
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5158309500275408,
+  "r2": 0.5397609833040229,
+  "r2_timing_only": 0.04942495452330797
+ },
+ "terms_from": "skeptic"
+}

@@ -1,0 +1,65 @@
+{
+  "label": "D2 after a2 led rarely to S1, late in episode (trials ~58-92)",
+  "predicate": "(phase == D2) & (action == 2) & (state == 1) & (ep_trial >= 58) & (ep_trial <= 92)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2, only when the agent chose a2 and reached S1 (the a2-rare transition): 98.5% of activation mass. It never fires on D1/GO, on S2, or on a1->S1 common. It is also strongly gated by the episode clock: silent before trial ~55, peaks over trials 60-90, and falls off after ~92. Adding the window 58-92 raises precision from 0.27 to 0.71. Magnitude is larger when the previous trial was rewarded: adding prev_reward==1 gives precision 0.89 but recall 0.76, while keeping 0.91 of the mass. Activity is concentrated where value is mid-range and the policy strongly favours a2. Both action and state are observed at D2, so no future variables are used.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 41,
+    "predicate": "(phase == D2) & (action == 2) & (state == 1) & (ep_trial >= 58) & (ep_trial <= 92)",
+    "split": "test",
+    "precision": 0.6941710463449594,
+    "recall": 0.9296775019196314,
+    "f1": 0.7948465452158214,
+    "mass_recall": 0.9775884855572653,
+    "correlation": 0.7077925314803972,
+    "n_active": 15628,
+    "n_predicted": 20930,
+    "coverage_by_activation_quartile": [
+      0.799334527770668,
+      0.9352444330688507,
+      0.9841310468390069,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 41,
+    "predicate": "(phase == D2) & (action == 2) & (state == 1) & (ep_trial >= 58) & (ep_trial <= 92)",
+    "split": "dev",
+    "precision": 0.7065168762737983,
+    "recall": 0.9395782375884181,
+    "f1": 0.806548632391329,
+    "mass_recall": 0.9801154931940668,
+    "correlation": 0.7133465034611896,
+    "n_active": 15127,
+    "n_predicted": 20117,
+    "coverage_by_activation_quartile": [
+      0.8305129561078795,
+      0.9399788471708092,
+      0.98783712321523,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 41,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most false positives come from one systematic class: the previous trial was unrewarded (prev_reward==0, which the agent sees at D1). On dev, B&T&(prev_reward==0) has precision 0.37 over 7174 predicted steps, against 0.89 for prev_reward==1. That one class accounts for about 4500 of the roughly 5900 dev false positives (about 76%). This is a firing condition, not 'magnitude' as the explanation put it. The test misses output shows the same pattern: nearly every false-positive window has r0 at the D1 of the predicted trial.",
+      "Restating the point above: the feature is really 'D2 after a2->S1, late in the episode, when the previous trial was rewarded'. Adding the reward condition raises test F1 from 0.795 to 0.825 (precision 0.694 -> 0.904; recall falls 0.93 -> 0.758; mass recall 0.978 -> 0.903). The agent's reason for keeping the simpler predicate ('higher recall, F1 within a point') leaves the main false-positive class unexplained.",
+      "The recorded predicate's test F1 is 0.795, below the 0.8 threshold.",
+      "'Never fires on a1->S1 (common) transitions' overstates it slightly: 617 dev steps (1.5% of activation mass) are a1->S1 common D2 steps. This is minor.",
+      "Confirmed claims: D2 only (0 activations at D1/GO); state==1 only (no activations on S2); a2 carries 98.5% of mass; zero activity before trial 50, with mass concentrated in trials 60-89. Outside trials 58-92, B&~T has precision 0.009 and mass 0.5%. Misses inside the predicate are only 2.2% of mass.",
+      "There is a secondary, smaller suppression: when the previous trial was also a2->S1, activation is weak or absent (precision 0.52 on that subset). The top-activating windows show the same thing, with repeated S1R trials giving about 0.3 activations. The episode-clock gate does not appear to be just the value head: B&(choice<-4.44)&(value<7.13) without ep_trial gets only dev F1 0.717."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after a2 led rarely to S1, when the previous trial was rewarded, late in the episode (trials ~58-92)",
+    "better_predicate": "(phase == D2) & (action == 2) & (state == 1) & (ep_trial >= 58) & (ep_trial <= 92) & (prev_reward == 1)",
+    "better_predicate_test_f1": 0.825
+  },
+  "final_label": "D2 after a2 led rarely to S1, when the previous trial was rewarded, late in the episode (trials ~58-92)"
+}

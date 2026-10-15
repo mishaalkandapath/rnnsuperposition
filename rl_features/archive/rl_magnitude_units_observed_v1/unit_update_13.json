@@ -1,0 +1,85 @@
+{
+  "label": "z13 drops at D2 after choosing a1, more so when belief favours S1 and after a1->S2",
+  "terms": "(phase == D2) * (action == 1) ;; (phase == D2) * np.tanh(belief_lo/2) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D2) * last_is(\"a1 S2 u\") ;; (phase == D1) * np.tanh(belief_lo/2) ;; (phase == D2) * (last_is(\"a1 S2 r\") + last_is(\"a2 S1 r\")) ;; (prev_action == 1) * (prev_reward == 0) * (ep_trial / 100.0)**4 ;; (phase == D2) * (action == 1) * (prev_reward == 0) * (ep_trial/100.0)**4",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw update gate of unit 13. It sits near 1 (mean 0.96) and dips mainly at D2, a little at D1, and barely moves at GO. The timing baseline (lower at D2, falling late in the episode) explains R^2 0.26. Beyond timing, from observed quantities only: (1) At D2 it is lower when the choice just made was a1 (about -0.03), and graded lower the more the ideal observer believes S1 is good (tanh(belief_lo/2) weight about -0.05; the D2 residual runs from +0.07 at the S2-good belief deciles to -0.10 at the S1-good ones). (2) At D1 it drops about -0.11 when the previous trial was a1 -> S2 (a rare transition), whatever the reward; there is also a small belief term (-0.009). (3) At D2, a previous a1 S2 u trial lowers it further (-0.06), and a previous rare-rewarded trial (a1 S2 r or a2 S1 r) raises it (+0.05). (4) Late in the episode (ep_trial^4 shape), an unrewarded a1 on the previous trial lowers it at every phase, and most of all at D2 when a1 is chosen again (-0.12 at the end of the episode). This is the deep, persistent dip to about 0.6 seen in late a1-perseveration runs. No future, hidden or model-output variables are used. All 8 terms are observed by the phase they apply to (action is known at D2). Test R^2 beyond timing is 0.74 (dev 0.75), against an all-observed ceiling of 0.79 and an all-cues ceiling of 0.86, and above the policy-decile-only reference of 0.68. The earlier model-policy explanation is essentially replaced by belief plus the choice just made, so dropping value/policy loses little. Residual misses are mostly the depth of the late-episode a1 unrewarded runs.",
+  "gate": "unit_update",
+  "feature": 13,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 13,
+    "terms": [
+      "(phase == D2) * (action == 1)",
+      "(phase == D2) * np.tanh(belief_lo/2)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D2) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * np.tanh(belief_lo/2)",
+      "(phase == D2) * (last_is(\"a1 S2 r\") + last_is(\"a2 S1 r\"))",
+      "(prev_action == 1) * (prev_reward == 0) * (ep_trial / 100.0)**4",
+      "(phase == D2) * (action == 1) * (prev_reward == 0) * (ep_trial/100.0)**4"
+    ],
+    "weights": [
+      -0.027839631279001475,
+      -0.053465432014059476,
+      -0.11090839308844265,
+      -0.06119278087988179,
+      -0.008931464834383989,
+      0.0533792326577105,
+      -0.03124813718354479,
+      -0.12108397200215117
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7389225176918202,
+    "r2": 0.8071300723909343,
+    "r2_timing_only": 0.2612540694666302
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 13,
+    "terms": [
+      "(phase == D2) * (action == 1)",
+      "(phase == D2) * np.tanh(belief_lo/2)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D2) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * np.tanh(belief_lo/2)",
+      "(phase == D2) * (last_is(\"a1 S2 r\") + last_is(\"a2 S1 r\"))",
+      "(prev_action == 1) * (prev_reward == 0) * (ep_trial / 100.0)**4",
+      "(phase == D2) * (action == 1) * (prev_reward == 0) * (ep_trial/100.0)**4"
+    ],
+    "weights": [
+      -0.027839631279001475,
+      -0.053465432014059476,
+      -0.11090839308844265,
+      -0.06119278087988179,
+      -0.008931464834383989,
+      0.0533792326577105,
+      -0.03124813718354479,
+      -0.12108397200215117
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.749103130302423,
+    "r2": 0.8150816755030119,
+    "r2_timing_only": 0.2629707787112582
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The claim that a previous rare-rewarded trial (a1 S2 r or a2 S1 r) raises z13 at D2 does not hold up. In the profile, the D2 residuals by previous trial are a2 S2 r +0.069, a2 S1 u +0.063, a2 S1 r +0.050, a2 S2 u +0.029, a1 S2 r +0.042, a1 S1 r -0.061 and a1 S2 u -0.157. So the D2 raise follows any previous a2 trial, plus a1 S2 r on its own. It is not a rare-rewarded (model-based) effect.",
+      "Swapping the rare-rewarded term for (phase==D2)*(prev_action==2) gives a better test R^2 (0.747 vs 0.739). Fitting a1 S2 r and a2 S1 r as separate terms (with the D1 belief term dropped) gives a1 S2 r +0.060 and a2 S1 r +0.049, with test R^2 0.734, below the original 0.739. Using prev_action==2 plus a1 S2 r instead reaches 0.757. So the pairing that defines 'rare-rewarded' carries no information.",
+      "Removing the rare-rewarded term costs only 0.025 (0.739 -> 0.714), so it is a minor term that is mislabelled.",
+      "The D1 belief term is negligible (weight -0.009). Dropping it in favour of a better D2 term raises test R^2, so listing it as part of the explanation overstates it.",
+      "The late-episode term applied 'at every phase' fits slightly better restricted to D1 and GO: (phase!=D2) version, test 0.7585 vs 0.7568.",
+      "The other claims check out: D1 is about -0.11 after a1->S2 regardless of reward (residuals -0.111 for both r and u); GO barely moves (residuals at most about 0.007); D2 falls in a graded way with belief (decile residuals +0.069 down to -0.102); the deep late dips follow unrewarded a1 runs.",
+      "Remaining misses: the worst windows are late-episode D1 steps at about 0.6 that are predicted at about 0.95, either at a window edge (previous trial '?') or after a deep D2 dip on the previous trial. This looks like carry-over of the deep state across trials and is not captured. GO is over-predicted by about 0.01 throughout. Neither is a large error class."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "z13 drops at D2 after choosing a1 (more when belief favours S1 and after a1->S2 unrewarded), drops at D1 after a1->S2, is higher at D2 after a previous a2 or a1 S2 r trial, and dips deeply late in an episode during unrewarded a1 runs",
+    "better_terms": "(phase == D2) * (action == 1) ;; (phase == D2) * np.tanh(belief_lo/2) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D2) * last_is('a1 S2 u') ;; (phase == D2) * (prev_action == 2) ;; (phase == D2) * last_is('a1 S2 r') ;; (phase!=D2)*(prev_action == 1) * (prev_reward == 0) * (ep_trial / 100.0)**4 ;; (phase == D2) * (action == 1) * (prev_reward == 0) * (ep_trial/100.0)**4",
+    "better_terms_test_r2_beyond_timing": 0.7585
+  },
+  "final_label": "z13 drops at D2 after choosing a1 (more when belief favours S1 and after a1->S2 unrewarded), drops at D1 after a1->S2, is higher at D2 after a previous a2 or a1 S2 r trial, and dips deeply late in an episode during unrewarded a1 runs"
+}

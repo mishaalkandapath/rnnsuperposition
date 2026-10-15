@@ -1,0 +1,112 @@
+{
+ "label": "Fires at GO after an unrewarded a2 trial (stronger after rare S1), growing through the episode.",
+ "short_terms": "(phase == GO) * last_is('a2 S1 u') * np.where(ep_dec < 9, np.minimum(ep_dec, 7), 0) ;; (phase == GO) * last_is('a2 S2 u') * np.where(ep_dec < 9, np.minimum(ep_dec, 7), 0) ;; (phase == GO) * (tv('reward', -2) == 0) * np.where(ep_dec < 9, np.minimum(ep_dec, 7), 0)",
+ "terms": "(phase == GO) * last_is(\"a2 S1 u\") * np.minimum(ep_dec, 7) ;; (phase == GO) * last_is(\"a2 S2 u\") * np.minimum(ep_dec, 7) ;; (phase == GO) * last_is(\"a2 S1 u\") * (tv(\"reward\", -2) == 0) ;; (phase == GO) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 0) ;; (phase == GO) * last_is(\"a2 S1 u\") ;; (phase == GO) * last_is(\"a2 S2 u\") ;; (phase == GO) * (prev_action == 2) * (in_rew == 0) * belief_lo ;; (phase == GO) * (prev_action == -1) * (in_rew == 0) * np.minimum(ep_dec, 7)",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Active only at GO. Magnitude is set by the previous trial: it is large after an unrewarded a2 trial (a2 S1 u, i.e. rare-unrewarded, about 3x stronger than a2 S2 u) and slightly below baseline after any other outcome, including unrewarded a1 trials. The a2-unrewarded response grows with episode progress up to roughly trial 70 (multiplicative with timing, which the additive baseline cannot capture), and is weaker when the trial before was also unrewarded (a second loss in a row). The free fit adds the belief log-odds (stronger when the observer favours S2) and the window-first-trial case where the previous choice is unknown, gaining only a little. No future variables used. Short form test R2 0.41 vs free fit 0.43 (94%), above the additive all ceiling 0.35.",
+ "full_test_scores": {
+  "gate": "update",
+  "feature": 242,
+  "terms": [
+   "(phase == GO) * last_is(\"a2 S1 u\") * np.minimum(ep_dec, 7)",
+   "(phase == GO) * last_is(\"a2 S2 u\") * np.minimum(ep_dec, 7)",
+   "(phase == GO) * last_is(\"a2 S1 u\") * (tv(\"reward\", -2) == 0)",
+   "(phase == GO) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 0)",
+   "(phase == GO) * last_is(\"a2 S1 u\")",
+   "(phase == GO) * last_is(\"a2 S2 u\")",
+   "(phase == GO) * (prev_action == 2) * (in_rew == 0) * belief_lo",
+   "(phase == GO) * (prev_action == -1) * (in_rew == 0) * np.minimum(ep_dec, 7)"
+  ],
+  "weights": [
+   0.05213486468754567,
+   0.016864116316512988,
+   -0.12483353953010046,
+   -0.10103736372918762,
+   -0.022163042773597805,
+   0.017063545105362458,
+   0.0030472340250755577,
+   0.00030718820896083476
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.43265920746817677,
+  "r2": 0.49742717871468545,
+  "r2_timing_only": 0.11416061051678339
+ },
+ "gate": "update",
+ "feature": 242,
+ "test_scores": {
+  "gate": "update",
+  "feature": 242,
+  "terms": [
+   "(phase == GO) * last_is('a2 S1 u') * np.where(ep_dec < 9, np.minimum(ep_dec, 7), 0)",
+   "(phase == GO) * last_is('a2 S2 u') * np.where(ep_dec < 9, np.minimum(ep_dec, 7), 0)",
+   "(phase == GO) * (tv('reward', -2) == 0) * np.where(ep_dec < 9, np.minimum(ep_dec, 7), 0)"
+  ],
+  "weights": [
+   0.05333097632786895,
+   0.02151574718101562,
+   -0.011816975872835322
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5043803108493341,
+  "r2": 0.5609605571469125,
+  "r2_timing_only": 0.11416061051678339
+ },
+ "dev_scores": {
+  "gate": "update",
+  "feature": 242,
+  "terms": [
+   "(phase == GO) * last_is('a2 S1 u') * np.where(ep_dec < 9, np.minimum(ep_dec, 7), 0)",
+   "(phase == GO) * last_is('a2 S2 u') * np.where(ep_dec < 9, np.minimum(ep_dec, 7), 0)",
+   "(phase == GO) * (tv('reward', -2) == 0) * np.where(ep_dec < 9, np.minimum(ep_dec, 7), 0)"
+  ],
+  "weights": [
+   0.05333097632786895,
+   0.02151574718101562,
+   -0.011816975872835322
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.5021349543566732,
+  "r2": 0.5568792730936252,
+  "r2_timing_only": 0.10995814873127496
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The label says the response grows 'through the episode', but it switches off in the last 10 trials. Adding a decile-9 indicator to the a2 S1 u term gets weight -0.29, which cancels the ~0.34 the capped ramp predicts there (a2 S2 u gets -0.11). With that one indicator added, the free-fit test R^2 goes from 0.427 to 0.488. The recorded short form, using np.minimum(ep_dec, 7), predicts its peak value for trials 90-99, where the feature is actually near zero. The timing baseline for GO at decile 9 is also only +0.0036.",
+   "The recorded 0.408 is beaten by a 3-term short form that passes --short and only changes the episode shape to np.where(ep_dec < 9, np.minimum(ep_dec, 7), 0): it scores 0.504 on test (0.502 dev). That is above the recorded free fit (0.433) as well as the short form.",
+   "The loss-streak effect is understated, and the label leaves it out even though it is the third short-form term. In a free fit, a second loss in a row (trial before also unrewarded) cuts the a2 S1 u slope from 0.051 to about 0.016 per decile and removes the a2 S2 u response completely (0.026 - 0.027). The examples from misses show this: after a repeated a2 S1 u loss the actual value is 0 or 0.07 while the prediction is 0.34. Scaling the streak term by episode progress also beats the recorded binary version (0.427 vs 0.412 at cap 6).",
+   "Confirmed claims: the feature is active only at GO (residuals at D1 and D2 are exactly 0). It is raised after a2 S1 u (+0.163) and a2 S2 u (+0.053), and the fitted ratio is about 2.7x, so 'about 3 times' holds. All other previous-trial outcomes, including unrewarded a1, sit at about -0.026. No future variables are used. Without the ep_dec interaction the score drops to 0.254, so the multiplicative ramp is real and not curve fitting.",
+   "Remaining misses are small and not systematic: GO over-prediction is at most -0.019 in any previous-trial cell, plus a constant +0.004 / -0.009 phase offset. Most of the worst windows are window-first trials, where the previous choice is unknown (prev_action == -1) and the feature fires around 0.6 after r0. That is a limit of the data window, not of the explanation."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At GO after an unrewarded a2 (stronger after rare S1); rises to trial ~70, damped after repeated losses, silent in trials 90-99.",
+  "better_short_terms": "(phase == GO) * last_is('a2 S1 u') * np.where(ep_dec < 9, np.minimum(ep_dec, 7), 0) ;; (phase == GO) * last_is('a2 S2 u') * np.where(ep_dec < 9, np.minimum(ep_dec, 7), 0) ;; (phase == GO) * (tv('reward', -2) == 0) * np.where(ep_dec < 9, np.minimum(ep_dec, 7), 0)",
+  "better_short_terms_test_r2_beyond_timing": 0.5043803108493341
+ },
+ "final_label": "At GO after an unrewarded a2 (stronger after rare S1); rises to trial ~70, damped after repeated losses, silent in trials 90-99.",
+ "original_short_terms": "(phase == GO) * last_is(\"a2 S1 u\") * np.minimum(ep_dec, 7) ;; (phase == GO) * last_is(\"a2 S2 u\") * np.minimum(ep_dec, 7) ;; (phase == GO) * (tv(\"reward\", -2) == 0) * (in_rew == 0)",
+ "original_test_scores": {
+  "gate": "update",
+  "feature": 242,
+  "terms": [
+   "(phase == GO) * last_is(\"a2 S1 u\") * np.minimum(ep_dec, 7)",
+   "(phase == GO) * last_is(\"a2 S2 u\") * np.minimum(ep_dec, 7)",
+   "(phase == GO) * (tv(\"reward\", -2) == 0) * (in_rew == 0)"
+  ],
+  "weights": [
+   0.043018680199828255,
+   0.01600075151604205,
+   -0.037713312541907976
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.40776144717182194,
+  "r2": 0.475371761934263,
+  "r2_timing_only": 0.11416061051678339
+ },
+ "terms_from": "skeptic"
+}

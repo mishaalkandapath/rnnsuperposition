@@ -1,0 +1,112 @@
+{
+ "label": "Reset gate drops after recent losses, most at GO and after S1 losses; S2 wins raise it.",
+ "short_terms": "(1 + (phase == GO)) * ((prev_reward == 0) + (tv('reward', -2) == 0)) ;; (1 + (phase == GO)) * (prev_reward == 0) * (prev_state == S1) ;; (phase == GO) * (prev_reward == 1) * (prev_action == 2)",
+ "terms": "(phase == GO) * (prev_reward == 0) ;; (phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) ;; (phase != GO) * (prev_reward == 0) ;; (phase == D1) * (tv(\"reward\", -2) == 0) ;; (phase == GO) * last_is(\"a1 S1 u\") ;; (phase == GO) * last_is(\"a2 S1 u\") ;; (phase == D2) * last_is(\"a1 S1 u\") ;; (phase == GO) * (prev_reward == 1) * (prev_state == S2)",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Raw reset gate r of unit 19 sits near 0.9 and is pushed down by recent unrewarded trials: each of the last two losses lowers it at every phase, roughly twice as much at GO, and consecutive losses compound (loss streaks drive GO to ~0.2-0.3). An unrewarded visit to S1 (especially a1->S1 common loss) lowers it far more than an S2 loss, and a rewarded S2 visit raises it at GO, so it is asymmetric by state. At D1 it lags: it still reflects the trial-before outcome. Free fit adds separate phase-specific weights (a1 S1 u vs a2 S1 u, D2 effects, D1 lag). Belief and choice/state of the current trial add little; no future variables used.",
+ "full_test_scores": {
+  "gate": "unit_reset",
+  "feature": 19,
+  "terms": [
+   "(phase == GO) * (prev_reward == 0)",
+   "(phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+   "(phase != GO) * (prev_reward == 0)",
+   "(phase == D1) * (tv(\"reward\", -2) == 0)",
+   "(phase == GO) * last_is(\"a1 S1 u\")",
+   "(phase == GO) * last_is(\"a2 S1 u\")",
+   "(phase == D2) * last_is(\"a1 S1 u\")",
+   "(phase == GO) * (prev_reward == 1) * (prev_state == S2)"
+  ],
+  "weights": [
+   -0.06476270235514629,
+   -0.06140973695853191,
+   -0.033873921359973164,
+   -0.04516733230135209,
+   -0.13457523458636542,
+   -0.05970105951593834,
+   -0.07978395328220853,
+   0.052616212728662355
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6021065566516941,
+  "r2": 0.8180060568719694,
+  "r2_timing_only": 0.5426063279743021
+ },
+ "gate": "unit_reset",
+ "feature": 19,
+ "test_scores": {
+  "gate": "unit_reset",
+  "feature": 19,
+  "terms": [
+   "(1 + (phase == GO)) * ((prev_reward == 0) + (tv('reward', -2) == 0))",
+   "(1 + (phase == GO)) * (prev_reward == 0) * (prev_state == S1)",
+   "(phase == GO) * (prev_reward == 1) * (prev_action == 2)"
+  ],
+  "weights": [
+   -0.030901215024462424,
+   -0.04701882366051055,
+   0.06548718090308117
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5015897921738796,
+  "r2": 0.7720303248673195,
+  "r2_timing_only": 0.5426063279743021
+ },
+ "dev_scores": {
+  "gate": "unit_reset",
+  "feature": 19,
+  "terms": [
+   "(1 + (phase == GO)) * ((prev_reward == 0) + (tv('reward', -2) == 0))",
+   "(1 + (phase == GO)) * (prev_reward == 0) * (prev_state == S1)",
+   "(phase == GO) * (prev_reward == 1) * (prev_action == 2)"
+  ],
+  "weights": [
+   -0.030901215024462424,
+   -0.04701882366051055,
+   0.06548718090308117
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.5043434132354141,
+  "r2": 0.7784115066239794,
+  "r2_timing_only": 0.5529394760544866
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The 'S2 wins raise it' claim is not specific to S2. Replacing the third term with (phase == GO) * (prev_reward == 1), meaning any win, scores 0.491 test, against 0.488 for the S2-only version. In the profile, GO residuals are also raised after a2 S1 r (+0.059) and a1 S2 r (+0.060), not just after a2 S2 r (+0.076). The only win that leaves it flat is a1 S1 r (+0.02).",
+   "Much of the third term's value is a GO-level correction rather than a win effect. A bare (phase == GO) term already lifts the two-term form from 0.399 to 0.456 test. Restricting the term to wins after S1 gives 0.405 and after a1 S1 r gives 0.400, so the gain comes from 'not a loss at GO', not from S2.",
+   "Only the last two losses are counted. The worst-fit windows are long loss streaks (3 or more), where GO falls to about 0.2 but the prediction is about 0.49, and D1/D2 fall to about 0.48 but the prediction is about 0.84. Adding a third lagged loss to the count does not help (0.475), so the deep-streak effect is non-additive and stays unexplained.",
+   "Remaining systematic errors in the misses output for the recorded form: D2 after a1 S1 u is over-predicted by 0.079 (the S1-loss drop also happens at D2, but the form only has it at GO), GO after a1 S1 u by 0.045, and GO after a2 S1 r is under-predicted by 0.065. Making the S1-loss term apply at all phases (weighted by 1 + GO) and making the win term specific to the previous choice being a2 reduces these.",
+   "Supported claims: the reset gate sits near 0.9; each of the last two losses lowers it, about twice as much at GO; S1 losses, especially a1->S1, lower it more than S2 losses; belief and belief log-odds add little (belief-decile reference score 0.07)."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Reset gate drops after each of the last two losses, more at GO and after S1 losses; raised at GO after a2 wins.",
+  "better_short_terms": "(1 + (phase == GO)) * ((prev_reward == 0) + (tv('reward', -2) == 0)) ;; (1 + (phase == GO)) * (prev_reward == 0) * (prev_state == S1) ;; (phase == GO) * (prev_reward == 1) * (prev_action == 2)",
+  "better_short_terms_test_r2_beyond_timing": 0.5015897921738796
+ },
+ "final_label": "Reset gate drops after each of the last two losses, more at GO and after S1 losses; raised at GO after a2 wins.",
+ "original_short_terms": "(1 + (phase == GO)) * ((prev_reward == 0) + (tv(\"reward\", -2) == 0)) ;; (phase == GO) * (prev_reward == 0) * (prev_state == S1) ;; (phase == GO) * (prev_state == S2) * (prev_reward == 1)",
+ "original_test_scores": {
+  "gate": "unit_reset",
+  "feature": 19,
+  "terms": [
+   "(1 + (phase == GO)) * ((prev_reward == 0) + (tv(\"reward\", -2) == 0))",
+   "(phase == GO) * (prev_reward == 0) * (prev_state == S1)",
+   "(phase == GO) * (prev_state == S2) * (prev_reward == 1)"
+  ],
+  "weights": [
+   -0.03225661272436014,
+   -0.10524370815190454,
+   0.0690111841837519
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.48788067759614206,
+  "r2": 0.7657598626103872,
+  "r2_timing_only": 0.5426063279743021
+ },
+ "terms_from": "skeptic"
+}

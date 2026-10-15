@@ -1,0 +1,64 @@
+{
+  "label": "D2 after a rare a2->S1 transition (late in episode)",
+  "predicate": "(phase == D2) & (action == 2) & (state == 1) & (ep_trial >= 50)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 steps, and almost only when the agent chose a2 and landed in S1, i.e. a rare transition from a2 (96% of activation mass; it never fires on S2 and rarely on common a1->S1). Every variable used is observed at D2 (action and reached state are inputs then). The feature is strongly gated by episode time: silent before trial ~30, weak in trials 30-49, strongest in trials 50-89, and weaker again in trials 90-99. Adding ep_trial >= 50 raises dev F1 from 0.60 to 0.82; also capping at ep_trial < 92 gives 0.85, but I kept the simpler predicate. Magnitude: the largest activations (about 1.0 of max) are rare a2->S1 trials while S1 is the good state, often just after a run of a2 choices. Rare a2->S1 when S2 is good gives weaker activations or none, and these make up most of the false positives. Small leftover activations occur on common a1->S1 D2 steps. It does not fire at D1 or GO, on any S2 D2 step, or on rewarded-input steps.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 255,
+    "predicate": "(phase == D2) & (action == 2) & (state == 1) & (ep_trial >= 50)",
+    "split": "test",
+    "precision": 0.7833400483481063,
+    "recall": 0.8423655991623642,
+    "f1": 0.811781284250448,
+    "mass_recall": 0.9120351743190069,
+    "correlation": 0.6943538453949725,
+    "n_active": 27697,
+    "n_predicted": 29784,
+    "coverage_by_activation_quartile": [
+      0.7192779783393501,
+      0.8061813980358175,
+      0.8757943385326401,
+      0.9682264586943963
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 255,
+    "predicate": "(phase == D2) & (action == 2) & (state == 1) & (ep_trial >= 50)",
+    "split": "dev",
+    "precision": 0.7836864406779661,
+    "recall": 0.8574740176950122,
+    "f1": 0.8189214619117022,
+    "mass_recall": 0.9226770463886506,
+    "correlation": 0.6960859641195836,
+    "n_active": 25883,
+    "n_predicted": 28320,
+    "coverage_by_activation_quartile": [
+      0.7236903106165972,
+      0.8462370576417865,
+      0.8907433163344151,
+      0.969242658423493
+    ]
+  },
+  "gate": "hidden",
+  "feature": 255,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold. 100% of activation mass is at D2 and there is zero activity at D1 or GO. All activity is on in_state == S1 and none on S2. 95.7% of mass is on rare a2->S1 (common==0). Common a1->S1 carries 4.3% of mass (predicate precision 0.014). The feature never fires on steps with in_rew == 1. It is silent before trial 30 and weak in trials 30-49. On test the original predicate scores P 0.783, R 0.842, F1 0.812, mass recall 0.912, which matches the report.",
+      "Systematic false-positive class: trials 92-99. The explanation calls this stretch 'weaker again', but the predicate restricted to ep_trial >= 92 has precision 0.168. The feature is close to silent there, not just weaker. Adding ep_trial < 92 raises dev F1 from 0.819 to 0.860 and test F1 from 0.812 to 0.853 (precision goes from 0.78 to 0.90). The author saw this and dropped it for simplicity, but it is a whole trial-position class, not scattered noise.",
+      "The magnitude and good-state claim is wrong or misleading. The explanation says rare a2->S1 while S2 is good gives 'weaker activations or none' and makes up most false positives. In fact, within the predicate, precision is 0.795 when good == S2 and 0.770 when good == S1, so the firing rate is not lower when S2 is good. The good == S2 cases hold 58% of activation mass (recall 0.62) against 29% for good == S1. They make up most false positives only because they are about 3x more common, not because the feature is weaker on them. Activations are somewhat larger per step when S1 is good (top quartile is enriched), but that is a mild effect.",
+      "Minor: precision is low (0.44) when the previous trial chose a1, i.e. a switch to a2 that lands rare in S1. It is also lower (0.65, mass recall only 0.075) after a previous rare a2->S1. The strongest case is a previous a2->S2 common trial followed by a rare a2->S1 (precision 0.85, 69% of mass). This is a weaker, secondary modulation by history, not covered by the label.",
+      "No future variables are used: action and state are both inputs at D2, so the observability claim is correct."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after a rare a2->S1 transition, in episode trials ~50-91 (silent early and in the last ~8 trials), mostly when the previous trial was a2",
+    "better_predicate": "(phase == D2) & (action == 2) & (state == 1) & (ep_trial >= 50) & (ep_trial < 92)",
+    "better_predicate_test_f1": 0.853
+  },
+  "final_label": "D2 after a rare a2->S1 transition, in episode trials ~50-91 (silent early and in the last ~8 trials), mostly when the previous trial was a2"
+}

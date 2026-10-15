@@ -1,0 +1,65 @@
+{
+  "label": "D2 arrival at S1, early in the episode (any route in the first ~15 trials, then only rare a2->S1 until ~trial 40)",
+  "predicate": "(phase == D2) & (state == S1) & (ep_trial < 40) & ((action == 2) | (ep_trial < 15))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "The unit is a D2 S1-state detector: 99.6% of its activation mass is at D2 with S1 shown, and it never fires at D1. It also never fires when the reward input is 1 or in state S2. It also depends strongly on time in the episode. It fires on S1 arrivals at a rate of about 14% in trials 0-9, fades over trials 10-39, and is silent from trial ~45 on. Early on (ep_trial < 15) it fires on any S1 arrival. Later it fires mostly on rare arrivals, where the agent chose a2 and landed in S1. (D2 & S1) alone gives recall 0.99 but precision 0.17. Adding ep_trial < 40 gives F1 0.62 with mass recall 0.99. Adding the action-2-or-very-early condition gives dev F1 0.81, mass recall 0.91. All variables are observed at D2 (state, own GO choice, elapsed trials), so no future variables are used. On dev, rate is higher shortly after a reversal (since_rev 2-11: about 12% vs 1% at since_rev 20), so it may partly signal that S1 is surprising or not the good state. A hidden-state version (good == 2 etc.) did not beat the time-based predicate. The ep_trial cutoff is a proxy for a slowly drifting hidden-state component, not a crisp rule. Magnitude was not analysed beyond the activation-quartile coverage.",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 2,
+    "predicate": "(phase == D2) & (state == S1) & (ep_trial < 40) & ((action == 2) | (ep_trial < 15))",
+    "split": "test",
+    "precision": 0.7754886717014661,
+    "recall": 0.8238209008052385,
+    "f1": 0.7989244697435604,
+    "mass_recall": 0.894930402552628,
+    "correlation": 0.7212656089329973,
+    "n_active": 33903,
+    "n_predicted": 36016,
+    "coverage_by_activation_quartile": [
+      0.6687116564417178,
+      0.8062765455403492,
+      0.8524067956583294,
+      0.9679056047197641
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 2,
+    "predicate": "(phase == D2) & (state == S1) & (ep_trial < 40) & ((action == 2) | (ep_trial < 15))",
+    "split": "dev",
+    "precision": 0.7831501202335966,
+    "recall": 0.8393262563662024,
+    "f1": 0.8102656754435328,
+    "mass_recall": 0.9094779953289043,
+    "correlation": 0.7323963524715752,
+    "n_active": 32594,
+    "n_predicted": 34932,
+    "coverage_by_activation_quartile": [
+      0.6803288747085532,
+      0.8242729169223217,
+      0.8713794796269023,
+      0.9813451153657339
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 2,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Factual error in the explanation. It says the unit 'fires on about 14% of S1 arrivals in trials 0-9'. On dev it fires on about 98% of S1 arrivals in trials 0-4 (precision 0.981 for a1, 0.97 for a2) and on 73% (a1) and 96% (a2) in trials 5-9. The 14% figure is wrong, or it describes something else, such as a share of activations.",
+      "Systematic misses, not scattered noise. Common a1->S1 arrivals in trials 15-39 are excluded by the predicate, yet they carry about 9% of the dev activation mass (mass recall per 5-trial bin: 0.036, 0.025, 0.014, 0.009, 0.003). Most of the missed test mass (10.5%) is in this class.",
+      "Which of those excluded a1->S1 arrivals fire is predictable from observed history. In trials 10-29 the unit fires on 100% of a1->S1 arrivals when the previous trial reached S2 and was rewarded (n=1041). It fires on 74% when the agent has just switched (stay==0), against 17% after an S1-rewarded trial. So 'later, only rare a2->S1' overclaims. The unit fires on S1 arrivals the agent's recent history makes unexpected: rare arrivals, or arrivals right after switching away from a2 or an S2 reward.",
+      "The ep_trial cutoffs are soft, not sharp. a1->S1 firing decays smoothly (98% -> 73% -> 51% -> 25% -> 16% -> 10% -> 8% -> 4% across 5-trial bins). a2->S1 firing also decays (96% at trials 10-14 -> 66% at 35-39 -> 14% at 40-44). The fixed 15 and 40 thresholds hide this.",
+      "Confirmed claims: it never fires at D1 (precision 0), never when in_rew == 1, almost never in S2 (0.3% of mass) or at GO (0.4%), and is silent from about trial 45 on. 99.6% of its mass is at D2 with S1 shown.",
+      "A better predicate using only observed variables raises test F1 from 0.799 to 0.829 and mass recall from 0.895 to 0.961, because it covers the missed history-dependent class."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "D2 arrival at S1 in the first ~40 trials of the episode, when the arrival is unexpected given recent history: almost always early on (fades over trials 10-40), and in later trials mainly rare a2->S1 arrivals or a1->S1 arrivals right after a switch from a2 or after an S2-rewarded trial",
+    "better_predicate": "(phase==D2)&(state==S1)&(ep_trial<40)&((action==2)|(ep_trial<15)|(prev_action==2)|((prev_state==2)&(prev_reward==1)))",
+    "better_predicate_test_f1": 0.829
+  },
+  "final_label": "D2 arrival at S1 in the first ~40 trials of the episode, when the arrival is unexpected given recent history: almost always early on (fades over trials 10-40), and in later trials mainly rare a2->S1 arrivals or a1->S1 arrivals right after a switch from a2 or after an S2-rewarded trial"
+}

@@ -1,0 +1,82 @@
+{
+  "label": "Late-episode D1 update-gate dip, deepened after a1->S2, eased after S1 and high value",
+  "terms": "(phase == D1) * np.maximum(ep_trial - 89, 0)**2 ;; (phase == GO) * np.maximum(ep_trial - 89, 0)**2 ;; (phase == D1) * np.maximum(ep_trial - 89, 0)**2 * (prev_state == 2) * (prev_action == 1) ;; (phase == D1) * np.maximum(ep_trial - 89, 0)**2 * (prev_state == 1) ;; (phase == D1) * (prev_state == 2) * (prev_action == 1) ;; (phase == D1) * (prev_state == 1) ;; (phase == D1) * np.maximum(ep_trial - 89, 0)**2 * value ;; (phase == GO) * np.maximum(ep_trial - 89, 0)**2 * value",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 24 sits near 1 (keeps its state) almost everywhere and dips only in the last ~10 trials of the episode, mostly at D1 (down to ~0.5-0.9), a bit at GO, and barely at D2. Beyond the per-decile timing baseline, the main driver is how far into trials 90-99 the step is: the dip grows roughly quadratically. That lateness term alone adds only ~0.06, though. Most of the gain comes from its interaction with the previous trial and the model value at D1. The D1 dip is deeper when the last trial was a1 that went rare to S2, and shallower when the last trial reached S1 (state, not reward, matters most). A higher value-head output also makes the late dip shallower, at D1 and less so at GO. Earlier in the episode the same previous-trial pattern gives a small fixed D1 shift (a1->S2 about -0.013, S1 about +0.005). The trial before, this trial reward, the next choice, the hidden good state and time since reversal add little. Scores (R^2 beyond timing): dev 0.617, test 0.608. The 7-term version without the GO value term gets test 0.597. The profile all-cue ceiling (0.13) is far lower because its cues do not include graded within-decile lateness. All terms are observed or model-internal; none uses the future.",
+  "gate": "unit_update",
+  "feature": 24,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 24,
+    "terms": [
+      "(phase == D1) * np.maximum(ep_trial - 89, 0)**2",
+      "(phase == GO) * np.maximum(ep_trial - 89, 0)**2",
+      "(phase == D1) * np.maximum(ep_trial - 89, 0)**2 * (prev_state == 2) * (prev_action == 1)",
+      "(phase == D1) * np.maximum(ep_trial - 89, 0)**2 * (prev_state == 1)",
+      "(phase == D1) * (prev_state == 2) * (prev_action == 1)",
+      "(phase == D1) * (prev_state == 1)",
+      "(phase == D1) * np.maximum(ep_trial - 89, 0)**2 * value",
+      "(phase == GO) * np.maximum(ep_trial - 89, 0)**2 * value"
+    ],
+    "weights": [
+      -0.0042921460907130345,
+      -0.0012747760592568234,
+      -0.0017658173214060216,
+      0.0014621304536740858,
+      -0.01272538917464172,
+      0.004890619831505294,
+      0.001050689477302498,
+      0.0003323157411008478
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6084788106078813,
+    "r2": 0.8041675521091582,
+    "r2_timing_only": 0.4998164768683554
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 24,
+    "terms": [
+      "(phase == D1) * np.maximum(ep_trial - 89, 0)**2",
+      "(phase == GO) * np.maximum(ep_trial - 89, 0)**2",
+      "(phase == D1) * np.maximum(ep_trial - 89, 0)**2 * (prev_state == 2) * (prev_action == 1)",
+      "(phase == D1) * np.maximum(ep_trial - 89, 0)**2 * (prev_state == 1)",
+      "(phase == D1) * (prev_state == 2) * (prev_action == 1)",
+      "(phase == D1) * (prev_state == 1)",
+      "(phase == D1) * np.maximum(ep_trial - 89, 0)**2 * value",
+      "(phase == GO) * np.maximum(ep_trial - 89, 0)**2 * value"
+    ],
+    "weights": [
+      -0.0042921460907130345,
+      -0.0012747760592568234,
+      -0.0017658173214060216,
+      0.0014621304536740858,
+      -0.01272538917464172,
+      0.004890619831505294,
+      0.001050689477302498,
+      0.0003323157411008478
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6166209966659599,
+    "r2": 0.8128133049034498,
+    "r2_timing_only": 0.5117450526275862
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor factual slip: the explanation says the lateness term alone adds ~0.06 R^2. On test, the D1 + GO lateness terms alone give 0.111.",
+      "The value interaction is not the only internal quantity that works. Swapping both value terms for (phase==D1)*late^2*choice plus a linear lateness term gives test 0.602, about the same as the 0.608 with value. Without either, the score is 0.488. So the 'high value eases the dip' reading is not unique: the policy logit does as well.",
+      "The lateness shape is not purely quadratic. Adding (phase==D1)*max(ep_trial-89,0) linear in place of the GO value term raises test from 0.608 to 0.627.",
+      "About 39% of the variance beyond timing is still unexplained. The worst dev windows have deep D1 dips (e.g. 0.59 actual vs 0.86 predicted at t96-97 after a2 S2c rewarded) that are under-predicted. However, the misses tables by phase x previous trial show no large systematic class: the largest is D1 after a1 S2 r at -0.006, and the mean error per phase is ~0.",
+      "The other claims check out on test. Previous reward (0.605), trial-before state (0.597-0.602), rare transition (0.606), hidden good state (0.600), a D2 lateness term (0.597) and a previous-stay term (0.597) all add nothing. The a1->S2 vs S1 split matches the profile residuals (a1 S2: -0.017/-0.026; S1: +0.007/+0.008; a2 S2: ~-0.003). The fitted signs match the explanation: the D1 late dip is deeper after a1->S2 and shallower after S1 and with higher value."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Late-episode D1 update-gate dip, deeper after a1->S2, shallower after S1 and with higher value or policy logit",
+    "better_terms": "(phase == D1) * np.maximum(ep_trial - 89, 0)**2 ;; (phase == GO) * np.maximum(ep_trial - 89, 0)**2 ;; (phase == D1) * np.maximum(ep_trial - 89, 0)**2 * (prev_state == 2) * (prev_action == 1) ;; (phase == D1) * np.maximum(ep_trial - 89, 0)**2 * (prev_state == 1) ;; (phase == D1) * (prev_state == 2) * (prev_action == 1) ;; (phase == D1) * (prev_state == 1) ;; (phase == D1) * np.maximum(ep_trial - 89, 0)**2 * value ;; (phase == D1) * np.maximum(ep_trial - 89, 0)",
+    "better_terms_test_r2_beyond_timing": 0.6271128952652771
+  },
+  "final_label": "Late-episode D1 update-gate dip, deeper after a1->S2, shallower after S1 and with higher value or policy logit"
+}

@@ -1,0 +1,91 @@
+{
+  "label": "D1 drops after unrewarded S1, rises after rewarded S2; D2 tracks rare transition direction.",
+  "short_terms": "(phase == D1) * (prev_state == S1) * (prev_reward == 0) ;; (phase == D1) * prev_reward * (prev_state == S2) ;; (phase == D2) * (action - state)",
+  "terms": "(phase == D1) * table(prev_action*100+prev_state*10+prev_reward, {111:0.003,110:-0.156,121:0.16,120:0.065,221:0.086,220:-0.04,211:-0.06,210:-0.2}) ;; (phase == D1) * (tv(\"reward\", -2) == 1) ;; (phase == D1) * (tv(\"state\", -2) == 2) ;; (phase == D2) * table(prev_action*100+prev_state*10+prev_reward, {111:-0.12,110:-0.05,121:0,120:0,221:0.08,220:0.085,211:-0.01,210:0.067}) ;; (phase == D2) * table(3*action+state, {4:-0.05,5:-0.15,7:0.157,8:0.03}) ;; (phase == D2) * belief_lo ;; (phase == D1) * belief_lo",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw reset gate r of unit 45: timing dominates (high at D1, near 0 at GO, mid at D2; R^2 0.90). Beyond timing: at D1 it is lowered when the previous trial reached S1 unrewarded (weight -0.18) and raised when it reached S2 rewarded (+0.10); a1->S2 rewarded is highest, a2->S1 unrewarded lowest, and repeated unrewarded trials push it lower further (trial-before reward adds a little). At D2 it follows the just-made transition: a2->S1 (rare) raises it, a1->S2 (rare) lowers it, common transitions are in between (term action - state). GO carries almost nothing. The free fit adds full last-trial tables at D1 and D2 (D2 is also higher after a previous a2 choice and lower after a1 S1 r), the trial-before reward and belief_lo; belief itself adds little once choice x state is in. Main-effect versions (reward + state additive) score much worse than the S1-unrewarded interaction. All terms observed; no model outputs or future variables.",
+  "full_test_scores": {
+    "gate": "unit_reset",
+    "feature": 45,
+    "terms": [
+      "(phase == D1) * table(prev_action*100+prev_state*10+prev_reward, {111:0.003,110:-0.156,121:0.16,120:0.065,221:0.086,220:-0.04,211:-0.06,210:-0.2})",
+      "(phase == D1) * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * (tv(\"state\", -2) == 2)",
+      "(phase == D2) * table(prev_action*100+prev_state*10+prev_reward, {111:-0.12,110:-0.05,121:0,120:0,221:0.08,220:0.085,211:-0.01,210:0.067})",
+      "(phase == D2) * table(3*action+state, {4:-0.05,5:-0.15,7:0.157,8:0.03})",
+      "(phase == D2) * belief_lo",
+      "(phase == D1) * belief_lo"
+    ],
+    "weights": [
+      1.003537407692793,
+      0.027211171629647837,
+      -0.014736214897162283,
+      0.5602838593400005,
+      0.80151793142774,
+      0.004022594039285958,
+      0.0003132512135573979
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7578789722788991,
+    "r2": 0.975630809174229,
+    "r2_timing_only": 0.8993512002854955
+  },
+  "gate": "unit_reset",
+  "feature": 45,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 45,
+    "terms": [
+      "(phase == D1) * (prev_state == S1) * (prev_reward == 0)",
+      "(phase == D1) * prev_reward * (prev_state == S2)",
+      "(phase == D2) * (action - state)"
+    ],
+    "weights": [
+      -0.18166671444488156,
+      0.09575754347827763,
+      0.15304610630941168
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6118738228872196,
+    "r2": 0.9609355661358194,
+    "r2_timing_only": 0.8993512002854955
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 45,
+    "terms": [
+      "(phase == D1) * (prev_state == S1) * (prev_reward == 0)",
+      "(phase == D1) * prev_reward * (prev_state == S2)",
+      "(phase == D2) * (action - state)"
+    ],
+    "weights": [
+      -0.18166671444488156,
+      0.09575754347827763,
+      0.15304610630941168
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6160668024516256,
+    "r2": 0.9618234906004401,
+    "r2_timing_only": 0.9005647085395639
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The label's 'D2 tracks rare transition direction' doesn't give the sign. From the residuals, rare a2->S1 is +0.157, rare a1->S2 is -0.149, and the common transitions sit between (-0.05 and +0.03), with fitted weight +0.153 on action - state. The label should say which rare transition raises the gate and which lowers it.",
+      "The claims check out on test. Reward and state as separate D1 main effects score 0.40, against 0.61 for the recorded form, so the S1-unrewarded interaction matters (the explanation said about 0.35). Turning the D2 term into a single a2->S1 indicator drops the score to 0.50. Replacing the D1 S2-rewarded term with S2 alone gives 0.57. The ordering 'a1 S2 r highest, a2 S1 u lowest' matches the residual table (+0.16 / -0.20).",
+      "The claim that runs of unrewarded trials push the gate down is only weakly supported: reward two trials back gets a weight of +0.026 at D1.",
+      "Moderate systematic errors from the previous choice remain, and the label leaves them out. At D1, a previous a1 is under-predicted (a1 S2 u +0.066, a1 S2 r +0.065) and a previous a2 over-predicted (a2 S1 r -0.059). At D2, a previous a2 is under-predicted (a2 S2 u +0.060) and a1 S1 r over-predicted (-0.078). These errors are about 0.06-0.08, against term effects of 0.10-0.18.",
+      "At D2 the residual also falls steadily with belief (decile 0 at +0.08, decile 9 at -0.09). Adding belief_lo or prev_action to the short form did not beat it: 0.58 and 0.43. The best alternative I found, with the D1 terms rewritten as prev_reward - (prev_state == S1) plus the S1-unrewarded term, scores 0.616 against 0.612, which is not a meaningful gain.",
+      "The short form reaches 0.61 on test, against an observed-only ceiling of 0.81 and a free fit of 0.76. None of its terms looks like curve fitting."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1: low after unrewarded S1, high after rewarded S2; D2: raised by rare a2->S1, lowered by rare a1->S2.",
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "D1: low after unrewarded S1, high after rewarded S2; D2: raised by rare a2->S1, lowered by rare a1->S2."
+}

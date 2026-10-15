@@ -1,0 +1,65 @@
+{
+  "label": "D1 after a common a1->S1 trial, growing exponentially late in episode; unrewarded > rewarded",
+  "terms": "(phase == D1) * (prev_state == 2) * np.exp((ep_trial-99)/12) ;; (phase == D1) * (prev_action == 2) * (prev_state == 1) * np.exp((ep_trial-99)/12) ;; (phase == D1) * last_is(\"a1 S1 r\") * np.exp((ep_trial-99)/12) ;; (phase == D1) * last_is(\"a1 S1 u\") * np.exp((ep_trial-99)/12)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1, with magnitude rising roughly as exp((ep_trial-99)/12) toward the end of the episode. The additive timing baseline averages over previous trials; the real structure is multiplicative: the late-episode ramp applies only when the previous trial was a1 -> S1 (common). It is larger after a1 S1 unrewarded (weight +3.3) than after a1 S1 rewarded (+2.6). After a trial that reached S2 (-1.24) or a rare a2 -> S1 (-0.98), it is pushed down to about zero. Four observed-only terms give test R^2 beyond timing 0.74 (dev 0.75), well above the additive all-cue ceiling of 0.24, because the cues interact with episode time. Small leftover structure: it can stay high after an a2 S1 trial when earlier trials were a1 S1, and on window-first trials. The trial before (tv state/action -2) adds about 0.001; the D1 policy logit adds about 0.025 (model output, not recorded). Value, hidden good state and this trial reward add essentially nothing. GO and D2 are always 0.",
+  "gate": "reset",
+  "feature": 24,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 24,
+    "terms": [
+      "(phase == D1) * (prev_state == 2) * np.exp((ep_trial-99)/12)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 1) * np.exp((ep_trial-99)/12)",
+      "(phase == D1) * last_is(\"a1 S1 r\") * np.exp((ep_trial-99)/12)",
+      "(phase == D1) * last_is(\"a1 S1 u\") * np.exp((ep_trial-99)/12)"
+    ],
+    "weights": [
+      -1.2413299251659962,
+      -0.9834777480720626,
+      2.5804110593356575,
+      3.2791173451779656
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7437491616296055,
+    "r2": 0.815915397509478,
+    "r2_timing_only": 0.2816234137566437
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 24,
+    "terms": [
+      "(phase == D1) * (prev_state == 2) * np.exp((ep_trial-99)/12)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 1) * np.exp((ep_trial-99)/12)",
+      "(phase == D1) * last_is(\"a1 S1 r\") * np.exp((ep_trial-99)/12)",
+      "(phase == D1) * last_is(\"a1 S1 u\") * np.exp((ep_trial-99)/12)"
+    ],
+    "weights": [
+      -1.2413299251659962,
+      -0.9834777480720626,
+      2.5804110593356575,
+      3.2791173451779656
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7457482406701381,
+    "r2": 0.8191412470630729,
+    "r2_timing_only": 0.2886627277875229
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the 'unrewarded > rewarded' distinction is real in direction (D1 residual after a1 S1 u is +0.43 vs +0.28 after a1 S1 r; fitted weights 3.28 vs 2.58), but it adds only about 0.004 of test R^2. Using one a1 S1 term without the reward split gives 0.740 vs 0.744.",
+      "Minor: the exp((ep_trial-99)/12) ramp under-predicts the plateau at roughly t89-95 (actual about 3.0-3.5 vs predicted 2.1-2.9 in the worst-fit windows). Other shapes do not beat it, though: scale 8 gives 0.697, 18 gives 0.721, 25 gives 0.659, and a sigmoid centred at 85 gives 0.739.",
+      "Minor: the leftover structure the explanation admits to (high activation after a2 S1 when the trial before was a1 S1, and on the window's first trial where prev_* = -1) shows up in the worst-fit windows, but targeted terms recover only about 0.005 (0.7489 with 4 extra terms). The largest mean error in any phase x previous-trial cell is +0.045, so no large systematic error class remains.",
+      "The claims check out: activation is 0 at GO and D2 (timing baseline and residuals are 0 there); the ramp is a late-episode effect; S2 and a2->S1 previous trials are suppressed about equally (merging them costs 0.003); the terms use no future variables; adding the hidden good state x a1 S1 interaction adds nothing (0.743)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a common a1->S1 trial, exponential late-episode ramp; slightly higher after unrewarded than rewarded",
+    "better_terms": "(phase == D1) * (prev_state == 2) * np.exp((ep_trial-99)/12) ;; (phase == D1) * (prev_action == 2) * (prev_state == 1) * np.exp((ep_trial-99)/12) ;; (phase == D1) * last_is('a1 S1 r') * np.exp((ep_trial-99)/12) ;; (phase == D1) * last_is('a1 S1 u') * np.exp((ep_trial-99)/12) ;; (phase == D1) * (prev_state == -1) * np.exp((ep_trial-99)/12) ;; (phase == D1) * (prev_action == 2) * (prev_state == 1) * (tv('state',-2) == 1) * np.exp((ep_trial-99)/12) ;; (phase == D1) * (prev_state == 1) * (tv('action',-2) == 1) * (tv('state',-2) == 1) * np.exp((ep_trial-99)/12)",
+    "better_terms_test_r2_beyond_timing": 0.7489
+  },
+  "final_label": "D1 after a common a1->S1 trial, exponential late-episode ramp; slightly higher after unrewarded than rewarded"
+}

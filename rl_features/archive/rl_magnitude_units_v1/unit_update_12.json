@@ -1,0 +1,69 @@
+{
+  "label": "D2 update gate: high after choosing a2, low after a1; lower after S2-unrewarded",
+  "terms": "(phase == D2) * table(action, {1: -1, 2: 1}) ;; (phase == D2) * table(action, {1: -1, 2: 1}) * ep_dec ;; (phase == D2) * (prev_state == 2) * (prev_reward == 0) ;; (phase != D2) * table(prev_action, {1: -1, 2: 1}) ;; (phase == GO) * (prev_reward == 0) * (prev_action == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 12 sits near 1 at D1/GO (about 0.99) and is much lower at D2 (about 0.55, falling late in the episode); timing alone gives R^2 0.73. Beyond timing, the magnitude is almost entirely the choice just made, read out at D2: z is about +0.27 higher after choosing a2 and the same amount lower after a1 (fitted weight 0.266 on a signed a2-vs-a1 indicator). Invalid (fixation) trials sit in between. Two small corrections: D2 z is about 0.10 lower when the previous trial reached S2 and went unrewarded, and the a1/a2 split shrinks slightly later in the episode. At D1/GO there is only a tiny carry-over of the previous choice (a2 raises by about 0.01) plus a small dip at GO after an unrewarded a1 trial. The state reached at D2 (S1 vs S2, i.e. common vs rare given the choice) adds almost nothing; the reward and hidden good state matter only through their correlation with the choice. All terms are observed at their step (the action is known by D2). Dev R^2 beyond timing 0.90, test 0.89, against an all-cue ceiling of 0.96 (all observed 0.91).",
+  "gate": "unit_update",
+  "feature": 12,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 12,
+    "terms": [
+      "(phase == D2) * table(action, {1: -1, 2: 1})",
+      "(phase == D2) * table(action, {1: -1, 2: 1}) * ep_dec",
+      "(phase == D2) * (prev_state == 2) * (prev_reward == 0)",
+      "(phase != D2) * table(prev_action, {1: -1, 2: 1})",
+      "(phase == GO) * (prev_reward == 0) * (prev_action == 1)"
+    ],
+    "weights": [
+      0.26633207427193634,
+      -0.007874207266879346,
+      -0.10326166897588898,
+      0.009884592408160588,
+      -0.025250486657727233
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8922287349085882,
+    "r2": 0.970678742818807,
+    "r2_timing_only": 0.7279306579882621
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 12,
+    "terms": [
+      "(phase == D2) * table(action, {1: -1, 2: 1})",
+      "(phase == D2) * table(action, {1: -1, 2: 1}) * ep_dec",
+      "(phase == D2) * (prev_state == 2) * (prev_reward == 0)",
+      "(phase != D2) * table(prev_action, {1: -1, 2: 1})",
+      "(phase == GO) * (prev_reward == 0) * (prev_action == 1)"
+    ],
+    "weights": [
+      0.26633207427193634,
+      -0.007874207266879346,
+      -0.10326166897588898,
+      0.009884592408160588,
+      -0.025250486657727233
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.899204483997869,
+    "r2": 0.9723692767368545,
+    "r2_timing_only": 0.7258734876404485
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Main claims check out on test. The D2 action term alone gives R^2 0.852. Adding the D2 prev S2-unrewarded term brings it to 0.881 (weight -0.103). The full term set gives 0.892. Splitting a1 and a2 gives symmetric weights (-0.232 and +0.228). The state reached at D2 adds almost nothing (0.881 vs 0.881, weight +0.007).",
+      "The S2-unrewarded dip at D2 holds for both current choices (-0.08 after a1, -0.13 after a2). Prev S1-unrewarded (+0.015) and prev S2-rewarded (+0.027) are small, so the label's specificity is right.",
+      "'The gap shrinks slightly later in the episode' is roughly right but the shape is off. A linear ep_dec interaction gets only -0.008 per decile. The shrinkage is concentrated in deciles 8-9 (action*(ep_dec>=8) weight -0.063, test 0.892 -> 0.901 with deciles 8 and 9 as separate terms). Every worst-fit window misses is at trials 85-99, where D2 and GO values fall below prediction, so the late-episode collapse is the main leftover systematic error. It is small in R^2 terms.",
+      "No large systematic error class remains by phase or previous trial (largest mean cell error is +0.038, at D2 after a2 S1 u). The model's D2 policy logit ('choice', a model-output quantity) adds about 0.02 (test 0.915-0.919). The observed-only ceiling is 0.91, and the claimed terms reach 0.89, which is nearly that ceiling."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 update gate: high after choosing a2, low after a1 (gap shrinks in the last ~20 trials); lower after S2-unrewarded",
+    "better_terms": "(phase == D2) * table(action, {1: -1, 2: 1}) ;; (phase == D2) * (prev_state == 2) * (prev_reward == 0) ;; (phase == D2) * choice ;; (phase == D2) * table(action, {1: -1, 2: 1}) * ep_dec ;; (phase != D2) * table(prev_action, {1: -1, 2: 1}) ;; (phase == GO) * (prev_reward == 0) * (prev_action == 1) ;; (phase == D2) * table(action, {1: -1, 2: 1}) * (ep_dec>=8)",
+    "better_terms_test_r2_beyond_timing": 0.9193
+  },
+  "final_label": "D2 update gate: high after choosing a2, low after a1 (gap shrinks in the last ~20 trials); lower after S2-unrewarded"
+}

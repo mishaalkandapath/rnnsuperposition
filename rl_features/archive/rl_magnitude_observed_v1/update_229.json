@@ -1,0 +1,72 @@
+{
+  "label": "D2 rare a2->S1 after unrewarded trial, scaled by belief that S2 is good",
+  "terms": "(phase == D2) * (action == 2) * (state == 1) * (prev_reward == 0) ;; (phase == D2) * (action == 2) * (state == 1) * (prev_reward == 0) * np.clip(-belief_lo, 0, 6) ;; (phase == D2) * (action == 2) * (state == 1) * (prev_reward == 0) * np.clip(-belief_lo - 2, 0, 6) ;; (phase == D2) * (action == 2) * (state == 1) * (prev_reward == 0) * (belief_cover < 3) ;; (phase == D2) * (action == 2) * (state == 1) * (prev_reward == 0) * (tv(\"state\", -1) == 1) * (tv(\"action\", -1) == 2)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (zero at D1/GO). Magnitude is carried by the trials where the agent chose a2, reached S1 by a rare transition, and the previous trial was unrewarded. The indicator alone gives dev R^2 beyond timing ~0.32. Scaling it by the ideal observer belief that S2 is good (clipped -belief_lo, with an extra convex term for strong S2 belief) raises dev R^2 to ~0.60: the stronger the observed evidence that S2 is good, the larger the activation. Smaller additions: a bump when belief_cover is low (start of the window, where the belief is weak but the agent is probably still confident), and a bump when the previous trial was also a2->S1 (repeated rare outcomes); together dev 0.61. a2->S1 after a rewarded trial, and every other choice x state, are near zero. Uses only observed variables (no value/policy, no future). The profile ceiling all=0.26 / all observed=0.22 is far below this because those tables lack the interaction with belief. Remaining misses: some repeated a2->S1u trials where the activation drops to 0 although belief still favours S2, and early window trials where the belief is weak. The earlier label used the policy (still strongly favouring a2); the observed belief seems to stand in for it with little loss.",
+  "gate": "update",
+  "feature": 229,
+  "test_scores": {
+    "gate": "update",
+    "feature": 229,
+    "terms": [
+      "(phase == D2) * (action == 2) * (state == 1) * (prev_reward == 0)",
+      "(phase == D2) * (action == 2) * (state == 1) * (prev_reward == 0) * np.clip(-belief_lo, 0, 6)",
+      "(phase == D2) * (action == 2) * (state == 1) * (prev_reward == 0) * np.clip(-belief_lo - 2, 0, 6)",
+      "(phase == D2) * (action == 2) * (state == 1) * (prev_reward == 0) * (belief_cover < 3)",
+      "(phase == D2) * (action == 2) * (state == 1) * (prev_reward == 0) * (tv(\"state\", -1) == 1) * (tv(\"action\", -1) == 2)"
+    ],
+    "weights": [
+      0.002045874915397597,
+      0.0650846555525864,
+      0.19565688427372332,
+      0.12649311152586118,
+      0.1673736406395628
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5823768805223751,
+    "r2": 0.5899529474341505,
+    "r2_timing_only": 0.018140918350621482
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 229,
+    "terms": [
+      "(phase == D2) * (action == 2) * (state == 1) * (prev_reward == 0)",
+      "(phase == D2) * (action == 2) * (state == 1) * (prev_reward == 0) * np.clip(-belief_lo, 0, 6)",
+      "(phase == D2) * (action == 2) * (state == 1) * (prev_reward == 0) * np.clip(-belief_lo - 2, 0, 6)",
+      "(phase == D2) * (action == 2) * (state == 1) * (prev_reward == 0) * (belief_cover < 3)",
+      "(phase == D2) * (action == 2) * (state == 1) * (prev_reward == 0) * (tv(\"state\", -1) == 1) * (tv(\"action\", -1) == 2)"
+    ],
+    "weights": [
+      0.002045874915397597,
+      0.0650846555525864,
+      0.19565688427372332,
+      0.12649311152586118,
+      0.1673736406395628
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6116541007766727,
+    "r2": 0.6188787425894662,
+    "r2_timing_only": 0.01860362585839692
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Large systematic gap the label leaves out: episode time interacts with the trigger. The timing baseline is additive, so it cannot switch off the trigger condition. Within B = D2*a2*S1*prev_reward==0, fitted offsets relative to mid-episode are: ep_trial<3 -0.41, 3-5 -0.36, 6-9 -0.34, 75-79 -0.09, 80-84 -0.24, 85-89 -0.40, >=90 -0.41, against a base weight of +0.42. So the feature is about 0 on trials before 10 and from 85 on. Adding just two ep-time gates to the claimed terms raises dev R^2 from 0.626 to 0.699. The worst misses (t85-t96 windows with predicted 0.69 and actual 0) are this class. Misses names only 'early-window trials where the belief is weak', which is a different thing.",
+      "The claim that 'scaling by belief raises dev to 0.60' credits belief alone, but belief is redundant with the previous trial's pattern. B plus last_is('a2 S1 u'), last_is('a2 S2 u') and last_is('a1 S1 u'), with no belief, scores dev 0.601 / test 0.577. B plus the two belief terms scores dev 0.599 / test 0.571. Both together score dev 0.626 / test 0.600. The previous trial (a2->S1 unrewarded raises it; a2->S2 unrewarded lowers it strongly, weight -0.34; a1->S1 unrewarded lowers it) does as well as the ideal-observer belief. Belief adds only about 0.02 beyond it.",
+      "belief_cover<3 adds nothing on top of the indicator alone (B + cover<3: dev 0.316 / test 0.280, the same as B alone at 0.28 test). It only helps once the other terms are in.",
+      "The confirmed claims hold: the feature is zero at D1/GO, D2 a2->S1 after an unrewarded trial is the trigger (indicator test 0.28), a2->S1 after a rewarded trial stays near zero (residual -0.012), and the claimed terms reproduce test 0.582.",
+      "Remaining unexplained class even after the fixes: the activation dies out within runs of repeated a2->S1 unrewarded trials (e.g. t71-74: 0.96, 0.20, 0, 0, predicted about 0.85) even though belief keeps favouring S2. Neither belief nor two-back history terms capture this (two-back a2 S1 u term weight about 0, dev unchanged at 0.60).",
+      "No direct comparison with the policy was possible in observed-only mode, so the claim that the observed belief stands in for the policy 'with little loss' is unverified."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 rare a2->S1 after an unrewarded trial, mid-episode only (trials 10-84, weaker from 75 on). Larger when the observed history favours S2 (previous trial a2->S1 unrewarded, or strong S2 belief), smaller after an a2->S2 or a1->S1 unrewarded trial. Dies out within long runs of repeats.",
+    "better_terms": "W = (phase == D2) * (action == 2) * (state == 1) * (prev_reward == 0) * (ep_trial >= 10) * (ep_trial < 85); terms: W ;; W * np.clip(-belief_lo, 0, 6) ;; W * np.clip(-belief_lo - 2, 0, 6) ;; W * last_is('a2 S1 u') ;; W * last_is('a2 S2 u') ;; W * last_is('a1 S1 u') ;; W * (ep_trial >= 75) ;; W * (belief_cover < 3)   (dev 0.772, test 0.750; the same without the belief terms: test 0.731)",
+    "better_terms_test_r2_beyond_timing": 0.75
+  },
+  "final_label": "D2 rare a2->S1 after an unrewarded trial, mid-episode only (trials 10-84, weaker from 75 on). Larger when the observed history favours S2 (previous trial a2->S1 unrewarded, or strong S2 belief), smaller after an a2->S2 or a1->S1 unrewarded trial. Dies out within long runs of repeats."
+}

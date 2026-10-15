@@ -1,0 +1,63 @@
+{
+  "label": "D2: a2 led rarely to S1, after an unrewarded previous trial",
+  "predicate": "(phase == D2) & (action == 2) & (state == 1) & (prev_reward == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (DELAY_2), almost entirely when the agent chose a2 and the rare transition took it to S1 (99.3% of activation mass), and mostly when the previous trial was unrewarded. Never fires at D1 or GO, and almost never after a common transition or an a1 choice. The predicate uses only inputs observed at D2 (action, state, prev_reward). Dropping the prev_reward==0 condition keeps recall (0.95) but precision falls to 0.35 (dev F1 0.51 vs 0.83). Magnitude: the strongest activations come on runs of repeated unrewarded a2->S1 rare trials, building to near max over 2-3 consecutive ones (e.g. 0.64, 0.90, 0.98). Activations that the predicate misses are weak (about 0.05 of max, 2.7% of mass), mostly a2->S1 rare after a rewarded trial. False positives are mainly isolated a2->S1 rare trials with no earlier such run in the window.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 229,
+    "predicate": "(phase == D2) & (action == 2) & (state == 1) & (prev_reward == 0)",
+    "split": "test",
+    "precision": 0.8291627469426153,
+    "recall": 0.8054464040939413,
+    "f1": 0.817132526769573,
+    "mass_recall": 0.9692848981038077,
+    "correlation": 0.7218620645924486,
+    "n_active": 21886,
+    "n_predicted": 21260,
+    "coverage_by_activation_quartile": [
+      0.5646929824561403,
+      0.6635599415204678,
+      0.9936026320599525,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 229,
+    "predicate": "(phase == D2) & (action == 2) & (state == 1) & (prev_reward == 0)",
+    "split": "dev",
+    "precision": 0.8464125560538116,
+    "recall": 0.8226844972758791,
+    "f1": 0.8343798663786608,
+    "mass_recall": 0.9725849449202814,
+    "correlation": 0.7422697792495788,
+    "n_active": 20190,
+    "n_predicted": 19624,
+    "coverage_by_activation_quartile": [
+      0.5618066561014263,
+      0.7297939778129953,
+      1.0,
+      0.9992074499702793
+    ]
+  },
+  "gate": "hidden",
+  "feature": 229,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "All the factual claims hold on the dev split. The feature never fires at D1 or GO (0 active steps at either phase). Activation mass is 99.6% with action==a2, 99.8% with state==S1 and 99.3% with common==0. Common-transition D2 steps give test precision 0.005.",
+      "The predicate reproduces its reported test scores: P 0.829, R 0.805, F1 0.817, mass recall 0.969. Dropping prev_reward==0 gives test F1 0.519, which matches the claim. On test, missed activations hold 3.1% of mass (2.7% was claimed) and are all weak (<=0.07 of max), so they look like scattered noise.",
+      "The false positives are only partly systematic. When the previous trial reached S2, the predicate's precision falls to 0.67, but those steps carry only 4% of mass. When good==S1 (S1 is actually the good state), precision is 0.68 and mass recall 0.12. When good==S2, precision is 0.93 and mass recall 0.77. So the feature is strongest when the rare-reached S1 is the bad state and the agent has already been seeing S1 go unrewarded. This fits the explanation's point about runs and isolated cases, though the explanation does not mention the good-state dependence.",
+      "Adding prev_state==S1 or prev_common==0 raises precision to 0.95-0.99 but cuts recall to 0.38-0.58. Excluding (previous trial reached S2 and good==S1) gives test F1 0.766. None of these beats the original predicate's test F1 of 0.817, so no better binary predicate was found.",
+      "Trials 0-2 of an episode account for only 341 predicted steps, at precision 0.36. This is negligible."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

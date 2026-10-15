@@ -1,0 +1,63 @@
+{
+  "label": "GO after rewarded S1, scaled by moderate policy logit and early episode",
+  "terms": "(phase==GO)*last_is(\"a1 S1 r\")*np.exp(-((choice-1)/5)**2)*np.clip(1-ep_trial/80,0,1) ;; (phase==GO)*last_is(\"a2 S1 r\")*np.exp(-((choice-1)/5)**2)*np.clip(1-ep_trial/80,0,1) ;; (phase==GO)*np.exp(-((choice-1)/5)**2)*np.clip(1-ep_trial/80,0,1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO. Magnitude is multiplicative: (previous trial reached S1 and was rewarded; a2->S1 rare-rewarded slightly stronger than a1->S1 common-rewarded) x (a bump in the policy logit choice=logit(a1)-logit(a2), peaking near +1 and falling off for strongly a1 or strongly a2 policies) x (an episode ramp that decays linearly to zero by about trial 80). Additive indicator terms reach only ~0.12-0.22 dev R^2 beyond timing; adding the multiplicative policy and episode gating raises it to 0.62 dev / 0.64 test (above the additive all ceiling of 0.29). Other previous-trial patterns (S2 or unrewarded) give near-zero activation; the trial before, value, hidden good state add little. Remaining misses: activation often persists over runs of rewarded trials, and first-trial-in-window steps where the previous trial is unknown. Uses the model policy output (not future variables).",
+  "gate": "update",
+  "feature": 132,
+  "test_scores": {
+    "gate": "update",
+    "feature": 132,
+    "terms": [
+      "(phase==GO)*last_is(\"a1 S1 r\")*np.exp(-((choice-1)/5)**2)*np.clip(1-ep_trial/80,0,1)",
+      "(phase==GO)*last_is(\"a2 S1 r\")*np.exp(-((choice-1)/5)**2)*np.clip(1-ep_trial/80,0,1)",
+      "(phase==GO)*np.exp(-((choice-1)/5)**2)*np.clip(1-ep_trial/80,0,1)"
+    ],
+    "weights": [
+      0.37974132945738437,
+      0.48199769528402814,
+      0.0021436496061481712
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.642089857343584,
+    "r2": 0.6578909115783835,
+    "r2_timing_only": 0.04414810409541281
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 132,
+    "terms": [
+      "(phase==GO)*last_is(\"a1 S1 r\")*np.exp(-((choice-1)/5)**2)*np.clip(1-ep_trial/80,0,1)",
+      "(phase==GO)*last_is(\"a2 S1 r\")*np.exp(-((choice-1)/5)**2)*np.clip(1-ep_trial/80,0,1)",
+      "(phase==GO)*np.exp(-((choice-1)/5)**2)*np.clip(1-ep_trial/80,0,1)"
+    ],
+    "weights": [
+      0.37974132945738437,
+      0.48199769528402814,
+      0.0021436496061481712
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6175336367237095,
+    "r2": 0.6340127001862146,
+    "r2_timing_only": 0.04308630782937839
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The main claims hold. On test the original three terms score 0.642 beyond timing, against an additive 'all' ceiling of 0.29. The feature is zero at D1 and D2, and the residual is about -0.006 at GO after any S2 or unrewarded trial. On raw residuals the rare-rewarded a2->S1 case is stronger than common a1->S1 (+0.062 vs +0.005), so the weight ordering 0.48 > 0.38 is real. The trial before the last one (tv reward/state -2), the hidden good state, value and since_rev each add at most 0.01 on test.",
+      "The a1/a2 split is mostly cosmetic. One term (phase==GO)*(prev_state==1)*(prev_reward==1)*bump*ramp scores 0.632 test against 0.642 for the three-term version. The third term (bump*ramp alone) gets weight 0.002 and does nothing.",
+      "Both multiplicative factors are needed. Dropping the episode ramp leaves 0.38 test, dropping the policy bump leaves 0.08, and the indicator alone scores 0.05. Bump width 5 centred near 1 is about optimal: width 3 gives 0.59 and width 8 gives 0.34. A ramp ending at trial 80 scores 0.684, against 0.624 ending at 60 and 0.669 ending at 100.",
+      "Overclaim: the explanation says the first trial in each window 'cannot be fit because its previous trial is unknown'. Most of it can be fit. prev_reward is observed even when prev_state is -1, and the term (phase==GO)*(prev_state==-1)*(prev_reward==1)*bump*ramp gets weight 0.29 and raises test R^2 from 0.632 to 0.705. In misses this was the largest error class: first-trial GOs firing at 0.36-0.42 while the model predicts about 0.01.",
+      "Missed detail: firing is suppressed in the first few episode trials even after S1 rewarded (ep_trial<6 term, weight -0.12, about +0.015 R^2). For example, t5 after a2 S1 r has activation 0 against a prediction of 0.34.",
+      "Residual: even with the better terms, GO after a1 S1 r stays slightly over-predicted (-0.011 mean error). None of the following explained which common-rewarded trials fire: a linear choice term, since_rev, the action two trials back, start_high, value or good. Test R^2 levels off at about 0.72."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after a rewarded S1 trial (rare a2->S1 strongest), scaled by a moderate a1-leaning policy logit and an early-episode ramp; suppressed in the first ~5 trials",
+    "better_terms": "(phase==GO)*np.exp(-((choice-1)/5)**2)*np.clip(1-ep_trial/80,0,1)*last_is('a1 S1 r') ;; (phase==GO)*np.exp(-((choice-1)/5)**2)*np.clip(1-ep_trial/80,0,1)*last_is('a2 S1 r') ;; (phase==GO)*np.exp(-((choice-1)/5)**2)*np.clip(1-ep_trial/80,0,1)*(prev_state==-1)*(prev_reward==1) ;; (phase==GO)*np.exp(-((choice-1)/5)**2)*np.clip(1-ep_trial/80,0,1)*(ep_trial<6)*(prev_state==1)*(prev_reward==1)",
+    "better_terms_test_r2_beyond_timing": 0.72
+  },
+  "final_label": "GO after a rewarded S1 trial (rare a2->S1 strongest), scaled by a moderate a1-leaning policy logit and an early-episode ramp; suppressed in the first ~5 trials"
+}

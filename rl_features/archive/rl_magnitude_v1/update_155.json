@@ -1,0 +1,66 @@
+{
+  "label": "GO after a streak of unrewarded rare a2->S1 trials, growing with streak and episode time",
+  "terms": "(phase == GO) * (tv(\"action\", -1) == 2) * (tv(\"reward\", -1) == 0) * (tv(\"state\", -1) == 1) * ep_dec ;; (phase == GO) * (tv(\"action\", -1) == 2) * (tv(\"reward\", -1) == 0) * (tv(\"action\", -2) == 2) * (tv(\"reward\", -2) == 0) * (tv(\"state\", -2) == 1) * ep_dec ;; (phase == GO) * (tv(\"action\", -1) == 2) * (tv(\"reward\", -1) == 0) * (tv(\"state\", -1) == 1) * (tv(\"action\", -2) == 2) * (tv(\"reward\", -2) == 0) * (tv(\"state\", -2) == 1) ;; (phase == GO) * (tv(\"action\", -1) == 2) * (tv(\"reward\", -1) == 0) * (tv(\"state\", -1) == 1) * (tv(\"action\", -2) == 2) * (tv(\"reward\", -2) == 0) * (tv(\"state\", -2) == 1) * (tv(\"action\", -3) == 2) * (tv(\"reward\", -3) == 0) * (tv(\"state\", -3) == 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Active only at GO (zero at D1/D2). Magnitude is driven by a run of consecutive unrewarded a2 trials that reached S1 (rare transition, unrewarded): one a2 S1 u gives a small activation that grows with episode decile; two in a row adds ~0.5; three in a row adds another ~0.55 (a near-additive staircase: roughly 0.05*ep_dec, then +0.5, then +0.55). An unrewarded a2 trial (either state) following an a2 S1 u also gets a moderate ep_dec-scaled boost. Other previous-trial patterns sit at or below baseline. Hidden good state, trials since reversal and the policy logit added nothing once the streak is modelled. All terms are observed-only. Test R^2 beyond timing 0.49 (dev 0.48), above the additive all-cue ceiling of 0.33 because the streak is a multi-trial interaction. Remaining error mostly comes from windows whose streak began before the window starts (history not visible).",
+  "gate": "update",
+  "feature": 155,
+  "test_scores": {
+    "gate": "update",
+    "feature": 155,
+    "terms": [
+      "(phase == GO) * (tv(\"action\", -1) == 2) * (tv(\"reward\", -1) == 0) * (tv(\"state\", -1) == 1) * ep_dec",
+      "(phase == GO) * (tv(\"action\", -1) == 2) * (tv(\"reward\", -1) == 0) * (tv(\"action\", -2) == 2) * (tv(\"reward\", -2) == 0) * (tv(\"state\", -2) == 1) * ep_dec",
+      "(phase == GO) * (tv(\"action\", -1) == 2) * (tv(\"reward\", -1) == 0) * (tv(\"state\", -1) == 1) * (tv(\"action\", -2) == 2) * (tv(\"reward\", -2) == 0) * (tv(\"state\", -2) == 1)",
+      "(phase == GO) * (tv(\"action\", -1) == 2) * (tv(\"reward\", -1) == 0) * (tv(\"state\", -1) == 1) * (tv(\"action\", -2) == 2) * (tv(\"reward\", -2) == 0) * (tv(\"state\", -2) == 1) * (tv(\"action\", -3) == 2) * (tv(\"reward\", -3) == 0) * (tv(\"state\", -3) == 1)"
+    ],
+    "weights": [
+      0.04688685314582235,
+      0.04062281673369535,
+      0.5136422756418633,
+      0.5721342173390612
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.4896170071004724,
+    "r2": 0.5152356302065957,
+    "r2_timing_only": 0.0501948996391548
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 155,
+    "terms": [
+      "(phase == GO) * (tv(\"action\", -1) == 2) * (tv(\"reward\", -1) == 0) * (tv(\"state\", -1) == 1) * ep_dec",
+      "(phase == GO) * (tv(\"action\", -1) == 2) * (tv(\"reward\", -1) == 0) * (tv(\"action\", -2) == 2) * (tv(\"reward\", -2) == 0) * (tv(\"state\", -2) == 1) * ep_dec",
+      "(phase == GO) * (tv(\"action\", -1) == 2) * (tv(\"reward\", -1) == 0) * (tv(\"state\", -1) == 1) * (tv(\"action\", -2) == 2) * (tv(\"reward\", -2) == 0) * (tv(\"state\", -2) == 1)",
+      "(phase == GO) * (tv(\"action\", -1) == 2) * (tv(\"reward\", -1) == 0) * (tv(\"state\", -1) == 1) * (tv(\"action\", -2) == 2) * (tv(\"reward\", -2) == 0) * (tv(\"state\", -2) == 1) * (tv(\"action\", -3) == 2) * (tv(\"reward\", -3) == 0) * (tv(\"state\", -3) == 1)"
+    ],
+    "weights": [
+      0.04688685314582235,
+      0.04062281673369535,
+      0.5136422756418633,
+      0.5721342173390612
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.48745400762301017,
+    "r2": 0.5118695592908371,
+    "r2_timing_only": 0.04763582591797677
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced: the claimed terms score test R^2 beyond timing 0.4896. Weights match the explanation: about +0.047 per decile for one a2 S1 u trial, +0.04 per decile for an a2 u trial after a2 S1 u, +0.51 for two in a row, +0.57 for three in a row.",
+      "Episode-decile growth holds up. A streak model with no ep_dec scores 0.417 test, and adding the ep_dec interaction raises it to 0.475.",
+      "The 'nothing else adds' claims hold. Adding A*choice (policy logit) gives 0.499, the hidden good state gives 0.491, stay at -1 gives 0.498, and the a1 or rewarded trial-before cues give 0.497.",
+      "Minor omission: the value-head output, which the explanation does not mention, does add a little. With A = GO * last_is('a2 S1 u'), adding A*value plus A to the claimed terms gives test 0.5475 (+0.06). It is probably standing in for streak length from before the window. The misses output agrees: the worst windows are the first visible GO after a2 S1 u, where the streak started before the window (actual about 2.2 vs predicted 0.05 to 0.45).",
+      "No other systematic error class. The phase x previous-trial errors from misses are all within 0.03 (GO after any non-a2 S1 u pattern is over-predicted by about 0.027; D1 and D2 are off by 0.009, i.e. the intercept). All terms are observed-only."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after a streak of unrewarded rare a2->S1 trials, growing with streak length and episode time",
+    "better_terms": "claimed 4 terms ;; (phase == GO) * last_is('a2 S1 u') * value ;; (phase == GO) * last_is('a2 S1 u') ;; (phase == GO) * last_is('a2 S1 u') * (rel == -2) * value ;; (phase == GO) * last_is('a2 S1 u') * (rel == -2)",
+    "better_terms_test_r2_beyond_timing": 0.5565
+  },
+  "final_label": "GO after a streak of unrewarded rare a2->S1 trials, growing with streak length and episode time"
+}

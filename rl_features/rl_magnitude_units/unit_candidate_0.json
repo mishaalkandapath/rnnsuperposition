@@ -1,0 +1,112 @@
+{
+ "label": "At GO it tracks the observer belief that S1 is good, including after a1 S2 rewarded.",
+ "short_terms": "(phase == GO) * np.tanh(belief_lo/2) * (1 - last_is('a2 S2 u')) ;; (phase == GO) * last_is('a2 S2 u') ;; (phase == D1) * (prev_reward == 0) * (prev_action == 1)",
+ "terms": "(phase == GO) * np.tanh(belief_lo) ;; (phase == GO) * (prev_action == 1) ;; (phase == GO) * last_is(\"a1 S2 r\") * np.tanh(belief_lo) ;; (phase == GO) * last_is(\"a1 S2 r\") ;; (phase == GO) * last_is(\"a1 S2 r\") * (tv(\"action\", -2) == 1) ;; (phase == D1) * (prev_reward == 0) * (prev_action == 1) ;; (phase == GO) * last_is(\"a2 S2 u\") ;; (phase == GO) * last_is(\"a1 S1 u\")",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Raw candidate n of unit 0. D2 is pinned at -1; D1 sits near -0.8 and rises after unrewarded a1 trials (strongest after a1 S2 u). At GO the value is a graded readout of the ideal observer belief that S1 is good (tanh(belief_lo), weight ~0.7): high (toward +1) when S1 is believed good, low (toward -1) when S2 is. It gets an extra positive offset after an a1 -> S1 trial (rewarded or not). The old short form used a plain prev_action == 1 offset, and that over-predicted GO after a1 S2 r by ~0.4. Restricting the offset to a1 -> S1 fixes that, so after a1 S2 r the GO value is predicted by belief alone. Within that situation (terms multiplied by (phase == GO) * last_is(a1 S2 r)), tanh(belief_lo) captured as much as a 6-bin belief table plus trial-before choice and reward terms (dev R^2 contribution ~0.0037 vs 0.0038, out of a condition-only 0.00015). So the GO variation there is driven by how strongly the episode history still favours S1 after the rare reward, and the trial before adds nothing beyond belief. I did not measure what fraction of the within-situation variance this explains. The free fit (dev 0.80) adds situation-specific offsets (a2 S2 u, a1 S1 u, a1 S2 r) beyond the short form (dev 0.77).",
+ "full_test_scores": {
+  "gate": "unit_candidate",
+  "feature": 0,
+  "terms": [
+   "(phase == GO) * np.tanh(belief_lo)",
+   "(phase == GO) * (prev_action == 1)",
+   "(phase == GO) * last_is(\"a1 S2 r\") * np.tanh(belief_lo)",
+   "(phase == GO) * last_is(\"a1 S2 r\")",
+   "(phase == GO) * last_is(\"a1 S2 r\") * (tv(\"action\", -2) == 1)",
+   "(phase == D1) * (prev_reward == 0) * (prev_action == 1)",
+   "(phase == GO) * last_is(\"a2 S2 u\")",
+   "(phase == GO) * last_is(\"a1 S1 u\")"
+  ],
+  "weights": [
+   0.6981879603467652,
+   0.2856182257902659,
+   -0.25982216739614533,
+   -0.4361524098540887,
+   0.09828918616455974,
+   0.6171128308930511,
+   -0.5101784271902164,
+   -0.12529552487918583
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7868347020976163,
+  "r2": 0.8722656616426221,
+  "r2_timing_only": 0.4007732984011676
+ },
+ "gate": "unit_candidate",
+ "feature": 0,
+ "test_scores": {
+  "gate": "unit_candidate",
+  "feature": 0,
+  "terms": [
+   "(phase == GO) * np.tanh(belief_lo/2) * (1 - last_is('a2 S2 u'))",
+   "(phase == GO) * last_is('a2 S2 u')",
+   "(phase == D1) * (prev_reward == 0) * (prev_action == 1)"
+  ],
+  "weights": [
+   0.9324108928291693,
+   -0.47207344097065973,
+   0.5861948537835625
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7781784324194195,
+  "r2": 0.8670785937152063,
+  "r2_timing_only": 0.4007732984011676
+ },
+ "dev_scores": {
+  "gate": "unit_candidate",
+  "feature": 0,
+  "terms": [
+   "(phase == GO) * np.tanh(belief_lo/2) * (1 - last_is('a2 S2 u'))",
+   "(phase == GO) * last_is('a2 S2 u')",
+   "(phase == D1) * (prev_reward == 0) * (prev_action == 1)"
+  ],
+  "weights": [
+   0.9324108928291693,
+   -0.47207344097065973,
+   0.5861948537835625
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.7922916873821523,
+  "r2": 0.8756682862944823,
+  "r2_timing_only": 0.4014119505449476
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "Large systematic error left by the recorded short form. In misses, GO after 'a2 S2 u' is over-predicted by -0.50, and the worst-fit windows are all a2 runs where the prediction is about +0.5 and the actual value is about -0.9. After an unrewarded S2 visit the observer belief moves toward S1, but the unit stays strongly negative. The label 'tracks the observer belief' is wrong in exactly this case. Other leftover errors: D1 after a1 S1 u -0.23 and GO after a1 S2 r -0.16.",
+   "The label leaves out the D1 component, even though the short form contains it. Dropping the D1 term (prev_reward==0 & prev_action==1) lowers test R^2 from 0.749 to 0.724. A reader of the label alone could not predict that the unit rises at D1 after unrewarded a1 trials.",
+   "The a1->S1 offset at GO adds little. Without it the form scores 0.740 test (with tanh(belief_lo/2)), and with it 0.761. The label's 'including after a1 S2 rewarded' is a minor detail of the offset, not a main property.",
+   "The belief scale is slightly off. tanh(belief_lo/2) beats tanh(belief_lo) on test (0.761 vs 0.749), and belief_lo/3 gives 0.760. The unit's belief readout saturates more slowly than tanh(belief_lo).",
+   "Better short form: '(phase == GO) * np.tanh(belief_lo/2) * (1 - last_is('a2 S2 u')) ;; (phase == GO) * last_is('a2 S2 u') ;; (phase == D1) * (prev_reward == 0) * (prev_action == 1)' scores dev 0.792 and test 0.778, against free-fit test 0.787. Fitted weights: +0.93 on belief, -0.47 on the a2 S2 u offset, +0.59 on D1. Its largest leftover errors are 0.23 or less (D1 after a1 S1 u -0.23, D1 after a1 S2 u +0.19, GO after a1 S1 u +0.17)."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "GO: graded S1-good belief, but low after a2 S2 unrewarded; D1: higher after unrewarded a1",
+  "better_short_terms": "(phase == GO) * np.tanh(belief_lo/2) * (1 - last_is('a2 S2 u')) ;; (phase == GO) * last_is('a2 S2 u') ;; (phase == D1) * (prev_reward == 0) * (prev_action == 1)",
+  "better_short_terms_test_r2_beyond_timing": 0.7782
+ },
+ "final_label": "GO: graded S1-good belief, but low after a2 S2 unrewarded; D1: higher after unrewarded a1",
+ "original_short_terms": "(phase == GO) * np.tanh(belief_lo) ;; (phase == GO) * (prev_action == 1) * (prev_state == 1) ;; (phase == D1) * (prev_reward == 0) * (prev_action == 1)",
+ "original_test_scores": {
+  "gate": "unit_candidate",
+  "feature": 0,
+  "terms": [
+   "(phase == GO) * np.tanh(belief_lo)",
+   "(phase == GO) * (prev_action == 1) * (prev_state == 1)",
+   "(phase == D1) * (prev_reward == 0) * (prev_action == 1)"
+  ],
+  "weights": [
+   0.7024441786278164,
+   0.30898510428822085,
+   0.6317201387761631
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7487402762558789,
+  "r2": 0.8494384644961765,
+  "r2_timing_only": 0.4007732984011676
+ },
+ "terms_from": "skeptic"
+}

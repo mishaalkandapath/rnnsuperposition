@@ -1,0 +1,65 @@
+{
+  "label": "GO step, choosing a2 after a rewarded trial, late in the episode",
+  "predicate": "(phase == GO) & (model_act == 2) & (prev_reward == 1) & (ep_trial >= 60)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO; never at D1 or D2. Within GO it fires almost only when the model picks a2 (model_act==2 holds 99% of the activation mass; a strongly negative choice logit) and the previous trial was rewarded (96% of the mass). It also depends strongly on time in the episode: it is silent before about trial 30, its rate climbs from about trial 50, and it peaks at trials 80-99. Dev F1 is 0.83 with ep_trial>=60 (precision 0.87, mass recall 0.94). Dropping the episode-time condition cuts precision to 0.39. Missed activations are weak: about 6% of the mass, mostly small firings at a2 GO steps after an unrewarded trial. The feature does not fire when the model chooses a1, at any non-GO step, or early in an episode. From the example windows, magnitude seems to grow over runs of consecutive rewarded a2 trials, but I did not quantify this. The predicate uses no future variables: model_act is the policy output of the model itself at GO. The upcoming action (action/next_action) behaves the same way but counts as future at GO.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 86,
+    "predicate": "(phase == GO) & (model_act == 2) & (prev_reward == 1) & (ep_trial >= 60)",
+    "split": "test",
+    "precision": 0.8656564210827637,
+    "recall": 0.7780940434838544,
+    "f1": 0.8195430139399379,
+    "mass_recall": 0.9317702641399102,
+    "correlation": 0.8043885271985888,
+    "n_active": 62184,
+    "n_predicted": 55894,
+    "coverage_by_activation_quartile": [
+      0.4349671941335392,
+      0.6873793901968352,
+      0.9900295896050431,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 86,
+    "predicate": "(phase == GO) & (model_act == 2) & (prev_reward == 1) & (ep_trial >= 60)",
+    "split": "dev",
+    "precision": 0.8689711934156379,
+    "recall": 0.7966297786720322,
+    "f1": 0.8312294974412807,
+    "mass_recall": 0.938635350451798,
+    "correlation": 0.8075812898796941,
+    "n_active": 59640,
+    "n_predicted": 54675,
+    "coverage_by_activation_quartile": [
+      0.45754527162977865,
+      0.7364855801475519,
+      0.9924882629107982,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 86,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "All factual claims check out on the dev profile. Activity is GO-only: D1 and D2 have 0 active steps. model_act==2 holds 99.1% of the mass. prev_reward==1 holds 96.4%. By ep_trial, there are 0 active steps in trials 0-19 and 2 in trials 20-29; the rate then climbs (trial 50-59 rate 0.022, 60-69 0.071, 80-99 about 0.15). Dropping the ep_trial condition gives precision 0.63 at F1 0.74 (the explanation's 0.39 figure is for a variant I did not reproduce, but the direction holds). The test score reproduces: P 0.866, R 0.778, F1 0.82, mass recall 0.932.",
+      "The 'late in the episode' cutoff is a ramp, not a step. Inside the predicate, precision is 0.61 for trials 60-69, 0.91 for 70-79 and 0.98 for 80+. Most false positives are therefore early-60s a2 GO steps. This is a graded effect, not a separate class of counterexamples. Moving the cutoff to ep_trial>=62 barely changes anything (test F1 0.824 vs 0.82).",
+      "After a rewarded rare transition (prev_common==0) the feature fires less reliably: precision 0.60 vs 0.92 after a rewarded common one, but this is only about 5% of the mass. After an unrewarded trial: it never fires if that trial was rare (precision 0.001) and fires weakly about 40% of the time if it was common. This matches the claim that the misses are small firings after unrewarded a2 trials (about 3.5% of the mass).",
+      "The misses check out (test: 6.8% of the mass, mostly low-magnitude): about 3.5% are a2 GO steps after an unrewarded trial late in the episode, about 1.7% are before trial 60, and about 0.9% are a1 choices. There is no systematic class large enough to justify a new predicate.",
+      "Activation tracks a low value-head output (85% of the mass is in the bottom two value bins; the top bin is silent). That is likely the value head reflecting how much of the episode is left, so ep_trial and value are partly interchangeable. A predicate using value<7.13 instead of ep_trial scores lower (F1 0.74), so the ep_trial version is the better one.",
+      "The claim that magnitude grows over runs of rewarded a2 trials is not quantified, and it is confounded with the ep_trial ramp (activation rises steadily within a window even across mixed outcomes). Treat it as anecdotal, not part of the label.",
+      "No future variables: model_act is the model's own policy output and prev_reward is observed at D1. The label does not overclaim relative to the predicate."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

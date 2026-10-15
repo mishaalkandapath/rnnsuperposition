@@ -1,0 +1,113 @@
+{
+ "label": "Update gate opens at GO and D1 when the evidence says S2 is good.",
+ "short_terms": "(phase == GO) * np.tanh(belief_lo / 2) ;; (phase == D1) * np.tanh(belief_lo / 2) ;; (phase == GO) * (prev_action == 2) * (prev_reward == 0)",
+ "terms": "(phase == GO) * np.tanh(belief_lo) ;; (phase == D1) * np.tanh(belief_lo) ;; (phase == GO) * (prev_action == 2) ;; (phase == D1) * (prev_action == 2) ;; (phase == GO) * (prev_action == 2) * prev_reward ;; (phase == GO) * prev_reward * (prev_common == 1) ;; (phase == D1) * (prev_state == 1) ;; (phase == GO) * belief_lo",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Raw update gate z of unit 40. At D2 it is saturated near 1 with no information. At GO (and, about half as strongly, at D1) it is graded by the ideal-observer belief: high when the observed history says S2 is good (belief_lo negative, saturating, so tanh fits best), low when S1 is good; i.e. it tracks the a2-favouring belief. A smaller extra rise at GO after the previous choice was a2. The free fit adds reward x choice/transition interactions at GO (lower after rewarded trials, especially common ones) and a D1 prev-state term, gaining only ~0.05 dev R^2. Residual misses: under-predicts D1 after a2 S1 trials and GO after a2 S2 u. Future reward and trials-since-reversal carry nothing.",
+ "full_test_scores": {
+  "gate": "unit_update",
+  "feature": 40,
+  "terms": [
+   "(phase == GO) * np.tanh(belief_lo)",
+   "(phase == D1) * np.tanh(belief_lo)",
+   "(phase == GO) * (prev_action == 2)",
+   "(phase == D1) * (prev_action == 2)",
+   "(phase == GO) * (prev_action == 2) * prev_reward",
+   "(phase == GO) * prev_reward * (prev_common == 1)",
+   "(phase == D1) * (prev_state == 1)",
+   "(phase == GO) * belief_lo"
+  ],
+  "weights": [
+   -0.18599416998542606,
+   -0.15426206889000224,
+   0.2381085188763178,
+   0.04141966636318061,
+   -0.10364155601493,
+   -0.10084939425954945,
+   0.048407782644456776,
+   -0.050874124804768696
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7692362737405182,
+  "r2": 0.9061534905969815,
+  "r2_timing_only": 0.5933220921493834
+ },
+ "gate": "unit_update",
+ "feature": 40,
+ "test_scores": {
+  "gate": "unit_update",
+  "feature": 40,
+  "terms": [
+   "(phase == GO) * np.tanh(belief_lo / 2)",
+   "(phase == D1) * np.tanh(belief_lo / 2)",
+   "(phase == GO) * (prev_action == 2) * (prev_reward == 0)"
+  ],
+  "weights": [
+   -0.42624118820880685,
+   -0.1842152293590675,
+   0.21382214663363944
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.751574414178625,
+  "r2": 0.8989708025015994,
+  "r2_timing_only": 0.5933220921493834
+ },
+ "dev_scores": {
+  "gate": "unit_update",
+  "feature": 40,
+  "terms": [
+   "(phase == GO) * np.tanh(belief_lo / 2)",
+   "(phase == D1) * np.tanh(belief_lo / 2)",
+   "(phase == GO) * (prev_action == 2) * (prev_reward == 0)"
+  ],
+  "weights": [
+   -0.42624118820880685,
+   -0.1842152293590675,
+   0.21382214663363944
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.7682264954662128,
+  "r2": 0.9043427260460997,
+  "r2_timing_only": 0.5872812375758172
+ },
+ "final_verdict": "partially_explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The claim that 'tanh(belief_lo) fits best because the effect levels off' is false. Swapping tanh(belief_lo) for the plain linear belief (2*belief - 1, which equals tanh(belief_lo/2)) raises the score. With belief terms only, test R^2 goes from 0.694 to 0.711. With the recorded third term it goes from 0.717 to about 0.72 (raw belief_lo gives 0.721). tanh(2*belief_lo) scores worse still (0.712 with the a2-unrewarded term, against 0.752 for the linear version). So the gate grows about linearly in P(S2 good); it does not level off.",
+   "The third term is mis-specified. (phase==GO)*(prev_action==2) adds only 0.024 (0.694 to 0.717). Restricting it to unrewarded a2 trials, (phase==GO)*(prev_action==2)*(prev_reward==0), scores 0.735 with tanh and 0.752 with linear belief.",
+   "The label leaves out the a2 term entirely. The explanation says it 'rises a little more if the previous choice was a2', but the effect really comes from unrewarded a2 trials (weight +0.21).",
+   "Large systematic errors remain after the short form, both recorded and improved. D1 after a2 S1 r is under-predicted by +0.24 and D1 after a2 S1 u by +0.16. GO after a2 S2 u is under-predicted by +0.22 (recorded form) or +0.13 (improved form). GO after a1 S1 r is over-predicted by -0.13 and D1 after a1 S2 r by -0.12 to -0.14. Rare a2 trials at D1 are the clearest error class. Adding (phase==D1)*(prev_action==2)*(prev_state==1) as a 4th term brings the score to 0.758.",
+   "There is a big gap to the observed-only ceiling. The additive tables over observed cues reach 0.90 and policy decile reaches 0.93, but the best 3-term short form reaches about 0.75 and an 8-term free fit about 0.79. Much of the variation tied to choice history is left unexplained. In the worst windows the gate is about 0.95 at GO during runs of a2 choices while the fit predicts 0.2 to 0.3.",
+   "These claims do check out: D2 sits near 1 and carries no information; the D1 weight is about half the GO weight (-0.16 vs -0.35); future and hidden variables add nothing (this-reward reference 0.00, since-reversal reference 0.01)."
+  ],
+  "revised_verdict": "partially_explained",
+  "revised_label": "Update gate rises linearly with evidence S2 is good at GO (half at D1), plus after unrewarded a2.",
+  "better_short_terms": "(phase == GO) * np.tanh(belief_lo / 2) ;; (phase == D1) * np.tanh(belief_lo / 2) ;; (phase == GO) * (prev_action == 2) * (prev_reward == 0)",
+  "better_short_terms_test_r2_beyond_timing": 0.7516
+ },
+ "final_label": "Update gate rises linearly with evidence S2 is good at GO (half at D1), plus after unrewarded a2.",
+ "original_short_terms": "(phase == GO) * np.tanh(belief_lo) ;; (phase == D1) * np.tanh(belief_lo) ;; (phase == GO) * (prev_action == 2)",
+ "original_test_scores": {
+  "gate": "unit_update",
+  "feature": 40,
+  "terms": [
+   "(phase == GO) * np.tanh(belief_lo)",
+   "(phase == D1) * np.tanh(belief_lo)",
+   "(phase == GO) * (prev_action == 2)"
+  ],
+  "weights": [
+   -0.34708361948592503,
+   -0.1601193812531696,
+   0.11241627707026995
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7172722296825358,
+  "r2": 0.885020861876024,
+  "r2_timing_only": 0.5933220921493834
+ },
+ "terms_from": "skeptic"
+}

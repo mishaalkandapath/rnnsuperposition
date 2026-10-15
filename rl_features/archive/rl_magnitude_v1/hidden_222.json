@@ -1,0 +1,75 @@
+{
+  "label": "Late-episode D1 ramp after a1->S1, gated by reward two trials back",
+  "terms": "(phase == D1) * (prev_action == 1) * (prev_state == 1) * np.maximum(ep_trial - 70, 0)**2 ;; (phase == D1) * (prev_action == 2) * np.maximum(ep_trial - 70, 0)**2 ;; (phase == D1) * (prev_state == 2) * np.maximum(ep_trial - 70, 0)**2 ;; (phase == D1) * (prev_action == 1) * (prev_state == 1) * (tv(\"reward\", -2) == 1) * np.maximum(ep_trial - 70, 0)**2 ;; (phase == D1) * (prev_action == 1) * (prev_state == 1) * (tv(\"reward\", -3) == 1) * np.maximum(ep_trial - 70, 0)**2 ;; (phase == D1) * (prev_action == 1) * (prev_state == 1) * (tv(\"reward\", -2) == 0) * np.maximum(ep_trial - 70, 0)**2",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1 and only late in the episode (from about trial 70 on). Its size grows roughly with the square of (ep_trial - 70), but only when the previous trial was a1 reaching S1 (common). After a previous trial that reached S2 or used a2, it sits below the timing baseline. Within a1->S1 trials the reward history two trials back matters most: if trial -2 was unrewarded the activation is pushed to near zero, and a reward at trial -2 or -3 raises it. The previous trial reward on its own adds little. Activation is zero at GO and D2. The model value and policy deciles add nothing. All terms are observed-only, with no future or hidden variables. Test R^2 beyond timing is 0.64 (dev 0.64). The profile additive all ceiling is only 0.17, because the shape is a multiplicative interaction of episode time and history. Shape is a quadratic ramp; an exponential ramp gave a slightly worse fit (dev 0.50 vs 0.51 in a 4-term version).",
+  "gate": "hidden",
+  "feature": 222,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 222,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 1) * np.maximum(ep_trial - 70, 0)**2",
+      "(phase == D1) * (prev_action == 2) * np.maximum(ep_trial - 70, 0)**2",
+      "(phase == D1) * (prev_state == 2) * np.maximum(ep_trial - 70, 0)**2",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 1) * (tv(\"reward\", -2) == 1) * np.maximum(ep_trial - 70, 0)**2",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 1) * (tv(\"reward\", -3) == 1) * np.maximum(ep_trial - 70, 0)**2",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 1) * (tv(\"reward\", -2) == 0) * np.maximum(ep_trial - 70, 0)**2"
+    ],
+    "weights": [
+      0.0012081757510557655,
+      -0.00025045846532019465,
+      -0.0003251755409464842,
+      0.00035518973135457516,
+      0.0003947383839160174,
+      -0.0016959090487586325
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6351197889471477,
+    "r2": 0.7077130765769764,
+    "r2_timing_only": 0.19895101304716567
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 222,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 1) * np.maximum(ep_trial - 70, 0)**2",
+      "(phase == D1) * (prev_action == 2) * np.maximum(ep_trial - 70, 0)**2",
+      "(phase == D1) * (prev_state == 2) * np.maximum(ep_trial - 70, 0)**2",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 1) * (tv(\"reward\", -2) == 1) * np.maximum(ep_trial - 70, 0)**2",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 1) * (tv(\"reward\", -3) == 1) * np.maximum(ep_trial - 70, 0)**2",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 1) * (tv(\"reward\", -2) == 0) * np.maximum(ep_trial - 70, 0)**2"
+    ],
+    "weights": [
+      0.0012081757510557655,
+      -0.00025045846532019465,
+      -0.0003251755409464842,
+      0.00035518973135457516,
+      0.0003947383839160174,
+      -0.0016959090487586325
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6422541555995724,
+    "r2": 0.7167374178949815,
+    "r2_timing_only": 0.20820161425002992
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Main claims reproduce. The original terms score test R^2 beyond timing 0.6351. The model value and policy-logit terms add only 0.004 (0.639). GO and D2 copies of the ramp get weight 0.0. The previous trial's reward adds little: a1->S1 ramp alone scores 0.326, and adding prev_reward==0 brings it to 0.336, while adding tv('reward',-2)==0 brings it to 0.489.",
+      "Overclaim: 'drops to near zero'. The fitted net weight after an unrewarded trial -2 is about 0.0012 - 0.0017, but in the worst-fit windows the actual value falls from about 1.9-2.1 to about 0.65-0.71 (e.g. t98 after t97 r0: actual 0.71, predicted -0.06). So the drop is large but not to zero, and the model under-predicts these cases.",
+      "The cue at trial -2 is broader than its reward. Adding A*(state_-2 == S2) gets weight -0.00155, and A*(reward_-2 == 0 & state_-2 == S1) gets -0.0015, while the plain reward_-2 == 0 weight shrinks to -0.00016 (test 0.638). The activation drops whenever trial -2 was not S1-rewarded, not only when it was unrewarded. This is a description issue only; the R^2 change is small.",
+      "The 'reward at -2 or -3 raises it' terms mostly encode whether trial -2/-3 lies inside the window. Their weights (+0.00036, +0.00039) are small next to the base 0.0012. Together they lift R^2 from 0.49 to 0.51. Most of the gain to 0.635 comes from the below-baseline terms after a2 or S2.",
+      "The largest remaining misses are on the window's first trial, where prev_action and tv are unknown (actual about 2.0, predicted 0.32 from timing only), and on the size of the dip. This is a window-truncation artifact, not a missed behavioural class. The phase x previous-trial mean errors are all small (the largest is D1 after a1 S1 u at -0.028).",
+      "Adding an a2->S1 term and a window-start term only reaches 0.642. No large systematic gap remains."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Late-episode D1 ramp after a1->S1, sharply reduced unless trial -2 was S1-rewarded",
+    "better_terms": "(phase == D1) * np.maximum(ep_trial - 70, 0)**2 * (prev_action == 1) * (prev_state == 1) ;; (phase == D1) * np.maximum(ep_trial - 70, 0)**2 * (prev_action == 2) ;; (phase == D1) * np.maximum(ep_trial - 70, 0)**2 * (prev_state == 2) ;; (phase == D1) * np.maximum(ep_trial - 70, 0)**2 * (prev_action == 1) * (prev_state == 1) * (tv('reward', -2) == 1) ;; (phase == D1) * np.maximum(ep_trial - 70, 0)**2 * (prev_action == 1) * (prev_state == 1) * (tv('reward', -3) == 1) ;; (phase == D1) * np.maximum(ep_trial - 70, 0)**2 * (prev_action == 1) * (prev_state == 1) * (tv('reward', -2) == 0) ;; (phase == D1) * np.maximum(ep_trial - 70, 0)**2 * (prev_action == 2) * (prev_state == 1) ;; (phase == D1) * np.maximum(ep_trial - 70, 0)**2 * (prev_action == -1)",
+    "better_terms_test_r2_beyond_timing": 0.6421
+  },
+  "final_label": "Late-episode D1 ramp after a1->S1, sharply reduced unless trial -2 was S1-rewarded"
+}

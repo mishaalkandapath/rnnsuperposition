@@ -1,0 +1,80 @@
+{
+  "label": "D1 surge after a1->S2 (rare) trials, esp. unrewarded; a1-choice bias later",
+  "terms": "(phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a1 S2 r\") ;; (phase == D1) * last_is(\"a2 S2 u\") ;; (phase == D1) * (prev_reward == 1) ;; (phase == D2) * last_is(\"a1 S2 u\") ;; (phase == D2) * (action == 1) ;; (phase == GO) * (prev_action == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw GRU candidate n of unit 38 sits near -0.8 and its magnitude is driven mainly by the previous trial at D1: after a1 -> S2 unrewarded (rare, unrewarded) it jumps by about +1.6 (to near +0.9), after a1 -> S2 rewarded by about +0.8, after a2 -> S2 unrewarded by about +0.65; other rewarded trials lower it a little. The a1 S2 u boost carries into the next D2 (+0.5). Outside D1 it is somewhat higher when the choice is a1 (D2: this trial action a1; GO: previous action a1). Value and the hidden good state add little. Observed-only 7 terms: test R^2 beyond timing 0.71 (ceiling all 0.85, all observed 0.79; last-trial table alone 0.72). A version using the upcoming GO choice (future at GO) gets 0.73 test; the observed-only version is recorded.",
+  "gate": "unit_candidate",
+  "feature": 38,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 38,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D2) * last_is(\"a1 S2 u\")",
+      "(phase == D2) * (action == 1)",
+      "(phase == GO) * (prev_action == 1)"
+    ],
+    "weights": [
+      1.641252677262272,
+      0.8477008102858002,
+      0.6266298464870781,
+      -0.18543993092666167,
+      0.5445246257984645,
+      0.22476798682879498,
+      0.23356257721493148
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7119982286920826,
+    "r2": 0.7292525907783866,
+    "r2_timing_only": 0.059910610993626046
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 38,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D2) * last_is(\"a1 S2 u\")",
+      "(phase == D2) * (action == 1)",
+      "(phase == GO) * (prev_action == 1)"
+    ],
+    "weights": [
+      1.641252677262272,
+      0.8477008102858002,
+      0.6266298464870781,
+      -0.18543993092666167,
+      0.5445246257984645,
+      0.22476798682879498,
+      0.23356257721493148
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7184860213181721,
+    "r2": 0.7340571052628514,
+    "r2_timing_only": 0.055311938744889155
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The numbers reproduce. The recorded 7 terms score test R^2 beyond timing 0.712 (timing alone 0.06). The fitted weights match the explanation: D1 a1 S2 u +1.64, a1 S2 r +0.85, a2 S2 u +0.63, prev rewarded -0.19, D2 a1 S2 u +0.54, D2 action a1 +0.22, GO prev a1 +0.23.",
+      "The future-variable claim checks out. Swapping in (phase==GO)*(action==1) gives 0.725 against 0.712 for the observed-only version. So recording the observed version is correct.",
+      "Every term carries weight. Without the GO term the score drops to 0.677. The four D1 terms alone score 0.58.",
+      "The phrase 'other rewarded trials lower it slightly' is imprecise. The D1 residual after a2 S1 u (unrewarded) is -0.31, as low as after the rewarded trials. The misses output shows D1 after a2 S1 u is the most over-predicted cell (-0.21), and D1 after a1 S1 u is under-predicted (+0.14). The real contrast at D1 is closer to 'S1 outcomes and rewarded S2 outcomes low; a1 S1 u near baseline'.",
+      "The D1 boost after a2 S2 u is not uniform. It is concentrated on trials where that a2 choice was a switch away from a1. Adding (phase==D1)*last_is('a2 S2 u')*(tv('stay',-1)==0) gives that term +0.68 and the base term +0.57, raising test R^2 to 0.719. The worst-fit windows show D1 surges of about +0.85 after a1 S1 u followed by a2 S2 u, which the model under-predicts (-0.13 predicted).",
+      "Some steps have no previous trial in the window (prev = '?'). The model under-predicts these (D1 +0.18, GO +0.11). This is an artifact of where the window starts, not a missing explanation.",
+      "Model-internal quantities add a little: the policy logit at D2 brings the score to 0.74, and at D1 to 0.76. The remaining gap to the 0.79 observed-only ceiling is spread over many small cells. I found no single large systematic error class, and no tried term with history from two trials back added more than about 0.01."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 surge after a1->S2 (rare) trials, esp. unrewarded, and after unrewarded a2->S2 when that a2 was a switch from a1; mild a1-choice bias at GO/D2",
+    "better_terms": "(phase == D1) * last_is('a1 S2 u') ;; (phase == D1) * last_is('a1 S2 r') ;; (phase == D1) * last_is('a2 S2 u') * (tv('stay',-1) == 0) ;; (phase == D1) * (prev_reward == 1) ;; (phase == D2) * last_is('a1 S2 u') ;; (phase == D2) * (action == 1) ;; (phase == GO) * (prev_action == 1) ;; (phase == D1) * last_is('a2 S2 u')",
+    "better_terms_test_r2_beyond_timing": 0.719
+  },
+  "final_label": "D1 surge after a1->S2 (rare) trials, esp. unrewarded, and after unrewarded a2->S2 when that a2 was a switch from a1; mild a1-choice bias at GO/D2"
+}

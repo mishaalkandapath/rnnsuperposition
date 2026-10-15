@@ -1,0 +1,64 @@
+{
+  "label": "GO step after a rewarded trial when the agent is choosing a2",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at the GO step (zero activity at D1 and D2), and only when the previous trial was rewarded (in_rew 0 at GO, but prev_reward==1 carries all the mass; nothing after an unrewarded trial) and the agent is about to choose a2 (99% of the mass has action==2 / model_act==2, choice logit strongly negative: 70% of the mass sits in the most a2-leaning choice bin). I recorded the policy argmax (model_act==2), which the model computes at that step, not the future action variable; the two score the same (dev F1 0.857). Thresholding the policy logit (choice < -4) is slightly better (F1 0.868). Magnitude: the top-activating examples are switches to a2 after a rewarded rare transition from a1, i.e. the model-based switch to a2. Repeated a2 choices after long common-rewarded a2 streaks give weak activations. Silent for a1 choices, after unrewarded trials, and outside GO. About 23% of predicted steps are inactive, mostly repeated a2 choices where the activation drops to zero.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 134,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2)",
+    "split": "test",
+    "precision": 0.7579184004644965,
+    "recall": 0.9709528532194079,
+    "f1": 0.8513103932642985,
+    "mass_recall": 0.9894994597463651,
+    "correlation": 0.7318055849042028,
+    "n_active": 104864,
+    "n_predicted": 134339,
+    "coverage_by_activation_quartile": [
+      0.9170353982300885,
+      0.9709719255416539,
+      0.9958040891058896,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 134,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2)",
+    "split": "dev",
+    "precision": 0.7669730960613983,
+    "recall": 0.9703559996119895,
+    "f1": 0.8567598932840007,
+    "mass_recall": 0.9894762996614506,
+    "correlation": 0.7369621898745363,
+    "n_active": 103090,
+    "n_predicted": 130427,
+    "coverage_by_activation_quartile": [
+      0.9132037403484267,
+      0.9722965894540798,
+      0.9959258109576284,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 134,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Systematic false-positive class: a2 choices after a rewarded trial that reached S1 (rare, a2->S1). (phase==GO)&(prev_reward==1)&(model_act==2)&(prev_action==2)&(prev_common==0) predicts 12,152 dev steps at precision 0.012 with mass 0.0002. So the feature does not fire for 'a2 after any rewarded trial'. It needs the reward to have come from S2. Grouped by prev_state, prev_state==1 gives precision 0.012 (12,204 steps) and prev_state==2 gives precision 0.85.",
+      "The label is too broad. 'Rewarded trial' should be 'rewarded in S2'. The feature tracks a rewarded S2 outcome together with the agent choosing a2 (model-based credit to a2), not reward alone. This also accounts for the top activations: a1->S2 rare rewarded then a2 (prev_action==1 & prev_common==0, precision 0.555) is the model-based switch to a2. a2->S1 rare rewarded then a2 again is silent.",
+      "Magnitude claim is right but describes a small slice. The top-activating 'switch to a2 after a rare a1->S2 reward' cases hold only 2.9% of the activation mass. 73% of the mass is common-rewarded a2 repeats (prev_action==2 & prev_common==1, precision 0.87).",
+      "Claims that check out: GO only (D1 and D2 have 0 activations); prev_reward==1 carries 100% of the mass; model_act==2 carries 98.9% of the mass; choice < -4 scores dev F1 0.868; the original predicate scores test F1 0.851.",
+      "Smaller residual: precision drops on the last trials of an episode (ep_trial>=90, precision 0.64 with the improved predicate) and at rel +1 (0.79). These are moderate and look like the activation fading late in the episode. They are not a clean extra condition."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step when the previous trial was rewarded in S2 and the agent is choosing a2",
+    "better_predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (prev_state != 1)",
+    "better_predicate_test_f1": 0.902
+  },
+  "final_label": "GO step when the previous trial was rewarded in S2 and the agent is choosing a2"
+}

@@ -1,0 +1,65 @@
+{
+  "label": "D1 after an a2 -> S1 rare transition (late in episode)",
+  "predicate": "(phase == D1) & (prev_action == 2) & (prev_common == 0) & (ep_trial >= 40)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (never GO or D2), on the trial after the agent chose a2 and was taken by a rare transition to S1. Previous reward modulates little (fires after both rewarded and unrewarded rare a2 trials); it almost never fires after a1 trials (1.7% of mass) or after common a2->S2 trials. Strongly gated by episode time: essentially silent in the first ~20 trials and grows through trials 40-99, so the ep_trial >= 40 condition raises precision from 0.65 to 0.96 (dev F1 0.72 -> 0.83). Activations are higher when the policy favors a2 and value is low. Most remaining misses are D1 steps of the window first trial (rel -3), where the previous trial is outside the window, plus low-magnitude activations at trials 30-40. All variables used are observed at D1 (previous choice and transition).",
+  "test_scores": {
+    "gate": "update",
+    "feature": 182,
+    "predicate": "(phase == D1) & (prev_action == 2) & (prev_common == 0) & (ep_trial >= 40)",
+    "split": "test",
+    "precision": 0.9571452009844135,
+    "recall": 0.7286966948962003,
+    "f1": 0.8274424146147737,
+    "mass_recall": 0.829697491488107,
+    "correlation": 0.7131816482856156,
+    "n_active": 40029,
+    "n_predicted": 30475,
+    "coverage_by_activation_quartile": [
+      0.4819144684252598,
+      0.743279704207055,
+      0.8296192665134406,
+      0.8599980013990207
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 182,
+    "predicate": "(phase == D1) & (prev_action == 2) & (prev_common == 0) & (ep_trial >= 40)",
+    "split": "dev",
+    "precision": 0.960283786603603,
+    "recall": 0.7340493407060825,
+    "f1": 0.8320626789211993,
+    "mass_recall": 0.8296094250295851,
+    "correlation": 0.7123993283835596,
+    "n_active": 37616,
+    "n_predicted": 28754,
+    "coverage_by_activation_quartile": [
+      0.49457677584006804,
+      0.7582943428328371,
+      0.8273075287111867,
+      0.8560187154402382
+    ]
+  },
+  "gate": "update",
+  "feature": 182,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Every factual claim held up on the test split. The feature never fires outside D1: 'phase != D1' gives precision 0 and recall 0, and the dev profile has 0 active GO or D2 steps.",
+      "After an a2 -> S2 common trial the feature is silent: D1 & prev_action==2 & prev_common==1 has precision 0.0. After a1 trials it barely fires: precision 0.016, mass recall 0.019.",
+      "Reward makes little difference, as claimed. With ep_trial>=40, precision is 0.93 if the previous trial was rewarded and 0.98 if not.",
+      "The episode-time gating is real. Within the base condition, precision is 0.018 for ep_trial<20, 0.14 for 20-30, 0.34 for 30-40 and about 0.96 for >=40.",
+      "The largest block of misses is structural. D1 steps with prev_action==-1 (the window's first trial, where the previous trial is outside the window) hold about 14% of the activation mass on test, and no in-window variable can predict them. The rest is low-magnitude firing at ep_trial 30-40 and a little firing after a1 (1.9% of mass). It looks like scattered noise, with no other systematic class.",
+      "Minor: within the predicate, the upcoming choice a2 accounts for most of the mass (mass recall 0.78 vs 0.05 for a1), but precision stays high both ways (0.97 vs 0.87). So the feature is not specific to the upcoming choice.",
+      "The threshold choice hardly matters: ep_trial>=35 gives test F1 0.827, the same as >=40, so no better predicate was found."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

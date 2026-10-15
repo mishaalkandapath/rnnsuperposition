@@ -1,0 +1,72 @@
+{
+  "label": "GO late in episode after rewarded a2 (esp. common S2), scaled by belief S2 good",
+  "terms": "(phase == GO) * np.clip(ep_trial-60,0,40)/40 * (prev_reward==1) * (prev_action!=1) ;; (phase == GO) * np.clip(ep_trial-60,0,40)/40 * (prev_reward==1) * (prev_action!=1) * (1-belief) ;; (phase == GO) * np.clip(ep_trial-60,0,40)/40 * (prev_action==1) ;; (phase == GO) * np.clip(ep_trial-60,0,40)/40 * (1-belief) ;; (phase == GO) * np.clip(ep_trial-60,0,40)/40 * last_is(\"a2 S1 r\")",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO, and only late in the episode (it ramps up from about trial 60; the timing baseline alone gives R^2 0.27). Beyond timing, the size of the activation at GO is set by the late-episode ramp multiplied by the observed history. It is large when the previous trial was a2 and rewarded, and grows with the ideal observer's belief that S2 is good (1-belief; fitted weight about +2.7). It is lower after a rewarded rare a2->S1 trial than after a common a2->S2 reward, and near zero after a previous a1 choice or an unrewarded trial. On the window's first trial prev_action is unknown, so (prev_action!=1) lets prev_reward plus belief stand in. Activation is zero at D1 and D2. Five observed-only terms (no model value or policy, no future or hidden variables) give test R^2 beyond timing 0.81 (dev 0.82). That is far above the profile's additive 'all' ceiling of 0.28 (all observed 0.23), because the terms multiply by the late-episode ramp. Additive tables are weak here: belief decile alone 0.13 and policy decile 0.17. So dropping the model's policy and value costs essentially nothing: the belief log-odds proxy plus last-trial reward and choice capture the 'committed to a2' signal. Remaining errors are small: it is slightly under-predicted after a1 S2 r and a1 S1 u, and slightly over-predicted after a2 S2 u.",
+  "gate": "reset",
+  "feature": 100,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 100,
+    "terms": [
+      "(phase == GO) * np.clip(ep_trial-60,0,40)/40 * (prev_reward==1) * (prev_action!=1)",
+      "(phase == GO) * np.clip(ep_trial-60,0,40)/40 * (prev_reward==1) * (prev_action!=1) * (1-belief)",
+      "(phase == GO) * np.clip(ep_trial-60,0,40)/40 * (prev_action==1)",
+      "(phase == GO) * np.clip(ep_trial-60,0,40)/40 * (1-belief)",
+      "(phase == GO) * np.clip(ep_trial-60,0,40)/40 * last_is(\"a2 S1 r\")"
+    ],
+    "weights": [
+      -0.5109843048262732,
+      2.692222071885342,
+      -0.5346625192690369,
+      -0.6273716676823574,
+      -0.9833536274446948
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.808451485799808,
+    "r2": 0.859381362104766,
+    "r2_timing_only": 0.265884997947465
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 100,
+    "terms": [
+      "(phase == GO) * np.clip(ep_trial-60,0,40)/40 * (prev_reward==1) * (prev_action!=1)",
+      "(phase == GO) * np.clip(ep_trial-60,0,40)/40 * (prev_reward==1) * (prev_action!=1) * (1-belief)",
+      "(phase == GO) * np.clip(ep_trial-60,0,40)/40 * (prev_action==1)",
+      "(phase == GO) * np.clip(ep_trial-60,0,40)/40 * (1-belief)",
+      "(phase == GO) * np.clip(ep_trial-60,0,40)/40 * last_is(\"a2 S1 r\")"
+    ],
+    "weights": [
+      -0.5109843048262732,
+      2.692222071885342,
+      -0.5346625192690369,
+      -0.6273716676823574,
+      -0.9833536274446948
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8163451482054789,
+    "r2": 0.8660957395014764,
+    "r2_timing_only": 0.2708917886452582
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced: the five terms score test R^2 beyond timing 0.808 (timing alone 0.266). Fitted weights: prevrew*prev!=a1 -0.51, that times (1-belief) +2.69, prev a1 -0.53, (1-belief) -0.63, a2 S1 r -0.98.",
+      "The claim that it is 'lower after a rewarded rare a2->S1 trial' understates the effect. In the profile, GO residual after a2 S1 r is -0.123, the same as after a1 or unrewarded trials (-0.11 to -0.12), while after a2 S2 r it is +0.282. With the fitted weights, an a2 S1 r trial with 1-belief around 0.8 gives about 0.16 x ramp, against about 1.14 x ramp after a2 S2 r. So the feature is close to fully suppressed after a rare reward, not just reduced.",
+      "Each component checks out. Dropping prev_reward (only prev_action!=1 terms) gives test 0.37, so the previous reward is needed. Using last_is('a2 S2 r') alone with belief gives 0.51 to 0.59, so the extra terms that handle the first trial ('?') and the a1/belief cases add a lot. Other ramp onsets do worse (50: 0.77, 70: 0.79, cubic: 0.75); 60 is the best of those tried.",
+      "No large systematic errors remain in misses. Mean error by phase is at most 0.008. The largest cells are GO after a1 S2 r (+0.055), GO after a2 S2 u (-0.059) and GO after ? (-0.022). Adding last_is('a1 S2 r'), last_is('a2 S2 u') and a two-back a2 term gives only 0.822; adding a first-trial term gives 0.810; using (1-belief)^2 gives 0.809.",
+      "Worst-fit windows are mostly first-trial ('?') cells, where the window does not record the previous choice. The fit is off there by up to about 1.5, because the agent knows its previous choice but the data does not. This is a limit of the data window, not of the explanation.",
+      "Saying 'dropping policy/value costs essentially nothing' is only weakly supported. The model-output terms cannot be scored in this run, and the earlier label was judged on firing F1, not magnitude R^2. The only comparison available is the additive policy-decile table (0.17) against belief decile (0.13)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO only, late in episode (ramp from trial ~60): after a rewarded a2->S2 (common) trial, scaled by ideal-observer belief that S2 is good; near zero after a1, unrewarded, or rare-rewarded a2->S1 trials",
+    "better_terms": "(phase == GO) * np.clip(ep_trial-60,0,40)/40 * (prev_reward==1) * (prev_action!=1) ;; (phase == GO) * np.clip(ep_trial-60,0,40)/40 * (prev_reward==1) * (prev_action!=1) * (1-belief) ;; (phase == GO) * np.clip(ep_trial-60,0,40)/40 * (prev_action==1) ;; (phase == GO) * np.clip(ep_trial-60,0,40)/40 * (1-belief) ;; (phase == GO) * np.clip(ep_trial-60,0,40)/40 * last_is('a2 S1 r') ;; (phase == GO) * np.clip(ep_trial-60,0,40)/40 * (prev_reward==1) * (prev_action==2) * (tv('action',-2)==2) ;; (phase == GO) * np.clip(ep_trial-60,0,40)/40 * last_is('a1 S2 r') ;; (phase == GO) * np.clip(ep_trial-60,0,40)/40 * last_is('a2 S2 u')",
+    "better_terms_test_r2_beyond_timing": 0.822
+  },
+  "final_label": "GO only, late in episode (ramp from trial ~60): after a rewarded a2->S2 (common) trial, scaled by ideal-observer belief that S2 is good; near zero after a1, unrewarded, or rare-rewarded a2->S1 trials"
+}

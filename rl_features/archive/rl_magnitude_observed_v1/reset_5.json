@@ -1,0 +1,60 @@
+{
+  "label": "GO after unrewarded rare a2->S1, larger the more the observer believes S2 is good",
+  "terms": "(phase == GO) * last_is(\"a2 S1 u\") ;; (phase == GO) * last_is(\"a2 S1 u\") * belief_lo",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO, and essentially only when the previous trial was a2 -> S1 (rare) unrewarded, the model-based case for staying on a2. The previous-trial indicator alone gives dev R^2 0.605 beyond timing. Its magnitude within that case grows as the ideal-observer belief moves toward S2 being good (term on belief_lo, negative weight; about -0.48 per log-odds unit), which brings the score to dev 0.627 / test 0.614. Belief_cover, the trial before, episode time and the D1 fixation error add under 0.01. Ceilings: all 0.68, all observed 0.66; policy decile (model output) alone 0.19 vs belief decile 0.15, so dropping model outputs costs little. Remaining errors are mostly windows whose first trial has no known previous trial, plus a few a2 S1 u GO steps where it stays silent.",
+  "gate": "reset",
+  "feature": 5,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 5,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S1 u\")",
+      "(phase == GO) * last_is(\"a2 S1 u\") * belief_lo"
+    ],
+    "weights": [
+      0.12511907377654347,
+      -0.48260624376611044
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6137116628575144,
+    "r2": 0.6371765620498671,
+    "r2_timing_only": 0.06074451888951882
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 5,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S1 u\")",
+      "(phase == GO) * last_is(\"a2 S1 u\") * belief_lo"
+    ],
+    "weights": [
+      0.12511907377654347,
+      -0.48260624376611044
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6263877289497306,
+    "r2": 0.6501218888571475,
+    "r2_timing_only": 0.06352617873255961
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims check out. At GO, last_is('a2 S1 u') alone scores 0.605 on dev and 0.592 on test. Adding last_is * belief_lo (weight -0.48) gives 0.626 on dev and 0.614 on test. Every other previous-trial pattern at GO has a residual of about -0.17, against +1.63 for a2 S1 u. D1 and D2 are exactly zero.",
+      "There is a large systematic gap the terms leave out: GO steps on a window's first trial, where the previous trial is unknown. The explanation calls these 'remaining errors' as if nothing could be done, but observed variables fix them. Adding (GO)*(prev_action==-1)*(prev_reward==0)*(belief<0.5) raises test R^2 from 0.614 to 0.681 (dev 0.694), which already beats the 'all observed' ceiling of 0.66.",
+      "Adding that term's belief_lo slope plus d1_err suppression terms brings test R^2 to 0.712 (dev 0.722). So the reported terms leave about 0.10 of test R^2 that observed-only terms can recover.",
+      "A D1 fixation error at an a2 S1 u GO step suppresses the feature almost completely (weight -1.19 against a predicted value of about 1.7). Its R^2 gain is small (+0.004) because it is rare, so the 'less than 0.01' claim is technically true. Still, it is a real switch, not noise.",
+      "Some errors remain unexplained: in whole windows the feature stays at 0 through repeated a2 S1 u GO steps (misses windows at t17-21, t94-98, t46-50). No observed term tried here accounts for them.",
+      "Testing the belief claim: thresholding at belief<0.5 within a2 S1 u (dev 0.608) does worse than linear belief_lo (0.626), and belief_cover adds only +0.002. The 'larger when belief favours S2' part holds, but it is a modest gain (+0.02)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after unrewarded rare a2->S1 (also at window start after any unrewarded trial when belief favours S2), larger when belief favours S2; suppressed by a D1 fixation error",
+    "better_terms": "(phase == GO) * last_is(\"a2 S1 u\") ;; (phase == GO) * last_is(\"a2 S1 u\") * belief_lo ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * (belief < 0.5) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * (belief < 0.5) * belief_lo ;; (phase == GO) * last_is(\"a2 S1 u\") * d1_err ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * d1_err",
+    "better_terms_test_r2_beyond_timing": 0.7115
+  },
+  "final_label": "GO after unrewarded rare a2->S1 (also at window start after any unrewarded trial when belief favours S2), larger when belief favours S2; suppressed by a D1 fixation error"
+}

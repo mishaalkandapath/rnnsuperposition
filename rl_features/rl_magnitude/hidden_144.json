@@ -1,0 +1,94 @@
+{
+  "label": "Late-episode GO: strongest after a rewarded a1->S1 trial and when S1 is believed good; weaker after no reward.",
+  "short_terms": "(phase == GO) * (ep_trial >= 75) * last_is(\"a1 S1 r\") ;; (phase == GO) * (ep_trial >= 75) * belief_lo ;; (phase == GO) * (ep_trial >= 75) * (prev_reward == 0)",
+  "terms": "(phase == GO) * (ep_trial >= 70) * last_is(\"a1 S1 r\") ;; (phase == GO) * (ep_trial >= 70) * belief_lo ;; (phase == GO) * (ep_trial >= 70) * (prev_action == 1) ;; (phase == GO) * (ep_trial >= 70) * (tv(\"reward\", -2) == 1) * (tv(\"action\", -2) == 1) ;; (phase == GO) * (ep_trial >= 70) * (prev_reward == 0) ;; (phase == GO) * (ep_trial >= 60) * last_is(\"a1 S1 r\") ;; (phase == GO) * (ep_trial >= 60) * belief_lo ;; (phase == GO) * (ep_trial >= 80) * last_is(\"a1 S1 r\")",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO, late in the episode (timing baseline ramps up from trial ~60). Beyond timing, its magnitude grows after a rewarded a1->S1 common trial, grows with the observer log-odds that S1 is good, and drops after an unrewarded trial (late-episode a1/S1-reward-streak signal; peaks ~1.1 during long a1-S1-rewarded runs). Nothing at D1 or D2. The episode gate threshold matters a lot (>=60 gives 0.38 dev, >=75 gives 0.55). The free fit adds a reward-on-a1 two trials back term and a prev_action term (which mostly offsets), plus a mix of gate thresholds; it under-predicts the peak in long streaks. Only observed variables used.",
+  "full_test_scores": {
+    "gate": "hidden",
+    "feature": 144,
+    "terms": [
+      "(phase == GO) * (ep_trial >= 70) * last_is(\"a1 S1 r\")",
+      "(phase == GO) * (ep_trial >= 70) * belief_lo",
+      "(phase == GO) * (ep_trial >= 70) * (prev_action == 1)",
+      "(phase == GO) * (ep_trial >= 70) * (tv(\"reward\", -2) == 1) * (tv(\"action\", -2) == 1)",
+      "(phase == GO) * (ep_trial >= 70) * (prev_reward == 0)",
+      "(phase == GO) * (ep_trial >= 60) * last_is(\"a1 S1 r\")",
+      "(phase == GO) * (ep_trial >= 60) * belief_lo",
+      "(phase == GO) * (ep_trial >= 80) * last_is(\"a1 S1 r\")"
+    ],
+    "weights": [
+      0.10762708376570143,
+      0.0311974475725983,
+      -0.12037281450234032,
+      0.12373572039727389,
+      -0.13673761167644458,
+      0.007214948902148323,
+      0.001095085263261025,
+      0.3058873224116771
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5654216855466535,
+    "r2": 0.6554176670535952,
+    "r2_timing_only": 0.20708806333364105
+  },
+  "gate": "hidden",
+  "feature": 144,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 144,
+    "terms": [
+      "(phase == GO) * (ep_trial >= 75) * last_is(\"a1 S1 r\")",
+      "(phase == GO) * (ep_trial >= 75) * belief_lo",
+      "(phase == GO) * (ep_trial >= 75) * (prev_reward == 0)"
+    ],
+    "weights": [
+      0.3055719199155444,
+      0.034922737864310924,
+      -0.17079426956762267
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.534401242925006,
+    "r2": 0.630821187818217,
+    "r2_timing_only": 0.20708806333364105
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 144,
+    "terms": [
+      "(phase == GO) * (ep_trial >= 75) * last_is(\"a1 S1 r\")",
+      "(phase == GO) * (ep_trial >= 75) * belief_lo",
+      "(phase == GO) * (ep_trial >= 75) * (prev_reward == 0)"
+    ],
+    "weights": [
+      0.3055719199155444,
+      0.034922737864310924,
+      -0.17079426956762267
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5471703113821893,
+    "r2": 0.6466524231579626,
+    "r2_timing_only": 0.21968990610890882
+  },
+  "final_verdict": "partially_explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The scores reproduce. On test the short form scores 0.534 beyond timing. Dropping the prev_reward==0 term gives 0.424, and last_is('a1 S1 r') alone gives 0.369. Cutoffs: >=80 gives 0.531, >=70 gives 0.486.",
+      "Large systematic under-prediction at the peaks. In every worst-fit window the agent is on a late (t85-97) run of rewarded a1->S1 trials: actual is about 1.05-1.14, but predicted levels off at about 0.60-0.63. The model gets roughly 55% of the peak. The explanation admits this, but it is the main mass of the feature and no short-form variant fixes it. Variants tried: belief instead of belief_lo (0.486), max(belief_lo,0) (0.491), ep_trial-graded last_is (0.475), and an added >=85 last_is term (0.451).",
+      "Window-start error. On the first trial of a window last_is is unknown ('?'), so a strong GO activation (about 1.07) is predicted at only about 0.19. Every worst window shows this at position -3. This is a limit of the data, not a fact about the feature, but it is systematic.",
+      "The feature is not specific to S1: after a rewarded rare a1->S2 trial it still fires at about 0.97 (under-predicted, +0.015). It also persists at about 0.4-0.6 on the next GO when the agent then picks a2. So 'after a rewarded a1 choice' fits better than 'after a rewarded a1->S1 trial', but the short-form factor limits block a state-free 'a1 rewarded' term.",
+      "Over-predicted after a2 S1 r (-0.044) and a1 S2 u (-0.031). belief_lo pushes the prediction up when S1 is believed good, even when the last trial argues against an a1 streak.",
+      "The prev_reward==0 term partly works as a correction for the late-GO cutoff. Replacing it with a plain (phase==GO)*(ep_trial>=75) indicator already gives 0.486 of the 0.534. Its real contribution ('weaker after no reward') is about +0.05 R^2. That supports the claim directionally, but the term is partly fitted structure rather than pure description.",
+      "The label is broadly faithful (GO only, late episode, a1->S1 rewarded, S1 believed good, lower after no reward). It does not say that activation is 0 at D1/D2 and essentially 0 right after an unrewarded trial."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "Late-episode (trial ~75+) GO only: grows through runs of rewarded a1 trials while S1 is believed good; off after no reward.",
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "Late-episode (trial ~75+) GO only: grows through runs of rewarded a1 trials while S1 is believed good; off after no reward."
+}

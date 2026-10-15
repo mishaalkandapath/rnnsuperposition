@@ -1,0 +1,89 @@
+{
+  "label": "Fires at D1 after unrewarded common a2->S2, stronger early in episode and after a prior reward.",
+  "short_terms": "(phase == D1) * last_is(\"a2 S2 u\") ;; (phase == D1) * last_is(\"a2 S2 u\") * ep_dec ;; (phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 1)",
+  "terms": "(phase == D1) * last_is(\"a2 S2 u\") ;; (phase == D1) * (in_rew == 0) * (prev_action == -1) ;; (phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 1) ;; (phase == D1) * last_is(\"a2 S2 u\") * ep_dec ;; (phase == D1) * (in_rew == 0) * (prev_action == -1) * (belief < 0.5) ;; (phase == D1) * last_is(\"a2 S2 u\") * belief_lo",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Active only at D1. Magnitude is essentially an indicator of the previous trial being a2 -> S2 common, unrewarded (residual +0.58 vs about -0.07 for every other pattern). Within those trials it is larger early in the episode (declines with ep_dec) and larger when the trial before was rewarded (a surprising omission). It does not respond to a1 S2 u or other unrewarded patterns, nor to GO/D2. The free fit adds a small term for unrewarded D1 at the window start where the previous trial is unknown in the window (a data artifact, prev pattern unobserved), plus a weak negative belief_lo slope (stronger when the observer favours S2). No future variables used.",
+  "full_test_scores": {
+    "gate": "hidden",
+    "feature": 212,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * (in_rew == 0) * (prev_action == -1)",
+      "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * last_is(\"a2 S2 u\") * ep_dec",
+      "(phase == D1) * (in_rew == 0) * (prev_action == -1) * (belief < 0.5)",
+      "(phase == D1) * last_is(\"a2 S2 u\") * belief_lo"
+    ],
+    "weights": [
+      1.142406568685395,
+      0.08348123900902553,
+      0.22536959095834122,
+      -0.1275582737504638,
+      0.11505176959415901,
+      -0.06826220461797114
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7029552239738932,
+    "r2": 0.725653419331151,
+    "r2_timing_only": 0.07641338003285714
+  },
+  "gate": "hidden",
+  "feature": 212,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 212,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * last_is(\"a2 S2 u\") * ep_dec",
+      "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 1)"
+    ],
+    "weights": [
+      1.0660105672820037,
+      -0.1284941296221175,
+      0.32237760100261426
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6697390132272631,
+    "r2": 0.6949753715195546,
+    "r2_timing_only": 0.07641338003285714
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 212,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * last_is(\"a2 S2 u\") * ep_dec",
+      "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 1)"
+    ],
+    "weights": [
+      1.0660105672820037,
+      -0.1284941296221175,
+      0.32237760100261426
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6608893940737617,
+    "r2": 0.684706968308654,
+    "r2_timing_only": 0.07023541528533905
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Every claim I tested holds up on the test split. Timing alone gives R^2 0.08. The a2 S2 u indicator alone gives 0.457 beyond timing. Adding the ep_dec term raises it to 0.634, and adding the trial-before-rewarded term gives 0.670. The free fit gives 0.703.",
+      "Episode time matters far more than the earlier reward: ep_dec adds +0.18, while tv('reward',-2)==1 adds only +0.035 on top of it (without ep_dec it adds +0.034, from 0.457 to 0.491). The label should put the most weight on 'early in the episode'. The ep_dec weight is -0.128 against a base of 1.07, so the response is almost gone by the last deciles. This matches the D1 timing baseline, which falls to 0 at decile 9.",
+      "The reward-omission-after-reward effect is real but captures only part of the pattern. Over consecutive a2 S2 u omissions the activation falls step by step (1.45 -> 1.04 -> 0.58 in the misses output), and a two-step reward history term does worse (0.656).",
+      "The claimed belief_lo slope is negligible. Using belief_lo as the third term instead of the reward term gives 0.507, against 0.491 without it. The cut belief_lo < -1 gives 0.655, against 0.670 for the reward term.",
+      "Misses shows one systematic error: unrewarded D1 steps on the window's first trial, where the previous trial is missing (prev_action = -1). Activation there is about 1.4 against a prediction of 0.08. The explanation notes this as a data artifact; it is not a gap in the interpretation. Errors by phase are otherwise small (D1 -0.034, GO/D2 +0.017).",
+      "np.maximum(ep_dec - 4, 0) in place of the linear ep_dec scores 0.684, but this is curve fitting and not a better description. ep_trial gives 0.672. No future variables are used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after an unrewarded common a2->S2 trial, fading over the episode; stronger after a reward.",
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "D1 after an unrewarded common a2->S2 trial, fading over the episode; stronger after a reward."
+}

@@ -1,0 +1,64 @@
+{
+  "label": "D1 after a rewarded a2->S2 (common) trial, mid-episode (trials ~30-89)",
+  "predicate": "(phase == D1) & (in_rew == 1) & (((prev_action == 2) & (prev_state == 2)) | ((prev_action == -1) & (action == 2))) & (ep_trial >= 30) & (ep_trial < 90)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": true,
+  "explanation": "Fires only at D1 (never GO/D2), only when the reward input is 1, and essentially only when the previous trial was a2 that reached S2 via a common transition (prev_action==1 or rare a2->S1 almost never fire). It is also gated by episode time: zero activity before episode trial ~25 and after ~89, which accounts for most false positives of the simpler predicate (F1 0.64 without the time window, 0.91 with it on dev). On the window first trial prev_action is unknown to the variables, so the agent own upcoming choice (action==2, a stay) is used as a proxy there; this is the only use of a FUTURE variable and it is the agent own computed choice, not a random outcome. Equivalent fully-observed form (prev_action in [2,-1]) gives recall 0.99 but precision 0.62. Activations are associated with a strongly a2-leaning policy (choice logit -4.4..-1.5) and mid-range value; magnitude is fairly uniform across activation quartiles of the predicate (coverage ~0.98-1.0), so no strong magnitude modulator was identified. Does not fire after unrewarded trials, after a1 choices, or after rare transitions.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 179,
+    "predicate": "(phase == D1) & (in_rew == 1) & (((prev_action == 2) & (prev_state == 2)) | ((prev_action == -1) & (action == 2))) & (ep_trial >= 30) & (ep_trial < 90)",
+    "split": "test",
+    "precision": 0.8430160014260054,
+    "recall": 0.9898410960668459,
+    "f1": 0.9105476733509078,
+    "mass_recall": 0.996151280174142,
+    "correlation": 0.8153280814408421,
+    "n_active": 62113,
+    "n_predicted": 72931,
+    "coverage_by_activation_quartile": [
+      0.9704423980938889,
+      0.9904688304997424,
+      0.9984544049459042,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 179,
+    "predicate": "(phase == D1) & (in_rew == 1) & (((prev_action == 2) & (prev_state == 2)) | ((prev_action == -1) & (action == 2))) & (ep_trial >= 30) & (ep_trial < 90)",
+    "split": "dev",
+    "precision": 0.8467257610114753,
+    "recall": 0.9919979391070537,
+    "f1": 0.913623085249937,
+    "mass_recall": 0.9969260033874471,
+    "correlation": 0.8176644009361882,
+    "n_active": 62109,
+    "n_predicted": 72765,
+    "coverage_by_activation_quartile": [
+      0.9771380731581659,
+      0.9910478521285503,
+      0.9998067881754363,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 179,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The checkable claims hold. On dev, 100% of activation mass is at D1, with zero activations at GO or D2. It fires only when in_rew == 1 (zero activations at in_rew 0 or -1). Activations at prev_action == 1 hold 0.3% of the mass. Rare a2->S1 rewarded gives P = 0.000 over 10409 predicted steps. a1->S2 rewarded gives P = 0.055. a2->S2 rewarded with ep_trial in 30-89 gives P = 0.859.",
+      "The time-window edges are softer and narrower than stated. Precision of the predicate by 2-trial episode bins: 28-29: 0.03, 30-31: 0.24, 32-33: 0.63, 36-37: 0.90, 40-81: about 0.97, 84-85: 0.56, 86-87: 0.16, 88-89: 0.02. So 'silent before ~25' is loose: it is essentially silent until about trial 30 and only reliable from about 34 on. Most of the predicate's remaining false positives sit at the 30-33 and 84-89 edges. Tightening the window to [32, 86) raises test F1 from 0.911 to 0.945 (P 0.922, R 0.970, mass recall 0.993).",
+      "The one FUTURE variable is used legitimately. On the window's first trial, (action == 2) stands in for the unknown previous trial: P = 0.81 with it versus 0.42 without it. After a rewarded common a2 trial the agent almost always stays (only 9 cases of a switch to a1), so action == 2 acts as a proxy for 'the previous choice was a2'. The observed-only version is clearly worse, as the other agent reported: test F1 0.846 with the [32, 86) window.",
+      "Minor and not systematic: after a rewarded a2->S2 trial whose own choice was a switch from a1 (tv('action', -2) == 1), precision falls to 0.46. If the trial before that was also a2, precision is 0.996. These cases are rare (recall share 0.005), so this is scattered noise, not a gap.",
+      "The feature does not track the hidden good state. Within the predicate it fires with P = 0.84 when good == S1 (shortly after reversals) and P = 0.85 when good == S2. It goes with the a2 history, not with S2 being good. The policy-logit (-4.4 to -1.5) and mid-range value correlations check out: no activations when value < 5.22, and only 3 predicted steps with choice < -4.44."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a rewarded a2->S2 (common) trial, mid-episode (trials ~32-85)",
+    "better_predicate": "(phase == D1) & (in_rew == 1) & (((prev_action == 2) & (prev_state == 2)) | ((prev_action == -1) & (action == 2))) & (ep_trial >= 32) & (ep_trial < 86)",
+    "better_predicate_test_f1": 0.945
+  },
+  "final_label": "D1 after a rewarded a2->S2 (common) trial, mid-episode (trials ~32-85)"
+}

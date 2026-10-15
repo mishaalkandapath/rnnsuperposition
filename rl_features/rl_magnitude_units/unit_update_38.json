@@ -1,0 +1,112 @@
+{
+ "label": "At D1, update gate is high after reaching S2, lower after reward or choosing a2.",
+ "short_terms": "(phase == D1) * (prev_state == 2) ;; (phase == D1) * (prev_reward == 1) * (prev_state == 1) ;; (phase == D1) * (prev_action == 2)",
+ "terms": "(phase == D1) * (prev_state == 2) ;; (phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_action == 2) ;; (phase == D1) * (prev_state == 2) * (prev_reward == 1) ;; (phase == D1) * (prev_common==1) * (prev_reward == 1) ;; (phase == D1) * (trial == 0) ;; (phase == D1) * (tv(\"reward\", -2)==1) * (prev_reward==1) ;; (phase == D1) * belief_lo",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Raw z of unit 38 is large only at D1 (~0.5-0.7, rising over the episode) and near zero at GO/D2; its magnitude beyond timing is set at D1 by the previous trial: reached state S2 raises it strongly (~+0.44), a rewarded previous trial lowers it (~-0.18), and having chosen a2 lowers it (~-0.13), so a1->S2 unrewarded is highest and a2->S1 rewarded lowest. GO/D2 variation is tiny. Belief log-odds adds almost nothing once last trial is known; the trial before adds nothing. The free fit gains mainly from a window-first-trial indicator (no previous trial in the window, activation high), likely an artifact of window start. No future, hidden or model-output variables used.",
+ "full_test_scores": {
+  "gate": "unit_update",
+  "feature": 38,
+  "terms": [
+   "(phase == D1) * (prev_state == 2)",
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D1) * (prev_action == 2)",
+   "(phase == D1) * (prev_state == 2) * (prev_reward == 1)",
+   "(phase == D1) * (prev_common==1) * (prev_reward == 1)",
+   "(phase == D1) * (trial == 0)",
+   "(phase == D1) * (tv(\"reward\", -2)==1) * (prev_reward==1)",
+   "(phase == D1) * belief_lo"
+  ],
+  "weights": [
+   0.4666905984337294,
+   -0.18919822159431318,
+   -0.18420356599524818,
+   0.007942192867873251,
+   -0.002257409201794083,
+   0.12849529138389226,
+   -0.01107497827326914,
+   -0.02101181700030095
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7800365225810422,
+  "r2": 0.9470075049258956,
+  "r2_timing_only": 0.7590850276786124
+ },
+ "gate": "unit_update",
+ "feature": 38,
+ "test_scores": {
+  "gate": "unit_update",
+  "feature": 38,
+  "terms": [
+   "(phase == D1) * (prev_state == 2)",
+   "(phase == D1) * (prev_reward == 1) * (prev_state == 1)",
+   "(phase == D1) * (prev_action == 2)"
+  ],
+  "weights": [
+   0.3344112714512438,
+   -0.26829668863126055,
+   -0.1373938165495786
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7369678255312737,
+  "r2": 0.9366316109682324,
+  "r2_timing_only": 0.7590850276786124
+ },
+ "dev_scores": {
+  "gate": "unit_update",
+  "feature": 38,
+  "terms": [
+   "(phase == D1) * (prev_state == 2)",
+   "(phase == D1) * (prev_reward == 1) * (prev_state == 1)",
+   "(phase == D1) * (prev_action == 2)"
+  ],
+  "weights": [
+   0.3344112714512438,
+   -0.26829668863126055,
+   -0.1373938165495786
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.7385551954260378,
+  "r2": 0.9371139632360908,
+  "r2_timing_only": 0.7594672540294487
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "better_short_terms": "(phase == D1) * (prev_state == 2) ;; (phase == D1) * (prev_reward == 1) * (prev_state == 1) ;; (phase == D1) * (prev_action == 2)",
+  "better_short_terms_test_r2_beyond_timing": 0.737,
+  "issues": [
+   "The direction claims check out. The D1 residuals by last trial are a1 S2 u +0.337 (highest), a2 S2 u +0.315, a1 S2 r +0.215, a2 S2 r +0.161, a1 S1 u -0.04, a2 S1 u -0.19, a1 S1 r -0.276 and a2 S1 r -0.388 (lowest). GO and D2 residuals are all under 0.06.",
+   "The reward and a2 effects are not additive, as the short form assumes. Reward lowers z by about 0.20 to 0.24 after S1 but only about 0.12 to 0.15 after S2. Choosing a2 lowers z by about 0.11 to 0.15 after S1 but only about 0.02 to 0.05 after S2. Misses on the recorded form show systematic D1 cell errors of about 0.1: after a1 S2 u it over-predicts by 0.097, after a1 S1 r by 0.096 and after a2 S1 r by 0.080; after '?' (no previous trial) it under-predicts by 0.118.",
+   "The recorded form scores 0.690 on test, against 0.78 for the additive last-trial table. Restricting the reward term to S1 trials, (phase == D1) * (prev_reward == 1) * (prev_state == 1), raises it to 0.737 on test (weights +0.33, -0.27, -0.14). Restricting the a2 term to S1 instead gives 0.712; using prev_common instead of prev_action gives 0.680. Dropping the a2 term gives 0.643.",
+   "Adding belief_lo on top of the last trial adds almost nothing (0.648 vs 0.643), which supports the claim that belief does not matter. A trial==0 indicator adds 0.07 (0.714), which is consistent with the window-start effect the explanation describes.",
+   "Even with the better form, D1 cells still miss by about 0.12 (a1 S2 r over-predicted, a2 S2 u under-predicted). The worst-fit windows also show a strong window-start transient: the first D1 is about 0.8 to 0.9 against a prediction of about 0.45. The fit is good but not complete."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At D1, z is high after reaching S2, lower after rewarded S1 or choosing a2.",
+  "upheld": false
+ },
+ "final_label": "At D1, z is high after reaching S2, lower after rewarded S1 or choosing a2.",
+ "original_short_terms": "(phase == D1) * (prev_state == 2) ;; (phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_action == 2)",
+ "original_test_scores": {
+  "gate": "unit_update",
+  "feature": 38,
+  "terms": [
+   "(phase == D1) * (prev_state == 2)",
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D1) * (prev_action == 2)"
+  ],
+  "weights": [
+   0.43667459054351454,
+   -0.17691155245177242,
+   -0.1280229294577836
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6903364879371352,
+  "r2": 0.9253974235624313,
+  "r2_timing_only": 0.7590850276786124
+ },
+ "terms_from": "skeptic"
+}

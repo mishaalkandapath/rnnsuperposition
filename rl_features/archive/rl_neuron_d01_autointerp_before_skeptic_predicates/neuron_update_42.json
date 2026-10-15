@@ -1,0 +1,65 @@
+{
+  "label": "D2 after a rare a2->S1 transition, previous trial rewarded, early in the episode",
+  "predicate": "(phase == D2) & (action == 2) & (state == 1) & (ep_trial < 40) & (prev_reward == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (100% of mass), and essentially only when the agent chose a2 and the observed state is S1, i.e. a rare transition on an a2 choice (99.9% of mass; never after a1 or on S2). It is gated to the first ~40 trials of the episode (zero activity at ep_trial >= 40, which the GRU must track implicitly), and requires the previous trial to have been rewarded (97% of mass; prev_reward==0 cases are weak, low-quartile). All variables are observed at D2 (choice, reached state, previous reward); no future variables. Without the episode-time condition precision drops to 0.21, so the time gating is essential. Does not fire at D1/GO, after a1, on common transitions, or late in episodes. Remaining false positives are a2->S1R steps with prev reward that simply stay below threshold, often when the preceding trial was also a rare a2->S1.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 42,
+    "predicate": "(phase == D2) & (action == 2) & (state == 1) & (ep_trial < 40) & (prev_reward == 1)",
+    "split": "test",
+    "precision": 0.812817828297936,
+    "recall": 0.920010157440325,
+    "f1": 0.8630985468117207,
+    "mass_recall": 0.9680359557090024,
+    "correlation": 0.7947434676030941,
+    "n_active": 11814,
+    "n_predicted": 13372,
+    "coverage_by_activation_quartile": [
+      0.7860528097494922,
+      0.896411645226811,
+      0.9976295292922451,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 42,
+    "predicate": "(phase == D2) & (action == 2) & (state == 1) & (ep_trial < 40) & (prev_reward == 1)",
+    "split": "dev",
+    "precision": 0.8204588014981273,
+    "recall": 0.9299548951976652,
+    "f1": 0.8717821166521577,
+    "mass_recall": 0.9727817608259248,
+    "correlation": 0.8029642737890346,
+    "n_active": 11307,
+    "n_predicted": 12816,
+    "coverage_by_activation_quartile": [
+      0.7983728333922886,
+      0.9225327201980899,
+      0.9989388043862752,
+      1.0
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 42,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most factual claims check out. Phase is D2 only (D1 and GO have 0 actives). 99.9% of activation mass falls on action==2 with state==1, i.e. rare a2->S1. After a1 or on common transitions the unit fires on only 13 steps. From trial 40 on it is almost silent (29 actives in trials 40-49, none after that). prev_reward==1 carries 97.4% of mass. No future variables are used. The reported dev and test scores reproduce exactly: dev P 0.820, R 0.930, F1 0.872; test P 0.813, R 0.920, F1 0.863.",
+      "The time edge is not at 40, and it is a decline, not a cliff. Within B = D2 & a2 & S1 & prev_reward==1, per-trial precision is 0.92-0.95 at trials 5-20, then 0.87 at trial 25, 0.83 at 30, 0.70 at 35, 0.43 at 36, 0.21 at 37, 0.17 at 38, 0.06 at 39 and 0.03 at 40. Mass per trial also shrinks steadily from about trial 10 (0.043 at trial 10, 0.015 at 30, 0.004 at 35). So the round cutoff of 40 puts trials 36-39 (roughly 1500 predicted steps, mostly inactive) inside the predicate. That is a systematic false-positive band, not noise. The explanation itself notes that a cutoff of 38 scored higher.",
+      "Systematic false-positive class 1, switch trials. When the previous trial's choice was a1 (the agent just switched to a2), B & ep_trial<38 has precision 0.216 over 464 steps. The unit wants a2 to be a repeated choice, and neither the predicate nor the label says so.",
+      "Systematic false-positive class 2, repeated rare a2->S1. When the previous trial was also a rare a2->S1, precision is 0.30 over 1043 steps. The explanation mentions this class, but the predicate and label do not exclude it, and it is the largest single source of false positives.",
+      "Removing these classes and moving the cutoff to 37 changes test scores from P 0.813 / F1 0.863 to P 0.961 / R 0.859 / F1 0.907 (mass recall 0.944). On dev the same change gives P 0.963 and F1 0.919. Precision goes up by 15 points with only a small loss in recall, which means the original predicate leaves out structure, not just scattered noise.",
+      "Overclaim: 'the GRU must be tracking time in the episode implicitly' goes beyond what activations alone show. Activation strength falls gradually across trials 10-35, which may track some slowly drifting internal state. Here all active steps fall in a narrow value-head band ([7.13, 7.54) holds 96.9% of mass), not a clock-like cutoff. The label's 'early in the episode' is fine, but the hard '< 40' is not supported."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after a rare a2->S1 transition, when a2 repeats a rewarded previous trial that was not itself a rare a2->S1, in roughly the first 36 trials of an episode (fading out over trials ~30-38)",
+    "better_predicate": "(phase == D2) & (action == 2) & (state == 1) & (prev_reward == 1) & (ep_trial < 37) & ~((prev_action==2)&(prev_common==0)) & (prev_action != 1)",
+    "better_predicate_test_f1": 0.907
+  },
+  "final_label": "D2 after a rare a2->S1 transition, when a2 repeats a rewarded previous trial that was not itself a rare a2->S1, in roughly the first 36 trials of an episode (fading out over trials ~30-38)"
+}

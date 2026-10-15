@@ -1,0 +1,82 @@
+{
+  "label": "D1: high after rewarded trials (esp. a2), low after unrewarded a1/common; D2: high when a2 chosen",
+  "terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 1) * (prev_action == 2) ;; (phase == D1) * (prev_reward == 0) * (prev_common == 1) ;; (phase == D1) * (prev_action == 1) * (prev_reward == 0) ;; (phase == D2) * (action == 2) ;; (phase == D2) * (prev_action == 1) * (prev_state == 1) ;; (phase == D2) * (prev_reward == 1) ;; (phase == GO) * (prev_action == 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r22 has a strong phase profile (D1 ~0.5, GO ~0.05, D2 ~0.23; timing R^2 0.77). Beyond timing, at D1 it tracks the just-shown reward: higher after a rewarded trial (+0.09), with an extra +0.08 if that rewarded choice was a2; lower after unrewarded trials, most after unrewarded a1 (-0.12) and unrewarded common transitions (-0.07), so a1 S1 u is lowest. At D2 it reflects the choice just made: about +0.13 when a2 was chosen, lowered after a previous a1->S1 trial and slightly after a previous reward. At GO it is slightly higher after a previous a2 choice. The trial before, value, hidden good state and time since reversal add little. All terms use observed variables only. Test R^2 beyond timing 0.80 (dev 0.80), against an all-cue ceiling of 0.87 (all observed 0.83).",
+  "gate": "unit_reset",
+  "feature": 22,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 22,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_reward == 1) * (prev_action == 2)",
+      "(phase == D1) * (prev_reward == 0) * (prev_common == 1)",
+      "(phase == D1) * (prev_action == 1) * (prev_reward == 0)",
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * (prev_action == 1) * (prev_state == 1)",
+      "(phase == D2) * (prev_reward == 1)",
+      "(phase == GO) * (prev_action == 2)"
+    ],
+    "weights": [
+      0.09390098675329543,
+      0.08482550028462756,
+      -0.07379877258940858,
+      -0.12299978379244088,
+      0.13465369235774102,
+      -0.05614021171336049,
+      -0.018758091198233313,
+      0.04926381507822331
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.798284602584841,
+    "r2": 0.954219885832187,
+    "r2_timing_only": 0.7730460105948627
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 22,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_reward == 1) * (prev_action == 2)",
+      "(phase == D1) * (prev_reward == 0) * (prev_common == 1)",
+      "(phase == D1) * (prev_action == 1) * (prev_reward == 0)",
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * (prev_action == 1) * (prev_state == 1)",
+      "(phase == D2) * (prev_reward == 1)",
+      "(phase == GO) * (prev_action == 2)"
+    ],
+    "weights": [
+      0.09390098675329543,
+      0.08482550028462756,
+      -0.07379877258940858,
+      -0.12299978379244088,
+      0.13465369235774102,
+      -0.05614021171336049,
+      -0.018758091198233313,
+      0.04926381507822331
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8014610261580444,
+    "r2": 0.9553634389329304,
+    "r2_timing_only": 0.7751748173000939
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The GO claim is a fitting artifact. Profile residuals at GO by previous trial are all within about +/-0.026, and the a1 vs a2 difference is about 0.01, not +0.05. The (phase == GO) * (prev_action == 2) term is mostly standing in for a missing GO-wide offset. Running misses on the original terms gives a GO mean error of +0.020, with GO under-predicted after every a1 pattern and after '?' (+0.03 to +0.05). First-trial GO steps are predicted around 0.016 against actual values of about 0.05 to 0.08.",
+      "Replacing the GO term with a plain (phase == GO) constant raises test R^2 from 0.798 to 0.869, and swapping the common term for an a2-unrewarded term gives 0.872. Both are above the stated 'all' ceiling of 0.87. So the reported 0.80 does not fully describe this unit: a systematic phase-level error class remains.",
+      "The quoted effect sizes are distorted by the missing offset. With a GO constant included, the D1 rewarded effect is about +0.15 to +0.17 (claimed +0.09) and D2 action == 2 is about +0.17 to +0.19 (claimed +0.13).",
+      "The D2 claims 'lower after a previous a1->S1 (-0.06)' and 'slightly lower after a previous reward (-0.02)' mostly disappear once the GO constant is added: the weights become -0.019 and +0.006.",
+      "The common-transition claim at D1 is weak. Profile D1 residuals for unrewarded trials are a1 S1 u -0.219, a1 S2 u -0.18, a2 S2 u -0.128, a2 S1 u -0.134, so after an a2 choice common vs rare makes no difference. The original misses also over-predict D1 after a2 S1 u by -0.093. The split is really action x reward. With the GO constant, the common term shrinks to -0.03."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1: tracks the shown reward, high after rewarded trials (more so after a rewarded a2), lowest after unrewarded a1; D2: high when a2 was chosen; GO: flat (no history dependence)",
+    "better_terms": "(phase == GO) ;; (phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 1) * (prev_action == 2) ;; (phase == D1) * (prev_reward == 0) * (prev_action == 1) ;; (phase == D2) * (action == 2) ;; (phase == D2) * (state == 2)",
+    "better_terms_test_r2_beyond_timing": 0.873
+  },
+  "final_label": "D1: tracks the shown reward, high after rewarded trials (more so after a rewarded a2), lowest after unrewarded a1; D2: high when a2 was chosen; GO: flat (no history dependence)"
+}

@@ -1,0 +1,76 @@
+{
+  "label": "GO only: size set by a previous a1-S1-rewarded trial, larger if the trial before was rewarded, fades over the episode",
+  "terms": "(phase == GO) * last_is(\"a1 S1 r\") ;; (phase == GO) * last_is(\"a1 S1 r\") * (tv(\"prev_reward\", -1) == 1) ;; (phase == GO) * last_is(\"a1 S1 r\") * ep_trial ;; (phase == GO) * (prev_action == -1) * np.clip(belief_lo, 0, 4) ;; (phase == GO) * (1 - last_is(\"a1 S1 r\")) * (prev_action != -1) ;; (phase == GO) * (1 - last_is(\"a1 S1 r\")) * (prev_action != -1) * ep_trial",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO. Magnitude is almost all set by the previous trial being a1 -> S1 (common) and rewarded: activation is about 0.67 above the other GO trials, plus about 0.47 more if the trial before that was also rewarded (repeated reward for a1 makes it larger). It shrinks by about 0.011 per episode trial, so it is near zero late in the episode. After any other previous-trial pattern (a1 S1 u, any S2 outcome, any a2 trial) it is about 0, which is well below the GO timing baseline (the -0.37 term). On the first trial of a window, where the previous trial is unknown, it grows with the ideal observer belief that S1 is good (clipped positive log-odds). Graded belief adds little once the last-trial pattern is known (about +0.005 dev). Uses only observed quantities, no future variables. Test R^2 beyond timing is 0.68, above the profile all ceiling (0.54) and the all-observed ceiling (0.46), because those tables cannot express the multiplicative zeroing at GO. The earlier policy-based label (committing to a1 after a rewarded common trial) loses nothing when replaced with observed history: the policy-decile table alone scored 0.33.",
+  "gate": "hidden",
+  "feature": 106,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 106,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S1 r\")",
+      "(phase == GO) * last_is(\"a1 S1 r\") * (tv(\"prev_reward\", -1) == 1)",
+      "(phase == GO) * last_is(\"a1 S1 r\") * ep_trial",
+      "(phase == GO) * (prev_action == -1) * np.clip(belief_lo, 0, 4)",
+      "(phase == GO) * (1 - last_is(\"a1 S1 r\")) * (prev_action != -1)",
+      "(phase == GO) * (1 - last_is(\"a1 S1 r\")) * (prev_action != -1) * ep_trial"
+    ],
+    "weights": [
+      0.6710988859456964,
+      0.46941420016423546,
+      -0.011126041384824325,
+      0.09046944690448583,
+      -0.3702856924223727,
+      0.004111586472651033
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6841463857365788,
+    "r2": 0.7419083477702852,
+    "r2_timing_only": 0.18287573554733183
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 106,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S1 r\")",
+      "(phase == GO) * last_is(\"a1 S1 r\") * (tv(\"prev_reward\", -1) == 1)",
+      "(phase == GO) * last_is(\"a1 S1 r\") * ep_trial",
+      "(phase == GO) * (prev_action == -1) * np.clip(belief_lo, 0, 4)",
+      "(phase == GO) * (1 - last_is(\"a1 S1 r\")) * (prev_action != -1)",
+      "(phase == GO) * (1 - last_is(\"a1 S1 r\")) * (prev_action != -1) * ep_trial"
+    ],
+    "weights": [
+      0.6710988859456964,
+      0.46941420016423546,
+      -0.011126041384824325,
+      0.09046944690448583,
+      -0.3702856924223727,
+      0.004111586472651033
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6926106062984356,
+    "r2": 0.7515660755482209,
+    "r2_timing_only": 0.191794090680381
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced the result: dev 0.693, test 0.684 R^2 beyond timing, with the same weights. It beats the 'all observed' ceiling (0.46) and the 'all' ceiling (0.54).",
+      "Each claim held up in ablations on test. last_is('a1 S1 r') plus a GO offset alone gives 0.40. Adding reward two trials back (tv('prev_reward',-1)==1, weight +0.47) gives 0.47. The episode fade terms (about -0.011 per trial) raise it to 0.66, so the fade is real. The first-trial belief term (+0.09 per clipped log-odds) adds 0.027 and gives 0.684.",
+      "Imprecise wording: 'after repeated reward' really means the trial two back was rewarded, whatever its choice or state. Requiring that trial to also be a1 or a1->S1 adds only about +0.001. Reward three trials back adds a little more (test 0.688).",
+      "No large systematic error remains. Mean error by phase is at most 0.011. The largest error by (phase, previous trial) is GO with the previous trial unknown, over-predicted by 0.055. Every other cell is within 0.01.",
+      "Worst-fit windows: in some windows the feature stays silent through long a1->S1-rewarded streaks in mid-episode (e.g. t41-45, actual 0 vs predicted about 0.87). In others it fires strongly. None of the following separates these cases (each adds at most 0.004 on test): belief, belief_cover, belief>0.95, start_high, good, since_rev, ep_trial^2, stay. About 30% of the variance beyond timing is unexplained and looks like hidden-state variation from episode to episode.",
+      "'Loses nothing vs the policy' is only an indirect claim. The observed terms (0.68) beat the policy-decile table (0.33), but policy-plus-history was not scored because this run is observed-only."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO only: last trial a1-S1-rewarded, larger if the trial before was also rewarded; fades over the episode",
+    "better_terms": null,
+    "better_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "GO only: last trial a1-S1-rewarded, larger if the trial before was also rewarded; fades over the episode"
+}

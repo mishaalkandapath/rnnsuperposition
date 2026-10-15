@@ -1,0 +1,67 @@
+{
+  "label": "D2 after common a1->S1, scaled by the D2 a1-preference logit",
+  "terms": "(phase == D2) * (action == 1) * (state == S1) ;; (phase == D2) * (1 - (action == 1) * (state == S1)) ;; (phase == D2) * (action == 1) * (state == S1) * np.maximum(choice, 0) ;; (phase == D2) * (action == 1) * (state == S1) * last_is(\"a1 S2 u\")",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2, and only after a common a1->S1 transition (choice x state residual +0.34 vs about -0.18 for the other three). Within those steps its size follows the model D2 policy logit for a1 (np.maximum(choice,0), weight about 0.33): policy deciles 7-8 have residuals +0.74/+0.56. In observed history terms it is largest (about 2.2-2.5) when the previous trial was unrewarded, and especially after a1 S2 u (rare unrewarded, an MB stay-on-a1 trial, residual +0.82). It shrinks over consecutive rewarded trials (about 1.5 then about 0.9). Phase D1/GO are always zero. Test R^2 beyond timing 0.77 with 4 terms (all-cue ceiling 0.65). An observed-only version (a1S1 indicator, last_is a1 S2 u, prev_reward==0, reward two trials back==0) gives test 0.55. No future variables are used; choice is the model internal policy output at D2.",
+  "gate": "update",
+  "feature": 80,
+  "test_scores": {
+    "gate": "update",
+    "feature": 80,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == S1)",
+      "(phase == D2) * (1 - (action == 1) * (state == S1))",
+      "(phase == D2) * (action == 1) * (state == S1) * np.maximum(choice, 0)",
+      "(phase == D2) * (action == 1) * (state == S1) * last_is(\"a1 S2 u\")"
+    ],
+    "weights": [
+      -0.09871678854559468,
+      -0.17694421181048375,
+      0.3251323335423893,
+      0.07727884333227397
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7679623108091003,
+    "r2": 0.7962125978053367,
+    "r2_timing_only": 0.1217486999407007
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 80,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == S1)",
+      "(phase == D2) * (1 - (action == 1) * (state == S1))",
+      "(phase == D2) * (action == 1) * (state == S1) * np.maximum(choice, 0)",
+      "(phase == D2) * (action == 1) * (state == S1) * last_is(\"a1 S2 u\")"
+    ],
+    "weights": [
+      -0.09871678854559468,
+      -0.17694421181048375,
+      0.3251323335423893,
+      0.07727884333227397
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7783032316996263,
+    "r2": 0.8063728477545631,
+    "r2_timing_only": 0.12661265326567872
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core is right: the feature fires only on D2 after a1->S1 (a1S1 indicator alone gives test 0.23) and scales with max(choice,0) (a1S1 + a1S1*max(choice,0) gives test 0.68, weight 0.34). It is zero at D1 and GO. The reported 0.77 reproduces.",
+      "Systematic gap: the timing baseline is additive, but within a1S1 the gain grows over the episode. Adding a1S1*ep_dec raises test from 0.77 to 0.84. Adding a1S1*max(choice,0)*ep_dec as well raises it to 0.89. All of the worst-fit windows are late-episode a1S1 steps (t87-99) that are under-predicted by about 1.0 (e.g. actual 2.30 vs predicted 1.16; 2.36 vs 1.31). The label leaves out this episode-time scaling.",
+      "The a1S2u term adds little. Its fitted weight is only 0.077, and it drops to about 0.02 or below 0 once a1S1*ep_dec is added (0.020 alone, -0.003 with choice*ep_dec). Its raw +0.82 residual is mostly carried by the policy logit, so the explanation overstates it as an independent driver.",
+      "The claim that the activation is 'largest when the previous trial was unrewarded' is only partly true. In a fit of prev-trial patterns inside a1S1, the weights relative to the unknown-previous-trial baseline are a1 S1 u -0.27 vs a1 S1 r -0.14, so after a common a1 trial, unrewarded is LOWER than rewarded. The unrewarded advantage holds after a1 S2 (u +0.87 vs r -0.50) and after a2 S2 (u 0.00 vs r -0.42), not across the board.",
+      "The examples show it shrinking over consecutive a1S1 trials even when they are unrewarded (2.48 -> 1.62 after a1S1u), so 'shrinks over consecutive rewarded trials' is not specific to reward. Simple consecutive-a1S1 indicators do not capture it either (test 0.28), so the decay is better described through the policy logit.",
+      "The main term is the model's own D2 policy logit, which is a readout and may sit downstream of this feature. The observed-only version reproduces at 0.55 on test (adding a1S1*ep_dec plus observed-cue x ep_dec interactions gives 0.63)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after common a1->S1, scaled by the D2 a1-preference logit, with a gain that grows over the episode",
+    "better_terms": "(phase == D2) * (action == 1) * (state == S1) ;; (phase == D2) * (1 - (phase == D2) * (action == 1) * (state == S1)) ;; (phase == D2) * (action == 1) * (state == S1) * np.maximum(choice,0) ;; (phase == D2) * (action == 1) * (state == S1) * last_is('a1 S2 u') ;; (phase == D2) * (action == 1) * (state == S1)*ep_dec ;; (phase == D2) * (action == 1) * (state == S1)*np.maximum(choice,0)*ep_dec",
+    "better_terms_test_r2_beyond_timing": 0.8915
+  },
+  "final_label": "D2 after common a1->S1, scaled by the D2 a1-preference logit, with a gain that grows over the episode"
+}

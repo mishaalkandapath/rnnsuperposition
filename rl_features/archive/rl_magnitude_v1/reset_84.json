@@ -1,0 +1,74 @@
+{
+  "label": "GO after unrewarded common a2->S2, larger when agent leans a2 and trial before rewarded",
+  "terms": "(phase == GO) * last_is(\"a2 S2 u\") ;; (phase == GO) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 1) ;; (phase == GO) * last_is(\"a2 S2 u\") * (choice < 0) ;; (phase == GO) * last_is(\"a2 S2 u\") * np.clip(-choice, -3, 3) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) ;; (phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 85)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO, almost only when the previous trial was a2 -> S2 (common) unrewarded (residual +1.38 vs about -0.15 for every other pattern). Within that case it is larger when the trial before was rewarded, and grows with the model policy leaning toward a2 (graded -choice; a future action==2 version scored dev 0.62 with 3 terms, and the observed policy-logit version does as well or better). Small positive activation on the window-first trial after an unrewarded trial (previous pattern not in window). Suppressed near the episode end (trial >= 85). Zero at D1 and D2. Hidden good state, value, trials since reversal do not matter. Dev R^2 beyond timing 0.736 vs all ceiling 0.64 (profile reference); observed-only terms.",
+  "gate": "reset",
+  "feature": 84,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 84,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 u\")",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 1)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (choice < 0)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * np.clip(-choice, -3, 3)",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 85)"
+    ],
+    "weights": [
+      1.330271509611871,
+      0.34426200553193004,
+      -0.43708838585546594,
+      0.30026274168559736,
+      0.3130107513936935,
+      -1.4665646180151146
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7429944833188904,
+    "r2": 0.7638021640937827,
+    "r2_timing_only": 0.08096200051888491
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 84,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 u\")",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 1)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (choice < 0)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * np.clip(-choice, -3, 3)",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 85)"
+    ],
+    "weights": [
+      1.330271509611871,
+      0.34426200553193004,
+      -0.43708838585546594,
+      0.30026274168559736,
+      0.3130107513936935,
+      -1.4665646180151146
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7360040183951259,
+    "r2": 0.7560154274785371,
+    "r2_timing_only": 0.0758019457787148
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Late-episode suppression is not a step at trial 85. With nested thresholds on the a2 S2 u term, weights of -0.24 (>=70), -0.22 (>=75), -0.30 (>=80), -0.47 (>=85), -0.41 (>=90) and -0.09 (>=95) show a gradual fade from about trial 70 that is nearly complete by 90. A ramp term clip(ep_trial-70, 0, 30) raises test R^2 from 0.743 to 0.756.",
+      "The window-first-trial term undersells what is happening. The worst misses are rel -3 GO steps with actual 2.5-2.7 against predicted about 0.47, so these are full-strength firings whose previous trial lies outside the window (presumably a2 S2 u), not a 'small positive activation'. Grading that term by the policy, (prev_action==-1)*(prev_reward==0)*clip(-choice), raises test R^2 to 0.762.",
+      "The choice effect is captured by two terms with opposite signs, (choice<0) at -0.44 and clip(-choice) at +0.30. The net effect is roughly monotone in -choice but has a step at 0. That fits the 'leans a2' claim, but the shape is approximate.",
+      "Ablations support each claim. On test: the a2 S2 u term plus the first-trial term alone gives 0.56; a2 S2 u plus the >=85 term gives 0.62; adding the trial-before-rewarded term gives 0.66; a2 S2 u, the >=85 term and the two choice terms give 0.715; all six recorded terms give 0.743. The +0.344 weight on trial-before-rewarded is real.",
+      "Misses show no large systematic error by previous-trial pattern. GO after other patterns is over-predicted by only about 0.1-0.13, and D1/D2 are under-predicted by a uniform +0.047, which looks like an intercept effect."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after unrewarded common a2->S2; larger when the agent leans a2 and the trial before was rewarded; fades out from about trial 70 to the episode end",
+    "better_terms": "(phase == GO) * last_is('a2 S2 u') ;; (phase == GO) * last_is('a2 S2 u') * (tv('reward', -2) == 1) ;; (phase == GO) * last_is('a2 S2 u') * (choice < 0) ;; (phase == GO) * last_is('a2 S2 u') * np.clip(-choice, -3, 3) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) ;; (phase == GO) * last_is('a2 S2 u') * (ep_trial >= 85) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * np.clip(-choice, -3, 3) ;; (phase == GO) * last_is('a2 S2 u') * np.clip(ep_trial - 70, 0, 30)",
+    "better_terms_test_r2_beyond_timing": 0.7747
+  },
+  "final_label": "GO after unrewarded common a2->S2; larger when the agent leans a2 and the trial before was rewarded; fades out from about trial 70 to the episode end"
+}

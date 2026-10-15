@@ -1,0 +1,112 @@
+{
+ "label": "Reset gate drops after a rewarded trial (D1, GO) and rises at D1 after reaching S1.",
+ "short_terms": "(phase == D1) * (prev_reward == 1) ;; (phase == GO) * (prev_reward == 1) ;; (phase == D1) * (2 * (prev_state == 1) + (prev_action == 1))",
+ "terms": "(phase == D1) * (prev_reward == 1) ;; (phase == GO) * (prev_reward == 1) ;; (phase == D1) * (prev_state == 1) ;; (phase == D1) * (prev_action == 1) ;; (phase == D1) * (prev_reward == 1) * (prev_state == 1) ;; (phase == GO) * (prev_state == 1) ;; (phase == D1) * belief_lo ;; (phase == D1) * (tv(\"reward\", -2) == 1)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Raw reset gate r of unit 40. Timing (high at D2, middle at GO, lowest at D1, falling late in the episode) explains most of its variance. Beyond timing, the last trial outcome drives it at D1 and GO: it is lower after a rewarded trial (about -0.17 at D1, -0.07 at GO) and higher at D1 when the last trial reached S1 (about +0.19). The S1 boost is largest when S1 was unrewarded: D1 residual is +0.29 after a1 S1 u and -0.19 after a2 S2 r. D2 barely moves. The free fit adds an S1 x reward interaction at D1 (the S1 boost shrinks when rewarded), a smaller prev_action==a1 effect at D1, a GO S1 term and belief_lo at D1, which takes dev R^2 from 0.64 to 0.78. Future variables (this reward, next choice) add little. Only observed quantities are used.",
+ "full_test_scores": {
+  "gate": "unit_reset",
+  "feature": 40,
+  "terms": [
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == GO) * (prev_reward == 1)",
+   "(phase == D1) * (prev_state == 1)",
+   "(phase == D1) * (prev_action == 1)",
+   "(phase == D1) * (prev_reward == 1) * (prev_state == 1)",
+   "(phase == GO) * (prev_state == 1)",
+   "(phase == D1) * belief_lo",
+   "(phase == D1) * (tv(\"reward\", -2) == 1)"
+  ],
+  "weights": [
+   -0.11348126739623804,
+   -0.07826712650958345,
+   0.24811824216593645,
+   -0.003944080289910777,
+   -0.18615525564622692,
+   0.05091213524959009,
+   0.028026886530484355,
+   0.007678766601932596
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7714975057191927,
+  "r2": 0.9670099373542187,
+  "r2_timing_only": 0.8556249342064522
+ },
+ "gate": "unit_reset",
+ "feature": 40,
+ "test_scores": {
+  "gate": "unit_reset",
+  "feature": 40,
+  "terms": [
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == GO) * (prev_reward == 1)",
+   "(phase == D1) * (2 * (prev_state == 1) + (prev_action == 1))"
+  ],
+  "weights": [
+   -0.1794028122571639,
+   -0.06620357707646857,
+   0.07325968673485363
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6753007733839536,
+  "r2": 0.9531215277941942,
+  "r2_timing_only": 0.8556249342064522
+ },
+ "dev_scores": {
+  "gate": "unit_reset",
+  "feature": 40,
+  "terms": [
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == GO) * (prev_reward == 1)",
+   "(phase == D1) * (2 * (prev_state == 1) + (prev_action == 1))"
+  ],
+  "weights": [
+   -0.1794028122571639,
+   -0.06620357707646857,
+   0.07325968673485363
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.6766450347638189,
+  "r2": 0.9535916546046846,
+  "r2_timing_only": 0.8564786368398013
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The free-fit explanation says the S1 boost at D1 shrinks when S1 was rewarded. The profile residuals don't support this. The S1-minus-S2 difference at D1 is +0.18 unrewarded vs +0.19 rewarded after a1, and +0.17 vs +0.14 after a2, so the effect is close to additive. The +0.29 (a1 S1 u) vs -0.19 (a2 S2 r) contrast comes from adding reward, S1 and a D1 effect of having chosen a1, not from an interaction.",
+   "The short form leaves out a systematic D1 effect of the previous choice: having chosen a1 last trial adds about +0.1 on top of the S1 effect. Misses on the recorded short form show it: D1 after a1 S2 u is under-predicted by +0.075 and D1 after a1 S1 u by +0.069, while D1 after a2 S1 r is over-predicted by -0.098 and after a2 S2 r by -0.046. These errors are about half the size of the fitted effects (-0.17 and +0.19).",
+   "Folding the a1 effect in as (phase == D1) * (2*(prev_state == 1) + (prev_action == 1)) raises test R^2 beyond timing from 0.637 to 0.675. Misses on that form no longer show a D1 choice/state error class: the largest D1 cell errors drop to about 0.045, apart from the first trial of the episode ('?' row, +0.09).",
+   "A smaller GO pattern remains in both forms: at GO, after unrewarded trials, the gate is higher when a2 was chosen (a2 S1 u and a2 S2 u under-predicted by +0.07; a1 S2 r over-predicted by -0.077). There is also a small negative mean error at D2 (-0.025).",
+   "The magnitudes the label gives check out (D1 reward -0.17, GO reward -0.07, D1 S1 +0.19). The label matches the recorded short form, but it does not mention the D1 previous-choice effect."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Reset gate drops after rewarded trials (D1, GO); at D1 it rises after reaching S1, less after choosing a1.",
+  "better_short_terms": "(phase == D1) * (prev_reward == 1) ;; (phase == GO) * (prev_reward == 1) ;; (phase == D1) * (2 * (prev_state == 1) + (prev_action == 1))",
+  "better_short_terms_test_r2_beyond_timing": 0.675
+ },
+ "final_label": "Reset gate drops after rewarded trials (D1, GO); at D1 it rises after reaching S1, less after choosing a1.",
+ "original_short_terms": "(phase == D1) * (prev_reward == 1) ;; (phase == GO) * (prev_reward == 1) ;; (phase == D1) * (prev_state == 1)",
+ "original_test_scores": {
+  "gate": "unit_reset",
+  "feature": 40,
+  "terms": [
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == GO) * (prev_reward == 1)",
+   "(phase == D1) * (prev_state == 1)"
+  ],
+  "weights": [
+   -0.17094161132045946,
+   -0.06845965713257036,
+   0.18865964209100775
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.637394068010137,
+  "r2": 0.9476487447118328,
+  "r2_timing_only": 0.8556249342064522
+ },
+ "terms_from": "skeptic"
+}

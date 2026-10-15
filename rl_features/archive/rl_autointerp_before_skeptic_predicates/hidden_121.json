@@ -1,0 +1,65 @@
+{
+  "label": "GO step where the agent is choosing a1",
+  "predicate": "(phase == GO) & (model_act == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at the GO step, never at D1 or D2. At GO it fires when the policy picks a1 (model_act==1: 80% rate, 95% of activation mass), and it tracks the a1-vs-a2 logit (choice > 8 holds 72% of mass). Magnitude is highest for a confident a1 choice after a rewarded trial: adding prev_reward==1 raises precision to 0.98 but drops recall to 0.71. The weak activations it misses (low quartile) are a2 choices with a small logit margin, or GOs where the feature carries over from a1 choices earlier in the window. False positives are a1 choices after unrewarded or mixed history, where the a1 preference is weaker. It does not fire on a2 choices, on D1/D2 steps, or when reward or action inputs are present. model_act is the agent's own computed choice and is not a future variable. action==1 scores the same.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 121,
+    "predicate": "(phase == GO) & (model_act == 1)",
+    "split": "test",
+    "precision": 0.7916110666310826,
+    "recall": 0.8539161413757325,
+    "f1": 0.8215840664302676,
+    "mass_recall": 0.9484746070989252,
+    "correlation": 0.7947556768154328,
+    "n_active": 166733,
+    "n_predicted": 179856,
+    "coverage_by_activation_quartile": [
+      0.4677814029363785,
+      0.9478924261689418,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 121,
+    "predicate": "(phase == GO) & (model_act == 1)",
+    "split": "dev",
+    "precision": 0.7982422097934025,
+    "recall": 0.8679313190734156,
+    "f1": 0.8316293616274887,
+    "mass_recall": 0.9542166143249975,
+    "correlation": 0.8004633306432726,
+    "n_active": 161151,
+    "n_predicted": 175220,
+    "coverage_by_activation_quartile": [
+      0.49446485305798255,
+      0.977263701350278,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 121,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The GO-only claim holds: D1 and D2 carry exactly 0 active steps and GO carries 100% of the activation mass. The test score of the recorded predicate is also reproduced (P 0.792, R 0.854, F1 0.822).",
+      "The false positives are not scattered and are not mainly 'a1 after an unrewarded history'. They are a1 choices made when the previous trial ended in S2. Dev precision of (GO & model_act==1) split by the previous trial: a1->S1 rewarded 1.00, a1->S1 UNrewarded 1.00 (15064 steps), a2->S1 rewarded 1.00, first trial in the window 0.83. In contrast: a1->S2 unrewarded 0.23 (27101 steps), a1->S2 rewarded 0.71, a2->S2 unrewarded then switch to a1 0.0014 (6494 steps). So the stated story 'magnitude highest after a rewarded trial; FPs are a1 after an unrewarded history' is wrong. After an unrewarded trial that reached S1, a1 fires 100% of the time. After an unrewarded trial that reached S2, a lose-switch to a1 almost never fires.",
+      "The explanation's adding prev_reward==1 (P 0.98, R 0.71, F1 0.824) is a proxy. Using prev_state!=2 instead gives P 0.955, R 0.80, F1 0.870 on dev and 0.863 on test.",
+      "Systematic misses: a2 choices after the previous trial reached S1 and was rewarded fire at 97% precision (12204 steps, about 7% of active steps). The explanation describes them only as 'a2 choices with a small logit margin' or carry-over. The test-split misses windows show the same pattern: a2 GO steps right after an S1R (a2, rare, rewarded) trial.",
+      "The claim that choice > 8 holds 72% of mass is consistent (mass recall 0.724). But choice > 0 does no better than model_act (F1 0.83), so the logit adds nothing beyond the argmax.",
+      "The label 'agent is choosing a1' overclaims. The feature combines the upcoming a1 choice with the last observed state: it fires on a1 unless the agent just saw S2 (especially an unrewarded S2), and also fires after a rewarded S1 even when the agent picks a2. Everything used is observed, apart from the agent's own computed choice."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step where the agent picks a1 (or the last trial was a rewarded S1), unless the previous trial reached S2. Roughly 'S1-directed choice given the last observed state'",
+    "better_predicate": "(phase == GO) & (((model_act == 1) & (prev_state != 2)) | ((prev_state == 1) & (prev_reward==1)) | ((model_act==1) & (prev_action==1) & (prev_reward==1)))",
+    "better_predicate_test_f1": 0.921
+  },
+  "final_label": "GO step where the agent picks a1 (or the last trial was a rewarded S1), unless the previous trial reached S2. Roughly 'S1-directed choice given the last observed state'"
+}

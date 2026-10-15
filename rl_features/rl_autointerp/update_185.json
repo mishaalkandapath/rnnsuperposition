@@ -1,0 +1,64 @@
+{
+  "label": "Late-episode rewarded D1 before an a1 choice",
+  "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 70) & (action == 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (never GO/D2), almost exclusively when the reward input is 1 (99.8% of mass), and only late in the episode: zero before trial ~55, ramping up through trials 60-99 with magnitude growing with ep_trial (trials 90-99 hold 64% of mass). Within those steps it is selective for the agent about to choose a1 (94% of mass has upcoming action a1; prev action a2 is strongly suppressed), consistent with high choice logit (a1-favoring) and low value-head output. The action condition is the agent own upcoming GO choice (computed, legitimate); no future random outcome is used. Predicate: D1 & rewarded & ep_trial>=70 & upcoming a1 (dev F1 0.85, mass recall 0.94). Missed activations are mostly weak ones at ep_trial 60-70 or before a2 choices; false positives are rewarded a1 D1s where it stays silent. Does not fire after unrewarded trials or early in episodes. Looks like a time-in-episode x reward x a1-preference conjunction.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 185,
+    "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 70) & (action == 1)",
+    "split": "test",
+    "precision": 0.8555344390693389,
+    "recall": 0.8428413378343876,
+    "f1": 0.849140456422641,
+    "mass_recall": 0.9186252614841088,
+    "correlation": 0.7063742775673584,
+    "n_active": 35251,
+    "n_predicted": 34728,
+    "coverage_by_activation_quartile": [
+      0.6066038806308862,
+      0.9369113809145581,
+      0.891977760127085,
+      0.9358828869723105
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 185,
+    "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 70) & (action == 1)",
+    "split": "dev",
+    "precision": 0.85614440433213,
+    "recall": 0.8521574151263402,
+    "f1": 0.8541462571313319,
+    "mass_recall": 0.9356534760676045,
+    "correlation": 0.7160682458648282,
+    "n_active": 34787,
+    "n_predicted": 34625,
+    "coverage_by_activation_quartile": [
+      0.5972174312981487,
+      0.9387144992526159,
+      0.917672760722088,
+      0.9550367985280589
+    ]
+  },
+  "gate": "update",
+  "feature": 185,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I reproduced the reported scores. Test: precision 0.856, recall 0.843, F1 0.849, mass recall 0.919. Dev: F1 0.854, mass recall 0.936.",
+      "Checked claims that hold: the feature is active only at D1 (0 GO and 0 D2 activations out of 380k each). 99.8% of activation mass has in_rew==1. It is silent through trial 49 (0 activations), with 164 weak activations in trials 50-59, then ramps from 60-69 (rate 0.021) to 90-99 (rate 0.109, 64% of mass). action==1 carries 94.4% of mass.",
+      "The 'suppressed when the previous choice was a2' claim is only mildly supported. Adding prev_action==2 to the predicate lowers precision from 0.86 to 0.58 but does not remove the activations, and these steps are only about 2% of recall.",
+      "Most false positives come from the trial 70-79 part of the ramp, where activations are weak or missing. Raising the cutoff to ep_trial>=80 gives precision 0.95 but recall 0.61. So the time onset is graded rather than a hard threshold. The explanation already says this, so it is not a systematic gap.",
+      "Observed-only alternatives score worse. prev_action != 2 instead of upcoming action==1 gives F1 0.74, and good==1 instead of action==1 gives F1 0.77. The upcoming choice is the agent's own computation and is legitimate, so uses_future=false is correct.",
+      "Alternatives that also scored lower: the choice logit (choice>0, F1 0.83), low value (value<7.13, F1 0.57) and splitting by start_high. None beat the original. Missed activations are scattered weak ones (lowest-quartile coverage 0.60) and the occasional rewarded D1 before an a2 choice. I found no systematic missed class."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

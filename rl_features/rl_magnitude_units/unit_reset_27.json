@@ -1,0 +1,112 @@
+{
+ "label": "At D1, drops sharply after an unrewarded S2 visit; at GO/D2, lower when belief favors S1.",
+ "short_terms": "(phase == D1) * (prev_reward == 1) * (prev_state == S1) ;; (phase == D1) * (prev_state == S2) * (prev_reward == 0) ;; (phase != D1) * belief_lo",
+ "terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_state == S1) ;; (phase == D1) * (prev_state == S2) ;; (phase == D1) * last_is(\"a1 S2 u\") ;; (phase == GO) * belief_lo ;; (phase == D2) * belief_lo ;; (phase == GO) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 1) * (prev_state == S1)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Raw reset gate r of unit 27 (high on average, falling late in the episode, which the timing baseline covers). Its magnitude is mainly set at D1 by the outcome of the previous trial: it drops strongly (about -0.3) when the previous trial reached S2 and was not rewarded, and is somewhat higher after any rewarded trial. The S2-unrewarded drop is largest after a1 (a rare transition), weaker after a2. At GO and D2 it varies with the ideal-observer belief: lower when the history favors S1 being good, higher when it favors S2 (this matches its relation to the upcoming choice, but only observed belief is used). The free fit adds separate S1/S2 state main effects, an extra term for the a1 S2 u pattern, a GO reward term, and per-phase belief weights (dev 0.71 vs 0.61 for the short form). Note prev_reward can be -1 (penalty), so indicator terms were needed. No future, hidden or model-output variables are used.",
+ "full_test_scores": {
+  "gate": "unit_reset",
+  "feature": 27,
+  "terms": [
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D1) * (prev_state == S1)",
+   "(phase == D1) * (prev_state == S2)",
+   "(phase == D1) * last_is(\"a1 S2 u\")",
+   "(phase == GO) * belief_lo",
+   "(phase == D2) * belief_lo",
+   "(phase == GO) * (prev_reward == 1)",
+   "(phase == D1) * (prev_reward == 1) * (prev_state == S1)"
+  ],
+  "weights": [
+   0.12204050849478248,
+   0.04451967285390793,
+   -0.15412207075220286,
+   -0.20697402117010835,
+   -0.024356164238175264,
+   -0.012630888631454947,
+   -0.034814596612841205,
+   -0.029957638223652803
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.695410875217874,
+  "r2": 0.7929823418389518,
+  "r2_timing_only": 0.32033798544472347
+ },
+ "gate": "unit_reset",
+ "feature": 27,
+ "test_scores": {
+  "gate": "unit_reset",
+  "feature": 27,
+  "terms": [
+   "(phase == D1) * (prev_reward == 1) * (prev_state == S1)",
+   "(phase == D1) * (prev_state == S2) * (prev_reward == 0)",
+   "(phase != D1) * belief_lo"
+  ],
+  "weights": [
+   0.13666724326435015,
+   -0.2960437357340672,
+   -0.01851813287373555
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6599656951001036,
+  "r2": 0.7688915993138333,
+  "r2_timing_only": 0.32033798544472347
+ },
+ "dev_scores": {
+  "gate": "unit_reset",
+  "feature": 27,
+  "terms": [
+   "(phase == D1) * (prev_reward == 1) * (prev_state == S1)",
+   "(phase == D1) * (prev_state == S2) * (prev_reward == 0)",
+   "(phase != D1) * belief_lo"
+  ],
+  "weights": [
+   0.13666724326435015,
+   -0.2960437357340672,
+   -0.01851813287373555
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.6627153409088097,
+  "r2": 0.7704971783761094,
+  "r2_timing_only": 0.31955748523433203
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The claim that it is 'a little higher after any rewarded trial' is wrong for rewarded S2 visits. The D1 residual after a1 S2 r is -0.096, below average, and after a2 S2 r it is only +0.015. The raise belongs to rewarded S1 visits (a1 S1 r +0.136, a2 S1 r +0.167). Misses on the recorded short form confirm this: D1 after a1 S2 r is over-predicted by -0.168, the largest systematic error.",
+   "Changing the reward term to (phase == D1) * (prev_reward == 1) * (prev_state == S1) raises test R^2 beyond timing from 0.609 to 0.660. On test this beats every recorded variant and passes --short.",
+   "The belief claim holds. GO residuals fall steadily from +0.08 (belief favors S2) to -0.10 (belief favors S1), and D2 follows the same pattern at about half the size. A GO-only belief term scores 0.641, against 0.660 when belief covers both GO and D2.",
+   "The 'larger drop after a1 (rare) than after a2' claim is true (-0.356 vs -0.237). However, the short form does not encode it, and an a1-specific S2 term did not help (0.665 raw R^2, much worse). With the improved form, a choice asymmetry remains: after a2 the unit is under-predicted by up to +0.10 (GO after a2 S2 u, D1 after a2 S1 u), and after a1 it is over-predicted (D1 after a1 S2 r -0.10, GO after a1 S1 r -0.07).",
+   "Many of the worst-fit windows are D1 on the first trial of a window, where prev_state is unknown (-1). There the S2-unrewarded indicator cannot fire, so a 0.22 activation is predicted as about 0.63. This is a limit of the window data, not of the interpretation."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At D1, high after rewarded S1 and very low after unrewarded S2; at GO/D2, lower when belief favors S1.",
+  "better_short_terms": "(phase == D1) * (prev_reward == 1) * (prev_state == S1) ;; (phase == D1) * (prev_state == S2) * (prev_reward == 0) ;; (phase != D1) * belief_lo",
+  "better_short_terms_test_r2_beyond_timing": 0.66
+ },
+ "final_label": "At D1, high after rewarded S1 and very low after unrewarded S2; at GO/D2, lower when belief favors S1.",
+ "original_short_terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_state == S2) * (prev_reward == 0) ;; (phase != D1) * belief_lo",
+ "original_test_scores": {
+  "gate": "unit_reset",
+  "feature": 27,
+  "terms": [
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D1) * (prev_state == S2) * (prev_reward == 0)",
+   "(phase != D1) * belief_lo"
+  ],
+  "weights": [
+   0.07118626813236063,
+   -0.2919822374149181,
+   -0.018482873614889574
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6089794033713591,
+  "r2": 0.7342381535627718,
+  "r2_timing_only": 0.32033798544472347
+ },
+ "terms_from": "skeptic"
+}

@@ -1,0 +1,113 @@
+{
+ "label": "At GO, scales with belief S1 is good, strongly after a rewarded a1-to-S1 trial.",
+ "short_terms": "(phase == GO) * last_is('a1 S1 r') * belief_lo ;; (phase == GO) * (prev_action == -1) * np.maximum(belief_lo, 0) ;; (phase == GO) * np.maximum(belief_lo, 0)",
+ "terms": "(phase == GO) * last_is(\"a1 S1 r\") ;; (phase == GO) * belief_lo ;; (phase == GO) * last_is(\"a1 S1 r\") * belief_lo ;; (phase == GO) * np.maximum(belief_lo, 0) ;; (phase == GO) * (prev_action == 1) * (prev_reward == 1) ;; (phase == GO) * (prev_action == -1) * belief_lo ;; (phase == GO) * last_is(\"a1 S1 r\") * np.minimum(belief_lo, 3) ;; (phase == GO) * (belief > 0.5) * belief_cover",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Active only at GO (zero at D1/D2). Magnitude is large (~+1.2 over timing) after the previous trial was a1 -> S1 rewarded, and grows with the observer log-odds that S1 is good; after any other previous pattern it sits ~0.46 below the timing baseline. A weaker general belief_lo slope at GO and a belief term for windows whose previous trial is unknown complete the short form. Future variables (next choice) are not needed. The free fit adds saturating belief nonlinearities and an a1-rewarded indicator; remaining misses are long a1-S1-rewarded streaks where the feature is unexpectedly silent, which observed cues do not predict.",
+ "full_test_scores": {
+  "gate": "hidden",
+  "feature": 55,
+  "terms": [
+   "(phase == GO) * last_is(\"a1 S1 r\")",
+   "(phase == GO) * belief_lo",
+   "(phase == GO) * last_is(\"a1 S1 r\") * belief_lo",
+   "(phase == GO) * np.maximum(belief_lo, 0)",
+   "(phase == GO) * (prev_action == 1) * (prev_reward == 1)",
+   "(phase == GO) * (prev_action == -1) * belief_lo",
+   "(phase == GO) * last_is(\"a1 S1 r\") * np.minimum(belief_lo, 3)",
+   "(phase == GO) * (belief > 0.5) * belief_cover"
+  ],
+  "weights": [
+   0.9137058348069008,
+   0.1223560396686227,
+   0.867142417843603,
+   -0.09808835211370057,
+   -0.17790363518622124,
+   0.19656799689701696,
+   -0.7346732422172401,
+   -0.05308119625034685
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6576122979737495,
+  "r2": 0.7157203074798212,
+  "r2_timing_only": 0.1697140673049543
+ },
+ "gate": "hidden",
+ "feature": 55,
+ "test_scores": {
+  "gate": "hidden",
+  "feature": 55,
+  "terms": [
+   "(phase == GO) * last_is('a1 S1 r') * belief_lo",
+   "(phase == GO) * (prev_action == -1) * np.maximum(belief_lo, 0)",
+   "(phase == GO) * np.maximum(belief_lo, 0)"
+  ],
+  "weights": [
+   0.5341290162197028,
+   0.4253322588732547,
+   -0.13173020798853066
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5765106841536152,
+  "r2": 0.6483827784060976,
+  "r2_timing_only": 0.1697140673049543
+ },
+ "dev_scores": {
+  "gate": "hidden",
+  "feature": 55,
+  "terms": [
+   "(phase == GO) * last_is('a1 S1 r') * belief_lo",
+   "(phase == GO) * (prev_action == -1) * np.maximum(belief_lo, 0)",
+   "(phase == GO) * np.maximum(belief_lo, 0)"
+  ],
+  "weights": [
+   0.5341290162197028,
+   0.4253322588732547,
+   -0.13173020798853066
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.5874016717969995,
+  "r2": 0.6603613303829197,
+  "r2_timing_only": 0.1768297484473168
+ },
+ "final_verdict": "partially_explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The label says the feature 'scales with belief S1 is good', but belief barely changes its size once the previous trial is known. On test: last_is('a1 S1 r') alone scores 0.479. Adding last_is*belief_lo scores 0.487 (+0.008). Replacing the interaction with a plain indicator, last_is + (prev_action==-1)*belief_lo, scores 0.543, close to the recorded 0.568. So the feature is mostly an on/off signal at GO after a rewarded a1->S1 trial, at about +2.1. That matches the earlier firing label (F1 0.99).",
+   "Most of what belief adds comes from the term for windows where the previous trial is unknown. Its weight is +0.16, versus +0.055 for the general GO belief_lo term, and it is worth about 0.06 R^2. Belief stands in for the unseen last trial there. The label never mentions this. A reader would wrongly expect a graded belief response after every trial type.",
+   "The general belief_lo term is small (+0.055). The residual table shows about -0.46 at GO after all eight other previous-trial patterns, which means the feature is effectively zero there whatever the belief. The label's wording 'scales with belief' suggests otherwise.",
+   "Misses show systematic errors at GO. Steps after every non-a1S1r pattern are over-predicted by 0.37 to 0.56 (largest after a1 S2 u: -0.56). Steps where the previous trial is unknown are under-predicted by about 0.14. These errors appear in every short-form variant tried, so they look partly structural, but they are not small.",
+   "The worst windows are whole a1->S1-rewarded streaks where the feature stays silent (actual 0, predicted about 1.8). Interacting with since_rev, ep_trial, tv('stay',-1) or belief_cover did not explain them (all about 0.55). The explanation is honest that no observed cue predicts this, but it is a large failure class.",
+   "The short form (0.568) falls well short of the free fit (0.66) and the all-observed reference (0.71)."
+  ],
+  "revised_verdict": "partially_explained",
+  "revised_label": "Fires at GO only after a rewarded a1->S1 trial; if that trial is unseen, tracks belief S1 is good.",
+  "better_short_terms": "(phase == GO) * last_is('a1 S1 r') * belief_lo ;; (phase == GO) * (prev_action == -1) * np.maximum(belief_lo, 0) ;; (phase == GO) * np.maximum(belief_lo, 0)",
+  "better_short_terms_test_r2_beyond_timing": 0.5765
+ },
+ "final_label": "Fires at GO only after a rewarded a1->S1 trial; if that trial is unseen, tracks belief S1 is good.",
+ "original_short_terms": "(phase == GO) * last_is(\"a1 S1 r\") * belief_lo ;; (phase == GO) * belief_lo ;; (phase == GO) * (prev_action == -1) * belief_lo",
+ "original_test_scores": {
+  "gate": "hidden",
+  "feature": 55,
+  "terms": [
+   "(phase == GO) * last_is(\"a1 S1 r\") * belief_lo",
+   "(phase == GO) * belief_lo",
+   "(phase == GO) * (prev_action == -1) * belief_lo"
+  ],
+  "weights": [
+   0.34433086812383684,
+   0.05459295856724463,
+   0.16215431652106466
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5677057205483022,
+  "r2": 0.6410721409867144,
+  "r2_timing_only": 0.1697140673049543
+ },
+ "terms_from": "skeptic"
+}

@@ -1,0 +1,105 @@
+{
+  "label": "GO step, strongly committed to a2 after an unrewarded trial",
+  "predicate": "(phase == GO) & (choice < -6) & (prev_reward == 0) & (ep_trial>=20) & (prev_action!=1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO (never D1/D2), only when the policy strongly favours a2 (choice logit a1-a2 < about -4.4; all activity is in the bottom two choice bins, model_act == 2 always) and almost only when the previous trial was unrewarded (prev_reward == 0 holds 98.8% of mass; after rewarded trials it gives only tiny activations, which are most of the missed lowest-quartile steps). It is essentially a2-specific: there is no counterpart for a1. Uses only observed variables plus the agent own policy output; the upcoming action == 2 version scores lower (dev F1 0.70) because it includes weak a2 choices. Being in the previous rare-vs-common transition or state did not help. False positives are confident-a2 GO steps after no reward where the feature stays silent, often when unrewarded trials came in a row. Absent in the first ~10 episode trials and grows later in the episode. Activation is larger with a more negative choice logit (choice < -8 gives precision 0.80 and mass recall 0.90). Dev: P 0.75, R 0.86, F1 0.80, mass recall 0.985.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 157,
+    "predicate": "(phase == GO) & (choice < -6) & (prev_reward == 0) & (ep_trial>=20) & (prev_action!=1)",
+    "split": "test",
+    "precision": 0.872111434011424,
+    "recall": 0.8471857173451707,
+    "f1": 0.8594678938948034,
+    "mass_recall": 0.9835574210693737,
+    "correlation": 0.7940817030737544,
+    "n_active": 51363,
+    "n_predicted": 49895,
+    "coverage_by_activation_quartile": [
+      0.40970329413597073,
+      0.9816213690522545,
+      0.9975079822443735,
+      0.9999221183800623
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 157,
+    "predicate": "(phase == GO) & (choice < -6) & (prev_reward == 0) & (ep_trial>=20) & (prev_action!=1)",
+    "split": "dev",
+    "precision": 0.8827890409824184,
+    "recall": 0.8470740188772976,
+    "f1": 0.8645628409759263,
+    "mass_recall": 0.9836058490306149,
+    "correlation": 0.7971155481272877,
+    "n_active": 50325,
+    "n_predicted": 48289,
+    "coverage_by_activation_quartile": [
+      0.4084406294706724,
+      0.9839440426039265,
+      0.9962642079325967,
+      0.9996820602495827
+    ]
+  },
+  "gate": "hidden",
+  "feature": 157,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold. The feature fires only at GO (all activation mass; D1 and D2 have zero active steps). model_act is 2 for all of the mass. Only 60 active steps have choice in [-4.44, -1.52) and none are above that. prev_reward==0 holds 98.8% of the mass, and the same predicate with prev_reward==1 gets precision 0.057 and mass recall 0.012.",
+      "Systematic false-positive class: early-episode trials. The profile shows zero activations in trials 0-9 and a 0.005 rate in trials 10-19. The predicate restricted to ep_trial<20 has 8898 predicted steps at precision 0.067, which is roughly half of all false positives. The explanation mentions that the feature is 'absent in the first ~10 trials' but the predicate ignores this, and the silent window actually runs to about trial 20.",
+      "Adding (ep_trial>=20) alone lifts dev precision from 0.75 to 0.876 and F1 from 0.80 to 0.861, with mass recall unchanged (0.984). So the original sub-0.8 test F1 comes from a missing condition, not from scattered noise.",
+      "Small extra gap: after an a1 trial the predicate's cases almost never fire (prev_action==1: 525 predicted steps, precision 0.06). So the feature tracks continuing a2 after no reward, not switching to a2.",
+      "The explanation attributes the false positives to runs of several unrewarded trials. That is only partly true: precision is 0.62 when the trial before was also unrewarded vs 0.79 when it was rewarded. The main false-positive driver is episode position (trials 0-19), which the explanation does not identify as the false-positive source.",
+      "uses_future=false is correct: the predicate uses only prev_reward (observed) and the policy logit."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step, strongly committed to repeating a2 after an unrewarded trial, only after about trial 20 of the episode",
+    "better_predicate": "(phase == GO) & (choice < -6) & (prev_reward == 0) & (ep_trial>=20) & (prev_action!=1)",
+    "better_predicate_test_f1": 0.859
+  },
+  "final_label": "GO step, strongly committed to repeating a2 after an unrewarded trial, only after about trial 20 of the episode",
+  "original_predicate": "(phase == GO) & (choice < -6) & (prev_reward == 0)",
+  "original_test_scores": {
+    "gate": "hidden",
+    "feature": 157,
+    "predicate": "(phase == GO) & (choice < -6) & (prev_reward == 0)",
+    "split": "test",
+    "precision": 0.7363140057098019,
+    "recall": 0.8586531160563051,
+    "f1": 0.7927916591767032,
+    "mass_recall": 0.9849606003608967,
+    "correlation": 0.7225340585174275,
+    "n_active": 51363,
+    "n_predicted": 59897,
+    "coverage_by_activation_quartile": [
+      0.45393660929834123,
+      0.9830231290397944,
+      0.9976637333541002,
+      1.0
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "hidden",
+    "feature": 157,
+    "predicate": "(phase == GO) & (choice < -6) & (prev_reward == 0)",
+    "split": "dev",
+    "precision": 0.7507983893362955,
+    "recall": 0.8595727769498261,
+    "f1": 0.8015119370767364,
+    "mass_recall": 0.9851826890920109,
+    "correlation": 0.7277497229110117,
+    "n_active": 50325,
+    "n_predicted": 57616,
+    "coverage_by_activation_quartile": [
+      0.45700206644412655,
+      0.985056831730387,
+      0.9963436928702011,
+      0.9999205150623957
+    ]
+  },
+  "predicate_from": "skeptic"
+}

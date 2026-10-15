@@ -1,0 +1,112 @@
+{
+ "label": "Late in episodes, D1 update gate drops after reward, most after a rare a1->S2 reward, belief-modulated.",
+ "short_terms": "(phase == D1) * last_is('a1 S2 r') ;; (phase == D1) * belief_lo * ep_dec ;; (in_rew == 1) * belief_lo * ep_dec",
+ "terms": "(phase == D1) * (prev_reward == 1) * ep_dec ;; (phase == D1) * (prev_state == S2) * ep_dec ;; (phase == D1) * last_is(\"a1 S2 r\") * ep_dec ;; (phase == D1) * (prev_reward == 1) * belief_lo * ep_dec ;; (phase == D1) * (prev_reward == 1) * (prev_state == S2) * ep_dec ;; (phase == D1) * (tv(\"reward\", -2) == 1) * ep_dec ;; (phase == D1) * belief_lo * ep_dec ;; (phase == GO) * belief_lo",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Raw update gate z of unit 26 sits near 1 (keep state) and only departs from it at D1, increasingly with episode time (baseline D1 mean falls from 0.89 to 0.55 in the last decile). Beyond timing, the D1 value depends on the outcome just shown: after a rare a1->S2 rewarded trial it drops sharply (residual -0.30), after other rewarded trials it is lower, after unrewarded trials (especially S1 unrewarded) it stays high (+0.11 to +0.13). The effect scales with episode time (ep_dec interaction). The ideal-observer belief modulates it: at D1 belief toward S1 lowers z overall, but after a reward belief toward S1 raises it (reward when the observer favours S2 lowers it most). GO and D2 effects are tiny (GO: belief toward S1 slightly lowers z). The free fit adds separate reward, S2, reward-x-S2 and two-trials-back reward terms (each x ep_dec) and a GO belief term. No future, hidden or model-output variables used.",
+ "full_test_scores": {
+  "gate": "unit_update",
+  "feature": 26,
+  "terms": [
+   "(phase == D1) * (prev_reward == 1) * ep_dec",
+   "(phase == D1) * (prev_state == S2) * ep_dec",
+   "(phase == D1) * last_is(\"a1 S2 r\") * ep_dec",
+   "(phase == D1) * (prev_reward == 1) * belief_lo * ep_dec",
+   "(phase == D1) * (prev_reward == 1) * (prev_state == S2) * ep_dec",
+   "(phase == D1) * (tv(\"reward\", -2) == 1) * ep_dec",
+   "(phase == D1) * belief_lo * ep_dec",
+   "(phase == GO) * belief_lo"
+  ],
+  "weights": [
+   -0.001361225137788129,
+   0.0005022172716103348,
+   -0.04337830534204906,
+   0.006941377823823885,
+   -0.014453132771939487,
+   0.008478014551047927,
+   -0.005528484785946866,
+   -0.005172117126099775
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5286855238390705,
+  "r2": 0.8368648768619025,
+  "r2_timing_only": 0.6538720294209777
+ },
+ "gate": "unit_update",
+ "feature": 26,
+ "test_scores": {
+  "gate": "unit_update",
+  "feature": 26,
+  "terms": [
+   "(phase == D1) * last_is('a1 S2 r')",
+   "(phase == D1) * belief_lo * ep_dec",
+   "(in_rew == 1) * belief_lo * ep_dec"
+  ],
+  "weights": [
+   -0.3151461104118826,
+   -0.005439908631652844,
+   0.008605300140596718
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.4640184188259906,
+  "r2": 0.8144817830405047,
+  "r2_timing_only": 0.6538720294209777
+ },
+ "dev_scores": {
+  "gate": "unit_update",
+  "feature": 26,
+  "terms": [
+   "(phase == D1) * last_is('a1 S2 r')",
+   "(phase == D1) * belief_lo * ep_dec",
+   "(in_rew == 1) * belief_lo * ep_dec"
+  ],
+  "weights": [
+   -0.3151461104118826,
+   -0.005439908631652844,
+   0.008605300140596718
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.47786530789111037,
+  "r2": 0.8222376742222397,
+  "r2_timing_only": 0.6595469934016787
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "better_short_terms": "(phase == D1) * last_is('a1 S2 r') ;; (phase == D1) * belief_lo * ep_dec ;; (in_rew == 1) * belief_lo * ep_dec",
+  "better_short_terms_test_r2_beyond_timing": 0.464,
+  "issues": [
+   "The 'late in episodes' scaling is attached to the wrong term. On test, dropping ep_dec from the last_is('a1 S2 r') term raises R^2 from 0.436 to 0.464 (dev 0.478). Dropping ep_dec from every term also does better (0.443). Keeping ep_dec only on the a1 S2 r term and removing it from the belief terms gives 0.412. So the drop after a rare a1->S2 reward is roughly a constant -0.3 at any point in the episode. Only the belief x reward modulation grows with episode time.",
+   "'Drops after reward' is not supported as a main effect. (in_rew == 1) * ep_dec alone scores test R^2 0.039, and adding it to the a1 S2 r and belief terms gives only 0.30. In the residual table, the D1 values after S1-rewarded trials are positive (a1 S1 r +0.04, a2 S1 r +0.08). In a categorical fit, the prev_reward == 0 weight is tiny (+0.005) next to prev_state == S1 (+0.014). Apart from a1 S2 r, what lowers the gate is the reward x belief sign: a fitted net slope of about +0.004*belief_lo after reward and -0.005*belief_lo without reward.",
+   "'Belief-modulated' does not give a direction, so a reader of the label alone cannot predict when the gate is high or low. The belief terms are essential: removing them takes test R^2 from 0.436 to 0.18. The label should say that z is lower after a reward while belief favours S2, and after no reward while belief favours S1.",
+   "Misses on the recorded short form show systematic under-prediction at D1 after unrewarded S1 trials (a1 S1 u +0.120, a2 S1 u +0.050) and after a2 S1 r (+0.069). Over-prediction remains after a1 S2 r (-0.060) and a2 S2 r (-0.030). In the worst windows, late unrewarded D1 steps are under-predicted by about 0.3-0.5. The improved form still leaves a1 S1 u at +0.119.",
+   "Claims that check out: the effect is D1-specific (GO/D2 residuals are below 0.03); a1 S2 r is the strongest single pattern (residual -0.30); no future, hidden or model-output variables are used; the reported R^2 values reproduce (0.4357 test)."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "D1 update gate drops after rare a1->S2 reward; later in episodes, also after reward-with-S2-belief or no-reward-with-S1-belief.",
+  "upheld": false
+ },
+ "final_label": "D1 update gate drops after rare a1->S2 reward; later in episodes, also after reward-with-S2-belief or no-reward-with-S1-belief.",
+ "original_short_terms": "(phase == D1) * last_is(\"a1 S2 r\") * ep_dec ;; (phase == D1) * belief_lo * ep_dec ;; (in_rew == 1) * belief_lo * ep_dec",
+ "original_test_scores": {
+  "gate": "unit_update",
+  "feature": 26,
+  "terms": [
+   "(phase == D1) * last_is(\"a1 S2 r\") * ep_dec",
+   "(phase == D1) * belief_lo * ep_dec",
+   "(in_rew == 1) * belief_lo * ep_dec"
+  ],
+  "weights": [
+   -0.054738943274267614,
+   -0.005437144673241567,
+   0.008621596054342717
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.435702660793008,
+  "r2": 0.8046809071771417,
+  "r2_timing_only": 0.6538720294209777
+ },
+ "terms_from": "skeptic"
+}

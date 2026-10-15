@@ -1,0 +1,84 @@
+{
+  "label": "GO: rises with a2-leaning policy; spikes at episode start D1",
+  "terms": "(phase == GO) * choice ;; (phase == GO) * choice * (ep_trial >= 80) ;; (phase == D1) * (ep_trial == 0) ;; (phase == GO) * (prev_action == 2) * (prev_reward == 0) ;; (phase == GO) * (prev_action == 2) * (prev_reward == 0) * (ep_trial >= 80) ;; (phase == D1) * (prev_reward == 1) * (prev_action == 2) ;; table(prev_action, {1: -1, 2: 1}) ;; (phase == D2) * table(action, {1: -1, 2: 1})",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw candidate n of unit 23 sits near -0.96 and is mainly an a2-vs-a1 signal. On the first D1 of an episode it jumps by about +0.27. At GO it goes up as the policy leans toward a2 (negative choice logit; weight about -0.0044 per logit unit, steeper after trial 80, when GO values reach -0.65). It gets an extra +0.03 at GO after an unrewarded a2 trial, the case where the agent is about to switch. It is higher at D1 after a rewarded a2 trial (+0.023) and at D2 after choosing a2 (+0.013). Value and trials since reversal add almost nothing. Dev R^2 beyond timing is 0.78; the 6-term version with a linear ep_trial interaction gets 0.76. With observed cues only (no policy logit, using the previous and second-previous action instead), dev is 0.55. No future variables are used.",
+  "gate": "unit_candidate",
+  "feature": 23,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 23,
+    "terms": [
+      "(phase == GO) * choice",
+      "(phase == GO) * choice * (ep_trial >= 80)",
+      "(phase == D1) * (ep_trial == 0)",
+      "(phase == GO) * (prev_action == 2) * (prev_reward == 0)",
+      "(phase == GO) * (prev_action == 2) * (prev_reward == 0) * (ep_trial >= 80)",
+      "(phase == D1) * (prev_reward == 1) * (prev_action == 2)",
+      "table(prev_action, {1: -1, 2: 1})",
+      "(phase == D2) * table(action, {1: -1, 2: 1})"
+    ],
+    "weights": [
+      -0.004426302759860092,
+      -0.0031276927049674825,
+      0.26988114102417576,
+      0.031651349540697565,
+      -0.009188551211024758,
+      0.022710077022936728,
+      0.0014308447310261558,
+      0.012612468836989913
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7680743155094599,
+    "r2": 0.8310313338476032,
+    "r2_timing_only": 0.2714534117962739
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 23,
+    "terms": [
+      "(phase == GO) * choice",
+      "(phase == GO) * choice * (ep_trial >= 80)",
+      "(phase == D1) * (ep_trial == 0)",
+      "(phase == GO) * (prev_action == 2) * (prev_reward == 0)",
+      "(phase == GO) * (prev_action == 2) * (prev_reward == 0) * (ep_trial >= 80)",
+      "(phase == D1) * (prev_reward == 1) * (prev_action == 2)",
+      "table(prev_action, {1: -1, 2: 1})",
+      "(phase == D2) * table(action, {1: -1, 2: 1})"
+    ],
+    "weights": [
+      -0.004426302759860092,
+      -0.0031276927049674825,
+      0.26988114102417576,
+      0.031651349540697565,
+      -0.009188551211024758,
+      0.022710077022936728,
+      0.0014308447310261558,
+      0.012612468836989913
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7781983047737149,
+    "r2": 0.8370520074690322,
+    "r2_timing_only": 0.26534379115215456
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The numbers reproduce. Test R^2 beyond timing is 0.768 and the weights match the claims: GO choice -0.0044, plus an extra -0.003 after trial 80; D1 at trial 0 +0.27; GO after unrewarded a2 +0.032; D1 after rewarded a2 +0.023; D2 a2 vs a1 +0.013. The core story checks out.",
+      "The reading 'the case where the agent is about to switch' is wrong. Splitting the GO unrewarded-a2 term by transition gives +0.019 after common (a2 S2 u, a true switch case) and +0.042 after rare (a2 S1 u, where a model-based agent repeats). Test R^2 rises to 0.772. The profile residual agrees: GO after a2 S1 u is +0.090, after a2 S2 u is +0.039. So the bump is mainly after rare-unrewarded a2 trials, which is a stay case, not a switch case.",
+      "There is an uncaptured rare-transition effect at GO. misses shows 'GO after a1 S2 r' over-predicted by -0.032 and 'GO after a2 S1 r' by -0.020. Adding (phase==GO)*last_is('a1 S2 r') gets weight -0.034 and lifts test R^2 to 0.782.",
+      "The D1 'after rewarded a2' effect comes mostly from rare trials: residual a2 S1 r is +0.035 vs a2 S2 r +0.016. misses still under-predicts D1 after a2 S1 r (+0.016) and D2 after a2 S1 r (+0.016).",
+      "Two terms do little. table(prev_action) across all phases gets weight +0.001. The (ep_trial>=80) refinement of the unrewarded-a2 term adds only about 0.0005 R^2 (0.7678 without it vs 0.768). Dropping both late-episode terms lowers R^2 to 0.744, so the claim that the choice slope is steeper late holds.",
+      "Worst-fit windows are long runs of a2 choices that land in S1 (a2 S1R, rare) at trials 4-18. There GO is under-predicted by about 0.08-0.13, so the policy-logit term saturates or misses this history.",
+      "The remaining errors are small (about 0.02, against a std of 0.041) and the score is near the 0.83 ceiling. The magnitude is explained overall, but the label's interpretation of the unrewarded-a2 bump is wrong and the rare-transition modulation is left out."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO: rises with a2-leaning policy logit (steeper late in the episode); extra boost after rare-unrewarded a2 trials, dip after rare-rewarded a1 trials; spikes at episode-start D1",
+    "better_terms": "(phase == GO) * choice ;; (phase == GO) * choice * (ep_trial >= 80) ;; (phase == D1) * (ep_trial == 0) ;; (phase == GO) * last_is('a2 S2 u') ;; (phase == GO) * last_is('a2 S1 u') ;; (phase == GO) * last_is('a1 S2 r') ;; (phase == D1) * (prev_reward == 1) * (prev_action == 2) ;; (phase == D2) * table(action, {1: -1, 2: 1})",
+    "better_terms_test_r2_beyond_timing": 0.782
+  },
+  "final_label": "GO: rises with a2-leaning policy logit (steeper late in the episode); extra boost after rare-unrewarded a2 trials, dip after rare-rewarded a1 trials; spikes at episode-start D1"
+}

@@ -1,0 +1,105 @@
+{
+  "label": "GO step, choosing a1 after a rewarded trial",
+  "predicate": "(phase == GO) & (model_act == 1) & (((prev_reward == 1) & (prev_state != 2)) | ((prev_reward == 0) & (prev_state == 1)))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at the GO step (D1 and D2 essentially never), when the agent is about to choose a1 (model_act == 1, the agent own policy output, so no future info) and the previous trial was rewarded. It is an a1-choice feature: GO & a1 alone gives F1 0.81 / mass recall 0.97, and adding prev_reward == 1 raises precision to 0.97 (dev F1 0.87, mass recall 0.94). Magnitude increases with a1 policy confidence (choice logit > 8 holds 77% of mass) and with runs of consecutive rewarded a1 trials, largely while S1 is good. The misses are weak activations, about 0.1-0.35 of max, at a1 GO steps after unrewarded trials, plus rare faint firing at a2 GO steps. It does not fire at a2 choices with any real strength (3% of mass), and it does not fire on D1/D2 steps.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 106,
+    "predicate": "(phase == GO) & (model_act == 1) & (((prev_reward == 1) & (prev_state != 2)) | ((prev_reward == 0) & (prev_state == 1)))",
+    "split": "test",
+    "precision": 0.9633746570550363,
+    "recall": 0.8424743231909365,
+    "f1": 0.898877393469738,
+    "mass_recall": 0.958613532536473,
+    "correlation": 0.918683665091546,
+    "n_active": 145462,
+    "n_predicted": 127207,
+    "coverage_by_activation_quartile": [
+      0.39226200296980696,
+      0.9776439531430458,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 106,
+    "predicate": "(phase == GO) & (model_act == 1) & (((prev_reward == 1) & (prev_state != 2)) | ((prev_reward == 0) & (prev_state == 1)))",
+    "split": "dev",
+    "precision": 0.9664603137738553,
+    "recall": 0.8511828351366221,
+    "f1": 0.9051660447411352,
+    "mass_recall": 0.9630612856284058,
+    "correlation": 0.9250159464425464,
+    "n_active": 141778,
+    "n_predicted": 124867,
+    "coverage_by_activation_quartile": [
+      0.4099308788263507,
+      0.9948088587953167,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "reset",
+  "feature": 106,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The phase claims hold. D1 mass is 0.00003 and D2 has zero activations. GO holds 100% of the mass, spread evenly over rel -3..+1. The original predicate's test scores reproduce exactly (P 0.967, R 0.781, F1 0.864, mass recall 0.934).",
+      "The reward framing points at the wrong conditioning variable; what matters is the state the previous trial reached. GO & a1 & prev_reward==1 & prev_state==1 has test precision 1.000. GO & a1 & prev_reward==1 & prev_state==2 (rewarded at S2, then the agent picks a1) has precision only 0.48 and 0.26% of the mass. That is a systematic false-positive class: the false-positive windows in the misses output are dominated by the previous trial being 'S2R rewarded'.",
+      "The misses after unrewarded trials are not uniform. GO & a1 & prev_reward==0 & prev_state==1 fires 74% of the time (2.7% of mass). GO & a1 & prev_reward==0 & prev_state==2 fires 4.5% of the time (0.03% of mass). So the feature fires on a1 after the previous trial reached S1 whether or not it paid, with weaker activations when it did not pay.",
+      "The 'rare faint firing at a2 GO steps' is not scattered noise. GO & a2 & prev_state==1 & prev_reward==1 is active 89% of the time (weak, 2.9% of mass). So the faint a2 firing also follows a trial that reached S1 and was rewarded.",
+      "An observed-only predicate that conditions on the previous reached state does better. GO & a1 & ((prev_reward==1 & prev_state!=2) | (prev_reward==0 & prev_state==1)) scores test F1 0.899 (P 0.963, R 0.842, mass recall 0.959), against 0.864 for the original. prev_state is -1 on each window's first trial (rel -3), which is why the condition is written as != 2.",
+      "The label is mostly right (GO, choosing a1, magnitude driven by S1 being rewarded). But 'after a rewarded trial' overclaims reward in general: a1 after reward at S2 does not drive it reliably, while a1 after an unrewarded visit to S1 does, weakly."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step, choosing a1 after the previous trial reached S1 (strongest when S1 was rewarded)",
+    "better_predicate": "(phase == GO) & (model_act == 1) & (((prev_reward == 1) & (prev_state != 2)) | ((prev_reward == 0) & (prev_state == 1)))",
+    "better_predicate_test_f1": 0.899
+  },
+  "final_label": "GO step, choosing a1 after the previous trial reached S1 (strongest when S1 was rewarded)",
+  "original_predicate": "(phase == GO) & (model_act == 1) & (prev_reward == 1)",
+  "original_test_scores": {
+    "gate": "reset",
+    "feature": 106,
+    "predicate": "(phase == GO) & (model_act == 1) & (prev_reward == 1)",
+    "split": "test",
+    "precision": 0.96678247245355,
+    "recall": 0.7805268729977589,
+    "f1": 0.8637276531000381,
+    "mass_recall": 0.9337459072605274,
+    "correlation": 0.933155974499294,
+    "n_active": 145462,
+    "n_predicted": 117438,
+    "coverage_by_activation_quartile": [
+      0.149755265907716,
+      0.9723642963207392,
+      1.0,
+      1.0
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "reset",
+    "feature": 106,
+    "predicate": "(phase == GO) & (model_act == 1) & (prev_reward == 1)",
+    "split": "dev",
+    "precision": 0.9672666351647408,
+    "recall": 0.7940935829254187,
+    "f1": 0.8721671127499776,
+    "mass_recall": 0.9402966034125338,
+    "correlation": 0.9369731178152885,
+    "n_active": 141778,
+    "n_predicted": 116395,
+    "coverage_by_activation_quartile": [
+      0.18157709126816193,
+      0.9948088587953167,
+      1.0,
+      1.0
+    ]
+  },
+  "predicate_from": "skeptic"
+}

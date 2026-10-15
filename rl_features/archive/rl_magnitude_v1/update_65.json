@@ -1,0 +1,66 @@
+{
+  "label": "GO after a2 rewarded following a2 rare-unrewarded (a2 S1 u -> a2 r); fades late episode",
+  "terms": "(phase == GO) * (prev_action == 2) * (prev_reward == 1) * (tv(\"action\", -2) == 2) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 0) ;; (phase == GO) * (prev_action == 2) * (prev_reward == 1) * (tv(\"action\", -2) == 2) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 0) * (ep_dec >= 7) ;; (phase == GO) * (trial == 1) * (prev_action == 2) * (prev_reward == 1) * np.maximum(-choice, 0) ;; (phase == GO) * (trial == 0) * (prev_reward == 1) * np.maximum(-choice, 0)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Sparse feature (nonzero on ~3% of steps), active only at GO. Its magnitude is mostly set by a specific two-trial history: the previous trial was a2 and rewarded, and the trial before that was a2 that went to S1 (rare) and was unrewarded (fitted weight ~+0.55). That one term alone gives dev R^2 beyond timing 0.37. Other first-reward-after-a-loss histories add almost nothing (a2 S2 u then a2 r, or a1 before: weights ~0), and neither does a second reward in a row (activation drops from ~1 to ~0.2, then to 0). The response is much weaker late in the episode (decile >= 7: weight about -0.45), beyond the additive timing baseline. At the window edges, where the trial before is not visible, a graded strength-of-a2-preference term (max(-choice, 0)) on the first two trials after a reward stands in for the missing history. All terms are observed or model-internal; none are future. Dev 0.49, test R^2 beyond timing 0.47, above the additive all ceiling of 0.35 because the key term is a conjunction across two trials.",
+  "gate": "update",
+  "feature": 65,
+  "test_scores": {
+    "gate": "update",
+    "feature": 65,
+    "terms": [
+      "(phase == GO) * (prev_action == 2) * (prev_reward == 1) * (tv(\"action\", -2) == 2) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * (prev_action == 2) * (prev_reward == 1) * (tv(\"action\", -2) == 2) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 0) * (ep_dec >= 7)",
+      "(phase == GO) * (trial == 1) * (prev_action == 2) * (prev_reward == 1) * np.maximum(-choice, 0)",
+      "(phase == GO) * (trial == 0) * (prev_reward == 1) * np.maximum(-choice, 0)"
+    ],
+    "weights": [
+      0.579901248999209,
+      -0.41618238796402957,
+      0.008968873241401696,
+      0.009131970659132651
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.4710916391832871,
+    "r2": 0.49686291879647937,
+    "r2_timing_only": 0.04872541544512099
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 65,
+    "terms": [
+      "(phase == GO) * (prev_action == 2) * (prev_reward == 1) * (tv(\"action\", -2) == 2) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * (prev_action == 2) * (prev_reward == 1) * (tv(\"action\", -2) == 2) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 0) * (ep_dec >= 7)",
+      "(phase == GO) * (trial == 1) * (prev_action == 2) * (prev_reward == 1) * np.maximum(-choice, 0)",
+      "(phase == GO) * (trial == 0) * (prev_reward == 1) * np.maximum(-choice, 0)"
+    ],
+    "weights": [
+      0.579901248999209,
+      -0.41618238796402957,
+      0.008968873241401696,
+      0.009131970659132651
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.48872244336177195,
+    "r2": 0.5139436559231132,
+    "r2_timing_only": 0.049329786206882775
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claim holds. The main term (GO, last trial a2 rewarded, the trial before a2 S1 unrewarded) gets weight +0.58 and, with the late term, test R^2 beyond timing 0.414. Swapping in other 'first reward after a loss' histories gives weights near 0 (test): a2 S2 u then a2 r -0.015, a1 u then a2 r -0.009, two rewards in a row -0.01. The feature fires only at GO and on about 2.9% of steps, as stated.",
+      "The window-start handling is weak and one large systematic error class is left. In the worst-fit windows, trial 0/1 GO steps reach about 1.1-1.2 but are predicted at only about 0.11-0.13. The claimed max(-choice,0) terms get weights of only 0.009. Gated terms do much better: (GO, trial 1, last a2 r, tv('prev_reward',-1)==0, choice<-8) gets weight +0.30, and (GO, trial 0, prev_reward 1, choice<-8) gets +0.08. Adding them raises test R^2 from 0.47 to 0.56.",
+      "The late fade is graded, not one step at decile 7. Fitting the main history term separately by episode decile (test) gives weights 0.475 (deciles 0-1), 0.60, 0.63, 0.57 (decile 6), 0.39 (decile 7), 0.10 (decile 8) and 0.005 (decile 9). So the response falls to zero by decile 9, and it is also a bit weaker in deciles 0-1. A single -0.42 offset for decile 7 and later understates the drop at deciles 8-9.",
+      "Within the main history, the magnitude also depends on how strongly the agent commits to a2. M*(choice<-8) gets weight +0.23 and M*value +0.06 to +0.1. The explanation does not mention this.",
+      "'After a second reward in a row it falls to about 0.2': the term for the three-trial history (a2 S1 u, a2 r, a2 r) gets weight only about +0.05 above the baseline (roughly 0.1 in total). Single windows show 0.2-0.3, so the claim is about right but a little high."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after a2 rewarded following a2 rare-unrewarded (first win after a rare loss on a2), larger when the agent strongly prefers a2; fades to zero over episode deciles 7-9",
+    "better_terms": "(phase == GO) * (prev_action == 2) * (prev_reward == 1) * (tv('action', -2) == 2) * (tv('state', -2) == 1) * (tv('reward', -2) == 0) ;; (phase == GO) * (prev_action == 2) * (prev_reward == 1) * (tv('action', -2) == 2) * (tv('state', -2) == 1) * (tv('reward', -2) == 0) * (ep_dec >= 7) ;; (phase == GO) * (prev_action == 2) * (prev_reward == 1) * (tv('action', -2) == 2) * (tv('state', -2) == 1) * (tv('reward', -2) == 0) * (ep_dec >= 8) ;; (phase == GO) * (prev_action == 2) * (prev_reward == 1) * (tv('action', -2) == 2) * (tv('state', -2) == 1) * (tv('reward', -2) == 0) * value ;; (phase == GO) * (trial == 0) * (prev_reward == 1) * (choice < -8) ;; (phase == GO) * (trial == 1) * (prev_action == 2) * (prev_reward == 1) * (tv('prev_reward', -1) == 0) * (choice < -8) ;; (phase == GO) * (prev_action == 2) * (prev_reward == 1) * (tv('action', -2) == 2) * (tv('state', -2) == 1) * (tv('reward', -2) == 0) * (choice < -8)",
+    "better_terms_test_r2_beyond_timing": 0.567
+  },
+  "final_label": "GO after a2 rewarded following a2 rare-unrewarded (first win after a rare loss on a2), larger when the agent strongly prefers a2; fades to zero over episode deciles 7-9"
+}

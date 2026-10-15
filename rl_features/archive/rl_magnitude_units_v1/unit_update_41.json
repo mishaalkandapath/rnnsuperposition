@@ -1,0 +1,78 @@
+{
+  "label": "z high at D1 after reaching S1; at GO high after a2 (esp. a2 S1 unrewarded), low when leaning a1",
+  "terms": "(phase == D1) * (prev_state == S1) ;; (phase == GO) * (prev_action == 2) ;; (phase == GO) * (prev_reward == 1) ;; (phase == GO) * last_is(\"a2 S1 u\") ;; (phase == GO) * choice ;; (phase == D1) * value ;; (phase == D2) * (action == 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw update gate of unit 41: near 1 at D2 (saturated, little variation), ~0.3 at D1, ~0.45 at GO. Beyond timing: at D1 it is driven by the state reached on the previous trial (S1 +0.25 vs S2), with a small negative dependence on the value output; reward and previous choice matter little at D1. At GO it is higher after an a2 choice (+0.09), lower after a rewarded previous trial (-0.11), extra high after a2 -> S1 unrewarded (+0.12), and decreases graded with the policy logit toward a1 (choice, -0.015 per logit unit; dropping it costs ~0.12 R^2). At D2 slightly higher when the choice just made was a2. All terms observable at their step (action is known at D2; choice/value are model outputs). Test R^2 beyond timing 0.72 (all ceiling 0.87, last-trial table alone 0.69); episode-start indicator, D1 previous-action and D1 reward x state terms added nothing.",
+  "gate": "unit_update",
+  "feature": 41,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 41,
+    "terms": [
+      "(phase == D1) * (prev_state == S1)",
+      "(phase == GO) * (prev_action == 2)",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == GO) * last_is(\"a2 S1 u\")",
+      "(phase == GO) * choice",
+      "(phase == D1) * value",
+      "(phase == D2) * (action == 2)"
+    ],
+    "weights": [
+      0.252186373510798,
+      0.08762747726201994,
+      -0.10595448120719922,
+      0.11965351630567067,
+      -0.014981532829944116,
+      -0.013334267453265443,
+      0.026220285949223935
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7106227408000627,
+    "r2": 0.9379198892511796,
+    "r2_timing_only": 0.7854699746605596
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 41,
+    "terms": [
+      "(phase == D1) * (prev_state == S1)",
+      "(phase == GO) * (prev_action == 2)",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == GO) * last_is(\"a2 S1 u\")",
+      "(phase == GO) * choice",
+      "(phase == D1) * value",
+      "(phase == D2) * (action == 2)"
+    ],
+    "weights": [
+      0.252186373510798,
+      0.08762747726201994,
+      -0.10595448120719922,
+      0.11965351630567067,
+      -0.014981532829944116,
+      -0.013334267453265443,
+      0.026220285949223935
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7177058434824131,
+    "r2": 0.9389141654204118,
+    "r2_timing_only": 0.7836092842545875
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I reproduced the recorded test R^2 beyond timing at 0.7106. The ablation claims also check out on test: removing the GO policy logit gives 0.587 (claimed 0.59), and removing the D1 value term gives 0.666, so value is worth about 0.045, not just a 'small' help. Adding prev_action==2 at D1 gives +0.001 and adding prev_reward at D1 gives about 0, which supports 'reward and previous choice add little at D1'. The D2 action term adds only about 0.003, consistent with 'slightly higher'.",
+      "Window-start error: the first trial of each window has prev_state = -1, and (phase == D1) * (prev_state == S1) codes those trials as if the previous state were S2. In misses, D1 after '?' is the most under-predicted cell (+0.099). Adding the term (phase == D1) * (prev_action == -1) raises test R^2 from 0.711 to 0.752 and moves the S1 weight from 0.25 to 0.30. This is a data-coding problem, not a missing mechanism, but it means the S1-vs-S2 effect at D1 is somewhat underestimated.",
+      "There is a policy-logit effect at D1 that the explanation does not mention. The profile's D1 residual by policy decile ranges from -0.09 to +0.27. Adding (phase == D1) * choice brings the score to 0.769 (with the window-start fix).",
+      "After these fixes, some GO errors remain but they are modest: after a1 S2 r it over-predicts by -0.10, and after a2 S2 u it under-predicts by +0.07. Trying full GO previous-trial tables or a last_is('a2 S2 u') term did not beat 0.769. This looks like the reward effect at GO being somewhat larger after a2 than after a1, not a missing factor.",
+      "Possible circularity: the GO policy logit is computed from the hidden state at the same step, which the update gate z itself shapes. The explanation's largest single term at GO is therefore partly a readout of the same computation, not an independent driver. The previous-trial terms alone carry most of the GO effect."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "z high at D1 after reaching S1 (lower when value is high); at GO high after a2 / after unrewarded trials, falling as the policy leans a1",
+    "better_terms": "(phase == D1) * (prev_state == S1) ;; (phase == GO) * (prev_action == 2) ;; (phase == GO) * (prev_reward == 1) ;; (phase == GO) * last_is('a2 S1 u') ;; (phase == GO) * choice ;; (phase == D1) * value ;; (phase == D1) * choice ;; (phase == D1) * (prev_action == -1)",
+    "better_terms_test_r2_beyond_timing": 0.7693
+  },
+  "final_label": "z high at D1 after reaching S1 (lower when value is high); at GO high after a2 / after unrewarded trials, falling as the policy leans a1"
+}

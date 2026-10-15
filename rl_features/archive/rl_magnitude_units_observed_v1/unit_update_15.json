@@ -1,0 +1,80 @@
+{
+  "label": "update gate high when observed history favours S2 / a2 (anti-S1 belief), strongest at GO",
+  "terms": "(phase == D1) * np.tanh(0.5*belief_lo) ;; (phase == GO) * np.tanh(0.5*belief_lo) ;; (phase == D1) * (prev_action == 2) ;; (phase == GO) * (prev_action == 2) ;; (phase == D2) * np.tanh(0.5*belief_lo) ;; (phase == D1) * (prev_action == 1) * ((prev_state == 2) + (prev_reward == 0)) ;; (phase == GO) * last_is(\"a1 S1 r\")",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 15 (mean 0.76; ~0.97 at D2, ~0.58 at GO, ~0.73 at D1). Beyond timing its magnitude tracks the agent-inferable preference for a2/S2: it falls with the ideal observer log-odds that S1 is good (saturating tanh(0.5*belief_lo); weight about -0.36 at GO, -0.16 at D1, -0.03 at D2) and is higher after a previous a2 choice (+0.09 D1, +0.12 GO). After an a1 choice it is pushed further down at D1 when the a1 trial went rare (S2) or was unrewarded (about -0.28 per condition, so a1 S2 u is lowest), and at GO after a1 S1 r (-0.17, the strongest stay-on-a1 case). D2 is nearly saturated near 1 and barely modulated. Test R^2 beyond timing 0.71 with these 7 observed-only terms (dev 0.72), against an all-observed ceiling of 0.84 and an all-cue ceiling of 0.95; the model policy decile alone reaches 0.91, so using observed quantities instead of the model policy costs about 0.2 R^2. Remaining errors are mostly windows where the agent leans to a1 (low activation) while the ideal-observer belief still favours S2, i.e. the agent own choice tendency, which belief and last-trial history do not fully capture; trial-before choice added nothing.",
+  "gate": "unit_update",
+  "feature": 15,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 15,
+    "terms": [
+      "(phase == D1) * np.tanh(0.5*belief_lo)",
+      "(phase == GO) * np.tanh(0.5*belief_lo)",
+      "(phase == D1) * (prev_action == 2)",
+      "(phase == GO) * (prev_action == 2)",
+      "(phase == D2) * np.tanh(0.5*belief_lo)",
+      "(phase == D1) * (prev_action == 1) * ((prev_state == 2) + (prev_reward == 0))",
+      "(phase == GO) * last_is(\"a1 S1 r\")"
+    ],
+    "weights": [
+      -0.16494255952138243,
+      -0.3557965357509709,
+      0.08787852268014705,
+      0.12839991316242216,
+      -0.03433915802446188,
+      -0.27885515775775344,
+      -0.17310552318500505
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7065774297017504,
+    "r2": 0.7737640132931767,
+    "r2_timing_only": 0.22897551310771525
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 15,
+    "terms": [
+      "(phase == D1) * np.tanh(0.5*belief_lo)",
+      "(phase == GO) * np.tanh(0.5*belief_lo)",
+      "(phase == D1) * (prev_action == 2)",
+      "(phase == GO) * (prev_action == 2)",
+      "(phase == D2) * np.tanh(0.5*belief_lo)",
+      "(phase == D1) * (prev_action == 1) * ((prev_state == 2) + (prev_reward == 0))",
+      "(phase == GO) * last_is(\"a1 S1 r\")"
+    ],
+    "weights": [
+      -0.16494255952138243,
+      -0.3557965357509709,
+      0.08787852268014705,
+      0.12839991316242216,
+      -0.03433915802446188,
+      -0.27885515775775344,
+      -0.17310552318500505
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7199627128431834,
+    "r2": 0.7844373475250394,
+    "r2_timing_only": 0.23023589228584118
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claimed test R^2 beyond timing reproduces exactly (0.7066). The fitted weights match the explanation: belief -0.165 at D1, -0.356 at GO, -0.034 at D2; prev a2 +0.088 at D1 and +0.128 at GO; the D1 a1-rare/unrewarded term -0.279; GO a1 S1 r -0.173.",
+      "Some systematic errors by previous trial remain, at about +-0.15 in a few cells. Under-predicted: GO after a2 S2 u (+0.152), GO after a1 S2 r (+0.127), D1 after a2 S1 r (+0.123). Over-predicted: GO after a1 S2 u (-0.136), D2 after a1 S2 u (-0.104). The GO pattern follows model-based stay/switch logic. The raw residual at GO is -0.50 after a1 S1 r and -0.46 after a1 S2 u, against +0.41 after a2 S1 u. Adding an explicit model-based 'predicts a2' term at GO only moves test R^2 from 0.707 to 0.713-0.724.",
+      "'D2 sits near 1 and barely changes' is mostly true, but there is one exception: D2 after a1 S2 u has a raw residual of -0.135, which the terms leave unmodelled (miss -0.10 to -0.14).",
+      "There is a 0.13 gap to the all-observed ceiling (0.84). Several targeted alternatives scored 0.69-0.727 on test: other tanh scales for belief, belief x belief_cover, a model-based stay/switch indicator, prev a2 x belief at GO, the action two trials back, and extra last_is cells. So the remaining gap does not reduce to a single missing term.",
+      "'The choice from two trials back added nothing' checks out: adding tv('action',-2) at GO gives test R^2 0.7068.",
+      "'No future variables' is correct, and the policy-decile comparison (0.91 vs 0.71, about 0.2 R^2 lost) matches the profile's reference scores."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "update gate high when observed history favours S2 / a2 (belief plus last-trial stay/switch), strongest at GO; D2 is near 1",
+    "better_terms": "(phase == D1) * np.tanh(0.5*belief_lo) ;; (phase == GO) * np.tanh(0.5*belief_lo) ;; (phase == D2) * np.tanh(0.5*belief_lo) ;; (phase == D1) * (prev_action == 2) ;; (phase == GO) * (prev_action == 2) ;; (phase == D1) * (prev_action == 1) * ((prev_state == 2) + (prev_reward == 0)) ;; (phase == GO) * last_is('a1 S1 r') ;; (phase == GO) * (prev_action == 2) * np.tanh(0.5*belief_lo)",
+    "better_terms_test_r2_beyond_timing": 0.727
+  },
+  "final_label": "update gate high when observed history favours S2 / a2 (belief plus last-trial stay/switch), strongest at GO; D2 is near 1"
+}

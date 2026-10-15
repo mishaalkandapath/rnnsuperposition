@@ -1,0 +1,69 @@
+{
+  "label": "D1 after reaching S2 via a1, scaled by a1-leaning policy and late episode",
+  "terms": "(phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a1 S2 r\") ;; (phase == D1) * (prev_state == 1) ;; (phase == D1) * (prev_state == 2) * np.clip(choice,0,None) * np.exp(ep_trial/30)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Active only at D1 (zero at GO and D2). Its size depends on the previous trial: it is largest after a1 reached S2 (rare). Unrewarded a1->S2 gives the most (residual +2.6), rewarded a1->S2 gives +1.5, a2->S2 adds little, and reaching S1 lowers it (about -0.4). Within trials where the last state was S2, the activation grows with the model policy logit toward a1 at D1 (positive part only), and this effect gets larger late in the episode (exp(ep_trial/30) shape). So the feature fires most when the agent has just reached S2 and is leaning toward a1 (the model-based switch / stay-on-a1 signal). The four previous-trial indicators alone score test R^2 beyond timing 0.51. Adding the graded policy x episode-time term raises it to 0.65 (all ceiling 0.60, all observed 0.56). The policy term is a model output, not a future variable. The trial before last and the hidden good state add little. Leftover error: some D1 bursts late in the episode after a2->S2 trials are overpredicted or underpredicted.",
+  "gate": "reset",
+  "feature": 114,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 114,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * (prev_state == 1)",
+      "(phase == D1) * (prev_state == 2) * np.clip(choice,0,None) * np.exp(ep_trial/30)"
+    ],
+    "weights": [
+      1.201728365017398,
+      1.1215677761976168,
+      -0.3970636150322611,
+      0.03206881354651385
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6530389479054,
+    "r2": 0.7070792717486123,
+    "r2_timing_only": 0.15575328561223656
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 114,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * (prev_state == 1)",
+      "(phase == D1) * (prev_state == 2) * np.clip(choice,0,None) * np.exp(ep_trial/30)"
+    ],
+    "weights": [
+      1.201728365017398,
+      1.1215677761976168,
+      -0.3970636150322611,
+      0.03206881354651385
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6640570457258561,
+    "r2": 0.7154691931457625,
+    "r2_timing_only": 0.15303832619734548
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced: the claimed terms score 0.653 test R^2 beyond timing. The four previous-trial indicators alone score 0.511 (the explanation says 0.51), and the profile ceilings are all 0.60 and all observed 0.56. The 'only at D1' claim holds: the profile shows GO and D2 residuals are exactly 0 and the timing baseline is 0 at those phases.",
+      "Previous-trial claims hold in the profile residuals: a1 S2 u +2.63, a1 S2 r +1.46, a2 S2 u +0.18, a2 S2 r -0.29, and S1 outcomes about -0.42 to -0.45.",
+      "Collinearity the explanation does not mention: once the policy x time term is added, the weight on a1 S2 u falls from 2.66 to 1.20. So about half of the 'a1 reached S2' effect is carried by the a1-leaning policy logit. On its own, prev_state==2 * clip(choice) * exp(ep/30) plus prev_state==1 scores 0.591. The feature reads more as 'after S2, a1-leaning policy (late)' with an extra a1->S2 bump than as mainly a rare-transition detector.",
+      "Calling the policy term 'a1-leaning' is fair, but 'choice' is the model's logit at D1 (the variables list says it is meaningful at GO). It is a model output, not something the agent observes; the explanation does say this.",
+      "The policy term is not specific to a1->S2. Applied only after a1->S2 it scores 0.587, only after a2->S2 0.582, and on both 0.658. The label wording 'D1 after a1 reached S2, scaled by policy' slightly undersells that the policy scaling also applies after a2->S2.",
+      "The episode-time shape is loose: exp(ep/20) scores 0.640 and exp(ep/45) 0.659, so 'late episode' is supported but the exact time constant is not.",
+      "Misses show no large systematic error class. Mean D1 error is -0.07. The biggest cell bias is over-prediction after a2 S2 r (-0.26). The worst windows are mostly the first D1 of a window (previous trial unknown) and late-episode bursts, which matches the leftover error the explanation describes.",
+      "Other variants added little: value in place of choice scored 0.512, and terms for the trial before last scored 0.521 and 0.659."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after reaching S2 (largest after a1->S2), scaled by the a1-leaning policy logit, more so late in the episode",
+    "better_terms": "(phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a1 S2 r\") ;; (phase == D1) * (prev_state == 1) ;; (phase == D1) * (prev_state == 2) * np.clip(choice,0,None) * np.exp(ep_trial/45)",
+    "better_terms_test_r2_beyond_timing": 0.659
+  },
+  "final_label": "D1 after reaching S2 (largest after a1->S2), scaled by the a1-leaning policy logit, more so late in the episode"
+}

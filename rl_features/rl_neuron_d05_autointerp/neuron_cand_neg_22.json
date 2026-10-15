@@ -1,0 +1,104 @@
+{
+  "label": "GO step late in the episode (trial >= ~85 of 100; low value)",
+  "predicate": "(phase == GO) & (((action == 2) & (value < 6.3)) | ((action == 1) & (value < 5.6)))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Episode-clock unit. Fires almost only at the GO step (98% of mass), and only in the last ~15-20 trials of the 100-trial episode: zero activity before trial 70, rate 0.14 at trials 80-89 and 0.37 at 90-99. Equivalent description: GO with low model value (value < ~6; 93% of mass in the lowest value bin), since value falls as the episode end approaches; (phase==GO)&(value<6) scores slightly higher on dev (F1 0.85 vs 0.83) but the episode-position predicate was recorded as the simpler, more primary description. Never fires at D2, rarely at D1. Independent of reward, transition, stay/switch and core pattern (all ~1.0x lift). Stronger/more frequent on a2 choices (80% of mass, policy logit strongly favouring a2) and on D1-fixation errors / penalty inputs; magnitude rises toward the episode end. No future variables used.",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 22,
+    "predicate": "(phase == GO) & (((action == 2) & (value < 6.3)) | ((action == 1) & (value < 5.6)))",
+    "split": "test",
+    "precision": 0.88455,
+    "recall": 0.8969276008923139,
+    "f1": 0.8906958010270869,
+    "mass_recall": 0.9810118359861396,
+    "correlation": 0.7261631602472202,
+    "n_active": 59172,
+    "n_predicted": 60000,
+    "coverage_by_activation_quartile": [
+      0.6676130602311904,
+      0.932332860136551,
+      0.9878320827418373,
+      0.9999324004596769
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 22,
+    "predicate": "(phase == GO) & (((action == 2) & (value < 6.3)) | ((action == 1) & (value < 5.6)))",
+    "split": "dev",
+    "precision": 0.883903208837454,
+    "recall": 0.8800607552506154,
+    "f1": 0.8819777970238565,
+    "mass_recall": 0.9758088347193268,
+    "correlation": 0.7098127223858481,
+    "n_active": 57279,
+    "n_predicted": 57030,
+    "coverage_by_activation_quartile": [
+      0.6395949720670391,
+      0.9021648044692737,
+      0.9784916201117319,
+      1.0
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 22,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The factual claims hold on dev. Mass by phase is GO 0.978, D1 0.022, D2 0. There are no activations in trials 0-69, and rates are 0.005 at 70-79, 0.138 at 80-89 and 0.371 at 90-99. 93% of mass falls in the lowest value bin. Lift is about 1.0x on reward, common, stay and core_pattern. in_rew=-1 has 11.9x lift and d1_err 6.3x. a2 carries 80% of the mass. Test F1 for the predicate reproduces at 0.847.",
+      "Systematic gap: when the unit turns on depends on the upcoming choice, and the stated predicate ignores this. Inside the predicate (GO & ep_trial>=85), precision is 0.93 for action==2 but only 0.73 for action==1. On the test split the false positives are mostly late GO steps where the agent chooses a1 while S1 is good, and the misses are mostly a2 GO steps before trial 85. Good state shows the same pattern: precision 0.92 when good==2 vs 0.75 when good==1.",
+      "Giving a2 an earlier onset than a1 is a better fit than one shared threshold. (phase==GO)&(((action==2)&(ep_trial>=82))|((action==1)&(ep_trial>=89))) scores dev F1 0.863 and test F1 0.874 (vs 0.847). Using model_act in place of action scores the same (test 0.874), so this tracks the agent's own computed choice and not an unobserved outcome.",
+      "The value-based description is better than the episode clock on test as well: (phase==GO)&(value<6) scores test F1 0.864 vs 0.847, and value<5.8 scores 0.867. Adding the choice-dependent threshold gives (phase==GO)&(((action==2)&(value<6.3))|((action==1)&(value<5.6))), which scores dev F1 0.882 and test F1 0.891. So choosing ep_trial as 'the more basic description' is not supported by the scores.",
+      "Low-magnitude activations are covered less well: only 51% of the lowest activation quartile falls inside the predicate. The unexplained part is mostly weak early a2 GO steps and a little D1 activity. The explanation says 'fires more on a2' but treats it as a side note, not as a shift in when the unit turns on."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step with low model value / late in the episode (about trial 82+ for an upcoming a2 choice, about trial 89+ for a1)",
+    "better_predicate": "(phase == GO) & (((action == 2) & (value < 6.3)) | ((action == 1) & (value < 5.6)))",
+    "better_predicate_test_f1": 0.891
+  },
+  "final_label": "GO step with low model value / late in the episode (about trial 82+ for an upcoming a2 choice, about trial 89+ for a1)",
+  "original_predicate": "(phase == GO) & (ep_trial >= 85)",
+  "original_test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 22,
+    "predicate": "(phase == GO) & (ep_trial >= 85)",
+    "split": "test",
+    "precision": 0.8473055410041064,
+    "recall": 0.8473771378354628,
+    "f1": 0.8473413379073756,
+    "mass_recall": 0.9671386831703671,
+    "correlation": 0.7205750736873112,
+    "n_active": 59172,
+    "n_predicted": 59177,
+    "coverage_by_activation_quartile": [
+      0.5495842628270128,
+      0.8557425809504495,
+      0.9843845061853579,
+      0.9997972013790306
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 22,
+    "predicate": "(phase == GO) & (ep_trial >= 85)",
+    "split": "dev",
+    "precision": 0.8402833682176784,
+    "recall": 0.8200387576598753,
+    "f1": 0.830037639823994,
+    "mass_recall": 0.9587535525522805,
+    "correlation": 0.7041505649152374,
+    "n_active": 57279,
+    "n_predicted": 55899,
+    "coverage_by_activation_quartile": [
+      0.5081703910614526,
+      0.8025139664804469,
+      0.9694832402234637,
+      1.0
+    ]
+  },
+  "predicate_from": "skeptic"
+}

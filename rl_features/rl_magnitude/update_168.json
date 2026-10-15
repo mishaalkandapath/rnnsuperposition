@@ -1,0 +1,87 @@
+{
+  "label": "Fires at GO after an a2 -> S2 rewarded trial, only in mid-to-late episode (trials 40-89).",
+  "short_terms": "(phase == GO) * last_is(\"a2 S2 r\") * isin(ep_dec, [4,5,6,7,8]) ;; (phase == GO) * (1 - last_is(\"a2 S2 r\")) * isin(ep_dec, [4,5,6,7,8])",
+  "terms": "(phase == GO) * last_is(\"a2 S2 r\") * isin(ep_dec, [4,5,6,7,8]) ;; (phase == GO) * (1 - last_is(\"a2 S2 r\")) * isin(ep_dec, [4,5,6,7,8]) ;; (phase == GO) * last_is(\"a2 S2 r\") * ep_dec ;; (phase == GO) * last_is(\"a2 S2 r\") * isin(ep_dec, [4,5,6,7,8]) * (tv(\"state\", -2) == 2) * (tv(\"reward\", -2) == 1) ;; (phase == GO) * last_is(\"a2 S2 r\") * isin(ep_dec, [4,5,6,7,8]) * belief_lo ;; (phase == GO) * last_is(\"a2 S2 r\") * (ep_dec == 6) ;; (phase == GO) * last_is(\"a2 S2 r\") * (ep_dec == 7) ;; (phase == GO) * last_is(\"a2 S2 r\") * (ep_dec == 4)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "GO-only feature (zero at D1 and D2). Its magnitude is an interaction of the previous trial and episode time: about +0.24 at GO when the last trial was a2 -> S2 rewarded (the a2-common-rewarded pattern, model-based stay-on-a2 evidence) and the episode is in trials 40-89; otherwise about zero, so the additive timing baseline over-predicts every other previous-trial pattern in that window (the second term corrects this). It is near zero before trial ~30 and in the last decile even after a2 S2 r. Belief log-odds adds nothing once the last-trial pattern is in (belief deciles toward S2 only look predictive because they track a2 S2 r). The free fit adds a finer per-decile ramp (strongest at deciles 6-7, weaker at 4) and a small boost when the trial before also reached S2 rewarded (a run of a2 S2 r). Remaining misses: some a2 S2 r trials late in the episode where the feature stays silent with no visible observed cause.",
+  "full_test_scores": {
+    "gate": "update",
+    "feature": 168,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 r\") * isin(ep_dec, [4,5,6,7,8])",
+      "(phase == GO) * (1 - last_is(\"a2 S2 r\")) * isin(ep_dec, [4,5,6,7,8])",
+      "(phase == GO) * last_is(\"a2 S2 r\") * ep_dec",
+      "(phase == GO) * last_is(\"a2 S2 r\") * isin(ep_dec, [4,5,6,7,8]) * (tv(\"state\", -2) == 2) * (tv(\"reward\", -2) == 1)",
+      "(phase == GO) * last_is(\"a2 S2 r\") * isin(ep_dec, [4,5,6,7,8]) * belief_lo",
+      "(phase == GO) * last_is(\"a2 S2 r\") * (ep_dec == 6)",
+      "(phase == GO) * last_is(\"a2 S2 r\") * (ep_dec == 7)",
+      "(phase == GO) * last_is(\"a2 S2 r\") * (ep_dec == 4)"
+    ],
+    "weights": [
+      0.17080095530404574,
+      -0.07074118963370342,
+      0.0021123997667722486,
+      0.06756378644029717,
+      -0.003229295029415525,
+      0.08278820081915807,
+      0.15082228785592167,
+      -0.12755307711512748
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5793015932967686,
+    "r2": 0.674062146854416,
+    "r2_timing_only": 0.22524581041376113
+  },
+  "gate": "update",
+  "feature": 168,
+  "test_scores": {
+    "gate": "update",
+    "feature": 168,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 r\") * isin(ep_dec, [4,5,6,7,8])",
+      "(phase == GO) * (1 - last_is(\"a2 S2 r\")) * isin(ep_dec, [4,5,6,7,8])"
+    ],
+    "weights": [
+      0.24657923860856143,
+      -0.07104158430781389
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5116946233446721,
+    "r2": 0.6216833636387983,
+    "r2_timing_only": 0.22524581041376113
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 168,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 r\") * isin(ep_dec, [4,5,6,7,8])",
+      "(phase == GO) * (1 - last_is(\"a2 S2 r\")) * isin(ep_dec, [4,5,6,7,8])"
+    ],
+    "weights": [
+      0.24657923860856143,
+      -0.07104158430781389
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5183447110007853,
+    "r2": 0.6296195848951638,
+    "r2_timing_only": 0.23102595660391456
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Main systematic miss: GO on the first trial of a window, where the previous trial falls outside the window so last_is() returns 0 ('GO after ?' under-predicted by +0.047). Adding (phase == GO) * (prev_action == -1) * isin(ep_dec,[4..8]) raises test R^2 from 0.51 to 0.58. That gain comes from how the windows are cut, not from the agent; the agent knows its own history.",
+      "An observed-only stand-in for those window-start cases, (phase == GO) * (prev_reward == 1) * (belief_lo < -1), only raises test R^2 to 0.54 and causes over-prediction after a2 S1 r (-0.037). It is not worth adopting, so the recorded short form stands.",
+      "The fitted magnitude after a2 S2 r is too low within the window. The worst misses are a2 S2 r streaks at trials 76-84 with actual ~0.60 and predicted ~0.35, which matches the ramp toward deciles 6-7 that the explanation mentions. Adding isin(ep_dec,[6,7]) gives test R^2 0.55, a modest gain.",
+      "'Belief adds nothing' is roughly right. A belief_lo < -2 term restricted to the window adds only +0.02 (test 0.53).",
+      "Claims checked out. Removing the window restriction from the a2 S2 r term drops test R^2 to 0.34, so the trials 40-89 window is real. The timing baseline is ~0 at D1, D2, deciles 0-3 and decile 9. a1 S2 r residual (-0.048) looks like the other non-a2-S2-r patterns, and an a1 S2 r term adds nothing (0.52). The trial-before-rewarded term adds nothing (0.517). The second term is a fair correction (other patterns in the window are near zero) and is not disguised curve fitting."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  }
+}

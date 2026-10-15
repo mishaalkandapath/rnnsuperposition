@@ -1,0 +1,63 @@
+{
+  "label": "D1 after an unrewarded common a2->S2 trial, late in the episode (trial >= 80)",
+  "predicate": "(phase == D1) & (prev_reward == 0) & (ep_trial >= 80) & (prev_action == 2) & (prev_common == 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (never GO or D2), only when the reward input is 0, and only late in the episode: none before trial ~70, rate climbs steeply over trials 80-99 (78% of the mass in trials 90-99). Within that, it wants the previous trial to have been a2 with a common transition to S2 (unrewarded a2->S2). Unrewarded trials after a1, or after a2 that went rare to S1, are false positives without this condition. Fires on low-value steps (86% of mass in the lowest value bin). Most missed activations are on the window first trial (rel -3), where prev_action/prev_common are unknown in the window, so the feature is probably still driven by an unrewarded a2->S2 trial there. Adding (prev_action == -1) & (upcoming action == 2) raises dev mass recall to 0.95 at F1 0.81; I recorded the simpler predicate, which uses only observed variables (dev F1 0.83, precision 0.93, mass recall 0.85). Activations are stronger later in the episode, as the quartile coverage shows; I did not check other magnitude modulators. Reads as an episode-end timer gated by an a2->S2 common, no-reward outcome.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 211,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (ep_trial >= 80) & (prev_action == 2) & (prev_common == 1)",
+    "split": "test",
+    "precision": 0.9407677814413565,
+    "recall": 0.7419205052005944,
+    "f1": 0.8295950155763241,
+    "mass_recall": 0.8428877767473932,
+    "correlation": 0.763966495828724,
+    "n_active": 10768,
+    "n_predicted": 8492,
+    "coverage_by_activation_quartile": [
+      0.5011144130757801,
+      0.7533432392273403,
+      0.8194650817236255,
+      0.8937592867756315
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 211,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (ep_trial >= 80) & (prev_action == 2) & (prev_common == 1)",
+    "split": "dev",
+    "precision": 0.9292134831460674,
+    "recall": 0.7466425911296694,
+    "f1": 0.8279832300857268,
+    "mass_recall": 0.8503540583882958,
+    "correlation": 0.7500215430309366,
+    "n_active": 8861,
+    "n_predicted": 7120,
+    "coverage_by_activation_quartile": [
+      0.5076714801444043,
+      0.7530474040632055,
+      0.8261851015801355,
+      0.8997742663656885
+    ]
+  },
+  "gate": "hidden",
+  "feature": 211,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Every factual claim held up. Phase: D1 has 100% of the activation mass, GO and D2 have 0 active steps. Reward input: 8859 of 8861 actives have in_rew == 0. Trial position: 0 actives before trial 60, 1 in trials 60-69, 441 in 70-79 (0.7% of mass), 78% of mass in 90-99. Value: 85.8% of mass in the lowest value bin.",
+      "The common-transition condition is needed. Restricting to a2 with a rare transition to S1 (unrewarded, trial >= 80) gives 0 coverage. Dropping prev_common drops precision from 0.93 to 0.50. Trials where the previous state was S1 never fire. Unrewarded a1 trials that went rare to S2 fire only weakly: precision 0.13, recall 0.08, mass 0.03. So it is specific to a2 followed by S2, not to S2 in general.",
+      "Within the predicate, precision rises steadily with trial: 0.10 at trials 70-79, 0.76 at 80-84, 0.96 at 85-89, 0.998 at 90-94, 0.999 at 95 and later. Mass also concentrates late. This supports the 'end-of-episode timer' reading. A cutoff of trial >= 78 or >= 82 gives about the same F1 (0.82, 0.81).",
+      "Misses on test (15.7% of mass) are mostly structural. They are the window's first trial (rel -3, where prev_action is -1; 11.5% of mass on dev), a few unrewarded a1 trials that went rare to S2, and trials 70-79. The rel -3 misses can't be fixed with observed in-window variables: prev_action == -1 at trial >= 80 has only 0.26 precision. False positives are mostly cases where the agent's own value is high or its upcoming choice is a1. Adding value < 5.22 gives precision 0.999. These change the magnitude; they don't show a different firing condition.",
+      "Minor: the predicate's precision is lower at value >= 5.22 (0.835) and when the upcoming choice is a1 (0.76). The label does not mention that activation strength depends on low value, though the explanation does. The predicate uses no future variables. Test scores reproduce: precision 0.941, recall 0.742, F1 0.83, mass recall 0.843."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "label": "late-episode: up after unrewarded / toward a1-S1, down after reward / toward a2",
+  "terms": "(phase == D1) * (0.02*last_is(\"a1 S1 r\") + 0.2*last_is(\"a1 S1 u\") - 0.14*last_is(\"a1 S2 r\") + 0.1*last_is(\"a1 S2 u\") - 0.12*last_is(\"a2 S2 r\") + 0.11*last_is(\"a2 S2 u\") - 0.15*last_is(\"a2 S1 r\") + 0.07*last_is(\"a2 S1 u\")) * ep_trial ;; (phase != D1) * (0.05*last_is(\"a1 S1 r\") + 0.06*last_is(\"a1 S2 r\") + 0.15*last_is(\"a1 S2 u\") - 0.04*last_is(\"a2 S2 r\") + 0.05*last_is(\"a2 S2 u\") - 0.08*last_is(\"a2 S1 r\") - 0.18*last_is(\"a2 S1 u\")) * ep_trial ;; (tv(\"prev_reward\", -1) == 1) * ep_trial ;; np.clip(belief_lo, -4, 4) * ep_trial ;; (phase == D2) * table(action, {1: 1, 2: -1}) * ep_trial ;; np.abs(np.clip(belief_lo, -4, 4)) * ep_trial ;; (phase == D2) * table(state, {1: 1, 2: -1}) * ep_trial",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw GRU candidate n of unit 9. Timing dominates: it starts near +0.93 and falls to about -0.3 by the end of the episode (timing R^2 0.87). The history effects beyond timing grow roughly linearly with episode trial, so every term is multiplied by ep_trial. Linear scaling beat no scaling (dev 0.39 vs 0.53), ep_trial^2 (0.52) and exp scalings. At D1 the reward input sets it: it goes up after an unrewarded trial (most after a1 S1 u) and down after a rewarded one, except a1 S1 r, which is about neutral. At GO/D2 the sign follows the a1/S1 side: up after a1 S2 u and a1 rewarded, down after a2 S1 u/r. At D2 it is higher when the choice just made was a1 and the state reached is S1. Graded terms: it rises with the ideal-observer belief that S1 is good (belief_lo, clipped), a little more when the belief is confident, and it falls when the trial before last was rewarded. Unexplained: window-wide offsets late in the episode, i.e. a slow per-episode drift. Longer reward-count terms did not capture it (dev 0.54). Scores: dev 0.55, test R^2 beyond timing 0.535, against an all ceiling of 0.49 and an all-observed ceiling of 0.45; the ep_trial scaling is what goes beyond the additive ceiling. No model outputs were used. The earlier explanation used the model's value/policy; observed-only terms lose nothing measurable, since the policy-decile table alone gives only 0.28.",
+  "gate": "unit_candidate",
+  "feature": 9,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 9,
+    "terms": [
+      "(phase == D1) * (0.02*last_is(\"a1 S1 r\") + 0.2*last_is(\"a1 S1 u\") - 0.14*last_is(\"a1 S2 r\") + 0.1*last_is(\"a1 S2 u\") - 0.12*last_is(\"a2 S2 r\") + 0.11*last_is(\"a2 S2 u\") - 0.15*last_is(\"a2 S1 r\") + 0.07*last_is(\"a2 S1 u\")) * ep_trial",
+      "(phase != D1) * (0.05*last_is(\"a1 S1 r\") + 0.06*last_is(\"a1 S2 r\") + 0.15*last_is(\"a1 S2 u\") - 0.04*last_is(\"a2 S2 r\") + 0.05*last_is(\"a2 S2 u\") - 0.08*last_is(\"a2 S1 r\") - 0.18*last_is(\"a2 S1 u\")) * ep_trial",
+      "(tv(\"prev_reward\", -1) == 1) * ep_trial",
+      "np.clip(belief_lo, -4, 4) * ep_trial",
+      "(phase == D2) * table(action, {1: 1, 2: -1}) * ep_trial",
+      "np.abs(np.clip(belief_lo, -4, 4)) * ep_trial",
+      "(phase == D2) * table(state, {1: 1, 2: -1}) * ep_trial"
+    ],
+    "weights": [
+      0.018529610967856068,
+      0.014573588973014053,
+      -0.0005871668648443829,
+      0.00012567942791761322,
+      0.00029929080994394445,
+      6.544908102015917e-05,
+      0.0007335764519060715
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5352088433960034,
+    "r2": 0.9396269321642465,
+    "r2_timing_only": 0.8701071072933699
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 9,
+    "terms": [
+      "(phase == D1) * (0.02*last_is(\"a1 S1 r\") + 0.2*last_is(\"a1 S1 u\") - 0.14*last_is(\"a1 S2 r\") + 0.1*last_is(\"a1 S2 u\") - 0.12*last_is(\"a2 S2 r\") + 0.11*last_is(\"a2 S2 u\") - 0.15*last_is(\"a2 S1 r\") + 0.07*last_is(\"a2 S1 u\")) * ep_trial",
+      "(phase != D1) * (0.05*last_is(\"a1 S1 r\") + 0.06*last_is(\"a1 S2 r\") + 0.15*last_is(\"a1 S2 u\") - 0.04*last_is(\"a2 S2 r\") + 0.05*last_is(\"a2 S2 u\") - 0.08*last_is(\"a2 S1 r\") - 0.18*last_is(\"a2 S1 u\")) * ep_trial",
+      "(tv(\"prev_reward\", -1) == 1) * ep_trial",
+      "np.clip(belief_lo, -4, 4) * ep_trial",
+      "(phase == D2) * table(action, {1: 1, 2: -1}) * ep_trial",
+      "np.abs(np.clip(belief_lo, -4, 4)) * ep_trial",
+      "(phase == D2) * table(state, {1: 1, 2: -1}) * ep_trial"
+    ],
+    "weights": [
+      0.018529610967856068,
+      0.014573588973014053,
+      -0.0005871668648443829,
+      0.00012567942791761322,
+      0.00029929080994394445,
+      6.544908102015917e-05,
+      0.0007335764519060715
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5515716678624798,
+    "r2": 0.9395134983371316,
+    "r2_timing_only": 0.8651144512333825
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The score reproduces: the 7 terms give test R^2 beyond timing 0.535 (timing alone 0.870, full fit 0.940). This is above the 'all observed' ceiling (0.45) and the 'all' ceiling (0.49). Pure timing slack is small: ep_trial, ep_trial^2 and ep_trial^3 plus phase-specific ep_trial reach only 0.03 beyond timing, so the ep_trial scaling is not just soaking up drift within each decile.",
+      "Most of the score comes from the two last_is tables: they alone reach 0.456 on test, and 0.348 without the ep_trial scaling, so the scaling is confirmed. Adding belief_lo gives 0.476; adding the reward from two trials back gives 0.469. The other 3 terms (D2 action, D2 state, |belief|) add about 0.02 together, with tiny weights.",
+      "The label overgeneralises the reward effect. 'Up after unrewarded, down after reward' is true only at D1 (D1 prev_reward*ep_trial alone: 0.081). At GO and D2, prev_reward has no effect (0.0002 on test). There the effect follows the previous ACTION (prev_action sign*ep_trial: 0.129). After a2 S1 u, an unrewarded trial, the value is strongly DOWN at GO (residual -0.19, the largest negative cell).",
+      "'Toward a1/S1' is half wrong for the previous trial. The previous reached state does not matter at GO and D2 (prev_state sign: 0.006) and barely at D1 (0.019). Only the previous action does. The S1 side enters only through belief_lo and the state reached on this trial at D2.",
+      "Misses: errors by phase x previous trial are small (largest +0.041 at D2 after a1 S2 r), so no large systematic class remains in those cells. The worst windows are late-episode runs (t85-t98) with offsets of about 0.3-0.5 across the whole window. For example, a run of rewarded a1 S1c trials sits at -0.4 to -0.7 while the fit predicts about 0 to +0.2. This matches the 'slow drift' the explanation admits to. Reward traces and consecutive-reward streaks over the window barely help (0.536 and 0.539 on test), and neither does belief x cover (0.535). Exponential scaling (0.473) and a late-episode hinge scaling (0.452) are worse, which confirms ep_trial is the best of the scalings tried."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Late in episode, scaled by trial: at D1 up after unrewarded and down after rewarded trials; at GO/D2 follows the previous action (a1 up, a2 down, strongest after rare-unrewarded) and the belief that S1 is good",
+    "better_terms": "Same 7 terms, with the reward from two trials back replaced by a streak of consecutive previous rewards (scaled by ep_trial) and |belief| kept. 8 terms, test 0.539: only a marginal gain, so the original terms stand.",
+    "better_terms_test_r2_beyond_timing": 0.539
+  },
+  "final_label": "Late in episode, scaled by trial: at D1 up after unrewarded and down after rewarded trials; at GO/D2 follows the previous action (a1 up, a2 down, strongest after rare-unrewarded) and the belief that S1 is good"
+}

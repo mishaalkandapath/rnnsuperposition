@@ -1,0 +1,80 @@
+{
+  "label": "high at D2 when S1 reached; at D1/GO high after reward, after a2, S2-leaning belief",
+  "terms": "(phase == D2) * (state == S1) ;; (phase != D2) * np.clip(belief_lo,-5,5) ;; (phase != D2) * (prev_action == 2) ;; (phase != D2) * (prev_reward == 1) ;; (phase != D2) * (prev_reward == 0) * (prev_state == S2) ;; (phase != D2) * (prev_reward == 0) * (tv(\"prev_reward\", -1) == 0) ;; (phase == D2) * np.clip(belief_lo,-5,5) * (state == S1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r of unit 18. Timing alone gives R^2 0.71 (D1 ~0.74 > GO ~0.63 > D2 ~0.29). Beyond timing, two observed-only regimes. D2: the reached state dominates; reaching S1 raises r by ~+0.29 relative to S2 (slightly less when belief already favours S1). D1/GO: r goes up after a rewarded previous trial (+0.15), after an unrewarded trial that ended in S2 (+0.09), and after choosing a2 (+0.04); it goes down with the ideal-observer belief that S1 is good (-0.023 per log-odds unit) and after two unrewarded trials in a row (-0.03). Taken together, at D1/GO the unit is higher when the observed history points to a2/S2, which is a stand-in for the upcoming choice (that choice x state cue reaches 0.72 on its own). Seven observed-only terms: test R^2 beyond timing 0.861 (dev 0.85-0.86), 92% of the all ceiling 0.94 and close to the all-observed ceiling 0.90. Dropping the model value/policy costs little: policy decile alone scores 0.48, and the observed history plus belief recover nearly all of what it carried. Remaining misses: long runs of unrewarded a2->S1-rare trials are over-predicted at D1/GO.",
+  "gate": "unit_reset",
+  "feature": 18,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 18,
+    "terms": [
+      "(phase == D2) * (state == S1)",
+      "(phase != D2) * np.clip(belief_lo,-5,5)",
+      "(phase != D2) * (prev_action == 2)",
+      "(phase != D2) * (prev_reward == 1)",
+      "(phase != D2) * (prev_reward == 0) * (prev_state == S2)",
+      "(phase != D2) * (prev_reward == 0) * (tv(\"prev_reward\", -1) == 0)",
+      "(phase == D2) * np.clip(belief_lo,-5,5) * (state == S1)"
+    ],
+    "weights": [
+      0.29177854544318116,
+      -0.023350589560173246,
+      0.04022939116258258,
+      0.15095496630365052,
+      0.09018678034381984,
+      -0.03158758968708032,
+      -0.015860070513679513
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8613655940473346,
+    "r2": 0.9596700841485747,
+    "r2_timing_only": 0.709091581023578
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 18,
+    "terms": [
+      "(phase == D2) * (state == S1)",
+      "(phase != D2) * np.clip(belief_lo,-5,5)",
+      "(phase != D2) * (prev_action == 2)",
+      "(phase != D2) * (prev_reward == 1)",
+      "(phase != D2) * (prev_reward == 0) * (prev_state == S2)",
+      "(phase != D2) * (prev_reward == 0) * (tv(\"prev_reward\", -1) == 0)",
+      "(phase == D2) * np.clip(belief_lo,-5,5) * (state == S1)"
+    ],
+    "weights": [
+      0.29177854544318116,
+      -0.023350589560173246,
+      0.04022939116258258,
+      0.15095496630365052,
+      0.09018678034381984,
+      -0.03158758968708032,
+      -0.015860070513679513
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8672908877559685,
+    "r2": 0.9612954493558947,
+    "r2_timing_only": 0.7083504667491587
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced test R^2 beyond timing 0.8614 with weights matching the explanation (D2 S1 +0.292, belief_lo -0.023, prev a2 +0.040, prev rewarded +0.151, prev unrewarded in S2 +0.090, two unrewarded in a row -0.032, D2 belief x S1 -0.016).",
+      "Most of the score comes from D1/GO history and belief. The D2 state term alone scores only 0.28, so 'the reached state dominates' is true within D2 only, not of the whole fit.",
+      "Some of the claimed effects are small. Removing prev_action==2 costs about 0.010 (0.852). Removing the two-unrewarded term costs 0.004 (0.858). Removing the D2 belief x S1 interaction costs 0.017 (0.845). Belief is the important D1/GO term: without it the score drops to 0.771.",
+      "'+0.09 after unrewarded S2' only holds with belief in the model. In the raw residual table, a1 S2 u is -0.14 at D1 while a2 S2 u is +0.03. The label's single-effect wording hides this.",
+      "The misses output shows the reported failure: runs of a2->S1 rare unrewarded trials are over-predicted by about 0.15-0.23 at GO and D2. Other cell errors are moderate (largest |mean error| 0.07, at GO after a1 S2 r; D1 after a1 S1 u is -0.054). Mean errors by phase are about 0.",
+      "None of my extra terms moved test R^2 by more than about 0.001: run-of-unrewarded count, the a2-S1-rare streak, belief x prev_action, belief_cover weighting, a GO-specific belief term, prev rare-rewarded, a D2 rare-transition term, and a saturating belief shape. The best was 0.8626. The remaining gap to the observed-only ceiling of 0.90 has no simple fix."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "high at D2 when S1 reached; at D1/GO high after reward and when observed belief leans S2 (small extra after a2)",
+    "better_terms": "(phase == D2) * (state == S1) ;; (phase != D2) * np.clip(belief_lo,-5,5) ;; (phase != D2) * (prev_reward == 1) ;; (phase != D2) * (prev_reward==0)*(prev_state==S2) ;; (phase != D2) * (prev_action==2) ;; (phase != D2) * (prev_reward==1)*(prev_common==0) ;; (phase != D2)*(prev_reward==0)*(tv('prev_reward',-1)==0) ;; (phase == D2) * np.clip(belief_lo,-5,5) * (state == S1)",
+    "better_terms_test_r2_beyond_timing": 0.8626
+  },
+  "final_label": "high at D2 when S1 reached; at D1/GO high after reward and when observed belief leans S2 (small extra after a2)"
+}

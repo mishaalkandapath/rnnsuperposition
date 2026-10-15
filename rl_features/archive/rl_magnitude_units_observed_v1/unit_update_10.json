@@ -1,0 +1,84 @@
+{
+  "label": "D1/GO update gate lowered by a1->S2, losing streaks and S1 belief; raised by a2->S1",
+  "terms": "(phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D1) * np.abs(np.clip(belief_lo, -4, 4)) ;; (phase == D1) * np.clip(belief_lo, -4, 4) ;; (phase == GO) * np.clip(belief_lo, -4, 4) ;; (phase == D1) * (prev_reward == 0) * ((tv(\"reward\", -2) == 0) + (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0)) ;; (phase == D1) * (prev_action == 2) * (prev_state == 1) ;; (phase == D1) * ((tv(\"reward\", -2) == 0) * 1.0 + (tv(\"reward\", -3) == 0)) ;; (phase == GO) * last_is(\"a1 S2 u\")",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 10; near 1 at D2 (little variation), modulation is mostly at D1 and less at GO. At D1 it is strongly lowered (~-0.26) after a rare a1->S2 trial and raised (~+0.16) after a rare a2->S1 trial (an action-state asymmetry: low when last state was S2 reached from a1). Losing streaks lower D1 a lot: ~-0.09 per consecutive unrewarded trial beyond the first, plus ~-0.07 per loss two/three trials back. Graded ideal-observer belief: D1 and GO both decrease as belief that S1 is good rises (~-0.02 to -0.03 per log-odds unit), with a small positive effect of belief certainty |belief_lo| at D1. GO additionally lowered after a1 S2 u. Observed-only, 8 terms: dev R^2 beyond timing 0.63, test 0.617 (all observed ceiling 0.73, all 0.87). The earlier model-based explanation could lean on the policy logit (policy decile alone 0.68), so observed-only quantities lose a small amount relative to that; the remaining misses are long-streak D1 values and GO after a1/a2 history.",
+  "gate": "unit_update",
+  "feature": 10,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 10,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D1) * np.abs(np.clip(belief_lo, -4, 4))",
+      "(phase == D1) * np.clip(belief_lo, -4, 4)",
+      "(phase == GO) * np.clip(belief_lo, -4, 4)",
+      "(phase == D1) * (prev_reward == 0) * ((tv(\"reward\", -2) == 0) + (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0))",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 1)",
+      "(phase == D1) * ((tv(\"reward\", -2) == 0) * 1.0 + (tv(\"reward\", -3) == 0))",
+      "(phase == GO) * last_is(\"a1 S2 u\")"
+    ],
+    "weights": [
+      -0.26380197546657935,
+      0.014333749015232216,
+      -0.021092731092699286,
+      -0.02602502764891708,
+      -0.09256194604736998,
+      0.1562455917166505,
+      -0.07427555478415496,
+      -0.05673092748293468
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6170861211194483,
+    "r2": 0.8445677974045213,
+    "r2_timing_only": 0.5940805200117463
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 10,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D1) * np.abs(np.clip(belief_lo, -4, 4))",
+      "(phase == D1) * np.clip(belief_lo, -4, 4)",
+      "(phase == GO) * np.clip(belief_lo, -4, 4)",
+      "(phase == D1) * (prev_reward == 0) * ((tv(\"reward\", -2) == 0) + (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0))",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 1)",
+      "(phase == D1) * ((tv(\"reward\", -2) == 0) * 1.0 + (tv(\"reward\", -3) == 0))",
+      "(phase == GO) * last_is(\"a1 S2 u\")"
+    ],
+    "weights": [
+      -0.26380197546657935,
+      0.014333749015232216,
+      -0.021092731092699286,
+      -0.02602502764891708,
+      -0.09256194604736998,
+      0.1562455917166505,
+      -0.07427555478415496,
+      -0.05673092748293468
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.629303809428396,
+    "r2": 0.8479058607425805,
+    "r2_timing_only": 0.5897067649308878
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced the test score exactly: 0.617 beyond timing. The fitted weights match the explanation: a1->S2 at D1 -0.264, a2->S1 at D1 +0.156, loss streak -0.093 per extra loss, losses 2-3 trials back -0.074, belief_lo -0.021 at D1 and -0.026 at GO, |belief_lo| +0.014, last trial a1 S2 u at GO -0.057.",
+      "The a1->S2 drop and a2->S1 rise at D1 do not depend on reward. Profile residuals at D1: a1 S2 r -0.26 and a1 S2 u -0.35; a2 S1 r +0.20 and a2 S1 u +0.19. So 'after a rare trial' should be read as 'after that choice-to-state transition', which is consistent with the terms.",
+      "The terms carry information: dropping belief cuts test R^2 to 0.438, and dropping |belief_lo| cuts it slightly, to 0.600. Simple swaps for the transition terms (a prev_action main effect at D1 and GO) did worse: 0.35 with belief, 0.59 with extra loss terms.",
+      "A systematic error remains at GO, as the explanation admits: residuals follow the last action. Misses: GO after a2 S2 u +0.068, GO after a2 S1 r +0.066, GO after a1 S1 u -0.059. These cell errors are small (<=0.07) next to the D1 effects (~0.35). Adding a GO term for the last action, or for the last two actions, raised test R^2 only from 0.617 to 0.626.",
+      "The worst-fit windows are D1 steps in long losing streaks, where the actual value is ~0.2-0.4 and the prediction ~0.65-0.8. A 4-loss streak term did not help (0.613), and neither did belief_cover at D1 (0.613). This is acknowledged but unexplained.",
+      "The gap to the observed-only ceiling (0.73) is ~0.11. Dropping the model's outputs costs ~0.06 against the policy decile alone (0.68). The claim of a 'modest' loss is fair."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1/GO update gate lowered by a1->S2 (either reward), losing streaks, S1 belief; raised by a2->S1 (either reward)",
+    "better_terms": "(phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D1) * np.abs(np.clip(belief_lo, -4, 4)) ;; (phase == D1) * np.clip(belief_lo, -4, 4) ;; (phase == GO) * np.clip(belief_lo, -4, 4) ;; (phase == D1) * (prev_reward == 0) * ((tv(\"reward\", -2) == 0) + (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0)) ;; (phase == D1) * (prev_action == 2) * (prev_state == 1) ;; (phase == D1) * ((tv(\"reward\", -2) == 0) * 1.0 + (tv(\"reward\", -3) == 0)) ;; (phase == GO) * (2*(prev_action==2)-1) * (1 + (tv(\"action\", -2) == prev_action))",
+    "better_terms_test_r2_beyond_timing": 0.6257
+  },
+  "final_label": "D1/GO update gate lowered by a1->S2 (either reward), losing streaks, S1 belief; raised by a2->S1 (either reward)"
+}

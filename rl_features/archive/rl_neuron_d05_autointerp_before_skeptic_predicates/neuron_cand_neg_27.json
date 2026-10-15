@@ -1,0 +1,64 @@
+{
+  "label": "D2 arrival in S2: rare a1->S2 throughout, any S2 arrival late in episode",
+  "predicate": "(phase == D2) & (state == S2) & (ep_trial >= 20) & ((action == 1) | (ep_trial >= 80))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Almost all activation (99% of mass) falls on DELAY_2 steps where state S2 is reached (28% of S2 D2 steps fire; it never fires at D1 and almost never on S1 arrivals or at GO). Within S2 arrivals, it fires mainly on rare transitions (a1 chosen, landed in S2: 74% precision there; top activations are all a1->S2 rare). Common a2->S2 arrivals fire only late in the episode (trials 80-99). There is a strong episode-time drift: no firing before trial ~20, and the rate climbs steeply over trials 80-99. Firing also goes with low model value (rate 18% in the lowest value bin, 0 in the highest). Magnitude is largest for rare a1->S2 arrivals. All variables are observed at D2. Episode time is not an input, so the drift probably reflects slow growth of the hidden state. Simpler variants: D2&S2 alone gets F1 0.44 (recall 0.97); D2&S2&(a1 | trial>=85) gets F1 0.83.",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 27,
+    "predicate": "(phase == D2) & (state == S2) & (ep_trial >= 20) & ((action == 1) | (ep_trial >= 80))",
+    "split": "test",
+    "precision": 0.7748319744380785,
+    "recall": 0.9492786636294609,
+    "f1": 0.8532300015924413,
+    "mass_recall": 0.9862996140271213,
+    "correlation": 0.7376507017739228,
+    "n_active": 59265,
+    "n_predicted": 72608,
+    "coverage_by_activation_quartile": [
+      0.8416683539177972,
+      0.9568034557235421,
+      0.9988525917926566,
+      0.999797516198704
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 27,
+    "predicate": "(phase == D2) & (state == S2) & (ep_trial >= 20) & ((action == 1) | (ep_trial >= 80))",
+    "split": "dev",
+    "precision": 0.7817757211434503,
+    "recall": 0.9483430969659876,
+    "f1": 0.8570412630181582,
+    "mass_recall": 0.986312055774905,
+    "correlation": 0.7453928608866618,
+    "n_active": 57185,
+    "n_predicted": 69369,
+    "coverage_by_activation_quartile": [
+      0.8302441071553472,
+      0.9642557358701734,
+      0.9990207050923335,
+      0.9998601007274762
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 27,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The factual claims check out on dev. D1 never fires (0/380619). GO fires at 0.4% (mass 0.006). S1 arrivals at D2 fire at 0.2% (mass 0.0006). 28.2% of S2 arrivals at D2 fire. D2&S2&a1 has precision 0.739, matching the stated 74%. Nothing fires before trial 20: a1->S2 at trials <20 has precision 0.007. Common a2->S2 before trial 80 has precision 0.010. Rates by value bin are 18.4% in the lowest and 0% in the highest. All top activations are a1->S2 rare arrivals.",
+      "The original predicate reproduces on test: P 0.775, R 0.949, F1 0.853, mass recall 0.986. Missed activations hold only 1.4% of the mass and are scattered (weak a2->S2 firings before trial 80, a few GO steps).",
+      "There is a systematic false-positive class in the a2 (common) arm. 'ep_trial >= 80' is too coarse. Common a2->S2 arrivals fire at 97% precision in trials 90-99, but only 37% in trials 80-89. Within trials >= 80 they also depend on the previous trial's reward, which is shown at D1 and so is observed: precision 0.88 when prev_reward==0 vs 0.53 when prev_reward==1. Most of the predicate's 16k test false positives are a2->S2 arrivals in trials 80-89 after a rewarded previous trial.",
+      "Value is not a better explanation on its own. D2&S2&(value<x) peaks at F1 about 0.70, so the low-value correlation is secondary to the action-by-episode-time structure.",
+      "Smaller point: in the a1 arm, firing is stronger when S1 is the good state (precision 0.89) and when value is low (value<7.13 gives precision 1.0). The rare-arrival response is largest when the arrival is surprising or bad, which the label does not mention."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 arrival in S2: any a1->S2 (rare) arrival after trial ~20; common a2->S2 arrivals only very late in the episode (trial >= 90), or in trials 80-89 after an unrewarded previous trial",
+    "better_predicate": "(phase==D2)&(state==S2)&(ep_trial>=20)&((action==1)|(ep_trial>=90)|((ep_trial>=80)&(prev_reward==0)))",
+    "better_predicate_test_f1": 0.906
+  },
+  "final_label": "D2 arrival in S2: any a1->S2 (rare) arrival after trial ~20; common a2->S2 arrivals only very late in the episode (trial >= 90), or in trials 80-89 after an unrewarded previous trial"
+}

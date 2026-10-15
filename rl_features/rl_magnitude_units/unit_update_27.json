@@ -1,0 +1,93 @@
+{
+  "label": "Update gate drops after reward; rises at D1 after reaching S1, at GO after choosing a2.",
+  "short_terms": "(phase!=D2)*(prev_reward==1) ;; (phase==D1)*(prev_state==1) ;; (phase==GO)*(prev_action==2)",
+  "terms": "(phase!=D2)*(prev_reward==1) ;; (phase!=D2)*(tv(\"reward\",-2)==1) ;; (phase==D1)*(prev_state==1) ;; (phase==GO)*(prev_action==2) ;; (phase!=D2)*(tv(\"reward\",-3)==1) ;; (phase!=D2)*(prev_reward==1)*ep_dec ;; (phase==D1)*belief_lo ;; (phase==GO)*belief_lo",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw z of unit 27 is dominated by timing (it decays across the episode, near 1 at D2). Beyond timing, at D1 and GO it is lower after a rewarded previous trial (-0.09) and higher after an unrewarded one; at D1 it is additionally higher when the previous trial reached S1 (+0.12), and at GO higher when the previous choice was a2 (+0.07). D2 carries almost no residual. Rewards two or three trials back add nothing. The free fit adds a graded D1 belief_lo term (S1-good belief raises it) and an episode-decile scaling of the reward effect, bringing dev R^2 from 0.48 to 0.55. Remaining errors are slow window-level offsets late in the episode that no trial-history term captures. Observed quantities only.",
+  "full_test_scores": {
+    "gate": "unit_update",
+    "feature": 27,
+    "terms": [
+      "(phase!=D2)*(prev_reward==1)",
+      "(phase!=D2)*(tv(\"reward\",-2)==1)",
+      "(phase==D1)*(prev_state==1)",
+      "(phase==GO)*(prev_action==2)",
+      "(phase!=D2)*(tv(\"reward\",-3)==1)",
+      "(phase!=D2)*(prev_reward==1)*ep_dec",
+      "(phase==D1)*belief_lo",
+      "(phase==GO)*belief_lo"
+    ],
+    "weights": [
+      -0.07781607807763313,
+      -0.0004391584001247302,
+      0.09816489123487915,
+      0.06221223801938423,
+      -0.00012974894439885597,
+      -0.002401677667993455,
+      0.013447389227295787,
+      -0.003571594054059953
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5379846906458482,
+    "r2": 0.951231500320598,
+    "r2_timing_only": 0.8944439747081645
+  },
+  "gate": "unit_update",
+  "feature": 27,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 27,
+    "terms": [
+      "(phase!=D2)*(prev_reward==1)",
+      "(phase==D1)*(prev_state==1)",
+      "(phase==GO)*(prev_action==2)"
+    ],
+    "weights": [
+      -0.09311975983160285,
+      0.11898566399875138,
+      0.07439623681876366
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.47462965069516627,
+    "r2": 0.9445439941211985,
+    "r2_timing_only": 0.8944439747081645
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 27,
+    "terms": [
+      "(phase!=D2)*(prev_reward==1)",
+      "(phase==D1)*(prev_state==1)",
+      "(phase==GO)*(prev_action==2)"
+    ],
+    "weights": [
+      -0.09311975983160285,
+      0.11898566399875138,
+      0.07439623681876366
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.47712511016085546,
+    "r2": 0.9453482393794714,
+    "r2_timing_only": 0.8954783224772154
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The short form reproduces on test: R^2 beyond timing is 0.475. Weights are reward -0.093 (D1+GO), D1 prev_state==S1 +0.119 and GO prev_action==a2 +0.074. The free fit scores 0.538, so the short form is 88% of it.",
+      "Every term is needed. Dropping one gives 0.164 without the reward term, 0.249 without the D1 S1 term and 0.372 without the GO a2 term. The phase restrictions also hold up: using the S1 term at both D1 and GO gives 0.406, using a2 at both gives 0.374, and using S1 instead of a2 at GO gives 0.397.",
+      "The claim that rewards 2-3 trials back add nothing holds: their fitted weights are about 0 (-0.0004 and -0.006), and adding tv('reward',-2) leaves the score at 0.4753. In the free fit, belief_lo at D1 has a small positive weight (+0.013) and the ep_dec reward interaction is negligible (-0.002). Most of the free fit's extra R^2 does not come from these named terms.",
+      "Scaling the terms by episode decile does not help (0.416 with ep_dec, 0.240 with the ep_dec>=7 gate). That fits the explanation's claim that the leftover error is slow late-episode offsets, not trial-history effects.",
+      "There is a moderate systematic miss at D1: after a2 S1 r the short form over-predicts by -0.093. The residual table shows that 'reached S1' raises D1 mostly after the common a1->S1 transition (a1 S1 u +0.186 vs a2 S1 u +0.096; a1 S1 r +0.058 vs a2 S1 r -0.053). Restricting the D1 term to prev_action==1 & prev_state==1 raises test R^2 only slightly, to 0.483. It also moves the error to a new cell (D1 after a2 S1 u, under-predicted by +0.077), so it is not a clear improvement and I am not proposing it as a replacement.",
+      "Some headroom is left: the observed-only last-trial reference table alone scores 0.58 on test, and the short form reaches 82% of that. The leftover errors are spread over cells (about 0.05 each), not one large class.",
+      "Minor wording point: the label's 'drops after reward' does not say the drop applies only at D1 and GO, not D2. D2 has almost no residual, so this barely matters in practice."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "label": "D2 rare a1->S2, largest when last trial was also unrewarded a1->S2",
+  "terms": "(phase == D2) * (action == 1) * (state == 2) ;; (phase == D2) * (action == 1) * (state == 2) * last_is(\"a1 S2 u\") ;; (phase == D2) * (action == 1) * (state == 2) * (prev_reward == 1) ;; (phase == D2) * last_is(\"a1 S2 u\") ;; (phase == D2) * (action == 1) * (state == 2) * (tv(\"state\", -2) == 2) * (tv(\"action\", -2) == 1) ;; (phase == D2) * (action == 1) * (state == 2) * (ep_trial >= 85) ;; (phase == D2) * (action == 1) * (state == 2) * (ep_trial >= 95)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (zero at D1/GO). Its magnitude is set by the rare transition a1->S2 that was just observed (this trial choice and state are observed at D2): about +0.9 for any a1->S2. It adds about +1.0 when the previous trial was also an unrewarded a1->S2, and +0.4 more when the trial before that was also a1->S2, so a streak of rare unrewarded a1->S2 trials drives it to about 2.4. It falls by about -0.8 when the previous trial was rewarded, and the response weakens late in the episode (trials 85+ and 95+). Previous a1 S2 u gives a small boost (+0.25) even on other D2 transitions. All other D2 transitions sit near zero (slightly below baseline). Observed-only terms; dev R^2 beyond timing 0.74, above the profile all ceiling (0.59). Adding the model policy logit at D2 adds only about 0.015. Hidden good state, reversals and future reward add little.",
+  "gate": "hidden",
+  "feature": 129,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 129,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 2)",
+      "(phase == D2) * (action == 1) * (state == 2) * last_is(\"a1 S2 u\")",
+      "(phase == D2) * (action == 1) * (state == 2) * (prev_reward == 1)",
+      "(phase == D2) * last_is(\"a1 S2 u\")",
+      "(phase == D2) * (action == 1) * (state == 2) * (tv(\"state\", -2) == 2) * (tv(\"action\", -2) == 1)",
+      "(phase == D2) * (action == 1) * (state == 2) * (ep_trial >= 85)",
+      "(phase == D2) * (action == 1) * (state == 2) * (ep_trial >= 95)"
+    ],
+    "weights": [
+      0.9181771677778449,
+      0.999040569973653,
+      -0.821957197083274,
+      0.24806805054357028,
+      0.41655790645278223,
+      -0.25834482292166766,
+      -0.35651498277348387
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7217489238474597,
+    "r2": 0.7348885124383286,
+    "r2_timing_only": 0.04722205848241101
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 129,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 2)",
+      "(phase == D2) * (action == 1) * (state == 2) * last_is(\"a1 S2 u\")",
+      "(phase == D2) * (action == 1) * (state == 2) * (prev_reward == 1)",
+      "(phase == D2) * last_is(\"a1 S2 u\")",
+      "(phase == D2) * (action == 1) * (state == 2) * (tv(\"state\", -2) == 2) * (tv(\"action\", -2) == 1)",
+      "(phase == D2) * (action == 1) * (state == 2) * (ep_trial >= 85)",
+      "(phase == D2) * (action == 1) * (state == 2) * (ep_trial >= 95)"
+    ],
+    "weights": [
+      0.9181771677778449,
+      0.999040569973653,
+      -0.821957197083274,
+      0.24806805054357028,
+      0.41655790645278223,
+      -0.25834482292166766,
+      -0.35651498277348387
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7392946961889706,
+    "r2": 0.7519316004633618,
+    "r2_timing_only": 0.04847198767981731
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The claim that adding the policy logit adds only about 0.015 is wrong. Adding the term (phase==D2)*(action==1)*(state==2)*choice to the 7 original terms raises test R^2 beyond timing from 0.722 to 0.786 (+0.065). The profile already hinted at this: by itself, the D2 policy decile table scores 0.40, the best single reference cue, and D2 residuals rise steeply in policy deciles 7 and 8 (+0.53, +1.29).",
+      "The history effect sizes are overstated. Once the choice term is added, the weights drop: base a1->S2 0.92 -> 0.49, previous unrewarded a1->S2 1.00 -> 0.55, trial before also a1->S2 0.42 -> 0.17, previous rewarded -0.82 -> -0.67. So part of the 'run of unrewarded a1->S2' effect is really how strongly the agent currently leans towards a1.",
+      "The worst-fit dev windows show the history rule failing. At t32 the history is a1->S2 after an unrewarded a1->S2, so the terms predict 2.26, but the actual value is 0.04. At t35 the history is a1->S2 after an unrewarded a2->S2 common trial; the terms predict 1.01 and the actual value is 2.32. Previous a2->S2 unrewarded as a modifier gets weight +0.47, but test R^2 only rises to 0.728.",
+      "Late-episode suppression is modelled crudely. Several worst windows at t96-99 have an actual value near 0 where the terms predict 1.5-2.0. Adding (ep_trial>=98) or a linear ramp after trial 80 barely helps (0.722 / 0.788 with choice), so the end-of-episode shutdown is not fully captured.",
+      "Checks that held: the feature is zero at D1 and GO; other D2 transitions sit near zero (residuals -0.04 to -0.10 against a baseline of about 0.1); the previous-rewarded drop and the previous unrewarded a1->S2 boost both reproduce; no future variables are used. A 3-term version (a1->S2, x previous unrewarded a1->S2, x previous rewarded) already reaches 0.669 test."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 rare a1->S2: larger after unrewarded a1->S2 trials and when the agent's policy leans towards a1; suppressed after a rewarded trial and in the last trials of the episode",
+    "better_terms": "(phase == D2) * (action == 1) * (state == 2) ;; (phase == D2) * (action == 1) * (state == 2) * last_is(\"a1 S2 u\") ;; (phase == D2) * (action == 1) * (state == 2) * (prev_reward == 1) ;; (phase == D2) * last_is(\"a1 S2 u\") ;; (phase == D2) * (action == 1) * (state == 2) * (tv(\"state\", -2) == 2) * (tv(\"action\", -2) == 1) ;; (phase == D2) * (action == 1) * (state == 2) * np.clip(ep_trial - 80, 0, None) ;; (phase == D2) * (action == 1) * (state == 2) * choice",
+    "better_terms_test_r2_beyond_timing": 0.7876
+  },
+  "final_label": "D2 rare a1->S2: larger after unrewarded a1->S2 trials and when the agent's policy leans towards a1; suppressed after a rewarded trial and in the last trials of the episode"
+}

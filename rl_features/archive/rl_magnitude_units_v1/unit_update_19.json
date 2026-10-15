@@ -1,0 +1,66 @@
+{
+  "label": "D1 update gate high after reaching S2 (esp. rare a1->S2), low after S1",
+  "terms": "(phase == D1) * (prev_state == 2) ;; (phase == D1) * (prev_state == 1) ;; (phase == D1) * last_is(\"a2 S2 r\") ;; (phase == D1) * last_is(\"a2 S2 u\")",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 19 is near 0 at GO and D2 and active only at D1. Its D1 magnitude is set by the state reached on the previous trial: high (~0.9-0.98) after S2, near 0 after S1. Within S2, it is highest when S2 was reached via a1 (rare transition) and somewhat lower after a2->S2 (common), more so if that trial was rewarded. Reward alone, the trial before, the hidden good state, time since reversal and episode decile add essentially nothing (adding tv state -2 and ep_dec interaction raised dev R^2 only 0.791->0.793). Four observed-only D1 terms give dev R^2 beyond timing 0.79, matching the last-trial reference (0.79) and close to the all ceiling (0.83).",
+  "gate": "unit_update",
+  "feature": 19,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 19,
+    "terms": [
+      "(phase == D1) * (prev_state == 2)",
+      "(phase == D1) * (prev_state == 1)",
+      "(phase == D1) * last_is(\"a2 S2 r\")",
+      "(phase == D1) * last_is(\"a2 S2 u\")"
+    ],
+    "weights": [
+      0.5581466153855527,
+      -0.3812791859953104,
+      -0.27752010037607594,
+      -0.19554343187806475
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7897765763500835,
+    "r2": 0.8764126193592499,
+    "r2_timing_only": 0.41211412841149786
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 19,
+    "terms": [
+      "(phase == D1) * (prev_state == 2)",
+      "(phase == D1) * (prev_state == 1)",
+      "(phase == D1) * last_is(\"a2 S2 r\")",
+      "(phase == D1) * last_is(\"a2 S2 u\")"
+    ],
+    "weights": [
+      0.5581466153855527,
+      -0.3812791859953104,
+      -0.27752010037607594,
+      -0.19554343187806475
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7906546872581137,
+    "r2": 0.8765059859808344,
+    "r2_timing_only": 0.41009420081247094
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Small overclaim: the explanation says z is 'about 0.9 to 0.98' after S2, but that only holds for a1->S2 (rare). Timing baseline plus residual puts D1 after a2 S2 r at about 0.39+0.28=0.67 and after a2 S2 u at about 0.39+0.36=0.75. The explanation does go on to say a2->S2 is lower, so the conclusion holds, but the stated range is too high for the common-S2 case.",
+      "For a1->S2, reward makes almost no difference (residuals: a1 S2 r +0.548, a1 S2 u +0.561). The 'lower if rewarded' effect only shows up for a2->S2 (+0.28 vs +0.36), and the label states it correctly only for that case.",
+      "Within the a2->S2 cell there is leftover variance: z is about 0.94 when the previous trial was a switch from a1 and about 0.65-0.77 when a2 was repeated (worst-fit windows). Terms for that (trial-2 action, stay, trial-2 state, trial-2 reward) each add only about 0.002-0.004 test R^2, so it is not a large systematic gap.",
+      "Many of the worst misses are windows where the first trial's previous trial lies outside the window (prev_state = -1, D1 actual 0.94 vs predicted 0.36). That is a data artifact, not something the explanation leaves out. A prev_state==-1 term adds nothing (0.7898).",
+      "Misses by phase show no systematic error: mean errors are D1 -0.002, GO +0.001, D2 +0.001, and the largest cell error is 0.018 (GO after a1 S2 r). Continuous add-ons (value, choice logit, ep_trial times prev_state==2) reach at most 0.796 test R^2."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1-only update gate: high (~0.94) after a rare a1->S2 trial, moderate (~0.67-0.75, lower if rewarded) after a common a2->S2 trial, near 0 after S1; near 0 at GO/D2",
+    "better_terms": "(phase == D1) * (prev_state == 2) ;; (phase == D1) * (prev_state == 1) ;; (phase == D1) * last_is(\"a2 S2 r\") ;; (phase == D1) * last_is(\"a2 S2 u\") ;; (phase == D1) * (prev_state == 2) * (prev_action==2) * choice",
+    "better_terms_test_r2_beyond_timing": 0.7963
+  },
+  "final_label": "D1-only update gate: high (~0.94) after a rare a1->S2 trial, moderate (~0.67-0.75, lower if rewarded) after a common a2->S2 trial, near 0 after S1; near 0 at GO/D2"
+}

@@ -1,0 +1,103 @@
+{
+  "label": "GO step, choosing a1 after a rewarded trial, early in the episode (trials < ~40)",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 1) & (ep_trial < 40) & (prev_state != 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO, only when the previous trial was rewarded (reward input at D1 = 1), and almost only when the agent is choosing a1 (99.8% of mass; model_act==1, its own computed choice). It also fires only in the first ~45 trials of the episode: the rate is flat through trials 0-29, drops at 30-49 and is exactly zero from trial 50 on, so the feature also carries an episode-time signal. Magnitude rises with a strong a1 preference (77% of mass where choice logit > 8) and in high-value steps (value 7.7-8.1), and is higher when S1 is the good state and some trials have passed since a reversal. It never fires at D1 or D2, after unrewarded trials, or on a2 choices. Recorded with the agent own choice (model_act) rather than the future action; action==1 gives nearly the same score. Dev: P 0.85, R 0.94, F1 0.89, mass recall 0.99; ep_trial<45 gives R 0.99, P 0.79.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 240,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 1) & (ep_trial < 40) & (prev_state != 2)",
+    "split": "test",
+    "precision": 0.8995916807946703,
+    "recall": 0.9360697691753422,
+    "f1": 0.9174682804471178,
+    "mass_recall": 0.9876642620648212,
+    "correlation": 0.8396375703354346,
+    "n_active": 40247,
+    "n_predicted": 41879,
+    "coverage_by_activation_quartile": [
+      0.7478632478632479,
+      0.9964221824686941,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 240,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 1) & (ep_trial < 40) & (prev_state != 2)",
+    "split": "dev",
+    "precision": 0.8984098939929329,
+    "recall": 0.9373972397987146,
+    "f1": 0.9174895764757517,
+    "mass_recall": 0.9883459017240416,
+    "correlation": 0.8367475092028442,
+    "n_active": 40142,
+    "n_predicted": 41884,
+    "coverage_by_activation_quartile": [
+      0.7545834994021523,
+      0.9951175767237943,
+      0.9999003487792726,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 240,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Systematic false-positive class: the feature never fires at GO after the previous trial went a1 -> S2 (rare) and was rewarded, even when the agent then chooses a1. The original predicate restricted to (prev_action == 1) & (prev_common == 0) predicts 2524 steps with precision 0.0.",
+      "The real condition is that the previous trial REACHED S1 and was rewarded, not just that it was rewarded. After a1 -> S1 common rewarded, precision is 0.91. After a2 -> S1 rare rewarded, followed by a model-based switch to a1, precision is 0.71. After a1 -> S2 rare rewarded, precision is 0. a2 -> S2 rewarded followed by choosing a1 never occurs.",
+      "Replacing prev_reward==1 alone with 'prev_reward==1 & prev_state != 2' raises test F1 from 0.888 to 0.917 (precision 0.845 -> 0.900, recall unchanged at 0.936, mass recall 0.988). prev_state is -1 on the window's first trial, where the agent itself knows the state, so those steps have to be kept: 'prev_state == 1' alone gives F1 0.80 because it drops the rel -3 steps.",
+      "Confirmed claims: it fires only at GO (100% of mass). It never fires after unrewarded trials or at in_rew=1 input steps. 99.8% of the mass is on a1 choices (model_act==1). It is exactly zero from trial 50 on. Magnitude is concentrated where the choice logit is above 8.07 and the value is 7.73-8.10. The remaining FPs are partly in the lower activation quartile and at the ep_trial 40-49 boundary (ep_trial<42 gives a similar F1)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step, choosing a1 after the previous trial reached S1 and was rewarded (common a1->S1 or rare a2->S1), early in the episode (trials < ~40); silent after rewarded rare a1->S2",
+    "better_predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 1) & (ep_trial < 40) & (prev_state != 2)",
+    "better_predicate_test_f1": 0.917
+  },
+  "final_label": "GO step, choosing a1 after the previous trial reached S1 and was rewarded (common a1->S1 or rare a2->S1), early in the episode (trials < ~40); silent after rewarded rare a1->S2",
+  "original_predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 1) & (ep_trial < 40)",
+  "original_test_scores": {
+    "gate": "update",
+    "feature": 240,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 1) & (ep_trial < 40)",
+    "split": "test",
+    "precision": 0.8449927105528765,
+    "recall": 0.9360697691753422,
+    "f1": 0.8882025650697849,
+    "mass_recall": 0.9876642620648212,
+    "correlation": 0.8127718456137208,
+    "n_active": 40247,
+    "n_predicted": 44585,
+    "coverage_by_activation_quartile": [
+      0.7478632478632479,
+      0.9964221824686941,
+      1.0,
+      1.0
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "update",
+    "feature": 240,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 1) & (ep_trial < 40)",
+    "split": "dev",
+    "precision": 0.8473473248063412,
+    "recall": 0.9373972397987146,
+    "f1": 0.8901005322294501,
+    "mass_recall": 0.9883459017240416,
+    "correlation": 0.8116650127353715,
+    "n_active": 40142,
+    "n_predicted": 44408,
+    "coverage_by_activation_quartile": [
+      0.7545834994021523,
+      0.9951175767237943,
+      0.9999003487792726,
+      1.0
+    ]
+  },
+  "predicate_from": "skeptic"
+}

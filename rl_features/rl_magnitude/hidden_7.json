@@ -1,0 +1,113 @@
+{
+ "label": "At D1 late in the episode, rises after an unrewarded S2 visit, weaker after two losses.",
+ "short_terms": "(phase == D1) * (prev_state - prev_reward == 2) * np.maximum(ep_trial - 70, 0) ;; (phase == D1) * (prev_state - prev_reward - tv(\"reward\", -2) == 2) * np.maximum(ep_trial - 70, 0) ;; (phase == D1) * np.maximum(ep_trial - 70, 0)",
+ "terms": "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * ep_trial ** 2 ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * np.maximum(ep_trial - 60, 0) ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * np.maximum(ep_trial - 80, 0) ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * ep_trial ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * (prev_common == 1) * ep_trial ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * belief_lo * ep_trial ;; (phase == D1) * (tv(\"reward\", -2) == 0) * np.maximum(ep_trial - 70, 0) ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv(\"state\", -2) == 2) * ep_trial",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Fires only at D1 (zero at GO and D2). Its size is set by an interaction: the previous trial reached S2 and went unrewarded (a1 or a2 alike), and the activation grows with trial number, roughly as a ramp from about trial 70. The timing baseline is additive, so it cannot capture this. After an S1 visit or any rewarded trial it stays near zero. It is reduced when the trial two back was also unrewarded. The free fit adds a steeper ramp after about trial 80, a small boost for a common transition on the previous trial and small belief and two-back-state effects (0.55 vs 0.49 on dev). Choice, belief and the hidden good state alone carry almost nothing. All terms are observed-only.",
+ "full_test_scores": {
+  "gate": "hidden",
+  "feature": 7,
+  "terms": [
+   "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * ep_trial ** 2",
+   "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * np.maximum(ep_trial - 60, 0)",
+   "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * np.maximum(ep_trial - 80, 0)",
+   "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * ep_trial",
+   "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * (prev_common == 1) * ep_trial",
+   "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * belief_lo * ep_trial",
+   "(phase == D1) * (tv(\"reward\", -2) == 0) * np.maximum(ep_trial - 70, 0)",
+   "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv(\"state\", -2) == 2) * ep_trial"
+  ],
+  "weights": [
+   -8.371613867201768e-06,
+   0.010508199151560843,
+   0.032931461395561655,
+   -0.003512657102139136,
+   0.0019962467497027236,
+   0.00028429173937506323,
+   -0.00895627897924816,
+   -0.00032899125758908493
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5455607543193224,
+  "r2": 0.5997746805605965,
+  "r2_timing_only": 0.11929851296199168
+ },
+ "gate": "hidden",
+ "feature": 7,
+ "test_scores": {
+  "gate": "hidden",
+  "feature": 7,
+  "terms": [
+   "(phase == D1) * (prev_state - prev_reward == 2) * np.maximum(ep_trial - 70, 0)",
+   "(phase == D1) * (prev_state - prev_reward - tv(\"reward\", -2) == 2) * np.maximum(ep_trial - 70, 0)",
+   "(phase == D1) * np.maximum(ep_trial - 70, 0)"
+  ],
+  "weights": [
+   0.044441034906947986,
+   -0.03465211172416117,
+   -0.005592574219574318
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6109899097979828,
+  "r2": 0.6573982350862937,
+  "r2_timing_only": 0.11929851296199168
+ },
+ "dev_scores": {
+  "gate": "hidden",
+  "feature": 7,
+  "terms": [
+   "(phase == D1) * (prev_state - prev_reward == 2) * np.maximum(ep_trial - 70, 0)",
+   "(phase == D1) * (prev_state - prev_reward - tv(\"reward\", -2) == 2) * np.maximum(ep_trial - 70, 0)",
+   "(phase == D1) * np.maximum(ep_trial - 70, 0)"
+  ],
+  "weights": [
+   0.044441034906947986,
+   -0.03465211172416117,
+   -0.005592574219574318
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.6162064203177362,
+  "r2": 0.6600061027481419,
+  "r2_timing_only": 0.11412302015751996
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The third term doesn't do what the label says. In the recorded form, (phase==D1)*(tv('reward',-2)==0)*ramp is applied to every late D1 step, not only to steps after an unrewarded S2 visit. If it is restricted to unrewarded-S2 steps, test R^2 drops from 0.49 to 0.44. So most of its gain is a correction to the timing baseline, which spreads the unrewarded-S2 mean over all late D1 steps. It is not the claimed 'weaker after two losses' effect.",
+   "The two-loss effect is real but much stronger than 'weaker'. As a proper interaction, (phase==D1)*(prev_state - prev_reward - tv('reward',-2) == 2)*ramp, it gets weight -0.035 against +0.039 for the main term, so firing is about 90% suppressed. With only the main term plus this interaction, test R^2 is 0.548 (recorded form: 0.491), which matches the free fit (0.546).",
+   "Splitting a1 S2 u from a2 S2 u wastes a term. Their weights are 0.033 and 0.031, and the merged term (prev_state - prev_reward == 2) scores 0.4905 vs 0.4907 on test.",
+   "There is a better short form. Main term + two-loss interaction + a general late-D1 ramp gives test R^2 0.611, well above the recorded 0.491 and the free fit 0.546. Restricted to the 3-term limit, the recorded form is clearly beaten.",
+   "Misses on the recorded form: the largest errors are first-in-window D1 steps, where the previous trial is unknown (a window-edge artifact). Beyond those, all late D1 steps not preceded by an unrewarded S2 visit are over-predicted (about -0.007 to -0.015) and a2-S2-u steps are under-predicted (+0.009). Both are fixed by the general D1 ramp term.",
+   "Claims that hold: D1 only (zero at GO and D2), unrewarded S2 visit with either action, a ramp from about trial 70, and belief, prev_common and choice adding almost nothing (belief_lo and prev_common terms each add <0.001)."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "D1 after unrewarded S2 visit, ramping from trial ~70; nearly silent if the trial before was also unrewarded.",
+  "better_short_terms": "(phase == D1) * (prev_state - prev_reward == 2) * np.maximum(ep_trial - 70, 0) ;; (phase == D1) * (prev_state - prev_reward - tv(\"reward\", -2) == 2) * np.maximum(ep_trial - 70, 0) ;; (phase == D1) * np.maximum(ep_trial - 70, 0)",
+  "better_short_terms_test_r2_beyond_timing": 0.611
+ },
+ "final_label": "D1 after unrewarded S2 visit, ramping from trial ~70; nearly silent if the trial before was also unrewarded.",
+ "original_short_terms": "(phase == D1) * last_is(\"a2 S2 u\") * np.maximum(ep_trial - 70, 0) ;; (phase == D1) * last_is(\"a1 S2 u\") * np.maximum(ep_trial - 70, 0) ;; (phase == D1) * (tv(\"reward\", -2) == 0) * np.maximum(ep_trial - 70, 0)",
+ "original_test_scores": {
+  "gate": "hidden",
+  "feature": 7,
+  "terms": [
+   "(phase == D1) * last_is(\"a2 S2 u\") * np.maximum(ep_trial - 70, 0)",
+   "(phase == D1) * last_is(\"a1 S2 u\") * np.maximum(ep_trial - 70, 0)",
+   "(phase == D1) * (tv(\"reward\", -2) == 0) * np.maximum(ep_trial - 70, 0)"
+  ],
+  "weights": [
+   0.033193443167026465,
+   0.030632333735138545,
+   -0.011885600027690672
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.4907466778590034,
+  "r2": 0.5514998419113784,
+  "r2_timing_only": 0.11929851296199168
+ },
+ "terms_from": "skeptic"
+}

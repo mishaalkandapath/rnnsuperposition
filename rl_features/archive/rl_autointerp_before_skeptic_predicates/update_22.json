@@ -1,0 +1,64 @@
+{
+  "label": "Late-episode D2: a1 led to S1 (common) after a reward, with no rare transition on the trial before",
+  "predicate": "(phase == D2) & (action == 1) & (common == 1) & (prev_reward == 1) & (ep_trial >= 72) & (tv(\"common\", -1) != 0)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (never D1/GO), and only when the agent chose a1 and reached S1 by the common transition (in_action=1, in_state=1). Nearly every activation also has prev_reward=1, and all of them fall late in the episode (none before trial 60, rate rises from trial 70 on). Excluding steps where the previous trial was rare raises precision. Magnitude builds over runs of consecutive rewarded a1->S1 common trials and is highest at about trials 80-99. Activation tends to be larger when the model value is low to moderate (it never fires at value > 8.1). It does not fire on a2, S2, rare transitions, or D2 steps right after an unrewarded trial (activations there are tiny, about 0.07). The episode-time dependence (ep_trial >= 72) is a learned clock or drift effect, not a task variable. All variables are observable at D2, so no future variables are used. Dev F1 0.82 (P 0.74, R 0.93, mass recall 0.99).",
+  "test_scores": {
+    "gate": "update",
+    "feature": 22,
+    "predicate": "(phase == D2) & (action == 1) & (common == 1) & (prev_reward == 1) & (ep_trial >= 72) & (tv(\"common\", -1) != 0)",
+    "split": "test",
+    "precision": 0.7070135217330277,
+    "recall": 0.9255221412384393,
+    "f1": 0.8016445623342175,
+    "mass_recall": 0.9871468545433326,
+    "correlation": 0.7235663863729054,
+    "n_active": 16327,
+    "n_predicted": 21373,
+    "coverage_by_activation_quartile": [
+      0.7192552670259676,
+      0.9828515433610975,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 22,
+    "predicate": "(phase == D2) & (action == 1) & (common == 1) & (prev_reward == 1) & (ep_trial >= 72) & (tv(\"common\", -1) != 0)",
+    "split": "dev",
+    "precision": 0.7373123330570139,
+    "recall": 0.93016500116198,
+    "f1": 0.8225864460771721,
+    "mass_recall": 0.9869838240527382,
+    "correlation": 0.7450321134212388,
+    "n_active": 17212,
+    "n_predicted": 21714,
+    "coverage_by_activation_quartile": [
+      0.7346037648152451,
+      0.9865210318382523,
+      0.9995352079944225,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 22,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Claims check out on dev. All activation mass is at D2 (D1 and GO have 0 active steps). in_action=1 and in_state=1 cover 100% of mass, with 2 stray a2 steps. Only 2 activations fall on rare transitions. (phase==D2)&(prev_reward==0)&a1&common gives P 0.002 and mass recall 0.000. There are no activations at ep_trial<60 (P=R=0). Dropping the prev-rare exclusion lowers dev F1 from 0.823 to 0.783, as claimed. Test split reproduces: P 0.707, R 0.926, F1 0.802, mass recall 0.987.",
+      "The episode-time dependence is a gradual ramp, not a step at 72. Predicate precision by ep_trial bin: 65-70: 0.11, 70-72: 0.31, 72-75: 0.40, 75-80: 0.52, 80-90: 0.75, 90-100: 0.79. Precision 0.40-0.52 in the 72-80 bins accounts for part of the false positives.",
+      "The other systematic false positives (dev and test) are the first a1->S1 rewarded trial of a run, for example after an unrewarded trial or a rare transition two trials back. The explanation already covers this ('magnitude builds over runs'), but the predicate does not encode it. A streak-aware predicate (require prev trial also a1 common, and its previous reward, when the window has them) raises test precision to 0.76 but lowers recall to 0.85. Test F1 is 0.804, no better than the original. So the remaining gap is graded magnitude, not a missing category.",
+      "The value<8.1 claim adds nothing: adding value<8.1 leaves the predicate unchanged, and no predicate step has value>8.1.",
+      "The feature also leans toward good==1 and start_high==0. This is mostly explained by a1->S1 rewards being frequent when S1 is good: adding good==2 to the predicate still gives P 0.50. It does not change the label.",
+      "No future variables are used. All conditions (this trial's action and transition at D2, prev_reward, prev_common, ep_trial) are observable at D2."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == D2) & (action == 1) & (common == 1) & (prev_reward == 1) & (ep_trial >= 72) & ((rel == -3) | (prev_common==1) & (prev_action==1) & ((rel==-2) | (tv('prev_reward',-1)==1)))",
+    "better_predicate_test_f1": 0.804
+  }
+}

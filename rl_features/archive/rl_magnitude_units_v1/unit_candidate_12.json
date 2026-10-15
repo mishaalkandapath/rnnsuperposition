@@ -1,0 +1,83 @@
+{
+  "label": "late-episode ramp amplified by unrewarded/S2 outcomes at D1, S1 at D2, low value",
+  "terms": "(phase == D1) * (prev_reward == 0) * (prev_state == 2) * np.exp((ep_trial-99)/20.) ;; (phase == D1) * (prev_reward == 0) * np.exp((ep_trial-99)/20.) ;; (phase == D1) * (prev_state == 2) * np.exp((ep_trial-99)/20.) ;; (phase == GO) * (prev_reward == 1) * (prev_state == 1) * np.exp((ep_trial-99)/20.) ;; (phase == D2) * (state == 1) * np.exp((ep_trial-99)/20.) ;; (phase == D2) * (state == 1) * (action == 2) * np.exp((ep_trial-99)/20.) ;; (phase != D1) * np.exp((ep_trial-99)/20.) ;; value * np.exp((ep_trial-99)/20.)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw candidate n of unit 12 sits near -1 for most of the episode and ramps up toward the end (timing alone R^2 0.70). What is left over is mostly history effects whose size grows with that ramp: all terms are multiplied by exp((ep_trial-99)/20), and this is why the score beats the additive ceiling (all = 0.28). At D1 it is higher after an unrewarded trial, most of all an unrewarded S2 trial (a1 S2 u, a2 S2 u), and it is also raised after reaching S2 at all; after S1 trials it is lower. At GO it is higher after a rewarded S1 trial. At D2 it is higher when S1 is reached, more so when S1 came by a rare transition from a2. The model value adds a graded negative effect (lower value means higher n late in the episode). The upcoming choice, policy logit and trials from two back added little. Test R^2 beyond timing 0.56 (dev 0.56). The observed-only version without the value term gets test 0.42. No future variables are used.",
+  "gate": "unit_candidate",
+  "feature": 12,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 12,
+    "terms": [
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 2) * np.exp((ep_trial-99)/20.)",
+      "(phase == D1) * (prev_reward == 0) * np.exp((ep_trial-99)/20.)",
+      "(phase == D1) * (prev_state == 2) * np.exp((ep_trial-99)/20.)",
+      "(phase == GO) * (prev_reward == 1) * (prev_state == 1) * np.exp((ep_trial-99)/20.)",
+      "(phase == D2) * (state == 1) * np.exp((ep_trial-99)/20.)",
+      "(phase == D2) * (state == 1) * (action == 2) * np.exp((ep_trial-99)/20.)",
+      "(phase != D1) * np.exp((ep_trial-99)/20.)",
+      "value * np.exp((ep_trial-99)/20.)"
+    ],
+    "weights": [
+      0.1070673254326669,
+      0.17403832602097233,
+      0.10081132137256937,
+      0.15418177788122384,
+      0.08486715425741703,
+      0.0848999904088554,
+      0.0881323019766848,
+      -0.028650010186758064
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5640995117412646,
+    "r2": 0.868292841008119,
+    "r2_timing_only": 0.6978503981080557
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 12,
+    "terms": [
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 2) * np.exp((ep_trial-99)/20.)",
+      "(phase == D1) * (prev_reward == 0) * np.exp((ep_trial-99)/20.)",
+      "(phase == D1) * (prev_state == 2) * np.exp((ep_trial-99)/20.)",
+      "(phase == GO) * (prev_reward == 1) * (prev_state == 1) * np.exp((ep_trial-99)/20.)",
+      "(phase == D2) * (state == 1) * np.exp((ep_trial-99)/20.)",
+      "(phase == D2) * (state == 1) * (action == 2) * np.exp((ep_trial-99)/20.)",
+      "(phase != D1) * np.exp((ep_trial-99)/20.)",
+      "value * np.exp((ep_trial-99)/20.)"
+    ],
+    "weights": [
+      0.1070673254326669,
+      0.17403832602097233,
+      0.10081132137256937,
+      0.15418177788122384,
+      0.08486715425741703,
+      0.0848999904088554,
+      0.0881323019766848,
+      -0.028650010186758064
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5567590091093813,
+    "r2": 0.8678221358497367,
+    "r2_timing_only": 0.7017923277252087
+  },
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The headline score reproduces: the claimed 8 terms give test R^2 beyond timing 0.564. Without value, test R^2 is 0.421.",
+      "The D1 claim 'higher after an unrewarded trial' is too broad. The D1 residual after a1 S1 u is -0.013, which is lower, and a2 S1 u is only +0.007. The raise is specific to S2-unrewarded trials (a1 S2 u +0.070, a2 S2 u +0.066). Scores agree: D1*S2u*ramp alone gets 0.237 test, D1*unrewarded alone 0.166. After the claimed terms are fitted, misses still over-predict D1 after a1 S1 u (-0.023).",
+      "The claim 'reaching S2 raises it in general' at D1 is false. D1 residual after a1 S2 r is -0.003 and after a2 S2 r is -0.006. The D1*(prev_state==2)*ramp term alone gets only 0.073 test. Its fitted weight is just making up for the overly broad unrewarded term.",
+      "The claimed value effect (lower value means higher n) does not hold on its own. value*ramp alone gives test R^2 0.0025. value per phase gives 0.0024. The value-decile residuals are not monotonic: decile 0 is +0.012/+0.020 and deciles 7-8 at D1 are positive. The value term earns its 0.14 only alongside the other terms, partly because the term set has no plain ramp: (phase != D1)*ramp replaces one. Adding a plain ramp term to the 7 non-value terms gives 0.487, so value's real added share is about 0.08. Value is also a model output, not an observed cue.",
+      "The ramp shape is not tuned. exp((t-99)/10) beats /20: 0.565 vs 0.542 with the same corrected term set.",
+      "About 44% of the variance beyond timing is still unexplained, and the worst-fit windows are systematic. In late-episode streaks of repeated a1 -> S1 trials (t93-99), GO and D2 are under-predicted by about 0.15-0.25 in absolute value (e.g. D2 S1c actual -0.34 vs predicted -0.61). Repeat-S1 streak, prev-action, good-state and policy-logit terms did not close this gap (+0.00 to +0.01)."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "late-episode ramp; within it, higher at D1 after S2-unrewarded trials (lower after S1-rewarded), at GO after S1-rewarded, at D2 when S1 is reached (more if by rare transition from a2); value adds a small correction",
+    "better_terms": "(phase == D1) * (prev_reward == 0) * (prev_state == 2) * np.exp((ep_trial-99)/10.) ;; (phase == D1) * (prev_reward == 1) * (prev_state == 1) * np.exp((ep_trial-99)/10.) ;; (phase == GO) * (prev_reward == 1) * (prev_state == 1) * np.exp((ep_trial-99)/10.) ;; (phase == D2) * (state == 1) * np.exp((ep_trial-99)/10.) ;; (phase == D2) * (state == 1) * (action == 2) * np.exp((ep_trial-99)/10.) ;; np.exp((ep_trial-99)/10.) ;; value * np.exp((ep_trial-99)/10.) ;; (phase == GO) * choice * np.exp((ep_trial-99)/10.)    [test 0.575, dev for the first 7 terms 0.560; the first 6 terms (observed-only, no value/choice) give 0.428 test]",
+    "better_terms_test_r2_beyond_timing": 0.575
+  },
+  "final_label": "late-episode ramp; within it, higher at D1 after S2-unrewarded trials (lower after S1-rewarded), at GO after S1-rewarded, at D2 when S1 is reached (more if by rare transition from a2); value adds a small correction"
+}

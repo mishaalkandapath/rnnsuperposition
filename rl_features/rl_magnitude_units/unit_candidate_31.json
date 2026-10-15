@@ -1,0 +1,91 @@
+{
+  "label": "Signed state code: + at S1 and - at S2 at D2; at D1, high after S2 or no reward.",
+  "short_terms": "(phase == D2) * (3 - 2 * state) ;; (phase == D1) * (in_rew == 1) ;; (phase == D1) * (prev_state == S2)",
+  "terms": "(phase == D2) * (3 - 2 * state) ;; (phase == D1) * (in_rew == 1) * (prev_state == S1) ;; (phase == D1) * (in_rew == 1) * (prev_state == S2) ;; (phase == D1) * (in_rew == 0) * (prev_state == S1) ;; (phase == D1) * (prev_action == 2) ;; (phase == GO) * (prev_reward == 1) ;; (phase == GO) * (prev_state == S2) ;; (phase == D1) * (ep_trial == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "The raw candidate value n of unit 31 mostly encodes the state the agent sees. At D2 it is about +0.85 when S1 is shown and -0.85 when S2 is shown, and this one term carries most of the variance. At the next D1 the sign flips relative to the last state: the value is high (about +0.7) after reaching S2 or after no reward, and low or negative after a rewarded trial, most negative after S1 rewarded. GO stays near its baseline with little history dependence. The free fit adds the reward x state interaction at D1, a D1 offset for a2 choices, small GO terms and a first-trial offset, but it only gains about 0.005 R^2 over the short form. Belief log-odds adds nothing once state and reward are in. No future variables are used.",
+  "full_test_scores": {
+    "gate": "unit_candidate",
+    "feature": 31,
+    "terms": [
+      "(phase == D2) * (3 - 2 * state)",
+      "(phase == D1) * (in_rew == 1) * (prev_state == S1)",
+      "(phase == D1) * (in_rew == 1) * (prev_state == S2)",
+      "(phase == D1) * (in_rew == 0) * (prev_state == S1)",
+      "(phase == D1) * (prev_action == 2)",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == GO) * (prev_state == S2)",
+      "(phase == D1) * (ep_trial == 0)"
+    ],
+    "weights": [
+      0.7900472253182077,
+      -0.655228219315812,
+      -0.2548709424522103,
+      -0.1648711228144084,
+      0.4629849879487235,
+      0.08442133893705041,
+      -0.05380807684083087,
+      0.17968185896729438
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.9027002923697673,
+    "r2": 0.9087835797996655,
+    "r2_timing_only": 0.06252112753531103
+  },
+  "gate": "unit_candidate",
+  "feature": 31,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 31,
+    "terms": [
+      "(phase == D2) * (3 - 2 * state)",
+      "(phase == D1) * (in_rew == 1)",
+      "(phase == D1) * (prev_state == S2)"
+    ],
+    "weights": [
+      0.7904182036498911,
+      -0.440819819086173,
+      0.5636257334718866
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8980133046459723,
+    "r2": 0.9043896278331064,
+    "r2_timing_only": 0.06252112753531103
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 31,
+    "terms": [
+      "(phase == D2) * (3 - 2 * state)",
+      "(phase == D1) * (in_rew == 1)",
+      "(phase == D1) * (prev_state == S2)"
+    ],
+    "weights": [
+      0.7904182036498911,
+      -0.440819819086173,
+      0.5636257334718866
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8982459742762426,
+    "r2": 0.9045973220417153,
+    "r2_timing_only": 0.06241863867593189
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The short form holds up. It gets test R^2 0.898 beyond timing, against a 0.96 ceiling. The D2 state term alone gives 0.744, so it does most of the work. The two D1 terms each pull their weight: swapping prev_state==S2 for prev_action==2 drops it to 0.868, and using belief_lo at D1 in place of the state term drops it to 0.836.",
+      "The label's 'at D1, high after S2 or no reward' reads as an OR, which overstates things. The fit is additive: in_rew==1 has weight -0.44 and prev_state==S2 has weight +0.56. The profile residuals at D1 are: a1 S1 u -0.05, a2 S1 u +0.24, a1 S2 r -0.16, a2 S2 r +0.21, S2 u +0.43/+0.67, S1 r -0.60/-0.36. So no reward after S1 does not make it high (a1 S1 u is about baseline), and S2 with reward is only middling. A better wording is 'raised after reaching S2, lowered after reward'. An interaction form (rewarded at S1 low, unrewarded at S2 high) scores the same, 0.8999 test.",
+      "The misses show no large systematic errors. Mean error by phase is at most 0.03. The largest cells are D1 after a1 S2 r (-0.31, over-predicted) and GO after the previous reward (about +0.2 when rewarded, -0.25 when not), which matches the free fit's small GO terms. The 'D1 after ?' under-prediction (+0.26) comes from the first trial in a window, where prev_state is unknown, so it is a data artifact.",
+      "The D2 magnitude claim checks out: the residual is +0.85/+0.75 at S1 and -0.69/-0.78 at S2. No future variables are used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Signed state code at D2 (+S1, -S2); at D1, raised after reaching S2, lowered after reward.",
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "Signed state code at D2 (+S1, -S2); at D1, raised after reaching S2, lowered after reward."
+}

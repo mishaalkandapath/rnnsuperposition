@@ -1,0 +1,65 @@
+{
+  "label": "D1 after a2 S1 unrewarded then a2 S2 rewarded, scaled by value",
+  "terms": "(phase == D1) * last_is(\"a2 S2 r\") * (tv(\"reward\", -2) == 0) * (tv(\"action\", -2) == 2) * (tv(\"state\", -2) == 1) ;; (phase == D1) * last_is(\"a2 S2 r\") * (tv(\"reward\", -2) == 0) * (tv(\"action\", -2) == 2) * (tv(\"state\", -2) == 1) * value ;; (phase == D1) * last_is(\"a2 S2 r\") * (tv(\"reward\", -2) == -9) ;; (phase == D1) * (in_rew == 1) * (trial == 0)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Sparse D1-only feature (zero at GO and D2). Its magnitude is driven by a two-trial history: the trial before last was a2 -> S1 (rare) unrewarded and the last trial was a2 -> S2 (common) rewarded. That conjunction alone takes dev R^2 beyond timing from 0.08 (last trial a2 S2 r only) to 0.42; within it the activation grows with the model value output (dev 0.49). Other histories before a2 S2 r add little: a2 S1 rewarded, a1 unrewarded, a2 S2 unrewarded before it, or the trial three back, each adds <= 0.01. Most remaining error is large firing on the first trial of a window, where the earlier history is not visible; generic terms for that case give only about 0.02. Observed-only alternative using ep_dec in place of value: dev 0.46, test 0.44. All terms are observed at D1 (value is the model internal output). Test R^2 beyond timing is printed by record; the profile all ceiling is 0.37, which the conjunction exceeds.",
+  "gate": "hidden",
+  "feature": 164,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 164,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S2 r\") * (tv(\"reward\", -2) == 0) * (tv(\"action\", -2) == 2) * (tv(\"state\", -2) == 1)",
+      "(phase == D1) * last_is(\"a2 S2 r\") * (tv(\"reward\", -2) == 0) * (tv(\"action\", -2) == 2) * (tv(\"state\", -2) == 1) * value",
+      "(phase == D1) * last_is(\"a2 S2 r\") * (tv(\"reward\", -2) == -9)",
+      "(phase == D1) * (in_rew == 1) * (trial == 0)"
+    ],
+    "weights": [
+      -0.7664831928900888,
+      0.2107033057123142,
+      0.11136018246143342,
+      0.039998292852738246
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.47435703429391707,
+    "r2": 0.4988810307174594,
+    "r2_timing_only": 0.0466552356324218
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 164,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S2 r\") * (tv(\"reward\", -2) == 0) * (tv(\"action\", -2) == 2) * (tv(\"state\", -2) == 1)",
+      "(phase == D1) * last_is(\"a2 S2 r\") * (tv(\"reward\", -2) == 0) * (tv(\"action\", -2) == 2) * (tv(\"state\", -2) == 1) * value",
+      "(phase == D1) * last_is(\"a2 S2 r\") * (tv(\"reward\", -2) == -9)",
+      "(phase == D1) * (in_rew == 1) * (trial == 0)"
+    ],
+    "weights": [
+      -0.7664831928900888,
+      0.2107033057123142,
+      0.11136018246143342,
+      0.039998292852738246
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.4911911046635872,
+    "r2": 0.5158432845749186,
+    "r2_timing_only": 0.048450764397568014
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims hold. GO and D2 baselines are exactly 0, so the feature is D1-only. Within D1 after last = a2 S2 r, I split by the trial before (8 cases, dev). Only a2 S1 u matters: weight 0.68, R^2 beyond timing 0.39. All other cases score 0.002 or less; a2 S1 r has weight 0.14 and a2 S2 r has -0.02, so 'stays near zero if the trial before was rewarded' is correct.",
+      "The value scaling is real: on test, the pattern alone scores 0.411, pattern plus value 0.474, and pattern plus ep_dec 0.442. Inside the pattern, trial three back (action, reward or state), since_rev, good and ep_trial<5 each add 0.001 or less, which matches the 'add 0.01 or less' claim.",
+      "The remaining error is concentrated in windows whose history starts outside the window: the worst misses all fire about 1.3-1.4 at rel -3 or trial 0, where the model predicts about 0.08. The submitted terms barely cover this. It can be partly recovered with the model's policy logit at D1. Adding the choice and |choice| terms for trial-0 and unknown-trial-before windows, plus |choice| inside the pattern, raises test R^2 from 0.474 to 0.557. These terms use model outputs, so they are not observed-only.",
+      "Small issue: 'scaled by value' is a positive slope on top of a negative intercept (-0.77 + 0.21*value). The label is fine, but the magnitude also tracks |choice| at D1 (adds 0.025 inside the pattern), which the label does not mention. Misses show no systematic phase-by-previous-trial error beyond about 0.03."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a2 S1 unrewarded then a2 S2 rewarded, scaled by value (and policy confidence)",
+    "better_terms": "K = (phase == D1) * last_is('a2 S2 r') * (tv('reward', -2) == 0) * (tv('action', -2) == 2) * (tv('state', -2) == 1); U = (phase == D1) * (trial == 0) * (in_rew == 1); terms: K ;; K * value ;; K * np.abs(choice) ;; (phase == D1) * last_is('a2 S2 r') * (tv('reward', -2) == -9) ;; U ;; U * choice ;; U * np.abs(choice) ;; (phase == D1) * last_is('a2 S2 r') * (tv('reward', -2) == -9) * choice",
+    "better_terms_test_r2_beyond_timing": 0.557
+  },
+  "final_label": "D1 after a2 S1 unrewarded then a2 S2 rewarded, scaled by value (and policy confidence)"
+}

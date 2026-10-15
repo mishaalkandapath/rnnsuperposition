@@ -1,0 +1,80 @@
+{
+  "label": "Fires strongly at D1 right after an a1 choice that rarely led to S2.",
+  "short_terms": "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+  "terms": "(phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * belief_lo ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * prev_reward ;; (phase == D1) * belief_lo ;; (phase == D1) * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 2) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * (tv(\"state\", -2) == 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Active only at D1 (zero at GO and D2). Its magnitude is driven almost entirely by the previous trial being a1 -> S2 (a rare transition): residual about +2.3 to +2.6 vs about -0.35 for every other previous-trial pattern, whether it was rewarded or not. A single indicator for this gets dev R^2 beyond timing 0.68. The free fit (0.70 dev) adds only small refinements: slightly higher when the a1->S2 trial was rewarded, when the belief favours S1, and when the trial before also reached S2. The belief-decile trend in the profile is mostly a by-product of the a1->S2 history. No future, hidden or model-output variables are needed.",
+  "full_test_scores": {
+    "gate": "reset",
+    "feature": 18,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * belief_lo",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * prev_reward",
+      "(phase == D1) * belief_lo",
+      "(phase == D1) * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 2)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (tv(\"state\", -2) == 2)"
+    ],
+    "weights": [
+      1.6847361075511662,
+      0.2736363416248375,
+      0.5641947978625228,
+      0.03116454052686261,
+      -0.29927795684692177,
+      0.2739286121891221
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6862253587826117,
+    "r2": 0.7155014938086033,
+    "r2_timing_only": 0.09330306270897304
+  },
+  "gate": "reset",
+  "feature": 18,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 18,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)"
+    ],
+    "weights": [
+      2.621629659013075
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6724553744304835,
+    "r2": 0.7030162911699831,
+    "r2_timing_only": 0.09330306270897304
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 18,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)"
+    ],
+    "weights": [
+      2.621629659013075
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6809478932757456,
+    "r2": 0.7108249614301552,
+    "r2_timing_only": 0.09364322480475351
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The explanation says the feature is 'a bit higher when the a1 -> S2 trial was rewarded', but the data point the other way. In the profile, the residual after a1 S2 u is +2.61 and after a1 S2 r is +2.34. Adding (phase == D1) * last_is('a1 S2 u') to the short form gives that term a weight of +0.27 (test 0.674). The positive prev_reward weight in the free fit most likely comes from collinearity with the belief_lo term, not from a real reward effect. The label does not depend on this claim, but the explanation should be fixed: the feature is slightly higher after the unrewarded a1 -> S2 trial.",
+      "The label's wording 'an a1 choice that rarely led to S2' is ambiguous. It means the previous trial was a1 with a rare transition to S2, regardless of reward.",
+      "The short form scores 0.672 on test, against 0.74 for the phase-specific previous-trial table and 0.76 for all observed cues, so some within-cell variance is unexplained. No refinement that passes --short closes much of that gap. Tested on test: + (phase == D1) * (prev_state == 2): 0.690; + (prev_state == 2) * ep_trial: 0.692; + ep_trial and belief_lo interactions: 0.698; + (phase == D1) * belief_lo: 0.679; + (phase == D1) * last_is('a1 S2 u'): 0.674; + (phase == D1) * (prev_action == 1) * (tv('state', -2) == 2): 0.675; + an unknown-previous-trial term: 0.672. The +0.02 from the prev_state == 2 term comes from a fitted correction whose sign (a negative weight for a2 -> S2) goes against the profile, where a2 S2 sits slightly above the S1 cells. So it is curve fitting, not a better description.",
+      "Misses show no large systematic error class. Every non-a1 S2 pattern at D1 is over-predicted by about 0.25 to 0.29, which is the timing baseline absorbing the mean, not a missing cue. The worst-fit windows are the first trial of a window (previous trial outside the window) and a few a1 -> S2 trials near the end of an episode (t96 to t99) where the feature fires weakly (0.2 to 0.7). That late-episode weakening is real but small: a (prev_state == 2) * (ep_trial >= 95) term adds only +0.006.",
+      "Checked and confirmed: the feature is exactly zero at GO and D2 in the timing baseline and in every residual table, and the single indicator scores 0.6725 on test, matching the reported value."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Fires only at D1 after a previous a1 choice that went rare to S2, rewarded or not.",
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "Fires only at D1 after a previous a1 choice that went rare to S2, rewarded or not."
+}

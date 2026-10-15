@@ -1,0 +1,69 @@
+{
+  "label": "D1 after a2->S2, scaled by how far the D1 policy leans to a1",
+  "terms": "(phase == D1) ;; (phase == D1) * (prev_action == 2) * (prev_state == 2) ;; (phase == D1) * (prev_action == 2) * (prev_state == 2) * choice ;; (phase == D1) * (prev_action == 2) * (prev_state == 2) * choice**2 ;; (phase == D1) * (prev_action == 2) * (prev_state == 2) * (prev_reward == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (GO/D2 are always 0). Its size depends on the previous trial being a2 -> S2 (common): after every other previous-trial pattern it is about 0. Within a2->S2 trials the magnitude is mostly set by the model policy logit at D1 (choice = logit a1 - logit a2), which raises it roughly linearly with slight concavity: it is larger when the agent already leans toward switching to a1. Being unrewarded adds a small extra amount; most of the unrewarded-vs-rewarded difference (a2 S2 u +0.27 vs a2 S2 r +0.03 residual) runs through the policy term. Indicators for the previous trial alone (last_is a2 S2 u / r, plus trial-before reward) reach only ~0.29 dev R^2 beyond timing; adding the D1 policy logit after a2->S2 brings dev to ~0.67 (test 0.67 for the 4-term version). The value head adds nothing, and nor do hidden good state, time since reversal, or future variables. Uses a model-internal quantity (choice) but no future variables.",
+  "gate": "reset",
+  "feature": 4,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 4,
+    "terms": [
+      "(phase == D1)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 2)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 2) * choice",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 2) * choice**2",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 2) * (prev_reward == 0)"
+    ],
+    "weights": [
+      -0.04386297470369995,
+      0.4797633474706359,
+      0.1299908127694591,
+      -0.015488893761015919,
+      0.05526916395551825
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6707149566453336,
+    "r2": 0.6988207087624895,
+    "r2_timing_only": 0.08535386797657751
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 4,
+    "terms": [
+      "(phase == D1)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 2)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 2) * choice",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 2) * choice**2",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 2) * (prev_reward == 0)"
+    ],
+    "weights": [
+      -0.04386297470369995,
+      0.4797633474706359,
+      0.1299908127694591,
+      -0.015488893761015919,
+      0.05526916395551825
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6691908898613946,
+    "r2": 0.6957049229097862,
+    "r2_timing_only": 0.08014904135282908
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the 'unrewarded adds a small extra amount' claim depends on how choice is shaped. With choice clipped to [-3,3] in place of choice + choice**2, the prev_reward==0 weight falls to +0.001 (test 0.663). So the reward effect runs almost entirely through the policy logit, not a separate small amount.",
+      "Minor systematic miss: on a window's first trial the previous trial is outside the window (prev_action = -1, the '?' cell), and these steps are under-predicted by up to ~1.0 (misses: D1 after ? +0.038 mean error). Adding (D1)*(prev_action==-1) and *choice raises test R^2 from 0.671 to 0.685. This comes from the windowing, not a missing mechanism.",
+      "Minor: in the last few episode trials (t96-99) a2->S2 cases are over-predicted (predicted ~0.75, actual ~0). But ep_trial>=95 and ep_trial interactions add only <=0.002 test R^2.",
+      "Checks that held up: test R^2 0.671 reproduced (dev 0.669). a2->S2 indicator alone gives 0.117; plus prev_reward==0 gives 0.230; indicators plus the reward two trials back give 0.286 (matches the claimed ~0.29); indicator + choice gives 0.605; + choice**2 gives 0.644. Binning choice gives monotone weights (-0.03, 0.32, 0.54, 0.53, 0.62, 0.74), so 'larger when leaning to a1, concave' holds. GO/D2 baseline and residuals are all 0. value, prev_common and the trial-before a2->S2 add <=0.002."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a2->S2 (common), scaled concavely by how far the D1 policy leans to a1 (the unrewarded-vs-rewarded difference runs mostly through the policy)",
+    "better_terms": "(phase == D1) ;; (phase == D1) * (prev_action == 2) * (prev_state == 2) ;; (phase == D1) * (prev_action == 2) * (prev_state == 2) * choice ;; (phase == D1) * (prev_action == 2) * (prev_state == 2) * choice**2 ;; (phase == D1) * (prev_action == 2) * (prev_state == 2) * (prev_reward == 0) ;; (phase == D1) * (prev_action == -1) ;; (phase == D1) * (prev_action == -1) * choice",
+    "better_terms_test_r2_beyond_timing": 0.6848
+  },
+  "final_label": "D1 after a2->S2 (common), scaled concavely by how far the D1 policy leans to a1 (the unrewarded-vs-rewarded difference runs mostly through the policy)"
+}

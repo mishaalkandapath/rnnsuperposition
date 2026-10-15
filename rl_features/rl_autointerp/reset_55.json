@@ -1,0 +1,103 @@
+{
+  "label": "GO step after a rewarded trial, when the agent is about to choose a1",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (action == 1) & (prev_state != 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO (never at D1 or D2). It needs the previous trial to have been rewarded (prev_reward==1: 100% of mass) and the agent to be about to choose a1 (action==1 at GO is the agent own upcoming choice, which it computes; model_act==1 gives the same result, dev F1 0.926; choice-logit top bin rate 0.74). Dev F1 0.927, mass recall 0.99. It does not fire after unrewarded trials or when a2 is chosen; the only exceptions are a few weak a2 cases. Magnitude, judged from example windows: largest (about 1.0) on the first rewarded a1 GO after unrewarded trials, and it decays over a run of consecutive rewarded a1 trials. Most false positives are late in long reward streaks, where it drops to zero. The predicate uses only the observed reward and the agent own choice, with no future random outcome.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 55,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (action == 1) & (prev_state != 2)",
+    "split": "test",
+    "precision": 0.9313877200126691,
+    "recall": 0.9721180637544274,
+    "f1": 0.9513171272760884,
+    "mass_recall": 0.9847847935321316,
+    "correlation": 0.8763403408423273,
+    "n_active": 105875,
+    "n_predicted": 110505,
+    "coverage_by_activation_quartile": [
+      0.9241376704824512,
+      0.9768030526276021,
+      0.9933884921984208,
+      0.9941438718452471
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 55,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (action == 1) & (prev_state != 2)",
+    "split": "dev",
+    "precision": 0.9324590522744683,
+    "recall": 0.9773737489604543,
+    "f1": 0.9543882575315613,
+    "mass_recall": 0.9880034996481954,
+    "correlation": 0.8793383656394258,
+    "n_active": 104613,
+    "n_predicted": 109652,
+    "coverage_by_activation_quartile": [
+      0.9377533073334863,
+      0.9816464650326923,
+      0.995067487477536,
+      0.9950292509463542
+    ]
+  },
+  "gate": "reset",
+  "feature": 55,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Systematic false-positive class: GO steps where the agent chooses a1 after the previous trial was rewarded but reached S2 (an a1 rare transition, prev_state==2). The predicate (phase==GO)&(prev_reward==1)&(action==1)&(prev_state==2) covers 6357 dev steps with precision 0.0, so the feature never fires there. That is about 45% of the original predicate's false positives, not late-streak decay as the explanation says. Every one of the first several false-positive windows in the test misses output had a rare-rewarded (a1 -> S2R) previous trial.",
+      "The label 'GO step after a rewarded trial' overclaims. The feature needs the previous reward to have come from S1 (prev_state != 2). Adding that condition raises dev precision from 0.88 to 0.932 and dev F1 from 0.927 to 0.954, while recall and mass recall stay the same (0.977 / 0.988).",
+      "Claims that hold: activation is GO-only (D1 and D2 share 0.000); all activation mass falls on prev_reward==1; 98.8% of mass falls on action==1; using model_act==1 or choice>0 gives about the same result. Original test scores reproduce (P 0.879, R 0.972, F1 0.923).",
+      "Remaining false positives after the fix are mostly long rewarded a1 streaks and rel -3 trials, where the previous trial's state is outside the window. The few misses are weak a2 GO steps whose previous trial was a2 -> S1 rewarded (rare), which fits a feature that tracks 'reward at S1'. Note that (prev_reward==1)&(action==2)&(prev_state==1) alone is weak (P 0.18, mass 1%)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step where the agent is about to choose a1 after the previous trial was rewarded at S1 (silent when the previous reward came from S2 via a rare a1 transition)",
+    "better_predicate": "(phase == GO) & (prev_reward == 1) & (action == 1) & (prev_state != 2)",
+    "better_predicate_test_f1": 0.951
+  },
+  "final_label": "GO step where the agent is about to choose a1 after the previous trial was rewarded at S1 (silent when the previous reward came from S2 via a rare a1 transition)",
+  "original_predicate": "(phase == GO) & (prev_reward == 1) & (action == 1)",
+  "original_test_scores": {
+    "gate": "reset",
+    "feature": 55,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (action == 1)",
+    "split": "test",
+    "precision": 0.8787224233317397,
+    "recall": 0.9721180637544274,
+    "f1": 0.9230638152849961,
+    "mass_recall": 0.9847847076912724,
+    "correlation": 0.8484918521309469,
+    "n_active": 105875,
+    "n_predicted": 117128,
+    "coverage_by_activation_quartile": [
+      0.9241376704824512,
+      0.9768030526276021,
+      0.9933884921984208,
+      0.9941438718452471
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "reset",
+    "feature": 55,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (action == 1)",
+    "split": "dev",
+    "precision": 0.8813626528976201,
+    "recall": 0.9773737489604543,
+    "f1": 0.9268885242632194,
+    "mass_recall": 0.9880035864278075,
+    "correlation": 0.8521985499532985,
+    "n_active": 104613,
+    "n_predicted": 116009,
+    "coverage_by_activation_quartile": [
+      0.9377533073334863,
+      0.9816464650326923,
+      0.995067487477536,
+      0.9950292509463542
+    ]
+  },
+  "predicate_from": "skeptic"
+}

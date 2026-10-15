@@ -1,0 +1,64 @@
+{
+  "label": "D2 after choosing a2 (repeated a2), early in the episode only",
+  "predicate": "(phase == D2) & (action == 2) & (ep_trial < 25) & (prev_action != 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (100% of mass), only when this trial chose a2 (in_action == 2 at D2, observed), and almost only when the previous choice was also a2 (stay; switches into a2 give ~0 activation). Strongly restricted to the first ~30 trials of the episode: trials 0-19 rate ~13%, 20-29 6.7%, nothing after trial 40, so it acts like an early-episode a2-streak detector (likely an untrained-transient or slow drift in the hidden state). Phase+action alone gives F1 0.28; adding ep_trial < 25 and prev_action != 1 gives dev F1 0.81, mass recall 0.97. Magnitude is larger when the reached state is S2 via a common transition (S2c cells ~0.7-1.0 of max vs S1 rare ~0.5; in_state == S2 holds 86% of mass) and is associated with high value and a strongly negative choice logit (a2 preferred). Does not fire at D1 or GO, after a1 choices, or late in the episode. All predicate variables are observed at D2 (ep_trial is a time-in-episode quantity the agent can implicitly track). Remaining false positives are a2-stay D2 steps in the same early windows where the unit stays just below threshold.",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 8,
+    "predicate": "(phase == D2) & (action == 2) & (ep_trial < 25) & (prev_action != 1)",
+    "split": "test",
+    "precision": 0.7130087310019865,
+    "recall": 0.9154779204602747,
+    "f1": 0.8016568631270046,
+    "mass_recall": 0.973212817462702,
+    "correlation": 0.73242706249006,
+    "n_active": 33719,
+    "n_predicted": 43294,
+    "coverage_by_activation_quartile": [
+      0.7397390272835113,
+      0.9307236061684461,
+      0.9914590747330961,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 8,
+    "predicate": "(phase == D2) & (action == 2) & (ep_trial < 25) & (prev_action != 1)",
+    "split": "dev",
+    "precision": 0.7299605942678121,
+    "recall": 0.9098785770943926,
+    "f1": 0.8100495688191757,
+    "mass_recall": 0.9709331680978524,
+    "correlation": 0.7416284427320945,
+    "n_active": 32778,
+    "n_predicted": 40857,
+    "coverage_by_activation_quartile": [
+      0.724222086638194,
+      0.924954240390482,
+      0.9906028801562119,
+      0.9997559189650964
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 8,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The factual claims check out. Phase: 100% of activation mass is at D2, with zero activity at D1 or GO. in_action == 2 holds 100% of mass. Phase plus action alone gives dev F1 0.275, matching the reported 0.28. The rate is 12.9% in trials 0-9, 13.2% in 10-19, 6.7% in 20-29, 0.4% in 30-39 and 0 from trial 40 on. in_state == S2 holds 86.3% of mass. Switching into a2 (prev_action == 1) has precision 0.005. The reported scores reproduce: dev P0.730 R0.910 F0.810 M0.971, test P0.713 R0.915 F0.802 M0.973.",
+      "The ep_trial < 25 cutoff is really a soft ramp. Precision for a2 stays at D2 falls by 5-trial bin: 0.86 (trials 5-9), 0.83, 0.75, 0.56 (trials 20-24), 0.24 (25-29), 0.04 (30-34). The 'early in the episode' wording is right, but the boundary is not sharp.",
+      "Systematic false positives (moderate): a2 stays in early trials while S1 is the good state. Adding good == 1 to the predicate gives precision 0.33 (n=5148), against 0.78 for good == 2. Episodes that start with S1 good (start_high == 1) carry only 12.5% of the mass, with precision 0.58 against 0.77 when S2 starts good. So the unit is suppressed when a2 is not the favored or good action, which the label does not mention. The explanation does note that activity goes with a strongly negative choice logit.",
+      "That gap can be closed with the agent's own observed choice logit, without the hidden good state. Adding choice < -2 raises test F1 from 0.802 to 0.834, with mass recall 0.955. Using the hidden variable good != 1 instead gives test F1 0.812. The gain is modest, so it refines the label rather than refuting it.",
+      "In-state magnitude claim: S2 reached with the predicate gives precision 0.80, and S1 (rare) gives 0.55. This is consistent with larger activation after common S2 outcomes, as claimed.",
+      "Test misses hold only 2.7% of the activation mass and are scattered small activations. The predicate uses no future variables."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == D2) & (action == 2) & (prev_action != 1) & (ep_trial < 25) & (choice < -2)",
+    "better_predicate_test_f1": 0.834
+  }
+}

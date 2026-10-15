@@ -1,0 +1,65 @@
+{
+  "label": "D2 after a2 led commonly to S2, following an unrewarded (esp. rare) trial, late in the episode",
+  "predicate": "(phase == D2) & (action == 2) & (state == 2) & (prev_reward == 0) & (ep_trial >= 70) & (prev_common != 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (the reached-state step), only when the agent chose a2 and reached S2 via a common transition, and almost only when the previous trial was unrewarded (prev_reward==0 carries 99.6% of mass). It is gated by episode time: essentially silent before trial ~55, and the rate climbs steadily to trial 99 (it also tracks low model value, which falls late in the episode). It is strongest when the previous trial was a rare transition (or the history is outside the window); after a common-unrewarded previous trial it fires weakly or not at all. All variables are observed at D2. Never fires at D1/GO, on S1 or a1, or on rare transitions. The simpler predicate (D2 & a2 & S2 & prev_reward==0 & ep_trial>=70) gives dev F1 0.70 / mass recall 0.98; adding prev_common!=1 raises dev F1 to 0.78 (precision 0.81, mass recall 0.93). The misses are low-magnitude activations after common-unrewarded trials or slightly earlier in the episode.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 2,
+    "predicate": "(phase == D2) & (action == 2) & (state == 2) & (prev_reward == 0) & (ep_trial >= 70) & (prev_common != 1)",
+    "split": "test",
+    "precision": 0.7990799079907991,
+    "recall": 0.7280845635137598,
+    "f1": 0.7619320078195776,
+    "mass_recall": 0.9193707764605824,
+    "correlation": 0.7626163226360849,
+    "n_active": 10974,
+    "n_predicted": 9999,
+    "coverage_by_activation_quartile": [
+      0.37900874635568516,
+      0.5550291545189504,
+      0.978855267954794,
+      0.999635435654393
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 2,
+    "predicate": "(phase == D2) & (action == 2) & (state == 2) & (prev_reward == 0) & (ep_trial >= 70) & (prev_common != 1)",
+    "split": "dev",
+    "precision": 0.8138144329896907,
+    "recall": 0.7482464454976303,
+    "f1": 0.7796543209876543,
+    "mass_recall": 0.9274849875062278,
+    "correlation": 0.773562860647363,
+    "n_active": 10550,
+    "n_predicted": 9700,
+    "coverage_by_activation_quartile": [
+      0.3889310083396513,
+      0.6254738438210766,
+      0.9791429654910884,
+      0.999620781190747
+    ]
+  },
+  "gate": "update",
+  "feature": 2,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core facts hold. Every activation is at D2 (D1 and GO are 0/380619 each), all of it on action==2, state==2 and common==1. prev_reward==0 carries 99.6% of the mass. Activity before trial 55 is about 0 (mass recall 0.0001). No future variables are used.",
+      "The claim that it 'fires hardest when the previous trial falls outside the window' is a data artifact, not a property of the feature. prev_common==-1 only happens on rel -3 rows, where the agent did see the previous trial but the variables do not record it. That subset mixes rare and common histories, so its precision is 0.58, against 0.91 for prev_common==0. The test-split false positives are almost all rel -3 D2 rows (step 2). So keeping -1 in 'prev_common != 1' buys recall from rows of unknown history; it is not an observed condition.",
+      "The label 'following an unrewarded (esp. rare) trial' is too broad. The firing is specific to the previous trial being a2 going rarely to S1 and going unrewarded, so this trial repeats a2. prev_action==2 holds 81% of the mass and prev_action==1 only 1.2%. D2 & a2 & S2 & prev_reward==0 & ep>=70 & prev_common==0 & prev_action==1 gives 39 predicted steps and 0 active. With prev_state==1 & prev_reward==0, F1 is 0.64; with prev_state==2 & prev_reward==0, it is 0.17.",
+      "There is a systematic miss class: after a common-unrewarded previous trial, late in the episode and at low value, the feature fires weakly. That is 18% of active steps but about 5% of the mass (precision 0.25 at ep>=70, 0.47 at ep>=85). The explanation admits this, but the predicate leaves it out entirely.",
+      "Test F1 is 0.762, below the 0.8 bar. Precision 0.799 / mass recall 0.919 just meets the alternative criterion. The low-value claim holds: within D2 & a2 & S2 & prev_reward==0, value<7 gives mass recall 0.95, and value<6 gives precision 0.73.",
+      "A better predicate that adds the low-value common-unrewarded cases reaches dev F1 0.813 and test F1 0.794 (mass recall 0.979). It still leans on prev_common==-1."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2, late in the episode (trial >= ~70): a2 led commonly to S2 right after the previous trial went unrewarded. The strongest firing follows a2's rare transition to S1 going unrewarded (a repeated a2); after a common-unrewarded trial it fires weakly, mainly at low value.",
+    "better_predicate": "(phase == D2) & (action == 2) & (state == 2) & (prev_reward == 0) & (ep_trial >= 70) & ((prev_common != 1) | (value < 6))",
+    "better_predicate_test_f1": 0.794
+  },
+  "final_label": "D2, late in the episode (trial >= ~70): a2 led commonly to S2 right after the previous trial went unrewarded. The strongest firing follows a2's rare transition to S1 going unrewarded (a repeated a2); after a common-unrewarded trial it fires weakly, mainly at low value."
+}

@@ -1,0 +1,64 @@
+{
+  "label": "End-of-episode GO choosing a1 after a reward (low value)",
+  "predicate": "(phase == GO) & (value < 4) & (model_act == 1) & (prev_reward == 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO steps, and only in the last ~10 trials of the 100-trial episode (99.9% of mass in ep_trial 90-99, none before trial 80), when the agent is about to choose a1 (model_act==1, 99% of mass) and the previous trial was rewarded (99% of mass). Every activation falls in the lowest value-head bin: the value output drops as the episode nears its end, so value < 4 serves as an observed proxy for being near the end. The predicate GO & value<4 & model_act==1 & prev_reward==1 gives dev P=0.92, R=0.84, F1=0.88, mass recall 0.97. The cruder ep_trial>=95 version scores F1=0.77. Magnitude rises steadily over consecutive late trials (e.g. 0.94, 0.97, 0.99, 1.00 across a window), and it is larger when the a1 logit margin is high (choice > 8 has 5x lift). Weak activations (lowest quartile) are the ones the predicate misses: earlier trials around 90-94, or a few after unrewarded trials. It does not fire at D1 or D2, at a2 choices, after unrewarded trials (apart from tiny activations), or before trial ~90. There is also an asymmetry: it is more frequent in episodes where S1 starts out bad and S1 is currently good, which fits its preference for a1. No future variables are used: value and model_act are outputs of the agent itself at that step.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 128,
+    "predicate": "(phase == GO) & (value < 4) & (model_act == 1) & (prev_reward == 1)",
+    "split": "test",
+    "precision": 0.9366462552991051,
+    "recall": 0.8604500216356555,
+    "f1": 0.896932792061344,
+    "mass_recall": 0.9680689233645671,
+    "correlation": 0.8514721343003916,
+    "n_active": 4622,
+    "n_predicted": 4246,
+    "coverage_by_activation_quartile": [
+      0.5198961937716263,
+      0.9290657439446367,
+      0.9930735930735931,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 128,
+    "predicate": "(phase == GO) & (value < 4) & (model_act == 1) & (prev_reward == 1)",
+    "split": "dev",
+    "precision": 0.9228070175438596,
+    "recall": 0.8421182266009852,
+    "f1": 0.8806181584030909,
+    "mass_recall": 0.9661488130646607,
+    "correlation": 0.8424627711901808,
+    "n_active": 4060,
+    "n_predicted": 3705,
+    "coverage_by_activation_quartile": [
+      0.45517241379310347,
+      0.9152709359605912,
+      0.9980295566502463,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 128,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "All the claims I checked hold up. Activation mass is 100% at GO and 0 at D1/D2. It fires 0 times before ep_trial 80 and on 6 steps before trial 90 (0.15% of active steps). action==1 holds 98.9% of mass and prev_reward==1 holds 99.3%. start_high==0 holds 81% and good==S1 holds 72%.",
+      "value<4 works as a proxy for the end of the episode. Only 26 test steps have GO & value<4 & ep_trial<90, and none of them fire. On its own the ep_trial threshold is much weaker: GO & ep_trial>=90 & model_act==1 & prev_reward==1 has P=0.38, F1=0.55. So value carries information beyond ep_trial, probably a graded 'nearness to the end' signal. The label's 'low value' wording is right to name it.",
+      "Reported scores reproduce. Dev: P=0.923, R=0.842, F1=0.881, mass recall 0.966. Test: P=0.937, R=0.860, F1=0.897, mass recall 0.968. The ep_trial>=95 variant gives F1=0.77 on dev, as claimed.",
+      "The misses on both splits are weak (3.2-3.4% of mass), mostly in the lowest activation quartile. They are early-late a1 GO trials just above the value threshold, a few after unrewarded trials, and a few small a2 activations. I found no systematic class among them.",
+      "Some false positives look like the first a1 after an a2 trial. However, restricting to prev_action!=2 (test F1=0.881) or adding choice>1 (test F1=0.897) does not beat the original, so this is not a systematic gap.",
+      "Minor: the threshold is sensitive. value<3.8 gives test F1=0.83 and value<4.2 gives 0.889, so 4 is close to optimal but the boundary is soft."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

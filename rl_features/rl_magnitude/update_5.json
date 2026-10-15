@@ -1,0 +1,91 @@
+{
+  "label": "Fires at GO after unrewarded a1->S1, stronger the more the observer still believes S1 good.",
+  "short_terms": "(phase == GO) * last_is(\"a1 S1 u\") ;; (phase == GO) * last_is(\"a1 S1 u\") * belief ;; (phase == GO) * last_is(\"a1 S1 u\") * belief_cover",
+  "terms": "(phase == GO) * last_is(\"a1 S1 u\") ;; (phase == GO) * last_is(\"a1 S1 u\") * belief_lo ;; (phase == GO) * last_is(\"a1 S1 u\") * belief_cover ;; (phase == GO) * last_is(\"a1 S1 u\") * belief ;; (phase == GO) * last_is(\"a1 S1 u\") * (tv(\"reward\", -2) == 1) ;; (phase == GO) * last_is(\"a1 S1 u\") * (tv(\"action\", -2) == 1) * (tv(\"reward\", -2) == 1) ;; (phase == GO) * last_is(\"a1 S1 u\") * ep_trial ;; (phase == GO) * (trial == 0) * (prev_reward == 0)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Silent at D1 and D2; at GO it is essentially zero except after a common a1->S1 unrewarded trial (indicator alone: dev R2 beyond timing 0.61). Within that situation (where the model needs it) the magnitude is graded by the ideal-observer belief that S1 is still good: an isolated loss after a1 S1 wins (high belief) gives ~1.4-1.6, a second consecutive loss (belief dropped) gives ~0.6; it is also somewhat higher when the belief rests on less history (negative belief_cover weight). Adding belief and belief_cover inside the situation raises dev R2 from 0.61 to 0.69. The free fit (0.71 dev) adds the trial-before reward, episode time and a term for window-first trials whose previous trial is not in the window (a main residual miss: those steps fire ~1.6 but last_is cannot see the previous trial). No future or model-output variables used.",
+  "full_test_scores": {
+    "gate": "update",
+    "feature": 5,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S1 u\")",
+      "(phase == GO) * last_is(\"a1 S1 u\") * belief_lo",
+      "(phase == GO) * last_is(\"a1 S1 u\") * belief_cover",
+      "(phase == GO) * last_is(\"a1 S1 u\") * belief",
+      "(phase == GO) * last_is(\"a1 S1 u\") * (tv(\"reward\", -2) == 1)",
+      "(phase == GO) * last_is(\"a1 S1 u\") * (tv(\"action\", -2) == 1) * (tv(\"reward\", -2) == 1)",
+      "(phase == GO) * last_is(\"a1 S1 u\") * ep_trial",
+      "(phase == GO) * (trial == 0) * (prev_reward == 0)"
+    ],
+    "weights": [
+      0.8404143737135192,
+      0.08446914185531781,
+      -0.05631733545536222,
+      0.9161222296837944,
+      -0.5185786355532376,
+      0.5724030758832774,
+      -0.002749639877083965,
+      0.12871358292686147
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7126583129937589,
+    "r2": 0.7244172087064239,
+    "r2_timing_only": 0.040923041258575044
+  },
+  "gate": "update",
+  "feature": 5,
+  "test_scores": {
+    "gate": "update",
+    "feature": 5,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S1 u\")",
+      "(phase == GO) * last_is(\"a1 S1 u\") * belief",
+      "(phase == GO) * last_is(\"a1 S1 u\") * belief_cover"
+    ],
+    "weights": [
+      0.5084399879666671,
+      1.3825949105995556,
+      -0.06219435587967673
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6926898442943226,
+    "r2": 0.7052659104754451,
+    "r2_timing_only": 0.040923041258575044
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 5,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S1 u\")",
+      "(phase == GO) * last_is(\"a1 S1 u\") * belief",
+      "(phase == GO) * last_is(\"a1 S1 u\") * belief_cover"
+    ],
+    "weights": [
+      0.5084399879666671,
+      1.3825949105995556,
+      -0.06219435587967673
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6928229047008838,
+    "r2": 0.7046142365130269,
+    "r2_timing_only": 0.03838610362748951
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Each claim holds up on test. The a1->S1-unrewarded GO indicator alone scores 0.603. Adding belief inside that situation raises it to 0.675 (belief_lo gives 0.674). The full short form scores 0.693 test and 0.693 dev, with weights +0.51 (indicator), +1.38 (x belief) and -0.062 (x belief_cover).",
+      "The belief_cover term adds only about 0.017 (0.675 -> 0.693). It probably makes up for the ideal-observer belief shrinking toward 0.5 when there is little history to draw on. That makes it a fitted correction, not a real 'fires more on less history' effect, and the label rightly leaves it out. Its main claim stands without it.",
+      "The explanation's 'a second loss in a row gives a smaller value' is better described as graded by belief. Using tv('reward',-2)==0 in place of belief scores only 0.641 test, against 0.675 for belief.",
+      "Misses show one systematic class, and it is an artefact of how windows are cut. GO steps on a window's first trial, where the previous trial is unknown (prev_action = -1), fire at about 1.6 but are predicted about 0.05. Adding a (phase==GO)*(trial==0)*(prev_reward==0) term in place of belief_cover gives 0.688 test, which is no better. Everywhere else the errors are tiny and uniform (about -0.05 at GO after every other previous-trial pattern; about 0 at D1 and D2).",
+      "None of the alternatives I tried beat 0.693 on test: an ep_trial interaction 0.682, a reward-repeat term 0.681, belief_cover<10 0.679, belief_lo>0 0.675. Without future or model-output variables, the short form is near the 'all observed' additive reference (0.69)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "label": "D1 after a2 S2 loss following a2 wins, mid/late episode, scaled by a2-leaning policy",
+  "terms": "(phase == D1) * last_is(\"a2 S2 u\") ;; (phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) != 0) * (tv(\"action\", -2) != 1) ;; (phase == D1) * last_is(\"a2 S2 u\") * table(ep_dec, {3: 0.1, 4: 0.4, 5: 1, 6: 2, 7: 2.6, 8: 1.4}) ;; (phase == D1) * last_is(\"a2 S2 u\") * choice ;; (phase == D1) * last_is(\"a2 S2 u\") * choice**2",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1, and almost only right after a common a2->S2 unrewarded trial (alone: dev R^2 beyond timing 0.15). Within those steps it is larger when the trial before was not an a1 choice and not a loss (a first loss after a2 wins or at the start of the window; together dev 0.28), and larger mid/late in the episode, peaking around trials 60-79 and dropping by 90+ (dev 0.34 with a linear ep_dec term, 0.49 with a peaked table). The D1 policy logit adds graded shape: activation is highest when the policy leans moderately toward a2 (choice plus choice^2 terms). Value adds about 0.001 once the episode table is in. It is never active at GO or D2, after rewarded trials, or after any other pattern. Uses only observed or internal (policy) quantities, no future variables. Test R^2 beyond timing 0.476, well above the 0.25 additive all-cue ceiling.",
+  "gate": "update",
+  "feature": 220,
+  "test_scores": {
+    "gate": "update",
+    "feature": 220,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) != 0) * (tv(\"action\", -2) != 1)",
+      "(phase == D1) * last_is(\"a2 S2 u\") * table(ep_dec, {3: 0.1, 4: 0.4, 5: 1, 6: 2, 7: 2.6, 8: 1.4})",
+      "(phase == D1) * last_is(\"a2 S2 u\") * choice",
+      "(phase == D1) * last_is(\"a2 S2 u\") * choice**2"
+    ],
+    "weights": [
+      -0.06626405185197394,
+      0.047933110731520005,
+      0.083504813395381,
+      -0.019986518729551032,
+      0.0030690877234974294
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.47600695603534493,
+    "r2": 0.49962529436092407,
+    "r2_timing_only": 0.04507376309211519
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 220,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) != 0) * (tv(\"action\", -2) != 1)",
+      "(phase == D1) * last_is(\"a2 S2 u\") * table(ep_dec, {3: 0.1, 4: 0.4, 5: 1, 6: 2, 7: 2.6, 8: 1.4})",
+      "(phase == D1) * last_is(\"a2 S2 u\") * choice",
+      "(phase == D1) * last_is(\"a2 S2 u\") * choice**2"
+    ],
+    "weights": [
+      -0.06626405185197394,
+      0.047933110731520005,
+      0.083504813395381,
+      -0.019986518729551032,
+      0.0030690877234974294
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.4916394544044317,
+    "r2": 0.513449844197454,
+    "r2_timing_only": 0.0429033881208668
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The factual claims hold. Activation is exactly 0 at GO and D2 (the profile's timing and residual tables are all +0 there). At D1 the only positive residual is after 'a2 S2 u' (+0.068; every other previous-trial pattern is about -0.008). The term alone scores test 0.141. With episode deciles it reaches 0.325, adding choice/choice^2 gives 0.462, and the full set gives 0.476. Value adds nothing (0.4767), and neither do good state or since_rev (0.4766). None of the terms use future variables.",
+      "The main systematic gap is the functional form. The three factors (first loss after an a2 win, episode-decile peak, a2-leaning D1 policy) multiply; they do not add. With the same variables, adding interaction terms raises test R^2 beyond timing a lot. Adding L*E*choice and L*E*choice^2 gives 0.645. Adding W*E gives 0.575. A fully multiplicative 8-term set gives 0.693. So the reported terms leave about 0.22 of test R^2 that their own cues can explain, which is a large structured error, not scattered noise.",
+      "The trial-before term adds little once choice is in: 0.462 without it vs 0.476 with it. The explanation says this term lifts dev from 0.15 to 0.28, but that gain mostly overlaps with what the policy logit already carries.",
+      "The 'window start where that trial is unknown' clause is an artifact of tv(-2) returning -9, which passes both '!= 0' and '!= 1'. In misses, the worst windows include a step -2 D1 after a2 S2 u with an unknown trial before it. It is predicted 0.21 but the actual value is 0, because the real trial before (visible via the step -3 D1 firing at 0.52) was another a2 S2 loss. Requiring a known a2-rewarded trial before scores 0.473, so the unknown-pass branch is not a real effect.",
+      "Misses still show under-prediction at the window's first D1 (rel -3), where the previous trial is unknown: actual values around 0.45-0.53 vs predicted 0.02. This is a data-window limitation, not a feature property. Adding a trial==0, in_rew==0 x episode term only raises test R^2 to 0.487.",
+      "The label says 'a2-leaning policy' but does not say the episode and policy effects gate each other multiplicatively. Note also that choice at D1 is the model's own policy output (documented as meaningful at GO), not an observed input."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 only: fires after a common a2->S2 loss, mainly the first loss after an a2 win. Episode position (peak trials 60-79) and a moderately a2-leaning D1 policy multiply this, not add to it.",
+    "better_terms": "L = (phase == D1) * last_is('a2 S2 u'); E = table(ep_dec, {3: 0.1, 4: 0.4, 5: 1, 6: 2, 7: 2.6, 8: 1.4}); W = L * (tv('reward', -2) != 0) * (tv('action', -2) != 1). Terms: L ;; W ;; L*E ;; W*E ;; L*E*choice ;; L*E*choice**2 ;; W*E*choice ;; W*E*choice**2 (all observed inputs or the model's own policy output; no future variables)",
+    "better_terms_test_r2_beyond_timing": 0.693
+  },
+  "final_label": "D1 only: fires after a common a2->S2 loss, mainly the first loss after an a2 win. Episode position (peak trials 60-79) and a moderately a2-leaning D1 policy multiply this, not add to it."
+}

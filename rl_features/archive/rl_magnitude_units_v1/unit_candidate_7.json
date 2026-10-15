@@ -1,0 +1,84 @@
+{
+  "label": "D1 dip after unrewarded S2 trials, deepening late in episode and with consecutive losses",
+  "terms": "(phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a2 S2 u\") ;; (phase == D1) * (prev_reward == 1) * (prev_action == prev_state) ;; (phase == D1) * (prev_reward == 0) * (prev_state == 2) * np.exp(ep_trial / 10.0) ;; (phase == D1) * (prev_reward == 0) * (prev_state == 1) * np.exp(ep_trial / 10.0) ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) ;; (phase == GO) * np.exp(ep_trial / 10.0) * (prev_reward == 0) ;; (phase == GO) * last_is(\"a1 S1 r\")",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw candidate n of unit 7 sits near 1 (saturated) and dips mainly at D1. Beyond timing, the dip is driven by the previous trial outcome shown at D1: strongest after a1 -> S2 (rare) unrewarded (about -0.13 to -0.16), weaker after a2 -> S2 (common) unrewarded (about -0.03 to -0.07); after rewarded common trials it is slightly higher (+0.03). The dip deepens sharply late in the episode (exponential in episode trial; to ~0.4 near trials 95-99) after unrewarded S2 trials, and is deeper again when the trial before was also unrewarded (two losses in a row). Unrewarded S1 trials do not dip. Small GO effects: lower after a1 S1 rewarded, and a late-episode post-loss term. D2 is essentially constant. All terms are observed-only (no future/hidden/model variables). Dev R^2 beyond timing 0.64; profile all ceiling 0.61, all observed 0.57; last-trial table alone 0.53.",
+  "gate": "unit_candidate",
+  "feature": 7,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 7,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * (prev_reward == 1) * (prev_action == prev_state)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 2) * np.exp(ep_trial / 10.0)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 1) * np.exp(ep_trial / 10.0)",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * np.exp(ep_trial / 10.0) * (prev_reward == 0)",
+      "(phase == GO) * last_is(\"a1 S1 r\")"
+    ],
+    "weights": [
+      -0.12958669150218083,
+      -0.031219779386769626,
+      0.025262359623631013,
+      -1.3827182818090529e-05,
+      3.723216271910105e-06,
+      -0.032989752110258626,
+      1.9280742249773438e-06,
+      -0.029174857024190707
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6379167665143833,
+    "r2": 0.7257900397787236,
+    "r2_timing_only": 0.24268804832088653
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 7,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * (prev_reward == 1) * (prev_action == prev_state)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 2) * np.exp(ep_trial / 10.0)",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 1) * np.exp(ep_trial / 10.0)",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * np.exp(ep_trial / 10.0) * (prev_reward == 0)",
+      "(phase == GO) * last_is(\"a1 S1 r\")"
+    ],
+    "weights": [
+      -0.12958669150218083,
+      -0.031219779386769626,
+      0.025262359623631013,
+      -1.3827182818090529e-05,
+      3.723216271910105e-06,
+      -0.032989752110258626,
+      1.9280742249773438e-06,
+      -0.029174857024190707
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6434036207924819,
+    "r2": 0.728728308542445,
+    "r2_timing_only": 0.23927524990462434
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The reported numbers reproduce: test R^2 beyond timing is 0.638. Fitted test weights are a1 S2 u -0.130, a2 S2 u -0.031, rewarded common +0.025, two losses in a row -0.033, and GO after a1 S1 r -0.029. The exp(ep_trial/10) late-episode term is real: dropping both D1 exp terms lowers test R^2 to 0.524.",
+      "The 'rare vs common' reading of the S2 dip is mostly a proxy for how strongly the agent currently prefers a1. Adding (phase==D1)*(prev_reward==0)*(prev_state==2)*choice (choice = model policy logit) raises test R^2 from 0.638 to 0.689, and the a1 S2 u weight shrinks from -0.13 to -0.02. In a fit that uses max(choice,0), the a1 S2 u indicator even turns positive (+0.067). So the dip after an unrewarded S2 outcome grows with the a1 preference, which is high after rare a1->S2 losses (stay with a1) and after common a2->S2 losses (switch to a1). The label credits the transition type rather than this preference.",
+      "The 'deeper after repeated losses' effect (-0.033) shrinks to -0.012 once the a1 preference is included, so it is partly the same preference effect.",
+      "The fit misses a large spread within the a2 S2 u group. In the worst-fit windows, D1 after a2 S2 u around trials 83-87 drops to about 0.46-0.51, while the terms predict about 0.81-0.82. The fixed common-loss weight cannot capture this.",
+      "A systematic GO error class remains. Late in the episode, after a run of rewarded a1 S1 trials, GO drops to about 0.70-0.83 while the terms predict 0.91. Adding a late-episode GO term for 'last trial a1 S1 r' recovers only about +0.01.",
+      "Two claimed terms do little. The GO 'late-episode post-loss' term has a positive, negligible weight (removing it changes test R^2 by under 0.005). The S1-loss exp term is positive, about +0.07 at trial 99, which is not exactly 'small'.",
+      "Observed-only alternatives (two-back state and reward history) reach only about 0.64. The extra gain needs the model-output variable choice, which the agent computes internally (not a future variable)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 dip after an unrewarded S2 outcome. It scales with the agent's current preference for a1 and deepens sharply late in the episode.",
+    "better_terms": "(phase == D1)*(prev_reward == 0)*(prev_state==2)*np.maximum(choice,0) ;; (phase == D1)*(prev_reward == 0)*(prev_state==2) ;; (phase == D1)*(prev_reward == 0)*(prev_state==2)*np.exp(ep_trial/10.0) ;; (phase == D1)*(prev_reward == 1)*(prev_action == prev_state) ;; (phase == D1)*(prev_reward == 0)*(tv('reward', -2) == 0) ;; (phase == GO)*last_is('a1 S1 r') ;; (phase == GO)*last_is('a1 S1 r')*np.exp(ep_trial/10.0) ;; (phase == D1)*last_is('a1 S2 u')",
+    "better_terms_test_r2_beyond_timing": 0.711
+  },
+  "final_label": "D1 dip after an unrewarded S2 outcome. It scales with the agent's current preference for a1 and deepens sharply late in the episode."
+}

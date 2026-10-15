@@ -1,0 +1,63 @@
+{
+  "label": "D1 after an unrewarded visit to S1 (S1 no-reward)",
+  "predicate": "(phase == D1) & (prev_reward == 0) & (prev_state != 2) & (ep_trial < 75)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1, and only when the previous trial reached S1 and was not rewarded. It never fires at GO or D2, after any rewarded trial, or after an unrewarded visit to S2 (the predicate with prev_state == 2 scores 0). prev_state != 2 is used instead of == 1 because prev_state is unknown (-1) on the first trial of each window, which holds about 18% of the activation mass. Activity also stops late in the episode: it is constant until about trial 70, fades over trials 70-79 and is near zero from trial 80 on, hence ep_trial < 75. Without that term F1 drops from 0.89 to 0.77. Magnitude: strongest after a common transition a1->S1 that went unrewarded (69% of the top activation quartile vs about 24% of the lower quartiles). It is weaker after a rare a2->S1 unrewarded trial. All variables are observed at D1.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 112,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (prev_state != 2) & (ep_trial < 75)",
+    "split": "test",
+    "precision": 0.811646418098031,
+    "recall": 0.9788407905905178,
+    "f1": 0.8874373608655423,
+    "mass_recall": 0.9957927696408196,
+    "correlation": 0.8273451541130239,
+    "n_active": 49482,
+    "n_predicted": 59675,
+    "coverage_by_activation_quartile": [
+      0.9155282515560585,
+      0.9998383315819255,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 112,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (prev_state != 2) & (ep_trial < 75)",
+    "split": "dev",
+    "precision": 0.8121003268438255,
+    "recall": 0.98100980623565,
+    "f1": 0.8885995004810542,
+    "mass_recall": 0.9963322766698816,
+    "correlation": 0.8274238651326812,
+    "n_active": 46603,
+    "n_predicted": 56296,
+    "coverage_by_activation_quartile": [
+      0.9243841730323578,
+      0.9997425113724144,
+      0.9999141704574714,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 112,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "All the factual claims check out on dev. The feature is active only at D1 (0 active steps at GO and D2), never after a rewarded trial (0 active steps when prev_reward==1), and never after an unrewarded visit to S2 (the prev_state==2 variant scores 0). The ep_trial fade is real: with prev_state==1, precision is 0.97 at trials 66-67, 0.75 at 72-73, 0.50 at 74-75, 0.26 at 76-77 and 0.05 at 80+. Dropping the ep_trial term lowers precision from 0.98 to 0.75.",
+      "The magnitude claim holds: the common a1->S1 unrewarded case covers 69% of the top activation quartile, and the rare a2->S1 unrewarded case is weaker.",
+      "Almost all of the original predicate's false positives (10578 on dev, precision 0.81) come from the first trial of each window (rel -3), where prev_state is -1 because the previous trial is outside the window. Restricted to prev_state==1, precision is 0.98 and recall 0.81. This is a limit of the data, not a flaw in the explanation.",
+      "The remaining false positives where prev_state is known (649 on test) are mostly weak cases: rare a2->S1 unrewarded trials while S2 is good. The explanation already says this case is weaker, so it does not count as a systematic counterexample.",
+      "Possible refinement: at rel -3 the agent's own upcoming choice stands in for the unseen prev_state. A model-based agent picks a2 after an unrewarded S1 visit, both after common a1->S1 (switch) and after rare a2->S1 (stay). The predicate (phase==D1)&(prev_reward==0)&((prev_state==1)|((prev_state==-1)&(action==2)))&(ep_trial<75) gives dev F1 0.917 and test F1 0.913, against 0.887 for the original. It uses only observed variables plus the agent's own upcoming choice, which is allowed."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == D1) & (prev_reward == 0) & ((prev_state == 1) | ((prev_state == -1) & (action == 2))) & (ep_trial < 75)",
+    "better_predicate_test_f1": 0.913
+  }
+}

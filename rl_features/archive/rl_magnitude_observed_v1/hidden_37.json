@@ -1,0 +1,69 @@
+{
+  "label": "D2 a2->S2 common, grows quadratically after trial 60, larger when belief favors S1 / after a1 S1 u",
+  "terms": "(phase == D2) * (action == 2) * (state == 2) * (np.maximum(ep_trial - 60, 0) / 40.0)**2 ;; (phase == D2) * (action == 2) * (state == 2) * (np.maximum(ep_trial - 60, 0) / 40.0)**2 * belief ;; (phase == D2) * (action == 2) * (state == 2) * (np.maximum(ep_trial - 60, 0) / 40.0)**2 * (prev_action == 1) ;; (phase == D2) * (action == 2) * (state == 2) * (np.maximum(ep_trial - 60, 0) / 40.0)**2 * last_is(\"a1 S1 u\")",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 when the agent chose a2 and commonly reached S2 (both observed at D2), and only late in the episode: magnitude grows roughly quadratically in max(ep_trial-60,0) (linear ramp gave ~0.38 dev, squared ~0.58; cubic/exponential no better). Within that gate it is scaled by the ideal-observer belief that S1 is good (weight +0.53 vs base -0.08: near zero when belief strongly favors S2, largest when a2 is chosen against an S1-leaning/uncertain belief), and is further raised when the a2 choice is a switch from a1 (+0.17), especially after an a1 S1 unrewarded trial (+0.69). Zero at D1/GO and on a1 or rare trials. Test R^2 beyond timing 0.595 (dev 0.60), far above the profile additive all ceiling 0.14 because the effect is a multiplicative interaction of choice/state, episode time and belief. Earlier value/policy version not needed: observed-only belief plus switch history reaches the same level; prev reward of the a2 trial and two-back reward added <0.01.",
+  "gate": "hidden",
+  "feature": 37,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 37,
+    "terms": [
+      "(phase == D2) * (action == 2) * (state == 2) * (np.maximum(ep_trial - 60, 0) / 40.0)**2",
+      "(phase == D2) * (action == 2) * (state == 2) * (np.maximum(ep_trial - 60, 0) / 40.0)**2 * belief",
+      "(phase == D2) * (action == 2) * (state == 2) * (np.maximum(ep_trial - 60, 0) / 40.0)**2 * (prev_action == 1)",
+      "(phase == D2) * (action == 2) * (state == 2) * (np.maximum(ep_trial - 60, 0) / 40.0)**2 * last_is(\"a1 S1 u\")"
+    ],
+    "weights": [
+      -0.08390358253329316,
+      0.5282090319472196,
+      0.1696834429397462,
+      0.6859036861763308
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5954855454673706,
+    "r2": 0.6144102866561161,
+    "r2_timing_only": 0.04678384412890957
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 37,
+    "terms": [
+      "(phase == D2) * (action == 2) * (state == 2) * (np.maximum(ep_trial - 60, 0) / 40.0)**2",
+      "(phase == D2) * (action == 2) * (state == 2) * (np.maximum(ep_trial - 60, 0) / 40.0)**2 * belief",
+      "(phase == D2) * (action == 2) * (state == 2) * (np.maximum(ep_trial - 60, 0) / 40.0)**2 * (prev_action == 1)",
+      "(phase == D2) * (action == 2) * (state == 2) * (np.maximum(ep_trial - 60, 0) / 40.0)**2 * last_is(\"a1 S1 u\")"
+    ],
+    "weights": [
+      -0.08390358253329316,
+      0.5282090319472196,
+      0.1696834429397462,
+      0.6859036861763308
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5937203013813149,
+    "r2": 0.6097901346771737,
+    "r2_timing_only": 0.03955362118878891
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The headline score reproduces (dev 0.594, test 0.595), and the core gate checks out: activity only at D2, a2 then S2 (choice x state code 8 is the only positive residual cell), late episode, zero at D1/GO. The explanation still misstates where the R^2 comes from.",
+      "The claim 'a straight-line ramp scored 0.38 and the squared ramp about 0.58' is false. The squared-ramp gate alone scores only 0.042 dev / 0.057 test. Adding belief raises it to 0.37 / 0.38. A LINEAR ramp with the same four modifiers scores 0.583 dev / 0.579 test, so the square adds about 0.015, not 0.2. Ramps from trial 50 and from trial 60 score the same (0.596 / 0.595). A cubic ramp is worse (0.56).",
+      "The belief effect is not linear and is not 'largest when belief leans S1 or is uncertain'. Adding belief**2 inside the gate gives weights of -0.41*belief + 1.08*belief^2. That is near zero up to belief of about 0.4, then rises convexly, so it is largest when belief strongly favours S1, i.e. a2 chosen against the belief. The 'uncertain' wording comes from the profile's belief-decile residual, which averages over all D2 steps including a1 trials and does not describe values inside the gate.",
+      "The claim 'especially after an unrewarded a1 S1 trial' overstates how special that case is. In a per-previous-trial table inside the gate (no belief term), the weights are a1 S1 r +1.19, a1 S2 u +1.17, a1 S1 u +1.01, a1 S2 r +0.34, and all a2-previous cases are about 0 to 0.15. So the feature responds to a switch from a1 in general. a1 S1 u only stands out once belief is included, because that history lowers belief while the activation stays high.",
+      "A missed history effect: an a1 choice two trials back (tv('action',-2)==1) adds signal beyond prev_action. Several worst-fit windows show runs of a2 S2 unrewarded trials whose activation keeps growing (0.34 -> 0.92 -> 1.39) while the prediction stays flat (about 0.26 -> 0.42), so recent history beyond one trial matters.",
+      "Better terms raise test R^2 beyond timing from 0.595 to 0.66: belief**2 plus the two-back a1 term. Previous reward contributes about 0 (weight -0.03), which confirms that claim. After the fix, misses show no remaining large systematic phase x previous-trial error class (largest about -0.004 at D2).",
+      "Not claimed, but worth noting: there is no comparison with the value/policy explanation. The profile's additive reference scores (policy decile 0.01, 'all' 0.14) say nothing about multiplicative fits, so how much is lost by dropping the model's outputs remains unknown."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after a2 -> S2 (common), late episode (ramp from about trial 55, roughly quadratic), grows convexly as the observed belief favours S1 (a2 chosen against belief), boosted by recent a1 choices (last trial, esp. a1 S1 u, and two back)",
+    "better_terms": "B = (phase == D2) * (action == 2) * (state == 2) * (np.maximum(ep_trial - 55, 0) / 45.0)**2 ; terms: B ;; B * belief ;; B * belief**2 ;; B * (prev_action == 1) ;; B * last_is(\"a1 S1 u\") ;; B * (tv(\"action\",-2)==1) ;; B * (tv(\"action\",-3)==1)",
+    "better_terms_test_r2_beyond_timing": 0.659
+  },
+  "final_label": "D2 after a2 -> S2 (common), late episode (ramp from about trial 55, roughly quadratic), grows convexly as the observed belief favours S1 (a2 chosen against belief), boosted by recent a1 choices (last trial, esp. a1 S1 u, and two back)"
+}

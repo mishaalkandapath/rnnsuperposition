@@ -1,0 +1,83 @@
+{
+  "label": "Ideal-observer belief that S1 is good, plus S1 shown; strongest at D2",
+  "terms": "(phase==D1)*np.tanh(belief_lo/2) ;; (phase==GO)*np.tanh(belief_lo/2) ;; (phase==D2)*np.tanh(belief_lo/2) ;; (phase==D2)*(state==1) ;; (phase==D1)*(prev_state==1) ;; (phase!=D2)*np.tanh(belief_lo/2)*np.exp((ep_trial-99)/12) ;; (phase==D2)*np.tanh(belief_lo/2)*np.exp((ep_trial-99)/12) ;; (phase==D1)*(prev_reward==1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r0 sits on a strong timing baseline (D2 > D1 > GO, rising steeply toward the end of the episode; timing alone gives R^2 0.84). Beyond timing it is a signed readout of the ideal-observer belief that S1 is the good state: higher when belief favours S1, lower when it favours S2. The belief effect is about 3x larger at D2 than at D1 and small at GO. A late-episode interaction (belief x exp((ep_trial-99)/12)) makes the belief effect larger in the last trials at D1/GO, but slightly smaller at D2 (fitted weight negative there). Seeing S1 (at D2 the state just reached, at D1 the previous trial state) adds a smaller bump, and a reward shown at D1 raises it a little. Only observed quantities are used: no value, policy or future variables. Test R^2 beyond timing 0.69 (dev 0.70). Reference: belief decile table alone 0.63, policy decile (model) 0.54; all-observed ceiling 0.81, all 0.83, so dropping model outputs costs little. Remaining errors: D1 after a2 S2 u and a1 S2 u over-predicted, late-episode high-belief windows under-predicted.",
+  "gate": "unit_reset",
+  "feature": 0,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 0,
+    "terms": [
+      "(phase==D1)*np.tanh(belief_lo/2)",
+      "(phase==GO)*np.tanh(belief_lo/2)",
+      "(phase==D2)*np.tanh(belief_lo/2)",
+      "(phase==D2)*(state==1)",
+      "(phase==D1)*(prev_state==1)",
+      "(phase!=D2)*np.tanh(belief_lo/2)*np.exp((ep_trial-99)/12)",
+      "(phase==D2)*np.tanh(belief_lo/2)*np.exp((ep_trial-99)/12)",
+      "(phase==D1)*(prev_reward==1)"
+    ],
+    "weights": [
+      0.03126779057712234,
+      0.003426833727946582,
+      0.102453920736608,
+      0.031118970949502348,
+      0.01772924457296447,
+      0.04550612429140641,
+      -0.061908790930476715,
+      0.023849683401080686
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6865556152680263,
+    "r2": 0.950103594481931,
+    "r2_timing_only": 0.8408125717079431
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 0,
+    "terms": [
+      "(phase==D1)*np.tanh(belief_lo/2)",
+      "(phase==GO)*np.tanh(belief_lo/2)",
+      "(phase==D2)*np.tanh(belief_lo/2)",
+      "(phase==D2)*(state==1)",
+      "(phase==D1)*(prev_state==1)",
+      "(phase!=D2)*np.tanh(belief_lo/2)*np.exp((ep_trial-99)/12)",
+      "(phase==D2)*np.tanh(belief_lo/2)*np.exp((ep_trial-99)/12)",
+      "(phase==D1)*(prev_reward==1)"
+    ],
+    "weights": [
+      0.03126779057712234,
+      0.003426833727946582,
+      0.102453920736608,
+      0.031118970949502348,
+      0.01772924457296447,
+      0.04550612429140641,
+      -0.061908790930476715,
+      0.023849683401080686
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6984501122510405,
+    "r2": 0.9523708372873839,
+    "r2_timing_only": 0.8420521291910831
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claim holds. Belief alone (tanh(belief_lo/2) at each phase) scores 0.615 on test, with weights D2 0.102 > D1 0.040 > GO 0.009. So r0 is a signed belief readout, strongest at D2 and weak at GO. The reported test score of 0.6866 reproduces.",
+      "'Seeing S1 at D2' is the wrong variable. The D2 residual follows this trial's choice more than the state reached: a1 S1 +0.099, a1 S2 +0.077, a2 S2 -0.065, a2 S1 -0.085. On top of the belief terms, (phase==D2)*(state==1) scores 0.629 and (phase==D2)*(action==1) scores 0.638. With both terms in, state==1 falls to weight 0.007 and action==1 keeps 0.029. Choosing a1 is observed by D2 (in_action), so the bump is about the choice, not about S1 being shown.",
+      "There is a systematic D1 error that the terms do not cover. D1 after a2 S2 u is over-predicted by -0.061 and D1 after a1 S2 u by -0.035 (misses output). The explanation lists these as remaining errors but does not say what they mean: r0 drops at D1 after an unrewarded visit to S2, beyond what belief predicts. Adding (phase==D1)*(prev_state==2)*(prev_reward==0) gets weight -0.054 and raises test R^2 from 0.708 to 0.735.",
+      "The late-episode belief interaction is only loosely supported. Dropping both interaction terms costs 0.019 (0.668 vs 0.687). The D2 interaction weight is negative, which sits awkwardly with the larger raw D2 belief effect late in the episode. Late, high-belief windows are still under-predicted by about 0.2 at D1 in the worst-fit list, even with the improved terms.",
+      "GO stays under-predicted by about +0.017 on average across all previous-trial patterns. This is a small offset, not explained structure."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Signed ideal-observer belief that S1 is good (strongest at D2, weak at GO), plus a bump for choosing a1 at D2, and a drop at D1 after an unrewarded S2 visit",
+    "better_terms": "(phase==D1)*np.tanh(belief_lo/2) ;; (phase==GO)*np.tanh(belief_lo/2) ;; (phase==D2)*np.tanh(belief_lo/2) ;; (phase==D2)*(action==1) ;; (phase==D1)*(prev_state==1) ;; (phase==D1)*(prev_reward==1) ;; (phase==D1)*np.tanh(belief_lo/2)*np.exp((ep_trial-99)/12) ;; (phase==D1)*(prev_state==2)*(prev_reward==0)",
+    "better_terms_test_r2_beyond_timing": 0.7349
+  },
+  "final_label": "Signed ideal-observer belief that S1 is good (strongest at D2, weak at GO), plus a bump for choosing a1 at D2, and a drop at D1 after an unrewarded S2 visit"
+}

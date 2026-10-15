@@ -1,0 +1,83 @@
+{
+  "label": "D2 a1->S2 rare; larger after a rewarded previous trial (esp. a2 rewarded), lower when belief favours S1",
+  "terms": "(phase == D2) * (action == 1) * (state == 2) ;; (phase == D2) * (action == 1) * (state == 2) * belief_lo ;; (phase == D2) * (action == 1) * (state == 2) * (prev_action == 2) * prev_reward ;; (phase == D2) * (action == 1) * (state == 2) * last_is(\"a1 S2 r\") ;; (phase == D2) * (action == 1) * (state == 2) * (prev_action == -1) ;; (phase == D2) * (action == 1) * (state == 2) * last_is(\"a2 S2 u\") ;; (phase == D2) * (action == 1) * (state == 2) * last_is(\"a1 S1 r\") ;; (phase == D2) * (action == 1) * (state == 2) * belief_cover",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (zero at D1/GO), almost exclusively after choosing a1 and landing in S2 (rare transition); this indicator alone gives dev R^2 0.17 beyond timing. Magnitude within that event is driven by the previous trial: largest when the previous trial was rewarded after choosing a2 (a2 S1 r and especially a2 S2 r, i.e. after a switch from rewarded a2; weight ~+1.2 on top), and when the previous trial was a1 S2 r (~+1.0); smaller boosts after a2 S2 u and a1 S1 r; it is lower when the ideal-observer belief favours S1 good (negative weight on belief_lo, so a1->S2 when S1 is believed good is weaker), and belief_cover adds a little. The window-first-trial indicator (unknown previous trial) captures a window-edge artifact. All terms are observed at D2 (action and state are known by then); no future, hidden or model-output variables used. Test R^2 beyond timing 0.48, above the additive all ceiling 0.31 (all observed 0.25) because the terms are interactions within the a1->S2 event. Relative to the earlier policy-based description (fires when policy not strongly committed to a1), belief_lo plus previous-trial history substitutes adequately; remaining misses are under-predicted large activations on consecutive a1->S2 trials and at window starts.",
+  "gate": "hidden",
+  "feature": 108,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 108,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 2)",
+      "(phase == D2) * (action == 1) * (state == 2) * belief_lo",
+      "(phase == D2) * (action == 1) * (state == 2) * (prev_action == 2) * prev_reward",
+      "(phase == D2) * (action == 1) * (state == 2) * last_is(\"a1 S2 r\")",
+      "(phase == D2) * (action == 1) * (state == 2) * (prev_action == -1)",
+      "(phase == D2) * (action == 1) * (state == 2) * last_is(\"a2 S2 u\")",
+      "(phase == D2) * (action == 1) * (state == 2) * last_is(\"a1 S1 r\")",
+      "(phase == D2) * (action == 1) * (state == 2) * belief_cover"
+    ],
+    "weights": [
+      0.2184852737528708,
+      -0.10233542058459151,
+      1.2246782875843463,
+      1.025479527318556,
+      0.0647170937802484,
+      0.2535377981105292,
+      0.1262755643904921,
+      0.02403266046280881
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.48123835514483304,
+    "r2": 0.4916082713002481,
+    "r2_timing_only": 0.01998975108946266
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 108,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 2)",
+      "(phase == D2) * (action == 1) * (state == 2) * belief_lo",
+      "(phase == D2) * (action == 1) * (state == 2) * (prev_action == 2) * prev_reward",
+      "(phase == D2) * (action == 1) * (state == 2) * last_is(\"a1 S2 r\")",
+      "(phase == D2) * (action == 1) * (state == 2) * (prev_action == -1)",
+      "(phase == D2) * (action == 1) * (state == 2) * last_is(\"a2 S2 u\")",
+      "(phase == D2) * (action == 1) * (state == 2) * last_is(\"a1 S1 r\")",
+      "(phase == D2) * (action == 1) * (state == 2) * belief_cover"
+    ],
+    "weights": [
+      0.2184852737528708,
+      -0.10233542058459151,
+      1.2246782875843463,
+      1.025479527318556,
+      0.0647170937802484,
+      0.2535377981105292,
+      0.1262755643904921,
+      0.02403266046280881
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.493014872483557,
+    "r2": 0.50276983616512,
+    "r2_timing_only": 0.019241123954364392
+  },
+  "final_verdict": "partially_explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The label's 'larger after rewarded previous trial' is too broad. With one term per previous-trial pattern inside the a1->S2 D2 event (test R^2 0.446), the fitted boosts are a2 S2 r +2.83, a2 S1 r +1.38, a1 S2 r +1.28, a2 S2 u +0.39, a1 S1 u +0.31, a1 S1 r +0.14, a1 S2 u ~0 and a2 S1 u 0. So after a rewarded a1 S1 trial the boost is near zero, smaller than after a1 S1 u. The boost comes from rewards not earned on the a1->S1 route.",
+      "The explanation's '+1.2 after a rewarded a2 trial' merges two very different cases: a2 S2 r is about +2.4 and a2 S1 r about +1.15 (weights from the split fit). Splitting them does not raise test R^2 (0.475 against 0.481), probably because a2 S2 r followed by a1 is rare, but the description of the shape is wrong.",
+      "The belief_lo effect checks out but is small. On its own with the event it gives test 0.26 against 0.18 for the event alone, with a negative weight. Added to the previous-trial terms it gives 0.455 against 0.428. Its weight stays negative (-0.07 to -0.13) in every fit. belief_cover adds about 0.015 (0.481 with it, 0.466 without).",
+      "Misses: the phase x previous-trial errors are all small (|mean error| <= 0.02) and there is no systematic class there. The worst windows are large activations (2.1 to 2.8) on the window's first trial, where the previous trial is unknown and predictions are about 0.1 to 0.3. The second group is back-to-back a1->S2 trials after a1 S2 u, with actual about 1.0 to 1.4 against predicted about 0.07. The observed-only fixes I tried each moved test R^2 by about 0.01 or less: prev_reward and belief at the window start, the belief<0.5 indicator, and the reward one and two trials back. The largest gain was the S2-rewarded-two-trials-back term, at +0.007 (0.488). These misses look like window-truncation artifacts rather than a missing cue, and the explanation admits them.",
+      "Every claim in the explanation was reproduced. The event alone scores test 0.183 (claimed 0.17 on dev). The full set scores test 0.481. No future or model-output variables are used. Because this is an observed-only run, how much is lost by dropping the policy could not be measured."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "D2 after a1 then rare S2. Much larger when the previous trial's reward did not come via a1->S1 (biggest after a2 S2 r, then a2 S1 r and a1 S2 r; near zero after a1 S1 r). Somewhat lower when the belief favours S1.",
+    "better_terms": "(phase == D2) * (action == 1) * (state == 2) ;; (phase == D2) * (action == 1) * (state == 2) * belief_lo ;; (phase == D2) * (action == 1) * (state == 2) * (prev_action == 2) * prev_reward ;; (phase == D2) * (action == 1) * (state == 2) * last_is(\"a1 S2 r\") ;; (phase == D2) * (action == 1) * (state == 2) * (prev_action == -1) ;; (phase == D2) * (action == 1) * (state == 2) * last_is(\"a2 S2 u\") ;; (phase == D2) * (action == 1) * (state == 2) * belief_cover ;; (phase == D2) * (action == 1) * (state == 2) * (tv(\"state\",-2)==2)*tv(\"reward\",-2)",
+    "better_terms_test_r2_beyond_timing": 0.488
+  },
+  "final_label": "D2 after a1 then rare S2. Much larger when the previous trial's reward did not come via a1->S1 (biggest after a2 S2 r, then a2 S1 r and a1 S2 r; near zero after a1 S1 r). Somewhat lower when the belief favours S1."
+}

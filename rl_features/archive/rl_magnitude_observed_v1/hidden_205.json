@@ -1,0 +1,71 @@
+{
+  "label": "D1 after a1->S2 unrewarded, larger after a losing streak",
+  "terms": "(phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 0) ;; (phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 1) * (tv(\"state\", -2) == 2) ;; (phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -3) == 0) ;; (phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (zero at GO and D2). Its main driver is a previous trial of a1 -> S2 (rare) unrewarded: that indicator alone gives dev R^2 0.46 beyond timing, and every other previous-trial pattern is silent. Within a1-S2-u the size depends on the trial before. It is larger if that trial was also unrewarded (+0.86, about double) and again if the trial three back was unrewarded (+0.33). It is suppressed if the trial before was a rewarded S2 visit (-0.69). So it tracks a recent losing streak that ends in an unrewarded S2. a2 -> S2 unrewarded (common) gives some activation only after three losses in a row (+0.36). Ideal-observer belief and belief_cover add almost nothing once trial history is in (<0.01). This history-only account (no model value or policy) scores test R^2 0.53 beyond timing, against an all-cue ceiling of 0.56 and an all-observed ceiling of 0.52. So leaving out the model policy (policy decile alone 0.32) loses little.",
+  "gate": "hidden",
+  "feature": 205,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 205,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 1) * (tv(\"state\", -2) == 2)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -3) == 0)",
+      "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0)"
+    ],
+    "weights": [
+      0.737334363938218,
+      0.8591138867627066,
+      -0.6860200711303956,
+      0.3252841722843127,
+      0.3729118364051422
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5324884590203722,
+    "r2": 0.555595195672412,
+    "r2_timing_only": 0.04942495452330797
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 205,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 1) * (tv(\"state\", -2) == 2)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -3) == 0)",
+      "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0)"
+    ],
+    "weights": [
+      0.737334363938218,
+      0.8591138867627066,
+      -0.6860200711303956,
+      0.3252841722843127,
+      0.3729118364051422
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.551304034020584,
+    "r2": 0.5748458268528411,
+    "r2_timing_only": 0.05246713725377472
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold. The feature is exactly 0 at GO and D2 (the timing baseline is +0 there). At D1 the residual is +0.95 after a1 S2 u and about -0.1 after every other previous trial. The five claimed terms reproduce test R^2 0.5325 beyond timing with the stated weights (+0.74, +0.86, -0.69, +0.33, +0.37).",
+      "Missed end-of-episode suppression. Inside a1-S2-u the activation is cut sharply in the last trials, which the per-decile timing baseline cannot capture. Adding last_is(a1 S2 u)*(ep_trial>=95) gets weight -1.05 (this nearly cancels the response), and ep_trial 90-94 gets -0.67. Together they raise test R^2 from 0.53 to 0.568. That beats the 'all' additive ceiling of 0.56 the label is compared against. Example miss: an episode-end window at t93-t96, a1 S2 u repeated, predicted 1.9 vs actual 0.3-0.4.",
+      "Missed window-edge cases. Most of the worst-fit dev windows are the first trial of a window (prev_action == -1), where last_is() cannot fire. The feature still fires at 2.1-2.8 there (e.g. t68, t57, t45, t40), but predictions are about 0.1. The observed belief variable picks these up: (phase==D1)*(prev_action==-1)*(in_rew==0)*belief raises test R^2 to 0.61. So the claim that belief adds <0.01 holds only where full history is available. Belief is informative where the window's history is missing.",
+      "Overclaim: saying the account is close to the 'all-cue ceiling of 0.56' and so 'loses little' is misleading. Observed-only terms reach 0.61, well above both the all-observed (0.52) and all-cue (0.56) additive ceilings, because those ceilings ignore the cue x late-episode and first-trial interactions.",
+      "Minor: other belief interactions inside a1-S2-u add little (belief_lo +0.002, belief_cover +0.0002, ep_dec +0.0007). Repeated S2-unrewarded (state -2 == 2 and unrewarded) adds nothing beyond reward -2 == 0. So 'losing streak' means unrewarded trials in general, not specifically S2 losses."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a1->S2 unrewarded (or at a window start with an unrewarded input and high P(S1 good)), larger after earlier losses, switched off in the last ~10 trials of the episode",
+    "better_terms": "(phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 0) ;; (phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 1) * (tv(\"state\", -2) == 2) ;; (phase == D1) * last_is(\"a1 S2 u\") * (tv(\"reward\", -3) == 0) ;; (phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0) ;; (phase == D1) * last_is(\"a1 S2 u\") * (ep_trial >= 95) ;; (phase == D1) * last_is(\"a1 S2 u\") * (ep_trial >= 90) * (ep_trial < 95) ;; (phase == D1) * (prev_action == -1) * (in_rew == 0) * belief",
+    "better_terms_test_r2_beyond_timing": 0.6098
+  },
+  "final_label": "D1 after a1->S2 unrewarded (or at a window start with an unrewarded input and high P(S1 good)), larger after earlier losses, switched off in the last ~10 trials of the episode"
+}

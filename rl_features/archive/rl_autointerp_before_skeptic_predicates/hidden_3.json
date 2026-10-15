@@ -1,0 +1,65 @@
+{
+  "label": "GO step, choosing a2 after a rewarded trial (strongest for a fresh reward after a loss, fades later in the episode)",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & ((ep_trial < 50) | (tv(\"prev_reward\", -1) != 1))",
+  "verdict": "partially_explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO steps (never D1/D2). Almost all of its mass (99.4%) is on GO steps where the previous trial was rewarded and the agent picks a2 (model_act==2 or action==2; it almost never fires when a1 is chosen, and choice logit is strongly negative). That base predicate has recall 0.98 but precision 0.51. Magnitude is largest on the first reward after one or more unrewarded trials and decays over a streak of consecutive rewards (e.g. 0.97 -> 0.2 -> 0.1 -> 0.05). Firing also fades with episode time: rate around 0.10 for trials 0-49, falling to about 0 by trials 90-99. So it fires on win-stay-a2 at GO, early in the episode or right after a fresh reward. Adding (ep_trial<50 | trial before the previous one was unrewarded) raises dev precision to 0.69 at recall 0.93, F1 0.79, mass recall 0.98. Misses are low-magnitude GO steps in a2 runs after unrewarded trials. I used model_act (the agent policy at GO, which is observable) instead of the future-marked action column; both score the same.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 3,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & ((ep_trial < 50) | (tv(\"prev_reward\", -1) != 1))",
+    "split": "test",
+    "precision": 0.6780394041326285,
+    "recall": 0.9279311478691009,
+    "f1": 0.7835434862651127,
+    "mass_recall": 0.9831275381581448,
+    "correlation": 0.5834028068839403,
+    "n_active": 69947,
+    "n_predicted": 95726,
+    "coverage_by_activation_quartile": [
+      0.7837822382341167,
+      0.9508777949333791,
+      0.977068679590553,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 3,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & ((ep_trial < 50) | (tv(\"prev_reward\", -1) != 1))",
+    "split": "dev",
+    "precision": 0.686603779729275,
+    "recall": 0.9306417914839773,
+    "f1": 0.7902104454397242,
+    "mass_recall": 0.9845975100560159,
+    "correlation": 0.5859706664515326,
+    "n_active": 67966,
+    "n_predicted": 92123,
+    "coverage_by_activation_quartile": [
+      0.7838983050847458,
+      0.9566854990583804,
+      0.9819904655405803,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 3,
+  "final_verdict": "partially_explained",
+  "scorecard": {
+    "format": "top40",
+    "summary": "Weighted combination of 40 cues. Raise it: phase=GO & value_bin=decile 8 (9 = highest) (+7.31), phase=GO & before=a2 S1 u (+4.23), phase=GO & value_bin=decile 7 (9 = highest) (+3.55), phase=GO & last=a2 S2 r (+2.66), phase=GO & before=a2 S2 u (+2.60), phase=GO & choice_bin=decile 1 (9 = most a1) (+2.54). Lower it: prev_state=1 (-6.72), model_act=1 (-4.65), choice_bin=decile 4 (9 = most a1) (-4.35), choice_bin=decile 5 (9 = most a1) (-4.06).",
+    "test_f1": 0.8897179788484136,
+    "test_precision": 0.9148052497243744,
+    "test_recall": 0.8659699486754256,
+    "full_test_f1": 0.8887763327792719,
+    "full_n_cues": 84,
+    "top40_test_f1": 0.8897179788484136,
+    "slot2_test_f1": 0.8000812353576894,
+    "slot2_slots": [
+      "last trial",
+      "policy (model)"
+    ],
+    "file": "scorecards/hidden_3.json"
+  }
+}

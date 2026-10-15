@@ -1,0 +1,69 @@
+{
+  "label": "D1 after unrewarded S2 visit; stronger after a1 (rare), two losses, early episode",
+  "terms": "(phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a2 S2 u\") ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * ep_trial ;; (phase == D1) * (prev_state == -1) * (prev_reward == 0) ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (zero at GO and D2), and only when the previous trial reached S2 and went unrewarded. Dev weights: about +1.12 after a1 S2 u (rare transition) and +0.83 after a2 S2 u (common). On those trials it drops about 0.011 per episode trial, so it fades late in the episode. It gets about +0.50 more when the trial before that was also unrewarded (two losses in a row). Window-first trials with an unknown previous state and no reward get +0.25, a window artifact. After S1 outcomes or rewarded outcomes it sits at zero, below the D1 timing baseline. The model value term (+0.002 dev R^2), the S2 state two trials back, the hidden good state and future variables add little. All terms are observed. Test R^2 beyond timing is about 0.60, above the additive all ceiling of 0.50 because the terms are interactions.",
+  "gate": "hidden",
+  "feature": 11,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 11,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * ep_trial",
+      "(phase == D1) * (prev_state == -1) * (prev_reward == 0)",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)"
+    ],
+    "weights": [
+      1.1188659857394132,
+      0.8257367696695138,
+      -0.011194045118272008,
+      0.24678856750413997,
+      0.5025841953783845
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6023513619528007,
+    "r2": 0.6469447086040632,
+    "r2_timing_only": 0.11214258615408468
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 11,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * ep_trial",
+      "(phase == D1) * (prev_state == -1) * (prev_reward == 0)",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)"
+    ],
+    "weights": [
+      1.1188659857394132,
+      0.8257367696695138,
+      -0.011194045118272008,
+      0.24678856750413997,
+      0.5025841953783845
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6042862206879164,
+    "r2": 0.6473757072448236,
+    "r2_timing_only": 0.10889053859032871
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: 'two losses' undersells the effect. It builds over a run of losses: adding U*(reward[-2]==0)*(reward[-3]==0) gets about +0.30 more (dev weight) on top of the +0.42 two-loss term, and test R^2 beyond timing goes from 0.602 to 0.619 with a nonlinear ep_dec term and a first-trial ep_trial term added. Better described as a run of recent losses.",
+      "Minor: the a1-over-a2 (rare) advantage is partly carried by the policy. With U*value and U*choice added, the a1 S2 u weight drops from 1.12 to 0.28 and the a2 S2 u weight goes from 0.83 to 0.62 (test 0.633). So 'stronger after a1 (rare)' holds marginally, but much of it moves with the model's choice logit.",
+      "The claims check out. With only the two last_is terms, test R^2 beyond timing is 0.370. Adding ep_trial gives 0.498 (weight -0.011). Adding the two-loss term gives 0.442 (weight +0.50). All terms together give 0.602. D1 after any S1 or rewarded outcome has residual about -0.11, and GO/D2 are exactly 0. since_rev, good==2 and S2 two trials back each add 0.002 or less.",
+      "Misses show no large systematic class. Mean errors by phase x previous trial are all within 0.09. The worst-fit windows are mostly the window-first D1 (prev_state unknown, actual about 2.3, predicted 0.4), which cannot be fixed from inside the window, as the label says. The rest is within-cell bimodality (the activation is about 0 or about 2 inside S2u cells), which these terms don't resolve."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after unrewarded S2 visit; grows with a run of recent losses, somewhat stronger after a1 (rare), fades late in episode",
+    "better_terms": "(phase == D1) * (prev_state == 2) * (prev_reward == 0) ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0)*(prev_action==1) ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * table(ep_dec,{0:0,1:1,2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9})**2 ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * ep_trial ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv('reward', -2) == 0) ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv('reward', -2) == 0)* (tv('reward', -3) == 0) ;; (phase == D1) * (prev_state == -1) * (prev_reward == 0) ;; (phase == D1) * (prev_state == -1) * (prev_reward == 0)*ep_trial",
+    "better_terms_test_r2_beyond_timing": 0.619
+  },
+  "final_label": "D1 after unrewarded S2 visit; grows with a run of recent losses, somewhat stronger after a1 (rare), fades late in episode"
+}

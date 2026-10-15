@@ -1,0 +1,78 @@
+{
+  "label": "D1 after reward at S2 (not S1), scaled by high value, early episode",
+  "terms": "(phase == D1) * (in_rew == 1) * (prev_state != 1) ;; (phase == D1) * (in_rew == 1) * (prev_state != 1) * np.maximum(value - np.percentile(value[phase == D1], 90), 0) ;; (phase == D1) * (in_rew == 1) * (prev_state != 1) * (value > np.percentile(value[phase == D1], 90)) ;; (phase == D1) * (in_rew == 1) * (prev_state != 1) * np.exp(-ep_trial / 10) ;; (phase == D1) * (in_rew == 1) * (prev_state != 1) * (prev_action == 1) ;; (phase == D1) * (in_rew == 1) * (prev_state != 1) * (tv(\"reward\", -2) == 1) ;; (phase == D1) * (in_rew == 1) * (prev_state != 1) * (tv(\"state\", -2) == 2)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (zero at GO and D2), and only when the reward input is 1 and the previous trial reached S2. The S2 condition is written as prev_state != 1 so that it also covers the window first trial, where prev_state is unknown. Within that gate the magnitude is driven mostly by the model value at D1. The value effect is a sharp threshold: it is near zero below about the 90th percentile of D1 value, then rises steeply with a step plus a ramp. On top of that there is an early-episode boost (exp(-ep_trial/10)) and a slight extra after a1 S2 r (rare-rewarded). Two trials back, S2 adds to it while a reward lowers it. Rewards at S1 and unrewarded trials give about zero, and the upcoming choice adds nothing once value is included (weight about 0). No future variables are used. Test R^2 beyond timing is 0.52 (dev 0.50), above the additive all-table ceiling of 0.43, because the value threshold is nonlinear. A gate plus a linear value term reached only about 0.13-0.19.",
+  "gate": "update",
+  "feature": 164,
+  "test_scores": {
+    "gate": "update",
+    "feature": 164,
+    "terms": [
+      "(phase == D1) * (in_rew == 1) * (prev_state != 1)",
+      "(phase == D1) * (in_rew == 1) * (prev_state != 1) * np.maximum(value - np.percentile(value[phase == D1], 90), 0)",
+      "(phase == D1) * (in_rew == 1) * (prev_state != 1) * (value > np.percentile(value[phase == D1], 90))",
+      "(phase == D1) * (in_rew == 1) * (prev_state != 1) * np.exp(-ep_trial / 10)",
+      "(phase == D1) * (in_rew == 1) * (prev_state != 1) * (prev_action == 1)",
+      "(phase == D1) * (in_rew == 1) * (prev_state != 1) * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * (in_rew == 1) * (prev_state != 1) * (tv(\"state\", -2) == 2)"
+    ],
+    "weights": [
+      -0.00789207558315096,
+      0.8875973784281709,
+      0.11086614256035297,
+      0.13220062610073813,
+      0.025296483399372714,
+      -0.06498361639721623,
+      0.07941880712159612
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.516580457796459,
+    "r2": 0.565524133760499,
+    "r2_timing_only": 0.10124471952652814
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 164,
+    "terms": [
+      "(phase == D1) * (in_rew == 1) * (prev_state != 1)",
+      "(phase == D1) * (in_rew == 1) * (prev_state != 1) * np.maximum(value - np.percentile(value[phase == D1], 90), 0)",
+      "(phase == D1) * (in_rew == 1) * (prev_state != 1) * (value > np.percentile(value[phase == D1], 90))",
+      "(phase == D1) * (in_rew == 1) * (prev_state != 1) * np.exp(-ep_trial / 10)",
+      "(phase == D1) * (in_rew == 1) * (prev_state != 1) * (prev_action == 1)",
+      "(phase == D1) * (in_rew == 1) * (prev_state != 1) * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * (in_rew == 1) * (prev_state != 1) * (tv(\"state\", -2) == 2)"
+    ],
+    "weights": [
+      -0.00789207558315096,
+      0.8875973784281709,
+      0.11086614256035297,
+      0.13220062610073813,
+      0.025296483399372714,
+      -0.06498361639721623,
+      0.07941880712159612
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.503560254753719,
+    "r2": 0.5522462640142238,
+    "r2_timing_only": 0.09807032923270875
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims hold up. The original terms reproduce test R^2 beyond timing of 0.517. The feature is zero at GO and D2 in the timing profile. The S2 gate matters: the same value threshold gated on prev_state == 1 scores 0.004. Dropping the prev_state condition and gating on in_rew == 1 only lowers the score (0.35-0.37 vs 0.46).",
+      "Nearly all of the magnitude comes from the model's value output, which is not an observed variable. The gate alone scores 0.07 and gate * linear value scores 0.09-0.13. A step function of value inside the gate scores 0.51 alone (thresholds at the 85/90/95/98th percentiles). The best observed-only set (gate, 2-3-back rewarded-S2 history, common, early episode) reaches only 0.18. The label correctly says 'scaled by high value', but readers should know the explanation rests on a model-internal quantity.",
+      "Several secondary claims are near-negligible. Dropping the 'small extra after a1 S2 r' term (weight +0.025) costs about 0.003 (0.517 to 0.513). The early-episode and two-back terms together add about 0.02-0.05.",
+      "There is a systematic but small error class. The original terms over-predict every D1 step outside the gate (misses: D1 after a1 S1 u -0.015, a2 S1 u -0.014, a1 S1 r -0.014, a1 S2 u -0.014). They under-predict GO and D2 by +0.004. The cause is that the timing baseline spreads the early-episode D1 mean over all D1 steps. Adding gate-off D1 terms fixes it (test 0.59, residuals within 0.003).",
+      "Worst-fit windows: activations of about 0.5 are often predicted at 0.15-0.3 inside the gate. So the value threshold does not fully explain whether the feature fires, though a finer value staircase helps (0.555)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after reward at S2, only when model value is in its top ~10% (stepwise), early-episode boost",
+    "better_terms": "G=(phase == D1) * (in_rew == 1) * (prev_state != 1); NG=(phase == D1) * (1 - (in_rew == 1) * (prev_state != 1)). Terms: G * (value > np.percentile(value[phase == D1], 85)) ;; G * (value > np.percentile(value[phase == D1], 90)) ;; G * (value > np.percentile(value[phase == D1], 95)) ;; G * (value > np.percentile(value[phase == D1], 98)) ;; G * np.exp(-ep_trial / 10) ;; G * (tv('state', -2) == 2) ;; NG ;; NG * np.exp(-ep_trial / 10)",
+    "better_terms_test_r2_beyond_timing": 0.591
+  },
+  "final_label": "D1 after reward at S2, only when model value is in its top ~10% (stepwise), early-episode boost"
+}

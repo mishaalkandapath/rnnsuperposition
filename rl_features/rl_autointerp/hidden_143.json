@@ -1,0 +1,104 @@
+{
+  "label": "D2: a2 led rarely to S1 after a rewarded S2 trial, late in the episode",
+  "predicate": "(phase == D2) & (action == 2) & (state == 1) & (prev_reward == 1) & (ep_trial >= 65) & (tv(\"state\", -1) != 1) & (value < 7.13)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (never at D1 or GO), and only when the agent chose a2 but the rare transition took it to S1 (in_action=2, in_state=1). Every active step has prev_reward=1, so the previous trial was rewarded, and that previous trial reached S2 rather than S1, so it is mostly a stay on a2 after a rewarded S2 visit. It is strongly gated by episode time: it never fires before trial 50 and is mostly active from about trial 65 on, which suggests a slow drift in the hidden state. Its rate is also higher when S2 is the good state, and the model value is lower (<7.1) on these steps. Magnitude is largest in core and context windows when S2 is good, i.e. when the rare S1 outcome contradicts a well-established a2/S2 preference; this is a qualitative read of the top examples and was not checked quantitatively. It does not fire on common transitions, on a1 choices, on S2 arrivals, or after unrewarded trials. Every variable is observed at D2 (this trial action and state, previous reward and state, trial index), so no future variable is used. Dev: P=0.83, R=0.95, F1=0.89, mass recall 0.99.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 143,
+    "predicate": "(phase == D2) & (action == 2) & (state == 1) & (prev_reward == 1) & (ep_trial >= 65) & (tv(\"state\", -1) != 1) & (value < 7.13)",
+    "split": "test",
+    "precision": 0.852285540810131,
+    "recall": 0.9526856699631568,
+    "f1": 0.8996932655770727,
+    "mass_recall": 0.9922580906418096,
+    "correlation": 0.8082321802677461,
+    "n_active": 10314,
+    "n_predicted": 11529,
+    "coverage_by_activation_quartile": [
+      0.8169833268708802,
+      0.9937960449786739,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 143,
+    "predicate": "(phase == D2) & (action == 2) & (state == 1) & (prev_reward == 1) & (ep_trial >= 65) & (tv(\"state\", -1) != 1) & (value < 7.13)",
+    "split": "dev",
+    "precision": 0.8421887390959556,
+    "recall": 0.9539874238946002,
+    "f1": 0.894608760763759,
+    "mass_recall": 0.9921476900801203,
+    "correlation": 0.7999617797242166,
+    "n_active": 10019,
+    "n_predicted": 11349,
+    "coverage_by_activation_quartile": [
+      0.8303393213572854,
+      0.9864271457085828,
+      0.9992015968063872,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 143,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I reproduced the test score: P=0.839, R=0.953, F1=0.893, mass recall 0.992. Dev gives F1=0.889.",
+      "The profile confirms every exclusion claim: no activity at D1 or GO, none on a1, S2, common transitions, prev_reward=0, or before trial 50. Activity is 0.1% in trials 50-59 and 52% of the activation mass is in trials 80-89.",
+      "One wording point: 'the previous trial reached S2' holds only where the previous trial is in the window. tv('state',-1)==2 recalls 82% of activations and tv('state',-1)==1 almost none (R=0.001). The other ~17% are at rel -3, where the previous trial is outside the window, so the '!= 1' term partly works by letting window-boundary steps through. Swapping in '== 2' drops test F1 to 0.46 without the time gate. Restricting to rel > -3 lowers recall to 0.78 and leaves precision unchanged.",
+      "'Mostly a stay on a2' checks out: stay==1 recalls about 76%, and the rest are rel -3 steps where stay is undefined.",
+      "The remaining false positives (~16%) are often D2 a2->S1 rare steps after a long run of rewarded trials, i.e. high value. Adding value < 7.13 raises test F1 only slightly, from 0.893 to 0.900, so this is a small refinement and not a systematic gap. Restricting to good==2 or start_high==1 lowers F1.",
+      "The episode-time gate (ep_trial >= 65) carries a lot of the precision: without it F1 is 0.48. It is an empirical drift effect, but the label states it honestly."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == D2) & (action == 2) & (state == 1) & (prev_reward == 1) & (ep_trial >= 65) & (tv(\"state\", -1) != 1) & (value < 7.13)",
+    "better_predicate_test_f1": 0.9
+  },
+  "original_predicate": "(phase == D2) & (action == 2) & (state == 1) & (prev_reward == 1) & (ep_trial >= 65) & (tv(\"state\", -1) != 1)",
+  "original_test_scores": {
+    "gate": "hidden",
+    "feature": 143,
+    "predicate": "(phase == D2) & (action == 2) & (state == 1) & (prev_reward == 1) & (ep_trial >= 65) & (tv(\"state\", -1) != 1)",
+    "split": "test",
+    "precision": 0.8394397472030062,
+    "recall": 0.9529765367461702,
+    "f1": 0.8926122689915089,
+    "mass_recall": 0.99227503484266,
+    "correlation": 0.8019472254330495,
+    "n_active": 10314,
+    "n_predicted": 11709,
+    "coverage_by_activation_quartile": [
+      0.8181465684373789,
+      0.9937960449786739,
+      1.0,
+      1.0
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "hidden",
+    "feature": 143,
+    "predicate": "(phase == D2) & (action == 2) & (state == 1) & (prev_reward == 1) & (ep_trial >= 65) & (tv(\"state\", -1) != 1)",
+    "split": "dev",
+    "precision": 0.83198468633081,
+    "recall": 0.9543866653358619,
+    "f1": 0.8889921904053552,
+    "mass_recall": 0.9921980648401352,
+    "correlation": 0.794923910620112,
+    "n_active": 10019,
+    "n_predicted": 11493,
+    "coverage_by_activation_quartile": [
+      0.831936127744511,
+      0.9864271457085828,
+      0.9992015968063872,
+      1.0
+    ]
+  },
+  "predicate_from": "skeptic"
+}

@@ -1,0 +1,71 @@
+{
+  "label": "D2 a2->S2 common: larger after a rewarded trial, belief S2 good, early episode",
+  "terms": "(phase == D2) ;; (phase == D2) * (action == 2) * (state == 2) ;; (phase == D2) * (action == 2) * (state == 2) * np.clip(-belief_lo, -4, 4) ;; (phase == D2) * (action == 2) * (state == 2) * (prev_reward == 1) ;; (phase == D2) * (action == 2) * (state == 2) * ep_dec",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Active only at D2, almost only when a2 led commonly to S2 (choice x state code 8, residual +0.53; all other D2 cells about -0.34; D1/GO always 0). Within a2->S2 its magnitude rises when the previous trial was rewarded (weight +0.56, the largest modulator; unrewarded previous trial often gives 0), rises with the ideal observer log-odds that S2 is good (clipped -belief_lo, +0.12 per unit), and falls across the episode (-0.15 per episode decile, beyond the shared D2 timing baseline). Previous choice (stay vs switch to a2), last_is a2 S2 r and the reward two trials back add nothing (<0.001). Observed-only, no model outputs: test R^2 beyond timing 0.695 (dev 0.714), above the profile all ceiling 0.64 and all-observed 0.50 because the terms are gated by the a2->S2 interaction. Earlier value/policy-based label used high value; here prev_reward plus belief replace it with no visible loss. Remaining error: some a2->S2 steps after unrewarded trials are 0 where the fit predicts ~1.5 (threshold-like behaviour).",
+  "gate": "reset",
+  "feature": 70,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 70,
+    "terms": [
+      "(phase == D2)",
+      "(phase == D2) * (action == 2) * (state == 2)",
+      "(phase == D2) * (action == 2) * (state == 2) * np.clip(-belief_lo, -4, 4)",
+      "(phase == D2) * (action == 2) * (state == 2) * (prev_reward == 1)",
+      "(phase == D2) * (action == 2) * (state == 2) * ep_dec"
+    ],
+    "weights": [
+      -0.3465266958351752,
+      0.9664356048687927,
+      0.1289887884182172,
+      0.5588663764052294,
+      -0.15122605639023742
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6945826063862994,
+    "r2": 0.7717482398511623,
+    "r2_timing_only": 0.2526563158431764
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 70,
+    "terms": [
+      "(phase == D2)",
+      "(phase == D2) * (action == 2) * (state == 2)",
+      "(phase == D2) * (action == 2) * (state == 2) * np.clip(-belief_lo, -4, 4)",
+      "(phase == D2) * (action == 2) * (state == 2) * (prev_reward == 1)",
+      "(phase == D2) * (action == 2) * (state == 2) * ep_dec"
+    ],
+    "weights": [
+      -0.3465266958351752,
+      0.9664356048687927,
+      0.1289887884182172,
+      0.5588663764052294,
+      -0.15122605639023742
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7140140941716298,
+    "r2": 0.7874209639759148,
+    "r2_timing_only": 0.2566800262119875
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The claim that whether the previous choice was the same or a switch to a2 'added nothing (<0.001 R^2)' is false. Adding X*(prev_action==1), where X = D2*a2*S2, raises test R^2 from 0.6946 to 0.7106 (weight -0.56). Adding X*last_is('a1 S2 r') instead gives 0.7057 (weight -0.72). misses on the original terms also shows the largest systematic over-prediction is D2 after 'a1 S2 r' (-0.216), so on a switch to a2 the feature is weaker. The earlier firing-based label also said 'weaker on the first a2 trial after switching from a1'. The agent tested last_is('a2 S2 r'), the wrong cell.",
+      "The previous-reward effect is not constant. It interacts with time in the episode. Adding X*(prev_reward==0)*ep_dec raises test R^2 to 0.751. The prev_reward weight becomes +1.26 early in the episode and the late-episode decline is steeper after rewarded trials (-0.21 per 10-trial block) than after unrewarded ones (about -0.06). This is the 'threshold' error the explanation mentions: early in the episode, a2->S2 trials after an unrewarded trial are near 0 while the fit predicts 1.4-1.7. The additive terms miss this.",
+      "'Previous reward is the biggest effect' is overclaimed. On test, with D2 and X as the base (0.401), adding ep_dec alone gives 0.548, more than prev_reward alone (0.504). Over 10 blocks, ep_dec's range (about 1.35) is larger than the 0.56 reward effect.",
+      "Claims that check out: the feature is 0 at D1 and GO, it is concentrated at D2 a2->S2 (residual +0.53 vs about -0.34 for other cells), it grows with belief that S2 is good (+0.11 to 0.13 per unit of log-odds, worth about +0.08 R^2), test R^2 is 0.6946 as reported, and no future variables are used.",
+      "After adding the better terms, the remaining errors are small: D2 after 'a2 S1 r' -0.11 and after 'a1 S2 r' -0.06."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 a2->S2 common only: larger after a rewarded trial (strongly early in the episode, fading later), with belief that S2 is good, and when a2 was repeated rather than switched to from a1",
+    "better_terms": "(phase == D2) ;; (phase == D2) * (action == 2) * (state == 2) ;; (phase == D2) * (action == 2) * (state == 2) * np.clip(-belief_lo, -4, 4) ;; (phase == D2) * (action == 2) * (state == 2) * (prev_reward == 1) ;; (phase == D2) * (action == 2) * (state == 2) * ep_dec ;; (phase == D2) * (action == 2) * (state == 2) * (prev_action == 1) ;; (phase == D2) * (action == 2) * (state == 2) * (prev_reward == 0) * ep_dec",
+    "better_terms_test_r2_beyond_timing": 0.751
+  },
+  "final_label": "D2 a2->S2 common only: larger after a rewarded trial (strongly early in the episode, fading later), with belief that S2 is good, and when a2 was repeated rather than switched to from a1"
+}

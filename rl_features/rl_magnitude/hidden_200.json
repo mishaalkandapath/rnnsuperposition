@@ -1,0 +1,108 @@
+{
+ "label": "At D2, fires when S2 is shown, strongly if the last trial was rewarded at S1.",
+ "short_terms": "(in_state == 1) ;; (in_state == 2) * (prev_reward == 1) * (prev_state == S1) ;; (in_state == 2) * (action == 1) * (prev_reward == 1)",
+ "terms": "(phase == D2) * (state == S2) ;; (phase == D2) * (state == S2) * (action == 1) ;; (phase == D2) * (state == S2) * (prev_reward == 1) * (prev_state == S1) ;; (phase == D2) * (state == S2) * (prev_reward == 1) ;; (phase == D2) * (state == S2) * belief_lo ;; (phase == D2) * (state == S2) * (tv(\"reward\", -2) == 1)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Silent at D1 and GO; active only at D2 when the reached state S2 is shown (S1 shown -> zero). Magnitude is set mainly by the previous trial: large when the previous trial was rewarded at S1 (a1 S1 r or a2 S1 r), i.e. S2 arriving after evidence that S1 is good; extra activation when S2 was reached via a rare transition after choosing a1. At D2 the state and this trial choice are already observed, so no future variable is used. The free fit adds a smaller boost for any previous reward, a graded belief_lo term (higher when the observer believes S1 good) and a reward two trials back, giving about 0.05 more dev R^2. Remaining misses are mostly window-first trials where the previous trial is unknown.",
+ "full_test_scores": {
+  "gate": "hidden",
+  "feature": 200,
+  "terms": [
+   "(phase == D2) * (state == S2)",
+   "(phase == D2) * (state == S2) * (action == 1)",
+   "(phase == D2) * (state == S2) * (prev_reward == 1) * (prev_state == S1)",
+   "(phase == D2) * (state == S2) * (prev_reward == 1)",
+   "(phase == D2) * (state == S2) * belief_lo",
+   "(phase == D2) * (state == S2) * (tv(\"reward\", -2) == 1)"
+  ],
+  "weights": [
+   -0.17509366729175008,
+   0.19290076757025987,
+   0.8510036017785069,
+   0.33081849349238046,
+   0.05685033316281497,
+   0.1497286690905096
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6779094050304681,
+  "r2": 0.709748533123249,
+  "r2_timing_only": 0.09885146784802179
+ },
+ "gate": "hidden",
+ "feature": 200,
+ "test_scores": {
+  "gate": "hidden",
+  "feature": 200,
+  "terms": [
+   "(in_state == 1)",
+   "(in_state == 2) * (prev_reward == 1) * (prev_state == S1)",
+   "(in_state == 2) * (action == 1) * (prev_reward == 1)"
+  ],
+  "weights": [
+   -0.19472650577248254,
+   0.8158172450881754,
+   0.7109847084880231
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7284646103775907,
+  "r2": 0.7553062822144504,
+  "r2_timing_only": 0.09885146784802179
+ },
+ "dev_scores": {
+  "gate": "hidden",
+  "feature": 200,
+  "terms": [
+   "(in_state == 1)",
+   "(in_state == 2) * (prev_reward == 1) * (prev_state == S1)",
+   "(in_state == 2) * (action == 1) * (prev_reward == 1)"
+  ],
+  "weights": [
+   -0.19472650577248254,
+   0.8158172450881754,
+   0.7109847084880231
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.7345484435539614,
+  "r2": 0.7610933604680208,
+  "r2_timing_only": 0.09999910066247986
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The recorded short form is badly set up. With (in_state == 2) as the base term, the fitted weight is -0.04 (dev), so the short form never says 'fires when S2 is shown'. The D2 timing baseline (~0.2) is left on S1 steps, which are predicted at about 0.17 when the actual value is 0. Swapping the base term to (in_state == 1) (weight -0.195), with the other two terms unchanged, raises test R^2 beyond timing from 0.632 to 0.687. That already beats the reported free fit (0.678).",
+   "The a1 boost depends on reward. (in_state == 2)*(action == 1) adds only about +0.03 test R^2 to the previous-S1-reward term (0.598 -> 0.632). Restricting it to rewarded previous trials, (in_state == 2)*(action == 1)*(prev_reward == 1), gives 0.728 test. So the rare a1->S2 boost holds mainly after a rewarded trial, which neither the label nor the explanation says.",
+   "The label leaves out the a1 / rare-transition component, so a reader cannot predict that a1->S2 after a reward from S2 is also high. The residual table shows this choice x state cell (a1 S2) at +0.86, and the profile's top-residual examples have a1 S2R at about +2.2 after a1 S1 c trials.",
+   "Misses on the recorded form: S1 cells at D2 are over-predicted by about 0.17 every time (the baseline artifact). Over-prediction after unrewarded previous trials reaches -0.24 (a1 S2 u). Under the improved form these shrink to at most about 0.13 (after a2 S1 u and a2 S2 u), which is modest next to std 0.31.",
+   "The claim that no future variables are used checks out: at D2 the choice and the reached state are both observed."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "D2 only, zero at S1: fires on S2 after a rewarded trial, most if rewarded at S1 or reached by a1.",
+  "better_short_terms": "(in_state == 1) ;; (in_state == 2) * (prev_reward == 1) * (prev_state == S1) ;; (in_state == 2) * (action == 1) * (prev_reward == 1)",
+  "better_short_terms_test_r2_beyond_timing": 0.7285
+ },
+ "final_label": "D2 only, zero at S1: fires on S2 after a rewarded trial, most if rewarded at S1 or reached by a1.",
+ "original_short_terms": "(in_state == 2) ;; (in_state == 2) * (prev_reward == 1) * (prev_state == S1) ;; (in_state == 2) * (action == 1)",
+ "original_test_scores": {
+  "gate": "hidden",
+  "feature": 200,
+  "terms": [
+   "(in_state == 2)",
+   "(in_state == 2) * (prev_reward == 1) * (prev_state == S1)",
+   "(in_state == 2) * (action == 1)"
+  ],
+  "weights": [
+   -0.04180241146830135,
+   1.1444331233265101,
+   0.35175898308654574
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6317001670965476,
+  "r2": 0.668107146187235,
+  "r2_timing_only": 0.09885146784802179
+ },
+ "terms_from": "skeptic"
+}

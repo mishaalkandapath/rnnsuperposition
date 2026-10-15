@@ -1,0 +1,66 @@
+{
+  "label": "GO after an unrewarded trial, when the agent strongly prefers a2 (in the first ~70 trials of the episode)",
+  "predicate": "(phase == GO) & (prev_reward == 0) & (choice < -6) & (ep_trial < 70)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO steps (never D1 or D2), and only when the previous trial was unrewarded (prev_reward 0; it never fires after reward 1) and the policy at that step strongly favours a2 (choice logit a1-a2 < -6; it essentially never fires when the agent picks a1). It also depends on episode time: the rate is flat over trials 0-60, then falls, and the feature is silent after about trial 75, so ep_trial < 70 is needed for precision. Without the time term, (GO & prev_reward==0 & choice<-4) gets P 0.57 / R 1.0; adding ep_trial<70 with choice<-6 gives dev P 0.91 / R 0.96 / F1 0.93 / mass recall 0.996. Every variable is observed or computed by the agent: the previous reward is an input at D1, and the choice is its own policy logit at GO. Magnitude: about 80% of the activation mass is in the most negative choice-logit bin (< -8.9), so activation grows with the strength of the a2 preference. Previous transition (rare>common), previous action a2 and good state S2 all show lift, but they are correlates of a confident a2 choice after no reward, not separate conditions. Missed activations are weak (1.8% of mass) and mostly at moderate a2 logits.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 163,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (choice < -6) & (ep_trial < 70)",
+    "split": "test",
+    "precision": 0.8971508503276154,
+    "recall": 0.9517338331771321,
+    "f1": 0.9236366392541783,
+    "mass_recall": 0.9945774053737465,
+    "correlation": 0.8277699812552933,
+    "n_active": 38412,
+    "n_predicted": 40749,
+    "coverage_by_activation_quartile": [
+      0.8069353327085286,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 163,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (choice < -6) & (ep_trial < 70)",
+    "split": "dev",
+    "precision": 0.9055672829929551,
+    "recall": 0.9601963216654981,
+    "f1": 0.9320820408109842,
+    "mass_recall": 0.9957953081879939,
+    "correlation": 0.8367483468022258,
+    "n_active": 37082,
+    "n_predicted": 39319,
+    "coverage_by_activation_quartile": [
+      0.8409017365979937,
+      1.0,
+      0.9998921251348436,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 163,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The scores reproduce. Test: P 0.897, R 0.952, F1 0.924, mass recall 0.995. Dev: P 0.906, R 0.960, F1 0.932, mass recall 0.996. Without the time term (GO & prev_reward 0 & choice < -4), test P is 0.554 at R 0.999, which matches the claimed ~0.57 / 1.0.",
+      "The GO-only claim holds: there are 0 activations at D1 and 0 at D2 out of 37082 dev activations.",
+      "The prev_reward claim is slightly overstated: there are 58 activations after prev_reward 1 on dev, not literally none. That is under 0.2% of activations and about 0 mass, so it is negligible.",
+      "The a2 claim holds: only 16 of 37082 activations happen when the action is a1, and there are no activations when choice >= -1.5.",
+      "The time dependence holds: the firing rate is 0.05 up to trial 59, 0.028 for trials 60-69, 0.004 for 70-79 and 0 from trial 80 on. The cutoff is soft, though: inside the predicate, precision is only 0.57 for ep_trial >= 60. The time term may also be a correlate of value rather than of episode time as such. Swapping ep_trial < 70 for value > 7.1 gives essentially the same dev F1 (0.929 against 0.932), and value has no activations below 5.22. So 'early in the episode' may mean 'the agent's value estimate is still high'. Both are observed or computed by the agent, so the label is not wrong, but it could mention this equivalence.",
+      "Subgroup check: precision inside the predicate is 0.98 after a rare previous transition but 0.78 after a common one (prev_common 1). It is 0.98 when choice < -8.9 and 0.79 when choice is between -8.9 and -6, consistent with the magnitude claim. These are gradients in reliability, not a counterexample class. Adding a prev_common-dependent threshold lowered test F1 to 0.914.",
+      "Misses on the test split hold only 0.5% of the activation mass and are weak, scattered GO activations. False positives are spread across reward and transition patterns, with no systematic phase or position class.",
+      "No future variables are used. prev_reward, choice and ep_trial are all observed or computed by the agent."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "label": "lowered by a1 choice/S1 at D2 and after a1-S2 at D1, deepening late in episode",
+  "terms": "(phase == D2) * (action == 1) ;; (phase == D2) * (action == 1) * (state == 1) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == GO) * choice ;; (phase == D1) * choice ;; (phase == D2) * (prev_reward == 1) ;; (phase == D2) * (action == 1) * (state == 1) * np.exp(ep_trial / 15.0) ;; (phase != D2) * (prev_action == 1) * np.exp(ep_trial / 15.0)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 16 sits near 1 (mean 0.984) and dips below it. Beyond timing (which already captures a big late-episode drop, esp. at D2), it is lowered by choosing a1: at D2 after an a1 choice (-0.011), strongly more if a1 reached S1 (common, extra -0.013), and this a1/S1 dip grows roughly exponentially over the last ~20 trials of the episode; at D1 it is lowered by ~-0.02 when the previous trial was a1 reaching S2 (rare), regardless of reward. At D1/GO it falls slightly with the policy logit toward a1 (graded choice term) and, late in the episode, after a previous a1 choice. At D2 it is higher when the previous trial was rewarded (+0.012). All terms are observed at the step (action/state at D2 are already known; choice is the model policy logit). Value, hidden good state and since_rev add little. Dev R^2 beyond timing 0.70 (all-cue ceiling 0.77, all observed 0.72).",
+  "gate": "unit_update",
+  "feature": 16,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 16,
+    "terms": [
+      "(phase == D2) * (action == 1)",
+      "(phase == D2) * (action == 1) * (state == 1)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == GO) * choice",
+      "(phase == D1) * choice",
+      "(phase == D2) * (prev_reward == 1)",
+      "(phase == D2) * (action == 1) * (state == 1) * np.exp(ep_trial / 15.0)",
+      "(phase != D2) * (prev_action == 1) * np.exp(ep_trial / 15.0)"
+    ],
+    "weights": [
+      -0.011209576517584814,
+      -0.013244117768544948,
+      -0.01926501722406168,
+      -0.0005518352972939572,
+      -0.0008936852358830461,
+      0.011694932266667986,
+      -4.1161149496559996e-05,
+      -1.0723933821702979e-05
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6933046085880143,
+    "r2": 0.7763045332272307,
+    "r2_timing_only": 0.270626579216256
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 16,
+    "terms": [
+      "(phase == D2) * (action == 1)",
+      "(phase == D2) * (action == 1) * (state == 1)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == GO) * choice",
+      "(phase == D1) * choice",
+      "(phase == D2) * (prev_reward == 1)",
+      "(phase == D2) * (action == 1) * (state == 1) * np.exp(ep_trial / 15.0)",
+      "(phase != D2) * (prev_action == 1) * np.exp(ep_trial / 15.0)"
+    ],
+    "weights": [
+      -0.011209576517584814,
+      -0.013244117768544948,
+      -0.01926501722406168,
+      -0.0005518352972939572,
+      -0.0008936852358830461,
+      0.011694932266667986,
+      -4.1161149496559996e-05,
+      -1.0723933821702979e-05
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7022471157399202,
+    "r2": 0.783622061366318,
+    "r2_timing_only": 0.27329691810917534
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: at D2 the plain a1 effect is weak once S1 is accounted for. The raw residual by this choice x state at D2 is -0.019 for a1/S1 but only -0.0013 for a1/S2. Dropping the (phase==D2)*(action==1) term costs only 0.008 test R^2 (0.693 -> 0.686), so the main D2 effect is a1 reaching S1, not a1 alone.",
+      "Minor: the label's D2 terms leave out a graded choice term. Adding (phase==D2)*choice, with the D1 and GO choice terms merged into one (phase!=D2)*choice term, raises test R^2 from 0.693 to 0.721. The label's claim that the graded choice effect is only at D1 and GO is therefore incomplete.",
+      "The worst-fit windows all fall late in the episode (t92-99), where large negative dips are under-predicted by about 0.03-0.07. The exponential late terms capture only part of this. Changing the time constant from 15 to 10 gives a small gain (0.701).",
+      "No large systematic error remains. Mean error by phase is within +/-0.002. The biggest phase x previous-trial errors are about +/-0.007 (D2 after a2 u +0.007, D1 after a1 S2 r -0.006).",
+      "The claims check out. Every term adds on test when dropped one at a time (losses of 0.008-0.13; the late a1/S1 exp term matters most, 0.693 -> 0.561). D1 a1-S2 is about -0.02 whether rewarded or not (residuals -0.026 r / -0.021 u). The D2 prev_reward effect is general: restricting it to a1 S2 drops R^2 to 0.59. No future variables are used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "lowered at D2 by a1->S1 and a1-leaning policy, at D1 after a1-S2; deepens late in episode",
+    "better_terms": "(phase == D2) * (action == 1) ;; (phase == D2) * (action == 1) * (state == 1) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase != D2) * choice ;; (phase == D2) * (prev_reward == 1) ;; (phase == D2) * (action == 1) * (state == 1) * np.exp(ep_trial / 15.0) ;; (phase != D2) * (prev_action == 1) * np.exp(ep_trial / 15.0) ;; (phase == D2) * choice",
+    "better_terms_test_r2_beyond_timing": 0.7211
+  },
+  "final_label": "lowered at D2 by a1->S1 and a1-leaning policy, at D1 after a1-S2; deepens late in episode"
+}

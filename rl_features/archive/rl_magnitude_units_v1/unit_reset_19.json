@@ -1,0 +1,78 @@
+{
+  "label": "reset gate drops with unrewarded-trial streaks, most at GO and after S1 losses",
+  "terms": "(phase == D1) * (tv(\"reward\", -2) == 0) ;; (phase == D1) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0) ;; (phase != D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (1 + (tv(\"reward\", -3) == 0)) ;; (phase == GO) * (prev_reward == 0) ;; (phase != D1) * (prev_reward==0) * (prev_state==1) ;; (prev_reward == 0) * ep_trial / 100 ;; (phase == GO) * (prev_reward==1) * (prev_state==2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r19 sits near 0.95 and is lowered by recent unrewarded trials. After an unrewarded trial it drops at GO (strongest, about -0.06 to -0.2) and at D2. The drop gets deeper with consecutive losses (the trial before, and the one before that), is larger when the lost trial reached S1 (a1 S1 u is the deepest cell), and grows later in the episode. One reward resets it quickly; GO after a rewarded S2 trial is slightly raised. At D1 the gate lags by one trial: it reflects the outcome of the trial before last (tv reward -2) and not yet the reward input shown at that D1. The upcoming choice, hidden good state and value add little; a policy-confidence term at GO added only ~0.006. Observed-only terms: test R^2 beyond timing 0.589 (dev 0.592) against an all-cue ceiling of 0.66 (all observed 0.63).",
+  "gate": "unit_reset",
+  "feature": 19,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 19,
+    "terms": [
+      "(phase == D1) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0)",
+      "(phase != D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (1 + (tv(\"reward\", -3) == 0))",
+      "(phase == GO) * (prev_reward == 0)",
+      "(phase != D1) * (prev_reward==0) * (prev_state==1)",
+      "(prev_reward == 0) * ep_trial / 100",
+      "(phase == GO) * (prev_reward==1) * (prev_state==2)"
+    ],
+    "weights": [
+      -0.04102819970544421,
+      -0.034604892817039795,
+      -0.030524537715068547,
+      -0.056550142877718146,
+      -0.06244576843599225,
+      -0.050229997762050824,
+      0.05190343372645806
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5887838339171783,
+    "r2": 0.8119123277990489,
+    "r2_timing_only": 0.5426063279743021
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 19,
+    "terms": [
+      "(phase == D1) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0)",
+      "(phase != D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (1 + (tv(\"reward\", -3) == 0))",
+      "(phase == GO) * (prev_reward == 0)",
+      "(phase != D1) * (prev_reward==0) * (prev_state==1)",
+      "(prev_reward == 0) * ep_trial / 100",
+      "(phase == GO) * (prev_reward==1) * (prev_state==2)"
+    ],
+    "weights": [
+      -0.04102819970544421,
+      -0.034604892817039795,
+      -0.030524537715068547,
+      -0.056550142877718146,
+      -0.06244576843599225,
+      -0.050229997762050824,
+      0.05190343372645806
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5917374681614402,
+    "r2": 0.8174819386089316,
+    "r2_timing_only": 0.5529394760544866
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Core claims check out on test. Dropping the S1-loss term lowers R^2 from 0.589 to 0.523, dropping the ep_trial term lowers it to 0.551, and adding (phase==D1)*(prev_reward==0) adds only 0.002. That confirms the D1 one-trial lag. A streak term for a fourth loss in a row adds nothing (0.589), so the claim that the drop deepens with each extra loss only holds up to about 3 losses in the terms.",
+      "Claim 'GO after a rewarded S2 trial is slightly raised' is too narrow. The profile residuals at GO are a1 S2 r +0.061, a2 S2 r +0.076 and a2 S1 r +0.059, but a1 S1 r only +0.021. So GO is raised after any rewarded trial except a1->S1, not only after S2. Swapping the term for (phase==GO)*(prev_reward==1)*(1-last_is('a1 S1 r')) raises test R^2 from 0.618 to 0.629 (with the a1 S1 u term below in place). misses also shows 'GO after a2 S1 r' under-predicted by +0.037.",
+      "Systematic miss: the deepest cell, GO after a1 S1 u, is over-predicted (actual - predicted = -0.062). The real residual there is -0.196, against -0.116 for a2 S1 u. So the effect is specific to the a1 -> S1 (common) path, not just to 'reached S1'. Adding (phase==GO)*last_is('a1 S1 u') alone raises test R^2 from 0.589 to 0.616.",
+      "A smaller leftover asymmetry by previous choice remains in every phase: a1 cells are over-predicted (D1 after a1 S2 r -0.025, D2 after a1 S1 u -0.029) and a2 cells under-predicted (D2 after a2 S1 u +0.032, GO after a2 S2 u +0.029).",
+      "Minor: a GO policy-confidence term (phase==GO)*abs(choice) adds 0.011 on test (0.589 -> 0.600), not the 0.006 the explanation states."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "reset gate drops with unrewarded streaks (up to ~3), deepest at GO after a1->S1 losses; GO is raised after any reward except a1->S1",
+    "better_terms": "(phase == D1) * (tv('reward', -2) == 0) ;; (phase == D1) * (tv('reward', -2) == 0) * (tv('reward', -3) == 0) ;; (phase != D1) * (prev_reward == 0) * (tv('reward', -2) == 0) * (1 + (tv('reward', -3) == 0)) ;; (phase == GO) * (prev_reward == 0) ;; (phase != D1) * (prev_reward==0) * (prev_state==1) ;; (prev_reward == 0) * ep_trial / 100 ;; (phase == GO)*last_is('a1 S1 u')*(1+ep_trial/50) ;; (phase == GO) * (prev_reward==1) * (1 - last_is('a1 S1 r'))",
+    "better_terms_test_r2_beyond_timing": 0.6293
+  },
+  "final_label": "reset gate drops with unrewarded streaks (up to ~3), deepest at GO after a1->S1 losses; GO is raised after any reward except a1->S1"
+}

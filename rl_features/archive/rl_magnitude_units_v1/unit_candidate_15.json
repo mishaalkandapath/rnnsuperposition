@@ -1,0 +1,74 @@
+{
+  "label": "Tracks an a2/S2-leaning belief: up after a2 unrewarded (D1), a2->S1 rare (D2); down with a1 policy",
+  "terms": "(phase == D1) * (prev_action == 2) * (prev_reward == 0) ;; (phase == D2) * (action == 2) * (state == 1) ;; (phase == D2) * (state == 2) ;; (phase == GO) * (prev_action == 2) ;; (phase == D1) * choice ;; (phase == D2) * choice",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw GRU candidate n of unit 15. Timing alone gives R^2 0.71 (D1 about -0.6, GO about +0.87, D2 about -0.28, all rising late in the episode). Beyond timing: at D1 it is much higher after an unrewarded a2 trial (a2 S1 u +0.93, a2 S2 u +0.61) and lower after any a1 trial (-0.2 to -0.4). At D2 it is very high when a2 led to S1 (rare, +0.92), lowest for a1->S2 (-0.64) and lower when S2 is reached. At GO there is a small rise after an a2 choice. On top of this it varies with the model policy logit (logit a1 - a2) at D1 and D2: higher when the policy leans to a2, lower when it leans to a1, e.g. long rewarded a1->S1 streaks push it up at D2 in a way the discrete history terms miss. Using only observed history and current-trial terms (prev action x reward at D1, action x state at D2, prev action at GO; 6 terms) the test R^2 beyond timing is 0.60. Adding the policy logit (an internal model quantity, not a future variable) gives test R^2 beyond timing 0.87 with 6 terms, against an all ceiling of 0.94 (all observed 0.81). The current trial reward (future) explains nothing (0.00).",
+  "gate": "unit_candidate",
+  "feature": 15,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 15,
+    "terms": [
+      "(phase == D1) * (prev_action == 2) * (prev_reward == 0)",
+      "(phase == D2) * (action == 2) * (state == 1)",
+      "(phase == D2) * (state == 2)",
+      "(phase == GO) * (prev_action == 2)",
+      "(phase == D1) * choice",
+      "(phase == D2) * choice"
+    ],
+    "weights": [
+      0.5970638664396674,
+      0.28761198055518494,
+      -0.5026846314491066,
+      0.13695354038423402,
+      -0.07875695009390592,
+      -0.11144422702670224
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8681167087775417,
+    "r2": 0.9612554845132217,
+    "r2_timing_only": 0.7062211965773229
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 15,
+    "terms": [
+      "(phase == D1) * (prev_action == 2) * (prev_reward == 0)",
+      "(phase == D2) * (action == 2) * (state == 1)",
+      "(phase == D2) * (state == 2)",
+      "(phase == GO) * (prev_action == 2)",
+      "(phase == D1) * choice",
+      "(phase == D2) * choice"
+    ],
+    "weights": [
+      0.5970638664396674,
+      0.28761198055518494,
+      -0.5026846314491066,
+      0.13695354038423402,
+      -0.07875695009390592,
+      -0.11144422702670224
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8702250892979728,
+    "r2": 0.9616578143421445,
+    "r2_timing_only": 0.7045485490959646
+  },
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The test score reproduces (0.868 beyond timing), and the per-phase facts hold: D1 is +0.93 after a2 S1 u and +0.61 after a2 S2 u, and every a1 history is negative; at D2 a2->S1 is +0.92 and a1->S2 is -0.64; GO rises slightly after a2. The episode-late rise is part of the timing baseline.",
+      "The 'S2-leaning belief' part of the label is contradicted by the data. At D2, reaching S2 lowers the unit (weight -0.50; residual a1->S2 -0.64, a2->S2 -0.17). At D1, a rewarded a2->S2 trial, the history that should most favour S2, gives no rise (+0.035). The rises come after a2 is chosen and the outcome goes against S2 (no reward, or the rare move to S1). Under model-based logic that evidence points away from S2. 'a2-leaning' is partly supported: after a2 S2 u, D1 is high when the agent will choose a2 again (weight 0.80) and low when it will switch to a1 (0.10).",
+      "About a third of the score comes from the 'choice' logit at D1 and D2. The variables doc says this logit is only meaningful at GO. At D1 and D2 it is read out from the same hidden state this unit's candidate feeds, so it is partly circular, and it does not show a 'policy lean'. The two choice terms alone score 0.46. The four observed terms alone score 0.55 (claimed 0.60). My best 8-term observed-only set reaches only 0.66, well below the observed ceiling of 0.81.",
+      "The explanation says the logit term captures long rewarded a1->S1 streaks at D2. The misses output contradicts this: those streaks dominate the worst-fit windows. At D2 a1 S1c the actual value is about 0.6-0.73 against a prediction of 0.14-0.34; at D1 it is about -0.85 to -0.96 against about -0.6. Other systematic D1 errors: after a1 S2 r it is over-predicted by 0.23, after a1 S2 u under-predicted by 0.18.",
+      "Adding streak and a1->S1 terms only raises test R^2 to 0.885. The remaining gap is mostly graded history that neither the discrete terms nor the logit explain cleanly."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "Up after an a2 choice whose outcome goes against S2 (unrewarded a2 at D1, a2->S1 at D2); down after a1 and whenever S2 is reached at D2; graded part follows the step's a1-a2 logit",
+    "better_terms": "(phase == D1) * (prev_action == 2) * (prev_reward == 0) ;; (phase == D2) * (action == 2) * (state == 1) ;; (phase == D2) * (state == 2) ;; (phase == GO) * (prev_action == 2) ;; (phase == D1) * choice ;; (phase == D2) * choice ;; (phase==D2)*(action==1)*(state==1)*(((prev_action==1)&(prev_reward==1))*1.0 + ((tv('action',-2)==1)&(tv('reward',-2)==1))*1.0) ;; (phase==D1)*(((prev_action==1)&(prev_reward==1))*1.0 + ((tv('action',-2)==1)&(tv('reward',-2)==1))*1.0)",
+    "better_terms_test_r2_beyond_timing": 0.885
+  },
+  "final_label": "Up after an a2 choice whose outcome goes against S2 (unrewarded a2 at D1, a2->S1 at D2); down after a1 and whenever S2 is reached at D2; graded part follows the step's a1-a2 logit"
+}

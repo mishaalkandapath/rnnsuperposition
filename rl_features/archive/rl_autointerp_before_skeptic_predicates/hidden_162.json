@@ -1,0 +1,65 @@
+{
+  "label": "D2 after a rare a2->S1 transition, early in the episode (trial < ~50)",
+  "predicate": "(phase == D2) & (in_action == 2) & (in_state == 1) & (ep_trial < 50)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2, and only when the reached state shown is S1 after the agent chose a2, i.e. the rare a2->S1 transition (essentially 100% of activations have in_action=2 and in_state=1). It does not fire at D1 or GO, on the mirror rare transition (a1->S2), or on common transitions. A strong episode-time gate: active on almost every such step for ep_trial < 50 and almost never after trial ~55. Magnitude falls steadily with trial in the episode: trials 0-9 hold about 26% of the mass versus about 5% for trials 40-49 on similar counts. Without the ep_trial term the predicate gets F1 0.61 (precision 0.44); with it, dev F1 0.94 and mass recall 0.997. All variables used are observed at D2.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 162,
+    "predicate": "(phase == D2) & (in_action == 2) & (in_state == 1) & (ep_trial < 50)",
+    "split": "test",
+    "precision": 0.881471738097848,
+    "recall": 0.9801332574957341,
+    "f1": 0.9281880614816382,
+    "mass_recall": 0.9972444235821342,
+    "correlation": 0.8092275554999648,
+    "n_active": 24614,
+    "n_predicted": 27369,
+    "coverage_by_activation_quartile": [
+      0.9218394540136496,
+      0.9987000324991875,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 162,
+    "predicate": "(phase == D2) & (in_action == 2) & (in_state == 1) & (ep_trial < 50)",
+    "split": "dev",
+    "precision": 0.894189837008629,
+    "recall": 0.9813544341091797,
+    "f1": 0.9357466789741943,
+    "mass_recall": 0.9974755461056142,
+    "correlation": 0.8162424219612423,
+    "n_active": 23759,
+    "n_predicted": 26075,
+    "coverage_by_activation_quartile": [
+      0.9264309764309764,
+      0.998989898989899,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 162,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core identity holds. 100% of activation mass is at D2, there are 0 activations at D1 or GO, 23685 of 23759 active steps have in_action=2, and 23754 have in_state=1. The mirror rare transition and common transitions are essentially silent. All variables are observable at D2.",
+      "Systematic false-positive class: the cutoff in episode time depends on the previous trial's reward, so 'fires on almost every such step while ep_trial < 50' is false. On rare a2->S1 D2 steps with ep_trial 30-49 and prev_reward==0, precision is only 0.38 (dev, n=3972). That one cell accounts for about 2450 of the predicate's roughly 2760 dev false positives (about 89%). The same steps with prev_reward==1 at ep_trial 30-49 have precision 0.97, and with prev_reward==0 at ep_trial < 30 precision is 0.985.",
+      "So the feature stops firing earlier (around trial 35) when the previous trial was unrewarded, and around trial 50 when it was rewarded. Across the whole predicate, precision is 0.73 with prev_reward==0 and 0.987 with prev_reward==1.",
+      "The predicate also gives a moderate overall skew toward good==S2 / start_high==0 (precision 0.91 vs 0.81 for good==S1). This is secondary.",
+      "There are few misses (0.3% of mass on test), and they are scattered: low-magnitude firings just past the cutoff or right after the transition. This is fine.",
+      "The refined observed-only predicate below improves test precision from 0.881 to 0.978 and test F1 from 0.928 to 0.965 (mass recall 0.993). Dev F1 is 0.965."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after a rare a2->S1 transition, early in the episode; the time window is shorter (ending around trial 35 vs around 50) when the previous trial was unrewarded",
+    "better_predicate": "(phase == D2) & (in_action == 2) & (in_state == 1) & (((ep_trial < 50) & (prev_reward == 1)) | ((ep_trial < 35) & (prev_reward == 0)))",
+    "better_predicate_test_f1": 0.965
+  },
+  "final_label": "D2 after a rare a2->S1 transition, early in the episode; the time window is shorter (ending around trial 35 vs around 50) when the previous trial was unrewarded"
+}

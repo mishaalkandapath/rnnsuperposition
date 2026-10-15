@@ -1,0 +1,106 @@
+{
+  "label": "early-episode: last trial rewarded and policy leaning to a2 (D1/GO)",
+  "predicate": "(phase != D2) & (prev_reward == 1) & (choice < -1.5) & (ep_trial < 35) & (prev_action != 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1 and GO (never at D2; ~73% of mass at GO) when the previous trial was rewarded (reward input 1 at D1) and the agent is about to choose a2 / its policy logit leans a2 (choice < -1.5; the strongest activations have choice < -8.9). Nearly always the previous choice was also a2, i.e. a rewarded-a2 stay. It is restricted to the first ~40 trials of an episode (rate 13-18% in trials 0-29, ~0 after trial 45), so it also carries a slow within-episode time signal. Within a window the activation decays across successive rewarded-a2 trials, and it is larger at GO than D1. Does not fire after unrewarded trials, before a1 choices, or at D2. Recorded predicate uses only observed quantities (prev reward, model policy logit, episode time); the version with the upcoming action == 2 instead of choice gives dev F1 0.75, choice < -1.5 gives 0.80.",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 35,
+    "predicate": "(phase != D2) & (prev_reward == 1) & (choice < -1.5) & (ep_trial < 35) & (prev_action != 1)",
+    "split": "test",
+    "precision": 0.7348340532853962,
+    "recall": 0.9455549801484551,
+    "f1": 0.8269823056947885,
+    "mass_recall": 0.9894244291729629,
+    "correlation": 0.7357548942700936,
+    "n_active": 57930,
+    "n_predicted": 74542,
+    "coverage_by_activation_quartile": [
+      0.7906511081958157,
+      0.9918525167437685,
+      0.9997237950559315,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 35,
+    "predicate": "(phase != D2) & (prev_reward == 1) & (choice < -1.5) & (ep_trial < 35) & (prev_action != 1)",
+    "split": "dev",
+    "precision": 0.7561106449704956,
+    "recall": 0.9393530306396213,
+    "f1": 0.8378295991464716,
+    "mass_recall": 0.9879932792674392,
+    "correlation": 0.7467792242763639,
+    "n_active": 58519,
+    "n_predicted": 72701,
+    "coverage_by_activation_quartile": [
+      0.7680792891319207,
+      0.9896103896103896,
+      0.9999316473000683,
+      0.9997949278829722
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 35,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most of the factual claims hold up on dev. The unit never fires at D2 (0 of 380k steps). 73% of activation mass is at GO. It barely fires after an unrewarded trial (37 active steps with prev_reward=0) or before an a1 choice (20 active steps with action=1). On trials where the previous choice is known, it almost never fires when that choice was a1 (16 active steps). The active rate is 13-18% in trials 0-29 and about 0 from trial 40 on. Choice < -8.9 does pick out the strongest activations (precision 0.92, recall 0.43).",
+      "The episode-time cutoff is in the wrong place. Activity tapers off over trials 30-39 (7.9% active rate), and the predicate's slice for trials 30-39 has dev precision 0.39 and recall 0.17. Moving the cutoff to ep_trial < 36 raises dev F1 from 0.803 to 0.830 and test F1 from 0.787 to 0.817, so most false positives in that slice are systematic, not noise.",
+      "The predicate has a systematic precision gap at D1. With phase restricted to D1, precision is 0.56 (F1 0.45). With phase restricted to GO, precision is 0.77, and at GO after two rewarded trials in a row it is 0.93. The explanation notes that GO is stronger but does not say that about 44% of the D1 steps the predicate selects are inactive.",
+      "There are false positives after an a1 choice. Adding prev_action != 1 to the predicate raises dev F1 from 0.803 to 0.811, so a small class of 'rewarded a1, now leaning a2' steps is matched wrongly. The explanation's own phrase, 'repeat of a rewarded a2', is closer to the truth than its predicate.",
+      "After a rare-rewarded trial (prev_common == 0), the predicate's precision is only 0.37 (dev). That fits a model-based repeat-after-common-reward signal more than plain 'previous trial rewarded'. The label does not mention it.",
+      "Precision is uneven across episode types. In episodes that start with S1 good (start_high == 1), precision is 0.62 and recall 0.19. In episodes that start with S2 good, precision is 0.78. This is consistent with the unit tracking a sustained, rewarded a2 streak early in the episode.",
+      "The reported test F1 of 0.787 is below the 0.8 bar. A predicate using only observed variables, with a tighter time cutoff and no a1 predecessor, does better on test (F1 0.827, precision 0.735, recall 0.946, mass recall 0.989)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "First ~35 trials of an episode: the agent repeats a rewarded a2 choice (D1/GO, strongest at GO after consecutive rewarded a2s)",
+    "better_predicate": "(phase != D2) & (prev_reward == 1) & (choice < -1.5) & (ep_trial < 35) & (prev_action != 1)",
+    "better_predicate_test_f1": 0.827
+  },
+  "final_label": "First ~35 trials of an episode: the agent repeats a rewarded a2 choice (D1/GO, strongest at GO after consecutive rewarded a2s)",
+  "original_predicate": "(phase != D2) & (prev_reward == 1) & (choice < -1.5) & (ep_trial < 40)",
+  "original_test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 35,
+    "predicate": "(phase != D2) & (prev_reward == 1) & (choice < -1.5) & (ep_trial < 40)",
+    "split": "test",
+    "precision": 0.6506093367755318,
+    "recall": 0.9962195753495598,
+    "f1": 0.7871488682629421,
+    "mass_recall": 0.999349291169991,
+    "correlation": 0.6773388623572187,
+    "n_active": 57930,
+    "n_predicted": 88703,
+    "coverage_by_activation_quartile": [
+      0.9855002416626389,
+      0.9993785817855416,
+      1.0,
+      1.0
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 35,
+    "predicate": "(phase != D2) & (prev_reward == 1) & (choice < -1.5) & (ep_trial < 40)",
+    "split": "dev",
+    "precision": 0.6720918437917839,
+    "recall": 0.9963943334643449,
+    "f1": 0.8027258647392875,
+    "mass_recall": 0.9992934700027379,
+    "correlation": 0.6874038364051075,
+    "n_active": 58519,
+    "n_predicted": 86756,
+    "coverage_by_activation_quartile": [
+      0.9859876965140123,
+      0.9995898838004101,
+      1.0,
+      1.0
+    ]
+  },
+  "predicate_from": "skeptic"
+}

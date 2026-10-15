@@ -1,0 +1,64 @@
+{
+  "label": "D1 after an unrewarded a1 -> S1 (common) trial",
+  "predicate": "(phase == D1) & (prev_reward == 0) & (prev_action == 1) & (prev_common == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (never GO or D2) and only when the reward input is 0, so it reads the previous trial outcome: no reward. Within that it is specific to the previous trial having chosen a1 and reached S1 through the common transition. The predicate on that conjunction has precision ~1.0 on dev, with only 13 false positives out of 22k. Recall is ~0.67 (mass recall 0.80). Most misses are on the window first trial (rel -3), where the previous trial is outside the window and cannot be checked; those include high activations that are probably the same case. The rest are weak activations (bottom quartile, ~0.05-0.4 of max) after other unrewarded trials, mainly a2 -> S1 rare and a2 -> S2 common. So the feature is strongest when S1 was reached via a1 and went unrewarded, and it is graded weakly for other no-reward outcomes. Adding reached-S1 alone (prev_state == 1) lowers F1 to 0.64. Never fires after a rewarded trial (in_rew == 1). Uses only observed variables.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 18,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (prev_action == 1) & (prev_common == 1)",
+    "split": "test",
+    "precision": 0.9990824956119355,
+    "recall": 0.674921849735906,
+    "f1": 0.8056163149768398,
+    "mass_recall": 0.801080184152376,
+    "correlation": 0.8839573747369431,
+    "n_active": 37108,
+    "n_predicted": 25068,
+    "coverage_by_activation_quartile": [
+      0.23164816212137546,
+      0.7866767273903201,
+      0.8427293306025655,
+      0.838633178829363
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 18,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (prev_action == 1) & (prev_common == 1)",
+    "split": "dev",
+    "precision": 0.9994118711545422,
+    "recall": 0.6711937532282077,
+    "f1": 0.80306087209408,
+    "mass_recall": 0.8028311913521392,
+    "correlation": 0.8844225264656675,
+    "n_active": 32913,
+    "n_predicted": 22104,
+    "coverage_by_activation_quartile": [
+      0.21715882853323612,
+      0.7854885755955274,
+      0.8438259601361205,
+      0.83835683033544
+    ]
+  },
+  "gate": "hidden",
+  "feature": 18,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The label and predicate hold up. The test scores reproduce the reported ones: P 0.999, R 0.675, F1 0.806, mass recall 0.801. The feature only fires at D1 (GO and D2 have 0 active steps). It never fires when in_rew == 1 (0 of 246,822 steps).",
+      "One claim in the explanation is wrong. It says the weak misses come 'mainly' after unrewarded a2 -> S1 rare and a2 -> S2 common trials. But D1 & prev_reward==0 & prev_action==2 & prev_common==1 (a2 -> S2 common, unrewarded) has precision 0.0 and recall 0.0 on dev: the feature never fires there. So the a2 -> S2 common half of that statement is false.",
+      "The only weak secondary case outside rel -3 is the unrewarded a2 -> S1 rare trial. On dev it has precision 0.17 and mass recall 0.038, which is about the whole missed mass outside rel -3 (1 - 0.803 - 0.159). On test, 0.55 of those activations fall in the bottom quartile, 0.055 in the second and none in the top half. Unrewarded a1 -> S2 rare is almost absent (precision 0.014, mass recall 5e-5).",
+      "So the feature is better described as 'no reward after reaching S1, strongly if S1 came via a1 (common), weakly if via a2 (rare)'. It is not 'weakly after any other no-reward outcome'.",
+      "The rel -3 misses (window's first trial, prev_action == -1) account for 0.159 of the mass. D1 & prev_reward==0 & prev_action==-1 has precision 0.23, consistent with that unobservable a1 -> S1 case at its usual rate. This is not a systematic flaw, but adding these steps to the predicate lowers test F1 to 0.55, so the original predicate is the right one to keep.",
+      "Minor: Requiring only prev_state == 1 gives test F1 0.67, against the reported 0.64 (that figure is presumably from dev). This does not change the conclusion."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

@@ -1,0 +1,108 @@
+{
+ "label": "GO after an unrewarded rare a2->S1 trial, strongest early in the episode and when belief favours S2",
+ "short_terms": "(phase == GO) * last_is('a2 S1 u') ;; (phase == GO) * last_is('a2 S1 u') * ep_dec ;; (phase == GO) * (prev_reward == 0) * np.minimum(belief_lo, 0)",
+ "terms": "(phase == GO) * last_is(\"a2 S1 u\") ;; (phase == GO) * last_is(\"a2 S2 u\") ;; (phase == GO) * last_is(\"a2 S1 u\") * belief_lo ;; (phase == GO) * last_is(\"a2 S1 u\") * ep_dec ;; (phase == GO) * (prev_reward == 0) * belief_lo ;; (phase == GO) * last_is(\"a2 S1 u\") * (tv(\"reward\", -2) == 0)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Fires only at GO. Magnitude is dominated by the previous trial being a2 -> S1 (rare) unrewarded, the model-based stay-on-a2 case: about +0.36 there versus near zero after every other pattern (a2 S2 u gives a small +0.03). Within that pattern it declines with episode decile (about -0.06 per decile, beyond the additive timing baseline) and is larger when the ideal observer believes S2 is good (negative belief_lo). D1 and D2 are always zero. The free fit adds a small a2 S2 u term, a generic unrewarded x belief term and a smaller response when the trial before was also unrewarded; together these add only about 0.04 dev R^2. No future variables used.",
+ "full_test_scores": {
+  "gate": "update",
+  "feature": 163,
+  "terms": [
+   "(phase == GO) * last_is(\"a2 S1 u\")",
+   "(phase == GO) * last_is(\"a2 S2 u\")",
+   "(phase == GO) * last_is(\"a2 S1 u\") * belief_lo",
+   "(phase == GO) * last_is(\"a2 S1 u\") * ep_dec",
+   "(phase == GO) * (prev_reward == 0) * belief_lo",
+   "(phase == GO) * last_is(\"a2 S1 u\") * (tv(\"reward\", -2) == 0)"
+  ],
+  "weights": [
+   0.39303741917139984,
+   0.03161842121463451,
+   -0.02989128477140521,
+   -0.06143149926106292,
+   -0.015215679399763479,
+   -0.06413699251632243
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6398583899413472,
+  "r2": 0.6741276214311703,
+  "r2_timing_only": 0.09515487944934187
+ },
+ "gate": "update",
+ "feature": 163,
+ "test_scores": {
+  "gate": "update",
+  "feature": 163,
+  "terms": [
+   "(phase == GO) * last_is('a2 S1 u')",
+   "(phase == GO) * last_is('a2 S1 u') * ep_dec",
+   "(phase == GO) * (prev_reward == 0) * np.minimum(belief_lo, 0)"
+  ],
+  "weights": [
+   0.35354530942527734,
+   -0.06128750139449533,
+   -0.05377771392387387
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.655308721599572,
+  "r2": 0.6881077786430043,
+  "r2_timing_only": 0.09515487944934187
+ },
+ "dev_scores": {
+  "gate": "update",
+  "feature": 163,
+  "terms": [
+   "(phase == GO) * last_is('a2 S1 u')",
+   "(phase == GO) * last_is('a2 S1 u') * ep_dec",
+   "(phase == GO) * (prev_reward == 0) * np.minimum(belief_lo, 0)"
+  ],
+  "weights": [
+   0.35354530942527734,
+   -0.06128750139449533,
+   -0.05377771392387387
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.6819304678277454,
+  "r2": 0.7136670123635562,
+  "r2_timing_only": 0.09977863745410054
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "Most of the label holds. The feature is zero at D1 and D2 (the timing and residual tables show +0 everywhere). At GO it is driven by the previous trial being a2 S1 u: the residual is +0.233, against about -0.03 for every other pattern and +0.019 for a2 S2 u. The episode-decile slope is real and large. last_is alone scores 0.382 test R^2 beyond timing; adding last_is*ep_dec brings it to 0.587.",
+   "The belief claim is weakly supported in the form the short form uses. The term last_is('a2 S1 u')*belief_lo adds only 0.009 test R^2 (0.587 to 0.597). Without the ep_dec term it adds 0.006 (0.382 to 0.388). The label's 'when belief favours S2' therefore rests on an almost empty term.",
+   "The belief effect is broader than the a2 S1 u case. (phase==GO)*(prev_reward==0)*belief_lo in third place gives 0.621. The one-sided version (prev_reward==0)*np.minimum(belief_lo,0) gives 0.655 test, which beats the free fit (0.640). So after any unrewarded trial the feature rises as the ideal observer becomes surer that S2 is good. The label and short form miss this.",
+   "Other claims I checked do not help. The a2 S2 u term adds nothing over the short form (0.592 vs 0.597). The trial-before-unrewarded term does not help either (0.595), and neither does belief_cover (0.587).",
+   "Misses on the recorded short form show a systematic class: windows with consecutive a2 trials where a2 S1 u gives roughly 0 activation but the prediction is about 0.5. The reverse also happens: after an unrewarded a2 S2 trial the feature fires at about 0.46-0.56 but is predicted near 0.05. The general unrewarded x S2-belief term captures part of this. After the fix the largest remaining systematic error is a small over-prediction at GO after a1 S1 u (-0.043)."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "GO after unrewarded rare a2->S1, fading over the episode; also after unrewarded trials when belief favours S2",
+  "better_short_terms": "(phase == GO) * last_is('a2 S1 u') ;; (phase == GO) * last_is('a2 S1 u') * ep_dec ;; (phase == GO) * (prev_reward == 0) * np.minimum(belief_lo, 0)",
+  "better_short_terms_test_r2_beyond_timing": 0.655308721599572
+ },
+ "final_label": "GO after unrewarded rare a2->S1, fading over the episode; also after unrewarded trials when belief favours S2",
+ "original_short_terms": "(phase == GO) * last_is(\"a2 S1 u\") ;; (phase == GO) * last_is(\"a2 S1 u\") * ep_dec ;; (phase == GO) * last_is(\"a2 S1 u\") * belief_lo",
+ "original_test_scores": {
+  "gate": "update",
+  "feature": 163,
+  "terms": [
+   "(phase == GO) * last_is(\"a2 S1 u\")",
+   "(phase == GO) * last_is(\"a2 S1 u\") * ep_dec",
+   "(phase == GO) * last_is(\"a2 S1 u\") * belief_lo"
+  ],
+  "weights": [
+   0.3555075590966543,
+   -0.06125182164916189,
+   -0.05250335578217627
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5965074971803597,
+  "r2": 0.6349017776448758,
+  "r2_timing_only": 0.09515487944934187
+ },
+ "terms_from": "skeptic"
+}

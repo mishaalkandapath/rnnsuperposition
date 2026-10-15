@@ -1,0 +1,107 @@
+{
+ "label": "Fires at GO after rewarded trials when S2 is believed good, mostly mid-to-late episode.",
+ "short_terms": "(phase == GO) * (belief_lo < 0) * (prev_reward == 1) ;; (phase == GO) * last_is(\"a2 S2 r\") * isin(ep_dec, [6, 7, 8]) ;; (phase == GO) * isin(ep_dec, [6, 7, 8])",
+ "terms": "(phase == GO) * (prev_reward == 1) * (belief_lo < 0) ;; (phase == GO) * (prev_reward == 1) * (belief_lo < 0) * table(ep_dec, {4:0.1,5:0.5,6:1,7:1.3,8:1.2,9:0.2}) ;; (phase == GO) * (1 - (prev_reward == 1) * (belief_lo < 0)) ;; (phase == GO) * (prev_reward == 1) * (belief_lo < 0) * np.clip(-belief_lo,0,6) ;; (phase == GO) * (prev_reward == 1) * (belief_lo < 0) * (tv(\"reward\",-2)==1) ;; (phase == GO) * (prev_reward == 1) * (belief_lo < 0) * (prev_action != 1)",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "GO-only feature (zero at D1/D2). Its magnitude is about 1.2 at GO when the previous trial was a2 -> S2 rewarded (equivalently, the last trial was rewarded and the observer believes S2 is good), so it signals staying on a2 after an S2 reward. It is gated by episode time: near zero before trial ~40, highest at trials 50-89, and lower again in trials 90-99. The timing baseline spreads that time profile over every GO step, so the short form also needs a term for GO with S1 believed good (belief_lo >= 0), which pulls those steps down. Other previous-trial patterns (any a1 trial, a2 unrewarded, a2 -> S1 rare rewarded) give about 0. The free fit adds a graded episode-decile profile, the strength of the S2 belief, and a2-as-previous-choice, which together take dev R^2 from about 0.49 to 0.61. last_is cannot see the previous trial on the first trial of a window; the prev_reward x belief term covers that. No future or model-output variables are used.",
+ "full_test_scores": {
+  "gate": "reset",
+  "feature": 63,
+  "terms": [
+   "(phase == GO) * (prev_reward == 1) * (belief_lo < 0)",
+   "(phase == GO) * (prev_reward == 1) * (belief_lo < 0) * table(ep_dec, {4:0.1,5:0.5,6:1,7:1.3,8:1.2,9:0.2})",
+   "(phase == GO) * (1 - (prev_reward == 1) * (belief_lo < 0))",
+   "(phase == GO) * (prev_reward == 1) * (belief_lo < 0) * np.clip(-belief_lo,0,6)",
+   "(phase == GO) * (prev_reward == 1) * (belief_lo < 0) * (tv(\"reward\",-2)==1)",
+   "(phase == GO) * (prev_reward == 1) * (belief_lo < 0) * (prev_action != 1)"
+  ],
+  "weights": [
+   -0.3539377713059026,
+   0.44542840884189644,
+   -0.09117102697471012,
+   0.07586004384441322,
+   -0.0014865935535904049,
+   0.1436612934708589
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5868465275257378,
+  "r2": 0.6791839932180002,
+  "r2_timing_only": 0.22349434736510554
+ },
+ "gate": "reset",
+ "feature": 63,
+ "test_scores": {
+  "gate": "reset",
+  "feature": 63,
+  "terms": [
+   "(phase == GO) * (belief_lo < 0) * (prev_reward == 1)",
+   "(phase == GO) * last_is(\"a2 S2 r\") * isin(ep_dec, [6, 7, 8])",
+   "(phase == GO) * isin(ep_dec, [6, 7, 8])"
+  ],
+  "weights": [
+   0.11379243115141995,
+   0.6700032784981989,
+   -0.17605505882408226
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5737837224188769,
+  "r2": 0.6690406512132547,
+  "r2_timing_only": 0.22349434736510554
+ },
+ "dev_scores": {
+  "gate": "reset",
+  "feature": 63,
+  "terms": [
+   "(phase == GO) * (belief_lo < 0) * (prev_reward == 1)",
+   "(phase == GO) * last_is(\"a2 S2 r\") * isin(ep_dec, [6, 7, 8])",
+   "(phase == GO) * isin(ep_dec, [6, 7, 8])"
+  ],
+  "weights": [
+   0.11379243115141995,
+   0.6700032784981989,
+   -0.17605505882408226
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.5831456486081061,
+  "r2": 0.6786177134458993,
+  "r2_timing_only": 0.22902979066671125
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The recorded short form scores 0.476 on test, but it has the wrong episode window. Changing isin(ep_dec,[5,6,7,8]) to [6,7,8] and replacing the correction term (GO)*(belief_lo>=0) with (GO)*isin(ep_dec,[6,7,8]) raises the test score to 0.574, which is 98% of the free fit's 0.587. Narrowing the window to [6,7] gives 0.435 and widening it to [6..9] gives 0.490, so the peak is trials 60-89 and decile 5 is only weakly on. The label's 'mid-to-late' is therefore imprecise.",
+   "The third recorded term, (GO)*(belief_lo>=0), is a fitted correction that offsets the timing baseline. Swapping it for the time-window offset (GO)*isin(ep_dec,[5..8]) scores higher (0.542 vs 0.476), which suggests the real structure is an interaction: a2->S2 rewarded x late episode. It is not a separate effect of S1 being believed good.",
+   "In the improved form, the term (GO)*(belief_lo<0)*(prev_reward==1) gets a weight of only +0.11, against +0.67 for last_is('a2 S2 r') x late. The 'rewarded trial and S2 believed good' wording in the label is mostly a stand-in for the previous trial being a2->S2 rewarded, plus coverage of the first trial in each window. It is not a graded belief effect.",
+   "Systematic misses remain. The worst windows show the feature staying off after a single a2->S2 reward that follows unrewarded trials (t71: actual 0, predicted 0.88). It also decays gradually through trials 89-92 (0.98 to 0.71) instead of switching off at decile 9. So it depends on a sustained run of rewards, not just the last trial. Adding tv('reward',-2) does not fully capture this (0.539). Under the recorded form, GO after a2->S1 trials is over-predicted by about -0.08 whether rewarded or not."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Fires at GO after a rewarded a2->S2 trial, but only in trials 60-89.",
+  "better_short_terms": "(phase == GO) * (belief_lo < 0) * (prev_reward == 1) ;; (phase == GO) * last_is(\"a2 S2 r\") * isin(ep_dec, [6, 7, 8]) ;; (phase == GO) * isin(ep_dec, [6, 7, 8])",
+  "better_short_terms_test_r2_beyond_timing": 0.5738
+ },
+ "final_label": "Fires at GO after a rewarded a2->S2 trial, but only in trials 60-89.",
+ "original_short_terms": "(phase == GO) * last_is(\"a2 S2 r\") * isin(ep_dec, [5, 6, 7, 8]) ;; (phase == GO) * (belief_lo < 0) * (prev_reward == 1) ;; (phase == GO) * (belief_lo >= 0)",
+ "original_test_scores": {
+  "gate": "reset",
+  "feature": 63,
+  "terms": [
+   "(phase == GO) * last_is(\"a2 S2 r\") * isin(ep_dec, [5, 6, 7, 8])",
+   "(phase == GO) * (belief_lo < 0) * (prev_reward == 1)",
+   "(phase == GO) * (belief_lo >= 0)"
+  ],
+  "weights": [
+   0.44358931332902496,
+   0.07197118557591885,
+   -0.08423121376336196
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.47648247437264557,
+  "r2": 0.5934856820969261,
+  "r2_timing_only": 0.22349434736510554
+ },
+ "terms_from": "skeptic"
+}

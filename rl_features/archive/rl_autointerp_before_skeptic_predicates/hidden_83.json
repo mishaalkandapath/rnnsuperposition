@@ -1,0 +1,64 @@
+{
+  "label": "D1 after a reward, late in the episode (trial >= ~85), when the agent is about to choose a1",
+  "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 85) & (action == 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (never GO or D2) when the reward input is 1: 98.8% of activation mass. It is also confined to the end of the episode. It is silent before trial ~70, and 86% of its mass falls in trials 90-99, where the model value is low. It fires almost only when the agent next chooses a1 (99% of mass), which is the agent's own upcoming choice and so allowed. Using the previous action instead (prev_action != 2, fully observed) gives F1 0.74, and the policy logit (choice > -1.5) gives F1 0.80. Magnitude rises with episode trial: low-quartile activations sit around trials 80-85 and the strongest near the end. It does not fire on unrewarded D1s, on penalty trials, or before an a2 choice. Remaining false positives are rewarded D1s near trial 85 just before the ramp starts.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 83,
+    "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 85) & (action == 1)",
+    "split": "test",
+    "precision": 0.853581590993443,
+    "recall": 0.8521583400234669,
+    "f1": 0.8528693717358385,
+    "mass_recall": 0.9626267199694025,
+    "correlation": 0.7801820705050421,
+    "n_active": 16193,
+    "n_predicted": 16166,
+    "coverage_by_activation_quartile": [
+      0.5438379846875772,
+      0.8767292490118577,
+      0.9898715415019763,
+      0.9982707509881423
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 83,
+    "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 85) & (action == 1)",
+    "split": "dev",
+    "precision": 0.8494818329379448,
+    "recall": 0.8558938231224054,
+    "f1": 0.8526757739065045,
+    "mass_recall": 0.9648956177561419,
+    "correlation": 0.7815956316238335,
+    "n_active": 15898,
+    "n_predicted": 16018,
+    "coverage_by_activation_quartile": [
+      0.5408805031446541,
+      0.8910691823899372,
+      0.9934574735782586,
+      0.998238550578762
+    ]
+  },
+  "gate": "hidden",
+  "feature": 83,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The factual claims hold up on the dev split. Of the activation mass, 100% is at D1 (0 active steps at GO or D2), 98.8% has in_rew==1 and 99.1% has action==1. There are 0 activations before trial 70 and only 110 in trials 70-79, 86% of the mass is in trials 90-99, and 87% is in the lowest value quantile (value < 5.22). The alternative predicates reproduce as stated: prev_action != 2 gives dev F1 0.743 and choice > -1.5 gives dev F1 0.796.",
+      "The test score reproduces: P 0.854, R 0.852, F1 0.853.",
+      "False positives cluster in trials 85-91, as the explanation says. Precision is 0.75 for trials < 92 against 0.96 for trials >= 92, so the trial cutoff is a soft stand-in for a ramp in magnitude. Swapping the trial cutoff for low value (value < 6) does slightly better: test F1 0.864 against 0.853. The improvement is small, so this is not a systematic gap.",
+      "There is a small weak spot when the agent switches from a2 to a1 (prev_action == 2 & action == 1): precision is 0.47, but only 610 of 16018 predicted steps fall here. Precision is also 0.29 when value >= 6, on 1054 predicted steps. Both are small.",
+      "Missed activations hold only 3.7% of the activation mass. They are low-magnitude (about 0.1-0.3 of max) and scattered: unrewarded D1s, D1s before an a2 choice, and trials around 80-84. I found no systematic missed class.",
+      "The choice term is needed and the hidden good state does not replace it: good != 2 drops dev F1 to 0.72 and removing the choice term drops it to 0.53. The predicate uses the agent's own upcoming choice, which is allowed, and no future random outcome."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == D1) & (in_rew == 1) & (value < 6) & (action == 1)",
+    "better_predicate_test_f1": 0.864
+  }
+}

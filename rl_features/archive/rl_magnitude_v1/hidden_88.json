@@ -1,0 +1,62 @@
+{
+  "label": "GO-only: a1 preference after unrewarded trial, plus extreme a1 logit, lower value",
+  "terms": "(phase == GO) * np.clip(choice-8, 0, None) ;; (phase == GO) * (choice > 0) * (prev_reward == 0) ;; (phase == GO) * value",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Active essentially only at GO (D1/D2 ~0). Magnitude at GO is driven by (1) the agent leaning toward a1 (policy logit choice > 0) right after an unrewarded trial (weight ~+0.70, the largest effect; covers a1 S2 u, a1 S1 u, and other unrewarded histories when the agent is set to choose a1), (2) a graded boost once the a1 logit is extreme, relu(choice - 8) (~+0.42 per logit unit), and (3) a small negative dependence on the value head (lower value -> larger). a2 choices and a1 choices after rewarded trials are weak/silent. Uses only the model own policy/value and the observed previous reward, no future variables. Dev R^2 beyond timing 0.70; adding a last_is(\"a1 S1 u\") term adds ~0.002. Profile all-cue ceiling 0.62, all observed 0.55.",
+  "gate": "hidden",
+  "feature": 88,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 88,
+    "terms": [
+      "(phase == GO) * np.clip(choice-8, 0, None)",
+      "(phase == GO) * (choice > 0) * (prev_reward == 0)",
+      "(phase == GO) * value"
+    ],
+    "weights": [
+      0.4240780181528988,
+      0.7008663199927578,
+      -0.046733291275395154
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6888286103171812,
+    "r2": 0.7531782149827263,
+    "r2_timing_only": 0.2067979473663616
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 88,
+    "terms": [
+      "(phase == GO) * np.clip(choice-8, 0, None)",
+      "(phase == GO) * (choice > 0) * (prev_reward == 0)",
+      "(phase == GO) * value"
+    ],
+    "weights": [
+      0.4240780181528988,
+      0.7008663199927578,
+      -0.046733291275395154
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7036348905536339,
+    "r2": 0.7653708384874958,
+    "r2_timing_only": 0.20831044534624743
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The value term is described as a 'small negative link', but it is a conditional suppressor that carries a lot of the fit. On its own, (phase==GO)*value scores test R^2 beyond timing of -0.0001. Dropping it from the three terms lowers test R^2 from 0.689 to 0.534, so it adds about 0.15. In the profile, the GO residual by value decile is +0.345 in the top decile, the opposite of 'lower value -> larger'. The negative sign only holds once the choice terms are controlled for. Gating it to choice>0 also does worse (0.555).",
+      "There is a systematic under-prediction at GO after a1 S1 u: mean error +0.197 in misses. The agent dismissed last_is('a1 S1 u') at +0.002 on dev, but on test it adds 0.009 (0.689 -> 0.698) and removes that bias completely (all phase x previous-trial errors drop below 0.011).",
+      "Unrewarded outcomes further back also matter and are left out. (phase==GO)*(choice>0)*(tv('reward',-2)==0) gets weight +0.42 and raises test R^2 from 0.689 to 0.722, so the 'after an unrewarded trial' story holds but undersells it: the feature tracks a run of unrewarded trials.",
+      "The ranking in the explanation is off. relu(choice-8) is the strongest single term (test 0.428 alone), while the (choice>0)*(prev_reward==0) indicator scores 0.266 alone. The explanation calls the indicator 'the biggest effect'.",
+      "The claim that the feature is weak when choosing a2 mostly holds: a (choice<=0)*(prev_reward==0) term adds only 0.0005. The worst-fit windows still show some a2 trials with activation about 1.8-2.9 that are predicted about 0.17. They are scattered, not a class."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO-only: grows with an extreme a1 logit and with a1 preference after one or more unrewarded trials (strongest after a1 S1 u); value acts as a negative suppressor once the policy is accounted for",
+    "better_terms": "(phase == GO) * np.clip(choice-8, 0, None) ;; (phase == GO) * (choice > 0) * (prev_reward == 0) ;; (phase == GO) * value ;; (phase == GO) * last_is('a1 S1 u') ;; (phase == GO) * (choice > 0) * (tv('reward', -2) == 0)",
+    "better_terms_test_r2_beyond_timing": 0.7318
+  },
+  "final_label": "GO-only: grows with an extreme a1 logit and with a1 preference after one or more unrewarded trials (strongest after a1 S1 u); value acts as a negative suppressor once the policy is accounted for"
+}

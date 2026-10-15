@@ -1,0 +1,66 @@
+{
+  "label": "GO after a rare-rewarded a1 trial (a1 -> S2 rewarded), late in the episode",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (prev_common == 0) & (prev_action == 1) & (ep_trial >= 45)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO steps (never at D1 or D2) when the previous trial was a1 that went rarely to S2 and was rewarded. That is the model-based switch-cue for a1 (rare-rewarded, so the agent should switch). It never fires on a2 rare-rewarded (a2 -> S1), so it is specific to the action and the transition. It is silent before ep_trial ~40 and its rate grows through the episode, so the episode-trial gate is part of the description. All variables are observed at GO, so no future variables are used. Missed activations are mostly low magnitude: some at rel -3 GO, where the previous trial falls outside the window and prev_* is unknown, and some weak firing after a2 -> S2 common rewarded (reward at S2 in general). The strongest activations are the clean a1 -> S2 rare-rewarded case. Activation is lower when the value estimate is high (none in the top value bin).",
+  "test_scores": {
+    "gate": "update",
+    "feature": 134,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (prev_common == 0) & (prev_action == 1) & (ep_trial >= 45)",
+    "split": "test",
+    "precision": 0.9377003484320557,
+    "recall": 0.709106239460371,
+    "f1": 0.8075376582848227,
+    "mass_recall": 0.7965016565164798,
+    "correlation": 0.7701853410582298,
+    "n_active": 9488,
+    "n_predicted": 7175,
+    "coverage_by_activation_quartile": [
+      0.5796795952782462,
+      0.5860033726812817,
+      0.7634907251264755,
+      0.9072512647554806
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 134,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (prev_common == 0) & (prev_action == 1) & (ep_trial >= 45)",
+    "split": "dev",
+    "precision": 0.9448401272920139,
+    "recall": 0.7381318811412336,
+    "f1": 0.8287917054366609,
+    "mass_recall": 0.8183915740149986,
+    "correlation": 0.7804491371523842,
+    "n_active": 8447,
+    "n_predicted": 6599,
+    "coverage_by_activation_quartile": [
+      0.5890151515151515,
+      0.6605113636363636,
+      0.803030303030303,
+      0.9000473709142587
+    ]
+  },
+  "gate": "update",
+  "feature": 134,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced the reported test scores exactly: precision 0.938, recall 0.709, F1 0.808, mass recall 0.797.",
+      "'Fires only at GO' holds. On the dev split, D1 and D2 have 0 of 380,619 steps active each, and GO carries 100% of the activation mass.",
+      "'Never fires after a2 rare-rewarded' holds. GO & prev_reward==1 & prev_common==0 & prev_action==2 & ep_trial>=45 scored precision 0.0 with 9,697 steps predicted.",
+      "The feature always follows a rewarded previous trial: active on 0 steps where prev_reward==0.",
+      "The episode-trial condition is supported. The feature is silent for ep_trial 0-39. Its overall rate rises from 0.004 (trials 40-49) to 0.016 (trials 90-99). Inside the predicate, test precision is 0.62 for ep_trial 45-49, 0.93 for 50-69 and 0.997 for 70 and above. Without the ep_trial term, dev precision falls to 0.55.",
+      "The recall gap has two parts, and neither is a fixable systematic class. (a) The rel -3 GO step holds about 10% of the mass; there prev_* is unknown, and GO & rel==-3 & ep_trial>=45 has precision 0.02. (b) GO after a2 -> S2 common rewarded holds about 8% of the mass, but the feature fires there on only 2.5% of such steps. Restricting to good==1 raises that to 13%, still far too low to add. Widening to 'any rewarded S2 visit' gives F1 0.23, and adding low-value a2 -> S2 rewarded trials to the predicate drops test F1 to 0.56.",
+      "Within the predicate, firing does not depend much on the good state (precision 0.96 when good==1, 0.91 when good==2) or on the upcoming choice (precision 0.99 for a1, 0.90 for a2), so no hidden or upcoming variable is needed. False positives are scattered, mostly in the 45-50 trial onset region.",
+      "'Never in the top value-estimate bin' holds: 0 active steps when value >= 8.10."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

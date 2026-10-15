@@ -1,0 +1,82 @@
+{
+  "label": "GO-phase last-trial S2/rare evidence raises n; S1-rewarded lowers it",
+  "terms": "(phase == GO) * (prev_state == 2) ;; (phase == GO) * (prev_state == 1) * (prev_reward == 1) ;; (phase == GO) * (prev_state == 2) * (prev_reward == 1) ;; (phase == GO) * (prev_common == 0) ;; (phase == D1) * (prev_state == 1) * (prev_reward == 0) ;; (phase == D1) * (prev_reward == 1) ;; (phase == GO) * np.tanh(choice / 3) ;; (phase == D2) * (action == 2)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw candidate n of unit 8. Timing dominates (R^2 0.83: about +0.9 at D1/D2, falling at GO over the episode, and D1 also falls late in the episode). Beyond timing, the variance is mostly at GO and is set by the last trial: it is higher after reaching S2 (+0.35), higher after a rare transition (+0.19), and lower after a rewarded trial (S1 rewarded -0.33, S2 rewarded -0.26 relative to S2 alone). So after a1 S1 r it is lowest (about -0.45) and after rare or S2-unrewarded trials it is highest (+0.3 to +0.4). It also rises when the GO policy leans toward a2 (tanh(choice) weight -0.09). At D1 it drops after S1-unrewarded trials (-0.22) and rises a little after any reward (+0.13). At D2 it is slightly higher when a2 was chosen (+0.11). The trial before adds little (<0.01), and this trial's reward, the hidden good state and value add little. All terms are observed or model outputs, none future. Dev R^2 beyond timing 0.61, test 0.60 (all ceiling 0.70, all observed 0.66). Not captured: the late-episode D1 dips during runs of unrewarded trials.",
+  "gate": "unit_candidate",
+  "feature": 8,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 8,
+    "terms": [
+      "(phase == GO) * (prev_state == 2)",
+      "(phase == GO) * (prev_state == 1) * (prev_reward == 1)",
+      "(phase == GO) * (prev_state == 2) * (prev_reward == 1)",
+      "(phase == GO) * (prev_common == 0)",
+      "(phase == D1) * (prev_state == 1) * (prev_reward == 0)",
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == GO) * np.tanh(choice / 3)",
+      "(phase == D2) * (action == 2)"
+    ],
+    "weights": [
+      0.3482015153707311,
+      -0.3349826790991373,
+      -0.25680635110674827,
+      0.18649719103201334,
+      -0.22089519062084476,
+      0.13189869812372365,
+      -0.0914354714903406,
+      0.11322611152147724
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6016049959445529,
+    "r2": 0.9325658843914636,
+    "r2_timing_only": 0.8307355390451855
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 8,
+    "terms": [
+      "(phase == GO) * (prev_state == 2)",
+      "(phase == GO) * (prev_state == 1) * (prev_reward == 1)",
+      "(phase == GO) * (prev_state == 2) * (prev_reward == 1)",
+      "(phase == GO) * (prev_common == 0)",
+      "(phase == D1) * (prev_state == 1) * (prev_reward == 0)",
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == GO) * np.tanh(choice / 3)",
+      "(phase == D2) * (action == 2)"
+    ],
+    "weights": [
+      0.3482015153707311,
+      -0.3349826790991373,
+      -0.25680635110674827,
+      0.18649719103201334,
+      -0.22089519062084476,
+      0.13189869812372365,
+      -0.0914354714903406,
+      0.11322611152147724
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6095717123442366,
+    "r2": 0.9349216915757248,
+    "r2_timing_only": 0.8333155908988488
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor wording problem: 'D1 rises a little after any reward (+0.13)'. In the raw D1 residuals the rise comes mostly from S2-rewarded trials (+0.12 / +0.11); S1-rewarded trials are about zero (a1 S1 r +0.055, a2 S1 r -0.018), and misses over-predicts D1 after a2 S1 r by -0.097. Still, a D1 term for 'any reward' scores better than one for 'S2 rewarded only' (test 0.602 vs 0.587), so the term itself is fine.",
+      "The tanh(choice) term at GO is weak and its shape is not monotone. The GO residual by policy decile peaks at decile 2 (+0.24); decile 0 (most a2) is only +0.136, and the drop is concentrated at the strong-a1 end (deciles 8-9: -0.13, -0.24). Calling it 'goes up when the policy leans toward a2' simplifies this. Dropping the term costs about 0.03 (0.572 vs 0.602).",
+      "Leftover misses by previous trial are moderate, not large: GO after a1 S2 r +0.11 and after a1 S1 u +0.10 are under-predicted; GO after a2 S2 r is rewarded... corrected: GO after a2 S1 r -0.11 and D1 after a2 S1 r -0.10 are over-predicted. Mean error is about 0.01 in every phase.",
+      "The late-episode D1 dips during unrewarded runs (worst windows: actual around -0.5, predicted around +0.35) are real and acknowledged in the label. Simple fixes barely help: (prev_reward==0)*ep_dec, its cubic version, and a 2-unrewarded-run term at D1 each add at most about 0.02, and no variant within 8 terms beat 0.6016 on test.",
+      "Checks that held up: GO S2 +0.35, rare +0.19, rewarded -0.33 / -0.26, D1 S1-unrewarded -0.22, D2 a2 +0.11 all match the fitted weights and the residual tables. GO terms alone give test 0.46. Adding trial-before terms does not help (0.58 or lower). No future variables are used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO-phase last-trial S2/rare evidence raises n; a reward last trial (S1 most) lowers it; D1 lowered after S1-unrewarded",
+    "better_terms": null,
+    "better_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "GO-phase last-trial S2/rare evidence raises n; a reward last trial (S1 most) lowers it; D1 lowered after S1-unrewarded"
+}

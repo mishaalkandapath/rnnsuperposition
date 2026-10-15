@@ -1,0 +1,78 @@
+{
+  "label": "GO-phase S2-belief signal (higher when S2 believed good), plus episode-start D1 jump",
+  "terms": "(phase == GO) * np.tanh(belief_lo/2) ;; (phase == GO) * np.tanh(belief_lo/2) * ep_dec ;; (phase != GO) * np.tanh(belief_lo/2) ;; (phase == D1) * (ep_trial == 0) ;; (phase == GO) * table(prev_action, {1: -1, 2: 1}) ;; (phase == GO) * (last_is(\"a2 S1 u\") + last_is(\"a2 S2 u\")) ;; (phase == D1) * (last_is(\"a2 S1 r\") + last_is(\"a2 S2 r\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw candidate n of unit 23 sits near -0.96 and rises (less negative) mainly at GO when the ideal observer believes S2 is good: graded in tanh(belief_lo/2) with negative weight, strongest at GO (about 3x the D1/D2 slope) and growing later in the episode (GO belief x ep_dec term). Also higher at GO after the previous choice was a2, especially when that a2 went unrewarded (+0.045), and at D1 after a rewarded a2; a large +0.27 jump at D1 of the episode first trial. Observed-only, 7 terms: dev R^2 beyond timing 0.72, test 0.71 (all-observed ceiling 0.78, all 0.83). The earlier policy-based explanation (policy decile alone 0.72) loses essentially nothing when replaced by belief + last trial: the unit tracks the a2/S2 preference the agent infers from history. This trial reward and value do not matter (0.00 / 0.01).",
+  "gate": "unit_candidate",
+  "feature": 23,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 23,
+    "terms": [
+      "(phase == GO) * np.tanh(belief_lo/2)",
+      "(phase == GO) * np.tanh(belief_lo/2) * ep_dec",
+      "(phase != GO) * np.tanh(belief_lo/2)",
+      "(phase == D1) * (ep_trial == 0)",
+      "(phase == GO) * table(prev_action, {1: -1, 2: 1})",
+      "(phase == GO) * (last_is(\"a2 S1 u\") + last_is(\"a2 S2 u\"))",
+      "(phase == D1) * (last_is(\"a2 S1 r\") + last_is(\"a2 S2 r\"))"
+    ],
+    "weights": [
+      -0.03248641023178335,
+      -0.0030694155320719926,
+      -0.012429798226973687,
+      0.26764032039496066,
+      0.00459480132950513,
+      0.04474576813068785,
+      0.012700795015186827
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7111213120989643,
+    "r2": 0.7895384175249315,
+    "r2_timing_only": 0.2714534117962739
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 23,
+    "terms": [
+      "(phase == GO) * np.tanh(belief_lo/2)",
+      "(phase == GO) * np.tanh(belief_lo/2) * ep_dec",
+      "(phase != GO) * np.tanh(belief_lo/2)",
+      "(phase == D1) * (ep_trial == 0)",
+      "(phase == GO) * table(prev_action, {1: -1, 2: 1})",
+      "(phase == GO) * (last_is(\"a2 S1 u\") + last_is(\"a2 S2 u\"))",
+      "(phase == D1) * (last_is(\"a2 S1 r\") + last_is(\"a2 S2 r\"))"
+    ],
+    "weights": [
+      -0.03248641023178335,
+      -0.0030694155320719926,
+      -0.012429798226973687,
+      0.26764032039496066,
+      0.00459480132950513,
+      0.04474576813068785,
+      0.012700795015186827
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.722607430678558,
+    "r2": 0.7962118266597462,
+    "r2_timing_only": 0.26534379115215456
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claim 'higher at D1 after a rewarded a2' is imprecise. Fitting the two rewarded-a2 cases separately at D1 gives a2 S1 r (rare rewarded) +0.036 and a2 S2 r (common rewarded) +0.003. The effect is specific to rare-rewarded a2, which the model-based rule reads as a switch toward a1 / evidence that S1 is good. After the original terms, misses still under-predicts it: D1 after a2 S1 r +0.026, D2 after a2 S1 r +0.021.",
+      "That a2 S1 r effect also shows up at D2, not just D1. Using (phase != GO)*last_is('a2 S1 r') in place of the pooled D1 term raises test R^2 from 0.711 to 0.723.",
+      "The 'previous choice was a2' main effect at GO is tiny in the full fit (weight +0.005 on a +/-1 code, so about 0.01 between a1 and a2). The GO effect sits almost entirely in the unrewarded-a2 term, where a2 S1 u and a2 S2 u fit to about equal weights (+0.046, +0.047).",
+      "The remaining claims hold up. Belief at GO carries most of the fit: the 4 base terms alone score 0.608 test. Dropping the GO belief x ep_dec term lowers test R^2 from 0.711 to 0.701, so the late-episode growth is real but small. GO slope / D1-D2 slope is about 2.6x early in the episode and grows later. The D1 first-trial jump (+0.26 to +0.27) is real. Misses by phase are near zero on average (D1 -0.000, GO -0.003, D2 +0.004). The largest leftover pattern is GO after a1 S2 r, over-predicted by -0.019. No large systematic error class remains."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO-phase S2-belief signal (stronger late in the episode), raised at GO after unrewarded a2 and at D1/D2 after rare-rewarded a2 (a2 S1 r), plus a D1 jump on the episode's first trial",
+    "better_terms": "(phase == GO) * np.tanh(belief_lo/2) ;; (phase == GO) * np.tanh(belief_lo/2) * ep_dec ;; (phase != GO) * np.tanh(belief_lo/2) ;; (phase == D1) * (ep_trial == 0) ;; (phase == GO) * table(prev_action, {1: -1, 2: 1}) ;; (phase == GO) * (last_is('a2 S1 u') + last_is('a2 S2 u')) ;; (phase != GO) * last_is('a2 S1 r') ;; (phase == GO) * prev_reward * (prev_action == 1)",
+    "better_terms_test_r2_beyond_timing": 0.7267
+  },
+  "final_label": "GO-phase S2-belief signal (stronger late in the episode), raised at GO after unrewarded a2 and at D1/D2 after rare-rewarded a2 (a2 S1 r), plus a D1 jump on the episode's first trial"
+}

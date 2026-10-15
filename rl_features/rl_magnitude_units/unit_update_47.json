@@ -1,0 +1,111 @@
+{
+ "label": "At D1, z dips after a1 led rarely to S2, increasingly late in episode; higher after S1.",
+ "short_terms": "(phase == D1) * ((prev_action - prev_state) == -1) * np.exp(ep_trial / 5) ;; (phase == D1) * ((prev_action - prev_state) == -1) ;; (phase == D1) * (prev_state == 1)",
+ "terms": "(phase == D1) * ((prev_action == 1) & (prev_state == 2)) * np.exp(ep_trial / 10) ;; (phase == D1) * ((prev_action == 1) & (prev_state == 2)) ;; (phase == D1) * ((prev_action == 1) & (prev_state == 2)) * ep_trial ;; (phase == D1) * belief_lo ;; (phase != D1) * belief_lo ;; (phase == D1) * (prev_state==1) ;; (phase == D1) * np.exp(ep_trial / 5) ;; (phase == D1) * (prev_state==1) * np.exp(ep_trial / 10)",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Raw update gate z of unit 47 sits near 1 (mean 0.997); variance is almost all at D1. Beyond timing, the main driver is the previous trial being a1 -> S2 (rare transition from a1): D1 z drops by about 0.02 regardless of reward, and the drop grows sharply near the end of the episode (late trials reach 0.8). D1 after reaching S1 is slightly higher (+0.004/0.006), after a2 -> S2 near baseline. The previous reward has essentially no effect (r and u rows match). GO and D2 vary only a little (around 1e-4, a weak negative belief_lo trend). The free fit adds belief_lo at each phase and finer late-episode time terms (0.66 dev vs 0.57 short); the remaining misses are late-episode D1 dips after other patterns (e.g. a run of a2 S2 trials), which neither form captures. No future, hidden or model-output variables used.",
+ "full_test_scores": {
+  "gate": "unit_update",
+  "feature": 47,
+  "terms": [
+   "(phase == D1) * ((prev_action == 1) & (prev_state == 2)) * np.exp(ep_trial / 10)",
+   "(phase == D1) * ((prev_action == 1) & (prev_state == 2))",
+   "(phase == D1) * ((prev_action == 1) & (prev_state == 2)) * ep_trial",
+   "(phase == D1) * belief_lo",
+   "(phase != D1) * belief_lo",
+   "(phase == D1) * (prev_state==1)",
+   "(phase == D1) * np.exp(ep_trial / 5)",
+   "(phase == D1) * (prev_state==1) * np.exp(ep_trial / 10)"
+  ],
+  "weights": [
+   -4.474772972644142e-06,
+   -0.011228342253706305,
+   3.375917145405156e-05,
+   -0.00047927184593758525,
+   -6.545189619756483e-05,
+   0.0022404452833008808,
+   -5.816867387741102e-11,
+   1.973799304766763e-06
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.651104730000752,
+  "r2": 0.7715889247401017,
+  "r2_timing_only": 0.34533054787360506
+ },
+ "gate": "unit_update",
+ "feature": 47,
+ "test_scores": {
+  "gate": "unit_update",
+  "feature": 47,
+  "terms": [
+   "(phase == D1) * ((prev_action - prev_state) == -1) * np.exp(ep_trial / 5)",
+   "(phase == D1) * ((prev_action - prev_state) == -1)",
+   "(phase == D1) * (prev_state == 1)"
+  ],
+  "weights": [
+   -3.455118118799852e-10,
+   -0.013902397528011206,
+   0.004600397518972173
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.579629332329409,
+  "r2": 0.7247961653060875,
+  "r2_timing_only": 0.34533054787360506
+ },
+ "dev_scores": {
+  "gate": "unit_update",
+  "feature": 47,
+  "terms": [
+   "(phase == D1) * ((prev_action - prev_state) == -1) * np.exp(ep_trial / 5)",
+   "(phase == D1) * ((prev_action - prev_state) == -1)",
+   "(phase == D1) * (prev_state == 1)"
+  ],
+  "weights": [
+   -3.455118118799852e-10,
+   -0.013902397528011206,
+   0.004600397518972173
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.5730926751847722,
+  "r2": 0.7268890238837911,
+  "r2_timing_only": 0.36025699199605987
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": true,
+  "issues": [
+   "The claims hold up on test. The a1->S2 pattern is specific: replacing it with prev_state==2 (any S2) in the late-episode term drops test R^2 from 0.569 to 0.400, and prev_action==1 * exp scores 0.263. The profile table shows the D1 residual after a1 S2 is the same whether rewarded or not (-0.0206 r vs -0.0204 u), so 'reward doesn't matter' is correct. The residual after reaching S1 is +0.004 to +0.006 and after a2 S2 it is about 0, both as stated.",
+   "Each term earns its place on test. The late-episode exp term alone scores 0.48, the a1->S2 indicator alone 0.25, and all three together 0.569.",
+   "The main thing left unexplained is late-episode D1 dips after other histories. The worst-fit windows are all at t95-99, with z dropping to about 0.82 after a2 S2c and a1 S1c runs that the model predicts at about 0.97. Several windows show z falling steadily over consecutive a2 S2c trials late in the episode. None of these observed variants captures it: prev_state==2*exp, (1-prev_reward)*exp, prev_action==2*exp, belief_lo*exp and belief_cover*exp all score <= 0.565 on test. The explanation already admits this. It looks like a general end-of-episode effect, not a misattributed pattern. The phase x previous-trial mean errors are all <= 0.001.",
+   "Minor: a faster time scale fits slightly better. Using exp(ep_trial/5) instead of exp(ep_trial/10) gives test 0.580 vs 0.569."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At D1, z dips after an a1 trial reached S2 (rare), most steeply late in the episode; slightly higher after S1.",
+  "better_short_terms": "(phase == D1) * ((prev_action - prev_state) == -1) * np.exp(ep_trial / 5) ;; (phase == D1) * ((prev_action - prev_state) == -1) ;; (phase == D1) * (prev_state == 1)",
+  "better_short_terms_test_r2_beyond_timing": 0.58
+ },
+ "final_label": "At D1, z dips after an a1 trial reached S2 (rare), most steeply late in the episode; slightly higher after S1.",
+ "original_short_terms": "(phase == D1) * ((prev_action - prev_state) == -1) * np.exp(ep_trial / 10) ;; (phase == D1) * ((prev_action - prev_state) == -1) ;; (phase == D1) * (prev_state == 1)",
+ "original_test_scores": {
+  "gate": "unit_update",
+  "feature": 47,
+  "terms": [
+   "(phase == D1) * ((prev_action - prev_state) == -1) * np.exp(ep_trial / 10)",
+   "(phase == D1) * ((prev_action - prev_state) == -1)",
+   "(phase == D1) * (prev_state == 1)"
+  ],
+  "weights": [
+   -5.1440291424148245e-06,
+   -0.010394206101737235,
+   0.004600397518972185
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5692175300486491,
+  "r2": 0.7179798764112939,
+  "r2_timing_only": 0.34533054787360506
+ },
+ "terms_from": "skeptic"
+}

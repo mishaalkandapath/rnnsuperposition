@@ -1,0 +1,83 @@
+{
+  "label": "D1 surge after an unrewarded visit to S1; S1/a1 history lifts GO and D2",
+  "terms": "(phase == D1) * (prev_state == 1) * (prev_reward == 0) ;; (phase == D1) * (prev_state == -1) * (prev_reward == 0) ;; (phase == D1) * (prev_state == 2) * (prev_reward == 1) ;; (phase == GO) * (prev_state == 1) ;; (phase != D1) * (prev_reward == 0) ;; (phase == D2) * (state == 1) ;; (phase == D2) * (prev_action == 1) ;; (phase == D2) * (prev_state == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw GRU candidate n of unit 4 (normally near -0.7, rising slowly over the episode in the timing baseline). The dominant driver is at D1: when the previous trial reached S1 and was unrewarded (a1 S1 u or a2 S1 u) the value jumps by about +0.9 (residual about +0.8 to +0.9, often to positive values). A second D1 term covers unrewarded D1s where the previous state lies outside the window (+0.47, a window artifact; the agent did observe that state). D1 after a rewarded S2 visit is slightly lower (-0.12). At GO it is higher when the previous state was S1 (+0.19). At GO and D2 an unrewarded previous trial adds +0.08. At D2 it is higher when this trial reached S1 (+0.14, observed at D2) and when the previous choice was a1 (+0.12) or the previous state was S1 (+0.05). So the unit codes S1 not rewarded / a switch away from S1, mostly at D1. All terms are observed; no future or hidden variables are used. Value, hidden good state and since_rev add little (reference scores 0.03, 0.06, 0.00). Dev R^2 beyond timing 0.74; last-trial table reference 0.70; all ceiling 0.81.",
+  "gate": "unit_candidate",
+  "feature": 4,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 4,
+    "terms": [
+      "(phase == D1) * (prev_state == 1) * (prev_reward == 0)",
+      "(phase == D1) * (prev_state == -1) * (prev_reward == 0)",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 1)",
+      "(phase == GO) * (prev_state == 1)",
+      "(phase != D1) * (prev_reward == 0)",
+      "(phase == D2) * (state == 1)",
+      "(phase == D2) * (prev_action == 1)",
+      "(phase == D2) * (prev_state == 1)"
+    ],
+    "weights": [
+      0.9492597365063278,
+      0.4660660167067143,
+      -0.12238464523536188,
+      0.19014028764032462,
+      0.08017758535568625,
+      0.14089807689120828,
+      0.1247504665360123,
+      0.05441976430601388
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7345073529848728,
+    "r2": 0.7769061017261495,
+    "r2_timing_only": 0.15969839171802347
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 4,
+    "terms": [
+      "(phase == D1) * (prev_state == 1) * (prev_reward == 0)",
+      "(phase == D1) * (prev_state == -1) * (prev_reward == 0)",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 1)",
+      "(phase == GO) * (prev_state == 1)",
+      "(phase != D1) * (prev_reward == 0)",
+      "(phase == D2) * (state == 1)",
+      "(phase == D2) * (prev_action == 1)",
+      "(phase == D2) * (prev_state == 1)"
+    ],
+    "weights": [
+      0.9492597365063278,
+      0.4660660167067143,
+      -0.12238464523536188,
+      0.19014028764032462,
+      0.08017758535568625,
+      0.14089807689120828,
+      0.1247504665360123,
+      0.05441976430601388
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.73639177338669,
+    "r2": 0.7803759640646996,
+    "r2_timing_only": 0.1668543931389912
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I reproduced the reported score exactly: test R^2 beyond timing is 0.7345, against 0.70 for the last-trial table and a 0.81 ceiling. The central claim holds. In the profile residuals, D1 after a1 S1 u is +0.87 and after a2 S1 u is +0.78, while every other previous-trial pattern sits between -0.25 and -0.02. The first term alone scores 0.47 on test, and adding the window-edge term brings it to 0.52.",
+      "The D1 surge is not a fixed step. It builds up over consecutive unrewarded trials. The worst-fit windows are all D1 steps after a run of losses, where the actual value is about 0.66-0.80 but the prediction is only 0.02-0.18. Adding (phase==D1)*(prev_state==1)*(prev_reward==0)*(tv('reward',-2)==0) gets a weight of +0.34 and raises test R^2 from about 0.734 to 0.747. The label does not mention this.",
+      "The D2 claim 'higher when this trial reached S1' is really a conjunction of choice and state, a1 common to S1. The profile residuals by this trial's choice x state at D2 are a1S1 +0.22, a1S2 +0.02, a2S1 -0.09 and a2S2 -0.16. When (phase==D2)*(action==1)*(state==1) is added, the weight on the plain state==1 term drops from 0.14 to about 0.00 and the conjunction gets +0.26.",
+      "Two of the original terms add almost nothing: (phase==D2)*(prev_state==1) at +0.05 and (phase==D1)*S2-rewarded at -0.12. The window-edge term (+0.47) comes from where the window is cut, not from the agent. The explanation does say this openly.",
+      "The remaining misses are modest and scattered across small cells, at most about 0.16. With the original terms they are D2 after a1 S2 r (-0.16), D2 after a2 S2 u (-0.12) and D1 after a2 S2 u (+0.11). The improved terms leave them almost unchanged. I found no large systematic error class.",
+      "No future variables are used, so no observed-only check was needed. My improved term set reaches 0.772 test, which is 95% of the 0.81 ceiling, so the original explanation was close but missed the two refinements above."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 surge after an unrewarded S1 visit (larger after consecutive losses); S1 history lifts GO; a1->S1 common lifts D2",
+    "better_terms": "(phase == D1) * (prev_state == 1) * (prev_reward == 0) ;; (phase == D1) * (prev_state == -1) * (prev_reward == 0) ;; (phase == GO) * (prev_state == 1) ;; (phase != D1) * (prev_reward == 0) ;; (phase == D2) * (action == 1) * (state == 1) ;; (phase == D2) * (prev_action == 1) ;; (phase == D1) * (prev_state == 1) * (prev_reward == 0) * (tv('reward',-2) == 0) ;; (phase == D1) * (prev_state == 2) * (prev_reward == 1)",
+    "better_terms_test_r2_beyond_timing": 0.7722
+  },
+  "final_label": "D1 surge after an unrewarded S1 visit (larger after consecutive losses); S1 history lifts GO; a1->S1 common lifts D2"
+}

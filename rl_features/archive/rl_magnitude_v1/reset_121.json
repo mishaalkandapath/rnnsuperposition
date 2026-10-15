@@ -1,0 +1,83 @@
+{
+  "label": "GO-only; grows with run of unrewarded trials, fades over episode",
+  "terms": "(phase == GO) * (prev_reward == 0) ;; (phase == GO) * last_is(\"a1 S1 u\") ;; (phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) ;; (phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0) ;; (phase == GO) * (prev_reward == 0) * ep_dec ;; (phase == GO) * (prev_reward == 1) * (9 - ep_dec) ;; (phase == GO) * (prev_reward == 0) * np.abs(choice) ;; (phase == GO) * (prev_action == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO (D1 is always 0, D2 almost 0). Magnitude is a recent-non-reward signal: large after an unrewarded previous trial (biggest after a1 S1 u), and it grows step by step with the run of consecutive unrewarded trials (2 and 3 in a row each add about +0.25). After a rewarded trial it is near 0, so the timing baseline (high early in the episode, falling to 0 by trial 80+) is cancelled by a rewarded x (9 - ep_dec) term. The unrewarded response also shrinks over the episode (-0.09 per decade). Smaller effects: higher after an a1 choice than an a2 choice, and slightly lower when the GO policy is confident (|choice|). The hidden good state, trials since reversal and future variables add little. Test R^2 beyond timing 0.73 (dev 0.73), above the additive all ceiling of 0.54 because the reward x episode-time and streak interactions matter.",
+  "gate": "reset",
+  "feature": 121,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 121,
+    "terms": [
+      "(phase == GO) * (prev_reward == 0)",
+      "(phase == GO) * last_is(\"a1 S1 u\")",
+      "(phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0)",
+      "(phase == GO) * (prev_reward == 0) * ep_dec",
+      "(phase == GO) * (prev_reward == 1) * (9 - ep_dec)",
+      "(phase == GO) * (prev_reward == 0) * np.abs(choice)",
+      "(phase == GO) * (prev_action == 1)"
+    ],
+    "weights": [
+      1.073427122347713,
+      0.19287593425494393,
+      0.2457989757358645,
+      0.256790640988253,
+      -0.09227172315856938,
+      -0.06720153647018198,
+      -0.03740491859729273,
+      0.135446044073312
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7331600924353465,
+    "r2": 0.8302380387893009,
+    "r2_timing_only": 0.36380595106612035
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 121,
+    "terms": [
+      "(phase == GO) * (prev_reward == 0)",
+      "(phase == GO) * last_is(\"a1 S1 u\")",
+      "(phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (tv(\"reward\", -3) == 0)",
+      "(phase == GO) * (prev_reward == 0) * ep_dec",
+      "(phase == GO) * (prev_reward == 1) * (9 - ep_dec)",
+      "(phase == GO) * (prev_reward == 0) * np.abs(choice)",
+      "(phase == GO) * (prev_action == 1)"
+    ],
+    "weights": [
+      1.073427122347713,
+      0.19287593425494393,
+      0.2457989757358645,
+      0.256790640988253,
+      -0.09227172315856938,
+      -0.06720153647018198,
+      -0.03740491859729273,
+      0.135446044073312
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7313519241576618,
+    "r2": 0.8291116297947565,
+    "r2_timing_only": 0.3638950524047936
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced: the claimed 8 terms score test R^2 beyond timing 0.733, matching the report. The core claims hold. Activation is exactly 0 at D1 and about 0.001 at D2. The 3 reward-by-episode terms alone (prev_reward==0, prev_reward==0 * ep_dec, prev_reward==1 * (9-ep_dec)) give 0.631 test. Dropping the rewarded*(9-ep_dec) term costs 0.18 (down to 0.554). Dropping the unrewarded*ep_dec term costs 0.085.",
+      "The streak claim is real but small. Each streak term has a fitted weight of about +0.25, but dropping either one costs only 0.004-0.010 test R^2 (0.723 and 0.729 vs 0.733). That is a marginal effect, not a main driver.",
+      "'Higher after a1 than a2' is fragile. Its weight is +0.135 in the claimed set, but it turns negative (-0.079) once signed GO choice is added. The a1 effect is mostly the a1 S1 u case (residual +0.905, against +0.35 to +0.48 for the other unrewarded patterns), not a general effect of a1.",
+      "'Slightly lower when the policy is confident (|choice|)' contributes about 0.01 (0.722 without it). Signed choice is the better policy term: added to the 3 core terms it gives +0.05, while |choice| gives +0.008.",
+      "Systematic misses with the claimed terms: GO after a1 S2 r is over-predicted by -0.179 and GO after a2 S2 u by -0.156 (mean error). An alternative set with signed choice cuts these to -0.03 and -0.09.",
+      "Worst-fit windows are early-episode (t12-t25) runs of unrewarded a2 choices, about 3.2 actual against 1.4 predicted. Streak x episode-time interactions did not fix them (0.755), so this error is still unexplained."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO-only; large after unrewarded trials (most after a1 S1 u), near 0 after rewarded; the non-reward response fades over the episode",
+    "better_terms": "(phase == GO) * (prev_reward == 0) ;; (phase == GO) * (prev_reward == 0) * ep_dec ;; (phase == GO) * (prev_reward == 1) * (9 - ep_dec) ;; (phase == GO) * (prev_reward==0) * (tv('reward', -2) == 0) ;; (phase == GO) * (prev_reward == 0) * (tv('reward', -2) == 0) * (tv('reward', -3) == 0) ;; (phase == GO) * choice ;; (phase == GO) * (prev_action == 1) ;; (phase == GO) * last_is('a1 S1 u')",
+    "better_terms_test_r2_beyond_timing": 0.7553
+  },
+  "final_label": "GO-only; large after unrewarded trials (most after a1 S1 u), near 0 after rewarded; the non-reward response fades over the episode"
+}

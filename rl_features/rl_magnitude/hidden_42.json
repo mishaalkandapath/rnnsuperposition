@@ -1,0 +1,89 @@
+{
+  "label": "Fires at D1 after an unrewarded a1->S2 rare trial, growing from trial 70 onward",
+  "short_terms": "(phase == D1) * last_is(\"a1 S2 u\") * np.maximum(ep_trial - 70, 0) ;; (phase == D1) * last_is(\"a1 S2 u\") * (ep_trial >= 80) ;; last_is(\"a1 S2 u\") * np.maximum(ep_trial - 70, 0) * (tv(\"reward\", -2) == 0)",
+  "terms": "(phase == D1) * last_is(\"a1 S2 u\") * np.maximum(ep_trial - 70, 0) ;; (phase == D1) * last_is(\"a1 S2 u\") * (ep_trial >= 80) ;; (phase == D1) * last_is(\"a1 S2 u\") * (ep_trial >= 75) * (tv(\"reward\", -2) == 0) ;; (phase == D1) * last_is(\"a1 S2 u\") * (ep_trial >= 75) * belief_lo ;; (phase == D1) * (prev_reward == 0) * (prev_state == 2) * (ep_trial >= 75) * (prev_action == 2) ;; (phase == D1) * (ep_trial >= 75) * (prev_reward == 0) * (prev_action == 1) * (prev_state == 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "hidden/42 is a sparse D1-only feature (0.7% of steps, zero at GO and D2). Its magnitude is set by the previous trial being a1 -> S2 (rare) unrewarded, and only late in the episode: it is near zero before trial ~70 and grows with ep_trial after that (a ramp from 70 plus a step at 80). It is weaker when the trial before that was also unrewarded (third term, negative weight). Other unrewarded patterns (a1 S1 u, a2 S2 u) and all rewarded patterns do not drive it. In the free fit, observer belief that S1 is good (belief_lo) raises it a little when combined with the late a1 S2 u condition; the free fit gets dev 0.63 against 0.55 for the short form, mostly from making the trial-before effect sharper and from the belief term. The largest misses are firings on the first trial of a window, where the previous trial is not in the window, so last_is cannot see it. Uses observed variables only.",
+  "full_test_scores": {
+    "gate": "hidden",
+    "feature": 42,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\") * np.maximum(ep_trial - 70, 0)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (ep_trial >= 80)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (ep_trial >= 75) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (ep_trial >= 75) * belief_lo",
+      "(phase == D1) * (prev_reward == 0) * (prev_state == 2) * (ep_trial >= 75) * (prev_action == 2)",
+      "(phase == D1) * (ep_trial >= 75) * (prev_reward == 0) * (prev_action == 1) * (prev_state == 1)"
+    ],
+    "weights": [
+      0.017906272047451956,
+      0.11231979536188065,
+      -0.5224596605341194,
+      0.059568222794287334,
+      -0.030751814454374894,
+      -0.039706650119255074
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6248551724217812,
+    "r2": 0.6446175230447847,
+    "r2_timing_only": 0.05267925657027195
+  },
+  "gate": "hidden",
+  "feature": 42,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 42,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\") * np.maximum(ep_trial - 70, 0)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (ep_trial >= 80)",
+      "last_is(\"a1 S2 u\") * np.maximum(ep_trial - 70, 0) * (tv(\"reward\", -2) == 0)"
+    ],
+    "weights": [
+      0.022548223363941463,
+      0.14589066776670176,
+      -0.008599166250309388
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5375284699240204,
+    "r2": 0.561891126313339,
+    "r2_timing_only": 0.05267925657027195
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 42,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\") * np.maximum(ep_trial - 70, 0)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * (ep_trial >= 80)",
+      "last_is(\"a1 S2 u\") * np.maximum(ep_trial - 70, 0) * (tv(\"reward\", -2) == 0)"
+    ],
+    "weights": [
+      0.022548223363941463,
+      0.14589066776670176,
+      -0.008599166250309388
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5476736956870853,
+    "r2": 0.5729256153017328,
+    "r2_timing_only": 0.05582677676241976
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The label leaves out the short form's third term. That term is a real effect: firing is weaker when the trial before the last one was also unrewarded (weight -0.0086 on the ramp). A D1-only version, (phase==D1)*last_is('a1 S2 u')*(tv('reward',-2)==0), gets weight -0.107 and test 0.527, against 0.505 without it.",
+      "The third term has no (phase == D1) factor, so it predicts negative values at GO and D2 after a1 S2 u, where the feature is always zero. In misses, GO and D2 after a1 S2 u are under-predicted by +0.010. The error is small, but the term only partly describes the effect. The unphased version still scores higher on test (0.538 vs 0.527).",
+      "Removing terms barely lowers the test score: ramp alone 0.497, ramp plus step 0.505, all three 0.538. Moving the breakpoints (78, 76/72, or a capped ramp) leaves it at 0.534-0.536. So the shape is robust and not overfit.",
+      "Adding belief_lo to the short form adds about nothing (0.5055 vs 0.5048). The belief effect is only claimed for the free fit, so this is consistent with the explanation.",
+      "The worst misses are firings on a window's first trial, where the previous trial is outside the window. This is a data limit. An observed proxy, (step==0)*(in_rew==0)*ramp, does not help (0.518).",
+      "The residual tables support the specificity claims. At D1 only a1 S2 u has a positive residual (+0.117); every other pattern is about -0.01. GO and D2 are exactly 0."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Fires at D1 after unrewarded a1->S2 rare trials from trial ~70, growing; weaker after two losses in a row",
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "Fires at D1 after unrewarded a1->S2 rare trials from trial ~70, growing; weaker after two losses in a row"
+}

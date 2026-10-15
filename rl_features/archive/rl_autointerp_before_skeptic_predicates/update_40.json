@@ -1,0 +1,64 @@
+{
+  "label": "GO after a2 -> rare S1 -> rewarded, when the agent sticks with a2 (mid-episode)",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (prev_common == 0) & (prev_action == 2) & (model_act == 2) & (ep_trial >= 15) & (ep_trial < 88)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO steps (never D1/D2), almost entirely (89% of mass) when the previous trial was a2 -> rare transition to S1 -> rewarded, i.e. the rare-rewarded case where a model-based agent should switch to a1. Within that context it fires mainly when the agent nonetheless chooses a2 (model_act == 2, choice logit strongly negative): adding model_act==2 raises precision 0.53 -> 0.67. It is silent in the first ~10 and last ~10 trials of the episode; restricting ep_trial to 15..87 raises precision to 0.87 (dev F1 0.83). Remaining misses are mostly first-trial-of-window GO steps where the previous trial is outside the window (prev_common unknown), plus weak activations after other a2 trials. Uses only observed variables plus the agent own current choice (model_act at GO), no future outcomes. Magnitude is fairly uniform (median 0.21, max 0.42); high quartiles are ~91% covered by the predicate, low quartile ~62%.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 40,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (prev_common == 0) & (prev_action == 2) & (model_act == 2) & (ep_trial >= 15) & (ep_trial < 88)",
+    "split": "test",
+    "precision": 0.8620589656839053,
+    "recall": 0.7925702097404905,
+    "f1": 0.8258554428855859,
+    "mass_recall": 0.8595154043144287,
+    "correlation": 0.781489621858882,
+    "n_active": 11252,
+    "n_predicted": 10345,
+    "coverage_by_activation_quartile": [
+      0.6118023462495557,
+      0.7479559189477426,
+      0.898684678279417,
+      0.9118378954852471
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 40,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (prev_common == 0) & (prev_action == 2) & (model_act == 2) & (ep_trial >= 15) & (ep_trial < 88)",
+    "split": "dev",
+    "precision": 0.8731806506849316,
+    "recall": 0.7965439812554915,
+    "f1": 0.8331035891152294,
+    "mass_recall": 0.8639756351158921,
+    "correlation": 0.7836868558566352,
+    "n_active": 10243,
+    "n_predicted": 9344,
+    "coverage_by_activation_quartile": [
+      0.6153846153846154,
+      0.7547832877782117,
+      0.9058961343225302,
+      0.91015625
+    ]
+  },
+  "gate": "update",
+  "feature": 40,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Scores reproduce. Dev: P 0.873, R 0.797, F1 0.833. Test: P 0.862, R 0.793, F1 0.826, mass recall 0.860.",
+      "Every factual claim checks out. Activity is 100% at GO and 0 at D1/D2. 88.9% of activation mass has prev_action==2 & prev_common==0, and all active steps have prev_reward==1. There are 0 activations in trials 0-9 and 90-99. Adding model_act==2 raises dev precision from 0.53 to 0.67, and adding the ep_trial range raises it to 0.87.",
+      "Misses are not a systematic class the predicate could capture. About 9.4% of mass is at rel -3 GO, where prev_common is unknown (-1). An observed-only stand-in for these, prev_common==-1 & prev_reward==1 & model_act==2, has only 0.037 precision, so they are a windowing artifact, not a gap in the predicate. Another ~5% of mass is weak activations when the agent chooses a1 (model_act==1, e.g. after common-rewarded a1 trials), at precision 0.007, which is scattered.",
+      "False positives are scattered with no clear pattern. Splitting on good state gives similar precision (0.889 when S2 is good, 0.856 when S1 is), and stay vs switch does not separate them either.",
+      "The ep_trial window is an odd, position-based condition. I tried value-range and choice-logit thresholds as replacements and neither did better (value range without ep_trial: F1 0.78), so ep_trial stays as a description of where it fires.",
+      "No future variables are used: model_act at GO is the agent's own current choice. The label matches the predicate."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

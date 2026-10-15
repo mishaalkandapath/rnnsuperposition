@@ -1,0 +1,65 @@
+{
+  "label": "GO after a1 led rarely to S2 and was unrewarded, following another unrewarded trial (stick with a1)",
+  "predicate": "(phase == GO) & (prev_reward == 0) & (tv(\"prev_reward\", -1) != 1) & (prev_action == 1) & (prev_common == 0)",
+  "verdict": "partially_explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO (100% of mass), only when the D1 reward input was 0 (prev_reward=0 holds all mass), and almost only when the agent then picks a1 with a strongly positive policy logit (choice > 8 holds 83% of mass; model_act=a1 on every activation). The previous trial was nearly always a1 -> S2 via a rare transition (prev_common=0 holds 80% of mass; prev_action=2 has 2.5%), and the trial before that was usually also unrewarded. So this is the model-based stay-after-rare-unrewarded case: the a1 choice failed, but only because of a rare transition, so the agent keeps choosing a1, i.e. it still believes S1 is good (good=S1 holds 82% of mass). Requiring two unrewarded trials in a row lifts precision from 0.23 to 0.71 (dev F1 0.69, mass recall 0.74). The recorded predicate uses only observed history, no future variables; the past-only rule gives nearly the same F1 as adding the upcoming choice (choice > 2.78, F1 0.695). Strongest activations come during long runs of unrewarded a1 -> S2-rare trials late in the episode (rate rises with ep_trial and since_rev). Misses are mostly at rel -3, where the earlier history lies outside the window, and at GO after a single common-unrewarded a1 trial (weak activations). Never fires at D1/D2, after a rewarded trial, or when the agent is about to choose a2. Its mirror case (a2 -> S1 rare unrewarded) does not activate it.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 238,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (tv(\"prev_reward\", -1) != 1) & (prev_action == 1) & (prev_common == 0)",
+    "split": "test",
+    "precision": 0.6773199845976127,
+    "recall": 0.680815378660818,
+    "f1": 0.6790631836314502,
+    "mass_recall": 0.7485638799177042,
+    "correlation": 0.6138732682520466,
+    "n_active": 7751,
+    "n_predicted": 7791,
+    "coverage_by_activation_quartile": [
+      0.52218782249742,
+      0.6713106295149639,
+      0.7203302373581011,
+      0.8094992256066081
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 238,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (tv(\"prev_reward\", -1) != 1) & (prev_action == 1) & (prev_common == 0)",
+    "split": "dev",
+    "precision": 0.7095788494752225,
+    "recall": 0.6777058748889735,
+    "f1": 0.693276220145379,
+    "mass_recall": 0.7415156215292383,
+    "correlation": 0.6267723603414959,
+    "n_active": 7881,
+    "n_predicted": 7527,
+    "coverage_by_activation_quartile": [
+      0.5383054287163876,
+      0.6527918781725889,
+      0.7197969543147208,
+      0.8
+    ]
+  },
+  "gate": "update",
+  "feature": 238,
+  "final_verdict": "partially_explained",
+  "scorecard": {
+    "format": "slot2",
+    "summary": "Graded preference over last trial (GO: a1 S2 u, a2 S2 u, ?) and trial before (GO: a1 S2 u, a1 S1 u, a2 S2 u); timing cues that raise it most: phase=GO & ep_dec=8, phase=GO & ep_dec=9, phase=GO & ep_dec=7.",
+    "test_f1": 0.6092657972476404,
+    "test_precision": 0.6899477806788512,
+    "test_recall": 0.5454780028383435,
+    "full_test_f1": 0.6177039557067573,
+    "full_n_cues": 68,
+    "top40_test_f1": 0.6199036700359541,
+    "slot2_test_f1": 0.6092657972476404,
+    "slot2_slots": [
+      "last trial",
+      "trial before"
+    ],
+    "file": "scorecards/update_238.json"
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "label": "z dips late in episode after a1 choices / a1-leaning policy, strongest at D2",
+  "terms": "(phase == D2) * choice * np.exp((ep_trial-99)/8) ;; (phase == D2) * choice ;; (phase != D2) * choice * np.exp((ep_trial-99)/8) ;; (phase != D2) * (prev_action == 1) * (prev_reward == 0) * np.exp((ep_trial-99)/8) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D2) * last_is(\"a1 S2 u\") ;; (phase == D2) * (action == 1) * np.exp((ep_trial-99)/8) ;; (phase == D2) * (action == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Update gate unit 34 sits near 1 (mean 0.989) and its magnitude drops below that when the agent has chosen or is leaning toward a1, and the drop gets much bigger near the end of the episode (trials ~90-99). D2 is the strongest phase: choosing a1 lowers z, and this effect is multiplied heavily by late-episode position (exp((ep_trial-99)/8), weight about -0.11). A more a1-leaning policy logit at D2 lowers it further, both overall and more so late in the episode. At D1, coming after an a1 trial that reached S2 (rare) lowers z by about 0.03. At D1/GO late in the episode, coming after an a1 trial that went unrewarded lowers it by about 0.045. At D2, the previous trial being a1-S2-unrewarded lowers it by about 0.03. a2 choices raise it slightly relative to the baseline. This trial reward, value and the hidden good state add little. No future variables are used: action is known at D2, and choice is the model policy logit. Test R^2 beyond timing 0.69 (dev 0.69), which beats the 0.54 all-tables additive ceiling because of the action x episode-position interaction. Without the late-episode interaction (just D2 action/state and prev-pattern indicators) dev R^2 is about 0.36.",
+  "gate": "unit_update",
+  "feature": 34,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 34,
+    "terms": [
+      "(phase == D2) * choice * np.exp((ep_trial-99)/8)",
+      "(phase == D2) * choice",
+      "(phase != D2) * choice * np.exp((ep_trial-99)/8)",
+      "(phase != D2) * (prev_action == 1) * (prev_reward == 0) * np.exp((ep_trial-99)/8)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D2) * last_is(\"a1 S2 u\")",
+      "(phase == D2) * (action == 1) * np.exp((ep_trial-99)/8)",
+      "(phase == D2) * (action == 1)"
+    ],
+    "weights": [
+      -0.013175891572182116,
+      -0.0025082428254334824,
+      -0.002600213640587855,
+      -0.044563482158093026,
+      -0.027507931248026907,
+      -0.02679713569529471,
+      -0.10723859092994596,
+      -0.00869639075264718
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6889978330341424,
+    "r2": 0.7787806504824898,
+    "r2_timing_only": 0.28868871983841815
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 34,
+    "terms": [
+      "(phase == D2) * choice * np.exp((ep_trial-99)/8)",
+      "(phase == D2) * choice",
+      "(phase != D2) * choice * np.exp((ep_trial-99)/8)",
+      "(phase != D2) * (prev_action == 1) * (prev_reward == 0) * np.exp((ep_trial-99)/8)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D2) * last_is(\"a1 S2 u\")",
+      "(phase == D2) * (action == 1) * np.exp((ep_trial-99)/8)",
+      "(phase == D2) * (action == 1)"
+    ],
+    "weights": [
+      -0.013175891572182116,
+      -0.0025082428254334824,
+      -0.002600213640587855,
+      -0.044563482158093026,
+      -0.027507931248026907,
+      -0.02679713569529471,
+      -0.10723859092994596,
+      -0.00869639075264718
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6911688439433339,
+    "r2": 0.7810020027546329,
+    "r2_timing_only": 0.29088114022671974
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The D2 claim is too coarse. The late-episode dip at D2 comes from choosing a1 AND reaching S1 (a common transition), not from choosing a1 in general. The profile's D2 residual by choice x state is a1-S1 -0.027 against a1-S2 -0.007, and the worst-fit windows are all S1c cells at D2 (e.g. 0.60-0.67 actual vs 0.79-0.85 predicted). When the D2 action x late term is split by state, the a1-S1 x late weight is -0.147 to -0.160 and the a1-S2 x late weight is -0.003 to -0.014. Test R^2 rises from 0.689 to 0.723.",
+      "Misattributed contribution. The explanation says dev R^2 is 0.36 without the choice x episode-position interaction. But dropping all choice terms (keeping action x late, action, prev a1-unrewarded x late, D1 prev a1-S2, D2 last a1-S2-u) still gives test R^2 0.512. The policy-logit terms add about 0.18 on top of that. Choice terms alone give 0.359. The action x late term carries most of the effect, not the policy logit.",
+      "D1 claim is incomplete. The z drop at D1 after an a1->S2 (rare) trial also grows late in the episode. Scaling it by (1 + 3*exp((ep_trial-99)/8)), together with the D2 last a1-S2-u term, lifts test R^2 to 0.755. The label presents it as a flat -0.03 effect.",
+      "The late-episode shape exp((ep_trial-99)/8) is near-optimal: test R^2 is 0.676, 0.689, 0.679 and 0.647 for tau 5, 8, 12 and 20. That claim checks out. No future variables are used, which also checks out. The reported test R^2 of 0.689 reproduces.",
+      "Misses on the original terms leave no large systematic class: the biggest phase x previous-trial error is D2 after a1 S2 r at +0.010. With the improved terms it falls to at most 0.007."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "z dips late in the episode at D2 after an a1->S1 (common) transition, and more with an a1-leaning policy logit. At D1 it dips after an a1->S2 (rare) trial, more so late.",
+    "better_terms": "(phase == D2) * choice * np.exp((ep_trial-99)/8) ;; (phase == D2) * choice ;; (phase != D2) * choice * np.exp((ep_trial-99)/8) ;; (phase != D2) * (prev_action == 1) * (prev_reward == 0) * np.exp((ep_trial-99)/8) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * (1+ 3*np.exp((ep_trial-99)/8)) ;; (phase == D2) * last_is(\"a1 S2 u\") * (1+ 3*np.exp((ep_trial-99)/8)) ;; (phase == D2) * (action == 1)*(state==1) * np.exp((ep_trial-99)/8) ;; (phase == D2) * (action == 1)*(state==2) * np.exp((ep_trial-99)/8)",
+    "better_terms_test_r2_beyond_timing": 0.755
+  },
+  "final_label": "z dips late in the episode at D2 after an a1->S1 (common) transition, and more with an a1-leaning policy logit. At D1 it dips after an a1->S2 (rare) trial, more so late."
+}

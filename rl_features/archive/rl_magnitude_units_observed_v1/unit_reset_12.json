@@ -1,0 +1,84 @@
+{
+  "label": "high at D1 after unrewarded trials (esp. after a1, loss streaks); higher with S1 belief / a1",
+  "terms": "(phase == D1) * (prev_reward == 0) ;; (phase == D1) * (prev_action == 1) ;; (phase == D1) * (prev_state == 2) ;; (phase == D1) * (prev_reward == 0) * (prev_action == 1) ;; (phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) ;; (phase == D1) * np.tanh(belief_lo/2) ;; (phase != D1) * np.tanh(belief_lo/2) ;; (phase == GO) * (prev_action == 1) + (phase == D2) * (action == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r of GRU unit 12 (timing alone R^2 0.86: about 0.3 at D1, 0.85 at GO, 0.17 at D2). Beyond timing, the biggest driver is the previous outcome at D1: an unrewarded last trial raises it by about +0.16, plus about +0.15 more if that choice was a1, and about +0.10 more if the trial before was also unrewarded (loss streaks keep it high). After a rewarded trial it drops, most after a2 (a2 S1 r / a2 S2 r residuals about -0.15 / -0.12). Its sign also follows the ideal-observer belief that S1 is good: tanh(belief_lo/2) has weight +0.08 at D1 and +0.04 at GO/D2. At GO it is higher after an a1 choice in the previous trial, and at D2 when the current (now observed) choice was a1 (+0.10). Uses observed-only quantities; no future variables (the D2 action is already observed). Dev R^2 beyond timing 0.745, test 0.737; the all-observed reference is 0.80 and the all ceiling 0.88. Swapping the earlier model-policy term for observed belief and prev/current choice loses little, since the policy-decile reference (0.52) is mostly captured by belief plus choice history. What is left: residual errors at D1 after rare transitions (a1 S2 r under-predicted, a2 S1 r over-predicted). A cumulative 3-trial loss-count term did worse than the 2-trial streak indicator.",
+  "gate": "unit_reset",
+  "feature": 12,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 12,
+    "terms": [
+      "(phase == D1) * (prev_reward == 0)",
+      "(phase == D1) * (prev_action == 1)",
+      "(phase == D1) * (prev_state == 2)",
+      "(phase == D1) * (prev_reward == 0) * (prev_action == 1)",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * np.tanh(belief_lo/2)",
+      "(phase != D1) * np.tanh(belief_lo/2)",
+      "(phase == GO) * (prev_action == 1) + (phase == D2) * (action == 1)"
+    ],
+    "weights": [
+      0.16029505552131543,
+      -0.08019845472855483,
+      0.02177368201548645,
+      0.15441881679787064,
+      0.09558829025488574,
+      0.08375756263450933,
+      0.03831753622101309,
+      0.0990215474733929
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7366371920318281,
+    "r2": 0.9641395962516143,
+    "r2_timing_only": 0.8638364922327244
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 12,
+    "terms": [
+      "(phase == D1) * (prev_reward == 0)",
+      "(phase == D1) * (prev_action == 1)",
+      "(phase == D1) * (prev_state == 2)",
+      "(phase == D1) * (prev_reward == 0) * (prev_action == 1)",
+      "(phase == D1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * np.tanh(belief_lo/2)",
+      "(phase != D1) * np.tanh(belief_lo/2)",
+      "(phase == GO) * (prev_action == 1) + (phase == D2) * (action == 1)"
+    ],
+    "weights": [
+      0.16029505552131543,
+      -0.08019845472855483,
+      0.02177368201548645,
+      0.15441881679787064,
+      0.09558829025488574,
+      0.08375756263450933,
+      0.03831753622101309,
+      0.0990215474733929
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7450472556934423,
+    "r2": 0.9653994220428215,
+    "r2_timing_only": 0.8642863090127227
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "I reproduced the score: test R^2 beyond timing is 0.737 with the stated weights. The ablations agree with the claims. Dropping both belief terms gives 0.664. Dropping the 2-trial loss-streak term gives 0.722, so the streak adds about 0.015.",
+      "One large systematic error class is left, as the explainer partly noted. Misses on the original terms show D1 after a1 S2 r under-predicted by +0.123 and D1 after a2 S1 r over-predicted by -0.106. In the profile's raw D1 residuals these two rare-rewarded cells sit far apart: a1 S2 r is +0.036 and a2 S1 r is -0.153. After a rare reward the gate follows the previous choice (a1 high), not the belief. The belief rises toward S1 after a2 S1 r, so the belief term pushes the prediction the wrong way.",
+      "Adding one contrast term, (phase==D1)*(last_is('a1 S2 r') - last_is('a2 S1 r')), in place of the weak prev_state term raises test R^2 to 0.771 (from 0.737). It also removes the D1 rare-rewarded misses: the largest leftover cell error falls to about 0.056, at GO after a1 S2 r. So the gap the explainer called 'what is left over' could be fixed. It is not noise, and the label leaves it out.",
+      "The '+0.15 more after unrewarded a1' figure ignores the fitted main effect of prev_action==1 at D1, which is -0.080. The net extra for a1 after a loss is about +0.07 (+0.15 - 0.08). The raw residuals show it depends strongly on the state reached: a1 S2 u is +0.325, a1 S1 u +0.20, a2 S2 u +0.165, a2 S1 u only +0.02. The state contrast goes the same way for a1 and a2: after a loss, landing in S2 raises the gate more than landing in S1.",
+      "The full additive table of D1 last-trial cells, with fixed weights, scores worse than the factored terms plus belief: 0.704 with the other terms, 0.437 alone. So the belief term carries real information beyond the last trial. The a1/S1-belief direction in the label holds at GO and D2: the belief-decile residuals rise steadily from about -0.09 to +0.11.",
+      "Tested 0.771 against the all-observed reference of 0.80. The explanation is good, but the label overclaims by leaving out the rare-rewarded asymmetry."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "High at D1 after unrewarded trials (most after a1 to S2, and after loss streaks); after rare rewards it follows the previous choice (a1 high, a2 low); rises with S1 belief and with an a1 choice at GO/D2",
+    "better_terms": "(phase == D1) * (prev_reward == 0) ;; (phase == D1) * (prev_action == 1) ;; (phase == D1) * (prev_reward == 0) * (prev_action == 1) ;; (phase == D1)*(last_is('a1 S2 r') - last_is('a2 S1 r')) ;; (phase == D1) * (prev_reward == 0) * (tv('reward', -2) == 0) ;; (phase == D1) * np.tanh(belief_lo/2) ;; (phase != D1) * np.tanh(belief_lo/2) ;; (phase == GO) * (prev_action == 1) + (phase == D2) * (action == 1)",
+    "better_terms_test_r2_beyond_timing": 0.7714
+  },
+  "final_label": "High at D1 after unrewarded trials (most after a1 to S2, and after loss streaks); after rare rewards it follows the previous choice (a1 high, a2 low); rises with S1 belief and with an a1 choice at GO/D2"
+}

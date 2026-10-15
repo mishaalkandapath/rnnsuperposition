@@ -1,0 +1,64 @@
+{
+  "label": "Late-episode (t>=92) D2 after rewarded a2->S2 then a2->S2 again, scaled by S2 belief",
+  "terms": "(phase == D2) * (prev_reward == 1) * (prev_action != 1) * (prev_state != 1) * (action == 2) * (state == 2) * (ep_trial >= 94) ;; (phase == D2) * (prev_reward == 1) * (prev_action != 1) * (prev_state != 1) * (action == 2) * (state == 2) * (ep_trial >= 92) * np.clip(-belief_lo, 0, 6) ;; (phase == D2) * (prev_reward == 1) * (prev_action != 1) * (prev_state != 1) * (action == 2) * (state == 2) * (ep_trial >= 94) * np.clip(-belief_lo, 0, 6)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Sparse feature (nonzero on 0.4% of steps, ~0.2-0.36 when on) that is zero at D1 and GO. It fires only at D2 in the last ~8 trials of the episode, when the previous trial was a rewarded a2->S2 (prev a2/S2 unknown at window start also allowed) and this trial again chose a2 and reached S2 (common). Magnitude rises with episode trial (near zero before ~92, partial at 92-93, full from ~94) and with the ideal observer confidence that S2 is good (-belief_lo). All terms are observed at D2 (this trial choice and state are shown at D2), so no future variables. Dev R^2 beyond timing 0.57, test 0.53; the profile additive ceilings are tiny (all 0.05, all observed 0.03) because the feature needs a conjunction. Single conjunction indicator with ep>=90 gives 0.35 dev; adding belief and a finer late-episode ramp brings it to 0.57. A streak term (trial -2 also a2->S2 rewarded) and the trial-before reward did not help. Remaining error: all-or-none firing, some qualifying trials at t90-93 fire fully and some at t95+ stay silent, not captured by observed history in the window.",
+  "gate": "update",
+  "feature": 111,
+  "test_scores": {
+    "gate": "update",
+    "feature": 111,
+    "terms": [
+      "(phase == D2) * (prev_reward == 1) * (prev_action != 1) * (prev_state != 1) * (action == 2) * (state == 2) * (ep_trial >= 94)",
+      "(phase == D2) * (prev_reward == 1) * (prev_action != 1) * (prev_state != 1) * (action == 2) * (state == 2) * (ep_trial >= 92) * np.clip(-belief_lo, 0, 6)",
+      "(phase == D2) * (prev_reward == 1) * (prev_action != 1) * (prev_state != 1) * (action == 2) * (state == 2) * (ep_trial >= 94) * np.clip(-belief_lo, 0, 6)"
+    ],
+    "weights": [
+      0.021528752365733303,
+      0.02378239346752636,
+      0.029618786764385962
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5281479367742372,
+    "r2": 0.5698648816397922,
+    "r2_timing_only": 0.08841106803764265
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 111,
+    "terms": [
+      "(phase == D2) * (prev_reward == 1) * (prev_action != 1) * (prev_state != 1) * (action == 2) * (state == 2) * (ep_trial >= 94)",
+      "(phase == D2) * (prev_reward == 1) * (prev_action != 1) * (prev_state != 1) * (action == 2) * (state == 2) * (ep_trial >= 92) * np.clip(-belief_lo, 0, 6)",
+      "(phase == D2) * (prev_reward == 1) * (prev_action != 1) * (prev_state != 1) * (action == 2) * (state == 2) * (ep_trial >= 94) * np.clip(-belief_lo, 0, 6)"
+    ],
+    "weights": [
+      0.021528752365733303,
+      0.02378239346752636,
+      0.029618786764385962
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.573015495028977,
+    "r2": 0.6216166757337477,
+    "r2_timing_only": 0.11382422579495943
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Scores reproduce: the claimed terms get R^2 beyond timing 0.573 on dev and 0.528 on test. The profile's additive ceilings are 0.05 (all) and 0.03 (all observed), so the claim that this is a conjunction feature holds. The profile residuals are exactly 0 at D1 and GO, and at D2 only the 'after a2 S2 r' cell is positive (+0.0075).",
+      "The ramp is described a little too simply. Per-trial indicators for the conjunction with a known previous a2->S2 rewarded trial, measured on top of the D2 decile-9 baseline of about 0.03, give roughly +0 for t<88, -0.018 at t90, +0.04 at t92, +0.10 at t93, +0.14 at t94, +0.175 at t95, then +0.20 / +0.21 / +0.18 / +0.15 at t96-99. So the effect peaks at t96-97 and falls back at t98-99. It is not 'full from ~94'.",
+      "'Fires only in the last ~8 trials' is true on average but not per window. In misses, windows that start at t90 or t91 with a run of rewarded a2->S2c trials fire fully (0.28-0.32) from t90 on, where the model predicts 0.03. These are the top systematic misses. Belief, belief_cover and window position do not explain them: split terms for t89-93 x (belief_lo<=-3), (trial==0) and belief_cover get weights of about 0.00-0.03. So the all-or-none leftover the explainer admits to is real and cannot be explained from observed quantities.",
+      "The belief effect works more like a threshold than the claimed linear clip(-belief_lo). Conjunction x ramp by belief bin: belief_lo>0 gives 0.04, (0,-3] about 0.09-0.12, and <=-3 gives 0.21 (no rows below -4). Using the threshold version: dev 0.581 vs 0.576.",
+      "The claim that a streak term did not help is only partly true. Requiring that no a1 choice appears at trials -2..-4 of the window gets weight +0.09 and raises dev R^2 from 0.531 to 0.543; tv('action',-2)==1 alone gets weight -0.15. The gains are small, but earlier window history does matter somewhat.",
+      "My better terms add only about 0.05 on test (0.577 vs 0.528). No large systematic error class is left that observed variables can explain. The leftover over-prediction is spread across D2 cells after other previous-trial patterns, each around -0.003, which is small."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Late-episode D2 (rising from t92, peak t95-97) after a rewarded a2->S2 trial when a2->S2 repeats; larger when the ideal observer is confident S2 is good (belief_lo <= -3)",
+    "better_terms": "C = (phase == D2) * (prev_reward == 1) * (prev_action != 1) * (prev_state != 1) * (action == 2) * (state == 2); R = np.clip((ep_trial-91)/4,0,1); terms: C*R ;; C*R*(belief_lo<=-3) ;; C*R*(tv('action',-2)!=1)*(tv('action',-3)!=1)*(tv('action',-4)!=1) ;; C*R*(tv('reward',-2)!=0)*(tv('reward',-3)!=0)*(tv('reward',-4)!=0) ;; C*R*(ep_trial>=98) ;; C*R*belief_cover",
+    "better_terms_test_r2_beyond_timing": 0.577
+  },
+  "final_label": "Late-episode D2 (rising from t92, peak t95-97) after a rewarded a2->S2 trial when a2->S2 repeats; larger when the ideal observer is confident S2 is good (belief_lo <= -3)"
+}

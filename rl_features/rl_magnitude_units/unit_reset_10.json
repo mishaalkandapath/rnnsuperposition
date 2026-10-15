@@ -1,0 +1,112 @@
+{
+ "label": "Higher at D1 after no reward, lowest after common-rewarded trials; slightly lower at GO/D2 after no reward.",
+ "short_terms": "(phase == D1) * (prev_reward == 0) ;; (phase == D1) * (prev_reward == 1) * belief ;; (phase != D1) * (prev_reward == 0)",
+ "terms": "(phase == D1) * (prev_reward == 0) ;; (phase != D1) * (prev_reward == 0) ;; (phase == D1) * (prev_reward == 1) * (prev_common == 1) ;; (phase == D1) * (prev_reward == 0) * (prev_common == 1) ;; (phase == D2) * (valid == 0) ;; (phase == D1) * (prev_reward == 1) * (prev_common == 1) * ep_trial ;; (phase == D2) * (prev_reward == 0) ;; (phase == D1) * belief_lo * (prev_action == 1)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Timing dominates the raw reset gate value (high at D1/GO, low at D2, falling late in the episode). Beyond timing, the main driver is the reward input at D1: after an unrewarded trial r is about +0.06 higher than after a rewarded one, and a common-rewarded trial lowers it a further ~0.026 (rare-rewarded sits in between). At GO and D2 the sign flips weakly: no reward on the last trial lowers r by ~0.01-0.02. Belief, choice/state, the trial before and the ep_trial interaction add almost nothing. The invalid-D2 term (agent acted at D2) has a large weight but is rare, so it adds little R^2. The free fit gains only about 0.02 over the short form.",
+ "full_test_scores": {
+  "gate": "unit_reset",
+  "feature": 10,
+  "terms": [
+   "(phase == D1) * (prev_reward == 0)",
+   "(phase != D1) * (prev_reward == 0)",
+   "(phase == D1) * (prev_reward == 1) * (prev_common == 1)",
+   "(phase == D1) * (prev_reward == 0) * (prev_common == 1)",
+   "(phase == D2) * (valid == 0)",
+   "(phase == D1) * (prev_reward == 1) * (prev_common == 1) * ep_trial",
+   "(phase == D2) * (prev_reward == 0)",
+   "(phase == D1) * belief_lo * (prev_action == 1)"
+  ],
+  "weights": [
+   0.062413982678168105,
+   -0.010364879083508945,
+   -0.026176289734537866,
+   -0.012925647705990148,
+   0.261321345784125,
+   -4.6268985992889764e-05,
+   -0.0031804965414697147,
+   -0.003885603588908101
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6753313417073877,
+  "r2": 0.9962753564506455,
+  "r2_timing_only": 0.9885278623167941
+ },
+ "gate": "unit_reset",
+ "feature": 10,
+ "test_scores": {
+  "gate": "unit_reset",
+  "feature": 10,
+  "terms": [
+   "(phase == D1) * (prev_reward == 0)",
+   "(phase == D1) * (prev_reward == 1) * belief",
+   "(phase != D1) * (prev_reward == 0)"
+  ],
+  "weights": [
+   0.05409868275482468,
+   -0.04800123819126573,
+   -0.01220619091714851
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7066095034348142,
+  "r2": 0.99663418382846,
+  "r2_timing_only": 0.9885278623167941
+ },
+ "dev_scores": {
+  "gate": "unit_reset",
+  "feature": 10,
+  "terms": [
+   "(phase == D1) * (prev_reward == 0)",
+   "(phase == D1) * (prev_reward == 1) * belief",
+   "(phase != D1) * (prev_reward == 0)"
+  ],
+  "weights": [
+   0.05409868275482468,
+   -0.04800123819126573,
+   -0.01220619091714851
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.701158490530295,
+  "r2": 0.9965634880556732,
+  "r2_timing_only": 0.9885005535194059
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The label's claim 'lowest after common-rewarded trials' is wrong. The D1 residual table shows a1 S1 r -0.046 (common), a2 S2 r -0.021 (common), a2 S1 r -0.023 (rare) and a1 S2 r +0.003 (rare). The two common-rewarded cells differ by 2x, and a2 S2 r is the same as the rare a2 S1 r. The real low point is a reward at S1, which is evidence that S1 is good. It is not about common transitions.",
+   "Misses on the recorded short form find the systematic error this causes. D1 after a2 S1 r is over-predicted by -0.025, and D1 after a2 S2 r is under-predicted by +0.012. Late-episode rewarded D1 windows (t96-99, a1 S1c) come out about 0.10 too high in the predictions.",
+   "The prev_common term is a stand-in. Replacing it with (phase == D1) * (prev_reward == 1) * belief (P(S1 good)) raises the test score from 0.658 to 0.707 with the same other two terms. The last_is('a1 S1 r') version scores 0.652, and the common version without the GO/D2 term scores 0.631.",
+   "Two claims hold up. The no-reward D1 raise (weight +0.054) is the main term (0.505 test on its own). The weak GO/D2 lowering after no reward (-0.012) is real (dropping it costs about 0.03).",
+   "A smaller error remains with the new form. D1 after a1 S2 r is under-predicted by +0.031 and D1 after a2 S2 r is over-predicted by -0.020, so belief does not capture everything at D1. The new form still reaches 0.707 against an all-observed reference of 0.69 and a ceiling of 0.74."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Higher at D1 after no reward; after reward, lower the more the belief favours S1; slightly lower at GO/D2 after no reward.",
+  "better_short_terms": "(phase == D1) * (prev_reward == 0) ;; (phase == D1) * (prev_reward == 1) * belief ;; (phase != D1) * (prev_reward == 0)",
+  "better_short_terms_test_r2_beyond_timing": 0.7066
+ },
+ "final_label": "Higher at D1 after no reward; after reward, lower the more the belief favours S1; slightly lower at GO/D2 after no reward.",
+ "original_short_terms": "(phase == D1) * (prev_reward == 0) ;; (phase != D1) * (prev_reward == 0) ;; (phase == D1) * (prev_reward == 1) * (prev_common == 1)",
+ "original_test_scores": {
+  "gate": "unit_reset",
+  "feature": 10,
+  "terms": [
+   "(phase == D1) * (prev_reward == 0)",
+   "(phase != D1) * (prev_reward == 0)",
+   "(phase == D1) * (prev_reward == 1) * (prev_common == 1)"
+  ],
+  "weights": [
+   0.0544000434918206,
+   -0.011904830180152563,
+   -0.034577904763846715
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6579072428055788,
+  "r2": 0.9960754647890381,
+  "r2_timing_only": 0.9885278623167941
+ },
+ "terms_from": "skeptic"
+}

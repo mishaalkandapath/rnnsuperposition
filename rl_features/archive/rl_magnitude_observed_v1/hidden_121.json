@@ -1,0 +1,74 @@
+{
+  "label": "GO-only; large after reaching S1 (esp. rewarded a1 S1), scaled by S1-good belief; ~0 after S2",
+  "terms": "(phase == GO) * last_is(\"a1 S1 r\") ;; (phase == GO) * last_is(\"a1 S1 u\") ;; (phase == GO) * (prev_state == 2) ;; (phase == GO) * (prev_state == 1) * np.clip(belief_lo, -3, 3) ;; (phase == GO) * (prev_state == -1) * np.clip(belief_lo, -3, 3) ;; (phase == GO) * (prev_state == -1) * (prev_reward == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO (D1/D2 are 0). Magnitude is set by the last observed state and outcome plus the ideal-observer belief that S1 is good. After the previous trial reached S2 (any choice or reward) it is pushed down to about 0 (weight -1.0). After an S1 trial it is high, highest after a rewarded common a1->S1 (+1.3 on top), a little higher after unrewarded a1 S1 (+0.25), and in both cases it grows with belief_lo (clipped log-odds of S1 good, +0.35 per unit). On the window first trial, where the previous state is not in the data, belief_lo (+0.48) and the previous reward (+0.51) take its place. So it reads as an S1-favouring signal gated by the last state being S1, roughly an observed-only stand-in for the a1 policy. Six observed-only terms give dev R^2 beyond timing 0.85 and test 0.84. Reference ceilings: all 0.89, all observed 0.85, policy decile (model) 0.58, belief decile alone 0.45. Dropping model outputs costs almost nothing. The trial before the last one and an a2 S1 r indicator added nothing (weights near 0). Remaining errors are small: slight under-prediction after a1 S2 r and over-prediction on window-first trials.",
+  "gate": "hidden",
+  "feature": 121,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 121,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S1 r\")",
+      "(phase == GO) * last_is(\"a1 S1 u\")",
+      "(phase == GO) * (prev_state == 2)",
+      "(phase == GO) * (prev_state == 1) * np.clip(belief_lo, -3, 3)",
+      "(phase == GO) * (prev_state == -1) * np.clip(belief_lo, -3, 3)",
+      "(phase == GO) * (prev_state == -1) * (prev_reward == 1)"
+    ],
+    "weights": [
+      1.3120587482514152,
+      0.2497569387216612,
+      -1.0428106264380024,
+      0.34826134080949334,
+      0.48145205926756646,
+      0.5099201256643076
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8428284872416303,
+    "r2": 0.8833187278578349,
+    "r2_timing_only": 0.2576181898716786
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 121,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S1 r\")",
+      "(phase == GO) * last_is(\"a1 S1 u\")",
+      "(phase == GO) * (prev_state == 2)",
+      "(phase == GO) * (prev_state == 1) * np.clip(belief_lo, -3, 3)",
+      "(phase == GO) * (prev_state == -1) * np.clip(belief_lo, -3, 3)",
+      "(phase == GO) * (prev_state == -1) * (prev_reward == 1)"
+    ],
+    "weights": [
+      1.3120587482514152,
+      0.2497569387216612,
+      -1.0428106264380024,
+      0.34826134080949334,
+      0.48145205926756646,
+      0.5099201256643076
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8507483315256334,
+    "r2": 0.8897890118524353,
+    "r2_timing_only": 0.261576173491869
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Wording overclaim: 'after an S1 trial it is high' is wrong for a2 S1 u. Its GO residual is -1.08, the same as after any S2 trial, so the feature is about 0 there. a2 S1 r is only +0.14. The fit gets this right only through the prev_state==1 * belief_lo slope (belief is low after a2 S1 u). An explicit a2 S1 u indicator takes weight -0.24 and adds just +0.0006 test R^2. The label should say 'after a1->S1 (or rewarded a2->S1)', not 'after S1'.",
+      "The +0.25 for a1 S1 u is not a stable effect. Adding (GO)*last_is('a1 S1 u')*(tv('reward',-2)==1) gets weight +0.56, and the plain a1 S1 u weight drops to -0.03 (test 0.8451). So after an unrewarded a1 S1 trial the feature stays high only when the trial before that was rewarded. The worst-fit windows show this: a1 S1 u after a1 S1 r has actual about 2.3 against predicted about 0.5. The gain is small, though.",
+      "Window-first GO steps are over-predicted by a systematic -0.26. This is the largest error class in misses, but the cause is missing data (the previous trial is not in the window), not a missing mechanism. A belief_lo>0 indicator on those steps lifts test R^2 only to 0.847.",
+      "Confirmed: the feature is exactly 0 at D1 and D2. S2-previous trials push it to about 0 (weight -1.04). The S1-belief slope matters: removing it drops test R^2 from 0.843 to 0.797. Test R^2 of 0.843 matches the 0.85 'all observed' ceiling, and the other errors (a1 S2 r +0.15, a2 S1 r +0.08) are small."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO-only; large after a1->S1 (esp. rewarded; a1 S1 u stays high mainly if the trial before was rewarded), about 0 after S2 or a2 S1 u, scaled by S1-good belief",
+    "better_terms": "(phase == GO) * last_is('a1 S1 r') ;; (phase == GO) * last_is('a1 S1 u') ;; (phase == GO) * (prev_state == 2) ;; (phase == GO) * (prev_state == 1) * np.clip(belief_lo, -3, 3) ;; (phase == GO) * (prev_state == -1) * np.clip(belief_lo, -3, 3) ;; (phase == GO) * (prev_state == -1) * (prev_reward == 1) ;; (phase == GO) * last_is('a1 S1 u') * (tv('reward',-2) == 1) ;; (phase == GO) * (prev_state==-1) * (belief_lo > 0)",
+    "better_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "GO-only; large after a1->S1 (esp. rewarded; a1 S1 u stays high mainly if the trial before was rewarded), about 0 after S2 or a2 S1 u, scaled by S1-good belief"
+}

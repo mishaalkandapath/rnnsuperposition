@@ -1,0 +1,112 @@
+{
+ "label": "Reset rises after unrewarded a1 and S1-favouring belief; at D2 rises on a1->S2 rare, falls on a2->S1 rare.",
+ "short_terms": "(phase != D2) * (prev_action == 1) * (prev_reward == 0) ;; (phase == D2) * (state - action) ;; (phase == D1) * (np.tanh(belief_lo) - (prev_action == 2) * (prev_reward == 1))",
+ "terms": "(phase == D1) * np.tanh(belief_lo/2) ;; (phase == GO) * np.tanh(belief_lo/2) ;; (phase == D2) * np.tanh(belief_lo/2) ;; (phase == D1) * (prev_action == 1) * (prev_reward == 0) ;; (phase == GO) * (prev_action == 1) * (prev_reward == 0) ;; (phase == D2) * (action == 1) * (state == 2) ;; (phase == D2) * (action == 2) * (state == 1) ;; (phase == D1) * (prev_action == 2) * (prev_reward == 1)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Raw reset gate r of unit 6 (timing explains R^2 0.70: high at D2, low at GO). Beyond timing: at D1 (and less at GO) it is raised after an unrewarded a1 trial (+0.2 to 0.3, either state) and graded by the ideal observer belief that S1 is good (higher when S1 favoured). At D2 it depends on the transition just seen: a1 reaching S2 (rare) raises it about +0.2, a2 reaching S1 (rare) lowers it about -0.25, common transitions are near baseline. The free fit adds a separate drop at D1 after rewarded a2 trials and phase-specific belief weights at GO. Remaining misses: runs of unrewarded trials keep it high even after a2 choices, and it is over-predicted to drop after a2 S1 r. All terms observed; no future variables used.",
+ "full_test_scores": {
+  "gate": "unit_reset",
+  "feature": 6,
+  "terms": [
+   "(phase == D1) * np.tanh(belief_lo/2)",
+   "(phase == GO) * np.tanh(belief_lo/2)",
+   "(phase == D2) * np.tanh(belief_lo/2)",
+   "(phase == D1) * (prev_action == 1) * (prev_reward == 0)",
+   "(phase == GO) * (prev_action == 1) * (prev_reward == 0)",
+   "(phase == D2) * (action == 1) * (state == 2)",
+   "(phase == D2) * (action == 2) * (state == 1)",
+   "(phase == D1) * (prev_action == 2) * (prev_reward == 1)"
+  ],
+  "weights": [
+   0.10775000115096593,
+   0.06568987274301621,
+   -0.0020686434078762126,
+   0.25232397610532986,
+   0.12004611981817337,
+   0.19286103633403612,
+   -0.25274802415072695,
+   -0.12157155323489165
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7546394786313558,
+  "r2": 0.9263312169892861,
+  "r2_timing_only": 0.6997529080889522
+ },
+ "gate": "unit_reset",
+ "feature": 6,
+ "test_scores": {
+  "gate": "unit_reset",
+  "feature": 6,
+  "terms": [
+   "(phase != D2) * (prev_action == 1) * (prev_reward == 0)",
+   "(phase == D2) * (state - action)",
+   "(phase == D1) * (np.tanh(belief_lo) - (prev_action == 2) * (prev_reward == 1))"
+  ],
+  "weights": [
+   0.20666041740431138,
+   0.22337684369449995,
+   0.10498202851094714
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7015086476400849,
+  "r2": 0.9103788394933396,
+  "r2_timing_only": 0.6997529080889522
+ },
+ "dev_scores": {
+  "gate": "unit_reset",
+  "feature": 6,
+  "terms": [
+   "(phase != D2) * (prev_action == 1) * (prev_reward == 0)",
+   "(phase == D2) * (state - action)",
+   "(phase == D1) * (np.tanh(belief_lo) - (prev_action == 2) * (prev_reward == 1))"
+  ],
+  "weights": [
+   0.20666041740431138,
+   0.22337684369449995,
+   0.10498202851094714
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.7138840056247399,
+  "r2": 0.9127917143624867,
+  "r2_timing_only": 0.695199543709766
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "Most of the claims hold up. In the D1 residuals, a1 S1 u is +0.296 and a1 S2 u is +0.324, so the rise after unrewarded a1 does not depend on the state reached. The GO effect is weaker (+0.10 / +0.20). At D2, a1->S2 is +0.189, a2->S1 is -0.254, and the common transitions are about 0 (a1S1 -0.007, a2S2 +0.04). Dropping the reward condition (prev_action==1 only) lowers test to 0.54, so the 'unrewarded' part is needed. Restricting the a1-unrewarded term to D1 only lowers test to 0.61, which supports including GO.",
+   "The largest systematic miss contradicts the label's belief claim. The short form's misses show D1 after a2 S1 r over-predicted by -0.164. In the raw residuals, D1 after a2 S1 r is -0.185 and after a2 S2 r is -0.207. A rewarded a2 lowers the gate whichever state was reached, even when it pushes belief toward S1, which the label says should raise the gate. 'S1-favouring belief raises it' is therefore partly a stand-in for a choice-by-reward effect (a2 rewarded -> low). The explanation calls the a2-rewarded drop a free-fit-only extra, yet it is the biggest error class of the recorded short form.",
+   "Adding the a2-rewarded drop to the D1 belief term gives (phase == D1) * (np.tanh(belief_lo) - (prev_action == 2) * (prev_reward == 1)). This passes --short and raises test R^2 beyond timing from 0.659 to 0.702 (dev 0.714). It also shrinks the D1 a2 S1 r miss from -0.164 to -0.069. Other targeted variants did no better: belief at D1+GO 0.647, belief in all phases 0.583, sign(belief_lo) 0.647, (2*belief-1) 0.662, a2-rewarded as a separate third term instead of belief 0.605.",
+   "The label leaves out that the belief effect is D1-only and that the a1-unrewarded rise is at D1/GO. The D1 belief-decile profile looks more like a step at 0.5 (-0.18 to +0.19, with the jump between deciles 4 and 5) than a 'gradual' rise.",
+   "Errors that remain with either form: unrewarded runs carry over into D2 (D2 after a2 S2 u +0.10, after a1 S2 u +0.07 to +0.08), and GO after a1 S1 u is over-predicted (-0.09 to -0.10). These are moderate and do not overturn the overall picture. The observed-only additive ceiling is 0.86."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At D1/GO, rises after unrewarded a1; at D1, tracks S1-belief, drops after rewarded a2; at D2, signed rare transition.",
+  "better_short_terms": "(phase != D2) * (prev_action == 1) * (prev_reward == 0) ;; (phase == D2) * (state - action) ;; (phase == D1) * (np.tanh(belief_lo) - (prev_action == 2) * (prev_reward == 1))",
+  "better_short_terms_test_r2_beyond_timing": 0.7015086476400849
+ },
+ "final_label": "At D1/GO, rises after unrewarded a1; at D1, tracks S1-belief, drops after rewarded a2; at D2, signed rare transition.",
+ "original_short_terms": "(phase != D2) * (prev_action == 1) * (prev_reward == 0) ;; (phase == D2) * (state - action) ;; (phase == D1) * np.tanh(belief_lo)",
+ "original_test_scores": {
+  "gate": "unit_reset",
+  "feature": 6,
+  "terms": [
+   "(phase != D2) * (prev_action == 1) * (prev_reward == 0)",
+   "(phase == D2) * (state - action)",
+   "(phase == D1) * np.tanh(belief_lo)"
+  ],
+  "weights": [
+   0.20785837566498605,
+   0.2225656548347746,
+   0.13078800310330296
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6591910249528599,
+  "r2": 0.8976730963449113,
+  "r2_timing_only": 0.6997529080889522
+ },
+ "terms_from": "skeptic"
+}

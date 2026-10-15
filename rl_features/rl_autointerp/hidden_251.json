@@ -1,0 +1,105 @@
+{
+  "label": "End-of-episode D2 after a1 reached S1 (common)",
+  "predicate": "(phase == D2) & (action == 1) & (state == 1) & (value < 5.0) & ((prev_reward == 1) | (prev_action == 1))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2, almost only when the agent chose a1 and reached S1 (98% of mass; it is almost silent after rare a1->S2 and after any a2 trial), and only in the last ~10 trials of the episode (ep_trial 90-99 hold 99.5% of mass; none before trial 80). The end-of-episode condition is captured by the model own value output being low (value < 5.0, the bottom value bin), which is observable to the agent; ep_trial >= 90 gives F1 0.71 instead of 0.82. Magnitude ramps up over successive a1->S1 trials toward the episode end, peaking after runs of consecutive rewarded a1->S1 trials. It does not fire at D1 or GO, on rewarded-input steps, or earlier in the episode. All variables are observed at D2 (action and state are known by then).",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 251,
+    "predicate": "(phase == D2) & (action == 1) & (state == 1) & (value < 5.0) & ((prev_reward == 1) | (prev_action == 1))",
+    "split": "test",
+    "precision": 0.8029865125240848,
+    "recall": 0.8694745077585083,
+    "f1": 0.8349089087835723,
+    "mass_recall": 0.9610990771220003,
+    "correlation": 0.7514081853385965,
+    "n_active": 7669,
+    "n_predicted": 8304,
+    "coverage_by_activation_quartile": [
+      0.6428571428571429,
+      0.8528951486697965,
+      0.9833072509128847,
+      0.9989567031820553
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 251,
+    "predicate": "(phase == D2) & (action == 1) & (state == 1) & (value < 5.0) & ((prev_reward == 1) | (prev_action == 1))",
+    "split": "dev",
+    "precision": 0.8008104343421553,
+    "recall": 0.8800445310325633,
+    "f1": 0.8385599681760924,
+    "mass_recall": 0.9665388163790735,
+    "correlation": 0.7465825666009827,
+    "n_active": 7186,
+    "n_predicted": 7897,
+    "coverage_by_activation_quartile": [
+      0.6533110740122426,
+      0.8836950473010573,
+      0.9871937639198218,
+      0.9961024498886414
+    ]
+  },
+  "gate": "hidden",
+  "feature": 251,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most factual claims hold on dev: activation is 100% at D2 (D1 and GO have 0 active steps). action==1 holds 99.9% of mass (6 active steps with a2). state==1 holds 98%. ep_trial 90-99 holds 99.5%, with nothing before trial 80. All activation is in the bottom value bin (<5.22). Recorded predicate: dev F1 0.818, test P 0.742 / R 0.900 / F1 0.813 / mass recall 0.974, matching the report.",
+      "The claim that it is silent 'on steps where the reward input is shown as rewarded' adds nothing. in_rew is non-zero only at D1, so this follows from the feature being D2-only.",
+      "Systematic false-positive class: a1->S1 D2 steps whose previous trial was unrewarded (prev_reward==0, shown at this trial's D1). The recorded predicate restricted to prev_reward==0 has precision 0.43 (test 0.42) over 3106 dev / 3350 test steps. Restricted to prev_reward==1 it has precision 0.92 on both splits. About 80% of the 2214 dev / 2400 test false positives fall in the prev_reward==0 class. The test misses output shows this repeatedly: an r0 at D1, then a1 reaching S1 common, and no activation. These are typically the first a1->S1 after an a2 trial or after a loss.",
+      "The label 'End-of-episode D2 after a1 reached S1' overclaims. Late in the episode the feature fires at less than half of a1->S1 D2 steps that follow an unrewarded trial. The explanation only notes that magnitude peaks after runs that were 'mostly rewarded'. It never says the feature is usually silent after an unrewarded or switched previous trial.",
+      "'End-of-episode' really means low value rather than episode position. With ep_trial>=90 and value>=5, a1->S1 D2 steps almost never fire (precision 0.05). The value cutoff carries real information beyond the trial index.",
+      "The good state is not the driver. Precision of the recorded predicate is 0.68 when good==S2 and 0.77 when good==S1. The skew toward low_first episodes comes from how often a1->S1 happens there, not from the predicate's precision."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Late-episode (low-value) D2 after a1->S1 (common), mainly when the previous trial was rewarded or was also a1; grows over runs of a1->S1",
+    "better_predicate": "(phase == D2) & (action == 1) & (state == 1) & (value < 5.0) & ((prev_reward == 1) | (prev_action == 1))",
+    "better_predicate_test_f1": 0.835
+  },
+  "final_label": "Late-episode (low-value) D2 after a1->S1 (common), mainly when the previous trial was rewarded or was also a1; grows over runs of a1->S1",
+  "original_predicate": "(phase == D2) & (action == 1) & (state == 1) & (value < 5.0)",
+  "original_test_scores": {
+    "gate": "hidden",
+    "feature": 251,
+    "predicate": "(phase == D2) & (action == 1) & (state == 1) & (value < 5.0)",
+    "split": "test",
+    "precision": 0.741990969683939,
+    "recall": 0.8999869604902856,
+    "f1": 0.8133875434564847,
+    "mass_recall": 0.9744255135955286,
+    "correlation": 0.7195513989788829,
+    "n_active": 7669,
+    "n_predicted": 9302,
+    "coverage_by_activation_quartile": [
+      0.7085505735140771,
+      0.892018779342723,
+      0.9994783515910276,
+      1.0
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "hidden",
+    "feature": 251,
+    "predicate": "(phase == D2) & (action == 1) & (state == 1) & (value < 5.0)",
+    "split": "dev",
+    "precision": 0.7458969356134512,
+    "recall": 0.9043974394656276,
+    "f1": 0.8175356940688094,
+    "mass_recall": 0.9779096537964577,
+    "correlation": 0.7189148491921182,
+    "n_active": 7186,
+    "n_predicted": 8713,
+    "coverage_by_activation_quartile": [
+      0.7022815804117974,
+      0.9159710628825821,
+      0.9994432071269488,
+      1.0
+    ]
+  },
+  "predicate_from": "skeptic"
+}

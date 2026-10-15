@@ -1,0 +1,74 @@
+{
+  "label": "Late-episode D1 after a1 led rarely to S2, much larger after two a1->S2 trials in a row",
+  "terms": "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (ep_dec == 8) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * (ep_dec == 9) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 2) * (ep_dec >= 7) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 2) * (ep_dec == 6) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * (ep_dec >= 7) * (tv(\"action\", -2) == -9) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * (ep_dec >= 7) * choice",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Sparse D1-only feature (nonzero on 0.8% of steps; it is zero at GO and D2). It fires only at D1 after the previous trial was a1 that reached S2 through the rare transition, and only late in the episode (trial 60 onward, mostly 80 onward). Reward matters little: after a1 S2 it fires whether or not that trial was rewarded, slightly more if unrewarded. The size depends mostly on the trial before. If the trial before was also a1 -> S2, the fitted step is about +0.6 (about +0.3 in decile 6). After a single a1 -> S2 it is about +0.1 to +0.2. When the window starts and the trial before is unknown it is about +0.1. A graded policy-logit (choice) term adds a little: test 0.46 with it, 0.44 without. The activation is close to all-or-none (about 1.2 when on), so much variance stays unexplained, especially on the first trial of the window where history is missing. Test R^2 beyond timing is 0.46, well above the additive profile ceiling of 0.12, because the history-by-late-episode interactions matter. Only observed cues are used, plus one model-output term.",
+  "gate": "update",
+  "feature": 60,
+  "test_scores": {
+    "gate": "update",
+    "feature": 60,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (ep_dec == 8)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (ep_dec == 9)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 2) * (ep_dec >= 7)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 2) * (ep_dec == 6)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (ep_dec >= 7) * (tv(\"action\", -2) == -9)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (ep_dec >= 7) * choice"
+    ],
+    "weights": [
+      0.1297336387850871,
+      0.09530601431674435,
+      0.6158465525065063,
+      0.27750825339693946,
+      0.09558842404136628,
+      0.022591953076381677
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.4627341576685693,
+    "r2": 0.48351819688363107,
+    "r2_timing_only": 0.03868483267961109
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 60,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (ep_dec == 8)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (ep_dec == 9)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 2) * (ep_dec >= 7)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 2) * (ep_dec == 6)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (ep_dec >= 7) * (tv(\"action\", -2) == -9)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (ep_dec >= 7) * choice"
+    ],
+    "weights": [
+      0.1297336387850871,
+      0.09530601431674435,
+      0.6158465525065063,
+      0.27750825339693946,
+      0.09558842404136628,
+      0.022591953076381677
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.47071020535551134,
+    "r2": 0.4929569808219406,
+    "r2_timing_only": 0.04203137051106742
+  },
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Core claims check out. The feature is D1-only (GO/D2 are zero). It needs prev a1->S2 (prev a1S1, a2S1 and a2S2 all score about 0.01). It is absent before decile 6: the B*(ep_dec<6) term has weight 0.0005 and R^2 0.000. Reward matters little: adding a prev_reward==1 term raises test R^2 only from 0.186 to 0.192, with weight -0.08.",
+      "'Larger after two a1->S2 in a row' is too narrow. What matters is the state reached two trials back, whatever the action. With prev a1S2 late in the episode, the -2 trial adds +0.66 for a1S2 and +0.39 for a2S2, but only about +0.08 to +0.09 for a1S1 (r or u) and 0.00 for a2S1. Splitting by tv('state',-2) alone, the weights are S2 +0.62, S1 +0.09, outside window +0.22.",
+      "The policy logit is understated. The claim is that a graded choice term 'adds a little' (0.44 -> 0.46). A threshold term does much more: (phase==D1)*(ep_dec>=7)*(choice>6) alone reaches test R^2 0.33, and B*(ep_dec>=6)*(choice>6) alone reaches 0.24. The effect is strongly nonlinear (all-or-none at a high a1 logit), not a small graded slope.",
+      "The worst-fit windows are systematic, not noise. Many have activation of about 1.2 on the window's first trial (history unknown, predicted about 0.04), or after a single a1->S2 (e.g. t86 r1 1.14 predicted 0.33; t89 0.95 predicted 0.32). The explanation puts these down to missing history. A high D1 choice logit partly captures them, and adding choice-threshold terms (including for the window's first trial) raises test R^2 from 0.463 to 0.531.",
+      "Within the late-episode a1->S2 condition, an ep_trial ramp also helps (0.364 -> 0.405). The size keeps growing across the late deciles rather than being one late-episode step."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "Late-episode D1 with a strong a1 policy after a1 led rarely to S2; larger if S2 was also reached the trial before",
+    "better_terms": "B=(phase == D1)*(prev_action == 1)*(prev_state == 2); U=(phase == D1)*(prev_action == -1)*(ep_dec>=7). Terms: B*(ep_dec==8) ;; B*(ep_dec==9) ;; B*(ep_dec>=6)*(tv('state',-2)==2) ;; B*(ep_dec>=6)*(tv('state',-2)==-9) ;; B*(ep_dec>=6)*(choice>6) ;; B*(ep_dec>=6)*(choice>6)*(tv('state',-2)==2) ;; U*(choice>6) ;; U*(choice>6)*(prev_reward==0). Observed cues plus the model's D1 policy logit; no future variables.",
+    "better_terms_test_r2_beyond_timing": 0.5305
+  },
+  "final_label": "Late-episode D1 with a strong a1 policy after a1 led rarely to S2; larger if S2 was also reached the trial before"
+}

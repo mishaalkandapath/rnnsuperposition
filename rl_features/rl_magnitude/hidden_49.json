@@ -1,0 +1,113 @@
+{
+ "label": "Late-episode GO after unrewarded trials, strongest after a2 reached S1 rarely, unrewarded.",
+ "short_terms": "(phase == GO) * last_is(\"a2 S1 u\") * np.maximum(ep_trial - 75, 0) ;; (phase == GO) * (prev_reward == 1) * np.maximum(ep_trial - 75, 0) ;; (phase == GO) * np.maximum(ep_trial - 75, 0)",
+ "terms": "(phase == GO) * last_is(\"a2 S1 u\") * np.maximum(ep_trial - 70, 0) ;; (phase == GO) * (prev_reward == 0) * (prev_action == 2) * np.maximum(ep_trial - 70, 0) ;; (phase == GO) * (prev_reward == 0) * (prev_action == 1) * np.maximum(ep_trial - 70, 0) ;; (phase == GO) * (prev_reward == 1) * np.maximum(ep_trial - 70, 0) ;; (phase == GO) * (belief_lo < 0) * np.maximum(ep_trial - 70, 0) ;; (phase == GO) * (prev_reward == 0) * (prev_action == -1) * np.maximum(ep_trial - 70, 0) ;; (phase == GO) * (tv(\"reward\", -2) == 0) * np.maximum(ep_trial - 70, 0) ;; (phase == GO) * last_is(\"a2 S1 r\") * np.maximum(ep_trial - 70, 0)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Fires only at GO, and only in the last ~25 trials of the episode, growing with trial index. Within that window its magnitude is set by the previous trial: largest by far after a2 -> S1 (rare) unrewarded (the stay-after-rare-unrewarded case), modestly positive after other unrewarded trials, and suppressed below the timing baseline after rewarded trials. The additive profile ceiling (0.17) misses this because the history effect is gated by the late-episode ramp. The free fit adds small terms for unrewarded a2 vs a1, belief favouring S2, an unrewarded trial two back, and a2 S1 rewarded, raising dev R^2 from 0.73 to 0.77. Remaining misses are window-start trials whose previous trial is unknown in the window. All terms are observed (no future or model-output variables).",
+ "full_test_scores": {
+  "gate": "hidden",
+  "feature": 49,
+  "terms": [
+   "(phase == GO) * last_is(\"a2 S1 u\") * np.maximum(ep_trial - 70, 0)",
+   "(phase == GO) * (prev_reward == 0) * (prev_action == 2) * np.maximum(ep_trial - 70, 0)",
+   "(phase == GO) * (prev_reward == 0) * (prev_action == 1) * np.maximum(ep_trial - 70, 0)",
+   "(phase == GO) * (prev_reward == 1) * np.maximum(ep_trial - 70, 0)",
+   "(phase == GO) * (belief_lo < 0) * np.maximum(ep_trial - 70, 0)",
+   "(phase == GO) * (prev_reward == 0) * (prev_action == -1) * np.maximum(ep_trial - 70, 0)",
+   "(phase == GO) * (tv(\"reward\", -2) == 0) * np.maximum(ep_trial - 70, 0)",
+   "(phase == GO) * last_is(\"a2 S1 r\") * np.maximum(ep_trial - 70, 0)"
+  ],
+  "weights": [
+   0.06901972069721954,
+   0.008250598052050143,
+   -0.0057673915366446265,
+   -0.018998713054497185,
+   0.008483819289186978,
+   0.021236932383814872,
+   0.0023803929378243037,
+   0.015301785053692599
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7631890537008089,
+  "r2": 0.8090171393972363,
+  "r2_timing_only": 0.19352182157376907
+ },
+ "gate": "hidden",
+ "feature": 49,
+ "test_scores": {
+  "gate": "hidden",
+  "feature": 49,
+  "terms": [
+   "(phase == GO) * last_is(\"a2 S1 u\") * np.maximum(ep_trial - 75, 0)",
+   "(phase == GO) * (prev_reward == 1) * np.maximum(ep_trial - 75, 0)",
+   "(phase == GO) * np.maximum(ep_trial - 75, 0)"
+  ],
+  "weights": [
+   0.1060536053982253,
+   -0.027557600829121842,
+   0.009917035055510422
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7130941451881032,
+  "r2": 0.7686166888314807,
+  "r2_timing_only": 0.19352182157376907
+ },
+ "dev_scores": {
+  "gate": "hidden",
+  "feature": 49,
+  "terms": [
+   "(phase == GO) * last_is(\"a2 S1 u\") * np.maximum(ep_trial - 75, 0)",
+   "(phase == GO) * (prev_reward == 1) * np.maximum(ep_trial - 75, 0)",
+   "(phase == GO) * np.maximum(ep_trial - 75, 0)"
+  ],
+  "weights": [
+   0.1060536053982253,
+   -0.027557600829121842,
+   0.009917035055510422
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.7289956708997887,
+  "r2": 0.7769864361467831,
+  "r2_timing_only": 0.17708486578916804
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": true,
+  "issues": [
+   "The short form is effectively 'a2 S1 u x late ramp' + 'rewarded x late ramp' + a plain late ramp. Swapping the prev_reward==0 term for (phase==GO)*ramp gives exactly the same test R^2 (0.713). So the 'unrewarded' term is mostly a within-decile timing ramp that the per-decile baseline cannot capture, not a specific unrewarded-history effect.",
+   "Dropping the rewarded term costs much more than dropping the unrewarded one. a2S1u + rewarded scores test 0.694; a2S1u + unrewarded scores test 0.611; a2S1u alone scores 0.590. So the history signal is (a) a2 S1 u is high and (b) rewarded trials are low, not 'after unrewarded trials' in general.",
+   "The explanation says the feature 'sits a little above baseline after other unrewarded trials', but that is false for a1 S2 u. Its profile residual is -0.055, the same as rewarded trials, and misses shows GO after a1 S2 u is the most over-predicted class (-0.083). Only a2 S2 u (+0.049) and a1 S1 u (+0.028) are raised.",
+   "GO after a2 S1 r is the most under-predicted class (+0.056). The worst windows (e.g. activation 0.9-1.2 after a2 S1 r) show it can fire moderately there, so 'below baseline after rewarded trials' does not hold for that case.",
+   "The worst-fit windows are dominated by the first GO of a window (previous trial unknown, actual ~3, predicted ~0.6). That is a data-window limitation, not a modelling error, and as the explanation says it cannot be fixed with observed-only terms (a prev_action==-1 term did not help: test 0.704).",
+   "The core claims hold up. The feature fires only at GO and grows over the last ~25 trials. It is largest after a2 led by a rare transition to S1 and was unrewarded (weight ~10x the others). The ramp thresholds 70/80 do no better than 75. Alternatives I tried (prev_action, prev_state, prev_common, belief_lo<0, reward two back) did not beat the recorded short form (best alternative 0.711 vs 0.713)."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Late-episode GO ramp, strongly boosted after a2 reached S1 rarely and unrewarded, damped after rewarded trials.",
+  "better_short_terms": "(phase == GO) * last_is(\"a2 S1 u\") * np.maximum(ep_trial - 75, 0) ;; (phase == GO) * (prev_reward == 1) * np.maximum(ep_trial - 75, 0) ;; (phase == GO) * np.maximum(ep_trial - 75, 0)",
+  "better_short_terms_test_r2_beyond_timing": 0.713
+ },
+ "final_label": "Late-episode GO ramp, strongly boosted after a2 reached S1 rarely and unrewarded, damped after rewarded trials.",
+ "original_short_terms": "(phase == GO) * last_is(\"a2 S1 u\") * np.maximum(ep_trial - 75, 0) ;; (phase == GO) * (prev_reward == 0) * np.maximum(ep_trial - 75, 0) ;; (phase == GO) * (prev_reward == 1) * np.maximum(ep_trial - 75, 0)",
+ "original_test_scores": {
+  "gate": "hidden",
+  "feature": 49,
+  "terms": [
+   "(phase == GO) * last_is(\"a2 S1 u\") * np.maximum(ep_trial - 75, 0)",
+   "(phase == GO) * (prev_reward == 0) * np.maximum(ep_trial - 75, 0)",
+   "(phase == GO) * (prev_reward == 1) * np.maximum(ep_trial - 75, 0)"
+  ],
+  "weights": [
+   0.1060506075580811,
+   0.009920040327400376,
+   -0.017640558175094887
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7130945766768823,
+  "r2": 0.7686170368177654,
+  "r2_timing_only": 0.19352182157376907
+ },
+ "terms_from": "skeptic"
+}

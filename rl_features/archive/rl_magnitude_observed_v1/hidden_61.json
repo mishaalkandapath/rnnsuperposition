@@ -1,0 +1,66 @@
+{
+  "label": "D2 reached S2 late in episode, scaled by S2-belief and previous reward",
+  "terms": "(phase == D2) * (state == 2) * np.clip(ep_trial - 60, 0, None) * (prev_reward == 1) * (1-belief) ;; (phase == D2) * (state == 2) * np.clip(ep_trial - 60, 0, None) * (1-belief) ;; (phase == D2) * (state == 2) * np.clip(ep_trial - 60, 0, None) ;; (phase == D2) * (state == 2) * np.clip(ep_trial - 60, 0, None) * (prev_reward == 1) * (prev_state == 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 and only when the reached state is S2. Its size grows roughly linearly with episode trial once past about trial 60 (fitted as a ramp from trial 60), and it is gated multiplicatively by the ideal-observer belief that S2 is good (1 - belief): it is large when S2 is believed good and near zero when S1 is believed good. A previous rewarded trial (reward shown at this trial's D1) raises it further, more so when that reward came from S1 than from S2 (the prev-S2-rewarded term has a negative weight; residuals are largest after a2 S1 r). The choice itself adds little once the state is known: an a2 term added +0.001 on dev. D1 and GO are always zero. All terms are observed at D2 (no future, hidden or model-output cues). Test R^2 beyond timing is 0.59 (dev 0.60). The multiplicative interactions exceed the additive 'all' ceiling of 0.30 and the 'all observed' ceiling of 0.25. The earlier explanation used the policy leaning a2; replacing it with belief loses little, because policy decile alone scored only 0.21 additively.",
+  "gate": "hidden",
+  "feature": 61,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 61,
+    "terms": [
+      "(phase == D2) * (state == 2) * np.clip(ep_trial - 60, 0, None) * (prev_reward == 1) * (1-belief)",
+      "(phase == D2) * (state == 2) * np.clip(ep_trial - 60, 0, None) * (1-belief)",
+      "(phase == D2) * (state == 2) * np.clip(ep_trial - 60, 0, None)",
+      "(phase == D2) * (state == 2) * np.clip(ep_trial - 60, 0, None) * (prev_reward == 1) * (prev_state == 2)"
+    ],
+    "weights": [
+      0.03587053223826786,
+      0.024221912146655058,
+      -0.012693736639378624,
+      -0.013889637543873564
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5910172130653242,
+    "r2": 0.7035392257959225,
+    "r2_timing_only": 0.27512652445338925
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 61,
+    "terms": [
+      "(phase == D2) * (state == 2) * np.clip(ep_trial - 60, 0, None) * (prev_reward == 1) * (1-belief)",
+      "(phase == D2) * (state == 2) * np.clip(ep_trial - 60, 0, None) * (1-belief)",
+      "(phase == D2) * (state == 2) * np.clip(ep_trial - 60, 0, None)",
+      "(phase == D2) * (state == 2) * np.clip(ep_trial - 60, 0, None) * (prev_reward == 1) * (prev_state == 2)"
+    ],
+    "weights": [
+      0.03587053223826786,
+      0.024221912146655058,
+      -0.012693736639378624,
+      -0.013889637543873564
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6013032778674879,
+    "r2": 0.7128217825571945,
+    "r2_timing_only": 0.2797076035469437
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The reported score reproduces: test 0.591, dev 0.601. The qualitative claims also hold. D1 and GO are always zero. The feature fires only at D2 at S2, grows late in the episode and is gated by 1-belief (residual by belief decile runs from +0.13 at deciles 0-2 to -0.11 at decile 9). A2 adds only +0.004 test.",
+      "Large systematic error: none of the terms covers D2 at S1, so the timing baseline (about 0.2-0.44 late in the episode) predicts activation there and the actual value is 0. Misses show this on many worst-fit windows (e.g. S1R/S1c cells actual 0, predicted 0.42), and the D2 over-prediction after a1 S1 u is -0.080. Adding the one term (phase==D2)*(state==1)*clip(ep_trial-60) lifts test R^2 beyond timing from 0.591 to 0.781. The explanation says it 'fires only when S2', but the terms do not encode that.",
+      "Even with the S1 fix, D2 is under-predicted after a2 S1 r (+0.107) and a2 S1 u (+0.033). So the previous trial's rare a2->S1 transition raises it whatever the reward. The explanation frames this as reward from S1 versus S2 only. Prev a2 S1 terms add about 0.03 test.",
+      "Framing nit: the 0.59 versus 'additive ceiling 0.30' comparison is fair, but most of the gain comes from state x late-episode gating rather than from belief or history."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 only, reached S2 late in episode (zero at S1), scaled by S2-belief, raised after a previous rewarded trial and after a rare a2->S1 trial",
+    "better_terms": "B=(phase == D2) * (state == 2) * np.clip(ep_trial - 60, 0, None); terms: B * (prev_reward == 1) * (1-belief) ;; B * (1-belief) ;; B ;; B * (prev_reward == 1) * (prev_state == 2) ;; (phase == D2) * (state == 1) * np.clip(ep_trial - 60, 0, None) ;; B*(prev_action==2)*(prev_state==1) ;; B*(prev_action==2)*(prev_state==1)*(prev_reward==1) ;; B*(action==2)*(1-belief)   [observed-only; dev 0.818, test 0.808]",
+    "better_terms_test_r2_beyond_timing": 0.808
+  },
+  "final_label": "D2 only, reached S2 late in episode (zero at S1), scaled by S2-belief, raised after a previous rewarded trial and after a rare a2->S1 trial"
+}

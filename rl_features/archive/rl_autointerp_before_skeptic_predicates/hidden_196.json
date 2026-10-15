@@ -1,0 +1,82 @@
+{
+  "label": "D1 after a reward, when the agent leans toward a1",
+  "predicate": "(phase == D1) & (in_rew == 1) & (choice > 2.78)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1, and only when the reward input is 1 (the previous trial was rewarded): never at GO or D2, and never after no reward or a penalty. Within rewarded D1 steps it is restricted to trials where the agent then picks a1 (99.98% of active steps have action==1, and essentially none have prev_action==2). (phase==D1)&(in_rew==1)&(action==1) reaches recall 1.0 but precision 0.54 (F1 0.70). It uses the upcoming choice, which the agent computes itself. A tighter version with observed variables only uses the model policy logit at D1: choice in a moderate a1-leaning range (>2.78) gives dev P 0.72, R 0.92, F1 0.81. In the profile all activations sit at choice in [-1.5, 8.07) and value < 7.73, and it is silent at the most confident a1 logits (>8.07) and highest values. Firing is concentrated where good==S1. In the example windows, activation is largest on the first rewarded D1 after an unrewarded or rare trial and tends to decay over a run of consecutive rewarded a1 trials (e.g. 0.31, 0.22, 0.14, 0.07), but that decay was seen in examples and not scored. Reading: an a1-reward-confirmation signal that weakens as confidence in a1 saturates.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 196,
+    "predicate": "(phase == D1) & (in_rew == 1) & (choice > 2.78)",
+    "split": "test",
+    "precision": 0.700289303292547,
+    "recall": 0.9133616465207448,
+    "f1": 0.7927580511388206,
+    "mass_recall": 0.8866999964919361,
+    "correlation": 0.6457111101292045,
+    "n_active": 61220,
+    "n_predicted": 79847,
+    "coverage_by_activation_quartile": [
+      0.9333551127082653,
+      0.9542633126429272,
+      0.9437438745508004,
+      0.8220842861809866
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 196,
+    "predicate": "(phase == D1) & (in_rew == 1) & (choice > 2.78)",
+    "split": "dev",
+    "precision": 0.7191148740618639,
+    "recall": 0.9231336464628653,
+    "f1": 0.8084514951565351,
+    "mass_recall": 0.9011678736726102,
+    "correlation": 0.6620959605444834,
+    "n_active": 62381,
+    "n_predicted": 80079,
+    "coverage_by_activation_quartile": [
+      0.9353039240830983,
+      0.9570375120230843,
+      0.9540237255530619,
+      0.8461686437960885
+    ]
+  },
+  "gate": "hidden",
+  "feature": 196,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The basic claims hold up. The feature is active only at D1 ('phase != D1' gives 0 active of 791k steps), only when in_rew==1 (in_rew != 1 at D1 gives 0 hits), and only when the upcoming action is a1 ((phase==D1)&(in_rew==1)&(action==1): test R 1.000, P 0.523, F1 0.686; with action==2, 0 hits).",
+      "The label overclaims 'after a reward'. The feature only fires on rewards from an a1 trial that reached S1 by the common transition. Recorded predicate & (prev_common==0) gives P 0.001 (n 2729). Recorded predicate & (prev_action==2) gives P 0.007. In the dev profile, prev_common==0 and prev_action==2 each have only 22 active steps out of about 250k-490k. Rewards after a2 or after any rare transition never drive it. The explanation mentions prev_action but not the common-transition / S1 requirement.",
+      "The claim that it is 'silent at the most confident a1 logits (above 8.07)' is empty. No D1 step has choice > 8.07 ((phase==D1)&(choice>8.07) gives n_predicted 0), so that profile bin comes from GO/D2 rows. Bounding the predicate at choice<8.07 changes nothing.",
+      "The choice threshold is a lossy proxy, and the errors are not scattered noise. The test split has 23,931 false positives (about 30% of predicted steps), many in contexts identical to firing ones: a run of rewarded a1\u2192S1c trials. It also misses 5,304 active steps holding 11.3% of activation mass, including strong ones (0.78-0.93 of max) where choice < 2.78. Thresholds trade precision for recall without getting past about 0.81 (choice>2: F1 0.771, >3.5: F1 0.706, >2.78: F1 0.793).",
+      "The decay story (activation falls over consecutive rewarded a1 trials) is contradicted by the example windows. Several runs are flat (0.55, 0.57, 0.58, 0.58, 0.57) or rise (0.29, 0.36, 0.38, 0.40, 0.43). Reward-streak predicates do not explain the silent steps either: 2+ previous rewarded trials gives P 0.60, R 0.27.",
+      "There are other systematic modulations the explanation leaves out. Firing is nearly absent within 5 trials after a reversal (P 0.16, R 0.004). Precision is lower at rel +1 (0.578 vs 0.715 elsewhere) and higher late in the episode (ep_trial >= 80: P 0.75 vs 0.51 earlier). So the 'on' set depends on more than the D1 logit.",
+      "Test F1 of the recorded predicate is 0.793, below the 0.8 bar. Adding the observed history conditions (prev_action != 2) & (prev_common != 0) only nudges it to 0.808. About 28% of predicted steps are still false positives, and no observed variable we tried separates them."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "D1 after a reward earned by a1\u2192S1 (common), on trials where the agent is going to repeat a1. Fires on only about half of such steps, and the D1 a1 logit predicts which ones only roughly.",
+    "better_predicate": "(phase == D1) & (in_rew == 1) & (prev_action != 2) & (prev_common != 0) & (choice > 2.78)",
+    "better_predicate_test_f1": 0.808
+  },
+  "final_label": "D1 after a reward earned by a1\u2192S1 (common), on trials where the agent is going to repeat a1. Fires on only about half of such steps, and the D1 a1 logit predicts which ones only roughly.",
+  "scorecard": {
+    "format": "top40",
+    "summary": "Weighted combination of 40 cues. Raise it: choice_bin=decile 8 (9 = most a1) (+3.57), phase=D1 & choice_bin=decile 8 (9 = most a1) (+3.55), value_bin=decile 0 (9 = highest) (+2.79), phase=D1 & value_bin=decile 0 (9 = highest) (+2.77), choice_bin=decile 7 (9 = most a1) (+2.51), phase=D1 & ep_dec=9 (+2.49). Lower it: in_rew=0 (-13.96), action=2 (-5.08), prev_common=0 (-4.84), phase=D1 & choice_bin=decile 5 (9 = most a1) (-3.99).",
+    "test_f1": 0.8758112483335531,
+    "test_precision": 0.7939387500332015,
+    "test_recall": 0.9765109441359033,
+    "full_test_f1": 0.8792659037014126,
+    "full_n_cues": 109,
+    "top40_test_f1": 0.8758112483335531,
+    "slot2_test_f1": 0.7852266805627932,
+    "slot2_slots": [
+      "last trial",
+      "policy (model)"
+    ],
+    "file": "scorecards/hidden_196.json"
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "label": "drops after a1->S2 outcomes, rare a1->S2 at D2, and recent losses late in episode",
+  "terms": "(phase == D1) * last_is(\"a1 S2 r\") ;; (phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D2) * table(3*action+state, {5: -1, 7: 1}) ;; (phase == D2) * choice ;; (phase == D1) * choice ;; (phase == GO) * (prev_action==1)*(prev_reward==0) ;; (phase == D2)*(prev_reward==0) ;; (ep_trial/99.0)**12*(1+(phase==D2))*(((prev_reward==0)*1.0+(tv(\"reward\",-2)==0)+(tv(\"reward\",-3)==0))+0.5*((prev_action==1)*1.0+(tv(\"action\",-2)==1)+(tv(\"action\",-3)==1)))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw reset gate r of unit 29 sits near 1 (mean 0.975) and dips mostly late in the episode, with the biggest dips at D2; timing alone gives R^2 0.73. Beyond timing: at D1 it drops after the last trial was a1 reaching S2 (rewarded about -0.029, unrewarded about -0.012). At GO it drops after an unrewarded a1 trial (-0.011). At D2 it drops when a1 led to S2 (rare) and rises when a2 led to S1 (rare) (+/-0.015), and drops when the previous trial was unrewarded (-0.009). At D1 and D2 it falls as the policy logit leans toward a1 (graded, about -0.001 per logit unit). The largest effect is a late-episode interaction: in about the last 10 trials, a count of recent unrewarded trials (plus a half-weighted count of recent a1 choices) drives deep dips, about twice as strong at D2. Pure within-decile timing explains only about 0.02-0.07 of that. Value and the hidden good state add little. No future variables are used (action/state at D2 are already observed; choice is the model policy). Dev R^2 beyond timing 0.47, test 0.48; profile all-cue additive ceiling 0.46 (all observed 0.40).",
+  "gate": "unit_reset",
+  "feature": 29,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 29,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D2) * table(3*action+state, {5: -1, 7: 1})",
+      "(phase == D2) * choice",
+      "(phase == D1) * choice",
+      "(phase == GO) * (prev_action==1)*(prev_reward==0)",
+      "(phase == D2)*(prev_reward==0)",
+      "(ep_trial/99.0)**12*(1+(phase==D2))*(((prev_reward==0)*1.0+(tv(\"reward\",-2)==0)+(tv(\"reward\",-3)==0))+0.5*((prev_action==1)*1.0+(tv(\"action\",-2)==1)+(tv(\"action\",-3)==1)))"
+    ],
+    "weights": [
+      -0.028686881647568413,
+      -0.011569176467592429,
+      0.015009245458151117,
+      -0.0011243062243297198,
+      -0.0011927264753341619,
+      -0.010801409131558418,
+      -0.009191551296866385,
+      -0.01056939817866698
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.48340591893809104,
+    "r2": 0.8583902618623477,
+    "r2_timing_only": 0.7258781249553619
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 29,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D2) * table(3*action+state, {5: -1, 7: 1})",
+      "(phase == D2) * choice",
+      "(phase == D1) * choice",
+      "(phase == GO) * (prev_action==1)*(prev_reward==0)",
+      "(phase == D2)*(prev_reward==0)",
+      "(ep_trial/99.0)**12*(1+(phase==D2))*(((prev_reward==0)*1.0+(tv(\"reward\",-2)==0)+(tv(\"reward\",-3)==0))+0.5*((prev_action==1)*1.0+(tv(\"action\",-2)==1)+(tv(\"action\",-3)==1)))"
+    ],
+    "weights": [
+      -0.028686881647568413,
+      -0.011569176467592429,
+      0.015009245458151117,
+      -0.0011243062243297198,
+      -0.0011927264753341619,
+      -0.010801409131558418,
+      -0.009191551296866385,
+      -0.01056939817866698
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.47367843457672776,
+    "r2": 0.8603503566389472,
+    "r2_timing_only": 0.7346685894416176
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Each phase-specific claim matches the fitted test weights. D1 after a1 S2 r: -0.029. D1 after a1 S2 u: -0.012. GO after an unrewarded a1 trial: -0.011. D2 a1->S2 / a2->S1: +/-0.015. D2 after an unrewarded trial: -0.009. Choice slope: -0.001 per logit unit. These agree with the profile residual tables (for example D1 a1 S2 r -0.0294, D2 code5 -0.024, code7 +0.0165). Reproduced test R^2 beyond timing is 0.4834.",
+      "The late-episode term carries most of the gain over the additive part: the additive terms alone score 0.377, adding a plain late-timing term scores 0.407, and the full interaction scores 0.483. The label is right that the interaction matters. But it overweights the 'recent a1 choices' part. The unrewarded count alone gives 0.461 and the a1 count alone gives 0.446, so the a1 count adds only about 0.02 on top of the unrewarded count.",
+      "Misses shows no systematic error class. Mean error is 0 in every phase, and the largest phase x previous-trial biases are within +/-0.006.",
+      "The worst-fit windows are late-episode D2 dips that are still underpredicted, including after a2 choices into S2 common (actual 0.69 vs predicted 0.82-0.85). The late term's a1 weighting does not capture these. Swapping the a1 count for a late*D2*(state==S2) component gives 0.4755, a little worse than the reported 0.483 but close. So the 'a1' part of the late interaction is a weak claim.",
+      "Adding value or the hidden good state changes test R^2 by at most about 0 (in fact slightly lower), which confirms 'add little'. No future variables are used: tv('reward',-2/-3) are past trials, and action and state are observed at D2."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "drops after a1->S2 outcomes, rare a1->S2 at D2, and the number of recent losses late in the episode (strongest at D2)",
+    "better_terms": null,
+    "better_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "drops after a1->S2 outcomes, rare a1->S2 at D2, and the number of recent losses late in the episode (strongest at D2)"
+}

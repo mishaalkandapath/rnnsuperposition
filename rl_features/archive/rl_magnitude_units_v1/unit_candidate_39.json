@@ -1,0 +1,79 @@
+{
+  "label": "D2 candidate high when repeating a1 after a1 S1 rewarded; lowered by stay, S1",
+  "terms": "(phase == D2) * last_is(\"a1 S1 r\") * (action == 1) ;; (phase == D2) * (action == 1) ;; (phase == D2) * (state == 1) ;; (phase == D2) * (prev_reward == 1) ;; (phase == D2) * (stay == 1) ;; (phase == D2) * (prev_state == 1) ;; (phase == D1) * (prev_action == 2) * (prev_state == 1) * (2 - prev_reward)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw candidate n of unit 39 is set by phase almost entirely (timing R^2 0.97: ~-0.97 at D1, ~+0.98 at GO, ~-0.68 at D2). Most of the variation beyond timing is at D2 and depends on the choice just made, the state reached and the previous trial, all of which the agent has seen by D2. The largest effect: D2 is strongly raised (about +0.4) when the agent chose a1 again after an a1 -> S1 rewarded trial (in a1/S1 reward streaks D2 sits around -0.1 instead of -0.7). Apart from that, at D2 the value goes up after choosing a1, after a rewarded previous trial and after a previous visit to S1, and goes down when the reached state is S1 and when the choice repeats the previous one (a switch raises it). At D1 it is mildly raised after a2 -> S1 (rare) trials, more so when unrewarded. GO varies very little. Value and policy deciles add little once these terms are in. Test R^2 beyond timing 0.64 (dev 0.65); the all-cue ceiling is 0.81 and all-observed is 0.75. Remaining misses: D2 is still under-predicted after a2 S1 r and over-predicted after a1 S2 r.",
+  "gate": "unit_candidate",
+  "feature": 39,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 39,
+    "terms": [
+      "(phase == D2) * last_is(\"a1 S1 r\") * (action == 1)",
+      "(phase == D2) * (action == 1)",
+      "(phase == D2) * (state == 1)",
+      "(phase == D2) * (prev_reward == 1)",
+      "(phase == D2) * (stay == 1)",
+      "(phase == D2) * (prev_state == 1)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 1) * (2 - prev_reward)"
+    ],
+    "weights": [
+      0.3606212513863014,
+      0.1530715404559637,
+      -0.12250376846480494,
+      0.09744369972921418,
+      -0.18396931811501824,
+      0.06273197746565974,
+      0.06801221910700318
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6413799506417561,
+    "r2": 0.988299599685369,
+    "r2_timing_only": 0.9673738254858614
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 39,
+    "terms": [
+      "(phase == D2) * last_is(\"a1 S1 r\") * (action == 1)",
+      "(phase == D2) * (action == 1)",
+      "(phase == D2) * (state == 1)",
+      "(phase == D2) * (prev_reward == 1)",
+      "(phase == D2) * (stay == 1)",
+      "(phase == D2) * (prev_state == 1)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 1) * (2 - prev_reward)"
+    ],
+    "weights": [
+      0.3606212513863014,
+      0.1530715404559637,
+      -0.12250376846480494,
+      0.09744369972921418,
+      -0.18396931811501824,
+      0.06273197746565974,
+      0.06801221910700318
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6544915051224254,
+    "r2": 0.9884764801411223,
+    "r2_timing_only": 0.9666476511295016
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The factual claims hold up. Test R^2 beyond timing reproduces at 0.641. Dropping each term costs on test: last_is('a1 S1 r')*a1 0.641->0.513, stay ->0.531, action==1 ->0.597, state==1 ->0.600, prev_reward ->0.610, D1 a2-S1 term ->0.621, prev_state ->0.636. The prev_state term ('after a previous visit to S1', weight +0.06) is nearly redundant.",
+      "The profile backs the stated directions. D2 residual is +0.385 after a1 S1 r. At D1 it is +0.037 after a2 S1 r and +0.123 after a2 S1 u, so it is larger when unrewarded, as claimed. GO residuals stay within +/-0.04. The D2 choice x state residuals are a1S1 +0.135, a1S2 +0.284, a2S1 -0.198, a2S2 -0.131, so S1 lowers the value within each choice and a1 raises it.",
+      "The 'lowered by stay' weight only holds alongside the a1-after-a1S1r term, which is itself a stay. On its own, repeating a1 after a1 S1 r raises D2. The weights on state, stay and prev_reward change sign or size a lot when other terms are dropped (state==1 goes from -0.12 to +0.16 when the main term is removed), so the single-factor claims depend on the other terms being present.",
+      "The label misses a streak build-up. The worst-fit windows are all streaks. During consecutive a1 S1 r trials, D2 climbs from about -0.76 to -0.52 and then to about -0.1, while the model predicts a flat value. During consecutive a2->S1 unrewarded trials, D1 rises to about -0.09 and even +0.16, against a prediction of -0.83. A D2 streak-count term (1 to 3 consecutive a1 S1 r, times a1) raises test R^2 from 0.641 to 0.671. A D1 a2-S1-u streak term adds only 0.001 because these windows are rare.",
+      "'Value and policy deciles add little' is only partly true. Adding (phase==D2)*choice adds 0.005, but adding (phase==D2)*value raises test R^2 to 0.693 (+0.05). With the streak term as well it reaches 0.723. Value is a model output, not an observed cue.",
+      "The remaining systematic misses are moderate, and the explanation names the main ones. D2 after a1 S2 r is over-predicted by -0.09 to -0.10, D2 after a2 S2 u by -0.06, and D2 after a2 S1 r is under-predicted by +0.03 to +0.06. Adding last_is terms for these patterns did not help (0.664). The gap to the observed-only ceiling (0.75) is about 0.08 to 0.11."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 candidate high when repeating a1 after a1 S1 rewarded, growing with streak length; lowered by S1, stay (net of that)",
+    "better_terms": "(phase == D2) * (action == 1) ;; (phase == D2) * (state == 1) ;; (phase == D2) * (prev_reward == 1) ;; (phase == D2) * (stay == 1) ;; (phase == D2) * (prev_state == 1) ;; (phase == D1) * (prev_action == 2) * (prev_state == 1) * (2 - prev_reward) ;; (phase == D2)*(action==1)*(A1R + A1R*A1R2 + A1R*A1R2*A1R3) where A1Rk = ((tv('action',-k)==1)&(tv('state',-k)==1)&(tv('reward',-k)==1))   [test 0.664; adding (phase==D2)*value as an 8th term (model output, not observed) gives 0.7225]",
+    "better_terms_test_r2_beyond_timing": 0.664
+  },
+  "final_label": "D2 candidate high when repeating a1 after a1 S1 rewarded, growing with streak length; lowered by S1, stay (net of that)"
+}

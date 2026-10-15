@@ -1,0 +1,70 @@
+{
+  "label": "D1: high if last state S1, low if S2; GO: low after reward / a1-leaning policy",
+  "terms": "(phase == D1) * table(prev_state, {1: 1, 2: -1}) ;; (phase == D1) * (prev_reward == 1) * table(prev_state, {1: 1, 2: -1}) ;; (phase == GO) * (prev_reward == 1) ;; (phase == GO) * choice ;; (phase == GO) * table(prev_action, {1: -1, 2: 1})",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r17 (mean 0.65; timing alone R^2 0.64, with D2 saturated near 0.97). At D1 the magnitude is set mainly by the state reached on the previous trial: about +0.25 above timing if it was S1 and -0.25 below if S2, whatever the choice or reward (reward only slightly shrinks the gap, weight -0.02). At GO it is lower after a rewarded trial (-0.11) and lower when the policy leans a1 (graded term on the choice logit, -0.016 per logit unit). That logit term takes over most of what the previous-choice term carried (a2 previously -> higher). Using observed cues only (previous action instead of the policy logit, plus a last_is a1 S1 r indicator) gives test 0.67. D2 varies little. Trial-before, hidden good state and future variables add next to nothing. Test R^2 beyond timing 0.74 (dev 0.75) vs an all-cue ceiling of 0.85; the remaining error is mostly GO after unrewarded trials (under-predicted) and window-start steps where the previous trial is unknown.",
+  "gate": "unit_reset",
+  "feature": 17,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 17,
+    "terms": [
+      "(phase == D1) * table(prev_state, {1: 1, 2: -1})",
+      "(phase == D1) * (prev_reward == 1) * table(prev_state, {1: 1, 2: -1})",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == GO) * choice",
+      "(phase == GO) * table(prev_action, {1: -1, 2: 1})"
+    ],
+    "weights": [
+      0.25353443061962316,
+      -0.023050739468269868,
+      -0.11447458383046892,
+      -0.016089994427022126,
+      0.02222089346104427
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7412513966755205,
+    "r2": 0.9080746812539862,
+    "r2_timing_only": 0.6447311499852371
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 17,
+    "terms": [
+      "(phase == D1) * table(prev_state, {1: 1, 2: -1})",
+      "(phase == D1) * (prev_reward == 1) * table(prev_state, {1: 1, 2: -1})",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == GO) * choice",
+      "(phase == GO) * table(prev_action, {1: -1, 2: 1})"
+    ],
+    "weights": [
+      0.25353443061962316,
+      -0.023050739468269868,
+      -0.11447458383046892,
+      -0.016089994427022126,
+      0.02222089346104427
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7453348993136377,
+    "r2": 0.9091120221984611,
+    "r2_timing_only": 0.6431078402318119
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor misstatement at D1: the profile residuals show reward raises D1 after S1 (a1 S1 r +0.246 vs a1 S1 u +0.156) and also after S2 (a2 S2 r -0.191 vs u -0.258). That is a small main effect of reward, not a narrowing of the S1/S2 gap. It hardly matters: adding a D1 prev_reward main effect moves test R^2 for the D1 state term from 0.450 to 0.454.",
+      "'Whatever the choice' at D1 is a little too strong. At D1 a2-previous runs about 0.07-0.1 above a1-previous within the same state (a2 S1 u +0.263 vs a1 S1 u +0.156), and misses show D1 after a1 S1 u over-predicted by -0.12. This class shrinks to -0.07 once a D1 policy (choice) term is added.",
+      "A systematic error remains at GO after unrewarded trials, mostly after a1: a1 S2 u +0.172, a2 S2 u +0.122, a1 S1 u +0.093. The explanation admits this. Better terms (a D1 choice term and a GO choice x unrewarded interaction) only reduce it to about +0.13, so it is moderate rather than large.",
+      "The GO reward weight of -0.11 understates the raw reward effect. The residual table gives about -0.25 after a1 and about -0.2 after a2, but the choice-logit term absorbs part of it, so the label 'low after reward' is still fair.",
+      "Checks that held up: the claimed score reproduces at 0.741 test. The observed-only version (prev_action plus last_is a1 S1 r) scores 0.673, close to the reported 0.67. The D1 prev_state term alone gives 0.45. Removing the GO choice logit costs about 0.07, which confirms the claimed policy effect. No future variables are used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1: high if last state S1, low if S2 (slightly higher after reward / a2); GO: low after reward and when policy leans a1",
+    "better_terms": "(phase == D1) * table(prev_state, {1: 1, 2: -1}) ;; (phase == D1) * (prev_reward == 1) ;; (phase == D1) * choice ;; (phase == GO) * (prev_reward == 1) ;; (phase == GO) * (prev_action == 2) ;; (phase == GO) * choice ;; (phase == GO) * (prev_reward == 0) * choice ;; (phase == D2) * choice",
+    "better_terms_test_r2_beyond_timing": 0.777
+  },
+  "final_label": "D1: high if last state S1, low if S2 (slightly higher after reward / a2); GO: low after reward and when policy leans a1"
+}

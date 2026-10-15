@@ -1,0 +1,75 @@
+{
+  "label": "z4 ~1 at D1, ~0 at GO/D2; dips on episode trial 0, D2 spikes late on a2-leaning S2",
+  "terms": "(phase == D1) * (ep_trial == 0) ;; (phase == GO) * last_is(\"a1 S2 r\") ;; (phase == GO) * (prev_reward == 1) ;; (phase == D2) * table(3*action+state, {4: -1, 5: -1, 8: 1}) ;; (phase == D1) * isin(prev_state, [2]) ;; (phase == D2) * (state == 2) * np.clip(-choice, 0, None) * (ep_trial/100)**2",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate of unit 4. Timing explains almost all of its variance (about 0.98 at D1, about 0.03 at GO/D2, rising late in the episode), so what is left is small. Beyond timing: (1) on the first D1 of the episode z drops by about 0.41 (this alone gives test R^2 0.16 beyond timing); (2) at D1 it is slightly higher (+0.017) when the previous trial reached S2; (3) at GO it is higher after a rewarded previous trial (+0.015), with an extra +0.042 after a1 S2 r (rare rewarded); (4) at D2 it is lower after choosing a1 (a1 S1 / a1 S2, -0.014) and higher for a2 S2 common (+0.014); (5) the largest residuals are late-episode D2 spikes (up to 0.6) when the state shown is S2 and the policy leans to a2 (graded by clip(-choice) times (ep_trial/100)^2), typically after a run of a2 S1 rare unrewarded trials. A pure history version of (5) (a2 S2 after a2 S1 u, late) scores lower (test 0.54 vs 0.57). This trial reward and the hidden good state add nothing. All terms are observable at their step (choice is the model policy output). Test R^2 beyond timing 0.57, above the 0.52 additive all-cue ceiling.",
+  "gate": "unit_update",
+  "feature": 4,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 4,
+    "terms": [
+      "(phase == D1) * (ep_trial == 0)",
+      "(phase == GO) * last_is(\"a1 S2 r\")",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == D2) * table(3*action+state, {4: -1, 5: -1, 8: 1})",
+      "(phase == D1) * isin(prev_state, [2])",
+      "(phase == D2) * (state == 2) * np.clip(-choice, 0, None) * (ep_trial/100)**2"
+    ],
+    "weights": [
+      -0.40644486599853846,
+      0.04232521462780594,
+      0.015262610878393498,
+      0.01414282727697526,
+      0.01697862484346627,
+      0.009650068741564701
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5693192359604077,
+    "r2": 0.9989540309882385,
+    "r2_timing_only": 0.9975713588831999
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 4,
+    "terms": [
+      "(phase == D1) * (ep_trial == 0)",
+      "(phase == GO) * last_is(\"a1 S2 r\")",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == D2) * table(3*action+state, {4: -1, 5: -1, 8: 1})",
+      "(phase == D1) * isin(prev_state, [2])",
+      "(phase == D2) * (state == 2) * np.clip(-choice, 0, None) * (ep_trial/100)**2"
+    ],
+    "weights": [
+      -0.40644486599853846,
+      0.04232521462780594,
+      0.015262610878393498,
+      0.01414282727697526,
+      0.01697862484346627,
+      0.009650068741564701
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5848053630447951,
+    "r2": 0.9989978976298415,
+    "r2_timing_only": 0.9975864274704813
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Wrong statistic in the explanation. It says timing explains 'about 0.98 at D1 and about 0.03 at GO and D2'. Those numbers are the mean gate values per phase from the timing table (D1 0.97-0.99, GO 0.027-0.075, D2 0.017-0.048), not variance explained. The profile reports timing-only R^2 = 1.00 (0.9976 on test).",
+      "The D2 spikes are described as S2-specific ('when S2 is shown'), but they are not. In the worst-fit windows (misses), a run of a2 S1R trials late in the episode produces D2 values of 0.14 and 0.36 at S1R (rare) steps, predicted 0.023, before the 0.62 spike at S2c. 'D2 after a2 S1 u' is still the most under-predicted cell (+0.011). Adding (phase==D2)*(state==1)*(action==2)*clip(-choice,0)*(ep_trial/100)^2 raises test R^2 from 0.569 to 0.575.",
+      "A systematic GO effect is missing. Adding (phase==GO)*clip(-choice,0)*(ep_trial/100)^2 raises test R^2 from 0.569 to 0.611. Its fitted weight is negative, so late in the episode z at GO is lower when the policy leans to a2: a GO dip that goes with the D2 spike. The label says nothing about GO depending on the policy or on episode time. 'GO after a2 S2 u' and 'GO after a1 S2 u' stay over-predicted (-0.013 / -0.012) because the GO terms only model reward, not unrewarded-trial dips.",
+      "The graded shape of the spike term is not uniquely supported. Without the S2 restriction it scores 0.556 test, and without the (ep_trial/100)^2 factor it scores 0.556 (0.576 when the S2 restriction is kept). So the specific clip(-choice)*(ep_trial/100)^2 form is one of several near-equivalent fits, not a finding.",
+      "Minor: the D1 prev_state==S2 term (+0.017) is better described as 'lower after a1 S1'. The D1 residuals are a1 S1 r/u -0.012/-0.014, a2 S1 about -0.001, S2 about +0.009, so a2 S1 does not behave like a1 S1.",
+      "Confirmed claims: the episode-trial-0 D1 dip (-0.41, 0.16 test alone), GO +a1 S2 r (+0.04) and GO +rewarded (+0.015), the D2 action x state pattern, and that the future reward adds nothing (reference 0.00). The hidden good state at D2 adds only +0.002 (0.5716). The original total of 0.569 test reproduces."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "z4 ~1 at D1, ~0 at GO/D2 (timing R^2 ~1.00); dips on episode trial 0. Late in the episode, a2-leaning policy dips z at GO and drives D2 spikes, at S2 and also at S1 after runs of unrewarded a2.",
+    "better_terms": "(phase == D1) * (ep_trial == 0) ;; (phase == GO) * last_is('a1 S2 r') ;; (phase == GO) * (prev_reward == 1) ;; (phase == D2) * table(3*action+state, {4: -1, 5: -1, 8: 1}) ;; (phase == D1) * isin(prev_state, [2]) ;; (phase == D2) * (action == 2) * np.clip(-choice, 0, None) * (ep_trial/100)**2 ;; (phase == D2) * (state == 2) * np.clip(-choice, 0, None) * (ep_trial/100)**2 ;; (phase == GO) * np.clip(-choice,0,None)*(ep_trial/100)**2",
+    "better_terms_test_r2_beyond_timing": 0.6155
+  },
+  "final_label": "z4 ~1 at D1, ~0 at GO/D2 (timing R^2 ~1.00); dips on episode trial 0. Late in the episode, a2-leaning policy dips z at GO and drives D2 spikes, at S2 and also at S1 after runs of unrewarded a2."
+}

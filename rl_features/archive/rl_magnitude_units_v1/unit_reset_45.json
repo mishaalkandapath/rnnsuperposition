@@ -1,0 +1,73 @@
+{
+  "label": "D1 reset set by last trial outcome x state; D2 by choice x reached state",
+  "terms": "(phase == D1) * table(3*prev_action+prev_state, {4: 0.0, 5: 0.16, 7: -0.06, 8: 0.09}) * (prev_reward == 1) ;; (phase == D1) * table(3*prev_action+prev_state, {4: -0.16, 5: 0.06, 7: -0.2, 8: -0.04}) * (prev_reward == 0) ;; (phase == D2) * table(3*action+state, {4: -0.05, 5: -0.15, 7: 0.16, 8: 0.03}) ;; (phase == D2) * (prev_state == 2) * (prev_reward == 0) ;; (phase == D1) * (tv(\"reward\", -2) == 0) ;; (phase == D2) * (tv(\"state\", -1) == 1) * (tv(\"reward\", -1) == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r45 is high at D1 (~0.6-0.7), near zero at GO, mid at D2; timing explains R^2 0.90. Beyond timing: at D1 it depends on the previous trial choice/state/reward: raised after a1 S2 r (+0.16), a2 S2 r (+0.09), a1 S2 u (+0.06); lowered after a2 S1 u (-0.20), a1 S1 u (-0.16), a2 S1 r (-0.06); roughly, reaching S2 raises it and unrewarded S1 lowers it, and a second unrewarded trial back lowers it a bit further (unrewarded a2-perseveration streaks give the lowest values). At D2 it depends on this trial choice x reached state (observed at D2): a2->S1 rare +0.16, a2->S2 +0.03, a1->S1 -0.05, a1->S2 rare -0.15, plus small boosts after a previous unrewarded S2 trial and a cut after a previous rewarded S1 trial. GO carries essentially no variance. 6 observed-only terms reach dev R^2 beyond timing 0.78 (ceiling all 0.84, all observed 0.80).",
+  "gate": "unit_reset",
+  "feature": 45,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 45,
+    "terms": [
+      "(phase == D1) * table(3*prev_action+prev_state, {4: 0.0, 5: 0.16, 7: -0.06, 8: 0.09}) * (prev_reward == 1)",
+      "(phase == D1) * table(3*prev_action+prev_state, {4: -0.16, 5: 0.06, 7: -0.2, 8: -0.04}) * (prev_reward == 0)",
+      "(phase == D2) * table(3*action+state, {4: -0.05, 5: -0.15, 7: 0.16, 8: 0.03})",
+      "(phase == D2) * (prev_state == 2) * (prev_reward == 0)",
+      "(phase == D1) * (tv(\"reward\", -2) == 0)",
+      "(phase == D2) * (tv(\"state\", -1) == 1) * (tv(\"reward\", -1) == 1)"
+    ],
+    "weights": [
+      1.0039489226083718,
+      0.9735763515805377,
+      0.8993421368997253,
+      0.05199964618781307,
+      -0.04457286128131581,
+      -0.05375938179114839
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7718516446709437,
+    "r2": 0.9770371418792922,
+    "r2_timing_only": 0.8993512002854955
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 45,
+    "terms": [
+      "(phase == D1) * table(3*prev_action+prev_state, {4: 0.0, 5: 0.16, 7: -0.06, 8: 0.09}) * (prev_reward == 1)",
+      "(phase == D1) * table(3*prev_action+prev_state, {4: -0.16, 5: 0.06, 7: -0.2, 8: -0.04}) * (prev_reward == 0)",
+      "(phase == D2) * table(3*action+state, {4: -0.05, 5: -0.15, 7: 0.16, 8: 0.03})",
+      "(phase == D2) * (prev_state == 2) * (prev_reward == 0)",
+      "(phase == D1) * (tv(\"reward\", -2) == 0)",
+      "(phase == D2) * (tv(\"state\", -1) == 1) * (tv(\"reward\", -1) == 1)"
+    ],
+    "weights": [
+      1.0039489226083718,
+      0.9735763515805377,
+      0.8993421368997253,
+      0.05199964618781307,
+      -0.04457286128131581,
+      -0.05375938179114839
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.78122986896104,
+    "r2": 0.9782465282573032,
+    "r2_timing_only": 0.9005647085395639
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor wording problem: 'reaching S2 raises it' is not true for every S2 outcome. After a2 S2 u the D1 residual is -0.04 (the profile shows the same value, and the term weight is -0.04).",
+      "Worst-fit windows are mostly D1 steps on the window's first trial (prev trial unknown, '?'), plus long unrewarded a2->S1 streaks. In those streaks the actual D1 value drops 0.3-0.45 below timing, but the fit predicts only about 0.2-0.25 below. I added streak terms: S1-unrewarded two trials running, a2 x a2, a 3-back trial, and a window-start indicator. Test R^2 rose by at most 0.004 (0.775), so this is a real gap but a small one.",
+      "Systematic errors in misses are small. Each phase x previous-trial cell is off by at most 0.022 (largest: D2 after a1 S1 u, -0.022), and the mean error per phase is 0.005 or less.",
+      "Each claim checks out on test. The base 3 tables give 0.706. The two small D2 previous-trial terms add about 0.05 (0.755 with them). The two-back unrewarded term adds about 0.016 (0.722 vs 0.706). Its fitted weight is -0.045, so 'lowers it a little more' is fair. Reproduced test R^2: 0.7719, against an observed-only ceiling of 0.80."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 set by last trial's choice/state/reward (S1-unrewarded lowers it, S2-rewarded raises it); D2 by this choice x reached state",
+    "better_terms": null,
+    "better_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "D1 set by last trial's choice/state/reward (S1-unrewarded lowers it, S2-rewarded raises it); D2 by this choice x reached state"
+}

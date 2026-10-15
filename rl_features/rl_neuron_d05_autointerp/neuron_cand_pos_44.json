@@ -1,0 +1,105 @@
+{
+  "label": "GO step, confident a1 choice after a rewarded a1 trial (a1 win-stay)",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (choice > 6) & (ep_trial < 85) & (tv('prev_reward',-1) != 0)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO (never D1/D2), only when the previous trial was rewarded (prev_reward==1, ~100% of mass) and the agent is about to choose a1 with a strongly positive policy logit (choice>6; 90% of mass in the top choice bin >8). Previous action is essentially always a1, so this is an a1 win-stay unit; almost silent on a2 choices, on trials after no reward, and when good=S2. Requiring the trial before that to also be rewarded (not 0) raises precision 0.67->0.77, and in example windows magnitude grows over runs of consecutive rewarded a1 trials. It goes silent late in the episode (zero activity on ep_trials 90-99, decaying from ~70), and also on the first 3 trials, so ep_trial<85 is included; that looks like slow drift in the hidden state over the episode. Every variable is observed: choice is the agent's own policy logit. A simpler predicate using the upcoming action==1 in place of choice>6 reaches F1 0.79 on dev.",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 44,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (choice > 6) & (ep_trial < 85) & (tv('prev_reward',-1) != 0)",
+    "split": "test",
+    "precision": 0.8130237376969254,
+    "recall": 0.9258288946336555,
+    "f1": 0.8657672931995359,
+    "mass_recall": 0.9590368930916656,
+    "correlation": 0.7855021833495222,
+    "n_active": 57637,
+    "n_predicted": 65634,
+    "coverage_by_activation_quartile": [
+      0.8371963913948647,
+      0.9235200222083421,
+      0.9430911236033035,
+      0.9995141925185648
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 44,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (choice > 6) & (ep_trial < 85) & (tv('prev_reward',-1) != 0)",
+    "split": "dev",
+    "precision": 0.8193236860314691,
+    "recall": 0.9261520149634416,
+    "f1": 0.8694687440137923,
+    "mass_recall": 0.9602084981447179,
+    "correlation": 0.7900097655478997,
+    "n_active": 58810,
+    "n_predicted": 66478,
+    "coverage_by_activation_quartile": [
+      0.8350676732639597,
+      0.9272937495749167,
+      0.9423207726839886,
+      0.9999319820432594
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 44,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold. The unit fires only at GO (D1 and D2 have 0 of about 380k steps active). prev_reward==1 holds 100% of the activation mass (prev_reward==0 gives 36 active steps). It never fires on a2 choices ((phase==GO)&(action==2): P 0.000 on 205k steps). The top choice bin (>8.07) holds 90.5% of the mass. good==2 has rate 0.004 (3.1% of mass). prev_action==2 within the predicate has P 0.097 on n=547. Reported test scores reproduce: P 0.758, R 0.940, F1 0.839, mass recall 0.969.",
+      "The tv('reward',-2)!=0 clause does nothing on half the predicted set. tv returns -9 outside the window, so on context trials rel -3 and rel -2 the clause is always true. On those rows precision stays at 0.673 (dev, P 0.673, R 0.457). The precision gain from 0.67 to 0.77 comes only from rows with rel >= -1. So the predicate tests reward history only where the window happens to contain it.",
+      "Fix: tv('prev_reward',-1) gives the reward from two trials back for rel -2 as well as rel >= -1. Replacing the clause with it raises test precision from 0.758 to 0.813 and F1 from 0.839 to 0.866. The remaining weak spot is rel -3, where the reward two trials back is outside the window (test P 0.661).",
+      "The unit tracks how long the reward streak has been, not just win-stay. Precision rises with streak length (dev): two-back unrewarded P 0.150, two-back rewarded P 0.882, three rewarded in a row P 0.922. Two rewarded but three-back unrewarded gives P 0.785. Misses include strong activations (0.70) after an unrewarded trial two back. This supports a 'consecutive rewarded a1 trials' reading. The magnitude-growth claim itself is still unmeasured; I only checked firing rates.",
+      "ep_trial<85 is a hand-picked cutoff for a gradual fade. The base predicate's precision is 0.459 on trials 70-84 and 0.027 on trials 85 and later; activity on trials 80-89 is 0.019, so the fade starts before 85. The label does not mention this dependence on episode time.",
+      "The phrase 'a1 win-stay' slightly overclaims. stay is FUTURE at GO, and about 23% of the mass is at rel -3, where prev_action is unknown. A better description is 'confident a1 at GO after a run of rewarded trials'. Separately, the explanation's 'silent in the first 3 trials' checks out: the predicate fires only 217 times there, all inactive."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step, confident a1 choice after two or more consecutive rewarded trials (a1 reward streak), fading late in the episode",
+    "better_predicate": "(phase == GO) & (prev_reward == 1) & (choice > 6) & (ep_trial < 85) & (tv('prev_reward',-1) != 0)",
+    "better_predicate_test_f1": 0.866
+  },
+  "final_label": "GO step, confident a1 choice after two or more consecutive rewarded trials (a1 reward streak), fading late in the episode",
+  "original_predicate": "(phase == GO) & (prev_reward == 1) & (choice > 6) & (ep_trial < 85) & (tv(\"reward\", -2) != 0)",
+  "original_test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 44,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (choice > 6) & (ep_trial < 85) & (tv(\"reward\", -2) != 0)",
+    "split": "test",
+    "precision": 0.7578386243756383,
+    "recall": 0.9397609174662109,
+    "f1": 0.8390519711873595,
+    "mass_recall": 0.9687646384642855,
+    "correlation": 0.758716133548451,
+    "n_active": 57637,
+    "n_predicted": 71473,
+    "coverage_by_activation_quartile": [
+      0.8580152671755725,
+      0.9419807065028801,
+      0.9594697758345478,
+      0.9995835935873413
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 44,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (choice > 6) & (ep_trial < 85) & (tv(\"reward\", -2) != 0)",
+    "split": "dev",
+    "precision": 0.7660576510187969,
+    "recall": 0.9403842883863288,
+    "f1": 0.8443165423692588,
+    "mass_recall": 0.9696025648376896,
+    "correlation": 0.7638166236598869,
+    "n_active": 58810,
+    "n_predicted": 72193,
+    "coverage_by_activation_quartile": [
+      0.858464258994763,
+      0.9451132421954703,
+      0.9580329206910625,
+      0.9999319820432594
+    ]
+  },
+  "predicate_from": "skeptic"
+}

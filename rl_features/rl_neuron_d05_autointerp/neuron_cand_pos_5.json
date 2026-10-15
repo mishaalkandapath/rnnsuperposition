@@ -1,0 +1,106 @@
+{
+  "label": "D1 after a reward, with a moderate a2 preference, late in the episode",
+  "predicate": "(phase==D1)&(in_rew==1)&(choice<-1.52)&(choice>-4.44)&((ep_trial>=50)|(prev_common==0)&(ep_trial>=10))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (never at GO or D2), and only when the reward input is 1 (the previous trial was rewarded). Almost every activation follows an a2 choice (prev_action 2; just 11 of 58779 follow a1), comes before an a2 choice, and occurs when the good state is S2. It is concentrated late in the episode (90% of mass in trials 50-99, almost none before trial 10). 99.8% of activations fall where the model's D1 policy logit(a1)-logit(a2) is in a moderate a2-preferring band [-4.44, -1.52]; it does not fire when a2 preference is saturated (choice < -4.44), when value is high (> 7.7), or after a1. Magnitude is largest on the first reward after an unrewarded or rare streak and decays over consecutive rewards in a run (e.g. 0.45 -> 0.09 -> 0.04). Observed-only alternatives: D1 & reward input & prev_action != 1 & ep_trial >= 50 scores dev F1 0.71 (mass recall 0.90); adding good != 1 (hidden, inferable) gives F1 0.76. The recorded predicate uses the model's own policy logit (dev F1 0.82, mass recall 0.94), so part of the band condition is a readout of the agent's own state, not of the task.",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 5,
+    "predicate": "(phase==D1)&(in_rew==1)&(choice<-1.52)&(choice>-4.44)&((ep_trial>=50)|(prev_common==0)&(ep_trial>=10))",
+    "split": "test",
+    "precision": 0.8331710483609218,
+    "recall": 0.890206686086836,
+    "f1": 0.8607450625356268,
+    "mass_recall": 0.9364550039602574,
+    "correlation": 0.771252358629857,
+    "n_active": 57672,
+    "n_predicted": 61620,
+    "coverage_by_activation_quartile": [
+      0.7925509779442363,
+      0.837772229157997,
+      0.9421556387848523,
+      0.9883478984602581
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 5,
+    "predicate": "(phase==D1)&(in_rew==1)&(choice<-1.52)&(choice>-4.44)&((ep_trial>=50)|(prev_common==0)&(ep_trial>=10))",
+    "split": "dev",
+    "precision": 0.8477887296543675,
+    "recall": 0.8896884941901019,
+    "f1": 0.8682333994670564,
+    "mass_recall": 0.9344101436307064,
+    "correlation": 0.777084842360279,
+    "n_active": 58779,
+    "n_predicted": 61684,
+    "coverage_by_activation_quartile": [
+      0.8004083021435863,
+      0.8370193943518204,
+      0.9308608370193944,
+      0.9904723016197087
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 5,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Confirmed core facts: the unit fires only at D1 (0 activations at GO and D2) and only when in_rew==1. Only 11 activations follow a1 and 27 come before an a1 choice. 99.8% of activation mass lies in choice [-4.44,-1.52]. No activations at value >= 8.10, and only 48 in [7.73, 8.10). 89.8% of mass falls in trials 50-99. Reported scores reproduce (dev F1 0.818, test F1 0.814).",
+      "Systematic false-positive block: the ep_trial>=40 cutoff is wrong for trials 40-49. Precision there is 0.29 (11477 predicted steps), against 0.85 for ep_trial>=50. Moving the cutoff to 50 alone raises dev F1 to 0.842.",
+      "Systematic class the label omits: after a rare-transition rewarded trial (prev_common==0, i.e. a2 -> S1 rare, rewarded) the unit fires well before late episode. In-band precision is 0.80 in trials 10-39 and 0.97 at ep_trial>=40. After common-rewarded trials in trials 20-49 it is only 0.17. So 'late in the episode' is only true for the common-transition case.",
+      "'Happens when S2 is the good state' overclaims. 21% of activation mass has good != 2 (7.8% good==1, 13.4% unknown). Within the recorded predicate, precision is actually higher when good==1 (0.80) than when good==2 (0.75).",
+      "Magnitude-decay claim is mixed. With prev_action==2, a first reward after an unrewarded trial (tv('reward',-2)==0) fires LESS often (precision 0.385) than a reward continuing a run (0.50 after one prior reward, 0.55 after two). Activations there are larger per active step (mass/recall ratio about 1.34 vs 0.90), but the profile also shows sustained runs of roughly constant magnitude (0.40, 0.40, 0.41, 0.42). Decay is not the general pattern.",
+      "Remaining false positives of the recorded predicate are mostly in-band D1 steps inside reward runs and in trials 40-49, not scattered noise.",
+      "Observed-only check: D1 & in_rew==1 & prev_action==2 & (ep_trial>=50 | prev_common==0 & ep_trial>=10) scores dev F1 0.70. The policy-logit band stays necessary for the high score, so the explanation still partly reads out the agent's internal policy state."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "D1 after a rewarded a2 trial while the D1 policy moderately prefers a2: late in the episode (trial >= 50) after common transitions, but already from about trial 10 after a rare-transition reward",
+    "better_predicate": "(phase==D1)&(in_rew==1)&(choice<-1.52)&(choice>-4.44)&((ep_trial>=50)|(prev_common==0)&(ep_trial>=10))",
+    "better_predicate_test_f1": 0.861
+  },
+  "final_label": "D1 after a rewarded a2 trial while the D1 policy moderately prefers a2: late in the episode (trial >= 50) after common transitions, but already from about trial 10 after a rare-transition reward",
+  "original_predicate": "(phase == D1) & (in_rew == 1) & (choice < -1.52) & (choice > -4.44) & (ep_trial >= 40)",
+  "original_test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 5,
+    "predicate": "(phase == D1) & (in_rew == 1) & (choice < -1.52) & (choice > -4.44) & (ep_trial >= 40)",
+    "split": "test",
+    "precision": 0.7471357716738696,
+    "recall": 0.8932931058399223,
+    "f1": 0.8137033468639933,
+    "mass_recall": 0.9431624200452788,
+    "correlation": 0.7319091622209314,
+    "n_active": 57672,
+    "n_predicted": 68954,
+    "coverage_by_activation_quartile": [
+      0.7732001664585935,
+      0.844916077125815,
+      0.9688583714800943,
+      0.9861978082951866
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 5,
+    "predicate": "(phase == D1) & (in_rew == 1) & (choice < -1.52) & (choice > -4.44) & (ep_trial >= 40)",
+    "split": "dev",
+    "precision": 0.7559504048729089,
+    "recall": 0.8910154987325405,
+    "f1": 0.8179447134155865,
+    "mass_recall": 0.9404139521473156,
+    "correlation": 0.7352919183401125,
+    "n_active": 58779,
+    "n_predicted": 69281,
+    "coverage_by_activation_quartile": [
+      0.7762504253147329,
+      0.8395372575706023,
+      0.9613473970738347,
+      0.9869334422213148
+    ]
+  },
+  "predicate_from": "skeptic"
+}

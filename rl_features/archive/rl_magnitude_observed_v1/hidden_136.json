@@ -1,0 +1,76 @@
+{
+  "label": "GO after common-unrewarded a1->S1, larger with S1 belief and later in episode",
+  "terms": "(phase == GO) * last_is(\"a1 S1 u\") ;; (phase == GO) * last_is(\"a1 S1 u\") * belief ;; (phase == GO) * last_is(\"a1 S1 u\") * ep_dec ;; (phase == GO) * last_is(\"a2 S1 u\") ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) ;; (phase == GO) * last_is(\"a1 S1 u\") * (tv(\"reward\", -2) == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Active only at GO. Magnitude is almost entirely set by the previous trial being a1 -> S1 (common) unrewarded: that one indicator gives dev R^2 beyond timing 0.59. Within those trials it is larger when the ideal-observer belief still favours S1 being good (graded, belief or belief_lo) and later in the episode (ep_dec), and a little smaller if the trial before was also unrewarded. There is a small bump after a2 -> S1 rare unrewarded, and a moderate one at the window-first GO when the previous outcome was unrewarded (previous trial unknown in the window, so mostly unseen a1 S1 u). It is near zero after any rewarded trial and after unrewarded trials that reached S2. Dev R^2 beyond timing 0.71 with these observed-only terms, above the additive all ceiling of 0.66 because the terms interact last trial with belief and episode time. The earlier model-based explanation used policy deciles (0.20 alone); the observed belief carries the same graded information, so dropping model outputs costs essentially nothing.",
+  "gate": "hidden",
+  "feature": 136,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 136,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S1 u\")",
+      "(phase == GO) * last_is(\"a1 S1 u\") * belief",
+      "(phase == GO) * last_is(\"a1 S1 u\") * ep_dec",
+      "(phase == GO) * last_is(\"a2 S1 u\")",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0)",
+      "(phase == GO) * last_is(\"a1 S1 u\") * (tv(\"reward\", -2) == 0)"
+    ],
+    "weights": [
+      0.03589947947150043,
+      0.20832266012793035,
+      0.05771093750327744,
+      0.012200147993791398,
+      0.06326259007805587,
+      -0.04046978375075257
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7195287793031262,
+    "r2": 0.7384983130439748,
+    "r2_timing_only": 0.06763451057016034
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 136,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S1 u\")",
+      "(phase == GO) * last_is(\"a1 S1 u\") * belief",
+      "(phase == GO) * last_is(\"a1 S1 u\") * ep_dec",
+      "(phase == GO) * last_is(\"a2 S1 u\")",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0)",
+      "(phase == GO) * last_is(\"a1 S1 u\") * (tv(\"reward\", -2) == 0)"
+    ],
+    "weights": [
+      0.03589947947150043,
+      0.20832266012793035,
+      0.05771093750327744,
+      0.012200147993791398,
+      0.06326259007805587,
+      -0.04046978375075257
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.713700205232497,
+    "r2": 0.7320171217345772,
+    "r2_timing_only": 0.06397809861147452
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The 'larger later in episode' claim is wrong in the last tenth of the episode. Within GO after a1 S1 u, the episode-time effect rises and then collapses near the end. Adding $G*(ep_trial>=90) and $G*(ep_trial>=95) to the linear ep_dec term gives fitted weights of -0.32 and -0.53, and the activation is roughly zero by trials 95-99. In misses, the worst-fit windows are a1 S1 u GOs at t95-t99 with actual 0.15-0.25 against predicted 0.66-0.73. Swapping the linear ep_dec for a per-decile table (decile 9 set low) raises test R^2 beyond timing from 0.72 to 0.76.",
+      "The core claim holds. last_is('a1 S1 u') at GO alone gives test R^2 beyond timing of 0.59. The residual is +0.40 in that cell and about -0.034 in every other previous-trial cell except a2 S1 u (+0.003).",
+      "The belief effect is graded but not monotone, and it is weaker than the explanation suggests. With bins inside a1 S1 u, relative to belief >= 0.9: below 0.3 is -0.044, 0.3-0.5 is +0.016, 0.5-0.7 is +0.045 and 0.7-0.9 is +0.084. So it peaks at 0.7-0.9, not at the highest belief. Adding belief to the indicator alone moves test R^2 only from 0.59 to 0.61.",
+      "The 'smaller effects' are real but tiny. The a2 S1 u term has a weight of only 0.012. The tv('reward',-2)==0 term (-0.04) is small.",
+      "The window-start term (prev_action==-1, prev_reward==0) still leaves the largest single miss (actual 0.83, predicted 0.11 at t74). Scaling it by belief barely helps (test 0.762).",
+      "The future upcoming choice adds little: the action==1 term inside a1 S1 u moves test R^2 from 0.720 to 0.727. Being observed-only costs essentially nothing compared with the 0.66 'all' ceiling, so that part of the explanation holds."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after common-unrewarded a1->S1. It ramps up over the episode but collapses in the last ~10 trials, and it is larger when the observed belief still moderately favours S1.",
+    "better_terms": "(phase == GO) * last_is('a1 S1 u') ;; (phase == GO) * last_is('a1 S1 u') * belief ;; (phase == GO) * last_is('a1 S1 u') * ep_dec ;; (phase == GO) * last_is('a1 S1 u') * (ep_trial >= 90) ;; (phase == GO) * last_is('a1 S1 u') * (ep_trial >= 95) ;; (phase == GO) * last_is('a2 S1 u') ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * belief ;; (phase == GO) * last_is('a1 S1 u') * (tv('reward', -2) == 0)",
+    "better_terms_test_r2_beyond_timing": 0.762
+  },
+  "final_label": "GO after common-unrewarded a1->S1. It ramps up over the episode but collapses in the last ~10 trials, and it is larger when the observed belief still moderately favours S1."
+}

@@ -1,0 +1,71 @@
+{
+  "label": "Late-episode D1 after rewarded S1 visit, strongest after rare a2->S1 reward",
+  "terms": "(phase == D1) * last_is(\"a2 S1 r\") * np.exp((ep_trial-99)/10.) ;; (phase == D1) * last_is(\"a1 S1 r\") * np.exp((ep_trial-99)/10.) ;; (phase == D1) * (in_rew==1) * (prev_state==2) * np.exp((ep_trial-99)/10.) ;; (phase == D1) * (in_rew==1) * (prev_action==-1) * np.exp((ep_trial-99)/10.) ;; (phase == D1) * (in_rew==0) * np.exp((ep_trial-99)/10.)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1, and its magnitude grows roughly exponentially toward the end of the episode (scale ~10 trials before trial 99). Within that late-episode ramp the size is set by the previous trial: largest after a rare-rewarded a2->S1 trial (weight ~3.1), smaller after common-rewarded a1->S1 (~0.9), and pushed below the ramp after S2-rewarded trials (~-0.5) or unrewarded trials (~-0.5). A small extra term for rewarded first-window trials with unknown previous choice. Silent at GO and D2. Trial-before, good state, value and policy add little. All terms observed-only. Test R^2 beyond timing 0.80 (dev 0.80; 4 terms without the first-trial term 0.78), far above the profile all ceiling of 0.18, which uses phase-specific tables without the ep_trial interaction.",
+  "gate": "hidden",
+  "feature": 36,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 36,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S1 r\") * np.exp((ep_trial-99)/10.)",
+      "(phase == D1) * last_is(\"a1 S1 r\") * np.exp((ep_trial-99)/10.)",
+      "(phase == D1) * (in_rew==1) * (prev_state==2) * np.exp((ep_trial-99)/10.)",
+      "(phase == D1) * (in_rew==1) * (prev_action==-1) * np.exp((ep_trial-99)/10.)",
+      "(phase == D1) * (in_rew==0) * np.exp((ep_trial-99)/10.)"
+    ],
+    "weights": [
+      3.1133013412856028,
+      0.8711452810409421,
+      -0.51065255546982,
+      0.15132980087057357,
+      -0.5120953778670885
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8014432177291578,
+    "r2": 0.8422327231965951,
+    "r2_timing_only": 0.20542992790746473
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 36,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S1 r\") * np.exp((ep_trial-99)/10.)",
+      "(phase == D1) * last_is(\"a1 S1 r\") * np.exp((ep_trial-99)/10.)",
+      "(phase == D1) * (in_rew==1) * (prev_state==2) * np.exp((ep_trial-99)/10.)",
+      "(phase == D1) * (in_rew==1) * (prev_action==-1) * np.exp((ep_trial-99)/10.)",
+      "(phase == D1) * (in_rew==0) * np.exp((ep_trial-99)/10.)"
+    ],
+    "weights": [
+      3.1133013412856028,
+      0.8711452810409421,
+      -0.51065255546982,
+      0.15132980087057357,
+      -0.5120953778670885
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7837713057742344,
+    "r2": 0.8275390894064605,
+    "r2_timing_only": 0.20241431780801455
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The window-start error class remains: the worst-fit dev windows are D1 steps on the first trial of a window, at trials 95-96 with reward 1 and the previous trial unknown. Actual is about 3.0 against a prediction of 0.47. The previous trial probably was an a2->S1 rewarded trial that falls outside the window. The window cannot observe it, so no term can fix this, but it is a systematic miss and the small prev_action==-1 term only partly covers it.",
+      "The history before the last trial adds a little that the label leaves out. After a2 S1 r, the activation is smaller when the trial two back was a1 (weight -0.87). Example: a run of a1 S1c trials followed by a2 S1R, where actual is 1.73 against a prediction of 3.48. This term raises test R^2 only from 0.801 to 0.804, so 'the trial before last adds little' holds.",
+      "Value and choice interaction terms each add less than 0.01 test R^2 (0.8095 and 0.8068), which matches 'value and policy add little'.",
+      "The ~10-trial scale is the best one tested. Test R^2 by scale: 5 -> 0.687, 7 -> 0.766, 10 -> 0.801, 14 -> 0.786, 20 -> 0.724.",
+      "The rewarded-S1 terms carry most of the fit: the a2 S1 r term alone scores 0.52, and adding a1 S1 r brings it to 0.67. The terms for rewarded S2 trials and for unrewarded trials add another 0.13, so they matter. Their negative weights are relative to the timing baseline, not absolute decreases.",
+      "Mean misses error by phase is about 0 (D1 -0.002). The largest error by phase x previous trial is +0.02 (D1 after a2 S1 r), so no large systematic class is left among observed histories."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Late-episode D1 after rewarded S1 visit, strongest after rare a2->S1 reward",
+    "better_terms": "(phase == D1) * last_is('a2 S1 r') * np.exp((ep_trial-99)/10.) ;; (phase == D1) * last_is('a1 S1 r') * np.exp((ep_trial-99)/10.) ;; (phase == D1) * (in_rew==1) * (prev_state==2) * np.exp((ep_trial-99)/10.) ;; (phase == D1) * (in_rew==1) * (prev_action==-1) * np.exp((ep_trial-99)/10.) ;; (phase == D1) * (in_rew==0) * np.exp((ep_trial-99)/10.) ;; (phase == D1) * last_is('a2 S1 r') * np.exp((ep_trial-99)/10.) * (tv('prev_reward',-1)==1) ;; (phase == D1) * last_is('a2 S1 r') * np.exp((ep_trial-99)/10.) * (tv('action',-2)==1)",
+    "better_terms_test_r2_beyond_timing": 0.8042
+  },
+  "final_label": "Late-episode D1 after rewarded S1 visit, strongest after rare a2->S1 reward"
+}

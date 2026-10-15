@@ -1,0 +1,64 @@
+{
+  "label": "end-of-episode clock at GO (onset earlier when choosing a2)",
+  "predicate": "(phase == GO) & (((model_act == 2) & (ep_trial >= 82)) | ((model_act == 1) & (ep_trial >= 89)))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Time-in-episode unit. Never active before episode trial ~78, and its rate climbs steeply to 36% of steps in trials 90-99. 97% of activation mass is at GO; it is almost silent at D1 and D2 and never active when S2 is shown. Within a GO step, magnitude increases with ep_trial (activation ramps across consecutive late trials in the example windows), and the unit is strongly tied to low model value (88% of mass falls in the lowest value bin, below 5.22, and there is no activation above value 7.1). That fits value falling as the episode end approaches. Onset depends on the agent own choice: it turns on around trial 82 when the policy picks a2, but only around trial 89 when it picks a1 (a2 holds 75% of mass). Simple version (phase == GO) & (ep_trial >= 85): dev F1 0.82, mass recall 0.94. Adding the choice-dependent onset gives dev F1 0.88, mass recall 0.96. Uses no future variables: ep_trial can be tracked internally, and model_act is the agent own GO decision. Rare extra firing comes from in_rew = -1 penalties and D1 errors, which are tiny in mass.",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 17,
+    "predicate": "(phase == GO) & (((model_act == 2) & (ep_trial >= 82)) | ((model_act == 1) & (ep_trial >= 89)))",
+    "split": "test",
+    "precision": 0.8921977367480644,
+    "recall": 0.8751606603348412,
+    "f1": 0.8835970810792592,
+    "mass_recall": 0.9602259434893646,
+    "correlation": 0.8295178996036918,
+    "n_active": 59909,
+    "n_predicted": 58765,
+    "coverage_by_activation_quartile": [
+      0.6227133128588597,
+      0.8842224744608399,
+      0.9937237096881886,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 17,
+    "predicate": "(phase == GO) & (((model_act == 2) & (ep_trial >= 82)) | ((model_act == 1) & (ep_trial >= 89)))",
+    "split": "dev",
+    "precision": 0.8880811587912982,
+    "recall": 0.8685578861731102,
+    "f1": 0.8782110317325489,
+    "mass_recall": 0.9607057611889732,
+    "correlation": 0.8239049295474199,
+    "n_active": 56542,
+    "n_predicted": 55299,
+    "coverage_by_activation_quartile": [
+      0.5978353140916808,
+      0.8834182229767968,
+      0.9929961089494164,
+      1.0
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 17,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "All factual claims hold up on the dev split. The unit has 0 active steps in episode trials 0-69 and 259 in trials 70-79, with mass share 0.001. Trials 90-99 have a 36.2% rate. 97.3% of the mass is at GO. It is never active when S2 is shown (in_state == 2 gives 0 active steps) and never above value 7.13 (0 active steps). 87.9% of the mass is at value < 5.22. a2 holds 74.7% of the mass.",
+      "The test scores reproduce exactly: P 0.892, R 0.875, F1 0.884, mass recall 0.96. The simpler predicate GO & ep_trial >= 85 gets test F1 0.838, so the choice-dependent onset earns its place.",
+      "The onset is a gradual ramp, not a sharp step. For a2, precision at GO is 0.15 at trial 80, 0.42 at 82, 0.76 at 84 and 0.94 at 86. For a1 it is 0.26 at 88, 0.56 at 90 and 0.86 at 92. So the cutoffs 82 and 89 are rough midpoints. Most of the false positives (6335 test steps) sit at GO in the ramp trials. They are boundary effects, not a separate class.",
+      "Missed activations hold 4.0% of the test mass. They are weak late-episode activations at D1, and at D2 after S1 is shown (D2 & S1 & ep_trial >= 85 has precision 0.06), plus penalty inputs and D1 fixation errors. This is minor and partly mentioned in the explanation.",
+      "There is a mild prev_reward effect not mentioned: within late GO, the rate is 0.90 after no reward vs 0.79 after reward. Adding it does not help (F1 0.878).",
+      "The value threshold is an alternative: GO & value < 6.0 gets dev F1 0.852, and adding value < 6.3 to the recorded predicate gives 0.888 vs 0.884. That gain is negligible, so value is a correlate rather than a better explanation. No systematic counterexample class remains."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

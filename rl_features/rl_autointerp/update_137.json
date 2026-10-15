@@ -1,0 +1,106 @@
+{
+  "label": "D2 rare transition a1->S2, late in the episode, after a non-rare previous trial",
+  "predicate": "(phase == D2) & (in_action == 1) & (in_state == 2) & (ep_trial >= 40) & (ep_trial < 92) & (prev_common != 0) & (stay != 0)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (100% of mass), and only when the agent chose a1 and landed in S2, i.e. the rare a1->S2 transition (in_action=1 & in_state=2 covers 99% of mass; the mirror rare a2->S1 never fires, nor does any common transition). It is also strongly gated by episode time: silent for trials 0-39, ramps up from 40 to 89, and nearly silent in 90-99. Within that window it is suppressed when the previous trial was itself rare (prev_common==0); adding prev_reward==1 raises precision to 0.86 but loses mass recall, so I kept the simpler prev_common condition. The activation is larger when the prior trials were common a1->S1 and good=S1 (top windows are a long streak of a1 S1c rewarded, then a1 S2R). It does not fire at D1 or GO, on rewarded-input steps, or on common transitions. All variables are observed at D2, so no future variables are used; the episode-time dependence means the agent is implicitly tracking trial count.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 137,
+    "predicate": "(phase == D2) & (in_action == 1) & (in_state == 2) & (ep_trial >= 40) & (ep_trial < 92) & (prev_common != 0) & (stay != 0)",
+    "split": "test",
+    "precision": 0.777191894127378,
+    "recall": 0.9148107581842522,
+    "f1": 0.8404047179831182,
+    "mass_recall": 0.9483762280862147,
+    "correlation": 0.7648861179203128,
+    "n_active": 16434,
+    "n_predicted": 19344,
+    "coverage_by_activation_quartile": [
+      0.8094426867851059,
+      0.9233390119250426,
+      0.9559396299902629,
+      0.9705452775073028
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 137,
+    "predicate": "(phase == D2) & (in_action == 1) & (in_state == 2) & (ep_trial >= 40) & (ep_trial < 92) & (prev_common != 0) & (stay != 0)",
+    "split": "dev",
+    "precision": 0.7882550159777882,
+    "recall": 0.9144333029474324,
+    "f1": 0.8466689173981543,
+    "mass_recall": 0.9480072185083129,
+    "correlation": 0.7720077668399368,
+    "n_active": 16455,
+    "n_predicted": 19089,
+    "coverage_by_activation_quartile": [
+      0.8142926592124453,
+      0.9156538648517258,
+      0.9530870199319397,
+      0.9747143204473621
+    ]
+  },
+  "gate": "update",
+  "feature": 137,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Main structure checks out. Dev split: 100% of activation mass is at D2 and none is at D1 or GO. 98.9% of the mass is at in_action==1 & in_state==2. The mirror rare transition a2->S1 (in_state==1) never fires. Nothing fires when in_rew==1. The window ep_trial 40-91 is confirmed: trials 0-29 have 0 activations, trials 30-39 have 63, trials >=92 have precision 0.02. Test scores reproduce (P 0.743, R 0.921, F1 0.823, mass recall 0.952).",
+      "One factual claim is false: 'never fires on any common transition'. There are 394 dev activations on a2->S2 common steps (1.1% of the mass, for example 'a2 S2c:0.15' and 'a2 S2c:0.17' in the profile and in the test misses). The amount is small, but the claim as stated is wrong.",
+      "Systematic false-positive class: switch trials. When prev_action==2 (stay==0, the agent switched from a2 to a1 and then hit S2), precision is only 0.11 on dev (881 predicted) and 0.30 on test (1679 predicted). The label mentions only 'after a non-rare previous trial', but the feature is also suppressed after a switch.",
+      "Second systematic false-positive class: unrewarded previous trial. Within the predicate, prev_reward==0 has dev precision 0.39 over 4351 predicted steps. That accounts for roughly half of all false positives. The other agent noted this but dropped it from the predicate, and the label does not mention it.",
+      "Adding (stay != 0) to the predicate raises test F1 from 0.823 to 0.840 (P 0.777, mass recall 0.948). Further adding value>5.22 gives test F1 0.849. So the original predicate leaves a small systematic gap that can be fixed.",
+      "Good state: 86% of the mass is at good==1, but that is largely confounded with the agent choosing a1. Adding good!=2 lowers F1, so it is not an independent driver.",
+      "No future variables are used. The variables in the predicate are observed at D2, and the time gating via ep_trial is real."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 when the agent chose a1 and reached S2 (rare a1->S2), in mid-to-late episode (trials 40-91), on a repeated a1 choice whose previous trial was not rare. Strongest after a rewarded previous trial; suppressed after a switch from a2 or an unrewarded previous trial.",
+    "better_predicate": "(phase == D2) & (in_action == 1) & (in_state == 2) & (ep_trial >= 40) & (ep_trial < 92) & (prev_common != 0) & (stay != 0)",
+    "better_predicate_test_f1": 0.84
+  },
+  "final_label": "D2 when the agent chose a1 and reached S2 (rare a1->S2), in mid-to-late episode (trials 40-91), on a repeated a1 choice whose previous trial was not rare. Strongest after a rewarded previous trial; suppressed after a switch from a2 or an unrewarded previous trial.",
+  "original_predicate": "(phase == D2) & (in_action == 1) & (in_state == 2) & (ep_trial >= 40) & (ep_trial < 92) & (prev_common != 0)",
+  "original_test_scores": {
+    "gate": "update",
+    "feature": 137,
+    "predicate": "(phase == D2) & (in_action == 1) & (in_state == 2) & (ep_trial >= 40) & (ep_trial < 92) & (prev_common != 0)",
+    "split": "test",
+    "precision": 0.743029648537208,
+    "recall": 0.9210782524035536,
+    "f1": 0.8225289354996468,
+    "mass_recall": 0.9523657522822446,
+    "correlation": 0.7481648895352907,
+    "n_active": 16434,
+    "n_predicted": 20372,
+    "coverage_by_activation_quartile": [
+      0.8211243611584327,
+      0.9303966901922609,
+      0.9615384615384616,
+      0.9712755598831548
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "update",
+    "feature": 137,
+    "predicate": "(phase == D2) & (in_action == 1) & (in_state == 2) & (ep_trial >= 40) & (ep_trial < 92) & (prev_common != 0)",
+    "split": "dev",
+    "precision": 0.758137205808713,
+    "recall": 0.9200850805226375,
+    "f1": 0.8312971859986272,
+    "mass_recall": 0.9517802025392524,
+    "correlation": 0.7575165712252664,
+    "n_active": 16455,
+    "n_predicted": 19970,
+    "coverage_by_activation_quartile": [
+      0.8249878463782208,
+      0.9229460379193,
+      0.956490034030141,
+      0.975929978118162
+    ]
+  },
+  "predicate_from": "skeptic"
+}

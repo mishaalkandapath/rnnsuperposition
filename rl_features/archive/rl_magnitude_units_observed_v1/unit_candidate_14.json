@@ -1,0 +1,60 @@
+{
+  "label": "late-episode ramp; GO lower after a1 / S1-belief / reward; D2 higher in S1",
+  "terms": "(phase == GO) * table(prev_action, {1: 1, 2: -1}) * np.exp(ep_trial / 15.0) ;; (phase == GO) * np.clip(belief_lo, -4, 4) * np.exp(ep_trial / 15.0) ;; (phase == D2) * table(state, {1: 1, 2: -1}) * np.exp(ep_trial / 15.0) ;; (phase == D1) * (prev_reward == 1) * np.exp(ep_trial / 15.0) ;; (phase == GO) * (prev_reward == 1) * table(prev_action, {1: 1, 2: -1}) * np.exp(ep_trial / 15.0) ;; (phase == GO) * (prev_reward == 1) * np.exp(ep_trial / 15.0)",
+  "verdict": "partially_explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw candidate n of unit 14 sits near -1 for most of the episode and ramps strongly toward + in the last ~20 trials (timing alone R^2 0.88). All history effects are small early and grow with that ramp, so each term is scaled by exp(ep_trial/15); unscaled versions score only 0.10 dev vs 0.26 scaled. At GO it is lower after choosing a1 (higher after a2), lower when the ideal-observer belief favours S1 (belief_lo), and lower after a reward (with an extra drop after rewarded a1), i.e. it is higher when the observed history points to a2/S2 or the last trial went unrewarded. At D2 it is higher when S1 is reached and lower for S2. At D1 it is higher after a rewarded trial. Only observed quantities used (no value/policy/model_act, no future). Test R^2 beyond timing 0.248 (dev 0.273), above the profile additive all ceiling 0.21 and all-observed 0.17 because of the time scaling. Residual misses are large whole-window offsets late in the episode (episode-level drift not captured by history) and leftover GO-after-unrewarded under-prediction; adding the trial-before reward, a D1 belief x last-state term or a within-decile time ramp added <0.015 dev. Replacing the model value/policy with belief loses little: the policy decile reference alone was 0.08 vs belief decile 0.06.",
+  "gate": "unit_candidate",
+  "feature": 14,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 14,
+    "terms": [
+      "(phase == GO) * table(prev_action, {1: 1, 2: -1}) * np.exp(ep_trial / 15.0)",
+      "(phase == GO) * np.clip(belief_lo, -4, 4) * np.exp(ep_trial / 15.0)",
+      "(phase == D2) * table(state, {1: 1, 2: -1}) * np.exp(ep_trial / 15.0)",
+      "(phase == D1) * (prev_reward == 1) * np.exp(ep_trial / 15.0)",
+      "(phase == GO) * (prev_reward == 1) * table(prev_action, {1: 1, 2: -1}) * np.exp(ep_trial / 15.0)",
+      "(phase == GO) * (prev_reward == 1) * np.exp(ep_trial / 15.0)"
+    ],
+    "weights": [
+      -0.0002376752444102928,
+      -9.470367908856384e-05,
+      0.00028230775926770804,
+      0.00033535824030112086,
+      -1.8006742938070944e-05,
+      -0.0001587135916207779
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.2484028960605169,
+    "r2": 0.908360852099261,
+    "r2_timing_only": 0.8780741072305708
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 14,
+    "terms": [
+      "(phase == GO) * table(prev_action, {1: 1, 2: -1}) * np.exp(ep_trial / 15.0)",
+      "(phase == GO) * np.clip(belief_lo, -4, 4) * np.exp(ep_trial / 15.0)",
+      "(phase == D2) * table(state, {1: 1, 2: -1}) * np.exp(ep_trial / 15.0)",
+      "(phase == D1) * (prev_reward == 1) * np.exp(ep_trial / 15.0)",
+      "(phase == GO) * (prev_reward == 1) * table(prev_action, {1: 1, 2: -1}) * np.exp(ep_trial / 15.0)",
+      "(phase == GO) * (prev_reward == 1) * np.exp(ep_trial / 15.0)"
+    ],
+    "weights": [
+      -0.0002376752444102928,
+      -9.470367908856384e-05,
+      0.00028230775926770804,
+      0.00033535824030112086,
+      -1.8006742938070944e-05,
+      -0.0001587135916207779
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.2733269728863026,
+    "r2": 0.9089574121203068,
+    "r2_timing_only": 0.8747131316524722
+  },
+  "final_verdict": "partially_explained",
+  "observed_only": true
+}

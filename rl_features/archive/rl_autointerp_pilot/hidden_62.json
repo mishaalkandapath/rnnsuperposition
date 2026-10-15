@@ -1,0 +1,65 @@
+{
+  "label": "End-of-episode D1 after a reward, a2-stay context (upcoming a2)",
+  "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (action == 2) & (prev_action != 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": true,
+  "explanation": "Fires only at D1 (never GO or D2), only when the reward input is 1, and only in the last ~10 trials of the 100-trial episode (all activity is in ep_trial 50-99, concentrated at >= 89-90; at those steps the model value is in its lowest decile, which is consistent with fewer trials left). It fires almost only when the previous choice was not a1 and the agent is about to choose a2 (upcoming action == 2 in all but 1 of 9462 active steps; the GO policy logit is moderately toward a2, between -4.4 and -1.5). action at D1 is the agent upcoming choice, which it computes, so this is a legitimate future variable. The closest predicate with only observed variables, (phase == D1) & (in_rew == 1) & (ep_trial >= 89) & (prev_action != 1), scores dev F1 0.72 (P 0.57, R 0.97). The recorded predicate with the upcoming a2 choice scores dev F1 0.82 (P 0.73, R 0.93, mass recall 0.97). It does not fire after unrewarded trials, after a1 choices, or before trial ~85. Magnitude: in the example windows activation seems to grow over runs of consecutive rewarded a2 trials, and is larger in episodes that started with S1 good (start_high = 1 holds 86% of the mass). I only saw this in examples and did not check it quantitatively. Remaining false positives are late rewarded a2 D1 steps where the feature stays silent, often in low_first episodes.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 62,
+    "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (action == 2) & (prev_action != 1)",
+    "split": "test",
+    "precision": 0.6806497397886768,
+    "recall": 0.9474261881242454,
+    "f1": 0.7921809755426054,
+    "mass_recall": 0.9801743934040689,
+    "correlation": 0.7275566475121015,
+    "n_active": 9111,
+    "n_predicted": 12682,
+    "coverage_by_activation_quartile": [
+      0.8463564530289728,
+      0.95171202809482,
+      0.9925373134328358,
+      0.9991216512955643
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 62,
+    "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (action == 2) & (prev_action != 1)",
+    "split": "dev",
+    "precision": 0.7281673833939795,
+    "recall": 0.930564362714014,
+    "f1": 0.8170177229284588,
+    "mass_recall": 0.9700578043291805,
+    "correlation": 0.7587201807093247,
+    "n_active": 9462,
+    "n_predicted": 12092,
+    "coverage_by_activation_quartile": [
+      0.8076923076923077,
+      0.9344885883347421,
+      0.9813953488372092,
+      0.9987315010570824
+    ]
+  },
+  "gate": "hidden",
+  "feature": 62,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The predicate misses a systematic exclusion. The feature NEVER fires at D1 after a rare transition: (phase==D1)&(prev_common==0)&(prev_action>0) has 0 active steps on both dev and test. Yet prev_action != 1 lets in a2->S1 rare-rewarded trials, so these are a systematic false-positive class. The feature fires after a rewarded a2->S2 (common) trial, or at a window start, not after any 'non-a1' trial. Adding (prev_state != 1) raises dev F1 from 0.817 to 0.874 at ep_trial>=90.",
+      "The recorded predicate's test F1 is 0.792, below the 0.8 bar, so the verdict 'explained' is not supported by its own scores.",
+      "The observed-only comparison was weak. With the rare-transition exclusion, the observed-only predicate (phase==D1)&(in_rew==1)&(ep_trial>=91)&(prev_action!=1)&(prev_state!=1) scores test F1 0.807 (P 0.73, R 0.90). That already matches or beats the recorded future-variable predicate (test 0.792). So the claim that the upcoming a2 choice is 'clearly better' does not hold once the missing condition is added. Using the agent's own D1 policy logit (choice < -1.52), which it does compute, instead of the FUTURE action gives test F1 0.883 (P 0.89, R 0.87).",
+      "The start_high magnitude claim does not generalize. On dev, start_high==1 holds 86% of activation mass, but on test it holds only 27%. Adding start_high==1 to the predicate drops test F1 to 0.39. This is a quirk of the split, not a property of the feature.",
+      "Checks that held up: D1 only (no GO/D2 activity); needs in_rew==1 (none at 0 or -1); action==2 in 9461/9462 steps; only fires at ep_trial>=85 (D1 & ep_trial<85 has recall 0.0008); value is in the lowest bin; choice logit is in [-4.44,-1.52) for 98.7% of mass.",
+      "Remaining false positives under the improved predicate are mostly the first rewarded D1 of a run (activation ramps up across consecutive rewarded a2->S2 trials). Requiring the reward two trials back to be nonzero hurts recall more than it helps (test F1 0.76), so this ramp is a magnitude effect, not a clean binary condition."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "End-of-episode (trial >= ~90) D1 right after a rewarded common a2->S2 trial, while the agent leans toward repeating a2",
+    "better_predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 91) & (prev_action != 1) & (prev_state != 1) & (choice < -1.52)",
+    "better_predicate_test_f1": 0.883
+  },
+  "final_label": "End-of-episode (trial >= ~90) D1 right after a rewarded common a2->S2 trial, while the agent leans toward repeating a2"
+}

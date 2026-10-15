@@ -1,0 +1,110 @@
+{
+ "label": "Fires at GO after a2-rare-S1-rewarded trials, only around episode trials 70-89.",
+ "short_terms": "(phase == GO) * last_is('a2 S1 r') * (ep_trial >= 70) ;; (phase == GO) * last_is('a2 S1 r') * (ep_trial >= 90) ;; (phase == GO) * last_is('a2 S1 r') * (tv('reward', -2) == 1)",
+ "terms": "(phase == GO) * last_is(\"a2 S1 r\") * (ep_trial >= 70) ;; (phase == GO) * last_is(\"a2 S1 r\") * (ep_trial >= 90) ;; (phase == GO) * last_is(\"a2 S1 r\") * belief_lo ;; (phase == GO) * last_is(\"a2 S1 r\") * (ep_trial >= 60) ;; (phase == GO) * last_is(\"a2 S1 r\") * (tv(\"reward\", -2) == 1) ;; (phase == GO) * last_is(\"a2 S1 r\") * (ep_trial >= 80) ;; (phase == GO) * last_is(\"a2 S1 r\") * (ep_trial >= 60) * (tv(\"state\", -2) == 1)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Silent at D1 and D2. At GO, magnitude is driven almost entirely by the previous trial being a2 -> S1 (rare) rewarded, gated by episode time: near zero before ~trial 60, large (~0.4-0.9) in trials ~70-89, weaker again at trials 90+. Within those trials it is larger when the ideal-observer belief leans toward S2 (negative weight on belief_lo, i.e. the rare reward is more surprising / evidence for S1). Other previous-trial patterns slightly lower it. The free fit adds a finer episode-time ramp (60/80 steps), a small boost if the trial before was also rewarded, and a slight decrease if the trial before reached S1. Residual misses: some GO firing on window-first trials (previous trial unknown) and occasional firing after a1 S1 r late in the episode. Uses no future, hidden or model-output variables.",
+ "full_test_scores": {
+  "gate": "update",
+  "feature": 159,
+  "terms": [
+   "(phase == GO) * last_is(\"a2 S1 r\") * (ep_trial >= 70)",
+   "(phase == GO) * last_is(\"a2 S1 r\") * (ep_trial >= 90)",
+   "(phase == GO) * last_is(\"a2 S1 r\") * belief_lo",
+   "(phase == GO) * last_is(\"a2 S1 r\") * (ep_trial >= 60)",
+   "(phase == GO) * last_is(\"a2 S1 r\") * (tv(\"reward\", -2) == 1)",
+   "(phase == GO) * last_is(\"a2 S1 r\") * (ep_trial >= 80)",
+   "(phase == GO) * last_is(\"a2 S1 r\") * (ep_trial >= 60) * (tv(\"state\", -2) == 1)"
+  ],
+  "weights": [
+   0.3034941014048233,
+   -0.42919347209636516,
+   -0.02111562300198507,
+   0.16818759411879305,
+   0.053159736759609805,
+   0.18383788350015579,
+   -0.1295550350188179
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5737297081428255,
+  "r2": 0.6005504792939527,
+  "r2_timing_only": 0.06291963494400332
+ },
+ "gate": "update",
+ "feature": 159,
+ "test_scores": {
+  "gate": "update",
+  "feature": 159,
+  "terms": [
+   "(phase == GO) * last_is('a2 S1 r') * (ep_trial >= 70)",
+   "(phase == GO) * last_is('a2 S1 r') * (ep_trial >= 90)",
+   "(phase == GO) * last_is('a2 S1 r') * (tv('reward', -2) == 1)"
+  ],
+  "weights": [
+   0.5167799133278962,
+   -0.352274302673862,
+   0.08932635201987177
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5290857073609235,
+  "r2": 0.5587154627436879,
+  "r2_timing_only": 0.06291963494400332
+ },
+ "dev_scores": {
+  "gate": "update",
+  "feature": 159,
+  "terms": [
+   "(phase == GO) * last_is('a2 S1 r') * (ep_trial >= 70)",
+   "(phase == GO) * last_is('a2 S1 r') * (ep_trial >= 90)",
+   "(phase == GO) * last_is('a2 S1 r') * (tv('reward', -2) == 1)"
+  ],
+  "weights": [
+   0.5167799133278962,
+   -0.352274302673862,
+   0.08932635201987177
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.5366280946906365,
+  "r2": 0.5647278085734919,
+  "r2_timing_only": 0.0606418161327561
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The label says 'only around episode trials 70-89', but the short form does not say that. The fitted weights are +0.568 for ep>=70 and -0.345 for ep>=90, so from trial 90 on the predicted firing after a2 S1 r is still about 40% of the 70-89 level. The worst misses are in fact GO steps after a2 S1 r at t90-93 where the actual value is 0.66-0.98 and the prediction is about 0.17-0.27. Firing at 90+ is under-predicted, not absent.",
+   "The label leaves out the third short-form term (belief_lo, weight -0.027), so the label and short form do not match. That term is also weak: dropping it lowers test R^2 only from 0.518 to 0.501.",
+   "The belief_lo term is not the best third factor. Replacing it with 'trial before also rewarded', (tv('reward',-2)==1), gives test 0.529 against 0.518. belief<0.5 gives 0.517, state(-2)==S2 gives 0.508 and belief_cover gives 0.504. So 'more surprising rare reward' is a weaker story than 'two rewarded trials in a row'.",
+   "Core claims check out. Activation is exactly zero at D1 and D2. In the residual table, a2 S1 r at GO is +0.16 and every other previous-trial pattern is about -0.005 to -0.012. Gating by ep>=70 (rather than a linear ep_trial term: 0.379) is what lifts the score above the additive ceiling of 0.21. Adding an ep>=60 step only adds 0.003.",
+   "Remaining systematic misses are mostly firing on the window's first trial (the previous trial is unknown; a prev_action==-1 x late term adds nothing beyond the timing baseline) and smaller firing (0.2-0.4) after a1 S1 r late in the episode (adding a1 S1 r x ep>=70 adds nothing on test, 0.502). The misses summary puts the largest per-cell error at +0.021 for GO after a2 S1 r, i.e. under-prediction concentrated in the target cell. No large uncaptured error class outside it."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "GO after a rare a2-to-S1 rewarded trial, from trial 70, peaking 70-89; larger after two rewards in a row.",
+  "better_short_terms": "(phase == GO) * last_is('a2 S1 r') * (ep_trial >= 70) ;; (phase == GO) * last_is('a2 S1 r') * (ep_trial >= 90) ;; (phase == GO) * last_is('a2 S1 r') * (tv('reward', -2) == 1)",
+  "better_short_terms_test_r2_beyond_timing": 0.529
+ },
+ "final_label": "GO after a rare a2-to-S1 rewarded trial, from trial 70, peaking 70-89; larger after two rewards in a row.",
+ "original_short_terms": "(phase == GO) * last_is(\"a2 S1 r\") * (ep_trial >= 70) ;; (phase == GO) * last_is(\"a2 S1 r\") * (ep_trial >= 90) ;; (phase == GO) * last_is(\"a2 S1 r\") * belief_lo",
+ "original_test_scores": {
+  "gate": "update",
+  "feature": 159,
+  "terms": [
+   "(phase == GO) * last_is(\"a2 S1 r\") * (ep_trial >= 70)",
+   "(phase == GO) * last_is(\"a2 S1 r\") * (ep_trial >= 90)",
+   "(phase == GO) * last_is(\"a2 S1 r\") * belief_lo"
+  ],
+  "weights": [
+   0.5684900577993883,
+   -0.345138983821606,
+   -0.026545683857467396
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5179845454991608,
+  "r2": 0.5483127819337215,
+  "r2_timing_only": 0.06291963494400332
+ },
+ "terms_from": "skeptic"
+}

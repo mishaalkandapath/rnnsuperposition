@@ -1,0 +1,64 @@
+{
+  "label": "D1 late-episode (t78-96) after unrewarded rare a2->S1, scaled by belief S2 good",
+  "terms": "(phase == D1) * (ep_trial >= 78) * (ep_trial <= 96) * last_is(\"a2 S1 u\") ;; (phase == D1) * (ep_trial >= 78) * (ep_trial <= 96) * last_is(\"a2 S1 u\") * (-belief_lo) ;; (phase == D1) * (ep_trial >= 78) * (ep_trial <= 96) * (prev_action == -1) * (prev_reward == 0) * (-belief_lo) * (belief < 0.5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 and only late in the episode (about trials 78-96; off in the last trials). Magnitude is driven by the previous trial being a2 -> S1 (rare) unrewarded, and grows linearly with the ideal observer log-odds that S2 is good (-belief_lo): the stronger the evidence that S2 is good, the larger the activation; the indicator alone gets ~0 weight once the graded belief term is in. A third term covers the windows first trial (previous trial not in window) with an unrewarded previous trial and belief favouring S2, with the same slope. Other previous-trial patterns (including a2 S2 u) do not drive it; GO and D2 are always zero. Observed-only, no future or model-output terms. Dev R^2 beyond timing 0.67, test 0.70, far above the additive-table ceiling (all 0.24, all observed 0.16) because the effect is a conjunction of late episode x a2 S1 u x belief; the earlier model-based version used the policy, which here is replaced by belief at no loss.",
+  "gate": "update",
+  "feature": 79,
+  "test_scores": {
+    "gate": "update",
+    "feature": 79,
+    "terms": [
+      "(phase == D1) * (ep_trial >= 78) * (ep_trial <= 96) * last_is(\"a2 S1 u\")",
+      "(phase == D1) * (ep_trial >= 78) * (ep_trial <= 96) * last_is(\"a2 S1 u\") * (-belief_lo)",
+      "(phase == D1) * (ep_trial >= 78) * (ep_trial <= 96) * (prev_action == -1) * (prev_reward == 0) * (-belief_lo) * (belief < 0.5)"
+    ],
+    "weights": [
+      -0.0011514604407411632,
+      0.1439750120916845,
+      0.14281418360256573
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6980153619676774,
+    "r2": 0.7183743123809827,
+    "r2_timing_only": 0.06741717242956613
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 79,
+    "terms": [
+      "(phase == D1) * (ep_trial >= 78) * (ep_trial <= 96) * last_is(\"a2 S1 u\")",
+      "(phase == D1) * (ep_trial >= 78) * (ep_trial <= 96) * last_is(\"a2 S1 u\") * (-belief_lo)",
+      "(phase == D1) * (ep_trial >= 78) * (ep_trial <= 96) * (prev_action == -1) * (prev_reward == 0) * (-belief_lo) * (belief < 0.5)"
+    ],
+    "weights": [
+      -0.0011514604407411632,
+      0.1439750120916845,
+      0.14281418360256573
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6659054655065522,
+    "r2": 0.6878882992997741,
+    "r2_timing_only": 0.06579824428002756
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Every factual claim checks out. The terms reproduce test R^2 beyond timing of 0.698 and dev 0.666. The plain a2 S1 u indicator gets a weight of -0.001 next to the belief-scaled term. The feature is zero at GO and D2: indicator terms for those phases got weights of 0.003 and the score did not change. No other previous-trial pattern adds anything: a2 S2 u x belief got weight 0.008 and a1 S1 u x belief 0.011, lifting R^2 to just 0.699. Firing after trial 96 is negligible (weight 0.014, R^2 0.700).",
+      "The third term is not specific to a2->S1. It fires on any window-first trial where the previous reward was 0 and belief < 0.5, because the previous trial's choice and state are unknown there. It works as a proxy and accounts for about 0.09 R^2 (0.61 without it, 0.70 with it). The explanation describes this honestly, but 'only after a2->S1' holds only for in-window trials.",
+      "The hard window 78-96 approximates a peaked shape. Adding (ep_trial-87)^2 interactions raises test R^2 from 0.698 to 0.739. Widening the window to start at 70 drops it to 0.48, and starting at 74 gives 0.64. There is a small amount of firing at trials 71-75 (seen in one worst-fit example), but a term for trials 60-77 got weight 0.012 and raised R^2 by only 0.002.",
+      "Misses show no large systematic error class. Per-cell biases are at most 0.01 (D1 after a2 S1 u +0.010; other D1 patterns -0.007 to -0.009), which is mostly intercept offset. The worst windows are scattered cases where a2 S1 u with strong S2 belief gives zero activation, or the reverse. Whether the trial two back was a1 explains a little of this (weight -0.16, +0.006 R^2).",
+      "The claim that switching from the model's policy to observed belief 'lost nothing' could not be checked directly, because model terms are rejected in this run. The only reference is the additive policy-decile table (0.22), and the observed-belief conjunction beats it easily.",
+      "About 27-30% of the variance beyond timing is still unexplained. It looks like noise within the a2 S1 u cells, not a missing pattern."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 only, late episode (peaks around trial 87, roughly trials 78-96): after an unrewarded rare a2->S1 trial, scaled linearly by the ideal observer's belief that S2 is good. On window-first trials the term uses previous trial unrewarded plus belief favouring S2.",
+    "better_terms": "(phase == D1) * (ep_trial >= 78) * (ep_trial <= 96) * last_is(\"a2 S1 u\") * (-belief_lo) ;; (phase == D1) * (ep_trial >= 78) * (ep_trial <= 96) * (prev_action == -1) * (prev_reward == 0) * (-belief_lo) * (belief < 0.5) ;; (phase == D1) * (ep_trial >= 78) * (ep_trial <= 96) * last_is(\"a2 S1 u\") * (-belief_lo) * (ep_trial-87)**2 ;; (phase == D1) * (ep_trial >= 78) * (ep_trial <= 96) * (prev_action == -1) * (prev_reward == 0) * (-belief_lo) * (belief < 0.5) * (ep_trial-87)**2",
+    "better_terms_test_r2_beyond_timing": 0.739
+  },
+  "final_label": "D1 only, late episode (peaks around trial 87, roughly trials 78-96): after an unrewarded rare a2->S1 trial, scaled linearly by the ideal observer's belief that S2 is good. On window-first trials the term uses previous trial unrewarded plus belief favouring S2."
+}

@@ -1,0 +1,113 @@
+{
+ "label": "At GO early in the episode: high after reaching S2, low after S1, higher if unrewarded.",
+ "short_terms": "(phase == GO) * (prev_state == 2) * np.maximum(60 - ep_trial, 0) ;; (phase == GO) * (prev_state == 1) * np.maximum(60 - ep_trial, 0) ;; (phase == GO) * last_is('a2 S2 r') * np.maximum(60 - ep_trial, 0)",
+ "terms": "(phase == GO) * (prev_state == 2) * np.maximum(50 - ep_trial, 0) ;; (phase == GO) * (prev_state == 1) * np.maximum(50 - ep_trial, 0) ;; (phase == GO) * (prev_reward == 0) * np.maximum(50 - ep_trial, 0) ;; (phase == GO) * (prev_action == 1) * (prev_state == 2) * np.maximum(50 - ep_trial, 0) ;; (phase == GO) * (tv(\"state\", -2) == 2) * np.maximum(50 - ep_trial, 0) ;; (phase == GO) * belief_lo * np.maximum(50 - ep_trial, 0) ;; (phase == GO) * (prev_state == 2) * (prev_reward == 0) * np.maximum(50 - ep_trial, 0) ;; (phase == GO) * (tv(\"reward\", -2) == 0) * np.maximum(50 - ep_trial, 0)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Fires only at GO, and its scale decays over the first ~50 trials of the episode (timing). Beyond timing, the magnitude is set by the previous trial: raised when the last reached state was S2, lowered when it was S1, with an extra boost when the last trial was unrewarded, all scaled by an early-episode ramp max(50 - ep_trial, 0). This is an interaction with timing, not an additive offset. The free fit adds a rare a1->S2 boost (a1 S2 u/r is under-predicted by the short form), an extra S2-unrewarded boost and small trial-before terms; belief_lo adds almost nothing. No future variables used. Silent at D1 and D2.",
+ "full_test_scores": {
+  "gate": "reset",
+  "feature": 65,
+  "terms": [
+   "(phase == GO) * (prev_state == 2) * np.maximum(50 - ep_trial, 0)",
+   "(phase == GO) * (prev_state == 1) * np.maximum(50 - ep_trial, 0)",
+   "(phase == GO) * (prev_reward == 0) * np.maximum(50 - ep_trial, 0)",
+   "(phase == GO) * (prev_action == 1) * (prev_state == 2) * np.maximum(50 - ep_trial, 0)",
+   "(phase == GO) * (tv(\"state\", -2) == 2) * np.maximum(50 - ep_trial, 0)",
+   "(phase == GO) * belief_lo * np.maximum(50 - ep_trial, 0)",
+   "(phase == GO) * (prev_state == 2) * (prev_reward == 0) * np.maximum(50 - ep_trial, 0)",
+   "(phase == GO) * (tv(\"reward\", -2) == 0) * np.maximum(50 - ep_trial, 0)"
+  ],
+  "weights": [
+   0.012218976749316537,
+   -0.02034072411507412,
+   0.002844031036197655,
+   0.00854789578080007,
+   -0.002129214847362849,
+   0.00019560021104438112,
+   0.01152929511375483,
+   0.0033945205120754856
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7008752173022346,
+  "r2": 0.8272612469240123,
+  "r2_timing_only": 0.42251941976161067
+ },
+ "gate": "reset",
+ "feature": 65,
+ "test_scores": {
+  "gate": "reset",
+  "feature": 65,
+  "terms": [
+   "(phase == GO) * (prev_state == 2) * np.maximum(60 - ep_trial, 0)",
+   "(phase == GO) * (prev_state == 1) * np.maximum(60 - ep_trial, 0)",
+   "(phase == GO) * last_is('a2 S2 r') * np.maximum(60 - ep_trial, 0)"
+  ],
+  "weights": [
+   0.022678665900210632,
+   -0.014020704768006003,
+   -0.015245199141864316
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6920924770094325,
+  "r2": 0.8221893849636419,
+  "r2_timing_only": 0.42251941976161067
+ },
+ "dev_scores": {
+  "gate": "reset",
+  "feature": 65,
+  "terms": [
+   "(phase == GO) * (prev_state == 2) * np.maximum(60 - ep_trial, 0)",
+   "(phase == GO) * (prev_state == 1) * np.maximum(60 - ep_trial, 0)",
+   "(phase == GO) * last_is('a2 S2 r') * np.maximum(60 - ep_trial, 0)"
+  ],
+  "weights": [
+   0.022678665900210632,
+   -0.014020704768006003,
+   -0.015245199141864316
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.6920335369696311,
+  "r2": 0.8200914366031107,
+  "r2_timing_only": 0.4158176782413209
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The label says 'higher if unrewarded' as if it applies everywhere, but the profile residuals show reward has no effect after S1 (GO after a1 S1 r -0.220 vs a1 S1 u -0.229; a2 S1 r -0.215 vs a2 S1 u -0.224). The reward effect only appears after S2, and there it is mostly the common-rewarded case a2 S2 r (+0.088) sitting low against the other S2 histories (+0.27 to +0.45).",
+   "The recorded prev_reward==0 term adds only a little: on test, the 2-term S2/S1 ramp scores 0.616 and the recorded 3-term form scores 0.651. Its weight (+0.008) is small next to the state terms (+0.017 / -0.022).",
+   "Misses on the recorded short form show clear systematic errors by previous trial at GO. Under-predicted: a1 S2 u +0.186, a1 S2 r +0.094, a2 S2 u +0.071. Over-predicted: a2 S2 r -0.088, a2 S1 u -0.066, a1 S1 u -0.065. Because the reward term is shared across both states, it pushes the S1-unrewarded cases too high and can't separate a2 S2 r from the other S2 histories.",
+   "Swapping the reward term for last_is('a2 S2 r') * ramp raises test R^2 beyond timing to 0.690 (ramp 50) and 0.692 (ramp 60). The leftover systematic errors shrink: largest is GO after a1 S2 u +0.127, every other cell is within 0.06.",
+   "The other targeted variants don't beat it on test: prev_common==0 0.634, stay==0 0.622, last_is('a1 S2 u') 0.654, 'reward mismatches state' 0.630. Ramp lengths 30/40/70/80 also score lower (0.559/0.649/0.671/0.639).",
+   "The checks that held up: the feature is silent at D1 and D2, the core effect is S2 vs S1 on the previous trial scaled by an early-episode ramp, belief adds nothing, and no future or model-output variables are used."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At GO early in the episode: high after reaching S2 (except common rewarded a2 S2), low after S1.",
+  "better_short_terms": "(phase == GO) * (prev_state == 2) * np.maximum(60 - ep_trial, 0) ;; (phase == GO) * (prev_state == 1) * np.maximum(60 - ep_trial, 0) ;; (phase == GO) * last_is('a2 S2 r') * np.maximum(60 - ep_trial, 0)",
+  "better_short_terms_test_r2_beyond_timing": 0.692
+ },
+ "final_label": "At GO early in the episode: high after reaching S2 (except common rewarded a2 S2), low after S1.",
+ "original_short_terms": "(phase == GO) * (prev_state == 2) * np.maximum(50 - ep_trial, 0) ;; (phase == GO) * (prev_state == 1) * np.maximum(50 - ep_trial, 0) ;; (phase == GO) * (prev_reward == 0) * np.maximum(50 - ep_trial, 0)",
+ "original_test_scores": {
+  "gate": "reset",
+  "feature": 65,
+  "terms": [
+   "(phase == GO) * (prev_state == 2) * np.maximum(50 - ep_trial, 0)",
+   "(phase == GO) * (prev_state == 1) * np.maximum(50 - ep_trial, 0)",
+   "(phase == GO) * (prev_reward == 0) * np.maximum(50 - ep_trial, 0)"
+  ],
+  "weights": [
+   0.01659832690919304,
+   -0.021782163257713125,
+   0.008108792379308092
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6509703355086299,
+  "r2": 0.7984421468291132,
+  "r2_timing_only": 0.42251941976161067
+ },
+ "terms_from": "skeptic"
+}

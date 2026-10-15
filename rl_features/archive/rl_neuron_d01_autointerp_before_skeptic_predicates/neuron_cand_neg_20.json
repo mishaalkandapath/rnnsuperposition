@@ -1,0 +1,66 @@
+{
+  "label": "End-of-episode (low value) a2-committed: rewarded D1 or rare S1 after a2",
+  "predicate": "(value < 4) & (action == 2) & (((phase == D1) & (in_rew == 1)) | ((phase == D2) & (state == 1)))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": true,
+  "explanation": "Fires only in the last ~10 trials of an episode (99.7% of mass at ep_trial 90-99; never before trial 80), which shows up as the model value output dropping below ~5 (100% of mass in the lowest value bin). Within that window it is specific to a2: 99.5% of mass on trials where the agent chooses a2. It is active at D1 (74% of mass, mostly when the previous reward was 1) and at D2 when a2 led rarely to S1 (26%). Never active at GO. Magnitude rises across consecutive trials toward the episode end, and the strongest activations are at D2 S1-rare on the final trials. Predicate: value < 4 and action a2, and either D1 with reward input 1 or D2 reaching S1. At D1 the action is the agent upcoming choice (marked FUTURE but it is the agent own computation, which is allowed); no future random outcome is used. A version using only the previous action at D1 scored worse (F1 0.58). Dev F1 0.81, mass recall 0.94. Not active on a1 trials, at GO, or before trial ~85.",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 20,
+    "predicate": "(value < 4) & (action == 2) & (((phase == D1) & (in_rew == 1)) | ((phase == D2) & (state == 1)))",
+    "split": "test",
+    "precision": 0.7463117118602159,
+    "recall": 0.7767198490307086,
+    "f1": 0.7612122231095794,
+    "mass_recall": 0.9075699247531368,
+    "correlation": 0.7181099660052221,
+    "n_active": 11658,
+    "n_predicted": 12133,
+    "coverage_by_activation_quartile": [
+      0.4590051457975986,
+      0.776672384219554,
+      0.8798901853122855,
+      0.9914207275223061
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 20,
+    "predicate": "(value < 4) & (action == 2) & (((phase == D1) & (in_rew == 1)) | ((phase == D2) & (state == 1)))",
+    "split": "dev",
+    "precision": 0.7936073059360731,
+    "recall": 0.8218553864671997,
+    "f1": 0.8074843723601959,
+    "mass_recall": 0.9351930865034314,
+    "correlation": 0.7553893462076905,
+    "n_active": 11631,
+    "n_predicted": 12045,
+    "coverage_by_activation_quartile": [
+      0.5275103163686382,
+      0.8359697386519945,
+      0.9240027510316369,
+      1.0
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 20,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Several claims hold up. The unit is never active at GO (0 of 380k steps on dev and 0 of 396k on test). It is never active before ep_trial 80 (0 on both splits); 99.7% of the mass is at trials 90-99, and 100% is at value < 5.22. 99.5% of the mass is on action==2 trials. The phase split is 74% D1 / 26% D2. The original predicate reproduces: test P 0.746, R 0.777, F1 0.761, mass recall 0.908.",
+      "Systematic false-positive class: the D1 clause 'rewarded D1' is too broad. Among a2 trials with value<4, rewarded D1 steps fire only when the previous trial reached S2. With prev_state==2: dev P 0.960, test P 0.956. With prev_state==1: dev P 0.213 on 845 predicted steps, test P 0.192 on 1241. So the unit encodes 'reward just received from S2' (mostly common a2 rewarded), not reward in general. The label overclaims here.",
+      "The explanation states the observed-only predicate wrongly. The natural observed-only version, (value<4) & ((D1 & in_rew==1 & prev_action==2) | (D2 & in_state==1 & in_action==2)), scores dev F1 0.740 and test F1 0.693, not 0.58. The future 'action' variable therefore adds less than claimed. The gap is real (0.76 vs 0.69 on test) but modest.",
+      "The D2 clause is weak on its own: (value<4) & action==2 & D2 & state==1 has dev precision only 0.638 and holds 25% of the mass. Precision is higher when the previous trial also reached S1 (0.845) than when it reached S2 (0.591). This points to a build-up or accumulation effect rather than a clean 'rare S1 after a2' trigger.",
+      "Missed activations at D1 after reward 0 (persistence across steps within an active streak) hold about 5-7% of the mass: (value<4) & a2 & D1 & in_rew==0 has test mass 0.073 at P 0.27. These look like carry-over, not a separate condition.",
+      "Nearly all of the selectivity comes from value < 4 (the model's own value output), which works as a proxy for the episode ending. On their own, ep_trial thresholds do worse: ep>=92 gives dev F1 0.747 and ep>=94 gives 0.738. So 'end-of-episode' is really 'low predicted value'. The label already says this.",
+      "Test F1 is below the 0.8 bar. The refined predicate that excludes D1 steps after S1 raises it, but only to 0.786."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "Low-value (last ~10 trials) a2-committed: D1 right after a reward from S2, or D2 on reaching S1 after choosing a2",
+    "better_predicate": "(value<4.2)&(action==2)&(((phase==D1)&(in_rew==1)&(prev_state!=1))|((phase==D2)&(state==1)))",
+    "better_predicate_test_f1": 0.786
+  },
+  "final_label": "Low-value (last ~10 trials) a2-committed: D1 right after a reward from S2, or D2 on reaching S1 after choosing a2"
+}

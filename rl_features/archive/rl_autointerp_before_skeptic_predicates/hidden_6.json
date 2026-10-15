@@ -1,0 +1,64 @@
+{
+  "label": "D1 late in episode, about to choose a2, last trial did not reach S1",
+  "predicate": "(phase == D1) & (action == 2) & (ep_trial >= 45) & (prev_state != 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": true,
+  "explanation": "Fires only at D1, and only from about episode trial 45 on (none before trial 40). It needs the agent to be about to choose a2 (more than 99% of activations) and the previous trial not to have reached S1 (almost no activations after an S1 outcome). The action variable is the agent own upcoming choice, which the task counts as legitimate. An all-observed version using the D1 policy logit, (phase == D1) & (ep_trial >= 45) & (prev_state != 1) & (choice < -1.5), scores dev F1 0.89. It is restricted to a moderately negative logit range (about -4.4 to -1.5), so it codes a moderate a2 preference, not a strong one. Magnitude is larger when the previous trial was rewarded (prev_reward == 1 carries 88% of the mass), and it builds up over runs of consecutive rewarded a2 to S2 common trials, reaching about 1.0 after 3 or more (seen in the example windows). It is silent at GO and D2, on a1 choices and after rare transitions to S1. Precision is about 0.76 because some late a2-choice D1 steps stay silent, mostly ones after an unrewarded trial.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 6,
+    "predicate": "(phase == D1) & (action == 2) & (ep_trial >= 45) & (prev_state != 1)",
+    "split": "test",
+    "precision": 0.7403688632880622,
+    "recall": 0.9833787236432041,
+    "f1": 0.8447443156123945,
+    "mass_recall": 0.9986696508113134,
+    "correlation": 0.7286724863368327,
+    "n_active": 71234,
+    "n_predicted": 94615,
+    "coverage_by_activation_quartile": [
+      0.9337975181088214,
+      1.0,
+      0.9997192273135669,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 6,
+    "predicate": "(phase == D1) & (action == 2) & (ep_trial >= 45) & (prev_state != 1)",
+    "split": "dev",
+    "precision": 0.761347498211042,
+    "recall": 0.9841050744229729,
+    "f1": 0.8585119391219609,
+    "mass_recall": 0.9987532562144815,
+    "correlation": 0.7403356768187457,
+    "n_active": 70274,
+    "n_predicted": 90835,
+    "coverage_by_activation_quartile": [
+      0.936820536171666,
+      0.9998292446923559,
+      0.9997723132969034,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 6,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most factual claims hold on test: activity is D1 only (GO and D2 have 0 active steps). There is no activity before trial 40, and trials 40-44 carry only 0.1% of the mass. Predicates with prev_state == 1 score precision 0.0. The upcoming choice is a2 for 99.9% of active steps (77 of 70274 are a1). prev_reward == 1 carries 88% of the mass.",
+      "The clause 'last trial did not reach S1' (prev_state != 1) overclaims. When the previous trial went a1 to S2 by a rare transition, the predicate is true but the feature is almost silent (test precision 0.009, mass 0.1%). Profile: prev_action == 1 has only 200 of 70274 activations. The real condition is that the previous trial was a2 to S2 common. About 22% of activations are on the window's first D1, where prev_state == -1 because that trial's history is outside the window (test precision 0.65, recall 0.21). Writing the predicate as (prev_state == -1) | ((prev_action == 2) & (prev_state == 2)) raises test F1 from 0.845 to 0.862.",
+      "The future-variable predicate is not the best explanation. The all-observed policy-logit version, (phase == D1) & (ep_trial >= 45) & (prev_state != 1) & (choice < -1.5) & (choice > -4.5), scores test F1 0.905 (precision 0.904, recall 0.907, mass recall 0.965). That beats the recorded predicate's 0.845 (precision 0.74). The label should be built around the observed logit band, not the future action.",
+      "There is a systematic false-positive class: late a2-choice D1 steps after an unrewarded trial. The predicate restricted to prev_reward == 0 has test precision 0.52, against 0.82 with prev_reward == 1. Adding prev_reward == 1 drops recall to 0.80, so it is a magnitude modulator rather than a gate. The explanation mentions this, but it is the main source of the precision gap.",
+      "The ep_trial >= 45 cutoff is a hard empirical threshold that the agent cannot observe directly. It is plausibly a proxy for elapsed time or for drift in the agent's state, and the label presents it as a clean condition."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 from episode trial ~45 on, when the policy holds a moderate a2 preference (logit -4.4 to -1.5) after an a2 to S2 common trial; stronger after a rewarded one",
+    "better_predicate": "(phase == D1) & (ep_trial >= 45) & (prev_state != 1) & (choice < -1.5) & (choice > -4.5)",
+    "better_predicate_test_f1": 0.905
+  },
+  "final_label": "D1 from episode trial ~45 on, when the policy holds a moderate a2 preference (logit -4.4 to -1.5) after an a2 to S2 common trial; stronger after a rewarded one"
+}

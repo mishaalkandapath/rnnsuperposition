@@ -1,0 +1,79 @@
+{
+  "label": "D1 reward-input gate: lower after reward, higher after no reward; D2 spike on invalid trials",
+  "terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 0) * (ep_trial > 0) ;; (phase == D2) * (valid == 0) ;; (phase == D1) * last_is(\"a1 S1 r\") ;; (phase == D1) * last_is(\"a1 S2 r\") ;; (phase == D1) * last_is(\"a1 S1 u\") ;; (phase != D1) * belief_lo",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r10 is almost fully set by timing (high at D1/GO, low at D2; timing R^2 0.99). Beyond timing, the main driver is the reward input at D1: after an unrewarded trial it rises by about +0.06, and after a rewarded one it falls by about -0.025 (dev weights). The previous trial pattern adjusts this a little: after a1 S1 r it falls further (-0.02), after a1 S2 r the drop is cancelled (+0.03), and after a1 S1 u the rise is smaller (-0.02). On D2 steps of invalid trials (fixation chosen at GO, or the agent acted at D2) it jumps by about +0.25. A graded belief log-odds term outside D1 (slightly higher when S1 is believed good) adds about 0.01. Test R^2 beyond timing is 0.737 (0.726 without the belief term). That is at the all-cue ceiling (0.74) and above all observed (0.69), so dropping the model value and policy loses essentially nothing: the policy decile alone scored only 0.23. Hidden good state, since_rev and future reward add nothing.",
+  "gate": "unit_reset",
+  "feature": 10,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 10,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_reward == 0) * (ep_trial > 0)",
+      "(phase == D2) * (valid == 0)",
+      "(phase == D1) * last_is(\"a1 S1 r\")",
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * last_is(\"a1 S1 u\")",
+      "(phase != D1) * belief_lo"
+    ],
+    "weights": [
+      -0.02479098285904299,
+      0.059564856912511864,
+      0.25099494701741276,
+      -0.021043731520919293,
+      0.027516713298987083,
+      -0.018594636598553965,
+      0.001514458065953028
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7370871647081481,
+    "r2": 0.9969838277548498,
+    "r2_timing_only": 0.9885278623167941
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 10,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_reward == 0) * (ep_trial > 0)",
+      "(phase == D2) * (valid == 0)",
+      "(phase == D1) * last_is(\"a1 S1 r\")",
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * last_is(\"a1 S1 u\")",
+      "(phase != D1) * belief_lo"
+    ],
+    "weights": [
+      -0.02479098285904299,
+      0.059564856912511864,
+      0.25099494701741276,
+      -0.021043731520919293,
+      0.027516713298987083,
+      -0.018594636598553965,
+      0.001514458065953028
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7411542837698588,
+    "r2": 0.9970234175394804,
+    "r2_timing_only": 0.9885005535194059
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Factual claims check out on test: the original terms reproduce exactly 0.737 (0.726 without the belief term). The D1 weights are -0.025 after reward and +0.060 after no reward. The pattern adjustments are a1 S1 r -0.021, a1 S2 r +0.028 and a1 S1 u -0.019, all matching the D1 residual table (a1 S1 r -0.046, a1 S2 r +0.003, a1 S1 u +0.041 against roughly \u00b10.02 to 0.06 for the other patterns).",
+      "Omission: the explanation says nothing about D2 apart from invalid trials, but the reward input carries over to D2 with the opposite sign. The D2 residual is +0.016 / +0.011 after a1 S1 r / a1 S2 r and -0.013 to -0.017 after unrewarded trials, and misses lists the largest systematic errors in exactly these cells (D2 after a1 S1 r +0.011, a1 S2 r +0.010, a1 S2 u -0.018, a2 S2 u -0.018). Adding (phase == D2) * (prev_reward == 1), weight +0.010, raises test R^2 from 0.737 to 0.754, above the stated 0.74 ceiling. So the claim 'matches the ceiling' does not mean nothing additive is left.",
+      "The D2 invalid-trial spike is real (weight +0.25), but on its own it explains only 0.002 of test R^2 beyond timing. It is a rare event and should not be listed as one of the label's two headline effects; the D1 reward terms alone already give 0.68.",
+      "The worst-fit windows include GO dips of 0.1 to 0.2 on runs of a2 choices after unrewarded trials late in the episode. None of the observed proxies I tried captured them: GO belief_lo +0.005, GO d1_err +0.005, GO a2 unrewarded streak +0.004, |belief_lo| at GO 0, reward x late-episode interaction at D1 0. These dips are scattered and do not form a large class the observed variables can explain.",
+      "The belief term adds only about 0.01 (weight +0.0015 per log-odds unit). 'Graded belief log-odds term outside D1' is accurate but minor."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Reward-input gate: at D1 lower after reward, higher after no reward (pattern-modulated); weak opposite-sign carryover at D2; D2 spike on rare invalid trials",
+    "better_terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 0) * (ep_trial > 0) ;; (phase == D2) * (valid == 0) ;; (phase == D1) * last_is(\"a1 S1 r\") ;; (phase == D1) * last_is(\"a1 S2 r\") ;; (phase == D1) * last_is(\"a1 S1 u\") ;; (phase == D2) * (prev_reward == 1) ;; (phase != D1) * belief_lo",
+    "better_terms_test_r2_beyond_timing": 0.754
+  },
+  "final_label": "Reward-input gate: at D1 lower after reward, higher after no reward (pattern-modulated); weak opposite-sign carryover at D2; D2 spike on rare invalid trials"
+}

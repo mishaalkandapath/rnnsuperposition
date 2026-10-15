@@ -1,0 +1,64 @@
+{
+  "label": "D2 step after choosing a1 (weakly after a2 late in the episode)",
+  "predicate": "(phase == D2) & ((in_action == 1) | (ep_trial >= 60))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (DELAY_2), never at D1 and essentially never at GO. Within D2 it fires on 100% of trials where the agent chose a1 (in_action == 1, observed at D2), with large magnitude (top windows all a1, ~0.85-1.0 of max, slightly higher for common S1 than rare S2). After an a2 choice it fires only about half the time, mostly in the later part of the episode (ep_trial >= 60), and those activations are weak (mostly < 0.15 of max, the lowest quartile). Plain phase == D2 gives dev F1 0.86 with mass recall 1.0; adding the a1 / late-episode split raises F1 to 0.94 (precision 0.98, mass recall 0.98). Reward, transition type, stay/switch and the hidden good state add little once the choice is known. So it is mainly a D2 feature for the a1 choice, with a weak a2 component that grows over the episode. Uses only observed variables (the choice input at D2 and trial time).",
+  "test_scores": {
+    "gate": "update",
+    "feature": 108,
+    "predicate": "(phase == D2) & ((in_action == 1) | (ep_trial >= 60))",
+    "split": "test",
+    "precision": 0.9828600191719069,
+    "recall": 0.8885899662373558,
+    "f1": 0.9333506725385651,
+    "mass_recall": 0.980907290036567,
+    "correlation": 0.8582251230353561,
+    "n_active": 298851,
+    "n_predicted": 270187,
+    "coverage_by_activation_quartile": [
+      0.559621484882149,
+      0.9947398712406141,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 108,
+    "predicate": "(phase == D2) & ((in_action == 1) | (ep_trial >= 60))",
+    "split": "dev",
+    "precision": 0.9821948119563886,
+    "recall": 0.8984437923282184,
+    "f1": 0.9384544480249898,
+    "mass_recall": 0.9833405684526664,
+    "correlation": 0.8592232200249538,
+    "n_active": 285566,
+    "n_predicted": 261216,
+    "coverage_by_activation_quartile": [
+      0.5964954056476917,
+      0.9972826086956522,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 108,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The magnitude claim is wrong. The explanation says a2 activations are weak (mostly below 0.15 of max), but a2 strength rises steadily with ep_trial. On dev, a2 at D2 with ep_trial >= 80 has precision 1.0, holds 18.7% of all activation mass, and makes up 28.6% of the top activation quartile. At ep_trial 90-99, a2 D2 activations fall almost entirely in the top quartile (top-quartile coverage 0.135 and 0.123, with no coverage in the lower quartiles). So the label's 'weakly after a2 late in the episode' is false for the last ~15 trials, where a2 steps are among the strongest activations.",
+      "The claim that a1 activations are strong (0.85-1.0 of max) comes only from late-episode top windows. a1 at D2 with ep_trial < 50 never reaches the top quartile (coverage 0.0). In the test misses windows, early-episode a1 D2 activations are about 0.28-0.46 of max. The top quartile is covered 100% by ep_trial >= 50, and plain (phase == D2) & (ep_trial >= 85) covers 63% of it whatever the choice.",
+      "A better reading is a graded code: D2 activation is roughly an a1 offset plus a ramp over trial-in-episode. The binary predicate is a threshold on that sum, so its 'a1 vs a2' framing hides the strong time dependence. The time effect is the main driver of the largest activations.",
+      "Most binary claims hold. D1 has 0 activity, GO has 19 of 380k steps, a1 at D2 is active 100% of the time, and a2 at D2 with ep_trial < 60 has precision 0.16-0.36 (weak, bottom quartile). Plain D2 scores F1 0.857. The missed activations (a2 early in the episode) are weak, holding 1.9% of mass on test. Part of them are switch trials: a2 with ep_trial < 60 and stay == 0 has precision 0.87. Adding stay == 0, which is observed at D2, raises test F1 from 0.933 to 0.944.",
+      "The test false positives are a2 D2 steps around ep_trial 60-65, where a2 precision is only 0.60. This is a soft threshold, consistent with a ramp."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 step only. Strength grows with trial-in-episode, with a boost after choosing a1: a1 D2 steps always fire (moderately early, strongly late), and a2 D2 steps fire from about trial 60 on, becoming among the strongest activations by trial 85-99.",
+    "better_predicate": "(phase == D2) & ((in_action == 1) | (ep_trial >= 60) | (stay == 0))",
+    "better_predicate_test_f1": 0.944
+  },
+  "final_label": "D2 step only. Strength grows with trial-in-episode, with a boost after choosing a1: a1 D2 steps always fire (moderately early, strongly late), and a2 D2 steps fire from about trial 60 on, becoming among the strongest activations by trial 85-99."
+}

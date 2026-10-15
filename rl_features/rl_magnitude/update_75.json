@@ -1,0 +1,82 @@
+{
+  "label": "At GO after an unrewarded a2-to-S2 trial, growing over the last ~20 trials of the episode.",
+  "short_terms": "(phase == GO) * last_is(\"a2 S2 u\") * np.maximum(ep_trial - 80, 0) ;; last_is(\"a2 S2 u\") * np.maximum(ep_trial - 80, 0) * belief_lo",
+  "terms": "(phase == GO) * last_is(\"a2 S2 u\") * np.maximum(ep_trial - 80, 0) ;; (phase == GO) * last_is(\"a2 S2 u\") * np.maximum(ep_trial - 80, 0) * belief_lo ;; (phase == GO) * last_is(\"a2 S2 u\") * np.maximum(ep_trial - 80, 0) * (tv(\"reward\", -2) == 1) ;; (phase == GO) * (prev_action == -1) * np.maximum(ep_trial - 80, 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Sparse feature (0.6% of steps), active only at GO. Its magnitude is set by the previous trial being a2 -> S2 unrewarded (common, unrewarded: the model-based switch cue), multiplied by a ramp in episode time that starts around trial 80 and rises to ~2 at trial 99. Every other previous-trial pattern sits at zero. The second short term adjusts the size by the ideal-observer belief after that trial (fitted sign is in the record weights); repeated unrewarded a2 S2 trials give smaller activations. The free fit also adds: more activation when the trial before was rewarded (the first miss after a reward is strongest), and a term for window-start trials with unknown history. A future-choice term (this GO choice = a2, i.e. staying) adds about 0.04 dev R^2; activation is near zero when the agent switches to a1. That term was not recorded because it is not observed at GO. D1 and D2 are always zero.",
+  "full_test_scores": {
+    "gate": "update",
+    "feature": 75,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 u\") * np.maximum(ep_trial - 80, 0)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * np.maximum(ep_trial - 80, 0) * belief_lo",
+      "(phase == GO) * last_is(\"a2 S2 u\") * np.maximum(ep_trial - 80, 0) * (tv(\"reward\", -2) == 1)",
+      "(phase == GO) * (prev_action == -1) * np.maximum(ep_trial - 80, 0)"
+    ],
+    "weights": [
+      0.08153464060121328,
+      -0.016293108165096458,
+      0.013560550834843636,
+      -0.0018838710135765898
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7030316422840036,
+    "r2": 0.7309765855535053,
+    "r2_timing_only": 0.0941007435419321
+  },
+  "gate": "update",
+  "feature": 75,
+  "test_scores": {
+    "gate": "update",
+    "feature": 75,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 u\") * np.maximum(ep_trial - 80, 0)",
+      "last_is(\"a2 S2 u\") * np.maximum(ep_trial - 80, 0) * belief_lo"
+    ],
+    "weights": [
+      0.08013400469216905,
+      -0.005291236805599686
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6261790262146311,
+    "r2": 0.6613558577994034,
+    "r2_timing_only": 0.0941007435419321
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 75,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 u\") * np.maximum(ep_trial - 80, 0)",
+      "last_is(\"a2 S2 u\") * np.maximum(ep_trial - 80, 0) * belief_lo"
+    ],
+    "weights": [
+      0.08013400469216905,
+      -0.005291236805599686
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6336214227820742,
+    "r2": 0.6645076005914685,
+    "r2_timing_only": 0.08430126576702868
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claim holds. On test, the single term (phase==GO)*last_is('a2 S2 u')*max(ep_trial-80,0) alone gets R^2 0.598 beyond timing. In the residual table, GO after a2 S2 u is +0.153 and every other previous-trial cell is about -0.016. Activation is exactly 0 at D1 and D2.",
+      "The ramp onset checks out. Shifting it to 75 or 85 lowers test R^2 (0.571 and 0.576). Adding a step at trial >= 90 or >= 95, or a second ramp from trial 90, adds at most +0.002. So a single linear ramp from about trial 80 is the right shape.",
+      "The belief term is real but small. With belief_lo it adds +0.028 on test (0.626 vs 0.598); (belief_lo<0) adds +0.016 and raw belief adds +0.007. The sign is negative, so the feature is larger when the ideal observer favours S2, as claimed. The label leaves this modulation out.",
+      "The second short-form term has no phase gate. It is nonzero at D1 and D2, where activation is always 0, so it fits there too: misses shows predictions down to about -0.35 at D1/D2 and a mean error of +0.005 in those phases. Adding the gate breaks the three-factor limit, so this is a small fitted correction rather than a clean description.",
+      "The explanation says the short form gives the decline across repeated unrewarded a2 S2 trials (1.9, 1.4, 0.4). It does not: in the worst-fit windows it predicts about 1.43 then 1.33 where the actual values are 1.53 then 0.48. Of the observed-only terms tried, none captures this decline: tv('reward',-2)==0 gives 0.607, tv('stay',-1) gives 0.598 and tv('action',-2)==2 gives 0.599.",
+      "The future-choice claim holds. stay==0 adds about +0.03 on test (0.629), the same as the observed-only belief_lo (0.626), so leaving it out of the record is justified. The 2-back-reward term adds about +0.006 on top of belief_lo (0.632). The window-start term (prev_action==-1) adds nothing on test (0.5976).",
+      "Misses shows no large systematic error class by phase x previous trial; the largest cell errors are about 0.016. About 37% of the variance inside the GO / a2 S2 u / late-episode cell is still unexplained. The worst misses are steps where the agent switches to a1 (actual about 0, predicted about 1.3), which points to the model's own policy, and that is not allowed in this run."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "At GO after unrewarded a2-to-S2, ramping up over trials 80-99; larger while belief favours S2.",
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "At GO after unrewarded a2-to-S2, ramping up over trials 80-99; larger while belief favours S2."
+}

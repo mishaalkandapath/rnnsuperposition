@@ -1,0 +1,89 @@
+{
+  "label": "Fires at GO late in episode after rewarded a2-to-S2, growing with trial number.",
+  "short_terms": "(phase == GO) * np.maximum(ep_trial - 82, 0) * last_is(\"a2 S2 r\") ;; (phase == GO) * (ep_trial >= 82) * last_is(\"a2 S2 r\") ;; (phase == GO) * np.maximum(ep_trial - 82, 0)",
+  "terms": "(phase == GO) * np.maximum(ep_trial - 82, 0) * last_is(\"a2 S2 r\") ;; (phase == GO) * (ep_trial >= 82) * last_is(\"a2 S2 r\") ;; (phase == GO) * np.maximum(ep_trial - 82, 0) ;; (phase == GO) * np.maximum(ep_trial - 82, 0) * (prev_action == 2) * (prev_reward == 1) ;; (phase == GO) * np.maximum(ep_trial - 82, 0) * (belief_lo < 0) ;; (phase == GO) * np.maximum(ep_trial - 82, 0) * last_is(\"a2 S2 r\") * np.clip(-belief_lo, 0, 6) ;; (phase == GO) * (ep_trial >= 82) * last_is(\"a2 S2 r\") * (tv(\"reward\", -2) == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Only active at GO in the last ~18 trials of the episode. Magnitude is driven by the previous trial being a2 -> S2 rewarded (common rewarded a2); in that case it ramps up with ep_trial past ~82 (to ~2 by trial 96-99), otherwise it stays near zero. The timing baseline alone over-predicts after all other histories; the short form gates the late ramp on last_is(a2 S2 r) and subtracts the generic ramp. D1 and D2 are always zero. The free fit adds a small belief (S2-good log-odds) and reward-two-trials-back refinement (+0.03 dev R^2). Observed-only; no future variables.",
+  "full_test_scores": {
+    "gate": "update",
+    "feature": 100,
+    "terms": [
+      "(phase == GO) * np.maximum(ep_trial - 82, 0) * last_is(\"a2 S2 r\")",
+      "(phase == GO) * (ep_trial >= 82) * last_is(\"a2 S2 r\")",
+      "(phase == GO) * np.maximum(ep_trial - 82, 0)",
+      "(phase == GO) * np.maximum(ep_trial - 82, 0) * (prev_action == 2) * (prev_reward == 1)",
+      "(phase == GO) * np.maximum(ep_trial - 82, 0) * (belief_lo < 0)",
+      "(phase == GO) * np.maximum(ep_trial - 82, 0) * last_is(\"a2 S2 r\") * np.clip(-belief_lo, 0, 6)",
+      "(phase == GO) * (ep_trial >= 82) * last_is(\"a2 S2 r\") * (tv(\"reward\", -2) == 1)"
+    ],
+    "weights": [
+      0.10070034722933734,
+      -0.09431417724716157,
+      -0.03143050593637857,
+      -0.010932548455530142,
+      0.022115251101065752,
+      0.003742786465981275,
+      0.06562573936584962
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7076653318278179,
+    "r2": 0.7767531907757067,
+    "r2_timing_only": 0.23633139161995265
+  },
+  "gate": "update",
+  "feature": 100,
+  "test_scores": {
+    "gate": "update",
+    "feature": 100,
+    "terms": [
+      "(phase == GO) * np.maximum(ep_trial - 82, 0) * last_is(\"a2 S2 r\")",
+      "(phase == GO) * (ep_trial >= 82) * last_is(\"a2 S2 r\")",
+      "(phase == GO) * np.maximum(ep_trial - 82, 0)"
+    ],
+    "weights": [
+      0.11753019714348753,
+      -0.06438023172076167,
+      -0.02509209690180444
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6836662074323211,
+    "r2": 0.7584258128462581,
+    "r2_timing_only": 0.23633139161995265
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 100,
+    "terms": [
+      "(phase == GO) * np.maximum(ep_trial - 82, 0) * last_is(\"a2 S2 r\")",
+      "(phase == GO) * (ep_trial >= 82) * last_is(\"a2 S2 r\")",
+      "(phase == GO) * np.maximum(ep_trial - 82, 0)"
+    ],
+    "weights": [
+      0.11753019714348753,
+      -0.06438023172076167,
+      -0.02509209690180444
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.702821414531646,
+    "r2": 0.780308257400883,
+    "r2_timing_only": 0.26074167742308085
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims hold up. Test R^2 beyond timing: the recorded short form scores 0.684. The ramp x last_is(a2 S2 r) term alone scores 0.508, and the step x last_is(a2 S2 r) alone scores 0.342. Swapping the condition for prev_reward + prev_state scores 0.441, and adding last_is(a2 S1 r) adds nothing (0.683). So the a2->S2 rewarded condition and the late ramp are both real. D1 and D2 are exactly zero, as claimed.",
+      "The second term, (phase==GO)*(ep_trial>=82)*last_is(a2 S2 r), gets weight -0.064 and is only a fitted offset. Dropping it gives 0.682 test, so a two-term form (gated ramp plus a negative generic ramp) says the same thing more simply.",
+      "The 'grows with trial number' claim is partly about how often the feature fires, not how strongly. In the misses output, whenever the feature is on it sits near 1.7-2.05, already at t93-94. The ramp mostly captures that firing becomes more likely as the episode goes on. Step functions at 82/88/90/94 do worse than the ramp (0.42-0.50), so the ramp is still the better description of expected activation.",
+      "Misses shows no large systematic error class. The biggest is GO after '?' (window start, previous trial not observable) at +0.034, where the feature fires at full strength but cannot be predicted from inside the window. Every other previous-trial cell is over-predicted by at most about 0.016. There are occasional false positives at t99 after a2 S2 rewarded when the two trials before were unrewarded, which hints at a weak dependence on longer reward history. But tv('reward',-2) adds nothing (0.683), and belief_lo<-1 adds only +0.013 (0.697).",
+      "No future variables are used. Everything here is observed-only."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  }
+}

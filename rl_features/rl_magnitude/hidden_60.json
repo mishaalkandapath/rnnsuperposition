@@ -1,0 +1,78 @@
+{
+  "label": "Late-episode D1 after an unrewarded a1 trip to rare S2, ramping up after trial 85",
+  "short_terms": "(phase == D1) * last_is(\"a1 S2 u\") * np.maximum(ep_trial - 85, 0)",
+  "terms": "(phase == D1) * last_is(\"a1 S2 u\") * (ep_trial >= 85) ;; (phase == D1) * (prev_reward == 0) * (prev_action == 1) * np.maximum(ep_trial - 85, 0) ;; (phase == D1) * (prev_reward == 0) * np.maximum(ep_trial - 85, 0) ;; (phase == D1) * last_is(\"a1 S2 u\") * np.maximum(ep_trial - 85, 0) ;; (phase == D1) * (prev_reward==0) * np.maximum(ep_trial-85,0) * belief_lo ;; (phase == D1) * (prev_action == -1) * np.maximum(ep_trial - 85, 0) * (prev_reward == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Sparse feature (0.4% of steps), only at D1. Its magnitude is set by the previous trial having been a1 -> S2 (rare) unrewarded, scaled by a linear ramp in episode trial beyond ~85 (activation grows to ~2 by trial 99). Other previous-trial patterns, GO and D2 give ~0. One observed-only term captures nearly all of it (dev 0.70 vs free fit 0.72). The free fit adds a slight belief_lo modulation (higher when S1 believed good) and window-start D1s whose previous trial is out of window; remaining misses are such window-start steps. No future variables used.",
+  "full_test_scores": {
+    "gate": "hidden",
+    "feature": 60,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\") * (ep_trial >= 85)",
+      "(phase == D1) * (prev_reward == 0) * (prev_action == 1) * np.maximum(ep_trial - 85, 0)",
+      "(phase == D1) * (prev_reward == 0) * np.maximum(ep_trial - 85, 0)",
+      "(phase == D1) * last_is(\"a1 S2 u\") * np.maximum(ep_trial - 85, 0)",
+      "(phase == D1) * (prev_reward==0) * np.maximum(ep_trial-85,0) * belief_lo",
+      "(phase == D1) * (prev_action == -1) * np.maximum(ep_trial - 85, 0) * (prev_reward == 0)"
+    ],
+    "weights": [
+      0.013470227243885826,
+      -0.008302957453899177,
+      -0.0026751166099082055,
+      0.1175542002836053,
+      0.003729551220808811,
+      0.0254349834142436
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7523858298461684,
+    "r2": 0.7696296594651084,
+    "r2_timing_only": 0.06963991442100115
+  },
+  "gate": "hidden",
+  "feature": 60,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 60,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\") * np.maximum(ep_trial - 85, 0)"
+    ],
+    "weights": [
+      0.12061404591079995
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7214130342663224,
+    "r2": 0.7408138067188221,
+    "r2_timing_only": 0.06963991442100115
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 60,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 u\") * np.maximum(ep_trial - 85, 0)"
+    ],
+    "weights": [
+      0.12061404591079995
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.702716003277935,
+    "r2": 0.7228489742005759,
+    "r2_timing_only": 0.06772302291624333
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The explanation's claim of a 'slight belief_lo modulation' is negligible. Adding last_is('a1 S2 u')*ramp*belief_lo to the short form moves test R^2 only from 0.7214 to 0.7214.",
+      "Most of the gap to the free fit (0.72 vs 0.75) comes from window-start D1s, where the previous trial is outside the window: misses shows actual values of 1.4-1.9 predicted at 0.098. That is a data artifact, not a gap in the label. A (prev_action == -1)*ramp term adds only +0.0001 on test because those window-start steps can't be told apart.",
+      "The short form under-predicts the early part of the ramp a little (e.g. trial 94: actual 1.96, predicted 1.18), but saturating versions score worse (clip variants 0.68-0.70 vs 0.72 for the linear ramp), so the linear ramp is a fair shape.",
+      "Specificity checks out: prev_reward==0 alone gives 0.11, prev_state==S2 alone gives 0.05, and a2 S2 u gives 0.0007. Firing really is specific to a1 -> S2 unrewarded, only at D1 (GO and D2 residuals are exactly 0)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  }
+}

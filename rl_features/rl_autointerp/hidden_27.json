@@ -1,0 +1,105 @@
+{
+  "label": "D1 after a reward earned at S1, when the agent is about to choose a1 (first ~70 trials of episode)",
+  "predicate": "(phase==D1)&(in_rew==1)&(action==1)&(prev_action!=2)&(prev_state!=2)&(ep_trial<70)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": true,
+  "explanation": "Fires only at D1 (never at GO or D2), and 97% of its mass is on D1 steps where the reward input is 1. Within those steps it is selective for the agent going on to choose a1 (93% of mass; the policy logit at D1 favours a1) after the reward came from S1, i.e. the model-based win-stay toward S1/a1. It is also gated by episode time: rate is steady up to about trial 50, then falls and is essentially zero after trial 80. Dev scores: phase D1 & in_rew==1 alone gives F1 0.48 (recall 0.95); adding action==1 gives 0.73; adding ep_trial<70 gives 0.84; excluding rewards earned at S2 (prev_state != 2) gives 0.86. The only FUTURE variable used is the agent own upcoming choice (action at D1), which is allowed. The observed-only version with choice>0 in place of action==1 gives dev F1 0.81. No future reward or transition is used. It does not fire after unrewarded trials, at GO or D2, or before an a2 choice. Magnitude (seen in example windows, not measured systematically): it is larger early in the episode and grows over runs of rewarded a1/S1 trials (top windows have 4-5 consecutive rewarded a1-S1 common trials); activations after a rare or interleaved outcome are weak.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 27,
+    "predicate": "(phase==D1)&(in_rew==1)&(action==1)&(prev_action!=2)&(prev_state!=2)&(ep_trial<70)",
+    "split": "test",
+    "precision": 0.9235576204643328,
+    "recall": 0.8053544986080673,
+    "f1": 0.8604153746851784,
+    "mass_recall": 0.8894012175059657,
+    "correlation": 0.8094157411400901,
+    "n_active": 84415,
+    "n_predicted": 73611,
+    "coverage_by_activation_quartile": [
+      0.5685178165276725,
+      0.7770090978013646,
+      0.9116755117513268,
+      0.9642230962422405
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 27,
+    "predicate": "(phase==D1)&(in_rew==1)&(action==1)&(prev_action!=2)&(prev_state!=2)&(ep_trial<70)",
+    "split": "dev",
+    "precision": 0.9244841291446616,
+    "recall": 0.8171023663727247,
+    "f1": 0.8674828055252217,
+    "mass_recall": 0.8930936992136327,
+    "correlation": 0.8068255123440264,
+    "n_active": 83123,
+    "n_predicted": 73468,
+    "coverage_by_activation_quartile": [
+      0.601799720898898,
+      0.7943313603772677,
+      0.9094365044993022,
+      0.9628488931665062
+    ]
+  },
+  "gate": "hidden",
+  "feature": 27,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The S1 condition is wrong. What matters is whether the previous trial was a1 with a common transition to S1 and a reward, not just whether the reward came from S1. On rewards earned at S1 by a rare transition after choosing a2, where the agent then picks a1, the feature mostly stays off. Precision of the original predicate restricted to prev_common==0 is 0.26 (n=3100). The same holds for (phase==D1)&(in_rew==1)&(action==1)&(prev_action==2)&(ep_trial<70): precision 0.26, mass recall 0.35%. After an a1 choice that was rewarded at S2 through a rare transition, precision is 0.0 (n=4816).",
+      "Because of this, the 'model-based win-stay toward S1/a1' reading is not supported. A model-based agent switching to a1 after a rewarded rare a2->S1 trial is exactly the case the feature mostly skips. The pattern is a1 win-stay after a rewarded common a1->S1 trial (prev_action==1, prev_state==1).",
+      "Adding prev_action!=2 fixes this false-positive class. Dev precision goes from 0.898 to 0.924 and F1 from 0.861 to 0.867. Test F1 goes from 0.852 to 0.860, with precision 0.924 vs 0.890.",
+      "The episode-time dependency is a gradual fade, not a step at trial 70. Precision of the original predicate by episode trial: 0.96-0.97 for trials 3-50, 0.90 for 50-60, 0.60 for 60-70, 0.28 for 70-80, 0.02 for 80-100. The label's 'first ~70 trials' also overclaims at the start: firing is essentially zero on episode trials 0-1 (ep_bucket 0: 0 of 1575 steps active; ep_bucket 1: 0.4%).",
+      "These claims check out: no firing at GO or D2 (0 active steps on each), 96.8% of activation mass on in_rew==1, 93% of mass on an upcoming a1 choice. The observed-only version (choice>0 instead of action==1) does about as well: dev F1 0.855 with the prev_state condition, 0.863 with prev_action!=2 added. The 0.81 quoted in the explanation is for a version without prev_state.",
+      "The leftover misses (about 10.6% of mass on test) look scattered and weak: low activations of about 0.15-0.35 after rewarded a2/S2 trials, and weak tails late in the episode. They are not an obvious separate class. The magnitude claims ('grows over runs of rewarded a1-S1 trials') were not measured, by the original agent or by me."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 win-stay toward a1: the previous trial was a1 with a common transition to S1 and was rewarded, and the agent is about to choose a1 again. Strong through episode trial ~50, fading to zero by ~80, absent on trials 0-1.",
+    "better_predicate": "(phase==D1)&(in_rew==1)&(action==1)&(prev_action!=2)&(prev_state!=2)&(ep_trial<70)",
+    "better_predicate_test_f1": 0.86
+  },
+  "final_label": "D1 win-stay toward a1: the previous trial was a1 with a common transition to S1 and was rewarded, and the agent is about to choose a1 again. Strong through episode trial ~50, fading to zero by ~80, absent on trials 0-1.",
+  "original_predicate": "(phase == D1) & (in_rew == 1) & (action == 1) & (prev_state != 2) & (ep_trial < 70)",
+  "original_test_scores": {
+    "gate": "hidden",
+    "feature": 27,
+    "predicate": "(phase == D1) & (in_rew == 1) & (action == 1) & (prev_state != 2) & (ep_trial < 70)",
+    "split": "test",
+    "precision": 0.8902314653447453,
+    "recall": 0.8169164248060179,
+    "f1": 0.8519996540604653,
+    "mass_recall": 0.8935735769904325,
+    "correlation": 0.7912886981772815,
+    "n_active": 84415,
+    "n_predicted": 77463,
+    "coverage_by_activation_quartile": [
+      0.6052880970432145,
+      0.7855856709628506,
+      0.9125758150113723,
+      0.9642230962422405
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "hidden",
+    "feature": 27,
+    "predicate": "(phase == D1) & (in_rew == 1) & (action == 1) & (prev_state != 2) & (ep_trial < 70)",
+    "split": "dev",
+    "precision": 0.8977640789886114,
+    "recall": 0.8269672653778136,
+    "f1": 0.8609126375312323,
+    "mass_recall": 0.8965974562870792,
+    "correlation": 0.7922262874106839,
+    "n_active": 83123,
+    "n_predicted": 76568,
+    "coverage_by_activation_quartile": [
+      0.6338482267455849,
+      0.8007314373706751,
+      0.9104470429719456,
+      0.9628488931665062
+    ]
+  },
+  "predicate_from": "skeptic"
+}

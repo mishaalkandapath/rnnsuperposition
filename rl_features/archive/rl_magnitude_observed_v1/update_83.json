@@ -1,0 +1,76 @@
+{
+  "label": "End-of-episode D1 ramp after the previous trial reached S2, strongest after a1->S2 (rare)",
+  "terms": "(phase==D1)*np.maximum(ep_trial-85,0)**2*(prev_state==2) ;; (phase==D1)*np.maximum(ep_trial-85,0)**2*(prev_action==1)*(prev_state==2) ;; (phase==D1)*np.maximum(ep_trial-85,0) ;; (phase==D1)*np.maximum(ep_trial-85,0)*(prev_state==2)*belief_lo ;; (phase==D1)*np.maximum(ep_trial-85,0)*(prev_state==2) ;; (phase==D1)*np.maximum(ep_trial-85,0)*(prev_action==1)*(prev_state==2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Sparse feature (nonzero on 1.1% of steps) that fires only at D1 in the last ~12 trials of the episode. Its size grows faster than linearly with the episode trial past about 85, and only when the previous trial reached S2. It is largest after a1->S2 (rare transition) and smaller after a2->S2 (common). After an S2 visit it is also higher when the ideal-observer belief favours S1 (positive belief_lo), i.e. when reaching S2 was unexpected or bad. Previous reward adds little (scored, small negative). It is zero at GO and D2. Timing alone gives R^2 0.15; these 6 observed-only terms give dev 0.716 and test 0.722 R^2 beyond timing, far above the profile additive ceiling (all 0.11, all observed 0.09), because the effect is an episode-time x last-state interaction. Without the model outputs nothing is lost: the earlier policy-decile cue scored only 0.04 on its own, and belief_lo adds about 0.03 here.",
+  "gate": "update",
+  "feature": 83,
+  "test_scores": {
+    "gate": "update",
+    "feature": 83,
+    "terms": [
+      "(phase==D1)*np.maximum(ep_trial-85,0)**2*(prev_state==2)",
+      "(phase==D1)*np.maximum(ep_trial-85,0)**2*(prev_action==1)*(prev_state==2)",
+      "(phase==D1)*np.maximum(ep_trial-85,0)",
+      "(phase==D1)*np.maximum(ep_trial-85,0)*(prev_state==2)*belief_lo",
+      "(phase==D1)*np.maximum(ep_trial-85,0)*(prev_state==2)",
+      "(phase==D1)*np.maximum(ep_trial-85,0)*(prev_action==1)*(prev_state==2)"
+    ],
+    "weights": [
+      0.011369981775825598,
+      -0.011186587963801333,
+      -0.036652566031374234,
+      0.013396486276979187,
+      -0.05516069867940945,
+      0.3110159779270696
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.722134438516906,
+    "r2": 0.7649180441281124,
+    "r2_timing_only": 0.15397232166106178
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 83,
+    "terms": [
+      "(phase==D1)*np.maximum(ep_trial-85,0)**2*(prev_state==2)",
+      "(phase==D1)*np.maximum(ep_trial-85,0)**2*(prev_action==1)*(prev_state==2)",
+      "(phase==D1)*np.maximum(ep_trial-85,0)",
+      "(phase==D1)*np.maximum(ep_trial-85,0)*(prev_state==2)*belief_lo",
+      "(phase==D1)*np.maximum(ep_trial-85,0)*(prev_state==2)",
+      "(phase==D1)*np.maximum(ep_trial-85,0)*(prev_action==1)*(prev_state==2)"
+    ],
+    "weights": [
+      0.011369981775825598,
+      -0.011186587963801333,
+      -0.036652566031374234,
+      0.013396486276979187,
+      -0.05516069867940945,
+      0.3110159779270696
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7163628738834569,
+    "r2": 0.760768373021889,
+    "r2_timing_only": 0.15655742866392808
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The score reproduces: the 6 terms give a test R^2 beyond timing of 0.722. The claims 'D1 only', 'last ~12 trials' and 'after S2' hold. The timing baseline is zero at GO and D2 and nonzero only from D1 decile 7 on, and residuals at GO and D2 are +0.",
+      "The superlinear growth is misattributed. A single linear term, (phase==D1)*max(ep_trial-85,0)*a1->S2, gets test 0.599 by itself. Adding a squared ramp for a1->S2 gets a weight of about 0 (8e-05). The faster-than-linear growth belongs to a2->S2 (common): that quadratic weight is 0.0113, test 0.724 with 5 terms. 'Grows faster than linearly' should not be stated generally, and the a1->S2 ramp is linear.",
+      "The a2->S2 description is misleading. A linear a2->S2 ramp alone gets weight 0.0007, essentially zero. The a2->S2 response is late-onset (quadratic), and it depends on belief_lo (weight 0.031) and on the previous reward.",
+      "The belief effect is specific to a2->S2. belief_lo*ramp gets weight 0.016 to 0.031 on a2->S2 and 0.002 on a1->S2. The claim that after any S2 visit it is higher when belief favours S1 is only true for common a2->S2 visits.",
+      "'The previous reward matters little' is wrong for a2->S2. A rewarded a2->S2 term gets weight 0.088 per ramp unit, comparable in size to the base a2 slope, and it adds about 0.02 test R^2. For a1->S2 the reward weight is about 0 (0.002), so there the claim holds.",
+      "The worst misses are high D1 activations on the window's first trial, where prev_state is unknown (-1). This is a window-truncation limit, not an explanatory gap: a ramp*(prev_state==-1) term helps only slightly. Otherwise, the misses run with the original terms show small systematic errors: D1 after a1 S2 r is under-predicted by 0.044, and S1 histories are over-predicted by about 0.015."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Late-episode D1 ramp after reaching S2. After a1->S2 (rare) it is a strong linear ramp that does not depend on reward. After a2->S2 (common) it is weaker, sets in late (quadratic), and is raised by a previous reward and by belief that S1 is good.",
+    "better_terms": "(phase==D1)*np.maximum(ep_trial-85,0) ;; (phase==D1)*np.maximum(ep_trial-85,0)*(prev_action==1)*(prev_state==2) ;; (phase==D1)*np.maximum(ep_trial-85,0)*(prev_action==2)*(prev_state==2) ;; (phase==D1)*np.maximum(ep_trial-85,0)*(prev_action==2)*(prev_state==2)*belief_lo ;; (phase==D1)*np.maximum(ep_trial-85,0)*(prev_action==2)*(prev_state==2)*np.maximum(ep_trial-85,0) ;; (phase==D1)*np.maximum(ep_trial-85,0)*(prev_state==-1) ;; (phase==D1)*np.maximum(ep_trial-85,0)*(prev_action==2)*(prev_state==2)*(prev_reward==1) ;; (phase==D1)*np.maximum(ep_trial-85,0)*(prev_state==1)*belief_lo",
+    "better_terms_test_r2_beyond_timing": 0.745
+  },
+  "final_label": "Late-episode D1 ramp after reaching S2. After a1->S2 (rare) it is a strong linear ramp that does not depend on reward. After a2->S2 (common) it is weaker, sets in late (quadratic), and is raised by a previous reward and by belief that S1 is good."
+}

@@ -1,0 +1,106 @@
+{
+ "label": "Late-episode D1 after a reward, growing with trial number after a2-S2-reward and S2-belief.",
+ "short_terms": "(phase == D1) * last_is('a2 S2 r') * np.maximum(ep_trial - 89, 0) ;; (in_rew == 1) * belief_lo * np.maximum(ep_trial - 89, 0)",
+ "terms": "(phase == D1) * (ep_dec == 9) * last_is(\"a2 S2 r\") ;; (phase == D1) * (ep_dec == 9) * last_is(\"a2 S2 r\") * (ep_trial - 90) ;; (ep_dec == 9) * (in_rew == 1) * (belief_lo < 0) ;; (ep_dec == 9) * (in_rew == 1) * belief_lo ;; (phase == D1) * (ep_dec == 9) * (prev_action == -1) * (in_rew == 1) ;; (phase == D1) * (ep_dec == 9) * last_is(\"a2 S2 u\") ;; (phase == D1) * (ep_dec == 9) * last_is(\"a2 S2 r\") * (tv(\"reward\", -2) == 1) ;; (phase == D1) * (ep_dec == 9) * (belief_lo < 0)",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Fires only at D1 in the last episode decile (trials 90-99). Its magnitude rises after a common a2->S2 rewarded trial, and the rise grows with the trial number past 89. It is also higher, at rewarded D1 steps late in the episode, the more strongly the ideal observer believes S2 is good (negative belief_lo). That belief term also covers windows whose first trial has no known previous choice. It is zero at GO and D2. Unrewarded trials and a1 or S1 histories lower it. The free fit adds a little: the trial before also being rewarded, a negative a2-S2-unrewarded term, and a nonlinear belief threshold. No future variables are used.",
+ "full_test_scores": {
+  "gate": "hidden",
+  "feature": 62,
+  "terms": [
+   "(phase == D1) * (ep_dec == 9) * last_is(\"a2 S2 r\")",
+   "(phase == D1) * (ep_dec == 9) * last_is(\"a2 S2 r\") * (ep_trial - 90)",
+   "(ep_dec == 9) * (in_rew == 1) * (belief_lo < 0)",
+   "(ep_dec == 9) * (in_rew == 1) * belief_lo",
+   "(phase == D1) * (ep_dec == 9) * (prev_action == -1) * (in_rew == 1)",
+   "(phase == D1) * (ep_dec == 9) * last_is(\"a2 S2 u\")",
+   "(phase == D1) * (ep_dec == 9) * last_is(\"a2 S2 r\") * (tv(\"reward\", -2) == 1)",
+   "(phase == D1) * (ep_dec == 9) * (belief_lo < 0)"
+  ],
+  "weights": [
+   -0.037237615964781916,
+   0.019071483703803776,
+   0.04306528985242468,
+   -0.0191746211482452,
+   0.03308707541939464,
+   -0.03545466389935914,
+   0.06579580544877876,
+   -0.04581670587416549
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5921536820400527,
+  "r2": 0.6618468690587818,
+  "r2_timing_only": 0.1708810008812517
+ },
+ "gate": "hidden",
+ "feature": 62,
+ "test_scores": {
+  "gate": "hidden",
+  "feature": 62,
+  "terms": [
+   "(phase == D1) * last_is('a2 S2 r') * np.maximum(ep_trial - 89, 0)",
+   "(in_rew == 1) * belief_lo * np.maximum(ep_trial - 89, 0)"
+  ],
+  "weights": [
+   0.014690635425389042,
+   -0.003287096236366992
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5002216266647876,
+  "r2": 0.5856242553191127,
+  "r2_timing_only": 0.1708810008812517
+ },
+ "dev_scores": {
+  "gate": "hidden",
+  "feature": 62,
+  "terms": [
+   "(phase == D1) * last_is('a2 S2 r') * np.maximum(ep_trial - 89, 0)",
+   "(in_rew == 1) * belief_lo * np.maximum(ep_trial - 89, 0)"
+  ],
+  "weights": [
+   0.014690635425389042,
+   -0.003287096236366992
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.4980804679727717,
+  "r2": 0.5985285958565693,
+  "r2_timing_only": 0.20012795174177123
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": true,
+  "issues": [
+   "The 'grows with trial number' claim is only roughly right. Per-trial weights on D1 x last_is('a2 S2 r') (test) are: t88 +0.009, t89 +0.027, t90 -0.004, t91 +0.047, t92 +0.090, t93 +0.145, t94 +0.168, t95 +0.189, t96 +0.198, t97 +0.182, t98 +0.167, t99 +0.155. So it rises from t90 to about t96 and then flattens and dips slightly. It is not a steady linear rise.",
+   "'Only in the last decile' is a slight overstatement. Activation already starts at t88-89 (the timing baseline for decile 8 at D1 is +0.0012, and a misses example shows 0.12 and 0.25 at t88-89), and the short form misses this.",
+   "Misses show moderate structured errors. Early-decile rewarded D1 steps at the start of a window (t90-t93) are under-predicted (actual about 0.31-0.39 vs predicted 0.07-0.18). Some rewarded D1 steps after a2-S2 are 0 when the trial before was unrewarded (predicted 0.26). Unrewarded late D1 steps are over-predicted by about 0.005 because nothing in the short form removes the decile-9 baseline. These errors are small in aggregate: phase-level mean error is at most 0.001 and the largest prev-trial cell error is -0.006.",
+   "The claims check out on test: the step-only version (phase==D1)*(ep_dec==9)*last_is('a2 S2 r') scores 0.298, the ramp alone 0.412, step plus belief 0.401, and the recorded ramp plus belief 0.489. Both the ramp and the belief term carry real signal, so this is not disguised curve fitting.",
+   "Replacing the belief term's decile gate with the same ramp scores slightly better: (in_rew==1)*belief_lo*np.maximum(ep_trial-89,0) reaches test 0.500 vs 0.489. A saturating ramp (clip at 5) applied to both terms reaches 0.506 but needs an arbitrary cap. Neither gain is large."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "D1 after a reward, trials 90+: rises with trial number, higher after a2-S2-reward and S2 belief.",
+  "better_short_terms": "(phase == D1) * last_is('a2 S2 r') * np.maximum(ep_trial - 89, 0) ;; (in_rew == 1) * belief_lo * np.maximum(ep_trial - 89, 0)",
+  "better_short_terms_test_r2_beyond_timing": 0.5002216266647876
+ },
+ "final_label": "D1 after a reward, trials 90+: rises with trial number, higher after a2-S2-reward and S2 belief.",
+ "original_short_terms": "(phase == D1) * last_is(\"a2 S2 r\") * np.maximum(ep_trial - 89, 0) ;; (ep_dec == 9) * (in_rew == 1) * belief_lo",
+ "original_test_scores": {
+  "gate": "hidden",
+  "feature": 62,
+  "terms": [
+   "(phase == D1) * last_is(\"a2 S2 r\") * np.maximum(ep_trial - 89, 0)",
+   "(ep_dec == 9) * (in_rew == 1) * belief_lo"
+  ],
+  "weights": [
+   0.016105450516802605,
+   -0.01827752220992178
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.4889473595678525,
+  "r2": 0.5762765462679043,
+  "r2_timing_only": 0.1708810008812517
+ },
+ "terms_from": "skeptic"
+}

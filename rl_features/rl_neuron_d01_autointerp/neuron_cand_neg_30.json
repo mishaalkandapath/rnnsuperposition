@@ -1,0 +1,106 @@
+{
+  "label": "D2 arrival at S2 while the agent still prefers a1 (believes S1 is good)",
+  "predicate": "(phase == D2) & (state == 2) & (choice > 2.5) & (ep_trial < 80) & (prev_action != 2)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (DELAY_2), and only when the reached state shown is S2 (100% of mass in_state==2); never at D1 or GO, never on S1. Within S2 arrivals it needs the agent to hold a moderate a1 preference (policy logit choice in about [2.8, 8) at that step; none fires at choice > 8.07 or below -1.5). Most firings (94%) are rare a1->S2 transitions, which is why it looks like a rare-transition detector, but the strongest activations are common a2->S2 arrivals while S1 is the good state, i.e. reaching S2 when the agent believes S1 is good. It fades over the episode and is almost silent after trial 80 (ep_trial < 80 lifts precision from 0.66 to 0.80). Magnitude tracks the a1 preference (coverage of choice>2.78 goes from 0.58 in the lowest activation quartile to 0.94 in the top). The observed-only version (D2 & state==2 & action==1) has recall 0.95 but precision 0.24. All variables used are observed or computed by the agent at D2; choice is the model policy readout, so the predicate partly restates the hidden belief.",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 30,
+    "predicate": "(phase == D2) & (state == 2) & (choice > 2.5) & (ep_trial < 80) & (prev_action != 2)",
+    "split": "test",
+    "precision": 0.7737383034207701,
+    "recall": 0.8732686980609419,
+    "f1": 0.8204961366409109,
+    "mass_recall": 0.919066775306752,
+    "correlation": 0.7506481183651584,
+    "n_active": 11552,
+    "n_predicted": 13038,
+    "coverage_by_activation_quartile": [
+      0.6876731301939059,
+      0.9037396121883656,
+      0.9622576177285319,
+      0.939404432132964
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 30,
+    "predicate": "(phase == D2) & (state == 2) & (choice > 2.5) & (ep_trial < 80) & (prev_action != 2)",
+    "split": "dev",
+    "precision": 0.7843391902215432,
+    "recall": 0.8748295841854125,
+    "f1": 0.8271167324579071,
+    "mass_recall": 0.9180065162825747,
+    "correlation": 0.7576023225655002,
+    "n_active": 11736,
+    "n_predicted": 13090,
+    "coverage_by_activation_quartile": [
+      0.6946148602590321,
+      0.9062713019768235,
+      0.9631901840490797,
+      0.9352419904567144
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 30,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "issues": [
+      "False claim: 'the strongest activations are common a2->S2 arrivals while S1 is good'. Within every activation quartile, D2 & state==2 & action==2 covers only 4-7% of firings (top quartile 0.069), while action==1, i.e. the rare a1->S2 transition, covers 93% (top quartile 0.931). So the top activations are rare a1->S2 arrivals. The a2->S2 & good==1 subset has precision 0.022 and mass recall 0.044.",
+      "The label's 'believes S1 is good' is not supported by the hidden good state. Adding good==1 to D2 & S2 & a1 gives F1 0.39, vs 0.386 without it. Adding it to the recorded predicate lowers dev F1 from 0.80 to 0.69. 14% of firings occur when good==2 or is unknown.",
+      "Nearly all of the selectivity comes from choice, which is the model's own logit(a1)-logit(a2) read out at the same D2 step. It cuts D2 & S2 & a1 (45,685 steps, precision 0.24) down to about 14,000 steps. The best predicate from observed variables only (D2 & S2 & a1 & ep_trial<60) reaches just F1 0.47. So the predicate mostly restates the hidden state instead of explaining it from inputs.",
+      "The 'choice < 8.07' bound in the explanation does nothing. At D2 on S2, choice is never >= 5 (0 steps predicted), and choice < -1.5 never fires (correct).",
+      "Confirmed: the unit fires only at D2 and only on S2 (100% of activation mass), never at D1 or GO. It is essentially silent for ep_trial >= 80 (mass recall 0.002). Magnitude increases strongly early in the episode: ep_trial<40 covers 90% of the top quartile but 31% of the bottom quartile.",
+      "Systematic false positives: firings after an a2 trial (prev_action==2). Excluding them raises dev precision from 0.80 to 0.84 at the same recall, which points to a recency effect from the previous choice.",
+      "The recorded test F1 of 0.788 is below the 0.8 bar."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "D2 arrival at S2 after choosing a1 (rare transition), in the first ~80 trials of an episode, when the agent's a1 logit stays moderately high (>~2.5) and the previous choice was not a2",
+    "better_predicate": "(phase == D2) & (state == 2) & (choice > 2.5) & (ep_trial < 80) & (prev_action != 2)",
+    "better_predicate_test_f1": 0.82,
+    "upheld": false
+  },
+  "final_label": "D2 arrival at S2 after choosing a1 (rare transition), in the first ~80 trials of an episode, when the agent's a1 logit stays moderately high (>~2.5) and the previous choice was not a2",
+  "original_predicate": "(phase == D2) & (state == 2) & (choice > 2.78) & (ep_trial < 80)",
+  "original_test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 30,
+    "predicate": "(phase == D2) & (state == 2) & (choice > 2.78) & (ep_trial < 80)",
+    "split": "test",
+    "precision": 0.7852049145115559,
+    "recall": 0.7911184210526315,
+    "f1": 0.7881505756543487,
+    "mass_recall": 0.875196797013364,
+    "correlation": 0.7566805391659412,
+    "n_active": 11552,
+    "n_predicted": 11639,
+    "coverage_by_activation_quartile": [
+      0.5339335180055401,
+      0.743421052631579,
+      0.9425207756232687,
+      0.9445983379501385
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 30,
+    "predicate": "(phase == D2) & (state == 2) & (choice > 2.78) & (ep_trial < 80)",
+    "split": "dev",
+    "precision": 0.8009377664109122,
+    "recall": 0.8005282890252216,
+    "f1": 0.8007329753686184,
+    "mass_recall": 0.8811544626416062,
+    "correlation": 0.7683720037165084,
+    "n_active": 11736,
+    "n_predicted": 11730,
+    "coverage_by_activation_quartile": [
+      0.5398773006134969,
+      0.7801635991820041,
+      0.9383094751192911,
+      0.943762781186094
+    ]
+  },
+  "predicate_from": "skeptic"
+}

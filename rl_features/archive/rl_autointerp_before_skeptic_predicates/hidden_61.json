@@ -1,0 +1,62 @@
+{
+  "label": "D2: reached S2, late in episode, policy leaning a2",
+  "predicate": "(phase == D2) & (state == S2) & (ep_trial >= 60) & (choice < -1.5)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 and only when the observed state is S2 (100% of mass; never on S1, D1 or GO). It is also gated by episode time: essentially silent before trial ~40 and ramping up to trials 60-99 (rate rises steadily through 90-99), so it reads like a slow clock in the hidden state. Among late S2 steps it fires when the model policy logit at that step leans toward a2 (choice < -1.5). The bulk is common a2->S2 transitions with S2 good, at low-moderate magnitude. The strongest activations are rare a1->S2 transitions while S1 is good (an unexpected arrival in S2). Uses only observed state, episode time and the model own policy readout. Dev: state==S2 at D2 alone F1 0.42; adding ep_trial>=60 gives 0.74; adding choice<-1.5 gives 0.89 (mass recall 0.98). Misses are mostly very weak activations.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 61,
+    "predicate": "(phase == D2) & (state == S2) & (ep_trial >= 60) & (choice < -1.5)",
+    "split": "test",
+    "precision": 0.8527184415313104,
+    "recall": 0.9170582838741084,
+    "f1": 0.8837188323169632,
+    "mass_recall": 0.9790888272537308,
+    "correlation": 0.7805989979725585,
+    "n_active": 53411,
+    "n_predicted": 57441,
+    "coverage_by_activation_quartile": [
+      0.7432037744327118,
+      0.9339474275443721,
+      0.9914625926758032,
+      0.9996255242660276
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 61,
+    "predicate": "(phase == D2) & (state == S2) & (ep_trial >= 60) & (choice < -1.5)",
+    "split": "dev",
+    "precision": 0.8620677462697122,
+    "recall": 0.9209065155807366,
+    "f1": 0.8905162810234307,
+    "mass_recall": 0.9809306805931277,
+    "correlation": 0.7887020503420767,
+    "n_active": 52950,
+    "n_predicted": 56564,
+    "coverage_by_activation_quartile": [
+      0.7500377700558997,
+      0.9410787127964949,
+      0.9925209639646445,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 61,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The scores reproduce. Dev: P 0.862, R 0.921, F1 0.891, MR 0.981. Test: P 0.853, R 0.917, F1 0.884, MR 0.979. Activity is limited to D2 (D1 and GO have 0 active steps). On in_state, 7 of 52950 active steps are S1 and all the rest are S2. ep_trial: 0 active in trials 0-19, rate 0.004 at 40-49, 0.019 at 50-59, then 0.08 to 0.12 from trial 60 on. On choice, the bins at or above -1.52 hold under 1% of the mass, and so does choice < -8.91.",
+      "One claim in the explanation is wrong: 'the strongest are rare a1->S2 transitions while S1 is good'. That is true only of the handful of top-10 windows. D2 & S2 & action==1 has precision 0.038 and 2.2% of the mass, and covers only 1% of the top activation quartile, less than it covers of the lower quartiles (5.8% of the lowest). D2 & S2 & good==1 covers 6.8% of the top quartile. The strong activations are mostly common a2->S2 transitions with S2 good (good==2 holds 74% of the mass). The rare a1->S2 cases are isolated extreme outliers, not a class of strong activations.",
+      "On test, the misses hold only 2.1% of the mass and are very weak, mostly below 0.15 of max. The false positives are late common a2->S2 steps, often right after an unrewarded trial or an S1R trial. Adding prev_reward==1 raises precision to 0.92 but drops recall to 0.70, so this is a soft graded effect, not a separate missed class. Raising the choice threshold to -2.5 trades recall for precision with no F1 gain (test 0.875).",
+      "A small refinement, ((ep_trial>=70)|(choice<-3)), gives test F1 0.903 against 0.884. That is within a few points, so the simpler recorded predicate is acceptable. No future variables are used. choice at D2 is the model's own policy readout, effectively its leaning for the next choice."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == D2) & (state == S2) & (ep_trial >= 60) & (choice < -1.5) & ((ep_trial >= 70) | (choice < -3))",
+    "better_predicate_test_f1": 0.903
+  }
+}

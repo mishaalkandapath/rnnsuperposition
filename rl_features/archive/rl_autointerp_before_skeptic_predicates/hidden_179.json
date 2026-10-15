@@ -1,0 +1,66 @@
+{
+  "label": "D1 after a rewarded a2 trial, late in the episode (trial >= ~65), when the agent will repeat a2",
+  "predicate": "(phase == D1) & (in_rew == 1) & (prev_action != 1) & (action == 2) & (ep_trial >= 65)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (never GO/D2), almost exclusively when the reward input is 1 (99.9% of mass) and the previous choice was a2 (prev_action==1 holds 0.2% of mass; prev_action -1 is just the first trial in the window, where the choice is not visible). The agent then chooses a2 again (next GO choice a2 in >99.9% of activations; action at D1 is the agent own upcoming choice, which it can compute, not a random future outcome). It also depends strongly on episode time: zero activations before ep_trial ~55, then the rate rises from trial 60 to 99 (an episode-clock component). The policy logit at D1 is moderately negative (favours a2) and value is low/moderate. Magnitude is larger across a run of consecutive rewarded a2 trials (example windows climb 0.1 -> 1.0 over a streak) and in good=S2 / start_high episodes. Not active after unrewarded trials, after a1 choices, or early in the episode. Without the upcoming-choice term (observed variables only) F1 drops to 0.75 (precision 0.62), because of D1s after a rewarded a2 where the agent then switches to a1. Dev: P 0.75, R 0.95, F1 0.84, mass recall 0.996. The ep_trial threshold is approximate, since activation ramps up through trials 60-70.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 179,
+    "predicate": "(phase == D1) & (in_rew == 1) & (prev_action != 1) & (action == 2) & (ep_trial >= 65)",
+    "split": "test",
+    "precision": 0.7310062042463665,
+    "recall": 0.9476247460551582,
+    "f1": 0.825338730397266,
+    "mass_recall": 0.9949534912930086,
+    "correlation": 0.7124640450868982,
+    "n_active": 35933,
+    "n_predicted": 46581,
+    "coverage_by_activation_quartile": [
+      0.8015360641139804,
+      0.9909829678281198,
+      0.9979962150729155,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 179,
+    "predicate": "(phase == D1) & (in_rew == 1) & (prev_action != 1) & (action == 2) & (ep_trial >= 65)",
+    "split": "dev",
+    "precision": 0.7530371436672556,
+    "recall": 0.951050877337961,
+    "f1": 0.8405394877787516,
+    "mass_recall": 0.9955152547786266,
+    "correlation": 0.7251461607331703,
+    "n_active": 36303,
+    "n_predicted": 45849,
+    "coverage_by_activation_quartile": [
+      0.8134640810929925,
+      0.9922873512560599,
+      0.998567650947554,
+      0.9998898071625344
+    ]
+  },
+  "gate": "hidden",
+  "feature": 179,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Systematic false-positive class: the predicate includes D1 steps after a RARE-rewarded a2 trial (a2 -> S1, rewarded). Adding (prev_common == 0) to the recorded predicate gives 5506 predicted test rows with 0 activations (precision 0.0). This is the model-based distinction the task is built around, and the label and explanation leave it out.",
+      "The same holds from the reached-state side. in_rew==1 & prev_state==2 & prev_action==1 (a rare-rewarded a1 trial that reached S2) gives precision 0.02 and mass recall 0.003. So the feature needs a2 + common + rewarded, not just 'rewarded a2' and not just 'rewarded at S2'.",
+      "Restricting to common previous transitions (prev_state in {-1, 2} & prev_common != 0) and keeping action==2 & ep_trial>=65 lifts test F1 from 0.825 to 0.884 (precision 0.73 -> 0.83, recall unchanged at 0.948, mass recall 0.995).",
+      "The observed-only version improves too: test F1 0.733 -> 0.795 when common-only is used in place of prev_action != 1.",
+      "prev_action == -1 (the window's first trial, where the previous choice is hidden) holds about 22% of activation mass. With prev_action == 2 strictly, mass recall falls to 0.78. The explanation treats this as trivial, but it is a large share of the mass, and the claim that the previous choice was a2 cannot be checked for that share.",
+      "Claims that check out: D1 only (phase != D1 has 0 activations); requires in_rew == 1; a1-common-rewarded trials give 0 activations; the upcoming choice is almost always a2.",
+      "Streak effect confirmed: many remaining false positives are the first rewarded trial after an unrewarded one. Adding tv('reward',-2) != 0 raises precision to 0.886 but lowers recall (F1 0.869), so the streak dependence is graded."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a COMMON-rewarded a2 trial (a2 -> S2, rewarded; never after rare a2 -> S1 rewards), late in the episode (trial >= ~65), when the agent will repeat a2; grows over a rewarded streak",
+    "better_predicate": "(phase == D1) & (in_rew == 1) & isin(prev_state, [-1, 2]) & (prev_common != 0) & (action == 2) & (ep_trial >= 65)",
+    "better_predicate_test_f1": 0.884
+  },
+  "final_label": "D1 after a COMMON-rewarded a2 trial (a2 -> S2, rewarded; never after rare a2 -> S1 rewards), late in the episode (trial >= ~65), when the agent will repeat a2; grows over a rewarded streak"
+}

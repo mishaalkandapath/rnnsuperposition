@@ -1,0 +1,64 @@
+{
+  "label": "D2 after choosing a2, early in the episode (strong a2 policy)",
+  "predicate": "(phase == D2) & (action == 2) & (choice < -4.44) & (ep_trial < 50)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Update-gate unit that fires almost only at D2 (99.8% of mass) after the agent chose a2 (in_action == 2; a1 choices give ~0 activations), and only in the first ~50 trials of an episode (rate ~10-13% of steps in trials 0-49, ~0 after trial 60). Within these steps it fires when the model output at D2 strongly favors a2 (choice logit < -4.44), i.e. during runs of a2 choices. Magnitude is largest at D2 after a rare transition to S1 following a2 (S1R cells reach the max, especially in runs of unrewarded rare trials), smaller on common S2 arrivals. It does not fire at D1 or GO (except ~0.1% at GO), not after a1, and not late in the episode. Simple (phase==D2)&(action==2)&(ep_trial<50) gives dev F1 0.71; adding the a2-leaning policy logit raises it to 0.82. All variables are observed at D2 (action is known at D2; choice is the model own output; ep_trial is elapsed time). The episode-time dependence suggests it tracks a slowly drifting hidden-state component.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 44,
+    "predicate": "(phase == D2) & (action == 2) & (choice < -4.44) & (ep_trial < 50)",
+    "split": "test",
+    "precision": 0.7804429494333454,
+    "recall": 0.8506981924098347,
+    "f1": 0.8140575813221407,
+    "mass_recall": 0.9345493895826164,
+    "correlation": 0.7453398452873629,
+    "n_active": 58365,
+    "n_predicted": 63619,
+    "coverage_by_activation_quartile": [
+      0.6108141447368421,
+      0.8584058666301144,
+      0.9394832430950586,
+      0.9941059557261326
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 44,
+    "predicate": "(phase == D2) & (action == 2) & (choice < -4.44) & (ep_trial < 50)",
+    "split": "dev",
+    "precision": 0.7835768198722677,
+    "recall": 0.8604142256530429,
+    "f1": 0.8201998965202894,
+    "mass_recall": 0.9401123366968915,
+    "correlation": 0.7482433838224288,
+    "n_active": 58036,
+    "n_predicted": 63727,
+    "coverage_by_activation_quartile": [
+      0.6282996760631332,
+      0.8726307808946171,
+      0.9456199600248122,
+      0.9951064856296092
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 44,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The factual claims hold up. Phase split: D2 holds 0.998 of activation mass, GO 0.002 (416 of 380619 steps), D1 0. Steps with action==1: 5 active out of 525531. ep_trial: active rate is 10-13% in trials 0-39, 5.5% in 40-49, 1.6% in 50-59 and 0 from trial 70 on. Dev F1 progression matches the explanation: 0.437, 0.715, 0.820. On the test split the recorded predicate scores precision 0.780, recall 0.851, F1 0.814, mass recall 0.935.",
+      "The rare-to-S1 claim holds: within the predicate, state==1 has precision 0.85 versus 0.75 for state==2, and S1 arrivals carry about 49% of the mass with fewer steps.",
+      "Minor caveat 1: the episode-time cutoff is a soft decline, not a step at 50. Precision is 0.88 with ep_trial<40, 0.83 with <45 and 0.78 with <50. ep_trial<45 gives about the same dev F1 (0.824).",
+      "Minor caveat 2: the hidden good state is strongly confounded with activity. 79% of mass falls on steps where good==S2, and 77% is in low_first episodes (S2 good at start). Within the predicate, good==1 steps have precision 0.50, but they are only 4.6k of 63.7k predicted steps, so this is not a large missed class. The explanation does not mention this.",
+      "Minor caveat 3: the 'strong a2 policy' wording refers to the D2 policy logit. At GO the a2 logit is just as strong (choice<-4.44 at GO: precision 0.002) yet the unit is silent there, so the activity is specific to D2, not to the a2 policy as such.",
+      "The false positives on the test split are mostly long common-rewarded runs of S2 arrivals, where activation decays. This is a modest effect: precision is 0.61 when the previous two trials were rewarded, versus 0.78 overall, so it is not a separate failure class. Within the predicate, precision stays in the 0.6-0.85 range across prev_reward, prev_common and state. Misses hold only 6.5% of activation mass and are scattered across D2 steps after a2."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

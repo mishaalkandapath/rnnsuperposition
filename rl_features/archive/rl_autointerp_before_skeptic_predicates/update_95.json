@@ -1,0 +1,65 @@
+{
+  "label": "D1 after reaching S2, when the agent is about to choose a2",
+  "predicate": "(phase == D1) & (action == 2) & (prev_state != 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": true,
+  "explanation": "Fires only at D1 (never GO or D2). Almost never fires when the previous trial reached S1: (D1) & prev_state in {S2, unknown at the window start} has recall 0.998. Inside that, it fires when the agent is about to choose a2 (the agent computes its own upcoming choice; action at D1 is flagged FUTURE only for that reason). Dev F1 0.89, mass recall 0.96. The version with only observed variables, the model policy logit at D1 favouring a2 (choice < 0) & prev_state != S1, gets dev F1 0.87 and mass recall 0.92. Magnitude is highest in the choice-logit band -4.4..-1.5 (moderate a2 preference) and with a rewarded previous trial (in_rew=1 carries 76% of the mass). It is zero when the policy strongly favours a2 (choice < -4.4) and at high value (> 8.1). Weak misses are D1 steps after an S2 outcome where the agent then picks a1. False positives are mostly first-in-window trials where prev_state is unknown. Read it as: last state was S2 and I am staying with a2, a stay-on-a2 signal at D1.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 95,
+    "predicate": "(phase == D1) & (action == 2) & (prev_state != 1)",
+    "split": "test",
+    "precision": 0.8746914141873654,
+    "recall": 0.893857311101469,
+    "f1": 0.8841705115038551,
+    "mass_recall": 0.9573992118013129,
+    "correlation": 0.8689319571121343,
+    "n_active": 161330,
+    "n_predicted": 164865,
+    "coverage_by_activation_quartile": [
+      0.6212034810205043,
+      0.9548260729427516,
+      0.9996032926708321,
+      0.999801646335416
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 95,
+    "predicate": "(phase == D1) & (action == 2) & (prev_state != 1)",
+    "split": "dev",
+    "precision": 0.8758352778113337,
+    "recall": 0.9007414963317509,
+    "f1": 0.8881138042080222,
+    "mass_recall": 0.9617711846407588,
+    "correlation": 0.8745119529810477,
+    "n_active": 152934,
+    "n_predicted": 157283,
+    "coverage_by_activation_quartile": [
+      0.6301459434011613,
+      0.9733483287126641,
+      0.9996861350142547,
+      0.9997907566761698
+    ]
+  },
+  "gate": "update",
+  "feature": 95,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The phase claims check out. The feature fires only at D1 (100% of mass at D1, 0 at GO and D2), and it is essentially silent when prev_state == S1 (test recall 0.0 for D1 & prev_state==1).",
+      "The label says 'after reaching S2', but what matters is the previous ACTION plus the transition, not the reached state alone. On test, D1 & prev_action==2 & prev_state==2 (a2 with a common transition) has precision 0.94. D1 & prev_action==1 & prev_state==2 (S2 reached by a rare transition from a1) has precision only 0.26 and holds about 1.6% of the mass. D1 & prev_action==2 & prev_state==1 (a2 with a rare transition) has precision 0.006. So the feature tracks 'last trial was a2 -> S2 common', not 'last state was S2'. The recorded predicate's FPs include D1 after a rare a1->S2 trial (seen in the misses output).",
+      "'About to choose a2' is overclaimed. After an a2->S2 common trial the feature fires about 84% of the time even when the agent then picks a1 (D1 & prev_action==2 & prev_state==2 & prev_reward==0 & action==1: precision 0.84). The action==2 conjunct mostly stands in for prev_action==2 (staying), and for the first-trial case where prev_* is unknown. Most of the predicate's misses on test are exactly these D1 steps after a2-common where the agent switches to a1.",
+      "The FPs on the window's first trial (prev_state == -1) are a real systematic class, as the explanation admits. D1 & prev_state==-1 & action==2 has precision 0.74, because the true previous trial is not visible in the window.",
+      "A better predicate fixes the misattribution and uses only observed variables plus the model's own policy logit: (phase == D1) & (((prev_action == 2) & (prev_state == 2)) | ((prev_state != 1) & (choice < 0) & (choice > -4.5))). Test P 0.922, R 0.911, F1 0.917, mass recall 0.971, against the recorded 0.884. The simpler (D1) & (((prev_action==2)&(prev_state==2)) | ((prev_state==-1)&(action==2))) gets test F1 0.901, mass recall 0.975.",
+      "The 'observed-only' alternative given in the explanation, (D1)&(choice<0)&(prev_state!=1), does reproduce: test F1 0.858, P 0.899, R 0.820, mass recall 0.906."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a trial where the agent chose a2 and reached S2 by the common transition. It fires largely whether or not the agent then stays on a2, and is strongest after a reward.",
+    "better_predicate": "(phase == D1) & (((prev_action == 2) & (prev_state == 2)) | ((prev_state != 1) & (choice < 0) & (choice > -4.5)))",
+    "better_predicate_test_f1": 0.9165
+  },
+  "final_label": "D1 after a trial where the agent chose a2 and reached S2 by the common transition. It fires largely whether or not the agent then stays on a2, and is strongest after a reward."
+}

@@ -1,0 +1,76 @@
+{
+  "label": "At D1, fires when the last two trials both reached S1 and the earlier went unrewarded.",
+  "short_terms": "(phase == D1) * (prev_state + tv(\"state\", -2) == 2) * (tv(\"reward\", -2) == 0)",
+  "terms": "(phase == D1) * (prev_state == 1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 0) ;; (phase == D1) * (prev_state == 1) * (tv(\"state\", -2) == 1) * (tv(\"state\", -3) == 1) * (tv(\"reward\", -3) == 0) ;; (phase == D1) * (prev_state == 1) * (tv(\"state\", -2) == -9) ;; (phase == D1) * (prev_state == 1) * (prev_reward == 0) * (tv(\"state\", -2) == 2) ;; (phase == D1) * (prev_state == 1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 1) * (tv(\"state\", -3) == 1) * (tv(\"reward\", -3) == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Active only at D1 (zero at GO/D2). Magnitude is large (~2-3.8) when the previous trial and the one before both reached S1 and the earlier S1 visit was unrewarded; the most recent outcome barely matters (weight ~0 for prev_reward), and a visit to S2 switches it off. So it tracks a lagged, sustained S1-was-unrewarded signal for streaks of S1 visits (whatever the choice, common or rare). The free fit adds a smaller boost for a third S1 unrewarded trial back and window-start terms, gaining only ~0.02 R^2; the remaining misses are mostly windows that start mid-streak, where the earlier history is not visible. Belief log-odds adds nothing beyond this.",
+  "full_test_scores": {
+    "gate": "reset",
+    "feature": 16,
+    "terms": [
+      "(phase == D1) * (prev_state == 1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * (prev_state == 1) * (tv(\"state\", -2) == 1) * (tv(\"state\", -3) == 1) * (tv(\"reward\", -3) == 0)",
+      "(phase == D1) * (prev_state == 1) * (tv(\"state\", -2) == -9)",
+      "(phase == D1) * (prev_state == 1) * (prev_reward == 0) * (tv(\"state\", -2) == 2)",
+      "(phase == D1) * (prev_state == 1) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 1) * (tv(\"state\", -3) == 1) * (tv(\"reward\", -3) == 0)"
+    ],
+    "weights": [
+      1.8445987060219091,
+      0.9973128496802974,
+      0.15113778741085723,
+      -0.03121074688864725,
+      -0.7750059128346778
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5512148961450367,
+    "r2": 0.5751241049418339,
+    "r2_timing_only": 0.05327540640592243
+  },
+  "gate": "reset",
+  "feature": 16,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 16,
+    "terms": [
+      "(phase == D1) * (prev_state + tv(\"state\", -2) == 2) * (tv(\"reward\", -2) == 0)"
+    ],
+    "weights": [
+      1.9387226342588544
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5256188647848095,
+    "r2": 0.5508917125547016,
+    "r2_timing_only": 0.05327540640592243
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 16,
+    "terms": [
+      "(phase == D1) * (prev_state + tv(\"state\", -2) == 2) * (tv(\"reward\", -2) == 0)"
+    ],
+    "weights": [
+      1.9387226342588544
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5246893741521734,
+    "r2": 0.5492465022964389,
+    "r2_timing_only": 0.051665430581237626
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the 'lasting signal through a run of S1 visits' part of the explanation goes beyond the short form, which only looks two trials back. Adding a 3-back unrewarded-S1 term gives only +0.010 test R^2 (0.536).",
+      "Minor: the trial right after a single unrewarded S1 visit sometimes fires moderately even when the trial before it was S2 (e.g. 1.78 in a misses window). Adding (D1)*(prev_state==1)*(prev_reward==0) gives only +0.003 test R^2 (0.528).",
+      "The remaining misses are window-start truncation, as stated: with no earlier history in the window, the prediction stays near 0 while the actual value is about 3.5. Adding a window-start term gives +0.010 (0.535). The other systematic errors are small: D1 after S2 is over-predicted by about 0.12, and D1 after a1 S1 u is under-predicted by 0.12.",
+      "Checked claims: the 'two S1' condition without the reward condition scores only 0.078, so the 2-back unrewarded condition is essential. prev_reward adds almost nothing (+0.00003). Choice (+0.0026) and common/rare (+0.0026) don't matter. belief_lo adds at most 0.005, which supports 'belief adds nothing'. Requiring both rewards to be 0 lowers the score to 0.318, so it is the 2-back reward specifically that counts."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "label": "D1 first a2->S2 loss after a reward, mid-late episode, stronger with S2 belief",
+  "terms": "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"prev_reward\", -1) == 1) * table(ep_dec, {4: 0.3, 5: 0.6, 6: 1, 7: 1, 8: 0.5}) ;; (phase == D1) * last_is(\"a2 S2 u\") ;; (phase == D1) * last_is(\"a2 S2 u\") * (tv(\"prev_reward\", -1) == 1) * table(ep_dec, {4: 0.3, 5: 0.6, 6: 1, 7: 1, 8: 0.5}) * belief_lo",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (zero at GO/D2). Its magnitude is large (~0.3-0.5) when the previous trial was a common a2->S2 loss AND the trial before that was rewarded, i.e. the first loss after a win, and only in the mid-to-late episode (trials 40-89, peaking at 60-79; near zero before trial 40 and at 90-99). A second loss in a row (prev a2 S2 u after an unrewarded trial) gives almost nothing (weight ~0.005-0.01). Within the firing condition it grows with the ideal observer belief that S2 is good (negative belief_lo weight). Every other previous-trial pattern, reward-shown D1s and all GO/D2 steps stay near 0. Observed-only terms: dev R^2 beyond timing 0.62 vs 0.26 for last_is + belief alone; the plain last_is(a2 S2 u) indicator gives 0.15. Adding belief_cover or more episode-decile terms adds <0.01. Main remaining misses are windows where the trial before falls outside the window (tv -1 is unknown on the first trial). The earlier model-based firing label (policy deciles 3-4 at D1) is not needed: these observed terms beat the profile all ceiling (0.27, which includes model outputs) because they use the reward-history x episode-time interaction.",
+  "gate": "update",
+  "feature": 220,
+  "test_scores": {
+    "gate": "update",
+    "feature": 220,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"prev_reward\", -1) == 1) * table(ep_dec, {4: 0.3, 5: 0.6, 6: 1, 7: 1, 8: 0.5})",
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"prev_reward\", -1) == 1) * table(ep_dec, {4: 0.3, 5: 0.6, 6: 1, 7: 1, 8: 0.5}) * belief_lo"
+    ],
+    "weights": [
+      0.30540338155008295,
+      0.005323333305196499,
+      -0.09170776672761623
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6182396707815438,
+    "r2": 0.6354470454187044,
+    "r2_timing_only": 0.04507376309211519
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 220,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"prev_reward\", -1) == 1) * table(ep_dec, {4: 0.3, 5: 0.6, 6: 1, 7: 1, 8: 0.5})",
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"prev_reward\", -1) == 1) * table(ep_dec, {4: 0.3, 5: 0.6, 6: 1, 7: 1, 8: 0.5}) * belief_lo"
+    ],
+    "weights": [
+      0.30540338155008295,
+      0.005323333305196499,
+      -0.09170776672761623
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6239474240094113,
+    "r2": 0.6400813536309873,
+    "r2_timing_only": 0.0429033881208668
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the main residual misses are windows whose core D1 sits at rel -3. There the previous trial is outside the window, so last_is() is 0, yet the activation is about 0.5 (misses output: [-3 t72] r0 actual 0.535 vs predicted 0.023, and so on). This is a data-window limitation. An observed-only proxy, (phase==D1)*(rel==-3)*(prev_reward==0)*(belief<0.5)*ep_table plus its belief_lo version, recovers about 0.03 (test 0.618 -> 0.651).",
+      "Minor: the episode-time claim is right but a little coarse. Free per-decile weights (test) are: deciles 0-3 about 0.002, 4 = 0.06, 5 = 0.17, 6 = 0.29, 7 = 0.37, 8 = 0.20, 9 = 0.002. The fixed table and the 'near zero over 90-99' statement both check out. The peak is decile 7 (trials 70-79).",
+      "Minor: the trial before is effectively always a stay a2->S2 rewarded trial. With an a1 trial before, the term gets weight 0. So 'after a reward' means 'after an a2->S2 win', which the label could say.",
+      "Minor false positive: [+1 t71] after a1 S1 x3 then a2 S2 r, a2 S2 u is predicted 0.47 with actual 0. A freshly started a2 run may not trigger it, but this is scattered rather than systematic.",
+      "Checks that held (test R^2 beyond timing): the claimed 3 terms get 0.618. The plain indicator plus first-loss-after-win gets 0.242. Adding the episode table gets 0.543 and adding belief_lo gets 0.618 (weight -0.09, so the feature is stronger when the observer believes S2 is good). A second loss in a row is near zero (weight -0.007). The plain a2 S2 u term has weight 0.005. Trial-before-trial-before reward adds 0.001, belief_cover adds 0.01, belief_lo^2 adds 0. Every non-D1 phase has zero residual, and D1 rows for other previous-trial patterns are uniformly slightly over-predicted, by -0.005 to -0.006."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a first common a2->S2 loss following an a2->S2 win, trials 50-89 (peak 60-79), stronger with S2-good belief",
+    "better_terms": "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"prev_reward\", -1) == 1) * table(ep_dec, {4: 0.3, 5: 0.6, 6: 1, 7: 1, 8: 0.5}) ;; (phase == D1) * last_is(\"a2 S2 u\") * (tv(\"prev_reward\", -1) == 1) * table(ep_dec, {4: 0.3, 5: 0.6, 6: 1, 7: 1, 8: 0.5}) * belief_lo ;; (phase == D1) * last_is(\"a2 S2 u\") ;; (phase == D1) * (rel == -3) * (prev_reward == 0) * (belief < 0.5) * table(ep_dec, {4: 0.3, 5: 0.6, 6: 1, 7: 1, 8: 0.5}) ;; (phase == D1) * (rel == -3) * (prev_reward == 0) * (belief < 0.5) * table(ep_dec, {4: 0.3, 5: 0.6, 6: 1, 7: 1, 8: 0.5}) * belief_lo ;; (phase == D1) * last_is(\"a2 S2 u\") * (tv(\"prev_reward\", -1) == 1) * table(ep_dec, {4: 0.3, 5: 0.6, 6: 1, 7: 1, 8: 0.5}) * belief_cover",
+    "better_terms_test_r2_beyond_timing": 0.6604
+  },
+  "final_label": "D1 after a first common a2->S2 loss following an a2->S2 win, trials 50-89 (peak 60-79), stronger with S2-good belief"
+}

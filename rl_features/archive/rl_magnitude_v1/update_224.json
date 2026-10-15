@@ -1,0 +1,71 @@
+{
+  "label": "D2 a1->S1 common; larger after unrewarded recent trials, decays over episode",
+  "terms": "(phase == D2) * (action == 1) * (state == 1) ;; (phase == D2) * (action == 1) * (state == 1) * (prev_reward == 0) ;; (phase == D2) * (action == 1) * (state == 1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D2) * (action == 1) * (state == 1) * ep_dec ;; (phase == D2) * (action == 1) * (state == 1) * (tv(\"reward\", -2) == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Silent at D1 and GO; fires only at D2, essentially only when this trial was a1 -> S1 (common), which is observed at D2. Magnitude on a1/S1 D2 steps: base about +0.47, plus about +0.8 if the previous trial was unrewarded, plus about +0.25 if the previous trial was a1 that reached S2 (rare), plus about +0.27 if the trial two back was unrewarded; it falls about 0.09 per episode decade (habituation: long runs of rewarded a1/S1 trials late in the episode give near-zero activation). Other choice/state combinations at D2 sit below the timing baseline. The reward from three trials back adds nothing. Policy logit and value correlate with it but are not needed. Test R^2 beyond timing 0.61 (dev 0.60), above the additive all ceiling of 0.59; no future or hidden variables used.",
+  "gate": "update",
+  "feature": 224,
+  "test_scores": {
+    "gate": "update",
+    "feature": 224,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 1)",
+      "(phase == D2) * (action == 1) * (state == 1) * (prev_reward == 0)",
+      "(phase == D2) * (action == 1) * (state == 1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D2) * (action == 1) * (state == 1) * ep_dec",
+      "(phase == D2) * (action == 1) * (state == 1) * (tv(\"reward\", -2) == 0)"
+    ],
+    "weights": [
+      0.46928330854674,
+      0.7934396296171417,
+      0.24764756080497086,
+      -0.0922708704896243,
+      0.27732452544932384
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6134119344366216,
+    "r2": 0.6728681217873778,
+    "r2_timing_only": 0.15379726547975592
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 224,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 1)",
+      "(phase == D2) * (action == 1) * (state == 1) * (prev_reward == 0)",
+      "(phase == D2) * (action == 1) * (state == 1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D2) * (action == 1) * (state == 1) * ep_dec",
+      "(phase == D2) * (action == 1) * (state == 1) * (tv(\"reward\", -2) == 0)"
+    ],
+    "weights": [
+      0.46928330854674,
+      0.7934396296171417,
+      0.24764756080497086,
+      -0.0922708704896243,
+      0.27732452544932384
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.608858509430598,
+    "r2": 0.6687611551459731,
+    "r2_timing_only": 0.1531482779496801
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Systematic error the terms miss: D2 steps that are not a1->S1 sit about 0.19 below the timing baseline (profile residuals for codes 5/7/8 are about -0.19). The explanation says this but no term models it, so the intercept absorbs it and leaves D1/GO at +0.047 and D2 at -0.093 mean error in misses. Adding the single term (phase==D2)*(1-(action==1)*(state==1)) (weight -0.188) lifts test R^2 from 0.613 to 0.688, and the phase-mean errors drop to 0.000.",
+      "The claim 'about +0.25 if the previous trial was a1 reaching S2 (rare)' is misattributed. The boost comes from a rare UNREWARDED previous trial, not rare in general. With A*(prev_reward==0)*(prev_common==0) added, the prev a1->S2 weight falls to -0.065 and the rare-unrewarded term takes +0.446 (test 0.695). Misses on the original terms also over-predict D2 after a1 S2 r (-0.203). The profile agrees: residual after a1 S2 u is +0.79, after a1 S2 r it is -0.10.",
+      "The flat 'previous trial unrewarded: +0.79' overstates the effect after a common-unrewarded a1->S1 trial. Misses over-predict D2 after a1 S1 u by -0.226, and a last_is('a1 S1 u') term fits at -0.457, so that case gets only about +0.47 while other unrewarded previous trials get about +0.93.",
+      "The claim that 'long runs of rewarded a1/S1 trials' push activation toward zero is not captured by ep_dec. The worst-fit windows are runs of rewarded a1 S1c trials with actual 0 and predicted 0.55-0.82. Explicit run-length terms add little (test 0.618), so the stated mechanism is only partly supported.",
+      "The model's own policy output explains a lot more: A*choice plus the non-a1S1 D2 term gives test 0.754. The magnitude follows the agent's a1 preference at D2 more closely than the label suggests. The explanation's line 'policy not needed' holds only for its own weaker fit.",
+      "Checks that held up: the feature is silent at D1/GO, the a1->S1 D2 base is about +0.47, the decline over the episode is about -0.09 per decade, and two-back unrewarded adds about +0.28. Everything used is observed (prev and tv(-2) outcomes are known at D2), so there are no future-variable problems."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after a1->S1 (common), below baseline for other D2 outcomes; larger after an unrewarded previous trial (most after rare-unrewarded or a2 trials, weaker after common-unrewarded a1) or an unrewarded trial two back; declines over the episode",
+    "better_terms": "(phase == D2) * (action == 1) * (state == 1) ;; (phase == D2) * (action == 1) * (state == 1) * (prev_reward==0) ;; (phase == D2) * (action == 1) * (state == 1) * (prev_reward==0)*(prev_common==0) ;; (phase == D2) * (action == 1) * (state == 1) * ep_dec ;; (phase == D2) * (action == 1) * (state == 1) * (tv('reward', -2) == 0) ;; (phase==D2)*(1-(action==1)*(state==1)) ;; (phase == D2) * (action == 1) * (state == 1) * last_is('a1 S1 u') ;; (phase == D2) * (action == 1) * (state == 1) * last_is('a1 S2 r')",
+    "better_terms_test_r2_beyond_timing": 0.71
+  },
+  "final_label": "D2 after a1->S1 (common), below baseline for other D2 outcomes; larger after an unrewarded previous trial (most after rare-unrewarded or a2 trials, weaker after common-unrewarded a1) or an unrewarded trial two back; declines over the episode"
+}

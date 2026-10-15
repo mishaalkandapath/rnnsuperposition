@@ -1,0 +1,74 @@
+{
+  "label": "GO only: large after a1 S1 rewarded, graded by belief S1 is good",
+  "terms": "(phase == GO) * last_is(\"a1 S1 r\") ;; (phase == GO) * last_is(\"a2 S1 r\") ;; (phase == GO) * last_is(\"a1 S1 u\") ;; (phase == GO) * (prev_state == 2) ;; (phase == GO) * (prev_action == -1) * np.clip(belief_lo, -3, 3) ;; (phase == GO) * (prev_state == 1) * np.clip(belief_lo, -3, 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO (D1 and D2 are about 0). Its magnitude is set by the previous trial plus the observer belief. It is near zero whenever the previous trial reached S2, whatever the choice or reward (prev_state==2 term about -1.2, cancelling the GO baseline). It is largest (about 3.5-5) after a1 -> S1 rewarded. It is intermediate after a2 -> S1 rewarded and lower after a1 -> S1 unrewarded. After S1 trials it rises with the ideal-observer log-odds that S1 is good. On the window first trial (previous trial unknown) it is driven by belief_lo. Reading: an a1-stay / S1-good signal from observed history. Six observed-only terms give test R^2 beyond timing 0.815 (dev 0.823), against an all-observed reference of 0.83 and an all ceiling of 0.88. So dropping the policy and value loses little: policy decile alone scored 0.56 and belief decile alone 0.45. Future variables (next choice 0.41) are not needed. A linear belief term not gated by previous state over-predicts after S2 trials (dev 0.65).",
+  "gate": "reset",
+  "feature": 106,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 106,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S1 r\")",
+      "(phase == GO) * last_is(\"a2 S1 r\")",
+      "(phase == GO) * last_is(\"a1 S1 u\")",
+      "(phase == GO) * (prev_state == 2)",
+      "(phase == GO) * (prev_action == -1) * np.clip(belief_lo, -3, 3)",
+      "(phase == GO) * (prev_state == 1) * np.clip(belief_lo, -3, 3)"
+    ],
+    "weights": [
+      1.7494769856177173,
+      -0.07696475811767522,
+      -0.7943733157947563,
+      -1.221285158082127,
+      0.5784529560884699,
+      0.3921913340428626
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8151194455900881,
+    "r2": 0.8565615060868955,
+    "r2_timing_only": 0.22415586446654212
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 106,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S1 r\")",
+      "(phase == GO) * last_is(\"a2 S1 r\")",
+      "(phase == GO) * last_is(\"a1 S1 u\")",
+      "(phase == GO) * (prev_state == 2)",
+      "(phase == GO) * (prev_action == -1) * np.clip(belief_lo, -3, 3)",
+      "(phase == GO) * (prev_state == 1) * np.clip(belief_lo, -3, 3)"
+    ],
+    "weights": [
+      1.7494769856177173,
+      -0.07696475811767522,
+      -0.7943733157947563,
+      -1.221285158082127,
+      0.5784529560884699,
+      0.3921913340428626
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8225388187436166,
+    "r2": 0.8633646821652737,
+    "r2_timing_only": 0.23005517675820508
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most of the original claims hold. I reproduced test R^2 beyond timing of 0.815. The feature is zero at D1 and D2. At GO the residual tables match the explanation: after any S2 trial it sits near zero (residual about -1.1 to -1.23, which cancels the GO baseline of about 1.23). It is largest after a1 S1 r (+2.88), close to baseline after a2 S1 r (+0.03), and lower after a1 S1 u (-0.68). It rises with belief decile (from -1.23 to +2.0).",
+      "There is a systematic miss on the window's first trial, where the previous trial is unknown. All 8 of the worst-fit dev windows in misses are GO steps on that first trial. Actual values are about 4.2 to 5.0 against predictions of about 0.4 to 1.1. The claim that belief_lo drives it there is incomplete: the reward input seen at D1 (prev_reward, which is observed) gates it together with belief. Adding (phase==GO)*(prev_action==-1)*(belief_lo>0.5)*prev_reward gets weight +1.9 and raises test R^2 from 0.815 to 0.857. That exceeds the all-observed reference of 0.83 and approaches the all ceiling of 0.88.",
+      "Small further miss: GO after a2 S1 u is over-predicted (-0.119 in misses). It actually sits at zero, like the post-S2 cases, but the prev_state==1 belief term pushes the prediction up. Giving it its own term adds about 0.002.",
+      "The label 'large after a1 S1 rewarded, graded by belief' leaves out that the feature effectively encodes 'last trial or last reward pointed to a1/S1, and the observer believes S1 is good'. On first-trial windows the D1 reward input carries that information."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO only: large after a1->S1 rewarded (on the window's first trial, after a reward when belief favours S1), graded by belief that S1 is good; about zero after S2 or after a2->S1 unrewarded",
+    "better_terms": "(phase == GO) * last_is('a1 S1 r') ;; (phase == GO) * last_is('a2 S1 r') ;; (phase == GO) * last_is('a1 S1 u') ;; (phase == GO) * (prev_state == 2) ;; (phase == GO) * (prev_state == 1) * np.clip(belief_lo, -3, 3) ;; (phase == GO) * (prev_action == -1) * np.clip(belief_lo, -3, 3) ;; (phase == GO) * (prev_action == -1) * (belief_lo>0.5) * prev_reward ;; (phase == GO) * last_is('a2 S1 u')",
+    "better_terms_test_r2_beyond_timing": 0.858
+  },
+  "final_label": "GO only: large after a1->S1 rewarded (on the window's first trial, after a reward when belief favours S1), graded by belief that S1 is good; about zero after S2 or after a2->S1 unrewarded"
+}

@@ -1,0 +1,65 @@
+{
+  "label": "GO step after a rewarded trial, agent choosing a2, first ~60 trials of the episode",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (ep_trial < 60)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO (never D1/D2), only when the previous trial was rewarded (in_rew=0 at GO, but prev_reward=1 always), and only when the agent picks a2 (model_act==2; using the future action==2 gives the same F1 0.849, the agent own choice so model_act was recorded). A strong episode-time dependence: active through ep_trial ~10-59, fades by 60-69 and is silent from trial 70 on; the ep_trial<60 clause lifts precision from 0.44 to 0.75. Previous trial almost always a2 too (prev_action==1 cases are ~1% of mass). Magnitude: larger when the agent is more confident in a2 (all activity at choice logit < -4.4; adding choice<-6 raises dev F1 to 0.89), and largest on the first reward after an unrewarded trial (25% of activations, 42% of mass), decaying across a run of consecutive rewarded a2 trials (e.g. 0.96, 0.47, 0.27, 0.19). Remaining false positives are mostly within long rewarded a2 streaks where it has decayed below threshold. Does not fire after unrewarded trials, on a1 choices, or late in the episode.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 23,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (ep_trial < 60)",
+    "split": "test",
+    "precision": 0.7423035247625726,
+    "recall": 0.9862804878048781,
+    "f1": 0.8470742262792305,
+    "mass_recall": 0.9951247506242893,
+    "correlation": 0.7013294288094902,
+    "n_active": 59040,
+    "n_predicted": 78445,
+    "coverage_by_activation_quartile": [
+      0.9590785907859078,
+      0.9905149051490515,
+      0.9957317073170732,
+      0.9997967479674796
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 23,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (ep_trial < 60)",
+    "split": "dev",
+    "precision": 0.7469769775055444,
+    "recall": 0.9871600286108058,
+    "f1": 0.8504354752654557,
+    "mass_recall": 0.9954278010814873,
+    "correlation": 0.7027468481900513,
+    "n_active": 57321,
+    "n_predicted": 75752,
+    "coverage_by_activation_quartile": [
+      0.9612029865326913,
+      0.9938590369853454,
+      0.9937892533147243,
+      0.9997906489881367
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 23,
+  "final_verdict": "explained",
+  "skeptic": {
+    "revised_verdict": "explained",
+    "upheld": false,
+    "issues": [
+      "Systematic false-positive class: the unit never fires after a reward that came from S1. On test, the original predicate plus prev_state == 1 (a rewarded rare a2->S1 trial followed by choosing a2) has precision 0.0 and recall 0.0. So the condition is 'previous trial was rewarded in S2', not just 'previous trial rewarded'.",
+      "The '~1% of mass after an a1 trial' cases are exactly the rare a1->S2 rewarded trials. Adding prev_action==1 and adding prev_common==0 each give the same recall (0.011) and mass recall (0.0087). This fits a rule keyed on the rewarded state S2, not on the previous choice. Rare-rewarded trials after an a2 choice (reaching S1) give no activity.",
+      "Adding prev_state != 1 to the predicate (which keeps the window's first trial, where prev_state = -1) raises test precision from 0.742 to 0.823, with recall and mass recall unchanged (0.986 / 0.995). Test F1 goes from 0.847 to 0.897, and dev F1 to 0.896.",
+      "Claims that check out on test: there is no activity outside GO (phase != GO: recall 0), after unrewarded trials (recall 5e-5), on a1 choices (recall 0) or at ep_trial >= 70 (recall 0). Removing ep_trial < 60 drops precision to 0.44. Adding choice < -6 gives F1 0.893, as stated.",
+      "The explanation says 'previous choice almost always a2', but prev_action == 2 covers only 74% of recall. The other 23% is the window's first trial, where prev_action = -1 (unknown), so that statistic as given is misleading. It is not a real a1 effect.",
+      "Adding prev_state != 1 and choice < -6 together reaches test F1 0.913 (precision 0.859, recall 0.975). Every variable used is observed or the model's own computation."
+    ],
+    "revised_label": "GO step after a trial rewarded in state S2 (usually common a2), agent choosing a2, first ~60 trials of the episode",
+    "better_predicate": "(phase == GO) & (prev_reward == 1) & (prev_state != 1) & (model_act == 2) & (ep_trial < 60)",
+    "better_predicate_test_f1": 0.897
+  },
+  "final_label": "GO step after a trial rewarded in state S2 (usually common a2), agent choosing a2, first ~60 trials of the episode"
+}

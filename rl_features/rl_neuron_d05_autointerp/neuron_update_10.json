@@ -1,0 +1,104 @@
+{
+  "label": "D2 after a2->S2, following a rewarded a2 trial (stay-on-a2 after reward), early/mid episode",
+  "predicate": "(phase == D2) & (in_state == 2) & (in_action == 2) & (prev_reward == 1) & (prev_action != 1) & (ep_trial < 72) & (tv('action',-2) != 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2, only when the agent chose a2 and reached S2 (common transition), and essentially only when the previous trial was rewarded and the previous choice was also a2 (or unknown at the window start): i.e. a rewarded-stay on a2 that landed in S2. Never fires at D1/GO, never after an a1 choice or S1 arrival, almost never after an unrewarded previous trial or a switch. It also has a strong episode-time dependence: active through ~trial 70 of the episode and silent from trial ~72 on (the agent does not see ep_trial, so this reflects slow drift of the hidden state). All variables are observable at D2 (in_state/in_action inputs, previous reward). Activation correlates with high model value (77% of mass in the top value bin) and a strong a2 policy preference. Lowest-quartile activations are partly the trials just before the episode-time cutoff; false positives are mostly the first trial of a fresh a2/S2 rewarded run. Without the episode-time term F1 drops to ~0.77 (precision 0.63).",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 10,
+    "predicate": "(phase == D2) & (in_state == 2) & (in_action == 2) & (prev_reward == 1) & (prev_action != 1) & (ep_trial < 72) & (tv('action',-2) != 1)",
+    "split": "test",
+    "precision": 0.8665237812941766,
+    "recall": 0.9782910881913817,
+    "f1": 0.919021747892115,
+    "mass_recall": 0.9970900148597511,
+    "correlation": 0.8573407701511967,
+    "n_active": 58271,
+    "n_predicted": 65787,
+    "coverage_by_activation_quartile": [
+      0.9150192202086765,
+      0.9989703459637562,
+      0.9993822075782537,
+      0.9997940550559484
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 10,
+    "predicate": "(phase == D2) & (in_state == 2) & (in_action == 2) & (prev_reward == 1) & (prev_action != 1) & (ep_trial < 72) & (tv('action',-2) != 1)",
+    "split": "dev",
+    "precision": 0.8838174273858921,
+    "recall": 0.9775512659642127,
+    "f1": 0.9283242466782018,
+    "mass_recall": 0.9974266540355221,
+    "correlation": 0.8681412084341258,
+    "n_active": 58177,
+    "n_predicted": 64347,
+    "coverage_by_activation_quartile": [
+      0.9111034719834995,
+      0.9993811881188119,
+      0.9997937293729373,
+      0.9999312431243125
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 10,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Factual claims hold. On dev, every activation falls at D2 (none at D1 or GO). D2 with a2->S1 has 0 activations (n=54395). There are 8 activations after a1. With a2->S2 before trial 72, a previous unrewarded trial gives precision 0.011 (n=38836), and a previous a1 that was rewarded gives precision 0.004 (n=2562). From trial 72 on, the full predicate has precision 0.03. The test score matches the report: P 0.851, R 0.980, F1 0.911, mass recall 0.998.",
+      "The prev_action != 1 term barely matters. The agent rarely picks a2 right after a rewarded a1, and window-start rows (prev_action == -1, rel -3) have the same precision (0.88) as prev_action == 2 (0.87). The phrase 'or the previous choice is unknown' is a data-window artifact, not something the agent experiences. It is harmless, but the label should not suggest the feature cares about the unknown case.",
+      "One systematic false-positive class, which the explanation partly states: the first rewarded a2 trial right after a switch from a1. When the action two trials back was a1, precision is only 0.075. Adding tv('action',-2) != 1 raises test F1 from 0.911 to 0.919, a small gain. So the feature prefers a sustained a2 run, not just one rewarded a2 trial.",
+      "It also fires about 63% of the time when the previous trial was a2 -> S1 (rare) and rewarded. Logically that is still 'stay on a2 after reward', but it is not model-based behaviour, so the feature is better read as rewarded-a2 persistence / high a2 value than as a model-based stay signal. The label does not overclaim either way.",
+      "Missed activations (0.2% of activation mass) cluster just after the trial-72 cutoff and are weak. That is boundary noise from slow drift, not a separate class."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after a2->S2 during a run of rewarded a2 choices (stay on a2 after reward), before about trial 72",
+    "better_predicate": "(phase == D2) & (in_state == 2) & (in_action == 2) & (prev_reward == 1) & (prev_action != 1) & (ep_trial < 72) & (tv('action',-2) != 1)",
+    "better_predicate_test_f1": 0.919
+  },
+  "final_label": "D2 after a2->S2 during a run of rewarded a2 choices (stay on a2 after reward), before about trial 72",
+  "original_predicate": "(phase == D2) & (in_state == 2) & (in_action == 2) & (prev_reward == 1) & (prev_action != 1) & (ep_trial < 72)",
+  "original_test_scores": {
+    "gate": "neuron_update",
+    "feature": 10,
+    "predicate": "(phase == D2) & (in_state == 2) & (in_action == 2) & (prev_reward == 1) & (prev_action != 1) & (ep_trial < 72)",
+    "split": "test",
+    "precision": 0.8512854907221105,
+    "recall": 0.9801959808481062,
+    "f1": 0.9112039947035081,
+    "mass_recall": 0.9976810573666166,
+    "correlation": 0.8489776374941173,
+    "n_active": 58271,
+    "n_predicted": 67095,
+    "coverage_by_activation_quartile": [
+      0.9222267984623833,
+      0.999176276771005,
+      0.9995194947830862,
+      0.9998627033706322
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_update",
+    "feature": 10,
+    "predicate": "(phase == D2) & (in_state == 2) & (in_action == 2) & (prev_reward == 1) & (prev_action != 1) & (ep_trial < 72)",
+    "split": "dev",
+    "precision": 0.8708863469537558,
+    "recall": 0.9788920019939151,
+    "f1": 0.9217360341185895,
+    "mass_recall": 0.9979440369816127,
+    "correlation": 0.8612303602255057,
+    "n_active": 58177,
+    "n_predicted": 65392,
+    "coverage_by_activation_quartile": [
+      0.9160536266758336,
+      0.9997937293729373,
+      0.9997937293729373,
+      0.9999312431243125
+    ]
+  },
+  "predicate_from": "skeptic"
+}

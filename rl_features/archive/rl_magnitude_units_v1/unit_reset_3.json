@@ -1,0 +1,81 @@
+{
+  "label": "D1 reset dips after S2 reward, rises after S1 non-reward; stronger late in episode",
+  "terms": "(phase == D1) * last_is(\"a1 S2 r\") ;; (phase == D1) * last_is(\"a2 S2 r\") ;; (phase == D1) * (prev_state == 1) * (prev_reward == 0) ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) ;; (phase == D1) * (prev_reward == 1) * np.maximum(ep_trial - 60, 0) ;; (phase == D1) * (prev_reward == 0) * np.maximum(ep_trial - 60, 0) ;; (phase == D2) * table(action, {1: -1, 2: 1}) ;; (phase == D1) * (prev_reward == 1) * (tv(\"reward\", -2) == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r of unit 3 sits near 0.98 at GO, 0.94 at D2 and 0.85 at D1, all falling late in the episode (timing R^2 0.72). Beyond timing, almost everything happens at D1 and depends on the previous trial outcome x reached state: after a rewarded S2 trial r drops a lot (a1 S2 r -0.16, rare; a2 S2 r -0.08); after an unrewarded S1 trial it rises (+0.09); after unrewarded S2 it rises a little (+0.02); rewarded S1 is about baseline. The reward-driven dip grows after trial ~60 (late-episode drop sits mostly on rewarded trials, unrewarded slightly up), and two rewards in a row make the dip smaller (+0.03). At D2 there is a small choice effect (higher after a2, lower after a1, about +/-0.014). GO is basically flat. All terms are observed, none are future. Test R^2 beyond timing 0.68 (all-cue ceiling 0.73, last trial alone 0.64).",
+  "gate": "unit_reset",
+  "feature": 3,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 3,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * last_is(\"a2 S2 r\")",
+      "(phase == D1) * (prev_state == 1) * (prev_reward == 0)",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0)",
+      "(phase == D1) * (prev_reward == 1) * np.maximum(ep_trial - 60, 0)",
+      "(phase == D1) * (prev_reward == 0) * np.maximum(ep_trial - 60, 0)",
+      "(phase == D2) * table(action, {1: -1, 2: 1})",
+      "(phase == D1) * (prev_reward == 1) * (tv(\"reward\", -2) == 1)"
+    ],
+    "weights": [
+      -0.1585719613783159,
+      -0.08092335988940294,
+      0.0934639291744975,
+      0.02277903954768037,
+      -0.0010268990046201705,
+      0.0016016261777593284,
+      0.014251564226904018,
+      0.027288901363250816
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6820991415083968,
+    "r2": 0.9113966490442298,
+    "r2_timing_only": 0.7212862167904133
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 3,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * last_is(\"a2 S2 r\")",
+      "(phase == D1) * (prev_state == 1) * (prev_reward == 0)",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0)",
+      "(phase == D1) * (prev_reward == 1) * np.maximum(ep_trial - 60, 0)",
+      "(phase == D1) * (prev_reward == 0) * np.maximum(ep_trial - 60, 0)",
+      "(phase == D2) * table(action, {1: -1, 2: 1})",
+      "(phase == D1) * (prev_reward == 1) * (tv(\"reward\", -2) == 1)"
+    ],
+    "weights": [
+      -0.1585719613783159,
+      -0.08092335988940294,
+      0.0934639291744975,
+      0.02277903954768037,
+      -0.0010268990046201705,
+      0.0016016261777593284,
+      0.014251564226904018,
+      0.027288901363250816
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6867570939959928,
+    "r2": 0.9142983784594254,
+    "r2_timing_only": 0.7264052277069658
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Lumping unrewarded S2 hides a choice difference. The D1 residual table gives a1 S2 u +0.018 and a2 S2 u +0.051. Split into separate terms they fit at +0.005 and +0.036. So the '+0.02 after unrewarded S2' figure is an average of the two.",
+      "The late-episode claim is loosely worded. In the fit, the rewarded slope is -0.001 per trial past trial 60 and the unrewarded slope is +0.0016. That is a reward/no-reward split widening against a timing baseline that is itself falling, not just a deeper dip after reward. Splitting the rewarded slope by state gives S2-r -0.0014 and S1-r +0.0002, so the late deepening is mainly after S2 reward.",
+      "Misses show no large systematic errors. The largest (phase, previous trial) mean errors are D1 after a1 S2 u -0.017, D2 after a1/a2 S1 u -0.016, and D1 after a2 S2 u +0.014. The worst windows are scattered late-episode (t>90) shortfalls at D1 and D2.",
+      "Every claim reproduces. The test R^2 beyond timing reproduces at 0.682, against an all-cue ceiling of 0.73 and an all-observed ceiling of 0.70. Dropping the late and two-reward terms gives 0.596; the late terms add about 0.06 and the two-reward term about 0.015. The D2 choice term (+0.014) and the two-rewards term (+0.027) match the explanation. GO is flat (|residual| < 0.01). No term uses future variables. Variants I tried (squared late ramps, a state-specific two-reward term, adding the choice probability at D1) did not beat 0.682."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 reset dips after S2 reward (rare a1 most), rises after S1 non-reward; late in the episode the reward/no-reward gap widens",
+    "better_terms": null,
+    "better_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "D1 reset dips after S2 reward (rare a1 most), rises after S1 non-reward; late in the episode the reward/no-reward gap widens"
+}

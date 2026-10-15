@@ -1,0 +1,80 @@
+{
+  "label": "GO after rare-rewarded a2->S1, late episode (trials 60-99, peak 70-89)",
+  "terms": "(phase == GO) * last_is(\"a2 S1 r\") * (ep_dec == 6) ;; (phase == GO) * last_is(\"a2 S1 r\") * (ep_dec == 7) ;; (phase == GO) * last_is(\"a2 S1 r\") * (ep_dec == 8) ;; (phase == GO) * last_is(\"a2 S1 r\") * (ep_dec == 9) ;; (phase == GO) * last_is(\"a2 S1 r\") * (ep_dec >= 6) * belief_lo ;; (phase == GO) * last_is(\"a2 S1 r\") * (ep_dec >= 6) * (tv(\"state\", -2) == 1) ;; (phase == GO) * last_is(\"a2 S1 r\") * (ep_dec >= 6) * (tv(\"reward\", -2) == 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Sparse feature (nonzero on 1.4% of steps). It is zero at D1 and D2 and fires only at GO. Its magnitude comes almost entirely from one interaction: the previous trial was a2 -> S1 rare and rewarded, AND the episode is late. Fitted weights by episode decile: 60s +0.09, 70s +0.40, 80s +0.58, 90s +0.16; before trial 60 it is about 0. Previous-trial pattern alone, as an additive table, scores only 0.19, and the profile all ceiling is 0.21. Most of the gain comes from crossing the pattern with episode time. Inside that cell, magnitude rises when the trial before was also rewarded (+0.20) and falls when the trial before reached S1 (-0.09). It also falls as the ideal-observer log-odds that S1 is good rises (belief_lo, -0.04 per unit), so it is larger when observed history favours S2. Other previous-trial patterns (a1 S1 r, a1/a2 S2 r, unrewarded trials) add nothing (weights near 0). Residual misses: GO firing on window-first trials whose previous trial is not in the window, plus weaker firing after some a1 rewarded trials late in the episode. Test R^2 beyond timing 0.61 (dev 0.61), far above the additive all ceiling of 0.21. Observed-only, with no value/policy terms: losing model outputs costs nothing measurable here (policy decile reference alone 0.03).",
+  "gate": "update",
+  "feature": 159,
+  "test_scores": {
+    "gate": "update",
+    "feature": 159,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S1 r\") * (ep_dec == 6)",
+      "(phase == GO) * last_is(\"a2 S1 r\") * (ep_dec == 7)",
+      "(phase == GO) * last_is(\"a2 S1 r\") * (ep_dec == 8)",
+      "(phase == GO) * last_is(\"a2 S1 r\") * (ep_dec == 9)",
+      "(phase == GO) * last_is(\"a2 S1 r\") * (ep_dec >= 6) * belief_lo",
+      "(phase == GO) * last_is(\"a2 S1 r\") * (ep_dec >= 6) * (tv(\"state\", -2) == 1)",
+      "(phase == GO) * last_is(\"a2 S1 r\") * (ep_dec >= 6) * (tv(\"reward\", -2) == 1)"
+    ],
+    "weights": [
+      0.08934724840785868,
+      0.398831649028181,
+      0.5765118779688376,
+      0.15836374958105012,
+      -0.03684219079789206,
+      -0.08909905766592784,
+      0.20056093565231414
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.614897625320561,
+    "r2": 0.6391281261514601,
+    "r2_timing_only": 0.06291963494400332
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 159,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S1 r\") * (ep_dec == 6)",
+      "(phase == GO) * last_is(\"a2 S1 r\") * (ep_dec == 7)",
+      "(phase == GO) * last_is(\"a2 S1 r\") * (ep_dec == 8)",
+      "(phase == GO) * last_is(\"a2 S1 r\") * (ep_dec == 9)",
+      "(phase == GO) * last_is(\"a2 S1 r\") * (ep_dec >= 6) * belief_lo",
+      "(phase == GO) * last_is(\"a2 S1 r\") * (ep_dec >= 6) * (tv(\"state\", -2) == 1)",
+      "(phase == GO) * last_is(\"a2 S1 r\") * (ep_dec >= 6) * (tv(\"reward\", -2) == 1)"
+    ],
+    "weights": [
+      0.08934724840785868,
+      0.398831649028181,
+      0.5765118779688376,
+      0.15836374958105012,
+      -0.03684219079789206,
+      -0.08909905766592784,
+      0.20056093565231414
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6108369464715511,
+    "r2": 0.6344365008092853,
+    "r2_timing_only": 0.0606418161327561
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claims hold. I reproduced test R^2 beyond timing of 0.615 with the 7 terms (weights +0.089/+0.399/+0.577/+0.158 by decile, belief_lo -0.037, state(-2)==S1 -0.089, reward(-2) +0.201). The 4 decile terms alone give 0.533. Firing at D1, D2 and early in the episode is about 0: adding a2 S1 r at D1, at D2 or at ep_dec<=5 gives weights of 0.002-0.004 and no R^2 gain. Other late previous-trial patterns add nothing: a1 S1 r, a1 S2 r and a2 S2 r weights are -0.01 to -0.03, R^2 0.539 vs 0.533.",
+      "'Trials 60-99' overstates the decile-9 window. Splitting decile 9 gives trials 90-94 +0.32 and trials 95-99 -0.003, and test R^2 rises to 0.641. The decile-9 weight of +0.16 is an average of a real effect and none. Even so, some trial-95+ windows still fire (e.g. t96 GO 0.80 after a2 S1R, predicted 0.01), so trials 95-99 are mixed rather than uniformly silent.",
+      "The 'trial before last reached S1 (-0.09)' term is a proxy and the explanation misnames it. Using 'trial before last chose a1' instead gives weight -0.22 and R^2 0.633, against 0.623 for the state version. With both terms in, the action term keeps -0.20 and the state term falls to -0.05. The real modulator is the earlier choice, not the earlier state.",
+      "The belief_lo reading ('larger when observed history favours S2') is not unique. Using |belief_lo| (less sure of either state) scores the same or better: 0.639 vs 0.636, and 0.645 vs 0.641 alongside the action(-2) term. The direction of the belief effect is unresolved, and each version adds only about 0.01-0.015.",
+      "Future-variable check: adding this trial's choice (action==2) inside the cell lifts R^2 only to 0.626, and this trial's reward adds 0. The observed-only terms lose almost nothing.",
+      "Misses show no large systematic error class. Mean GO error is -0.005 and the worst cell is -0.010 (GO after a2 S2 u). The remaining misses are GO firing on a window's first trial, where the previous trial is outside the window (prev_action==-1 x late weighs -0.007, so it cannot be modelled), and occasional firing after a1 S1 r (e.g. 0.57-0.67), which averages to about 0. About 0.36 of the variance is unexplained and spread within the cell."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after rare-rewarded a2->S1, late episode (trials 60-94, peak 70-89); stronger if the trial before was rewarded, weaker if it chose a1",
+    "better_terms": "C=(phase == GO) * last_is('a2 S1 r'): C*(ep_trial>=60)*(ep_trial<70) ;; C*(ep_trial>=70)*(ep_trial<80) ;; C*(ep_trial>=80)*(ep_trial<90) ;; C*(ep_trial>=90)*(ep_trial<95) ;; C*(ep_trial>=95) ;; C*(ep_dec>=6)*(tv('reward',-2)==1) ;; C*(ep_dec>=6)*np.abs(belief_lo) ;; C*(ep_dec>=6)*(tv('action',-2)==1)",
+    "better_terms_test_r2_beyond_timing": 0.645
+  },
+  "final_label": "GO after rare-rewarded a2->S1, late episode (trials 60-94, peak 70-89); stronger if the trial before was rewarded, weaker if it chose a1"
+}

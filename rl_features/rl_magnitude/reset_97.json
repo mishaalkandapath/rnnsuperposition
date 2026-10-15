@@ -1,0 +1,112 @@
+{
+ "label": "Fires at D2 after choosing a2, most when switching to a2 or against S1-favoring belief.",
+ "short_terms": "(phase == D2) * (action == 2) * last_is('a1 S1 u') ;; (phase == D2) * (action == 2) * belief ;; (phase == D2) * (action == 2)",
+ "terms": "(phase == D2) * (action == 2) ;; (phase == D2) * (action == 2) * (stay == 0) ;; (phase == D2) * (action == 2) * (prev_reward == 0) ;; (phase == D2) * (action == 2) * (state == 2) ;; (phase == D2) * (action == 2) * np.abs(belief_lo) ;; (phase == D2) * (action == 2) * (belief_lo > 0) ;; (phase == D2) * (action == 2) * (tv(\"reward\", -2) == 0) ;; (phase == D2) * (action == 2) * (prev_action == 2) * (prev_reward == 0)",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Silent at D1 and GO; only fires at D2 and only after an a2 choice (seen as in_action at D2, so observed). Magnitude is largest when the a2 choice is a switch from a1 (weight ~0.76), larger when the observer belief still favors S1 (a2 chosen against or with weak evidence, ~0.3), and slightly larger after an unrewarded previous trial. Reached state, hidden good state and trials since reversal add little. The free fit adds the trial-before reward, reached state S2, and a negative correction for staying on a2 after a loss; it gains only ~0.06 over the short form. Remaining variance is large-magnitude stays on a2 after losses that the indicator terms only partly capture.",
+ "full_test_scores": {
+  "gate": "reset",
+  "feature": 97,
+  "terms": [
+   "(phase == D2) * (action == 2)",
+   "(phase == D2) * (action == 2) * (stay == 0)",
+   "(phase == D2) * (action == 2) * (prev_reward == 0)",
+   "(phase == D2) * (action == 2) * (state == 2)",
+   "(phase == D2) * (action == 2) * np.abs(belief_lo)",
+   "(phase == D2) * (action == 2) * (belief_lo > 0)",
+   "(phase == D2) * (action == 2) * (tv(\"reward\", -2) == 0)",
+   "(phase == D2) * (action == 2) * (prev_action == 2) * (prev_reward == 0)"
+  ],
+  "weights": [
+   -0.12515397462961048,
+   0.6355583515848043,
+   0.2825275640673681,
+   0.11392055131487176,
+   -0.008481331681794022,
+   0.30228529752295924,
+   0.10887393253552363,
+   -0.24115712919055862
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.49106357125945954,
+  "r2": 0.5175841699180932,
+  "r2_timing_only": 0.05210984547571862
+ },
+ "gate": "reset",
+ "feature": 97,
+ "test_scores": {
+  "gate": "reset",
+  "feature": 97,
+  "terms": [
+   "(phase == D2) * (action == 2) * last_is('a1 S1 u')",
+   "(phase == D2) * (action == 2) * belief",
+   "(phase == D2) * (action == 2)"
+  ],
+  "weights": [
+   1.1134544089530276,
+   0.5903999211227202,
+   -0.07674299991517756
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.49421666610348514,
+  "r2": 0.5205729574770264,
+  "r2_timing_only": 0.05210984547571862
+ },
+ "dev_scores": {
+  "gate": "reset",
+  "feature": 97,
+  "terms": [
+   "(phase == D2) * (action == 2) * last_is('a1 S1 u')",
+   "(phase == D2) * (action == 2) * belief",
+   "(phase == D2) * (action == 2)"
+  ],
+  "weights": [
+   1.1134544089530276,
+   0.5903999211227202,
+   -0.07674299991517756
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.488657776716963,
+  "r2": 0.512637202101191,
+  "r2_timing_only": 0.04689506223497397
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The label and explanation say the main driver is any switch to a2. It is really one kind of switch: a2 after a common-unrewarded a1 trial (a1 S1 u, the model-based switch). Adding (phase == D2) * (action == 2) * last_is('a1 S1 u') to the stay and belief terms gives it weight +0.83 and drops the generic stay==0 weight from 0.76 to 0.32. Test R^2 beyond timing rises from 0.42 to 0.49.",
+   "Misses on the recorded short form show a systematic error by previous trial. D2 after a1 S2 r (a rare-rewarded a1 trial, then a switch to a2) is over-predicted by -0.228. D2 after a2 S1 r is under-predicted by +0.115 and D2 after a1 S1 u by +0.068. So the stay==0 term lumps two different switch types together.",
+   "The prev_reward==0 term adds almost nothing. Its weight is +0.067, and test R^2 is 0.420 without it vs 0.431 with it. It works as a filler correction, not a real driver.",
+   "The belief claim holds in direction: given a2, activation is higher when P(S1 good) is higher. A continuous belief term (0.440) beats belief_lo>0 (0.421) and np.abs(belief_lo) (0.367). The 'weak evidence' reading is not supported separately: an np.abs(belief_lo)<1 term gets weight 0.04.",
+   "The better short form scores 0.494 test R^2 beyond timing, slightly above the reported free fit (0.491). With it, the remaining misses are small and balanced (largest is +0.059 at D2 after a2 S1 r)."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Fires at D2 after choosing a2, most when switching from an unrewarded common a1 trial; rises with P(S1 good).",
+  "better_short_terms": "(phase == D2) * (action == 2) * last_is('a1 S1 u') ;; (phase == D2) * (action == 2) * belief ;; (phase == D2) * (action == 2)",
+  "better_short_terms_test_r2_beyond_timing": 0.4942
+ },
+ "final_label": "Fires at D2 after choosing a2, most when switching from an unrewarded common a1 trial; rises with P(S1 good).",
+ "original_short_terms": "(phase == D2) * (action == 2) * (stay == 0) ;; (phase == D2) * (action == 2) * (prev_reward == 0) ;; (phase == D2) * (action == 2) * (belief_lo > 0)",
+ "original_test_scores": {
+  "gate": "reset",
+  "feature": 97,
+  "terms": [
+   "(phase == D2) * (action == 2) * (stay == 0)",
+   "(phase == D2) * (action == 2) * (prev_reward == 0)",
+   "(phase == D2) * (action == 2) * (belief_lo > 0)"
+  ],
+  "weights": [
+   0.7639880214215022,
+   0.0669162609283548,
+   0.2931690186119246
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.4312851351499094,
+  "r2": 0.4609207788769918,
+  "r2_timing_only": 0.05210984547571862
+ },
+ "terms_from": "skeptic"
+}

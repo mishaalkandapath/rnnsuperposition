@@ -1,0 +1,75 @@
+{
+  "label": "GO after unrewarded S2 visit, scaled by observer belief that S1 is good",
+  "terms": "(phase == GO) * last_is(\"a1 S2 u\") ;; (phase == GO) * last_is(\"a2 S2 u\") ;; (phase == GO) * last_is(\"a1 S2 u\") * np.clip(belief_lo, -3, 3) ;; (phase == GO) * last_is(\"a2 S2 u\") * np.clip(belief_lo, 0, None) ;; (phase == GO) * (prev_action == -1) * np.clip(belief_lo, 0, None) ;; (phase == GO) * last_is(\"a1 S2 u\") * (tv(\"state\", -2) == 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Active only at GO. Magnitude is dominated by the previous trial being a1 -> S2 (rare) unrewarded (weight ~+1.8, the model-based stay-on-a1 case), graded up by the ideal-observer log-odds that S1 is good (belief_lo). After a2 -> S2 common unrewarded it fires only when belief favours S1 (switch to a1), scaled by positive belief_lo. On window-first trials (unknown previous trial) a positive-belief term picks up some firing. Firing after a1 S2 u is smaller if the trial before also reached S2. Other previous-trial patterns (any rewarded trial, S1 unrewarded) give ~0. Observed-only, no model outputs or future variables; dev R^2 beyond timing 0.725 vs all-observed reference 0.77 and all ceiling 0.78, so dropping the model value/policy loses little: the last-trial pattern alone carries most of it (reference 0.72).",
+  "gate": "hidden",
+  "feature": 146,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 146,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S2 u\")",
+      "(phase == GO) * last_is(\"a2 S2 u\")",
+      "(phase == GO) * last_is(\"a1 S2 u\") * np.clip(belief_lo, -3, 3)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * np.clip(belief_lo, 0, None)",
+      "(phase == GO) * (prev_action == -1) * np.clip(belief_lo, 0, None)",
+      "(phase == GO) * last_is(\"a1 S2 u\") * (tv(\"state\", -2) == 2)"
+    ],
+    "weights": [
+      1.8153027768642416,
+      -0.22591475282432977,
+      0.4204113627807404,
+      0.544837174444773,
+      0.15145246746442115,
+      -0.6134996202049756
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.717885113140982,
+    "r2": 0.739835448793382,
+    "r2_timing_only": 0.0778063713573871
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 146,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S2 u\")",
+      "(phase == GO) * last_is(\"a2 S2 u\")",
+      "(phase == GO) * last_is(\"a1 S2 u\") * np.clip(belief_lo, -3, 3)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * np.clip(belief_lo, 0, None)",
+      "(phase == GO) * (prev_action == -1) * np.clip(belief_lo, 0, None)",
+      "(phase == GO) * last_is(\"a1 S2 u\") * (tv(\"state\", -2) == 2)"
+    ],
+    "weights": [
+      1.8153027768642416,
+      -0.22591475282432977,
+      0.4204113627807404,
+      0.544837174444773,
+      0.15145246746442115,
+      -0.6134996202049756
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7250720779646074,
+    "r2": 0.7465626062826602,
+    "r2_timing_only": 0.07816786363113126
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Large systematic miss on each window's first trial (prev_action == -1). The worst-fit dev windows are nearly all [-3] GO cells with actual 3.7-3.9 against predicted 0.33-0.39. The previous reward is observed at that trial's D1 even when the previous trial's choice and state are not, and the firing there follows that reward: it fires after prev_reward == 0. Adding (GO)*(prev_action==-1)*(prev_reward==0), the same term times clip(belief_lo,0,None), and the same term times belief_cover raises test R^2 beyond timing from 0.718 to 0.805. That is above the reported 'all' ceiling of 0.78, so the label's 'a positive-belief term picks up some firing' badly understates this case.",
+      "The claim that firing after a1-S2-unrewarded 'grows with belief_lo' has almost no support. Dropping the a1 S2 u x clip(belief_lo) term changes test R^2 from 0.718 to 0.716 (0.805 to 0.803 in the improved set). Belief scaling matters mainly in the a2-S2-unrewarded case.",
+      "The tv('state',-2)==2 term adds only about 0.005 test R^2. The weight is real (-0.6) but minor.",
+      "The residual tables confirm the GO-only, a1 S2 u-dominant (+2.84) and a2 S2 u (+0.22) structure, and confirm that rewarded and S1-unrewarded trials give about zero. Those claims check out.",
+      "misses shows a uniform +0.09 bias at D1/D2 and -0.24 at GO for the other previous-trial patterns. This looks like an artifact of the shared intercept, not a missing pattern."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after an unrewarded trial whose outcome favours a1: mainly after a1->S2 (rare) unrewarded, weaker after a2->S2 (common) unrewarded when belief favours S1. On a window's first trial it is driven by an observed unrewarded previous outcome, scaled by belief_lo>0 and belief_cover.",
+    "better_terms": "(phase == GO) * last_is('a1 S2 u') ;; (phase == GO) * last_is('a2 S2 u') ;; (phase == GO) * last_is('a1 S2 u') * np.clip(belief_lo, -3, 3) ;; (phase == GO) * last_is('a2 S2 u') * np.clip(belief_lo, 0, None) ;; (phase == GO) * last_is('a1 S2 u') * (tv('state', -2) == 2) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * np.clip(belief_lo, 0, None) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * belief_cover",
+    "better_terms_test_r2_beyond_timing": 0.805
+  },
+  "final_label": "GO after an unrewarded trial whose outcome favours a1: mainly after a1->S2 (rare) unrewarded, weaker after a2->S2 (common) unrewarded when belief favours S1. On a window's first trial it is driven by an observed unrewarded previous outcome, scaled by belief_lo>0 and belief_cover."
+}

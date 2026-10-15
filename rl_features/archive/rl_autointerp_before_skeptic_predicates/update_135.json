@@ -1,0 +1,65 @@
+{
+  "label": "D1 after a reward, upcoming choice a1, first half of episode",
+  "predicate": "(phase == D1) & (in_rew == 1) & (action == 1) & (ep_trial < 50)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": true,
+  "explanation": "Fires only at D1, almost always when the reward input is 1 (96% of mass), and only in the first ~50 trials of an episode (none after trial ~65). Within that, it fires when the agent is about to choose a1 (94% of mass is on a1 trials); the previous trial reaching S2 essentially never co-occurs with activation. Recorded predicate uses the upcoming action at D1, which is the agent own choice (legitimate to compute) but technically marked FUTURE; dev F1 0.85, mass recall 0.92. The closest predicate using only observed history, (phase == D1) & (in_rew == 1) & (prev_state != 2) & (ep_trial < 50), gets dev F1 0.78 (prec 0.69, mass recall 0.95), i.e. a rewarded-S1 signal (the window first trial has unknown prev_state). Never fires at GO or D2, on unrewarded D1s (except a few weak ones), or late in the episode. Magnitude: in top windows the largest activation is at the first rewarded a1/S1 D1 of a run and shrinks across consecutive rewarded repeats (1.0, 0.64, 0.58, 0.55); activations sit in a narrow mid-range of the value head (7.5-7.7).",
+  "test_scores": {
+    "gate": "update",
+    "feature": 135,
+    "predicate": "(phase == D1) & (in_rew == 1) & (action == 1) & (ep_trial < 50)",
+    "split": "test",
+    "precision": 0.8480727602821032,
+    "recall": 0.839122549442957,
+    "f1": 0.8435739153838807,
+    "mass_recall": 0.9112008557167428,
+    "correlation": 0.772174677702937,
+    "n_active": 57895,
+    "n_predicted": 57284,
+    "coverage_by_activation_quartile": [
+      0.6297498963658975,
+      0.8306618764681498,
+      0.9345032472018793,
+      0.9615836384992745
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 135,
+    "predicate": "(phase == D1) & (in_rew == 1) & (action == 1) & (ep_trial < 50)",
+    "split": "dev",
+    "precision": 0.8531731263402272,
+    "recall": 0.8531580066633586,
+    "f1": 0.8531655664348057,
+    "mass_recall": 0.920499627242347,
+    "correlation": 0.7768575165644246,
+    "n_active": 56428,
+    "n_predicted": 56427,
+    "coverage_by_activation_quartile": [
+      0.6564825972921244,
+      0.8500035443396895,
+      0.9397462252782307,
+      0.9663996597433898
+    ]
+  },
+  "gate": "update",
+  "feature": 135,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The factual claims hold. The feature is D1-only: 100% of activation mass is at D1, with 0 active steps at GO or D2. 96.3% of the mass has in_rew == 1. After ep_trial >= 65 there is only 0.005% of the mass, and at ep_trial >= 50 recall is just 0.041. 94.1% of the mass is on action == 1. D1 with prev_state == 2 has exactly 0 activations across 156k steps. The reported test scores reproduce (F1 0.844, mass recall 0.911).",
+      "Systematic false-positive class in the recorded predicate: D1 steps with in_rew == 1, action == 1, ep_trial < 50 and prev_state == 2 (the agent was rewarded at S2 and then switches to a1). That is 3228 dev steps with precision 0.000, about 39% of the predicate's 8285 dev false positives. The explanation itself says the feature never fires after S2, yet neither the predicate nor the label includes this.",
+      "Label overclaims and underspecifies. 'D1 after a reward, upcoming choice a1' should be 'after a reward obtained at S1 (or with no known previous state), with a1 upcoming'. Reward collected at S2 never drives the feature, even when a1 follows.",
+      "Adding prev_state != 2 to the original predicate raises dev F1 from 0.853 to 0.878 (precision 0.905) and test F1 from 0.844 to 0.870, with no loss of recall.",
+      "The future variable is not needed. Replacing action == 1 with the model's own D1 policy readout (choice > 0, which is observed and computed by the agent) gives dev F1 0.871 and test F1 0.860. That is far better than the explanation's observed-only alternative (dev F1 0.78) and close to the action-based predicate.",
+      "Remaining false positives are mostly later steps in long rewarded a1/S1 runs, where activation decays toward zero. This matches the claimed magnitude decay and is not an extra category. The remaining misses look scattered and low in magnitude (about 8-9% of the mass)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a reward at S1 (not S2), when the agent is about to choose a1 (rewarded-S1 stay signal), first ~50 trials of the episode",
+    "better_predicate": "(phase == D1) & (in_rew == 1) & (action == 1) & (prev_state != 2) & (ep_trial < 50)",
+    "better_predicate_test_f1": 0.87
+  },
+  "final_label": "D1 after a reward at S1 (not S2), when the agent is about to choose a1 (rewarded-S1 stay signal), first ~50 trials of the episode"
+}

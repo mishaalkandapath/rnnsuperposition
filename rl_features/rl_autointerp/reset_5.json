@@ -1,0 +1,104 @@
+{
+  "label": "GO step after an unrewarded rare a2->S1 trial (model-based stay on a2)",
+  "predicate": "(phase == GO) & (prev_reward == 0) & (((prev_action == 2) & (prev_common == 0)) | ((prev_common == -1) & (choice < -9)))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO steps (never D1 or D2), and almost only when the previous trial went a2 -> S1 (a rare transition) and was unrewarded: the case where a model-based agent should repeat a2. The policy at these steps is strongly a2 (choice logit < -8.9 holds for 97% of activation mass). The core clause (prev_action==2, prev_common==0, prev_reward==0) gets dev F1 0.80, P 0.89, mass recall 0.80. Most of the remaining misses are GO steps on the first trial of the window, where the previous trial is outside the window (prev_common == -1). For those the clause stands in prev_reward==0 & choice<-8; that brings dev F1 to 0.87 and mass recall to 0.98. All variables are observed at GO (the previous outcome, and the policy logit of the model itself). It almost never fires after a rewarded trial (0.3% of mass) or after a1 trials, and essentially never when the model chooses a1. Weaker activations (lowest quartile, about 0.1-0.4 of max) show up on GO steps where the model picks a2 after other unrewarded trials, e.g. a switch to a2 after an unrewarded common a1->S1 trial, or a stay after an unrewarded common a2->S2 trial. Magnitude is about 0.8-1.0 of max in the canonical rare-unrewarded a2->S1 case.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 5,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (((prev_action == 2) & (prev_common == 0)) | ((prev_common == -1) & (choice < -9)))",
+    "split": "test",
+    "precision": 0.8936804451510334,
+    "recall": 0.8871322286100778,
+    "f1": 0.8903942976749448,
+    "mass_recall": 0.9783998667702791,
+    "correlation": 0.8963781215917349,
+    "n_active": 35484,
+    "n_predicted": 35224,
+    "coverage_by_activation_quartile": [
+      0.5593506932702063,
+      0.9906436703866531,
+      0.9989854582346973,
+      0.9995490925487543
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 5,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (((prev_action == 2) & (prev_common == 0)) | ((prev_common == -1) & (choice < -9)))",
+    "split": "dev",
+    "precision": 0.8953254622158046,
+    "recall": 0.8944644018895144,
+    "f1": 0.8948947249264206,
+    "mass_recall": 0.9805783838417798,
+    "correlation": 0.9008162074854412,
+    "n_active": 35353,
+    "n_predicted": 35319,
+    "coverage_by_activation_quartile": [
+      0.5850209299694535,
+      0.9941163159085766,
+      0.9995474089160443,
+      0.9992079656030777
+    ]
+  },
+  "gate": "reset",
+  "feature": 5,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims hold up. On dev the feature is active at GO only (D1 and D2 have 0 active steps). Rewarded previous trials hold 0.3% of the mass and prev_action==1 holds 1.0%. Unrewarded rare a1->S2 trials (prev_action==1, prev_common==0, prev_reward==0) never fire: 0 of 27183 steps.",
+      "The feature tracks the rare a2->S1 unrewarded outcome itself, not just a strong a2 policy. After unrewarded common trials with choice<-8 it fires on only 0.36% of 11767 steps. Inside the core clause, choice<-8 has precision 0.92, while choice>=-8 has 0.24 precision and 0.3% of the mass.",
+      "Caveat: the prev_common==-1 clause (the window's first trial, where the previous trial isn't visible) is a proxy, not a check of the actual history. It has precision 0.69 and covers 18.5% of the mass. That is a limitation of the data window, not a counterexample.",
+      "The core clause holds up under every split I tried: good==2 gives precision 0.91, good==1 gives 0.77, and it stays 0.80-0.92 whether the trial before the previous one was rewarded or not. The weakest cases are d1_err==1 steps (precision 0.48), which carry only 0.35% of the mass.",
+      "The test misses are scattered weak activations, about 0.02-0.25 of max (for example a2 choices after unrewarded common trials), holding 1.7% of the mass. The false positives are mostly first-trial proxy steps or a few inactive canonical cases. I found no systematic class.",
+      "The reported test scores reproduce exactly (P 0.836, R 0.896, F1 0.865, mass recall 0.983). Tightening the proxy threshold to choice<-9 gives test F1 0.890, a minor tuning gain only."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == GO) & (prev_reward == 0) & (((prev_action == 2) & (prev_common == 0)) | ((prev_common == -1) & (choice < -9)))",
+    "better_predicate_test_f1": 0.89
+  },
+  "original_predicate": "(phase == GO) & (prev_reward == 0) & (((prev_action == 2) & (prev_common == 0)) | ((prev_common == -1) & (choice < -8)))",
+  "original_test_scores": {
+    "gate": "reset",
+    "feature": 5,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (((prev_action == 2) & (prev_common == 0)) | ((prev_common == -1) & (choice < -8)))",
+    "split": "test",
+    "precision": 0.8362445414847162,
+    "recall": 0.8958685604779619,
+    "f1": 0.8650303409616589,
+    "mass_recall": 0.9826344107629207,
+    "correlation": 0.8656197594906158,
+    "n_active": 35484,
+    "n_predicted": 38014,
+    "coverage_by_activation_quartile": [
+      0.5923796640739488,
+      0.9925600270544471,
+      0.9989854582346973,
+      0.9995490925487543
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "reset",
+    "feature": 5,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (((prev_action == 2) & (prev_common == 0)) | ((prev_common == -1) & (choice < -8)))",
+    "split": "dev",
+    "precision": 0.8426444186292111,
+    "recall": 0.9027805278194213,
+    "f1": 0.8716765215966353,
+    "mass_recall": 0.9845938958960698,
+    "correlation": 0.8725136697538279,
+    "n_active": 35353,
+    "n_predicted": 37876,
+    "coverage_by_activation_quartile": [
+      0.6173775313949542,
+      0.9950214980764879,
+      0.9995474089160443,
+      0.9992079656030777
+    ]
+  },
+  "predicate_from": "skeptic"
+}

@@ -1,0 +1,65 @@
+{
+  "label": "D1 after reward, about to choose a2 (early/late in episode)",
+  "predicate": "(phase == D1) & (in_rew == 1) & (action == 2) & (ep_trial < 50)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (never GO or D2), only when the reward input is 1 (previous trial rewarded), and almost only when the agent will choose a2 on this trial (99.5% of mass; action is the agent own upcoming choice, legitimately computed; policy logit at GO in the mildly-a2 bin [-4.4,-1.5] holds 97% of mass). Previous-action-based observed version (D1 & rewarded & prev a2) is weaker (F1 0.56) because the feature tracks the upcoming a2 choice, not just the last action. The base predicate D1 & in_rew==1 & action==2 has recall 0.99 / mass recall 0.99 but precision 0.44; the extra gating is episode time: it is active through trials 0-49, fades by 50-59, nearly silent 60-89, and returns at 90-99 (adding ep_trial>=92 gives dev F1 0.83), so recorded predicate uses ep_trial<50 (dev F1 0.81, mass 0.92). This episode-time dependence is not understood and may reflect slow hidden-state drift. Also concentrated in a narrow value band (7.54-7.73), more when S2 is the good state. Magnitude builds over consecutive rewarded a2 trials in a window; low-quartile activations are mostly beyond trial 50 or at the start of a2 runs. Never fires after an unrewarded trial or before an a1 choice.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 22,
+    "predicate": "(phase == D1) & (in_rew == 1) & (action == 2) & (ep_trial < 50)",
+    "split": "test",
+    "precision": 0.7659936072347392,
+    "recall": 0.8442225735496288,
+    "f1": 0.8032077954989495,
+    "mass_recall": 0.9304697332283697,
+    "correlation": 0.7350006343768111,
+    "n_active": 58192,
+    "n_predicted": 64135,
+    "coverage_by_activation_quartile": [
+      0.618504261754193,
+      0.8469892768765466,
+      0.9250068737970855,
+      0.9863898817706901
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 22,
+    "predicate": "(phase == D1) & (in_rew == 1) & (action == 2) & (ep_trial < 50)",
+    "split": "dev",
+    "precision": 0.7865638837712919,
+    "recall": 0.8354675913210656,
+    "f1": 0.8102785223167462,
+    "mass_recall": 0.9157887957509779,
+    "correlation": 0.7413717991559245,
+    "n_active": 58256,
+    "n_predicted": 61878,
+    "coverage_by_activation_quartile": [
+      0.6211205712716287,
+      0.8468140620708596,
+      0.9020873386432299,
+      0.9718483932985443
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 22,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The label and predicate disagree. The label says '(early/late in episode)', but the recorded predicate only covers ep_trial < 50. Trials 90-99 still hold 6027 active dev steps (5.6% rate, 7.1% of activation mass), and the predicate misses all of them. This is a systematic miss, not noise. Adding (ep_trial >= 92) raises mass recall from 0.92 to 0.98 (test 0.98).",
+      "The observed-only comparison in the explanation is unfair. The quoted F1 of 0.56 is for (D1, in_rew==1, prev_action==2) with no ep_trial term (dev 0.557, test 0.544). With the same ep_trial<50 gate, observed history gets dev F1 0.70 (prev_action==2) or 0.73 with prev_action != 1. The higher number comes from counting window-first trials, where prev_action is -1 (unknown). So the real advantage of the upcoming choice is about 0.08-0.11 F1, not 0.25.",
+      "There is a better non-future variable. The model's own policy logit at D1 ('choice', computed by the agent) beats the discrete upcoming action. (D1, in_rew==1, -4.6<choice<-1.0, ep_trial<50) scores dev F1 0.840 and test F1 0.841, against 0.81/0.80 for the recorded predicate. This fits the explanation's note that 97% of mass falls in the moderate a2-leaning logit band, but the predicate doesn't use that band.",
+      "There are systematic false-positive subclasses inside the predicate. Its precision is only about 0.47-0.54 when the trial two back was unrewarded (tv('reward',-2)==0, P 0.47), after a rare previous transition (prev_common==0, P 0.48), when S1 is good (good==1, P 0.54), and just after switching from a1 (prev_action==1, P 0.12). Precision is 0.81-0.88 in the complementary cases. This fits an evidence-accumulating unit that needs a run of rewarded a2 trials, but the predicate doesn't capture it.",
+      "The episode-time gating (silent in trials 60-89, back in trials 90-99) is unexplained. The explanation admits this, which leaves a large part of the selectivity without a mechanism.",
+      "These factual claims hold: active only at D1 (0 active steps at GO or D2); needs in_rew==1 (0 activations when in_rew is 0 or -1); 99.5% of mass is before an a2 choice (only 560 steps before a1); 97% of mass is in choice [-4.44,-1.52]; 86% of mass is in value [7.54,7.73]; the rate is higher when good==S2 (0.095 vs 0.009). Reported test scores reproduce (dev P 0.787 / R 0.835 / F1 0.810)."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "D1 after a rewarded trial while the agent's policy leans moderately toward a2 (built up over a run of rewarded a2 trials); gated by episode time (active in trials 0-~50 and 92-99, silent in between)",
+    "better_predicate": "(phase == D1) & (in_rew == 1) & (choice < -1.0) & (choice > -4.6) & ((ep_trial < 52) | (ep_trial >= 92))",
+    "better_predicate_test_f1": 0.855
+  },
+  "final_label": "D1 after a rewarded trial while the agent's policy leans moderately toward a2 (built up over a run of rewarded a2 trials); gated by episode time (active in trials 0-~50 and 92-99, silent in between)"
+}

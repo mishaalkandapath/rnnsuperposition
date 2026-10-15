@@ -1,0 +1,65 @@
+{
+  "label": "S2 reached at D2, early in the episode (longer after rare a1->S2)",
+  "predicate": "(phase == D2) & (state == 2) & (ep_trial > 0) & ((ep_trial < 10) | ((common == 0) & (ep_trial < 16)))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 and only when the shown state is S2 (100% of activations), and only in the first ~20 trials of an episode: 85% of mass is in trials 1-9, none after trial 29, none on trial 0. Rare transitions into S2 (choice a1) keep it active longer (to about trial 15) and give the largest activations (top windows are all a1->S2 rare). Common a2->S2 activations are weaker. It never fires at D1/GO, on S1, or late in the episode. Everything in the predicate is observed at D2 (the state input, the transition implied by the previous choice, and time in the episode). Simple version (D2 & S2 & trials 1-9) gets dev F1 0.79. Recorded version adds the rare-transition extension, dev F1 0.82 and mass recall 0.98. Remaining errors are at the time boundary, so a cutoff that fades out gradually over trials 10-15 would fit better than a hard one.",
+  "test_scores": {
+    "gate": "neuron_update",
+    "feature": 27,
+    "predicate": "(phase == D2) & (state == 2) & (ep_trial > 0) & ((ep_trial < 10) | ((common == 0) & (ep_trial < 16)))",
+    "split": "test",
+    "precision": 0.7385834109972041,
+    "recall": 0.9309447893941937,
+    "f1": 0.8236822568671122,
+    "mass_recall": 0.9784805472422377,
+    "correlation": 0.6738772831163425,
+    "n_active": 11918,
+    "n_predicted": 15022,
+    "coverage_by_activation_quartile": [
+      0.7953020134228188,
+      0.952013422818792,
+      0.9808660624370594,
+      0.995636119503189
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_update",
+    "feature": 27,
+    "predicate": "(phase == D2) & (state == 2) & (ep_trial > 0) & ((ep_trial < 10) | ((common == 0) & (ep_trial < 16)))",
+    "split": "dev",
+    "precision": 0.7372710176220659,
+    "recall": 0.9312862924511701,
+    "f1": 0.8229988726042841,
+    "mass_recall": 0.9800870167412552,
+    "correlation": 0.6735731519782844,
+    "n_active": 11366,
+    "n_predicted": 14357,
+    "coverage_by_activation_quartile": [
+      0.7899366643209008,
+      0.9542575650950035,
+      0.9841605068637803,
+      0.996832101372756
+    ]
+  },
+  "gate": "neuron_update",
+  "feature": 27,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The factual claims hold on dev. 100% of activation mass is at D2 with in_state == 2 (D1 and GO are 0/380619 each). Trial 0 has 0 activations. Mass is 0.846 in trials 0-9 and 0.153 in trials 10-19, with only 18 activations in trials 20-29 and none after. Every top window is a1->S2 rare. Test scores reproduce: mass recall 0.98, and the quartile coverage matches dev.",
+      "Rare vs common split, trials 1-9: rare a1->S2 has precision 0.88 and carries 42% of the mass on 2890 steps. Common a2->S2 has precision 0.76 and carries 42% of the mass on 8630 steps, so its activations are weaker per step, as claimed. Trials 10-15: rare gives precision 0.53 and common gives 0.046, which supports the rare-only extension. Rare at trials 16-21 has precision only 0.13, so cutting off at trial 16 is reasonable.",
+      "Unmentioned modulator: the previous trial's reward. Within D2 & S2 & trials 1-9, precision is 0.93 when prev_reward == 1 and 0.57 when prev_reward == 0. The largest false-positive class is common a2->S2 after an unrewarded trial (precision 0.53, 3406 predicted steps, about 40% of dev false positives). Excluding it does not raise F1 (dev 0.796 vs 0.82, because recall drops), so this is a graded modulation, not a refutation. The explanation should still mention it.",
+      "The misses output on test also shows the unit is weaker on repeated S2 visits within a window (activation falls over consecutive S2 trials). This fits the 'fades out gradually' description rather than a separate rule.",
+      "The profile also shows a since_rev effect (rate 6-9% at since_rev 2-12). It appears to be confounded with early episode position: there are almost no activations past trial 20 whatever the time since the last reversal, so it is not an independent driver.",
+      "Missed activations hold only 2.2% of the activation mass on test and are scattered weak activations near the time cutoff. No systematic class of misses remains."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "S2 reached at D2, early in the episode (longer after rare a1->S2; stronger after a rewarded previous trial)",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "S2 reached at D2, early in the episode (longer after rare a1->S2; stronger after a rewarded previous trial)"
+}

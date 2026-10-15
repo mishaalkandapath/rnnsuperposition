@@ -1,0 +1,112 @@
+{
+ "label": "At D2, strongly negative when a1 reaches S2 (rare), high when a2 reaches S1.",
+ "short_terms": "(phase == D2) * (action == 1) * (state == S2) ;; (phase == D2) * (state == S1) ;; (phase == D2) * belief_lo",
+ "terms": "(phase == D2) * (action == 1) * (state == S2) ;; (phase == D2) * (action == 2) * (state == S1) ;; (phase == D2) * (action == 1) * (state == S1) ;; (phase == D2) * belief_lo ;; (phase == D1) * belief_lo ;; (phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a1 S1 u\") ;; (phase == GO) * belief_lo",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Raw candidate n of unit 35 sits near +1 at D1/GO and lower at D2 (declining over the episode). Beyond timing, its magnitude is set at D2 by the just-made choice x reached state (both observed at D2): a1->S2 (rare) drives it strongly negative (weight about -0.95), a2->S1 (rare) raises it (+0.46), a1->S1 slightly raises it (+0.15), a2->S2 is the reference. So it is an a1-vs-a2 by state code with an asymmetric rare-transition emphasis, not a reward signal (this trial reward, a future variable, adds ~0.02). The free fit adds smaller effects: a negative belief_lo term at all phases (lower when the observer believes S1 is good) and a D1 dip after unrewarded a1 trials (a1 S2 u, a1 S1 u); these lift dev R^2 from 0.71 to 0.76. Residual variance remains within a2->S2 at D2.",
+ "full_test_scores": {
+  "gate": "unit_candidate",
+  "feature": 35,
+  "terms": [
+   "(phase == D2) * (action == 1) * (state == S2)",
+   "(phase == D2) * (action == 2) * (state == S1)",
+   "(phase == D2) * (action == 1) * (state == S1)",
+   "(phase == D2) * belief_lo",
+   "(phase == D1) * belief_lo",
+   "(phase == D1) * last_is(\"a1 S2 u\")",
+   "(phase == D1) * last_is(\"a1 S1 u\")",
+   "(phase == GO) * belief_lo"
+  ],
+  "weights": [
+   -0.8432569600251063,
+   0.38709500502689675,
+   0.2445173804072728,
+   -0.036374538997328155,
+   -0.015477970961195756,
+   -0.14716304342069017,
+   -0.12161356096227294,
+   -0.00842257678273785
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7448467943710081,
+  "r2": 0.8642128614935237,
+  "r2_timing_only": 0.467821154071962
+ },
+ "gate": "unit_candidate",
+ "feature": 35,
+ "test_scores": {
+  "gate": "unit_candidate",
+  "feature": 35,
+  "terms": [
+   "(phase == D2) * (action == 1) * (state == S2)",
+   "(phase == D2) * (state == S1)",
+   "(phase == D2) * belief_lo"
+  ],
+  "weights": [
+   -0.7955757519110156,
+   0.31375114877492055,
+   -0.0492083114752927
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7132469115386639,
+  "r2": 0.8473960723163456,
+  "r2_timing_only": 0.467821154071962
+ },
+ "dev_scores": {
+  "gate": "unit_candidate",
+  "feature": 35,
+  "terms": [
+   "(phase == D2) * (action == 1) * (state == S2)",
+   "(phase == D2) * (state == S1)",
+   "(phase == D2) * belief_lo"
+  ],
+  "weights": [
+   -0.7955757519110156,
+   0.31375114877492055,
+   -0.0492083114752927
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.7254654082993883,
+  "r2": 0.8536096590055084,
+  "r2_timing_only": 0.46676905053139983
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The core claim holds. On test, the recorded short form scores R^2 beyond timing of 0.6926, matching the report. Fitted weights: a1->S2 at D2 -0.948, a2->S1 at D2 +0.463, a1->S1 at D2 +0.147. The profile's choice x state table shows the same pattern (D2: a1S1 +0.147, a1S2 -0.948, a2S1 +0.463, a2S2 -0.004).",
+   "A better short form passes --short: (phase==D2)*(action==1)*(state==S2) ;; (phase==D2)*(state==S1) ;; (phase==D2)*belief_lo. It scores test 0.7132 against 0.6926. It merges the two S1 cells (weight +0.31) and adds a negative D2 belief term (-0.049 per log-odds unit). The profile backs that term: the D2 residual runs from +0.24 at belief decile 0 to -0.29 at decile 9. So the recorded third term (a1->S1, +0.15) adds less than the belief term it displaces.",
+   "A systematic error class remains in misses and the label never mentions it. After an unrewarded a1 trial the short form over-predicts: D2 after a1 S2 u -0.217, D1 after a1 S2 u -0.203, D1 after a1 S1 u -0.130, D2 after a1 S1 u -0.09. The unit carries a dip of about 0.2 after unrewarded a1 trials across phases. Adding (phase!=GO)*(prev_action==1)*(prev_reward==0) as a third term gives only 0.6946, so the dip is real but small in variance terms.",
+   "Large variance within a2->S2 at D2 is unexplained. In the worst-fit windows, a2 S2c cells reach -0.7 to -0.9 where the prediction is +0.04 to +0.5. The explanation admits this, but the label implies a2->S2 is neutral.",
+   "'Extra weight on rare transitions' is loosely true: the two rare cells carry the largest deviations, but the coding is not symmetric in rarity. It amounts to a1->S2 being strongly negative and S1 at D2 being positive. A common/rare term alone adds nothing (D2*common in place of the belief term gives 0.6597, the same as the two-term form at 0.6590)."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At D2: strongly negative after a1 reaches S2, raised when S1 is reached; lower when belief favors S1.",
+  "better_short_terms": "(phase == D2) * (action == 1) * (state == S2) ;; (phase == D2) * (state == S1) ;; (phase == D2) * belief_lo",
+  "better_short_terms_test_r2_beyond_timing": 0.7132
+ },
+ "final_label": "At D2: strongly negative after a1 reaches S2, raised when S1 is reached; lower when belief favors S1.",
+ "original_short_terms": "(phase == D2) * (action == 1) * (state == S2) ;; (phase == D2) * (action == 2) * (state == S1) ;; (phase == D2) * (action == 1) * (state == S1)",
+ "original_test_scores": {
+  "gate": "unit_candidate",
+  "feature": 35,
+  "terms": [
+   "(phase == D2) * (action == 1) * (state == S2)",
+   "(phase == D2) * (action == 2) * (state == S1)",
+   "(phase == D2) * (action == 1) * (state == S1)"
+  ],
+  "weights": [
+   -0.947530545723973,
+   0.46327027723148534,
+   0.14743417338405224
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6925956840167822,
+  "r2": 0.8364059258867532,
+  "r2_timing_only": 0.467821154071962
+ },
+ "terms_from": "skeptic"
+}

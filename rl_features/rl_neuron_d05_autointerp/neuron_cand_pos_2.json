@@ -1,0 +1,105 @@
+{
+  "label": "S1 shown at D2, early in the episode (rare a2->S1 persists longer)",
+  "predicate": "(phase == D2) & (in_state == 1) & (ep_trial<50)&((in_action==2)|(ep_trial<25)|((ep_trial<35)&(prev_reward==0)))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires almost only at D2 when the reached state shown is S1 (97.5% of mass; never on S2, never at D1, small leakage into the following GO step). It is gated by time in the episode: rate ~20% in trials 0-9, falling steadily to ~4% by trials 40-49 and zero after trial ~55, so S1-at-D2 alone has F1 0.44 and adding ep_trial < 50 gives 0.72. The activation decays faster for common S1 (a1->S1) than rare S1 (a2->S1): adding that rare S1 stays active until ~trial 50 while common S1 drops out by ~35 gives dev F1 0.81, mass recall 0.95. Magnitude is largest for rare S1 (after a2) and early trials, and decays across consecutive repeated a1->S1c trials within a window. It does not depend on reward, the hidden good state or the next choice. Only observed variables are used (ep_trial reflects elapsed time, which the agent can track only implicitly).",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 2,
+    "predicate": "(phase == D2) & (in_state == 1) & (ep_trial<50)&((in_action==2)|(ep_trial<25)|((ep_trial<35)&(prev_reward==0)))",
+    "split": "test",
+    "precision": 0.8289216961498439,
+    "recall": 0.8572725744072641,
+    "f1": 0.8428587961049481,
+    "mass_recall": 0.9258316173388526,
+    "correlation": 0.7552923039173967,
+    "n_active": 59470,
+    "n_predicted": 61504,
+    "coverage_by_activation_quartile": [
+      0.6972020446596717,
+      0.8389830508474576,
+      0.9056971816775409,
+      0.9872200174883972
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 2,
+    "predicate": "(phase == D2) & (in_state == 1) & (ep_trial<50)&((in_action==2)|(ep_trial<25)|((ep_trial<35)&(prev_reward==0)))",
+    "split": "dev",
+    "precision": 0.8297497714421156,
+    "recall": 0.8601112651585616,
+    "f1": 0.8446577679733213,
+    "mass_recall": 0.9293346638870517,
+    "correlation": 0.7563599588928943,
+    "n_active": 56981,
+    "n_predicted": 59066,
+    "coverage_by_activation_quartile": [
+      0.704127474378773,
+      0.8341874341874342,
+      0.908950508950509,
+      0.9931905931905932
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 2,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The scores reproduce. The predicate gets dev P 0.747 / R 0.897 / F1 0.815 / mass recall 0.960, and test P 0.753 / R 0.896 / F1 0.818 / mass recall 0.960. Several core claims also hold: the unit never fires at D1 (0 of 380619 steps), it never fires when S2 is shown (0 of 196720 steps), 97.5% of the activation mass is at D2 with S1 shown, and activity is zero after trial ~55.",
+      "The firing rates in the explanation are wrong. It says the unit is active on 'about 20% of S1 steps in trials 0-9, dropping to about 4% by trials 40-49'. The actual firing rate at D2 with S1 shown is 1.00 in trials 0-9, for both a1 and a2, and stays at or above 0.97 until about trial 15. The quoted percentages look like each trial bucket's share of all activations (the recall of that bucket), mistaken for a firing rate.",
+      "The time course is described inaccurately. For rare a2->S1 the rate stays high (0.97 at trials 20-24, 0.89 at 35-39, 0.77 at 40-44, 0.58 at 45-49), then drops sharply to 0.018 at trials 50-54. For common a1->S1 it decays gradually rather than stopping at about trial 35: 0.98 at trials 10-14, 0.76 at 15-19, 0.59 at 20-24, 0.37 at 25-29, 0.22 at 30-34, 0.12 at 35-39, 0.04 at 45-49. The ep_trial<35 cutoff for a1 is an arbitrary point on this ramp, and the unit is near-saturated early rather than sparse.",
+      "The GO activity is mischaracterised as a little leaking into the next GO step. GO firing is 7% of active steps and 2.5% of the mass. It occurs only when the model is about to choose a2 and the trial is before 50: (phase==GO)&(model_act==2)&(ep_trial<50) captures all 7.1% of GO-active recall. GO with an upcoming a1 choice fires 0 times in 175k steps, and only about half of GO firing follows a trial that reached S1. The agent's own upcoming choice is a legitimate variable to use here.",
+      "'Does not depend on reward or the hidden good state' is overstated. For a1->S1 in trials 20-39, the rate is 0.46 after an unrewarded previous trial versus 0.26 after a rewarded one. It is 0.57 when S2 is the good state versus 0.30 when S1 is. These are secondary effects and may be confounded, but they are not absent. It also fires more after a previous S2 than after a previous S1 (0.48 vs 0.26 for trials 15-49).",
+      "The remaining false positives are systematic, not noise: about 17.5k test steps of a1->S1 common D2 in trials 15-34 where the decaying ramp has already shut the unit off. No single variable fixes this, and moving the cutoff to ep_trial<25 for a1 helps only slightly (test F1 0.839)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "S1 shown at D2 in the first half of the episode: near-always active on S1 at D2 through trial ~15; for common a1->S1 it fades gradually by trial ~45, while rare a2->S1 stays active until a sharp cutoff at trial 50. It also fires weakly at GO before an a2 choice in trials 0-49.",
+    "better_predicate": "(phase == D2) & (in_state == 1) & (ep_trial<50)&((in_action==2)|(ep_trial<25)|((ep_trial<35)&(prev_reward==0)))",
+    "better_predicate_test_f1": 0.843
+  },
+  "final_label": "S1 shown at D2 in the first half of the episode: near-always active on S1 at D2 through trial ~15; for common a1->S1 it fades gradually by trial ~45, while rare a2->S1 stays active until a sharp cutoff at trial 50. It also fires weakly at GO before an a2 choice in trials 0-49.",
+  "original_predicate": "(phase == D2) & (in_state == 1) & (ep_trial < 50) & ((in_action == 2) | (ep_trial < 35))",
+  "original_test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 2,
+    "predicate": "(phase == D2) & (in_state == 1) & (ep_trial < 50) & ((in_action == 2) | (ep_trial < 35))",
+    "split": "test",
+    "precision": 0.7525316008756444,
+    "recall": 0.8959643517740037,
+    "f1": 0.8180080598733448,
+    "mass_recall": 0.9600888186294152,
+    "correlation": 0.7282342178224591,
+    "n_active": 59470,
+    "n_predicted": 70805,
+    "coverage_by_activation_quartile": [
+      0.733454398708636,
+      0.8770513855259618,
+      0.9734310889890361,
+      0.9999327369341494
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 2,
+    "predicate": "(phase == D2) & (in_state == 1) & (ep_trial < 50) & ((in_action == 2) | (ep_trial < 35))",
+    "split": "dev",
+    "precision": 0.747025462624609,
+    "recall": 0.8969130060897492,
+    "f1": 0.8151361697037361,
+    "mass_recall": 0.9602465917331178,
+    "correlation": 0.7241197392911435,
+    "n_active": 56981,
+    "n_predicted": 68414,
+    "coverage_by_activation_quartile": [
+      0.7391548504843465,
+      0.8752544752544753,
+      0.9733941733941734,
+      0.9998595998595998
+    ]
+  },
+  "predicate_from": "skeptic"
+}

@@ -1,0 +1,110 @@
+{
+ "label": "At D2, update gate drops when S1 seems good and after a1 reaching S1.",
+ "short_terms": "(phase == D2) * (action == 1) * (state == 1) ;; (phase == D2) * belief_lo ;; (phase == D2) * (action == 2)",
+ "terms": "(phase == D2) * (action == 1) ;; (phase == D2) * (state == 1) ;; (phase == D2) * np.tanh(belief_lo) ;; (phase == D2) * (action == 1) * (state == 1) ;; (phase == D2) * last_is(\"a1 S1 r\") ;; (phase == D2) * last_is(\"a1 S2 u\") ;; (phase == D2) * (prev_action == 1) ;; (phase == D1) * belief_lo",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "z unit 32 sits near 1 at D1/GO (residuals there are tiny); all magnitude variation beyond timing is at D2. At D2 it is lowered when the ideal observer believes S1 is good (graded, saturating tanh of belief log-odds) and further lowered when this trial was a1 reaching S1 (common); a2 trials and S2-belief keep it near 1 (ceiling saturation causes the main linear misfit). Choice and state are observed at D2, so no future variables are used. The free fit adds last-trial patterns (a1 S1 r, a1 S2 u, prev a1) for a few points of R^2. Future reward and hidden reversal timing do not matter.",
+ "full_test_scores": {
+  "gate": "unit_update",
+  "feature": 32,
+  "terms": [
+   "(phase == D2) * (action == 1)",
+   "(phase == D2) * (state == 1)",
+   "(phase == D2) * np.tanh(belief_lo)",
+   "(phase == D2) * (action == 1) * (state == 1)",
+   "(phase == D2) * last_is(\"a1 S1 r\")",
+   "(phase == D2) * last_is(\"a1 S2 u\")",
+   "(phase == D2) * (prev_action == 1)",
+   "(phase == D1) * belief_lo"
+  ],
+  "weights": [
+   0.005688559940128596,
+   0.04288616613174714,
+   -0.18135183794374826,
+   -0.2475901131972894,
+   -0.0916445895880913,
+   -0.17191429499583655,
+   0.09486481007201432,
+   -0.0020343941236440326
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.8080320247146374,
+  "r2": 0.890342814507245,
+  "r2_timing_only": 0.42877354762038633
+ },
+ "gate": "unit_update",
+ "feature": 32,
+ "test_scores": {
+  "gate": "unit_update",
+  "feature": 32,
+  "terms": [
+   "(phase == D2) * (action == 1) * (state == 1)",
+   "(phase == D2) * belief_lo",
+   "(phase == D2) * (action == 2)"
+  ],
+  "weights": [
+   -0.25245188508569644,
+   -0.031236790567371046,
+   0.17887027609262696
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.9172070589265142,
+  "r2": 0.9527064819885183,
+  "r2_timing_only": 0.42877354762038633
+ },
+ "dev_scores": {
+  "gate": "unit_update",
+  "feature": 32,
+  "terms": [
+   "(phase == D2) * (action == 1) * (state == 1)",
+   "(phase == D2) * belief_lo",
+   "(phase == D2) * (action == 2)"
+  ],
+  "weights": [
+   -0.25245188508569644,
+   -0.031236790567371046,
+   0.17887027609262696
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.9203215843026191,
+  "r2": 0.9547070140885164,
+  "r2_timing_only": 0.4315526292150863
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The recorded short form leaves out the main D2 effect, which is this trial's choice (a1 vs a2). 'On a2 trials it stays near 1' appears only in the prose. The D2 choice x state residuals are a1S1 -0.335, a1S2 -0.137, a2S1 +0.20, a2S2 +0.257, and adding (phase == D2) * (action == 2) to the short form raises test R^2 beyond timing from 0.788 to 0.908.",
+   "The tool's timing baseline does not refit a D2 offset, so a single one-sided indicator (a1S1) cannot recenter D2. (action==1) alone scores 0.542 and (action==1) ;; (action==2) scores 0.859, even though the two are complementary at D2. The recorded form is therefore underfit, not a complete description.",
+   "The claim that the belief effect levels off (tanh) is not supported. Linear belief_lo does better: a1S1 ;; belief_lo ;; a2 gives test 0.917, against 0.908 with tanh. Without the a2 term, a1S1 ;; belief_lo gives 0.806 and a1S1 ;; tanh gives 0.788, so tanh only helped because the form was missing the a2 term.",
+   "Misses on the recorded form show systematic under-prediction at D2 after a1 S2 r (+0.234), a2 S2 u (+0.144) and a2 S1 r (+0.143), plus a D2 mean error of +0.046. These are a2 trials and S2-evidence histories sitting higher than the form predicts.",
+   "After the fix, a moderate systematic error remains at D2 after the previous trial was rare: after a1 S2 r it is under-predicted by +0.146 and after a1 S2 u it is over-predicted by -0.090. The unit seems to weight a previous rare transition differently from the ideal observer."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At D2 only: low after choosing a1, lowest on a1 reaching S1; also falls as belief favours S1.",
+  "better_short_terms": "(phase == D2) * (action == 1) * (state == 1) ;; (phase == D2) * belief_lo ;; (phase == D2) * (action == 2)",
+  "better_short_terms_test_r2_beyond_timing": 0.917
+ },
+ "final_label": "At D2 only: low after choosing a1, lowest on a1 reaching S1; also falls as belief favours S1.",
+ "original_short_terms": "(phase == D2) * (action == 1) * (state == 1) ;; (phase == D2) * np.tanh(belief_lo)",
+ "original_test_scores": {
+  "gate": "unit_update",
+  "feature": 32,
+  "terms": [
+   "(phase == D2) * (action == 1) * (state == 1)",
+   "(phase == D2) * np.tanh(belief_lo)"
+  ],
+  "weights": [
+   -0.1916989048421558,
+   -0.1910752911656421
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7880429572829024,
+  "r2": 0.8789245304318382,
+  "r2_timing_only": 0.42877354762038633
+ },
+ "terms_from": "skeptic"
+}

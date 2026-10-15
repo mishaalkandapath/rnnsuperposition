@@ -1,0 +1,63 @@
+{
+  "label": "GO after common-unrewarded a2->S2, ramping over episode trials 86-99",
+  "terms": "(phase == GO) * last_is(\"a2 S2 u\") * np.clip(ep_trial - 85, 0, 15) ;; (phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 95) ;; (phase == GO) * (ep_trial >= 90) * (1 - last_is(\"a2 S2 u\"))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO, late in the episode, and almost only when the previous trial was a2 -> S2 (common) and unrewarded. Within that pattern its size grows with episode trial: about +0.05 per trial from trial 86, plus a step of about +0.57 from trial 95, so in the examples it reaches roughly 1.2-1.7 at trials 95-99. After every other previous-trial pattern it is about 0 even late in the episode (third term, -0.085, cancels the late-GO timing baseline). The rare a1 -> S2 unrewarded case does not drive it, so it depends on the previous choice being a2, not only on S2 going unrewarded. The upcoming choice and policy logit add nothing (a choice term left R^2 unchanged); the reward two trials back adds about 0.01. All terms are observed at GO. Test R^2 beyond timing 0.715 (dev 0.737), well above the profile additive all ceiling of 0.08, which cannot express the pattern x late-episode interaction.",
+  "gate": "hidden",
+  "feature": 28,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 28,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 u\") * np.clip(ep_trial - 85, 0, 15)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 95)",
+      "(phase == GO) * (ep_trial >= 90) * (1 - last_is(\"a2 S2 u\"))"
+    ],
+    "weights": [
+      0.05136293405374932,
+      0.5709664315619938,
+      -0.08473040769469924
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.715166836651032,
+    "r2": 0.7441437153299509,
+    "r2_timing_only": 0.10173281207222873
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 28,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 u\") * np.clip(ep_trial - 85, 0, 15)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 95)",
+      "(phase == GO) * (ep_trial >= 90) * (1 - last_is(\"a2 S2 u\"))"
+    ],
+    "weights": [
+      0.05136293405374932,
+      0.5709664315619938,
+      -0.08473040769469924
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.736891053251564,
+    "r2": 0.7610308681017521,
+    "r2_timing_only": 0.09174836184217128
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claim holds up. Re-scoring the three terms on --split test gives R^2 beyond timing 0.715 (weights +0.051/trial ramp, +0.571 step at trial 95, -0.085 for the other late-GO patterns), so GO, late episode and previous trial a2 S2 u are confirmed. Using a per-trial table instead of the ramp plus step gives 0.716, so the ramp + step shape is fine.",
+      "One explanation claim is false: 'the rare case (a1 -> S2, unrewarded) does not drive it'. On its own, a flat late-GO a1 S2 u term gets a weight of about 0.02, but that average hides a value-gated effect. Adding (GO)*last_is('a1 S2 u')*(ep_trial>=90) and the same term times value gives weights +0.68 and -0.134*value, and test R^2 rises from 0.752 to 0.772. So after a rare unrewarded trial the feature does fire, when the model's value is low.",
+      "misses on the original terms shows a systematic under-prediction class: GO after a1 S2 u (mean error +0.010, the largest of any cell). The worst-fit windows are dominated by this case, for example t97 after a1 S2 u with actual 1.18 vs predicted 0.02, and t95 after a1 S2 u with actual 1.20 vs 0.01. There are also some GO after a1 S1 u cases, such as t97 at 1.29.",
+      "A second miss class is the window's first trial, where the previous pattern is '?' (unknown) but the D1 reward was 0. Actual values there are 1.39-1.63 against a prediction of 0.02. The term (GO)*(prev_action==-1)*(prev_reward==0)*(ep_trial>=90) gets weight +0.22 and adds about 0.02 test R^2. This is a window-edge artifact (the previous trial is probably often a2 S2 u), but it means 'almost only after a2 S2 u' is partly an artifact of how windows are cut.",
+      "Inside the a2 S2 u pattern, magnitude also falls as value rises: a term times value gets weight -0.085 and adds about 0.017 test R^2. The claim that 'the policy logit adds nothing' is correct (a choice term gives no gain), but the explanation never tests value, which matters for both patterns.",
+      "Taken together, about 0.06 of the 0.285 residual is recoverable with observed and model-internal terms. The label overstates how specific the feature is to a2."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO late in episode (ramping over trials 86-99, step at 95) after an unrewarded S2 trial: mainly common a2->S2, but also rare a1->S2 when the model's value is low; lower value raises it",
+    "better_terms": "(phase == GO) * last_is('a2 S2 u') * np.clip(ep_trial - 85, 0, 15) ;; (phase == GO) * last_is('a2 S2 u') * (ep_trial >= 95) ;; (phase == GO) * (ep_trial >= 90) * (1 - last_is('a2 S2 u')) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * (ep_trial >= 90) ;; (phase == GO) * last_is('a2 S2 u') * (ep_trial >= 90) * value ;; (phase == GO) * last_is('a1 S2 u') * (ep_trial >= 90) ;; (phase == GO) * last_is('a1 S2 u') * (ep_trial >= 90) * value",
+    "better_terms_test_r2_beyond_timing": 0.772
+  },
+  "final_label": "GO late in episode (ramping over trials 86-99, step at 95) after an unrewarded S2 trial: mainly common a2->S2, but also rare a1->S2 when the model's value is low; lower value raises it"
+}

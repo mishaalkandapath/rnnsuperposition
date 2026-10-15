@@ -1,0 +1,76 @@
+{
+  "label": "GO late in episode after common-rewarded a2 (S2) trial, stronger with later trial and firm S2 belief",
+  "terms": "(phase == GO) * last_is(\"a2 S2 r\") * (ep_trial >= 80) ;; (phase == GO) * last_is(\"a2 S2 r\") * (ep_trial >= 85) ;; (phase == GO) * last_is(\"a2 S2 r\") * (ep_trial >= 75) * (belief < 0.2) ;; (phase == GO) * (prev_reward == 1) * (prev_action == -1) * (belief < 0.3) * (ep_trial >= 75) ;; (phase == GO) * (prev_reward == 1) * (prev_action == -1) * (belief < 0.3) * (ep_trial >= 85) ;; (phase == GO) * (ep_trial >= 70) * (1 - last_is(\"a2 S2 r\")) * (1 - (prev_reward == 1) * (prev_action == -1))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Active only at GO, and only late in the episode (trial >= ~75). Magnitude is set by an interaction of three things: the previous trial was a2 -> S2 (common) and rewarded, the trial index (steps up at >= 80 and again at >= 85), and a firm ideal-observer belief that S2 is good (belief < 0.2). On the first trial of a window, where the previous choice is not in the data, a rewarded previous trial combined with belief < 0.3 stands in for it. Late GO steps after any other previous-trial pattern (unrewarded, a1, or rare a2 -> S1) are pushed down to about 0, which cancels the positive timing baseline. D1 and D2 are always 0. Additive one-cue tables do poorly here (all ceiling 0.21, all observed 0.16) because the effect is a conjunction. Using only observed quantities (belief replaces the policy), test R^2 beyond timing is 0.66 (dev 0.63), so dropping the model outputs loses nothing measurable. Remaining misses are a2 S2 r streaks where the feature stays low, probably just after a reversal while belief is still weak.",
+  "gate": "hidden",
+  "feature": 171,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 171,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 r\") * (ep_trial >= 80)",
+      "(phase == GO) * last_is(\"a2 S2 r\") * (ep_trial >= 85)",
+      "(phase == GO) * last_is(\"a2 S2 r\") * (ep_trial >= 75) * (belief < 0.2)",
+      "(phase == GO) * (prev_reward == 1) * (prev_action == -1) * (belief < 0.3) * (ep_trial >= 75)",
+      "(phase == GO) * (prev_reward == 1) * (prev_action == -1) * (belief < 0.3) * (ep_trial >= 85)",
+      "(phase == GO) * (ep_trial >= 70) * (1 - last_is(\"a2 S2 r\")) * (1 - (prev_reward == 1) * (prev_action == -1))"
+    ],
+    "weights": [
+      0.14663726679126368,
+      0.09612032080784302,
+      0.13414941852304113,
+      0.18395598675041325,
+      0.23558195799351783,
+      -0.10554509891505491
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.664375923822606,
+    "r2": 0.7383822490363444,
+    "r2_timing_only": 0.22050362434255866
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 171,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 r\") * (ep_trial >= 80)",
+      "(phase == GO) * last_is(\"a2 S2 r\") * (ep_trial >= 85)",
+      "(phase == GO) * last_is(\"a2 S2 r\") * (ep_trial >= 75) * (belief < 0.2)",
+      "(phase == GO) * (prev_reward == 1) * (prev_action == -1) * (belief < 0.3) * (ep_trial >= 75)",
+      "(phase == GO) * (prev_reward == 1) * (prev_action == -1) * (belief < 0.3) * (ep_trial >= 85)",
+      "(phase == GO) * (ep_trial >= 70) * (1 - last_is(\"a2 S2 r\")) * (1 - (prev_reward == 1) * (prev_action == -1))"
+    ],
+    "weights": [
+      0.14663726679126368,
+      0.09612032080784302,
+      0.13414941852304113,
+      0.18395598675041325,
+      0.23558195799351783,
+      -0.10554509891505491
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6265002462362228,
+    "r2": 0.7067417081006137,
+    "r2_timing_only": 0.214836719584935
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The trial-index shape is wrong. The explanation says the value steps up at >=80 and again at >=85, but the effect is not monotonic and falls sharply at the end of the episode. Fitting the a2 S2 r effect in 5-trial bins (test) gives weights of 0.13 for trials 75-79, 0.28 for 80-84, 0.50 for 85-89, 0.47 for 90-94 and only 0.11 for 95-99. The timing baseline also dips in the last decile (GO decile 8 = 0.155, decile 9 = 0.142).",
+      "The misses are misattributed. The worst-fit dev windows are a2 S2 r streaks at t95-t99 where the actual value is 0 and the prediction is about 0.52. That is the end-of-episode drop, not 'just after a reversal while belief is still weak'. Adding one term, (phase==GO)*(prev_reward==1)*isin(prev_action,[-1,2])*(ep_trial>=95), gets weight -0.26 and raises test R^2 from 0.664 to 0.693.",
+      "The magnitude decays within a run of a2 S2 r trials, and the explanation does not mention it. In the profile examples, consecutive GO values in one window are 0.84, 0.63, 0.57, 0.54. A term for 'the trial before last was also a2 rewarded' gets weight -0.117 and adds test R^2 (0.693 to 0.700). The first rewarded a2 trial after a break is the strongest.",
+      "The belief contribution is overstated. The explanation calls 'firm belief that S2 is good' one of three drivers, but dropping the belief<0.2 term only lowers test R^2 from 0.664 to 0.650. A graded -belief_lo version adds about 0.005 on top of the other fixes.",
+      "About 0.16 of the 0.66 comes from terms for the window's first trial (prev_action == -1), a missing-data stand-in rather than a behavioural driver. Without them, test R^2 is 0.504. Misses still show first-window-trial GO cells at about 0.93 actual vs about 0.15 predicted.",
+      "Confirmed claims: activity is only at GO (D1 and D2 residuals are 0). The main driver is a previous common, rewarded a2 trial late in the episode. Other previous-trial patterns at late GO get a negative weight (-0.10). Rare-rewarded a2 trials stay mostly silent (residual -0.036). No future variables are used. Test R^2 0.664 reproduces exactly."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Late-episode GO (trials ~80-94, falling at 95+) after a common, rewarded a2 trial; strongest on the first such trial after a break, decaying over a run; weakly raised by an S2-good belief",
+    "better_terms": "(phase == GO) * last_is('a2 S2 r') * (ep_trial >= 75) * (-belief_lo) ;; (phase == GO) * last_is('a2 S2 r') * (ep_trial >= 80) ;; (phase == GO) * last_is('a2 S2 r') * (ep_trial >= 85) ;; (phase == GO) * (prev_reward == 1) * (prev_action == -1) * (belief < 0.3) * (ep_trial >= 75) ;; (phase == GO) * (prev_reward == 1) * (prev_action == -1) * (belief < 0.3) * (ep_trial >= 85) ;; (phase == GO) * (ep_trial >= 70) * (1 - last_is('a2 S2 r')) * (1 - (prev_reward == 1) * (prev_action == -1)) ;; (phase == GO) * (prev_reward == 1) * isin(prev_action,[-1,2]) * (ep_trial >= 95) ;; (phase == GO) * last_is('a2 S2 r') * (ep_trial >= 75)*(tv('action',-2)==2)*(tv('reward',-2)==1)",
+    "better_terms_test_r2_beyond_timing": 0.705
+  },
+  "final_label": "Late-episode GO (trials ~80-94, falling at 95+) after a common, rewarded a2 trial; strongest on the first such trial after a break, decaying over a run; weakly raised by an S2-good belief"
+}

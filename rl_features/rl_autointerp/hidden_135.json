@@ -1,0 +1,65 @@
+{
+  "label": "D1 after an a1->S1 common transition, early-to-mid episode",
+  "predicate": "(phase == D1) & (ep_trial < 60) & (((prev_action == 1) & (prev_common == 1)) | ((prev_action == -1) & (action == 1)))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": true,
+  "explanation": "Fires only at D1 (never GO or D2), when the previous trial was a1 with a common transition to S1. The previous reward does not gate it: it fires after both rewarded and unrewarded trials. Firing gets rarer over the episode: rate about 12% of steps at trials 0-30, falling to near zero by trial ~70, and it is silent from trial 80 on. It is nearly silent after a2 choices (prev_action=2: 0.4% rate) and after rare transitions (prev_common=0: 0.8%). The only future variable is action == 1, used for the window first trial, where the previous trial is outside the window. That is the agent own upcoming choice, a legitimate proxy for the unseen prev a1 choice. The core clause, prev a1 common, uses only observed history. Without the first-trial fallback, the observed-only predicate gets dev F1 0.75 (precision 0.80). With it, dev F1 0.82 and mass recall 0.95. False positives are mostly long a1-rewarded streaks where the activation has decayed to zero. In consecutive a1->S1 trials, magnitude visibly decays from one trial to the next (seen in the examples).",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 135,
+    "predicate": "(phase == D1) & (ep_trial < 60) & (((prev_action == 1) & (prev_common == 1)) | ((prev_action == -1) & (action == 1)))",
+    "split": "test",
+    "precision": 0.7551258127013182,
+    "recall": 0.8904633756622656,
+    "f1": 0.8172293364377183,
+    "mass_recall": 0.9502053202749259,
+    "correlation": 0.7176534740543485,
+    "n_active": 71346,
+    "n_predicted": 84133,
+    "coverage_by_activation_quartile": [
+      0.7471547906038011,
+      0.8657285417951449,
+      0.9593518726171787,
+      0.989627719219556
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 135,
+    "predicate": "(phase == D1) & (ep_trial < 60) & (((prev_action == 1) & (prev_common == 1)) | ((prev_action == -1) & (action == 1)))",
+    "split": "dev",
+    "precision": 0.7480838703378246,
+    "recall": 0.8977532368621478,
+    "f1": 0.8161132266396826,
+    "mass_recall": 0.9534061723165971,
+    "correlation": 0.7125513243297695,
+    "n_active": 68276,
+    "n_predicted": 81936,
+    "coverage_by_activation_quartile": [
+      0.7670630968422286,
+      0.8701739996484855,
+      0.9633253266155017,
+      0.990450524342375
+    ]
+  },
+  "gate": "hidden",
+  "feature": 135,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the 'nearly silent after a2 (0.4%)' and 'after rare (0.8%)' rates are per step over all phases. Counting D1 steps only, the precision of (phase==D1)&(prev_action==2) is 0.015 on test and of (phase==D1)&(prev_common==0) is 0.029. The feature is still effectively silent there, but the quoted numbers flatter it about 3x.",
+      "The ep_trial<60 cutoff simplifies a gradual decline. Precision of the core clause by trial range on dev: trials <30 0.96, 30-60 0.67, 50-60 0.47, 60-70 0.26, 70-80 0.03. Nothing fires at trial 80 or later (test: 0 of 80136 D1 steps). Moving the cutoff barely changes dev F1 (50: 0.810, 55: 0.818, 60: 0.816, 65: 0.805).",
+      "Systematic but acknowledged false-positive class: repeated a1->S1 common trials. When the trial two back was also a1->S1 common, precision is 0.75. When the a1->S1 common trial follows a different trial type, precision is 0.96 (dev, trial <60). In misses --split test the main false-positive windows are long a1/S1c/rewarded streaks. Adding streak-break or reward terms to the predicate did not raise F1 (0.809 vs 0.816).",
+      "The reward claim holds: after a1->S1 common, precision is 0.778 after rewarded trials and 0.898 after unrewarded ones (test). The feature fires slightly more reliably after unrewarded trials, so 'not gated by reward' is accurate.",
+      "The fallback using the future variable action==1 only covers window-truncation cases (prev_action==-1). The observed-only core clause scores test F1 0.750 (precision 0.807), as stated. A good==1 fallback (hidden state) does worse on dev (precision 0.546 vs 0.605). The agent's upcoming choice is a fair proxy for the previous a1 choice it actually saw.",
+      "Verified: zero activation at GO and D2 (test: 0 of 791460 steps). prev_state==1 after a2 (rare) gives about 0 recall, and a1 with a rare transition to S2 gives 0, so the feature needs a1 AND reaching S1, not just S1. Test scores reproduce: P 0.755, R 0.89, F1 0.817, mass recall 0.95."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after an a1->S1 common transition (reward shown either way), fading over the episode (strong before ~trial 30, gone by ~70) and weaker within long a1->S1 streaks",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "D1 after an a1->S1 common transition (reward shown either way), fading over the episode (strong before ~trial 30, gone by ~70) and weaker within long a1->S1 streaks"
+}

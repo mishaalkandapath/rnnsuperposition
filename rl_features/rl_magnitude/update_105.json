@@ -1,0 +1,92 @@
+{
+  "label": "D1 after an unrewarded a2->S2 trial, stronger when S2 still believed good, early in episode",
+  "short_terms": "(phase == D1) * last_is(\"a2 S2 u\") ;; (phase == D1) * last_is(\"a2 S2 u\") * belief_lo ;; (phase == D1) * last_is(\"a2 S2 u\") * ep_dec",
+  "terms": "(phase == D1) * last_is(\"a2 S2 u\") ;; (phase == D1) * last_is(\"a2 S2 u\") * belief_lo ;; (phase == D1) * last_is(\"a2 S2 u\") * ep_dec ;; (phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 1) ;; (phase == D1) * last_is(\"a2 S2 u\") * (belief_lo < 0) ;; (phase == D1) * last_is(\"a2 S2 u\") * belief_lo**2 ;; (phase == D1) * (prev_action == -1) * (prev_reward == 0) ;; (phase == D1) * last_is(\"a2 S2 u\") * (tv(\"action\", -2) == 2) * (tv(\"reward\", -2) == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1, almost exclusively right after a common-unrewarded a2->S2 trial (indicator alone: dev R2 0.27). Its magnitude is graded by how surprising the loss is: larger when the ideal observer still believes S2 is good (negative belief_lo weight) and smaller later in the episode (negative ep_dec weight); short form dev R2 0.525 vs free fit 0.549. A second consecutive a2 S2 loss gives a much smaller response (captured mostly by belief). The free fit adds small terms for a rewarded trial before, nonlinearity in belief, and window-first-trial D1 after a loss (where the previous trial pattern is not visible in the window, a main residual miss). GO and D2 are silent; future, hidden good state and since_rev add nothing.",
+  "full_test_scores": {
+    "gate": "update",
+    "feature": 105,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * last_is(\"a2 S2 u\") * belief_lo",
+      "(phase == D1) * last_is(\"a2 S2 u\") * ep_dec",
+      "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"reward\", -2) == 1)",
+      "(phase == D1) * last_is(\"a2 S2 u\") * (belief_lo < 0)",
+      "(phase == D1) * last_is(\"a2 S2 u\") * belief_lo**2",
+      "(phase == D1) * (prev_action == -1) * (prev_reward == 0)",
+      "(phase == D1) * last_is(\"a2 S2 u\") * (tv(\"action\", -2) == 2) * (tv(\"reward\", -2) == 0)"
+    ],
+    "weights": [
+      0.7607106505652477,
+      -0.20658882443502355,
+      -0.08052989794950058,
+      0.07268678415355509,
+      -0.09454223881093615,
+      0.03500291672774467,
+      0.07425980188961236,
+      -0.06525823495151971
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5423598138284359,
+    "r2": 0.5641858875403034,
+    "r2_timing_only": 0.04769265106383214
+  },
+  "gate": "update",
+  "feature": 105,
+  "test_scores": {
+    "gate": "update",
+    "feature": 105,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * last_is(\"a2 S2 u\") * belief_lo",
+      "(phase == D1) * last_is(\"a2 S2 u\") * ep_dec"
+    ],
+    "weights": [
+      0.7931295829511282,
+      -0.13976634666588442,
+      -0.07981632993727587
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5151539485512107,
+    "r2": 0.5382775421026346,
+    "r2_timing_only": 0.04769265106383214
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 105,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == D1) * last_is(\"a2 S2 u\") * belief_lo",
+      "(phase == D1) * last_is(\"a2 S2 u\") * ep_dec"
+    ],
+    "weights": [
+      0.7931295829511282,
+      -0.13976634666588442,
+      -0.07981632993727587
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5251308174861022,
+    "r2": 0.5465432821826536,
+    "r2_timing_only": 0.045091291423032365
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "All the claims check out on the test split. The trigger term alone scores 0.259. Adding the belief_lo term (weight negative: larger when S2 is believed good) gives 0.397, adding the ep_dec term (negative) gives 0.385, and with both terms the short form scores 0.515. Each term adds a lot on its own, so neither is a fitted correction.",
+      "The claim that 'belief accounts for most of the second-loss drop' holds. Trigger + ep_dec + (tv('reward',-2)==0) scores 0.441, below the belief version at 0.515. Adding tv('reward',-2)==1 to the short form only raises it to 0.525.",
+      "Only D1 fires: the GO and D2 residuals are exactly 0 and the profile shows the timing baseline is 0 outside D1. The residual table by previous trial shows only a2 S2 u is raised (+0.33); every other pattern is about -0.037.",
+      "Remaining misses are not systematic in a way the label could cover. (1) Strong firing (about 1.3) on the D1 of a window's first trial, where the previous trial is not visible. This is an artifact of the window edge: (phase==D1)*(prev_action==-1)*(prev_reward==0) adds nothing (0.411 vs 0.40). (2) Over-prediction after an a2 S2 u trial when the loss follows earlier losses and the agent then switches to a1 (actual about 0, predicted about 0.5). Belief only partly captures this. The future-choice version (stay) adds nothing in the observed-only fit (0.411).",
+      "Using belief in place of belief_lo is marginally better (test 0.523 vs 0.515), and ep_trial in place of ep_dec scores 0.524. Both say the same thing, so they are not worth replacing the recorded form.",
+      "Minor: the label says 'unrewarded a2->S2' without 'common', but an a2->S2 trial is common by definition, so this is accurate. The label does not mention that the main effect is the trigger itself and the rest is modulation, but a reader can still predict when it is high and low."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  }
+}

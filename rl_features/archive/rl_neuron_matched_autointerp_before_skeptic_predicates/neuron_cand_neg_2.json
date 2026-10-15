@@ -1,0 +1,62 @@
+{
+  "label": "end-of-episode (low value) clock, suppressed by S1 / a2 policy",
+  "predicate": "(value < 4) & (in_state != 1) & (model_act != 2)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only in the last ~10 trials of an episode (99.8% of mass at ep_trial 90-99, none before trial 80). Over that stretch the model value head falls steadily, so value < ~4-5 is a smooth proxy for the episode end; activation grows as the episode nears its end (activations climb trial by trial inside late windows; top windows sit at the very end). Within that period it is suppressed on two kinds of step: D2 steps showing S1 (never active, 0 of 184k), and steps where the policy argmax is a2 (0.1% rate, mostly GO steps choosing a2). So it fires at D1 (63% of mass), D2 when S2 is shown, and GO when the agent is about to choose a1. It does not depend on reward history, transition type, the good state or stay/switch (all near 1x lift). Using ep_trial >= 93 instead of value gives F1 0.76 dev, value < 4 gives 0.82. All variables are observed or the model own computation (value, policy argmax); no future variables.",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 2,
+    "predicate": "(value < 4) & (in_state != 1) & (model_act != 2)",
+    "split": "test",
+    "precision": 0.7794357026587087,
+    "recall": 0.8471677527791702,
+    "f1": 0.8118915405592529,
+    "mass_recall": 0.9402230044889612,
+    "correlation": 0.7321577392980284,
+    "n_active": 33913,
+    "n_predicted": 36860,
+    "coverage_by_activation_quartile": [
+      0.6208279278216771,
+      0.8077376739797122,
+      0.970276008492569,
+      0.9898560981363529
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 2,
+    "predicate": "(value < 4) & (in_state != 1) & (model_act != 2)",
+    "split": "dev",
+    "precision": 0.7923088002304479,
+    "recall": 0.844100046033451,
+    "f1": 0.8173848439821695,
+    "mass_recall": 0.9407255116374744,
+    "correlation": 0.7465297202368351,
+    "n_active": 32585,
+    "n_predicted": 34715,
+    "coverage_by_activation_quartile": [
+      0.6072173806309071,
+      0.801497667566904,
+      0.9754480726737049,
+      0.992266142892217
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 2,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The main claims hold. Of the active steps, 0 fall in trials 0-79 (ep_trial<80 gives F1 0). 99.8% of activation mass falls in trials 90-99. The unit is active on 0 of 183,887 in_state==1 (S1 shown at D2) steps, and model_act==2 has a 0.1% active rate (mostly GO). Phase mass is D1 0.63, GO 0.13, D2 0.24. Test F1 is 0.812 (P 0.779, R 0.847, mass 0.94), which reproduces the reported scores.",
+      "Minor overclaim: 'does not depend on reward history'. Within value<4 at D1, precision is 0.88 when in_rew==1 and 0.75 when in_rew==0, and in_rew==1 carries 42% of mass against 16%. So D1 activity is somewhat stronger after a reward. This may partly come through the value term, but it is not exactly 1x.",
+      "The GO a1 component is weaker than the D1 and D2-S2 components: (value<4)&GO&model_act==1 has precision only 0.57.",
+      "Misses (test) are low-magnitude activations around the onset boundary: coverage of the lowest activation quartile is only 0.61, against 0.99 for the top quartile. False positives also sit near the onset. This looks like threshold noise from approximating a smooth clock with value<4, not a systematic class. Variants (value<4.2, adding ep_trial>=88, or adding a reward-gated D1 term) do not improve F1 (0.806, 0.817, 0.774)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

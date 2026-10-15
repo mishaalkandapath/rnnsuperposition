@@ -1,0 +1,63 @@
+{
+  "label": "GO step after a rewarded trial, agent strongly choosing a1",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (choice > 5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at the GO step (never D1 or D2), only when the previous trial was rewarded (prev_reward == 1; never after unrewarded trials), and only when the agent is about to choose a1 (99.96% of activations have action == 1; model_act == 1 on all of them). The agent policy logit choice > 5 (strong a1 preference) is the cleanest condition (dev F1 0.99). The upcoming-choice version (phase == GO) & (prev_reward == 1) & (action == 1) reaches F1 0.93; action is the agent own upcoming choice, which is legitimate, but I recorded the policy-logit version because it is observable at the step and more precise. No future random outcome is needed. Its false positives are mostly GO steps after a reward where a1 is chosen with a weaker logit. It is silent on a2 choices and on all non-GO steps. Magnitude: example windows suggest activation is highest early in a run of rewarded a1 choices (often right after a rare/unrewarded trial) and shrinks over long uninterrupted streaks; choice > 8.07 alone gives precision 1.0. I did not quantify this further.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 55,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (choice > 5)",
+    "split": "test",
+    "precision": 0.9847162844928099,
+    "recall": 0.9984729364938622,
+    "f1": 0.9915468980833765,
+    "mass_recall": 0.999939507363428,
+    "correlation": 0.9230559472341646,
+    "n_active": 101502,
+    "n_predicted": 102920,
+    "coverage_by_activation_quartile": [
+      0.993891866330391,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 55,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (choice > 5)",
+    "split": "dev",
+    "precision": 0.9860562420939963,
+    "recall": 0.9982760658838364,
+    "f1": 0.9921285282110025,
+    "mass_recall": 0.9999325569753238,
+    "correlation": 0.9258640494407363,
+    "n_active": 101512,
+    "n_predicted": 102770,
+    "coverage_by_activation_quartile": [
+      0.9931042635353455,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 55,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Every factual claim held up on the test split. The feature never fires outside GO (phase != GO gives F1 0). It never fires after an unrewarded trial ((GO) & (prev_reward == 0) gives F1 0). It almost never fires on a2 choices ((GO) & (action == 2) gives recall 0.0004). The original predicate scores P 0.985, R 0.998, F1 0.992. The action == 1 version scores F1 0.928. choice > 8.07 with GO and prev_reward == 1 gives precision 1.0 but recall only 0.83.",
+      "Small refinement, not a refutation: in the profile, almost all activations follow a previous a1 choice or the first trial of a window (prev_action == 2 holds only 0.2% of mass). This is mostly already captured by choice > 5, because a rewarded a2 trial seldom produces a strong a1 logit. Adding prev_action != 2 gives test F1 0.988, so the label does not need to change. In misses, some false positives are switches from a2 back to a1.",
+      "Misses on the test split: 155 missed steps holding 0.0% of activation mass, all at GO with prev_reward == 1 and a weaker a1 logit. False positives: 1573 steps, scattered, mostly GO after a reward where a1 has a high logit but the feature is silent. I found no systematic class (phase, position, transition or good state) among them.",
+      "The magnitude claim (strongest early in a run of rewarded a1 choices) was not measured. It is hedged as anecdotal, so it is not counted against the label.",
+      "The predicate uses no future variable. choice is the agent's own policy logit, which is legitimate."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

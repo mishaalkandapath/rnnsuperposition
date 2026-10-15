@@ -1,0 +1,64 @@
+{
+  "label": "D2: reached S1 via common a1, after a rewarded or S1 previous trial",
+  "predicate": "(phase == D2) & (action == 1) & (state == 1) & ((prev_reward == 1) | (prev_state == 1))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (100% of mass), and only when the input shows action a1 and state S1, i.e. a common a1->S1 transition (never on S2, a2, or rare a1->S2 / a2->S1). Within those steps it is gated by the recent history: it fires when the previous trial was rewarded or the previous trial also reached S1 (dev F1 0.94, mass recall 0.99). The bare a1->S1-common predicate has recall 1.0 but precision 0.69. Magnitude builds over runs of consecutive rewarded common a1->S1 trials (it climbs toward the max across the window, e.g. 0.4 -> 0.7 -> 0.9 -> 1.0) and is weak after an unrewarded or S2 trial. It also correlates with high value (top value bin holds 53% of the mass). Most of the remaining misses are weak activations on the first trial of a window, where the previous trial is unknown. All variables used are observed at D2, so no future information is needed. Reads as an S1-is-good / stay-on-a1 evidence accumulator at D2.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 76,
+    "predicate": "(phase == D2) & (action == 1) & (state == 1) & ((prev_reward == 1) | (prev_state == 1))",
+    "split": "test",
+    "precision": 0.8934675506356061,
+    "recall": 0.9803129900897595,
+    "f1": 0.9348777266869263,
+    "mass_recall": 0.9880606185870937,
+    "correlation": 0.8615143870828252,
+    "n_active": 89907,
+    "n_predicted": 98646,
+    "coverage_by_activation_quartile": [
+      0.9575566134270588,
+      0.9721493081816969,
+      0.9915469146238377,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 76,
+    "predicate": "(phase == D2) & (action == 1) & (state == 1) & ((prev_reward == 1) | (prev_state == 1))",
+    "split": "dev",
+    "precision": 0.899796619968409,
+    "recall": 0.9816304005045727,
+    "f1": 0.9389338059046275,
+    "mass_recall": 0.9891504246002032,
+    "correlation": 0.8680203172250803,
+    "n_active": 88788,
+    "n_predicted": 96863,
+    "coverage_by_activation_quartile": [
+      0.9589584178042078,
+      0.9737351894400145,
+      0.9938279947740686,
+      1.0
+    ]
+  },
+  "gate": "reset",
+  "feature": 76,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The 'rewarded OR S1 previous trial' clause is wrong. The feature never fires after a rewarded S2 previous trial: the predicate B & prev_reward==1 & prev_state==2, with B = D2 & a1 & S1, has precision 0.000 over 4870 predicted steps (dev). This is one systematic class, and it accounts for about half of the original predicate's 9706 dev false positives.",
+      "What actually matters is that the previous trial reached S1, ideally rewarded. After a rewarded S1 trial it fires at precision 0.994 (recall 0.676), whether the previous trial got there by a1 (0.996) or by a rare a2 transition (0.971). After an unrewarded S1 trial it fires at only 0.652 precision, and that depends on the trial two back: it fires at 0.866 if that trial was a rewarded S1, 0.078 if it was an unrewarded S1, and 0.000 if it was S2. After an unrewarded S2 trial it is essentially silent (0.0016).",
+      "The prev_reward==1 disjunct only helps on the window's first trial, where prev_state is unknown (-1). There B & prev_state==-1 & prev_reward==1 has precision 0.972 and covers about 22% of activations. So the disjunct works by standing in for an unseen S1 trial, not because any rewarded trial is enough.",
+      "Minor: 'never fires on a2 or rare transitions' is almost true but not exactly. On dev there are 69 activations on rare a2->S1 at D2, which is negligible mass. The claims that the feature is D2-only (100% of mass) and never fires on S2 were confirmed.",
+      "The original predicate's test scores reproduce: precision 0.893, recall 0.98, F1 0.935, mass recall 0.988. But its false positives are systematic, not scattered noise."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2: reached S1 via common a1, when the recent history (prev trial and, if it was unrewarded, the one before) shows rewarded S1 outcomes and no S2 visit; silent after any S2 previous trial",
+    "better_predicate": "(phase == D2) & (action == 1) & (state == 1) & (prev_state != 2) & ((prev_reward == 1) | ((prev_state == 1) & (tv('state',-2) != 2) & (tv('reward',-2) != 0)))",
+    "better_predicate_test_f1": 0.973
+  },
+  "final_label": "D2: reached S1 via common a1, when the recent history (prev trial and, if it was unrewarded, the one before) shows rewarded S1 outcomes and no S2 visit; silent after any S2 previous trial"
+}

@@ -1,0 +1,64 @@
+{
+  "label": "D2 after a rare a1->S2 transition, late in the episode (last ~8 trials)",
+  "predicate": "(phase == D2) & (action == 1) & (state == 2) & (ep_trial >= 92)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2, and only when the agent chose a1 and landed in S2 (a rare transition): 99.5% of activations meet that condition. It is also gated by how far into the episode the trial is. It never fires before trial 80, and 99.6% of its mass falls in trials 90-99, where the model value output is in its lowest bin (<5.22, i.e. little reward left to collect). Restricting to ep_trial >= 92 gives dev F1 0.82 and mass recall 0.97. Weaker activations come from earlier trials (around 90-92), so magnitude grows toward the end of the episode. It does not fire on rare a2->S1 transitions, on common transitions, or at D1/GO. Every variable used is observed at D2 (the choice, the reached state, elapsed time, which the GRU can track, or equivalently its own low value). Activity is enriched when S1 is the good state, which fits a1 being the usual choice.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 92,
+    "predicate": "(phase == D2) & (action == 1) & (state == 2) & (ep_trial >= 92)",
+    "split": "test",
+    "precision": 0.7682890415049268,
+    "recall": 0.9124113475177305,
+    "f1": 0.8341708542713567,
+    "mass_recall": 0.9713175383757426,
+    "correlation": 0.7460600376297096,
+    "n_active": 2820,
+    "n_predicted": 3349,
+    "coverage_by_activation_quartile": [
+      0.75177304964539,
+      0.9092198581560283,
+      0.9900709219858156,
+      0.9985815602836879
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 92,
+    "predicate": "(phase == D2) & (action == 1) & (state == 2) & (ep_trial >= 92)",
+    "split": "dev",
+    "precision": 0.7391579613801836,
+    "recall": 0.9174852652259332,
+    "f1": 0.8187237026647967,
+    "mass_recall": 0.9713129234646203,
+    "correlation": 0.7283501994498508,
+    "n_active": 2545,
+    "n_predicted": 3159,
+    "coverage_by_activation_quartile": [
+      0.7660910518053375,
+      0.9339622641509434,
+      0.9732704402515723,
+      0.9968553459119497
+    ]
+  },
+  "gate": "hidden",
+  "feature": 92,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The factual claims hold up. All activation mass is at D2 (D1 0, GO 0). 2540 of 2545 active steps have action==1 and 2537 have state==2; common==1 gives only 13 active steps and action==2 gives 5. Nothing fires before trial 80: trials 80-89 hold 0.4% of the mass and trials 90-99 hold 99.6%. All of the mass is in the lowest value bin (<5.22). The base condition D2 & a1 & S2 with no time gate reaches recall 0.995 but precision only 0.055, so the late-episode gating is real.",
+      "The ep_trial >= 92 cutoff stands in for a graded ramp, not a sharp boundary. Precision of D2 & a1 & S2 by trial: 0.12 at trial 90, 0.23 at 91, 0.38 at 92, 0.54 at 93, 0.69 at 94, 0.79 at 95, 0.94 at 96 and later. The predicate's false positives are mostly trials 92-94, so the label 'last ~8 trials' overstates how sharp the onset is.",
+      "The model's own value output thresholds the feature better than elapsed trials. D2 & a1 & S2 & value<4.7 scores test F1 0.869 (P 0.78, R 0.98, mass recall 0.998), against 0.834 for ep_trial>=92; value<4.5 scores test F1 0.858. The explanation compared only against value<4 and missed this range. Within trials 92+, precision is lower when the previous trial reached S2 (0.54 vs 0.82) or the previous reward was 0 (0.55). Both are history effects that value captures and ep_trial does not.",
+      "The claim 'activity is higher when S1 is the good state' is only a base-rate effect. Within the predicate, precision for good==2 (0.78) is about the same as overall (0.74), so the good state does not modulate the feature beyond how often a1 is chosen.",
+      "The missed activations (2.9% of the mass) are mostly D2 a1->S2 steps at trials 90-91 plus scattered weak ones. No other systematic class remains. The predicate uses no future variables: action and state at D2 match in_action and in_state exactly, with identical scores."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after a rare a1->S2 transition, at the very end of the episode (when the model's value is low, i.e. little reward left; activation ramps up over the last ~8 trials)",
+    "better_predicate": "(phase == D2) & (action == 1) & (state == 2) & (value < 4.7)",
+    "better_predicate_test_f1": 0.869
+  },
+  "final_label": "D2 after a rare a1->S2 transition, at the very end of the episode (when the model's value is low, i.e. little reward left; activation ramps up over the last ~8 trials)"
+}

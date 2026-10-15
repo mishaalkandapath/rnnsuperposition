@@ -1,0 +1,113 @@
+{
+ "label": "Late in episode, reset dips at D2 after choosing a1 or believing S1 good.",
+ "short_terms": "(phase == D2) * (action == 1) * ep_trial ;; (phase == D2) * belief_lo * ep_trial ;; (phase == D1) * (prev_action == 1) * (prev_state == S2)",
+ "terms": "(phase == D2) * (action == 1) * ep_trial ;; (phase == D2) * belief_lo * ep_trial ;; (phase == D1) * last_is(\"a1 S2 r\") * ep_trial ;; (phase == D2) * (state == S1) * ep_trial ;; (phase == D1) * last_is(\"a1 S2 u\") * ep_trial ;; (phase == GO) * belief_lo * ep_trial ;; (phase == D2) * (action == 1) ;; (phase == D1) * (prev_action == 2) * (prev_state == S1) * ep_trial",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Raw reset gate r43 sits near 1 and dips mostly at D2, with dips that grow strongly toward the end of the episode (already partly in the timing baseline). Beyond timing: at D2 it is lower when the choice just made was a1 (action matters more than the reached state) and when the ideal observer believes S1 is good (belief_lo), higher after a2 or an S2 belief; at the next D1 it dips after a rewarded rare a1->S2 trial. All effects scale with episode trial (ep_trial interaction beats plain indicators, 0.48 vs 0.41 on dev). Free fit (test 0.52) adds the reached state at D2, a1 S2 u at D1, a small GO belief term and a2 S1 at D1; short form keeps 92% of it. No future variables used; this trial reward and the hidden good state add little.",
+ "full_test_scores": {
+  "gate": "unit_reset",
+  "feature": 43,
+  "terms": [
+   "(phase == D2) * (action == 1) * ep_trial",
+   "(phase == D2) * belief_lo * ep_trial",
+   "(phase == D1) * last_is(\"a1 S2 r\") * ep_trial",
+   "(phase == D2) * (state == S1) * ep_trial",
+   "(phase == D1) * last_is(\"a1 S2 u\") * ep_trial",
+   "(phase == GO) * belief_lo * ep_trial",
+   "(phase == D2) * (action == 1)",
+   "(phase == D1) * (prev_action == 2) * (prev_state == S1) * ep_trial"
+  ],
+  "weights": [
+   -5.5863985537921695e-05,
+   -4.660707885301501e-05,
+   -0.0003383095303678026,
+   -1.4645073984771461e-05,
+   -0.00017361212764696447,
+   -8.333262689844128e-06,
+   -0.0034378831456371812,
+   6.430905212311696e-05
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5175579851815553,
+  "r2": 0.771589731558685,
+  "r2_timing_only": 0.5265539454989805
+ },
+ "gate": "unit_reset",
+ "feature": 43,
+ "test_scores": {
+  "gate": "unit_reset",
+  "feature": 43,
+  "terms": [
+   "(phase == D2) * (action == 1) * ep_trial",
+   "(phase == D2) * belief_lo * ep_trial",
+   "(phase == D1) * (prev_action == 1) * (prev_state == S2)"
+  ],
+  "weights": [
+   -0.00012273884750959855,
+   -4.541572392662541e-05,
+   -0.011779522648157272
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.48177293506424546,
+  "r2": 0.7546474407705234,
+  "r2_timing_only": 0.5265539454989805
+ },
+ "dev_scores": {
+  "gate": "unit_reset",
+  "feature": 43,
+  "terms": [
+   "(phase == D2) * (action == 1) * ep_trial",
+   "(phase == D2) * belief_lo * ep_trial",
+   "(phase == D1) * (prev_action == 1) * (prev_state == S2)"
+  ],
+  "weights": [
+   -0.00012273884750959855,
+   -4.541572392662541e-05,
+   -0.011779522648157272
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.48553362835625935,
+  "r2": 0.7610286131488697,
+  "r2_timing_only": 0.5354965843780866
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": true,
+  "issues": [
+   "The label leaves out the third short-form term, the dip at D1 after a rare a1->S2 trial. A reader of the label alone could not predict that D1 dip.",
+   "'Late in episode' overstates how late the effect is. The same three terms without the ep_trial factor still score test 0.399. Restricting them to the last decile (ep_dec == 9) scores only 0.245. So the effect is present all through the episode and grows roughly linearly with ep_trial (0.474). It is not only a late-episode effect.",
+   "The D1 term is too narrow. The profile residual at D1 is -0.016 after a1 S2 r and -0.008 after a1 S2 u, so the dip follows any rare a1->S2 trial, and reward only deepens it. Misses on the recorded short form over-predict D1 after a1 S2 u (-0.009). Using (phase == D1)*(prev_action == 1)*(prev_state == S2) without ep_trial scores test 0.482, against 0.474.",
+   "The other claims check out on test. Choice beats reached state: action==1 gives 0.474 and state==S1 gives 0.455. belief_lo beats raw belief (0.392). Dropping the belief term gives 0.431 and dropping the D1 term gives 0.363, so both carry weight. Extending the belief term to GO lowers the score (0.435), so the belief effect is D2-specific.",
+   "Some error remains. The worst-fit windows are all at episode trials 93-99, where the D2 dips (actual about 0.84-0.88) are deeper than predicted (about 0.92-0.93). Linear ep_trial underfits the steep end of the episode. The leftover systematic errors are about 0.01 (D2 after a1 S2 r +0.010, D2 after a1 S1 u -0.009). Those are moderate, not a large missed class.",
+   "None of the terms looks like disguised curve fitting, and no future or model-output variables are used."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Reset dips at D2 after an a1 choice or S1-good belief, more so later in the episode; also dips at D1 after rare a1->S2.",
+  "better_short_terms": "(phase == D2) * (action == 1) * ep_trial ;; (phase == D2) * belief_lo * ep_trial ;; (phase == D1) * (prev_action == 1) * (prev_state == S2)",
+  "better_short_terms_test_r2_beyond_timing": 0.482
+ },
+ "final_label": "Reset dips at D2 after an a1 choice or S1-good belief, more so later in the episode; also dips at D1 after rare a1->S2.",
+ "original_short_terms": "(phase == D2) * (action == 1) * ep_trial ;; (phase == D2) * belief_lo * ep_trial ;; (phase == D1) * last_is(\"a1 S2 r\") * ep_trial",
+ "original_test_scores": {
+  "gate": "unit_reset",
+  "feature": 43,
+  "terms": [
+   "(phase == D2) * (action == 1) * ep_trial",
+   "(phase == D2) * belief_lo * ep_trial",
+   "(phase == D1) * last_is(\"a1 S2 r\") * ep_trial"
+  ],
+  "weights": [
+   -0.0001154822055182211,
+   -4.6501988454677986e-05,
+   -0.0003340699432842507
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.47391753907361667,
+  "r2": 0.7509283345322171,
+  "r2_timing_only": 0.5265539454989805
+ },
+ "terms_from": "skeptic"
+}

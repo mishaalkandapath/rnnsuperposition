@@ -1,0 +1,79 @@
+{
+  "label": "Reset gate dips for a1/S1 and a1-leaning policy, growing late in episode",
+  "terms": "(phase == D2) * choice * ep_trial ;; (phase == D1) * choice * ep_trial ;; (phase == D2) * (action == 1) * ep_trial ;; (phase == D2) * (state == 1) * ep_trial ;; (phase == D1) * last_is(\"a1 S2 r\") * ep_trial ;; (phase == D1) * last_is(\"a1 S2 u\") * ep_trial ;; (phase == GO) * (prev_action == 1) * ep_trial",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw reset gate r43 sits near 1 (mean 0.989) and dips mostly late in the episode; timing alone gives R^2 0.53. Past timing, every effect gets bigger with ep_trial (scaling the terms by ep_trial lifted dev R^2 from 0.37 to 0.42; exp and quadratic scalings did worse). D2: lower after choosing a1 and after reaching S1, and lower still when the policy logit leans to a1 (choice). This graded model term is the biggest single addition (dev 0.42 -> 0.56). D1: lower after a previous trial of a1 -> rare S2, especially when rewarded; also mildly lower with an a1-leaning policy. GO: slightly lower after a previous a1. Value and the trial before added little. 7 terms: dev 0.581, test R^2 beyond timing 0.578, roughly at the all ceiling of 0.58. An observed-only version (no choice logit; action/state/previous-trial terms) reached dev 0.47. Not explained: occasional big D1 dips (about -0.12) after a rewarded S2 trial that came after a switch or a loss.",
+  "gate": "unit_reset",
+  "feature": 43,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 43,
+    "terms": [
+      "(phase == D2) * choice * ep_trial",
+      "(phase == D1) * choice * ep_trial",
+      "(phase == D2) * (action == 1) * ep_trial",
+      "(phase == D2) * (state == 1) * ep_trial",
+      "(phase == D1) * last_is(\"a1 S2 r\") * ep_trial",
+      "(phase == D1) * last_is(\"a1 S2 u\") * ep_trial",
+      "(phase == GO) * (prev_action == 1) * ep_trial"
+    ],
+    "weights": [
+      -3.7032304670903775e-05,
+      -3.0614850561214046e-06,
+      -0.00013828956132140875,
+      -0.00010284202112141824,
+      -0.0003349649742105747,
+      -0.00015712329320447747,
+      -5.5010228940178376e-05
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5783608748826958,
+    "r2": 0.8003766197899507,
+    "r2_timing_only": 0.5265539454989805
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 43,
+    "terms": [
+      "(phase == D2) * choice * ep_trial",
+      "(phase == D1) * choice * ep_trial",
+      "(phase == D2) * (action == 1) * ep_trial",
+      "(phase == D2) * (state == 1) * ep_trial",
+      "(phase == D1) * last_is(\"a1 S2 r\") * ep_trial",
+      "(phase == D1) * last_is(\"a1 S2 u\") * ep_trial",
+      "(phase == GO) * (prev_action == 1) * ep_trial"
+    ],
+    "weights": [
+      -3.7032304670903775e-05,
+      -3.0614850561214046e-06,
+      -0.00013828956132140875,
+      -0.00010284202112141824,
+      -0.0003349649742105747,
+      -0.00015712329320447747,
+      -5.5010228940178376e-05
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5807706372585406,
+    "r2": 0.805266529077594,
+    "r2_timing_only": 0.5354965843780866
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The score itself reproduces: test R^2 beyond timing is 0.578, which matches the 'all' ceiling of 0.58. The problem is with the claims made about it.",
+      "The claim that 'exp or quadratic scalings did worse' is false on test. With the same 7 terms, ep_trial**2 scores 0.582 and np.exp(ep_trial/25) scores 0.608, against 0.578 for linear ep_trial. Only the hinge versions do worse (max(ep_trial-60,0) 0.500, max(ep_trial-70,0) 0.474). The late-episode growth is steeper than linear.",
+      "The label and explanation lean on the policy logit (the 'a1-leaning policy' term, 'the biggest single addition'). But an observed-only set does better than the logit version. Using the D2 this-trial choice x state table, the D2 previous-trial choice x state table, the D1 last_is a1 S2 r/u terms, GO prev_action==1 and a D2 a1-after-a1 term, all scaled by ep_trial, gives test 0.586. With exp(ep_trial/35) scaling the same set gives test 0.620 (dev 0.618), above the authors' 0.578 and above the 'all' ceiling. The logit seems to stand in for recent choice/state history, which the agent can observe at D2. The authors' observed-only comparison (dev 0.47; test 0.425 when re-scored) left out previous-trial terms at D2, so it understated what observed variables can do.",
+      "'Mildly lower with an a1-leaning policy at D1' is essentially empty. Its weight is -3e-6, and dropping the term only moves test from 0.578 to 0.576.",
+      "Systematic errors remain at D2, and they are by previous-trial pattern. With the authors' terms, D2 after a1 S2 r is under-predicted by +0.008, D2 after a2 S2 u by +0.005, and D2 after a1 S1 u is over-predicted by -0.006. The worst windows are all at trials 92-99, where D2 dips to about 0.84 against predictions of about 0.92-0.93. That fits linear ep_trial scaling being too flat at the end of the episode.",
+      "The D1 dips at trials 93-99 (about -0.12 to -0.15, e.g. 0.82 actual vs 0.94 predicted) stay unexplained. The authors do note this."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Reset gate dips after recent a1/S1 history (at D2: this trial's and the previous trial's choice x state; at D1: after a1->rare S2), growing steeply (roughly exponentially) late in the episode; observed history explains it without the policy logit",
+    "better_terms": "(phase == D2) * table(3*action+state, {4:-1,5:-0.6,7:0.7,8:0.8}) * np.exp(ep_trial/35) ;; (phase == D2) * table(3*prev_action+prev_state, {4:-1,5:-1,8:1,7:0.5}) * np.exp(ep_trial/35) ;; (phase == D1) * last_is('a1 S2 r') * np.exp(ep_trial/35) ;; (phase == D1) * last_is('a1 S2 u') * np.exp(ep_trial/35) ;; (phase == GO) * (prev_action == 1) * np.exp(ep_trial/35) ;; (phase == D2) * (action == 1) * (prev_action == 1) * np.exp(ep_trial/35)",
+    "better_terms_test_r2_beyond_timing": 0.6197
+  },
+  "final_label": "Reset gate dips after recent a1/S1 history (at D2: this trial's and the previous trial's choice x state; at D1: after a1->rare S2), growing steeply (roughly exponentially) late in the episode; observed history explains it without the policy logit"
+}

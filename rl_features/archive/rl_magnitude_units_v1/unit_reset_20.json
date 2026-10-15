@@ -1,0 +1,81 @@
+{
+  "label": "D2 reset high when S1 reached (most after a2), low after a1 to S2",
+  "terms": "(phase == D2) ;; (phase == GO) ;; (phase == D2) * (state == S1) ;; (phase == D2) * (action == 2) ;; (phase == D2) * (action == 2) * (state == S1) ;; (phase == D1) * (prev_state == S2) ;; (phase == D1) * (prev_state == S2) * (prev_reward == 1) ;; (phase == D2) * (action == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r20 has a strong timing profile (D2 >> D1 > GO, decaying over the episode; timing R^2 0.80). Beyond timing, the magnitude is driven mainly by the D2 choice x reached-state inputs, all observed at D2: reaching S1 raises it by about +0.19 and having chosen a2 adds about +0.09 (plus +0.04 interaction), so a2->S1 (rare) is highest, a1->S1 next, a2->S2 lower and a1->S2 (rare) lowest (about -0.2 relative to a2->S1). At the next D1 it stays higher if the previous trial reached S2 (+0.046, +0.015 more if rewarded), i.e. the reached-state signal flips sign at D1. Invalid (fixation) choices lower D2. GO shows almost no history dependence. Trial-before, future reward, hidden good state and since-reversal add nothing. Test R^2 beyond timing 0.89 vs an additive ceiling of 0.95 (all observed 0.94).",
+  "gate": "unit_reset",
+  "feature": 20,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 20,
+    "terms": [
+      "(phase == D2)",
+      "(phase == GO)",
+      "(phase == D2) * (state == S1)",
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * (action == 2) * (state == S1)",
+      "(phase == D1) * (prev_state == S2)",
+      "(phase == D1) * (prev_state == S2) * (prev_reward == 1)",
+      "(phase == D2) * (action == 0)"
+    ],
+    "weights": [
+      -0.1253795168057907,
+      0.02265113906274134,
+      0.18995636941041644,
+      0.09406643184323135,
+      0.03939106925569247,
+      0.045521070887106725,
+      0.015434244539815414,
+      -0.06713132438097587
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8913010661790759,
+    "r2": 0.9782874634544053,
+    "r2_timing_only": 0.8002506944422755
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 20,
+    "terms": [
+      "(phase == D2)",
+      "(phase == GO)",
+      "(phase == D2) * (state == S1)",
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * (action == 2) * (state == S1)",
+      "(phase == D1) * (prev_state == S2)",
+      "(phase == D1) * (prev_state == S2) * (prev_reward == 1)",
+      "(phase == D2) * (action == 0)"
+    ],
+    "weights": [
+      -0.1253795168057907,
+      0.02265113906274134,
+      0.18995636941041644,
+      0.09406643184323135,
+      0.03939106925569247,
+      0.045521070887106725,
+      0.015434244539815414,
+      -0.06713132438097587
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8920961749013957,
+    "r2": 0.9785063054017055,
+    "r2_timing_only": 0.8008069261802975
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The (phase == D2) * (action == 0) term does nothing. Dropping it leaves test R^2 beyond timing at 0.8913, unchanged. The claim that invalid fixation choices lower r20 at D2 has a fitted weight of -0.067 but no predictive support.",
+      "The D1 reward effect is not specific to trials that reached S2. Swapping (prev_state==S2)*(prev_reward==1) for a general (phase==D1)*(prev_reward==1) scores slightly better (test 0.8933 vs 0.8913). Misses also show that unrewarded S1 trials are the most over-predicted at D1 (-0.020). So the explanation's '+0.015 more if that trial was rewarded' should hold for every previous trial, not only S2 ones.",
+      "D2 also carries a small effect from the previous trial: (phase==D2)*(prev_state==S2) gets weight +0.017 and adds about 0.004 test R^2. The largest D2 under-prediction is after a1 S2 u (+0.033). This is small next to the ~0.2 effect of the state reached at D2.",
+      "The main claims hold. The D2 ordering by choice and state reached, from residuals 'by phase x this choice x state', is a2->S1 +0.175, a1->S1 +0.042, a2->S2 -0.054, a1->S2 -0.148. The state term matters most: dropping (D2)*(S1) lowers test to 0.594. Dropping (D2)*(a2) lowers it to 0.817. Dropping the D1 prev_state==S2 term lowers it to 0.867. The test score of 0.891 is reproduced. The largest leftover errors in misses are about 0.02-0.03, so no large systematic class remains."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 reset high when S1 reached (most after a2), low after a1 to S2; at D1 higher after reaching S2 and after reward",
+    "better_terms": "(phase == D2) ;; (phase == GO) ;; (phase == D2) * (state == S1) ;; (phase == D2) * (action == 2) ;; (phase == D2) * (action == 2) * (state == S1) ;; (phase == D1) * (prev_state == S2) ;; (phase == D1) * (prev_reward == 1) ;; (phase == D2) * (prev_state == S2)",
+    "better_terms_test_r2_beyond_timing": 0.8996
+  },
+  "final_label": "D2 reset high when S1 reached (most after a2), low after a1 to S2; at D1 higher after reaching S2 and after reward"
+}

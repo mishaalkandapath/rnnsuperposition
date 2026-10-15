@@ -1,0 +1,90 @@
+{
+  "label": "Fires at GO after an unrewarded a1->S1 trial, growing later in the episode.",
+  "short_terms": "(phase == GO) * last_is(\"a1 S1 u\") ;; (phase == GO) * last_is(\"a1 S1 u\") * ep_dec ;; (phase == GO) * last_is(\"a1 S1 u\") * belief_lo",
+  "terms": "(phase == GO) * last_is(\"a1 S1 u\") ;; (phase == GO) * last_is(\"a1 S1 u\") * ep_dec ;; (phase == GO) * last_is(\"a1 S1 u\") * ep_dec * ep_dec ;; (phase == GO) * last_is(\"a1 S1 u\") * belief_lo ;; (phase == GO) * last_is(\"a2 S1 u\") ;; (phase == GO) * last_is(\"a2 S1 u\") * ep_dec ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * ep_dec",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "GO-only feature (zero at D1/D2). Magnitude is set almost entirely by the previous trial being a1 -> S1 (common) unrewarded: that indicator alone gives dev R^2 beyond timing 0.59. Within those trials activation grows with episode decile (the a1 S1 u x ep_dec term lifts dev to ~0.70) and is somewhat larger when the observer belief still favours S1 (positive belief_lo), i.e. a surprising S1 omission. Other previous-trial patterns slightly lower it; a2 S1 u gives only a weak response. The free fit adds a quadratic ep saturation, a weak a2 S1 u term, and the window-first-trial case where the previous pattern is unknown but the reward input was 0 (dev 0.74). Uses no future or model-output variables.",
+  "full_test_scores": {
+    "gate": "hidden",
+    "feature": 136,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S1 u\")",
+      "(phase == GO) * last_is(\"a1 S1 u\") * ep_dec",
+      "(phase == GO) * last_is(\"a1 S1 u\") * ep_dec * ep_dec",
+      "(phase == GO) * last_is(\"a1 S1 u\") * belief_lo",
+      "(phase == GO) * last_is(\"a2 S1 u\")",
+      "(phase == GO) * last_is(\"a2 S1 u\") * ep_dec",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0)",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0) * ep_dec"
+    ],
+    "weights": [
+      -0.026605880819128392,
+      0.16516419394657678,
+      -0.011743674379585196,
+      0.045881902092700017,
+      -0.008154655860776351,
+      0.004381273960141189,
+      0.01807564574170331,
+      0.01032659490940826
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7430532447556707,
+    "r2": 0.7604317127892117,
+    "r2_timing_only": 0.06763451057016034
+  },
+  "gate": "hidden",
+  "feature": 136,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 136,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S1 u\")",
+      "(phase == GO) * last_is(\"a1 S1 u\") * ep_dec",
+      "(phase == GO) * last_is(\"a1 S1 u\") * belief_lo"
+    ],
+    "weights": [
+      0.12978273298395454,
+      0.05739840926252745,
+      0.047976113024986805
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7026120757502768,
+    "r2": 0.7227257624563828,
+    "r2_timing_only": 0.06763451057016034
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 136,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S1 u\")",
+      "(phase == GO) * last_is(\"a1 S1 u\") * ep_dec",
+      "(phase == GO) * last_is(\"a1 S1 u\") * belief_lo"
+    ],
+    "weights": [
+      0.12978273298395454,
+      0.05739840926252745,
+      0.047976113024986805
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6976735337160701,
+    "r2": 0.717015806188842,
+    "r2_timing_only": 0.06397809861147452
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The label leaves out the belief_lo term, but that term adds little: on test, last_is plus the ep_dec interaction scores 0.688, and adding belief_lo raises it only to 0.703. Its weight is positive (+0.048) and stable, so the explanation's claim holds.",
+      "The growth with episode decile stalls late in the episode. The GO timing baseline falls from 0.061 in decile 7 to 0.026 in decile 9, and some a1 S1 u trials near t97 fire weakly (0.16 actual vs 0.70 predicted). Capping the term with np.minimum(ep_dec, 7) raises test R^2 to 0.722. That is a fitted correction, so I did not adopt it as the recorded form.",
+      "Misses show no large systematic error: every (GO, previous trial) cell is off by at most 0.026. The worst windows come from the window-start '?' class (fires at the first GO step with no previous trial in the window), which the short form does not cover, plus a weak a2 S1 u response (+0.011 under-predicted).",
+      "belief_cover cannot stand in for the ep_dec effect: last_is plus cover plus belief_lo scores 0.612 on test, against 0.703 for the ep_dec version. So 'later in the episode' is the right description, not 'more history accumulated'."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  }
+}

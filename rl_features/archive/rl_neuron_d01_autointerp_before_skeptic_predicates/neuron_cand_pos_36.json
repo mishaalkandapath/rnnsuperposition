@@ -1,0 +1,65 @@
+{
+  "label": "D2 surprise: chose a2 but rarely landed in S1, after a rewarded common previous trial (episode trials 3-49 only)",
+  "predicate": "(phase == D2) & (action == 2) & (state == 1) & (prev_reward == 1) & (prev_common != 0) & (ep_trial >= 3) & (ep_trial < 50)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (100% of mass), and almost only when the agent chose a2 and reached S1, i.e. the rare a2->S1 transition (in_action=2, in_state=1: 99.9% of mass; a1->S1 common fires 9 times in dev). Further gated by the previous trial being rewarded (prev_reward=1, 100% of mass) and its transition common or unknown (prev_common=0 holds 0.1% of mass), which makes it a reward-history-conditioned rare-transition detector. Strikingly, it is silent on episode trials 0-2 and 50-99 and fires only on trials 3-49; I kept that observed time-in-episode gate because it raises dev F1 from 0.55 to 0.89. Everything in the predicate is observed by D2. Value-head output sits in a narrow band [7.13, 7.54) on active steps, and the policy logit is strongly a2 ([-8.9, -4.4]). Lowest-activation examples include rare transitions that follow other rare trials. It does not fire at D1/GO, on S2, or after unrewarded trials. Remaining false positives are unexplained a2->S1R steps that match every condition; I did not find a magnitude modulator beyond core-trial enrichment, which is a window-sampling effect.",
+  "test_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 36,
+    "predicate": "(phase == D2) & (action == 2) & (state == 1) & (prev_reward == 1) & (prev_common != 0) & (ep_trial >= 3) & (ep_trial < 50)",
+    "split": "test",
+    "precision": 0.7953910138405945,
+    "recall": 0.9943743607228094,
+    "f1": 0.8838213568695783,
+    "mass_recall": 0.9973216427346486,
+    "correlation": 0.8031069886986373,
+    "n_active": 11732,
+    "n_predicted": 14667,
+    "coverage_by_activation_quartile": [
+      0.9812478690760313,
+      0.998636208660075,
+      1.0,
+      0.9976133651551312
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_pos",
+    "feature": 36,
+    "predicate": "(phase == D2) & (action == 2) & (state == 1) & (prev_reward == 1) & (prev_common != 0) & (ep_trial >= 3) & (ep_trial < 50)",
+    "split": "dev",
+    "precision": 0.7976629338526814,
+    "recall": 0.9956589685709325,
+    "f1": 0.8857308360687393,
+    "mass_recall": 0.9984859074456947,
+    "correlation": 0.8094398677009276,
+    "n_active": 11518,
+    "n_predicted": 14377,
+    "coverage_by_activation_quartile": [
+      0.984375,
+      1.0,
+      0.9996526571726294,
+      0.9986106286905175
+    ]
+  },
+  "gate": "neuron_cand_pos",
+  "feature": 36,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The claim that the remaining false positives cannot be explained is wrong. Most of them are one systematic class: episode trials 43-49. Within the base condition (D2, a2->S1 rare, prev_reward=1, prev_common!=0), dev precision by ep_trial bin is: 3-9 about 0.61-0.94, 10-30 about 0.94, 30-40 about 0.85-0.92, 40-43 0.80, 43-46 0.47, 46-50 0.10, 50+ 0.00. The unit fades out from about trial 40 rather than switching off at 50. The 43-49 bins hold about 2350 of the predicate's roughly 2900 dev false positives.",
+      "Moving the episode cutoff from 50 to 45 raises dev F1 from 0.886 to 0.927 (P 0.884, R 0.975) and test F1 from 0.884 to 0.915 (P 0.868, R 0.968, mass recall 0.992). So the reported boundary 'episode trials 3-49' overclaims.",
+      "Smaller point: the gate is also soft at the low end. Precision at ep_trial 3 is 0.61, rising to about 0.94 by trial 9, so 'completely silent on trials 0-2' is true but the onset is gradual.",
+      "Smaller point: the 9 common a1->S1 activations are rare (0.1% of mass), but they include the unit's maximum activation (1.00) and a 0.96 in the top windows. 'Fires almost only on rare' holds by count and mass, not by peak magnitude.",
+      "Claims that check out: 100% of mass at D2 (zero at D1 and GO). Zero on S2. Zero after unrewarded trials (prev_reward=0). Only 0.1% of mass after a rare previous trial. Value band [7.13, 7.54) holds 99% of mass. Policy logit in [-8.9, -4.4) holds 100%. No future variables are used.",
+      "After the cutoff fix, the test misses show no other systematic class. Missed activations are 0.8% of mass and low-magnitude. Adding the observed policy-logit band (choice < -4.44) gives only a small further gain (test F1 0.923)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 surprise: chose a2 but rarely landed in S1, after a rewarded, non-rare previous trial. Active from about episode trial 3, fading over trials 40-45, silent from trial 50 on.",
+    "better_predicate": "(phase == D2) & (action == 2) & (state == 1) & (prev_reward == 1) & (prev_common != 0) & (ep_trial >= 3) & (ep_trial < 45)",
+    "better_predicate_test_f1": 0.915
+  },
+  "final_label": "D2 surprise: chose a2 but rarely landed in S1, after a rewarded, non-rare previous trial. Active from about episode trial 3, fading over trials 40-45, silent from trial 50 on."
+}

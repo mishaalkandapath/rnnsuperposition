@@ -1,0 +1,106 @@
+{
+  "label": "D1 after reward, agent about to choose a2, first ~60 trials of episode",
+  "predicate": "(phase == D1) & (in_rew == 1) & ((prev_state==2) | ((prev_state==-1)&(action==2))) & (ep_trial<60) & (tv('prev_reward', -1) != 0)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1 and only when the reward input is 1 (never at GO/D2 or after no reward). Within rewarded D1 steps it is selective for the agent being about to choose a2 (its own upcoming choice, a legitimate computed quantity; policy logit mildly favoring a2, -4.4..-1.5), for the previous trial also having been rewarded (reward streak; tv prev_reward -1 != 0 also admits the window first trial), and for the episode being early: rate is high in trials 0-59 and drops to ~0 after trial 70, so the unit is strongly gated by an internal episode-time drift (ep_trial is not an input). Model value in a narrow mid band (7.5-7.7) holds 83% of mass. Largest activations: after an a1 rare-rewarded trial when the agent switches to a2 (model-based switch toward S2), e.g. the next D1 in high_first episodes. Dev F1 0.83 (P 0.82, R 0.83, mass recall 0.89); without the episode-time clause F1 drops to 0.63. No future random outcomes used.",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 4,
+    "predicate": "(phase == D1) & (in_rew == 1) & ((prev_state==2) | ((prev_state==-1)&(action==2))) & (ep_trial<60) & (tv('prev_reward', -1) != 0)",
+    "split": "test",
+    "precision": 0.8961264849633869,
+    "recall": 0.8784334452950504,
+    "f1": 0.887191761950682,
+    "mass_recall": 0.9480730992223215,
+    "correlation": 0.8467634448566715,
+    "n_active": 58651,
+    "n_predicted": 57493,
+    "coverage_by_activation_quartile": [
+      0.6573006888085657,
+      0.8854941007979268,
+      0.9791311464229694,
+      0.9918155776838085
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 4,
+    "predicate": "(phase == D1) & (in_rew == 1) & ((prev_state==2) | ((prev_state==-1)&(action==2))) & (ep_trial<60) & (tv('prev_reward', -1) != 0)",
+    "split": "dev",
+    "precision": 0.9031179410561514,
+    "recall": 0.878477508650519,
+    "f1": 0.8906273295738579,
+    "mass_recall": 0.9483695163327205,
+    "correlation": 0.8504821027210527,
+    "n_active": 57800,
+    "n_predicted": 56223,
+    "coverage_by_activation_quartile": [
+      0.6583391003460207,
+      0.8854671280276817,
+      0.9777162629757785,
+      0.9923875432525952
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 4,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The central clause 'agent about to choose a2' is a proxy. The unit actually tracks which state the PREVIOUS trial reached, which the agent has observed. Among rewarded D1 steps: prev_state==1 gives 0 active out of 96,584 steps (P=0.000), while prev_state==2 gives P=0.461 and R=0.775. Adding ep_trial<60 to prev_state==2 lifts P to 0.757.",
+      "Systematic false-positive class in the original predicate: D1, rewarded, upcoming a2, previous trial was a2 to S1 (rare). These 6,663 dev steps have exactly 0 activations. The agent picks a2 here but the unit stays silent, because the last state reached was S1.",
+      "Systematic missed class: D1, rewarded, prev_state==2, ep_trial<60, upcoming choice a1. These 3,975 steps fire with precision 0.886. The unit fires even when the agent is about to choose a1, which directly contradicts the 'about to choose a2' label.",
+      "The 'largest activations' observation fits prev_state==2 rather than the upcoming choice. In those windows a1 went rare to S2 and was rewarded, so S2 was the state just reached. After a1 common (S1) rewarded, the unit never fires (0 of 153 steps).",
+      "The action==2 clause only earns its keep at the window's first trial (rel -3). There prev_state is outside the window (-1), and the upcoming choice is the only usable stand-in for it.",
+      "Claims that check out: D1 only (GO and D2 share 0), in_rew==1 only (0 activations at in_rew 0/-1), firing collapses after trial ~60-70, and the value band 7.54-7.73 holds about 83% of the mass. Original predicate test score: P0.809 R0.827 F0.818, matching the report.",
+      "A better predicate that uses only observed variables (except the window-start fallback) scores test F1 0.887 against 0.818, with mass recall 0.948. Restricted to steps where prev_state is known, it reaches precision 0.971."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after the previous trial reached S2 and was rewarded (a reward streak), early in the episode (trials < ~60). The upcoming a2 choice is only a correlate, used as a stand-in at the window's first trial.",
+    "better_predicate": "(phase == D1) & (in_rew == 1) & ((prev_state==2) | ((prev_state==-1)&(action==2))) & (ep_trial<60) & (tv('prev_reward', -1) != 0)",
+    "better_predicate_test_f1": 0.887
+  },
+  "final_label": "D1 after the previous trial reached S2 and was rewarded (a reward streak), early in the episode (trials < ~60). The upcoming a2 choice is only a correlate, used as a stand-in at the window's first trial.",
+  "original_predicate": "(phase == D1) & (in_rew == 1) & (action == 2) & (ep_trial < 60) & (tv(\"prev_reward\", -1) != 0)",
+  "original_test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 4,
+    "predicate": "(phase == D1) & (in_rew == 1) & (action == 2) & (ep_trial < 60) & (tv(\"prev_reward\", -1) != 0)",
+    "split": "test",
+    "precision": 0.8088353011807085,
+    "recall": 0.82694242212409,
+    "f1": 0.8177886439320492,
+    "mass_recall": 0.8849534828674044,
+    "correlation": 0.7698850065047274,
+    "n_active": 58651,
+    "n_predicted": 59964,
+    "coverage_by_activation_quartile": [
+      0.6388187956079929,
+      0.8342767510059333,
+      0.9231398758780605,
+      0.9115400354658301
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 4,
+    "predicate": "(phase == D1) & (in_rew == 1) & (action == 2) & (ep_trial < 60) & (tv(\"prev_reward\", -1) != 0)",
+    "split": "dev",
+    "precision": 0.8235344649852244,
+    "recall": 0.8292906574394464,
+    "f1": 0.8264025378435227,
+    "mass_recall": 0.8883363908087746,
+    "correlation": 0.7791716114702915,
+    "n_active": 57800,
+    "n_predicted": 58204,
+    "coverage_by_activation_quartile": [
+      0.6385467128027682,
+      0.8401384083044983,
+      0.9220069204152249,
+      0.9164705882352941
+    ]
+  },
+  "predicate_from": "skeptic"
+}

@@ -1,0 +1,83 @@
+{
+  "label": "z saturated near 1; dips at D1 after a1->S2 (rare), strongly in the last ~10 trials",
+  "terms": "(phase==D1)*np.exp((ep_trial-99)/2.0) ;; (phase!=D1)*np.exp((ep_trial-99)/2.0) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * (ep_dec==9) ;; (phase==D1)*(prev_action == 1) * (prev_state == 2)*(ep_trial-90)*(ep_dec==9) ;; (phase == D1) * (prev_reward == 0) * (ep_dec==9) ;; (phase==D1)*(prev_action==1)*(ep_dec==9) ;; (phase == D2) * (action==1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate of unit 6 sits near 1 (mean 0.992) and falls mainly late in the episode. Timing by decile explains R^2 0.52. Beyond that, the main observed driver is the previous trial at D1: after a1 that reached S2 (a rare transition) z drops by about 0.02 overall. In the last decile the drop grows to about 0.08 and keeps growing toward trial 99, whether or not that trial was rewarded. In the last decile an unrewarded previous trial raises z a little at D1, and so does a previous a1 choice. On top of this there is a sharp within-decile ramp downward over the final few trials (strongest at D1, weaker at GO/D2), which accounts for about 0.15 of the gain by itself, so part of the score is finer timing. A small negative term at D2 after choosing a1 adds a bit. Future, hidden and value cues add little (the additive all-cue ceiling is 0.23, which my interaction terms with late episode exceed). Test R^2 beyond timing 0.53 (dev 0.54). Remaining error: some episodes run lower throughout the end of the episode, not captured.",
+  "gate": "unit_update",
+  "feature": 6,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 6,
+    "terms": [
+      "(phase==D1)*np.exp((ep_trial-99)/2.0)",
+      "(phase!=D1)*np.exp((ep_trial-99)/2.0)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (ep_dec==9)",
+      "(phase==D1)*(prev_action == 1) * (prev_state == 2)*(ep_trial-90)*(ep_dec==9)",
+      "(phase == D1) * (prev_reward == 0) * (ep_dec==9)",
+      "(phase==D1)*(prev_action==1)*(ep_dec==9)",
+      "(phase == D2) * (action==1)"
+    ],
+    "weights": [
+      -0.08170302240497836,
+      -0.03496153748620376,
+      -0.020882546528769377,
+      -0.05536704213723463,
+      -0.015772453300948102,
+      0.03258401384944551,
+      0.02359600043727117,
+      -0.0036202875959826103
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5315737331984882,
+    "r2": 0.7756480724275714,
+    "r2_timing_only": 0.5210517781072809
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 6,
+    "terms": [
+      "(phase==D1)*np.exp((ep_trial-99)/2.0)",
+      "(phase!=D1)*np.exp((ep_trial-99)/2.0)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (ep_dec==9)",
+      "(phase==D1)*(prev_action == 1) * (prev_state == 2)*(ep_trial-90)*(ep_dec==9)",
+      "(phase == D1) * (prev_reward == 0) * (ep_dec==9)",
+      "(phase==D1)*(prev_action==1)*(ep_dec==9)",
+      "(phase == D2) * (action==1)"
+    ],
+    "weights": [
+      -0.08170302240497836,
+      -0.03496153748620376,
+      -0.020882546528769377,
+      -0.05536704213723463,
+      -0.015772453300948102,
+      0.03258401384944551,
+      0.02359600043727117,
+      -0.0036202875959826103
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5439682568074387,
+    "r2": 0.7903091226915022,
+    "r2_timing_only": 0.5401835937110306
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The test score reproduces: 0.532 beyond timing (timing-only R^2 0.521). The fine-timing ramp terms alone give 0.130. The headline claim, a D1 dip after a1->S2 that deepens in the last decile, is real.",
+      "'Whether or not that trial was rewarded' is wrong. Splitting by reward in the last decile gives last_is('a1 S2 r') -0.140 vs last_is('a1 S2 u') -0.085 (earlier deciles: -0.026 vs -0.018). Rewarded a1->S2 dips about 1.6x more. With the label's own terms, misses still flags 'D1 after a1 S2 r' as the most over-predicted cell (-0.006). The label's terms only encode reward dependence indirectly, through the generic prev_reward==0 term, and that term matters: dropping it lowers test R^2 from 0.53 to 0.49.",
+      "The '(rare)' framing is misleading. The other rare transition, a2->S1, does the opposite: its D1 residual is +0.008 (r) and +0.010 (u), and it is the most under-predicted cell in misses (+0.008 r, +0.006 u). The effect is specific to a1->S2, not to rarity. A2->S1 also raises z in the last decile (+0.047 vs a2->S2), more than a1->S1 does (+0.031).",
+      "The claim that a previous a1 choice raises z late is fragile. Once value at D1 in the last decile is added, its weight falls from +0.024 to +0.003. Dropping that term costs only 0.01 (0.532 to 0.521).",
+      "Policy logit and value were left out but add real variance. Adding (phase==D1)*value*(ep_dec==9) raises the score from 0.52 to 0.58, and adding choice at D1 gives a further +0.05. The hidden-state term good==2 at D1 late adds 0.02. This fits the 'some episodes stay lower' remainder better than history alone does.",
+      "The D2 a1 term adds nothing: weight -0.004 and about 0.01 of R^2."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "z saturated near 1, sagging over the last trials. At D1, z dips after an a1->S2 trial: about 2x deeper if that trial was rewarded, and growing toward trial 99. It rises slightly after a2->S1. Late in the episode it tracks the model's value.",
+    "better_terms": "(phase==D1)*np.exp((ep_trial-99)/2.0) ;; (phase!=D1)*np.exp((ep_trial-99)/2.0) ;; (phase==D1)*table(prev_action*3+prev_state,{5:-1,7:0.4}) ;; (phase==D1)*(prev_action==1)*(prev_state==2)*(ep_dec==9)*(ep_trial-89) ;; (phase==D1)*(ep_dec==9)*table(prev_action*3+prev_state,{5:-1})*(1+prev_reward) ;; (phase==D1)*value*(ep_dec==9) ;; (phase!=D1)*value*(ep_dec==9) ;; (phase==D1)*choice*(ep_dec==9)   [test 0.625, dev 0.614; observed-only variant without value/choice reaches test 0.570]",
+    "better_terms_test_r2_beyond_timing": 0.6254
+  },
+  "final_label": "z saturated near 1, sagging over the last trials. At D1, z dips after an a1->S2 trial: about 2x deeper if that trial was rewarded, and growing toward trial 99. It rises slightly after a2->S1. Late in the episode it tracks the model's value."
+}

@@ -1,0 +1,104 @@
+{
+  "label": "Late-episode GO step: repeating a1 after a rewarded a1 trial",
+  "predicate": "(phase == GO) & (ep_trial >= 83) & (prev_reward == 1) & (prev_state != 2) & (prev_action != 2) & (choice > 4)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at the GO step (100% of mass), only late in the episode (none before trial ~70; 83% of mass in trials 90-99), essentially only when the previous trial was rewarded (98.6% of mass), the previous choice was a1, and the model is about to choose a1 (model_act == 1, a strong positive choice logit; 99.8% of mass on action a1). Value is low (bottom third), which goes with being late in the episode. It is silent at D1 and D2, after unrewarded trials, after a2 choices, and when the agent picks a2. Magnitude grows within a window over runs of consecutive rewarded a1 trials and toward the end of the episode, and drops sharply (to about 0.2-0.4) on the GO right after an unrewarded trial. Most misses are these weak post-unrewarded GOs or trials 80-82; false positives are early in the ramp (trials 83-88) or at the start of a rewarded streak. All variables are observed or are the agent own upcoming choice (no future variables). The ep_trial >= 80 version reaches mass recall 0.98 but has lower precision. Dev: P 0.79, R 0.89, F1 0.84, mass recall 0.97.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 151,
+    "predicate": "(phase == GO) & (ep_trial >= 83) & (prev_reward == 1) & (prev_state != 2) & (prev_action != 2) & (choice > 4)",
+    "split": "test",
+    "precision": 0.8405579270125654,
+    "recall": 0.8816926278615123,
+    "f1": 0.8606340412434595,
+    "mass_recall": 0.9657537056835324,
+    "correlation": 0.774194681310557,
+    "n_active": 15857,
+    "n_predicted": 16633,
+    "coverage_by_activation_quartile": [
+      0.6645649432534678,
+      0.8779011099899092,
+      0.984359233097881,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 151,
+    "predicate": "(phase == GO) & (ep_trial >= 83) & (prev_reward == 1) & (prev_state != 2) & (prev_action != 2) & (choice > 4)",
+    "split": "dev",
+    "precision": 0.8414553737337409,
+    "recall": 0.8786380421856419,
+    "f1": 0.8596448254745868,
+    "mass_recall": 0.9665037339992876,
+    "correlation": 0.7736323218057558,
+    "n_active": 15977,
+    "n_predicted": 16683,
+    "coverage_by_activation_quartile": [
+      0.6425531914893617,
+      0.8883324987481221,
+      0.9839759639459189,
+      0.9997496244366549
+    ]
+  },
+  "gate": "hidden",
+  "feature": 151,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Systematic false-positive class: the predicate includes GO steps after a rare-rewarded a1 trial (a1 led to S2 and was rewarded), and the feature never fires on them. Adding (prev_common == 0) to the predicate gives n_predicted 759, precision 0.0, mass recall 0.0 on dev. More generally, (phase==GO)&(ep_trial>=83)&(prev_reward==1)&(prev_state==2) predicts 16830 steps with precision 0.0. These 759 steps are about 20% of the predicate's 3732 dev false positives.",
+      "So the label 'repeating a1 after a rewarded a1 trial' overclaims. The feature needs the previous trial to be COMMON-rewarded a1 (a1 reached S1, then reward), which is the case where a model-based agent should repeat a1. When a1 went to S2 by a rare transition and was rewarded, the feature is silent even if the agent still picks a1.",
+      "prev_action does matter once prev_state is fixed. a2 then S1 rewarded (rare-rewarded a2) with model_act==1 gives precision 0.21 and mass recall 0.004. Both conditions, previous choice a1 and previous state S1, are needed. That means previous transition common, or unknown on the window's first trial.",
+      "Checks that hold up: 100% of mass is at GO; nothing fires before trial 50 (ep_bucket 5 holds all of it); prev_reward==1 holds 98.6% of mass; action a1 holds 99.8%. Raising the trial threshold trades recall for precision as described: >=80 gives P 0.70 / R 0.94, >=90 gives P 0.93 / R 0.56. Test scores reproduce (P 0.791, R 0.889, F1 0.837, mass recall 0.970). Misses hold only 2.9% of mass and are mostly weak firing after unrewarded trials, as claimed.",
+      "Smaller points: the profile shows good==S1 holds 80% of mass and start_high==0 holds 79%. This follows from the S1/a1 specificity and is not a separate factor. Requiring choice > 4 in place of model_act==1 adds a little precision. The other remaining false positives are mostly window-first trials, where prev_common is unknown (-1), and the early ramp (trials 83-88)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Late-episode GO step: choosing a1 again after a1 reached S1 by the common transition and was rewarded (common-rewarded a1); silent after rare-rewarded a1 (a1 reached S2 and was rewarded)",
+    "better_predicate": "(phase == GO) & (ep_trial >= 83) & (prev_reward == 1) & (prev_state != 2) & (prev_action != 2) & (choice > 4)",
+    "better_predicate_test_f1": 0.861
+  },
+  "final_label": "Late-episode GO step: choosing a1 again after a1 reached S1 by the common transition and was rewarded (common-rewarded a1); silent after rare-rewarded a1 (a1 reached S2 and was rewarded)",
+  "original_predicate": "(phase == GO) & (ep_trial >= 83) & (prev_reward == 1) & (prev_action != 2) & (model_act == 1)",
+  "original_test_scores": {
+    "gate": "hidden",
+    "feature": 151,
+    "predicate": "(phase == GO) & (ep_trial >= 83) & (prev_reward == 1) & (prev_action != 2) & (model_act == 1)",
+    "split": "test",
+    "precision": 0.7905958927168668,
+    "recall": 0.8885665636627357,
+    "f1": 0.8367231806170017,
+    "mass_recall": 0.9701187819447492,
+    "correlation": 0.75094837331602,
+    "n_active": 15857,
+    "n_predicted": 17822,
+    "coverage_by_activation_quartile": [
+      0.6728877679697352,
+      0.8895055499495459,
+      0.9919273461150353,
+      1.0
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "hidden",
+    "feature": 151,
+    "predicate": "(phase == GO) & (ep_trial >= 83) & (prev_reward == 1) & (prev_action != 2) & (model_act == 1)",
+    "split": "dev",
+    "precision": 0.7915782419300793,
+    "recall": 0.8871502785253802,
+    "f1": 0.8366437446507098,
+    "mass_recall": 0.9711113809004703,
+    "correlation": 0.749927114149147,
+    "n_active": 15977,
+    "n_predicted": 17906,
+    "coverage_by_activation_quartile": [
+      0.6548185231539424,
+      0.9043565348022033,
+      0.9897346019028542,
+      0.9997496244366549
+    ]
+  },
+  "predicate_from": "skeptic"
+}

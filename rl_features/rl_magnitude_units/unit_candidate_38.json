@@ -1,0 +1,112 @@
+{
+ "label": "Fires at D1 after an S2 visit that came via a1 or went unrewarded; strongest after a1-S2-unrewarded.",
+ "short_terms": "(phase == D1) * (prev_state == 2) * ((prev_action == 1) + (prev_reward == 0)) ;; (phase != GO) * last_is('a1 S2 u') ;; (phase != D1) * belief",
+ "terms": "(phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * last_is(\"a1 S2 r\") ;; (phase == D1) * last_is(\"a2 S2 u\") ;; (phase == D2) * last_is(\"a1 S2 u\") ;; (phase == D1) * belief_lo ;; (phase != D1) * belief_lo ;; (phase == GO) * (prev_action == 1) ;; (phase == D2) * (state == 1)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "The raw candidate value (mostly near -0.8) rises sharply at D1 when the previous trial reached S2: by about +1.5 after a1 -> S2 (rare) unrewarded, and about +0.55 after a1 -> S2 rewarded or a2 -> S2 unrewarded. A2 -> S2 rewarded and S1 outcomes lower it a little. The a1-S2-unrewarded boost lasts into that trial's D2 (about +0.6). There is also a small graded rise with the observer belief that S1 is good, at every phase. Read together, it codes the previous trial's S2 visit when it either came from a1 or was unrewarded, i.e. the case of a1 rare-unrewarded (evidence that S1 is good) is the peak. The free fit adds a separate weight per pattern and small GO effects of the previous choice, gaining only a little. Uses observed variables only.",
+ "full_test_scores": {
+  "gate": "unit_candidate",
+  "feature": 38,
+  "terms": [
+   "(phase == D1) * last_is(\"a1 S2 u\")",
+   "(phase == D1) * last_is(\"a1 S2 r\")",
+   "(phase == D1) * last_is(\"a2 S2 u\")",
+   "(phase == D2) * last_is(\"a1 S2 u\")",
+   "(phase == D1) * belief_lo",
+   "(phase != D1) * belief_lo",
+   "(phase == GO) * (prev_action == 1)",
+   "(phase == D2) * (state == 1)"
+  ],
+  "weights": [
+   1.5600508537361466,
+   0.6556945108429154,
+   0.6213087061978609,
+   0.607807489796792,
+   0.027024970250005588,
+   0.033634932603667365,
+   0.1558214316971233,
+   0.07894453863242264
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6739978706876935,
+  "r2": 0.6935288574400168,
+  "r2_timing_only": 0.059910610993626046
+ },
+ "gate": "unit_candidate",
+ "feature": 38,
+ "test_scores": {
+  "gate": "unit_candidate",
+  "feature": 38,
+  "terms": [
+   "(phase == D1) * (prev_state == 2) * ((prev_action == 1) + (prev_reward == 0))",
+   "(phase != GO) * last_is('a1 S2 u')",
+   "(phase != D1) * belief"
+  ],
+  "weights": [
+   0.836608424105488,
+   0.7267235092574724,
+   0.32038264407482475
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6771749071379547,
+  "r2": 0.6965155556953939,
+  "r2_timing_only": 0.059910610993626046
+ },
+ "dev_scores": {
+  "gate": "unit_candidate",
+  "feature": 38,
+  "terms": [
+   "(phase == D1) * (prev_state == 2) * ((prev_action == 1) + (prev_reward == 0))",
+   "(phase != GO) * last_is('a1 S2 u')",
+   "(phase != D1) * belief"
+  ],
+  "weights": [
+   0.836608424105488,
+   0.7267235092574724,
+   0.32038264407482475
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.684985223018069,
+  "r2": 0.7024093010662285,
+  "r2_timing_only": 0.055311938744889155
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The label leaves out two of the three short-form terms. It never mentions the a1-S2-unrewarded boost carrying into that trial's D2 (D2 residual +0.67). Dropping that D2 part takes test R^2 from 0.6515 to 0.577. It also never mentions the belief effect.",
+   "The claim of a graded rise with belief_lo 'at every phase' is not right as stated. At D1 the belief residual is not monotone (deciles 5-9: +0.19, +0.23, +0.18, +0.11, +0.35) and mostly overlaps with the previous-trial pattern. With belief_lo, misses over-predicts D1 after a1 S1 r (-0.344) and after a2 S1 r (-0.268). Restricting belief to GO/D2 and using the probability instead of the log-odds, (phase != D1) * belief, raises test R^2 to 0.677. That beats the free fit (0.674). Its largest systematic misses are under 0.23 (D1 after a1 S1 u +0.23).",
+   "The D1 pattern itself holds up. Residuals are a1S2u +1.54, a1S2r +0.56, a2S2u +0.53, and about -0.3 for a2S2r and the S1 outcomes. The exception is a1S1u at +0.03, which stays under-predicted by about 0.23.",
+   "Without the belief term the form scores 0.574, so belief is needed. Using belief at GO/D2 only is the better description.",
+   "The short form is a real description, not curve fitting. Its D1 term counts 'S2 reached' x (a1 + unrewarded), so a1-S2-u gets the largest value and a2-S2-r gets zero."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "High at D1 after S2 via a1 or unrewarded (peak a1-S2-u, persists to D2); later phases rise with P(S1 good).",
+  "better_short_terms": "(phase == D1) * (prev_state == 2) * ((prev_action == 1) + (prev_reward == 0)) ;; (phase != GO) * last_is('a1 S2 u') ;; (phase != D1) * belief",
+  "better_short_terms_test_r2_beyond_timing": 0.6772
+ },
+ "final_label": "High at D1 after S2 via a1 or unrewarded (peak a1-S2-u, persists to D2); later phases rise with P(S1 good).",
+ "original_short_terms": "(phase == D1) * (prev_state == 2) * ((prev_action == 1) + (prev_reward == 0)) ;; (phase != GO) * last_is(\"a1 S2 u\") ;; belief_lo",
+ "original_test_scores": {
+  "gate": "unit_candidate",
+  "feature": 38,
+  "terms": [
+   "(phase == D1) * (prev_state == 2) * ((prev_action == 1) + (prev_reward == 0))",
+   "(phase != GO) * last_is(\"a1 S2 u\")",
+   "belief_lo"
+  ],
+  "weights": [
+   0.658287734659666,
+   0.719080096451823,
+   0.04014103150007786
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6515483769626064,
+  "r2": 0.6724243266004973,
+  "r2_timing_only": 0.059910610993626046
+ },
+ "terms_from": "skeptic"
+}

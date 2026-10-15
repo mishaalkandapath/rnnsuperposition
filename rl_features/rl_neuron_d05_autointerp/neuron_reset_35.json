@@ -1,0 +1,106 @@
+{
+  "label": "D2 arrival at S2 while expected value is high, early-to-mid episode",
+  "predicate": "(phase == D2) & (in_state == 2) & (value > 8.0) & (action==2) & (prev_action!=1) & ~((prev_reward==0)&(value<8.1))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 and essentially only when the reached state shown is S2 (99.5% of mass; D2 & in_state==2 alone gives recall 0.99, precision 0.29). Within S2 arrivals it fires when the model value is high (value>8.1 bin has 93% of mass) and only before episode trial ~60 (silent after trial 60, which looks like a slow drift of the hidden state across the episode). Observed-variable alternative: D2 & S2 & a2 chosen & previous trial rewarded & ep_trial<60 gives dev F1 0.81, i.e. it fires when the agent chose a2, reached S2 commonly, and has recent reward evidence that S2 is good; false positives are S2 arrivals right after an unrewarded trial or a rare S1 visit. Magnitude: the largest activations are rare a1->S2 transitions (in_action 1), though those are rarely active overall; common a2->S2 visits after a run of rewarded S2 trials give moderate values. Never fires at D1 or GO, nor on S1 arrivals.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 35,
+    "predicate": "(phase == D2) & (in_state == 2) & (value > 8.0) & (action==2) & (prev_action!=1) & ~((prev_reward==0)&(value<8.1))",
+    "split": "test",
+    "precision": 0.876693678028936,
+    "recall": 0.9074470252648736,
+    "f1": 0.8918053029418145,
+    "mass_recall": 0.9552761998283894,
+    "correlation": 0.817935236030812,
+    "n_active": 58896,
+    "n_predicted": 60962,
+    "coverage_by_activation_quartile": [
+      0.7138005976636783,
+      0.954360228198859,
+      0.9887258897038849,
+      0.9729013854930725
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 35,
+    "predicate": "(phase == D2) & (in_state == 2) & (value > 8.0) & (action==2) & (prev_action!=1) & ~((prev_reward==0)&(value<8.1))",
+    "split": "dev",
+    "precision": 0.8946774689775407,
+    "recall": 0.909460516028147,
+    "f1": 0.9020084266032518,
+    "mass_recall": 0.9576591756404123,
+    "correlation": 0.8290791687728432,
+    "n_active": 57555,
+    "n_predicted": 58506,
+    "coverage_by_activation_quartile": [
+      0.7149906178330669,
+      0.9576065049690736,
+      0.9897143651400375,
+      0.9755351681957186
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 35,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claims hold. The reported test scores reproduce exactly (P 0.766, R 0.960, F1 0.852, mass 0.982). The unit is active only at D2 (D1 and GO active steps: 0). 99.5% of the activation mass is on in_state==2. D2 & S2 alone gives P 0.291 / R 0.994 on dev. The value>8.10 bin holds 93.5% of the mass. The history predicate D2&S2&a2&prev_reward==1&ep_trial<60 scores dev F1 0.811, as claimed.",
+      "The ep_trial<60 clause in the predicate does nothing. D2&S2&value>8.0 without it predicts 70480 dev steps vs 70475 with it, and 73766 vs 73763 on test. Test F1 is the same, 0.852. Value>8 at an S2 arrival essentially never happens after trial 60. So the 'early-to-mid episode' part of the label is not an independent condition; it is already carried by value. The unit really is silent after trial 60 (D2&S2&ep_trial>=60: 82137 steps, precision 0.001), but the predicate and label present this as a second factor.",
+      "There is a systematic false-positive class the explanation does not name. On S2 arrivals with value>8 where the previous trial's choice was a1 (a switch from a1 to a2, or a run of a1 choices), the unit almost never fires: precision 0.068 over 3242 steps. Rare a1->S2 arrivals with value>8 also give precision only 0.336 (1476 steps). The explanation lists only 'after an unrewarded trial or a rare visit to S1'. After an unrewarded trial the precision is 0.578 (17530 steps).",
+      "The explanation reads the history predicate as 'recent reward evidence that S2 is good'. Two pieces of evidence agree: when the previous trial was rewarded, precision is 0.86 if it reached S2 but 0.44 if it reached S1, and 0.014 if it chose a1. But the predicate only uses prev_reward==1. The more accurate statement is that the unit needs the previous choice to be a2 (or unknown) and needs a2/S2 to have been rewarded recently.",
+      "Magnitude claim: rare a1->S2 trials do dominate the top windows, but only 2% of them are active (D2&S2&action==1: P 0.02). Since the explanation says these are seldom active, this is acceptable.",
+      "The predicate depends on the model's own value-head output. That makes it partly circular, a readout of the same hidden state, rather than a statement about the task. The best predicate built from task variables alone does worse: test F1 0.805 for the reward-history version.",
+      "Refinement: excluding trials whose previous choice was a1, and the a1->S2 rare arrivals, gives D2&S2&value>8&action==2&prev_action!=1. That scores dev F1 0.882 and test F1 0.871. Also excluding low-value cases after an unrewarded trial gives test F1 0.892."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 arrival at S2 after choosing a2 (not right after an a1 choice), while the value output is high (which only happens before about trial 60)",
+    "better_predicate": "(phase == D2) & (in_state == 2) & (value > 8.0) & (action==2) & (prev_action!=1) & ~((prev_reward==0)&(value<8.1))",
+    "better_predicate_test_f1": 0.892
+  },
+  "final_label": "D2 arrival at S2 after choosing a2 (not right after an a1 choice), while the value output is high (which only happens before about trial 60)",
+  "original_predicate": "(phase == D2) & (in_state == 2) & (value > 8.0) & (ep_trial < 60)",
+  "original_test_scores": {
+    "gate": "neuron_reset",
+    "feature": 35,
+    "predicate": "(phase == D2) & (in_state == 2) & (value > 8.0) & (ep_trial < 60)",
+    "split": "test",
+    "precision": 0.7661564741130377,
+    "recall": 0.9595558272208639,
+    "f1": 0.852019086530126,
+    "mass_recall": 0.9822962900351728,
+    "correlation": 0.7612786618814256,
+    "n_active": 58896,
+    "n_predicted": 73763,
+    "coverage_by_activation_quartile": [
+      0.8728606356968215,
+      0.9851263243683781,
+      0.9931404509644118,
+      0.9870958978538441
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 35,
+    "predicate": "(phase == D2) & (in_state == 2) & (value > 8.0) & (ep_trial < 60)",
+    "split": "dev",
+    "precision": 0.7852146151117417,
+    "recall": 0.9614803231691426,
+    "f1": 0.8644536436772631,
+    "mass_recall": 0.9842664873073216,
+    "correlation": 0.773124203708515,
+    "n_active": 57555,
+    "n_predicted": 70475,
+    "coverage_by_activation_quartile": [
+      0.8769198693446383,
+      0.9862394884981583,
+      0.992633261519216,
+      0.990130664442591
+    ]
+  },
+  "predicate_from": "skeptic"
+}

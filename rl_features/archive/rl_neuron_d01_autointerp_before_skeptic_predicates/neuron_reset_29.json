@@ -1,0 +1,66 @@
+{
+  "label": "D1 after a first no-reward, while strongly preferring a2, early-mid episode",
+  "predicate": "(phase == D1) & (prev_reward == 0) & (tv(\"prev_reward\", -1) != 0) & (choice < -4.44) & (ep_trial < 60)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (never GO/D2), and only when the reward input is 0 (the previous trial was unrewarded). It needs three more things: (a) the policy at that step strongly favors a2 (choice logit in about [-8.9,-4.4]; nearly all activations follow a2 choices), (b) it is the first unrewarded outcome after a rewarded trial (or the window start); a second no-reward in a row mostly does not fire it, and (c) the episode is before trial ~60 (it never fires at trials 60-99, and fires little at 50-59). The value head is in a narrow mid band [7.1,7.5]. Every variable here is observed or the agent computes it (choice is the model own policy logit), so no future variables. Dev F1 0.89, mass recall 0.995. Missed steps are low-magnitude ones with slightly weaker a2 preference. I did not check what drives magnitude beyond the quartile coverage. Reads as a lose-after-win signal specific to the a2-preferring regime early in the episode.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 29,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (tv(\"prev_reward\", -1) != 0) & (choice < -4.44) & (ep_trial < 60)",
+    "split": "test",
+    "precision": 0.8430954375809278,
+    "recall": 0.9597676233417151,
+    "f1": 0.897656313356581,
+    "mass_recall": 0.9940334925177193,
+    "correlation": 0.8351327190194677,
+    "n_active": 11533,
+    "n_predicted": 13129,
+    "coverage_by_activation_quartile": [
+      0.8391123439667129,
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 29,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (tv(\"prev_reward\", -1) != 0) & (choice < -4.44) & (ep_trial < 60)",
+    "split": "dev",
+    "precision": 0.8334068195179306,
+    "recall": 0.9650272294077604,
+    "f1": 0.8944006309148265,
+    "mass_recall": 0.9952522744234479,
+    "correlation": 0.8311605735412453,
+    "n_active": 11752,
+    "n_predicted": 13608,
+    "coverage_by_activation_quartile": [
+      0.8604492852280463,
+      0.9996596324029953,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 29,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The predicate's core holds up. All activation is at D1 (GO and D2 have 0 of 380619 steps each), all of it has prev_reward == 0, and all of it is at ep_trial < 60. Original test scores reproduce: P 0.843, R 0.960, F1 0.898.",
+      "The claim that the choice logit runs 'about -8.9 to -4.4' and that the policy 'strongly' prefers a2 is wrong. At D1 the unit has 0 activations on 3899 steps with choice < -6. Activations sit in a narrow, moderate band: choice -5.5 to -5 holds 78% of activations and 83% of the mass, and -6 to -5.5 adds only 6.6%. So 'strongly preferring a2' overclaims; the unit fires at a moderate, specific a2 preference, not at the strong end.",
+      "The claim that 'a second no-reward in a row mostly does not fire it' understates the effect. D1 & prev_reward==0 & tv('prev_reward',-1)==0 & choice<-4.44 & ep_trial<60 gives 0 activations on 2631 predicted steps. It never fires.",
+      "A defining pattern in the observed history is missing from the label. When the previous trial is known, it is almost always a2 -> rare -> S1, unrewarded. With prev_common==1 there are 5 activations out of 11752. With prev_common==0 the rate lift is 3.6x and the share is 81%. The other 19% are window starts with unknown history (rel -3). The choice threshold captures this only implicitly. The label should say 'after an a2 choice reached S1 by a rare transition and went unrewarded' (the model-based 'stay on a2' case).",
+      "The ep_trial < 60 cutoff is loose. Within the predicate, trials 50-59 have precision 0.43 and only 2.5% of the mass, which is a systematic false-positive class, not scattered noise. Cutting at ep_trial < 55 raises test F1 to 0.928.",
+      "Smaller systematic false-positive pockets: window-start steps (rel -3, history unknown) have precision 0.71, and start_high==1 episodes have precision 0.76, against about 0.87 elsewhere.",
+      "Narrowing the choice band to (-6, -4.44) and cutting at ep_trial < 55 raises test F1 from 0.898 to 0.940 (P 0.937, R 0.942, MR 0.992). The refined predicate uses only observed or agent-computed variables, like the original."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a first no-reward (typically a2 -> rare S1, unrewarded) with a moderate a2 preference (choice logit about -6 to -4.4), episode trials before ~55",
+    "better_predicate": "(phase == D1) & (prev_reward == 0) & (tv('prev_reward', -1) != 0) & (choice < -4.44) & (choice > -6) & (ep_trial < 55)",
+    "better_predicate_test_f1": 0.94
+  },
+  "final_label": "D1 after a first no-reward (typically a2 -> rare S1, unrewarded) with a moderate a2 preference (choice logit about -6 to -4.4), episode trials before ~55"
+}

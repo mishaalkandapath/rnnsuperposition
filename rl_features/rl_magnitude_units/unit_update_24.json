@@ -1,0 +1,87 @@
+{
+  "label": "Update gate drops at D1 after reaching S2 (most after a1-to-S2 rare), mostly near episode end.",
+  "short_terms": "(phase == D1) * (prev_state == 2) * np.exp(ep_trial / 5) ;; (phase == D1) * (prev_state - prev_action == 1) * np.exp(ep_trial / 5) ;; (phase == D1) * np.exp(ep_trial / 5)",
+  "terms": "(phase == D1) * (prev_state == 2) * np.exp(ep_trial / 5) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * np.exp(ep_trial / 5) ;; (phase == D1) * np.exp(ep_trial / 5) ;; (phase == D1) * (prev_state == 2) * (prev_reward == 1) * np.exp(ep_trial / 5) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == GO) * np.exp(ep_trial / 5)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw z of unit 24 sits near 1 (keeps state) and dips mainly at D1, increasingly steeply in the last ~10 trials of the episode (dips to 0.6-0.8). Beyond the per-decile baseline, the dip at D1 is driven by the previous trial reaching S2: larger after a1->S2 (rare) than a2->S2 (common), with a1/a2->S1 slightly above baseline; the effect scales roughly exponentially with episode trial, so it is an interaction of last state reached with lateness in the episode. Observed belief, the trial before, and GO/D2 phases add little (GO shows a tiny belief_lo slope). The free fit adds a rewarded-S2 extra dip and a small non-scaled a1->S2 offset (dev 0.49 vs short 0.46). Much of the gain comes from the within-decile exponential timing shape that the decile baseline misses, gated by previous state.",
+  "full_test_scores": {
+    "gate": "unit_update",
+    "feature": 24,
+    "terms": [
+      "(phase == D1) * (prev_state == 2) * np.exp(ep_trial / 5)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * np.exp(ep_trial / 5)",
+      "(phase == D1) * np.exp(ep_trial / 5)",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 1) * np.exp(ep_trial / 5)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == GO) * np.exp(ep_trial / 5)"
+    ],
+    "weights": [
+      -3.073029978683158e-10,
+      -3.680971341126345e-10,
+      1.259081338271685e-10,
+      -1.2788734653400202e-10,
+      -0.009511984947063703,
+      -3.7100331373886603e-11
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.47377717537096586,
+    "r2": 0.7367920136247641,
+    "r2_timing_only": 0.4998164768683554
+  },
+  "gate": "unit_update",
+  "feature": 24,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 24,
+    "terms": [
+      "(phase == D1) * (prev_state == 2) * np.exp(ep_trial / 5)",
+      "(phase == D1) * (prev_state - prev_action == 1) * np.exp(ep_trial / 5)",
+      "(phase == D1) * np.exp(ep_trial / 5)"
+    ],
+    "weights": [
+      -3.940494615079676e-10,
+      -3.687832567572617e-10,
+      1.2904140380081055e-10
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.46154794742783134,
+    "r2": 0.7306751553069871,
+    "r2_timing_only": 0.4998164768683554
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 24,
+    "terms": [
+      "(phase == D1) * (prev_state == 2) * np.exp(ep_trial / 5)",
+      "(phase == D1) * (prev_state - prev_action == 1) * np.exp(ep_trial / 5)",
+      "(phase == D1) * np.exp(ep_trial / 5)"
+    ],
+    "weights": [
+      -3.940494615079676e-10,
+      -3.687832567572617e-10,
+      1.2904140380081055e-10
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.462400605058639,
+    "r2": 0.7375144357154643,
+    "r2_timing_only": 0.5117450526275862
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor remaining error: after a1 S2 r the D1 dip is under-predicted (misses: D1 after a1 S2 r -0.014 vs at most +/-0.006 for every other cell). Reward adds a little extra dip after rare S2 visits. Adding last_is('a1 S2 r') in place of the generic D1 term scores lower on test (0.419), and the free fit's reward term only reaches 0.474, so this is small.",
+      "Several of the worst-fit windows are the window's first trial, where prev_state = -1 and no prev-trial term can fire. That is a gap in the data, not a fault in the interpretation.",
+      "Every term is needed: on test, without the a1->S2 term 0.350, without prev_state==2 0.321, without the generic D1 late term 0.414, all three 0.4615. Swapping the generic term for prev_state==1 (after S1) gives 0.463, which supports the 'after S1 slightly above baseline' claim. The exp(ep_trial/5) rate is not tuned: /4 gives 0.459 and /6 gives 0.458.",
+      "Alternatives score worse on test: prev_action==1 instead of rare a1->S2 0.389, prev_reward term 0.428 / 0.348, GO late term 0.422, belief_lo term 0.406. So the label's choice of previous state and transition is right, and belief adds nothing.",
+      "Label matches the short form (prev_state-prev_action==1 means a1->S2 rare under this coding), and the profile residuals agree: D1 a1 S2 r/u -0.026/-0.017, a2 S2 -0.004/-0.002, S1 about +0.007."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  }
+}

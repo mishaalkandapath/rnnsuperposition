@@ -1,0 +1,78 @@
+{
+  "label": "rare-transition sign at D2 (a1->S2 up, a2->S1 down), plus last choice/belief",
+  "terms": "(phase == D2) * (action == 1) * (state == 2) ;; (phase == D2) * (action == 2) * (state == 1) ;; (phase == D1) * table(prev_action, {1: 1, 2: -1}) ;; (phase == D1) * (prev_common == 0) * table(prev_action, {1: 1, 2: -1}) ;; (phase == GO) * table(prev_action, {1: 1, 2: -1}) ;; np.clip(belief_lo, -4, 4) ;; (phase != D1) * (prev_reward == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r46 is timing-dominated (high at D2, low at GO, declining over the episode; timing R^2 0.81). Beyond timing, the largest driver is a rare transition at D2: a1 reaching S2 raises it (~+0.16) and a2 reaching S1 lowers it (~-0.21); common transitions are near baseline. At the next D1 the same rare-transition sign persists (prev_action x rare, +0.077) on top of a small prev-action sign (a1 +, a2 -, ~0.03), which also holds at GO. A graded ideal-observer belief term (log-odds S1 good, clipped) adds a small push (higher when S1 believed good), and an unrewarded previous trial raises it at GO and D2 (~+0.05). All terms are observed-only (action/state at D2 are already seen). Test R^2 beyond timing 0.78 vs all-observed reference 0.86 and all ceiling 0.93; policy decile alone (model output, now disallowed) scored 0.75, so dropping model outputs loses essentially nothing. The trial-before reward added only ~0.004.",
+  "gate": "unit_reset",
+  "feature": 46,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 46,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 2)",
+      "(phase == D2) * (action == 2) * (state == 1)",
+      "(phase == D1) * table(prev_action, {1: 1, 2: -1})",
+      "(phase == D1) * (prev_common == 0) * table(prev_action, {1: 1, 2: -1})",
+      "(phase == GO) * table(prev_action, {1: 1, 2: -1})",
+      "np.clip(belief_lo, -4, 4)",
+      "(phase != D1) * (prev_reward == 0)"
+    ],
+    "weights": [
+      0.15793466416252963,
+      -0.21258652246190293,
+      0.029527244647921797,
+      0.0765950185014549,
+      0.03231841553012834,
+      0.009921645886144819,
+      0.05346000300065669
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.78221938347134,
+    "r2": 0.9594322022859256,
+    "r2_timing_only": 0.8137217243632165
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 46,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 2)",
+      "(phase == D2) * (action == 2) * (state == 1)",
+      "(phase == D1) * table(prev_action, {1: 1, 2: -1})",
+      "(phase == D1) * (prev_common == 0) * table(prev_action, {1: 1, 2: -1})",
+      "(phase == GO) * table(prev_action, {1: 1, 2: -1})",
+      "np.clip(belief_lo, -4, 4)",
+      "(phase != D1) * (prev_reward == 0)"
+    ],
+    "weights": [
+      0.15793466416252963,
+      -0.21258652246190293,
+      0.029527244647921797,
+      0.0765950185014549,
+      0.03231841553012834,
+      0.009921645886144819,
+      0.05346000300065669
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7902500360982079,
+    "r2": 0.9601498952265689,
+    "r2_timing_only": 0.8100113867381191
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor overstatement: the belief term is called a 'small push', but dropping it lowers test R^2 beyond timing from 0.782 to 0.738. That loss is about as large as dropping the unrewarded term (0.724). The profile's belief-decile residuals run from -0.09 to +0.10, so the term is a real secondary driver.",
+      "The prev_reward==0 effect is not uniform. In the residual table, the GO-phase gap between unrewarded and rewarded previous trials is +0.108 after a1 S2, +0.072 after a2 S2, +0.044 after a1 S1 and +0.014 after a2 S1. 'About 0.05' is the average. Interaction variants added at most 0.002 on test.",
+      "The worst-fit windows show an offset of 0.1-0.15 that persists across the whole window. Examples are early-episode unrewarded a2 streaks (under-predicted) and long rewarded a1-S1 streaks late in the episode (over-predicted). This suggests a slowly integrating state that the belief term does not capture. Every observed-only term I tried added at most 0.005: reward two trials back, belief_cover, |belief-0.5|, stay at D2, rare x belief, prev_action at D2, and a 2-back rare sign. Errors by phase x previous trial are all within +/-0.04, so no large systematic class remains.",
+      "The gap to the all-observed reference (0.86) stays at about 0.08 and I could not localise it to a single cue. The 0.75 'policy decile alone' figure is not a like-for-like measure of what leaving out model outputs costs, though the conclusion that the loss is small seems right."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "rare-transition sign at D2 (a1->S2 up, a2->S1 down), carried into D1; plus last-choice sign, ideal-observer belief (S1 good up), and an unrewarded previous trial (up at GO/D2)",
+    "better_terms": "(phase == D2) * (action == 1) * (state == 2) ;; (phase == D2) * (action == 2) * (state == 1) ;; (phase == D1) * table(prev_action, {1: 1, 2: -1}) ;; (phase == D1) * (prev_common == 0) * table(prev_action, {1: 1, 2: -1}) ;; (phase == GO) * table(prev_action, {1: 1, 2: -1}) ;; np.clip(belief_lo, -4, 4) ;; (phase != D1) * (prev_reward == 0) ;; (phase==D2)*table(prev_action,{1:1,2:-1})*(action==prev_action)",
+    "better_terms_test_r2_beyond_timing": 0.7876
+  },
+  "final_label": "rare-transition sign at D2 (a1->S2 up, a2->S1 down), carried into D1; plus last-choice sign, ideal-observer belief (S1 good up), and an unrewarded previous trial (up at GO/D2)"
+}

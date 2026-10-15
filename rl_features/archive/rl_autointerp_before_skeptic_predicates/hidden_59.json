@@ -1,0 +1,65 @@
+{
+  "label": "D1: agent about to choose a2, after an a2 trial that reached S2",
+  "predicate": "(phase == D1) & (action == 2) & (prev_state != 1) & (prev_action != 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (never at GO or D2) on trials where the agent will go on to choose a2. Its own upcoming choice is something it computes, so it counts as legitimate. Nearly all activation (more than 99.8% of mass) is on a2 trials, and 91% of mass falls where the D1 policy logit(a1)-logit(a2) is moderately negative (-4.4 to -1.5), so it is a moderate a2 preference signal. It is suppressed when the previous trial reached S1 (a1 trials, or a2 trials with a rare transition to S1). So it is roughly: stay with a2 after reaching S2. Reward is not required: the feature fires with either previous reward, and the highest examples come after unrewarded a2->S2 trials while the agent still picks a2. Remaining false positives are mostly at the window start, where the previous trial is unknown. Action==2 at D1 alone gives F1 0.75; adding prev_state != 1 gives 0.88; adding prev_action != 1 gives 0.90 on dev. The predicate uses no future random outcomes.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 59,
+    "predicate": "(phase == D1) & (action == 2) & (prev_state != 1) & (prev_action != 1)",
+    "split": "test",
+    "precision": 0.803868464644047,
+    "recall": 0.9906393349736489,
+    "f1": 0.8875344218519652,
+    "mass_recall": 0.9965154534345514,
+    "correlation": 0.6723007766391248,
+    "n_active": 128837,
+    "n_predicted": 158771,
+    "coverage_by_activation_quartile": [
+      0.9760633343682086,
+      0.9905926914837467,
+      0.9971126082771896,
+      0.9987891583097892
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 59,
+    "predicate": "(phase == D1) & (action == 2) & (prev_state != 1) & (prev_action != 1)",
+    "split": "dev",
+    "precision": 0.8158419228163418,
+    "recall": 0.992589391465796,
+    "f1": 0.8955784290010579,
+    "mass_recall": 0.9970404873767085,
+    "correlation": 0.6763376472525788,
+    "n_active": 124956,
+    "n_predicted": 152027,
+    "coverage_by_activation_quartile": [
+      0.9820736899388585,
+      0.9916770703287557,
+      0.9972790422228625,
+      0.9993277633727072
+    ]
+  },
+  "gate": "hidden",
+  "feature": 59,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Factual claims check out on dev. The feature is active only at D1 (0 active steps at GO or D2). 99.8% of activation mass has action==2. 91.3% of mass is at D1 with -4.4 < choice < -1.5. It never fires after a2->S1: (D1 & prev_action==2 & prev_state==1 & action==2) has precision 0.000 on 41k steps. It almost never fires after a1->S2 (precision 0.029).",
+      "The upcoming-choice term really is needed. After a2->S2 trials, the feature fires at a 0.81-0.88 rate when the agent stays with a2 and at only 0.10 when it switches to a1 (6.3k steps). So 'about to choose a2' is not just a stand-in for the previous trial's a2->S2.",
+      "The label underplays reward. 75.6% of mass has prev_reward==1. Unrewarded a2->S2 trials followed by a2 do fire (precision 0.81, 20% of mass), and the top examples come after long unrewarded a2 runs, so 'reward not required' holds. Still, the feature is mostly a post-reward stay signal by mass.",
+      "'Remaining false positives are mostly at the window start' is a slight overclaim. Rough split of the ~28k dev false positives: about 47% at the window start (prev_action==-1, precision 0.68), about 35% on rewarded a2->S2 trials followed by a2 (inactive about 12% of the time), and about 18% on unrewarded ones.",
+      "One systematic false-positive class is at the window start with prev_reward==0. With choice > -4.4 it has precision 0.50; plain prev_action==-1 & action==2 & prev_reward==0 has precision 0.30. Requiring prev_reward==1 at the window start raises test F1 from 0.888 to 0.901.",
+      "A second gap is the agent's choice confidence. On steps where the predicate holds and choice < -4.4 (5.4k), the feature is almost never active (precision 0.026). Adding choice > -4.4 raises test F1 to 0.903. Both gains are modest, so the original predicate and label stand.",
+      "Small subgroup: when the previous a2 trial was itself a switch from a1 (tv('action',-2)==1), the feature rarely fires (precision 0.16, 2.5k steps). So it leans toward runs of a2 trials, but this subgroup is too small to change the verdict."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == D1) & (action == 2) & (prev_state != 1) & (prev_action != 1) & (choice > -4.4)",
+    "better_predicate_test_f1": 0.903
+  }
+}

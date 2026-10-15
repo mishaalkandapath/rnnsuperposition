@@ -1,0 +1,83 @@
+{
+  "label": "High after rare a2->S1 at D2; at GO lowered by no reward, raised by a2 policy",
+  "terms": "(phase == D2) * (action == 2) * (state == S1) ;; (phase == D2) * (action == 1) * (state == S1) ;; (phase == D1) * (prev_action == 2) ;; (phase == GO) * (prev_reward == 0) * (prev_common == 0) * (prev_action == 1) ;; (phase == GO) * (prev_reward == 0) ;; (phase == GO) * (tv(\"reward\", -2) == 1) ;; (phase == GO) * (choice < 0) ;; (phase == D1) * (choice < 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw candidate n of GRU unit 30. Timing alone gives R^2 0.89: high at D1 (~+0.8), mid at GO (~+0.5), strongly negative at D2 (~-0.75). Beyond timing: at D2 the strongest driver is the transition just seen. Reaching S1 after choosing a2 (rare) raises it by about +0.57, and reaching S1 after a1 adds about +0.19, so S1 sits above S2, most of all on rare a2 trials. At GO it is lowered when the previous trial went unrewarded (about -0.28), and lowered further after a rare unrewarded a1->S2 trial (about -0.36 more). It is raised when the trial before last was rewarded (+0.17) and when the model policy favours a2 (choice logit < 0, +0.28). At D1 it is slightly higher when the policy leans a2 (+0.17) and after a previous a2 choice (+0.08). Value, the hidden good state and trials since reversal add little. Test R^2 beyond timing is 0.68 against an all-cue ceiling of 0.81 (84%). The model-policy terms are observed, computed quantities. Using the actual upcoming GO action instead scores about the same on dev (0.667). An observed-input-only version, with prev_action == 2 at GO instead of policy sign and no D1 policy term, scores 0.59 on test.",
+  "gate": "unit_candidate",
+  "feature": 30,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 30,
+    "terms": [
+      "(phase == D2) * (action == 2) * (state == S1)",
+      "(phase == D2) * (action == 1) * (state == S1)",
+      "(phase == D1) * (prev_action == 2)",
+      "(phase == GO) * (prev_reward == 0) * (prev_common == 0) * (prev_action == 1)",
+      "(phase == GO) * (prev_reward == 0)",
+      "(phase == GO) * (tv(\"reward\", -2) == 1)",
+      "(phase == GO) * (choice < 0)",
+      "(phase == D1) * (choice < 0)"
+    ],
+    "weights": [
+      0.5691624956024633,
+      0.19411044173632136,
+      0.07840542185041116,
+      -0.3581921983790551,
+      -0.2830885253038447,
+      0.17385172099036816,
+      0.28108590996410177,
+      0.17476561513643246
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6825082450828044,
+    "r2": 0.9639553991670518,
+    "r2_timing_only": 0.886470749949557
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 30,
+    "terms": [
+      "(phase == D2) * (action == 2) * (state == S1)",
+      "(phase == D2) * (action == 1) * (state == S1)",
+      "(phase == D1) * (prev_action == 2)",
+      "(phase == GO) * (prev_reward == 0) * (prev_common == 0) * (prev_action == 1)",
+      "(phase == GO) * (prev_reward == 0)",
+      "(phase == GO) * (tv(\"reward\", -2) == 1)",
+      "(phase == GO) * (choice < 0)",
+      "(phase == D1) * (choice < 0)"
+    ],
+    "weights": [
+      0.5691624956024633,
+      0.19411044173632136,
+      0.07840542185041116,
+      -0.3581921983790551,
+      -0.2830885253038447,
+      0.17385172099036816,
+      0.28108590996410177,
+      0.17476561513643246
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6931383168841508,
+    "r2": 0.9651784953527691,
+    "r2_timing_only": 0.8865237774437783
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The test score reproduces: the 8 claimed terms give 0.6825 test R^2 beyond timing, against an additive ceiling of 0.81. All observed cues together reach 0.75, so the model-output policy terms are carrying weight.",
+      "The importance ranking overclaims. The label calls rare a2->S1 at D2 the strongest driver, but dropping that term costs only 0.025 on test (0.658). Dropping the a1->S1 term costs 0.25 (0.433). So the D2 effect that explains most variance is reaching S1 versus S2. A rare a2->S1 trial adds a large but infrequent extra boost (D2 residuals: a1S1 +0.07, a1S2 -0.23, a2S1 +0.45, a2S2 -0.15). Rewriting the two terms as (D2)*(state==S1) plus (D2)*a2*S1 gives the same fit (0.6825).",
+      "'Raised by a2 policy' at GO is not graded. In the GO residual by policy decile, only the two most-a2 deciles are positive (+0.19, +0.12); deciles 2-9 are flat around -0.12 to -0.19. A threshold of choice < -1 scores better than choice < 0, and a continuous clipped -choice scores worse (0.635).",
+      "The worst-fit windows are long runs of a2 choices that keep reaching S1 unrewarded. In these, the GO value is much lower than predicted (actual -0.32 vs predicted +0.42), and the D2 value after a2->S1 swings between -0.63 and +0.52. The D2 S1 value depends partly on the policy: adding (D2)*(S1)*clip(-choice) raises test R^2 to 0.698. A term for repeated a2->S1 adds nothing (0.683).",
+      "The remaining systematic errors in misses are moderate, not large. The biggest are GO after a1 S2 r (-0.167), GO after a2 S1 u (+0.12) and D2 after a2 S1 u (+0.115). Part of this is that GO is higher when the previous trial reached S1; a GO prev_state==S1 term gets about 0.696 test.",
+      "The other claims hold up in drop-one tests on test: prev_reward==0 at GO (dropping it costs 0.06), rare unrewarded a1->S2 at GO (costs 0.115), trial-before-last rewarded at GO (costs 0.13), D1 policy (costs 0.15) and D1 prev_action==2 (costs 0.08). The observed-only claim also holds: my observed-only variant scored 0.61 test, close to the reported 0.59. No FUTURE variables are used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "At D2 high when S1 is reached (most of all after rare a2->S1, scaled by a2 policy); at GO lowered by no reward (especially after rare unrewarded a1->S2), raised when the policy strongly favours a2",
+    "better_terms": "(phase == D2) * (state == S1) ;; (phase == D2) * (action == 2) * (state == S1) ;; (phase == D2) * (state == S1) * np.clip(-choice,-3,3) ;; (phase == GO) * (prev_reward == 0) * (prev_common == 0) * (prev_action == 1) ;; (phase == GO) * (prev_reward == 0) ;; (phase == GO) * (choice < -1) ;; (phase == GO) * (tv('reward', -2) == 1) ;; (phase == D1) * (choice < 0)",
+    "better_terms_test_r2_beyond_timing": 0.6986
+  },
+  "final_label": "At D2 high when S1 is reached (most of all after rare a2->S1, scaled by a2 policy); at GO lowered by no reward (especially after rare unrewarded a1->S2), raised when the policy strongly favours a2"
+}

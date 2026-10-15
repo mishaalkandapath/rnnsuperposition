@@ -1,0 +1,64 @@
+{
+  "label": "D2 after a rare a2->S1 transition, following an unrewarded trial, while the policy still strongly favours a2",
+  "predicate": "(phase == D2) & (action == 2) & (state == 1) & (prev_reward == 0) & (choice < -5.5)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (100% of mass), almost exclusively when the agent chose a2 and landed in S1 through a rare transition (99.7% of mass). Within that, it needs the previous trial to have been unrewarded (prev_reward==0 takes precision from 0.16 to 0.42 while keeping 98% of mass) and the model policy at that step to strongly favour a2 (choice logit < -5.5 takes precision to 0.85). Dev F1 is 0.83, mass recall 0.90. Every variable is observable at D2: the action and state are already shown, prev_reward was the D1 input, and choice is the model's own output. It never fires at D1 or GO, after a1 choices, on common transitions, or on rare a1->S2 transitions. It is mostly silent when the previous trial was rewarded or when the a2 preference is weak (for example right after the agent switched away from a1). Most activations fall in the mid value band (7.1-7.5). Magnitude was not checked beyond the quartile coverage: stronger activations sit inside the predicate (top-quartile coverage is about 1.0).",
+  "test_scores": {
+    "gate": "update",
+    "feature": 229,
+    "predicate": "(phase == D2) & (action == 2) & (state == 1) & (prev_reward == 0) & (choice < -5.5)",
+    "split": "test",
+    "precision": 0.8468668891360771,
+    "recall": 0.7796108772329048,
+    "f1": 0.8118483412322274,
+    "mass_recall": 0.8962079880723999,
+    "correlation": 0.8087535570471794,
+    "n_active": 8789,
+    "n_predicted": 8091,
+    "coverage_by_activation_quartile": [
+      0.46178343949044587,
+      0.7724169321802458,
+      0.9012289485662267,
+      0.9831588529813382
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 229,
+    "predicate": "(phase == D2) & (action == 2) & (state == 1) & (prev_reward == 0) & (choice < -5.5)",
+    "split": "dev",
+    "precision": 0.8548290341931614,
+    "recall": 0.7977830030231777,
+    "f1": 0.8253214409822772,
+    "mass_recall": 0.9024872374995545,
+    "correlation": 0.8096597910226593,
+    "n_active": 8931,
+    "n_predicted": 8335,
+    "coverage_by_activation_quartile": [
+      0.5078369905956113,
+      0.800268696820421,
+      0.9014778325123153,
+      0.9816308243727598
+    ]
+  },
+  "gate": "update",
+  "feature": 229,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor overclaim: the explanation says the top activation quartile is 'fully inside' the predicate. Coverage is 0.98 on dev and 0.983 on test, not 1.0.",
+      "Minor overclaim: 'never fires on common transitions' is not quite true. It is weakly active on 124 dev steps of common a1->S1 at D2 (0.3% of mass, test precision 0.001). Every activation is still at state==1, D2.",
+      "There is a weak tail when the previous trial was rewarded: the base conjunction plus prev_reward==1 covers 7% of test active steps but only 1.2% of mass, with activations around 0.01-0.09 of max. This is consistent with 'mostly silent'.",
+      "Most misses come from the choice cutoff. The base conjunction with prev_reward==0 and choice >= -5.5 holds 8.8% of test mass at precision 0.09. The cutoff of -5.5 is hand-tuned (test F1: 0.768 at -6.5, 0.812 at -5.5, 0.772 at -5, 0.698 at -4.5). The feature probably scales smoothly with how strongly the policy favours a2 rather than switching at a hard cutoff, but no simpler observed variable replaces it: using prev_action==2 or stay==1 instead of the choice logit drops test F1 to 0.50.",
+      "The wording 'mid value band (7.1-7.5)' refers to the value-estimate variable, not to activation magnitude (mean activation is 0.71). The fact itself is correct: 62% of mass falls in value in [7.13, 7.54).",
+      "Other claims check out: 100% of mass is at D2, none at D1 or GO; 99.7% of mass is a2->S1 rare; 98.8% has prev_reward==0. Test scores reproduce: P 0.847, R 0.78, F1 0.812, mass recall 0.896. No future variables are used. Splitting by the good state shows no systematic false-positive class: precision is 0.85 when good==2 and 0.83 when good==1."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "label": "D1 after an unrewarded visit to S2 (not late in the episode)",
+  "predicate": "(phase == D1) & (prev_reward == 0) & (prev_state == 2) & (ep_trial < 85)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1, and only when the previous trial was unrewarded (never after a reward, never at GO/D2). Within that, it is specific to the previous trial having reached S2: S2 unrewarded gives precision ~0.75 (0.88 with ep_trial < 85); it almost never fires after S1 unrewarded. The ~18% of activations it misses are on the first trial of each window, where prev_state is not recorded in the window (the agent did observe it). Using prev_state != 1 to include those gives dev F1 0.86 / mass recall 0.996, but I recorded the cleaner prev_state == 2 version (dev F1 0.85, precision 0.88). The rate drops late in the episode (almost silent at trials 85-99), so the ep_trial cutoff is needed. Magnitude is larger when the agent then prefers a1 (policy logit positive, upcoming action a1 holds 83% of mass but only 60% of active steps) and when S1 is the good state. So it looks like an S2-was-unrewarded, so lean toward a1 signal. Uses only observed variables.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 34,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (prev_state == 2) & (ep_trial < 85)",
+    "split": "test",
+    "precision": 0.8801382522549165,
+    "recall": 0.8157849653943672,
+    "f1": 0.846740638002774,
+    "mass_recall": 0.8132749614032162,
+    "correlation": 0.6525737362625263,
+    "n_active": 58372,
+    "n_predicted": 54104,
+    "coverage_by_activation_quartile": [
+      0.817926403069965,
+      0.8268347838004523,
+      0.8092921263619544,
+      0.809086548345097
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 34,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (prev_state == 2) & (ep_trial < 85)",
+    "split": "dev",
+    "precision": 0.8842942026658102,
+    "recall": 0.8142096702646754,
+    "f1": 0.8478060046189375,
+    "mass_recall": 0.8135578148188103,
+    "correlation": 0.663174177562083,
+    "n_active": 54104,
+    "n_predicted": 49816,
+    "coverage_by_activation_quartile": [
+      0.8156143723199764,
+      0.8184237764305782,
+      0.810956676031347,
+      0.8118438562768002
+    ]
+  },
+  "gate": "hidden",
+  "feature": 34,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The reported test scores reproduce exactly: P 0.880, R 0.816, F1 0.847, mass recall 0.813.",
+      "The phase claim holds. Every active step (54104 in dev) is at D1, with zero at GO or D2. It never fires after a reward: prev_reward==1 has 0 active steps. It never fires after S1 unrewarded: (D1 & prev_reward==0 & prev_state==1) scores P 0 and R 0 on test.",
+      "Most misses are at rel -3, where prev_state is not recorded inside the window. (D1 & rel==-3 & prev_reward==0) has precision 0.41, which fits roughly half of those being after S2. prev_state != 1 gives test F1 0.858 and mass recall 0.996, which confirms the explanation. Excluding rel -3, recall is close to complete.",
+      "The ep_trial cutoff is a gradual fade, not a cliff, and this is where nearly all false positives sit. On rel>-3 steps, base-predicate precision is 0.984 for trials <60, 0.885 for 60-69, 0.587 for 70-79 and 0.345 for 80-84. For trials >=85 it is 0.054. The label's 'not late in the episode' is accurate, but the 85 threshold is arbitrary: <80 gives about the same F1 (0.852 on rel>-3 steps).",
+      "Magnitude claims check out: upcoming action a1 has 83% of the activation mass on 60% of active steps, and good==S1 has 77% of the mass. The explanation leaves out one magnitude effect. The case a1 -> rare S2 -> unrewarded holds 61-63% of the mass on about 41% of active steps (test precision 0.949), against 0.829 precision for a2 -> common S2 unrewarded. This fits the 'lean toward a1' reading, because both cases call for choosing a1 next under model-based play.",
+      "The predicate uses no future variables. The claim of observed-only variables is correct."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

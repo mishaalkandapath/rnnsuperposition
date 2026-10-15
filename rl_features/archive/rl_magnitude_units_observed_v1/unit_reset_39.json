@@ -1,0 +1,73 @@
+{
+  "label": "a1-vs-a2 leaning from last trial outcome and belief; unrewarded raises at D1",
+  "terms": "(phase == D1) * table((prev_action*100 + prev_state*10 + prev_reward), {111: -0.044, 110: 0.083, 121: 0.032, 120: 0.14, 221: -0.038, 220: 0.104, 211: -0.131, 210: 0.0}) ;; (phase == GO) * table((prev_action*100 + prev_state*10 + prev_reward), {111: 0.083, 110: -0.007, 121: 0.07, 120: 0.103, 221: -0.035, 220: -0.035, 211: -0.031, 210: -0.195}) ;; (phase == D2) * table((prev_action*100 + prev_state*10 + prev_reward), {111: 0.028, 110: 0.013, 121: 0.018, 120: 0.104, 221: -0.04, 220: 0.0, 211: -0.033, 210: -0.048}) ;; (phase == GO) * np.clip(belief_lo, -4, 4) ;; (phase == D2) * table(action*10 + state, {11: 0.023, 12: 0.087, 21: -0.061, 22: -0.024})",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r of unit 39: high (~0.7) at D1/GO, low (~0.15) at D2; timing explains R^2 0.92. Beyond timing, uses observed quantities only: (1) at D1 the previous trial's outcome: unrewarded trials raise it (a1 S2 u +0.14, a2 S2 u +0.10, a1 S1 u +0.08), rewarded ones lower it, strongest after a2 S1 r (-0.13). (2) at GO it tracks a model-based leaning toward a1: higher after a1 S1 r / a1 S2 u / a1 S2 r, much lower after a2 S1 u (-0.20), plus a graded increase with the ideal-observer log-odds that S1 is good (belief_lo). (3) at D2 the previous trial (a1 S2 u +0.10) plus this trial's choice x reached state (a1->S2 rare +0.09, a2->S1 -0.06). Trial-before tables and D2 belief added ~0 once belief and last trial were in; reward-streak terms added <0.01. No future variables. Test R^2 beyond timing 0.70 (dev 0.71) vs all-observed reference 0.80 and all ceiling 0.88; the earlier model-policy explanation (policy decile alone 0.58) is largely replaced by belief_lo + last-trial tables at GO. Residual errors are cumulative streaks (repeated a2 S1 u pushing GO to ~0.2, repeated a1 S1 r pushing D1 to ~0.55).",
+  "gate": "unit_reset",
+  "feature": 39,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 39,
+    "terms": [
+      "(phase == D1) * table((prev_action*100 + prev_state*10 + prev_reward), {111: -0.044, 110: 0.083, 121: 0.032, 120: 0.14, 221: -0.038, 220: 0.104, 211: -0.131, 210: 0.0})",
+      "(phase == GO) * table((prev_action*100 + prev_state*10 + prev_reward), {111: 0.083, 110: -0.007, 121: 0.07, 120: 0.103, 221: -0.035, 220: -0.035, 211: -0.031, 210: -0.195})",
+      "(phase == D2) * table((prev_action*100 + prev_state*10 + prev_reward), {111: 0.028, 110: 0.013, 121: 0.018, 120: 0.104, 221: -0.04, 220: 0.0, 211: -0.033, 210: -0.048})",
+      "(phase == GO) * np.clip(belief_lo, -4, 4)",
+      "(phase == D2) * table(action*10 + state, {11: 0.023, 12: 0.087, 21: -0.061, 22: -0.024})"
+    ],
+    "weights": [
+      1.0032229548097285,
+      0.6947116673605628,
+      0.5418290580423456,
+      0.01142204710920008,
+      0.7039443293302693
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7012336242759954,
+    "r2": 0.9770007023317728,
+    "r2_timing_only": 0.923019122843082
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 39,
+    "terms": [
+      "(phase == D1) * table((prev_action*100 + prev_state*10 + prev_reward), {111: -0.044, 110: 0.083, 121: 0.032, 120: 0.14, 221: -0.038, 220: 0.104, 211: -0.131, 210: 0.0})",
+      "(phase == GO) * table((prev_action*100 + prev_state*10 + prev_reward), {111: 0.083, 110: -0.007, 121: 0.07, 120: 0.103, 221: -0.035, 220: -0.035, 211: -0.031, 210: -0.195})",
+      "(phase == D2) * table((prev_action*100 + prev_state*10 + prev_reward), {111: 0.028, 110: 0.013, 121: 0.018, 120: 0.104, 221: -0.04, 220: 0.0, 211: -0.033, 210: -0.048})",
+      "(phase == GO) * np.clip(belief_lo, -4, 4)",
+      "(phase == D2) * table(action*10 + state, {11: 0.023, 12: 0.087, 21: -0.061, 22: -0.024})"
+    ],
+    "weights": [
+      1.0032229548097285,
+      0.6947116673605628,
+      0.5418290580423456,
+      0.01142204710920008,
+      0.7039443293302693
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7069771075755172,
+    "r2": 0.9770795938190426,
+    "r2_timing_only": 0.921779469203539
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced: test R^2 beyond timing is 0.7012 (timing-only R^2 0.923, total 0.977). Misses show mean error by phase of 0.000 to 0.003, and the largest cell errors by phase x previous trial are about \u00b10.027 (GO after a1 S2 r / a2 S2 r +0.027/+0.024, GO after a2 S2 u -0.024). That is small and scattered.",
+      "The D1 claim 'unrewarded raises, rewarded lowers' is only roughly true. a2 S1 u (rare unrewarded) is +0.002 at D1, not raised, and a1 S2 r (rare rewarded) is +0.032, slightly raised rather than lowered. The pattern holds for common trials only.",
+      "The claim that 'tables for the trial before added about 0' is overstated. Adding the trial-before table at GO and D1 (shaped like the last-trial tables) raises test R^2 from 0.701 to 0.723 (+0.022). Adding that plus a GO last_is('a2 S1 u')*belief_lo interaction gives 0.729.",
+      "The GO belief_lo term is modest. Dropping it costs 0.027 (0.674 without it). Dropping the D2 action x state table costs 0.033. Both claims hold, but belief is not a large driver beyond the last-trial tables.",
+      "There is a systematic streak error, which the explanation acknowledges. During long a1 S1 r runs the unit is over-predicted in all three phases, not only at D1: D1 0.53-0.56 vs 0.63-0.69 predicted, GO 0.72 vs 0.79-0.80, D2 0.10 vs 0.17-0.18. Repeated a2 S1 u pushes GO to about 0.2 against a predicted 0.53. Streak indicators add only about 0.01-0.03 of test R^2, so this class is large in single windows but small in variance.",
+      "There is still a gap of about 0.10 to the all-observed reference (0.80). No term set within 8 terms that I tried got past 0.73.",
+      "The label's 'a1-vs-a2 leaning' really describes only GO. At D1 the drive is mostly an unrewarded-vs-rewarded effect, mainly after common transitions."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "r39: raised at D1 after common unrewarded trials, lowered after rewarded ones; at GO it leans toward a1 (last-trial pattern plus belief_lo); saturates on streaks",
+    "better_terms": "(phase == D1) * table((prev_action*100 + prev_state*10 + prev_reward), {111: -0.044, 110: 0.083, 121: 0.032, 120: 0.14, 221: -0.038, 220: 0.104, 211: -0.131, 210: 0.0}) ;; (phase == GO) * table((prev_action*100 + prev_state*10 + prev_reward), {111: 0.083, 110: -0.007, 121: 0.07, 120: 0.103, 221: -0.035, 220: -0.035, 211: -0.031, 210: -0.195}) ;; (phase == D2) * table((prev_action*100 + prev_state*10 + prev_reward), {111: 0.028, 110: 0.013, 121: 0.018, 120: 0.104, 221: -0.04, 220: 0.0, 211: -0.033, 210: -0.048}) ;; (phase == GO) * np.clip(belief_lo, -4, 4) ;; (phase == D2) * table(action*10 + state, {11: 0.023, 12: 0.087, 21: -0.061, 22: -0.024}) ;; (phase==GO)*table(tv('action',-2)*100+tv('state',-2)*10+tv('reward',-2),{111:0.083,110:-0.007,121:0.07,120:0.103,221:-0.035,220:-0.035,211:-0.031,210:-0.195}) ;; (phase==D1)*table(tv('action',-2)*100+tv('state',-2)*10+tv('reward',-2),{111:-0.044,110:0.083,121:0.032,120:0.14,221:-0.038,220:0.104,211:-0.131,210:0.0}) ;; (phase==GO)*last_is('a2 S1 u')*np.clip(belief_lo,-4,4)",
+    "better_terms_test_r2_beyond_timing": 0.729
+  },
+  "final_label": "r39: raised at D1 after common unrewarded trials, lowered after rewarded ones; at GO it leans toward a1 (last-trial pattern plus belief_lo); saturates on streaks"
+}

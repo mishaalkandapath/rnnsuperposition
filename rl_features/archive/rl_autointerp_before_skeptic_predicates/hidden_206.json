@@ -1,0 +1,66 @@
+{
+  "label": "GO step after a rewarded trial, when the agent strongly commits to a1 (before late episode)",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (choice > 8) & (ep_trial < 75)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO (never D1 or D2), and only when the previous trial was rewarded (99.9% of mass) and the agent is about to pick a1 with a strongly confident policy (choice logit > 8 holds 99.6% of mass; it essentially never fires before an a2 choice). It is therefore an a1-specific win-stay-commit signal, mostly when S1 is the good state. Activity drops off late in the episode and is about zero after trial ~80, so an ep_trial < 75 cutoff removes many false positives. Magnitude is largest on the first rewarded a1 trial after an unrewarded one and decays over a run of consecutive rewarded a1 trials. Those long reward streaks make up most of the remaining false positives, but a streak-length predicate scored worse than the time cutoff. Every variable used is observed: prev_reward is the D1 input, and choice is the agent own policy output at that step. Dev: P 0.74, R 0.95, F1 0.84.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 206,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (choice > 8) & (ep_trial < 75)",
+    "split": "test",
+    "precision": 0.7405751186163197,
+    "recall": 0.9521350197813334,
+    "f1": 0.8331343792633014,
+    "mass_recall": 0.9889437791399519,
+    "correlation": 0.7009349590565569,
+    "n_active": 51311,
+    "n_predicted": 65969,
+    "coverage_by_activation_quartile": [
+      0.8486124103523542,
+      0.9608668537574057,
+      0.9990645463049579,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 206,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (choice > 8) & (ep_trial < 75)",
+    "split": "dev",
+    "precision": 0.7448490109187264,
+    "recall": 0.9544549818522421,
+    "f1": 0.8367247440404403,
+    "mass_recall": 0.989605833101265,
+    "correlation": 0.7038588424825767,
+    "n_active": 51246,
+    "n_predicted": 65667,
+    "coverage_by_activation_quartile": [
+      0.8535747736497034,
+      0.9651108335935061,
+      0.9991413628912653,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 206,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Phase claim holds: GO carries 100% of activation mass, D1 and D2 have 0 active steps.",
+      "prev_reward claim holds: prev_reward==1 carries 0.999 of the mass. One unstated point: the feature needs the previous trial to have been COMMON-rewarded (prev_common==0 carries 0.001 of the mass), so it is really 'S1 just paid off'. Restricting to prev_state==2 gives 0 predicted steps, so choice>8 already filters out rare-rewarded cases implicitly. Adding prev_common!=0 changes test F1 only from 0.833 to 0.837.",
+      "a1 claim holds: action==2 has 4 of 51246 active steps, and choice >= 8.07 carries 0.996 of the mass.",
+      "Fade and streak claims hold, and they are the main systematic false-positive class. Precision of the base predicate by episode time (dev): 0.95 for trials 0-24, 0.85 for 25-49, 0.49 for 50-74, 0.05 for 75+. By streak (test): 0.90 when trial t-2 was unrewarded vs 0.59 when the two previous trials were also rewarded. This is a graded decay, so the hard ep_trial<75 cutoff is a coarse proxy. The explanation openly acknowledges these false positives, so I do not count them as a refutation.",
+      "Cutoff choice is slightly off: ep_trial<65 scores better than <75 (dev F1 0.854 vs 0.84; test P 0.814, R 0.891, F1 0.851). Combinations with streak or value give only about +0.02.",
+      "The unrecorded value-head claim is only roughly true: value>7.6 instead of the time cutoff gives dev F1 0.818 (vs 0.84). value>7.5 & ep_trial<75 gives 0.841.",
+      "No future variables are used. prev_reward is observed and choice is the agent's own policy output, so no observed-only substitute is needed.",
+      "Rel position shows no artifact: precision is about 0.74 at every rel, including rel -3."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == GO) & (prev_reward == 1) & (choice > 8) & (ep_trial < 65)",
+    "better_predicate_test_f1": 0.851
+  }
+}

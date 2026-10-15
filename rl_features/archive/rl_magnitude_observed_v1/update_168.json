@@ -1,0 +1,78 @@
+{
+  "label": "GO in mid-late episode, scaled by rewarded last trial and S2-good belief (after a2 S2 r)",
+  "terms": "(phase == GO) * np.exp(-((ep_trial-72)/18.0)**2) * (belief < 0.3) * (prev_reward == 1) ;; (phase == GO) * np.exp(-((ep_trial-72)/18.0)**2) * last_is(\"a2 S2 r\") ;; (phase == GO) * np.exp(-((ep_trial-72)/18.0)**2) * (belief < 0.1) * (prev_reward == 1) ;; (phase == GO) * np.exp(-((ep_trial-72)/18.0)**2) * (prev_reward == 0) ;; (phase == GO) * np.exp(-((ep_trial-72)/18.0)**2) * (belief > 0.5) ;; (phase == GO) * np.exp(-((ep_trial-72)/18.0)**2) * last_is(\"a2 S1 r\") ;; (phase == GO) * np.exp(-((ep_trial-72)/18.0)**2) * last_is(\"a1 S2 r\")",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Active only at GO, inside a mid-to-late-episode window (about trials 40-95, peaking around 70; modelled as a Gaussian in ep_trial centred at 72, width 18 that multiplies every term, since the additive timing baseline cannot capture this gating). Within that window the magnitude is set by observed history. It is large when the last trial was rewarded and the ideal observer believes S2 is good (belief < 0.3, with an extra step at belief < 0.1), largest after a common rewarded a2 -> S2 trial (around +0.5). It is pushed down after an unrewarded trial, when the belief favours S1 (> 0.5), and after rare rewarded trials (a2 S1 r is strongly negative; a1 S2 r is weaker), i.e. whenever the model-based agent would not stay with a2. Read this way it is a 'commit to a2 now' signal. D1 and D2 are always zero. Scores (R^2 beyond timing, observed-only, no FUTURE or model-output terms): last_is a2 S2 r alone 0.41 dev; times the episode window 0.45; 4 terms (belief x reward, a2 S2 r, prev_reward==0) 0.66 dev; 5 terms 0.73 dev / 0.72 test; final 7 terms 0.75 dev / 0.74 test. That is well above the profile's additive 'all' ceiling (0.40) and 'all observed' (0.36), because the gain comes from multiplying by the episode window. What is lost by not using the model's value/policy: the policy-decile table alone scored 0.23 and the belief-decile table 0.21, so the observed belief almost fully stands in for the policy; the remaining error is mostly GO after an unknown previous trial and after a1 S2 u.",
+  "gate": "update",
+  "feature": 168,
+  "test_scores": {
+    "gate": "update",
+    "feature": 168,
+    "terms": [
+      "(phase == GO) * np.exp(-((ep_trial-72)/18.0)**2) * (belief < 0.3) * (prev_reward == 1)",
+      "(phase == GO) * np.exp(-((ep_trial-72)/18.0)**2) * last_is(\"a2 S2 r\")",
+      "(phase == GO) * np.exp(-((ep_trial-72)/18.0)**2) * (belief < 0.1) * (prev_reward == 1)",
+      "(phase == GO) * np.exp(-((ep_trial-72)/18.0)**2) * (prev_reward == 0)",
+      "(phase == GO) * np.exp(-((ep_trial-72)/18.0)**2) * (belief > 0.5)",
+      "(phase == GO) * np.exp(-((ep_trial-72)/18.0)**2) * last_is(\"a2 S1 r\")",
+      "(phase == GO) * np.exp(-((ep_trial-72)/18.0)**2) * last_is(\"a1 S2 r\")"
+    ],
+    "weights": [
+      0.19712100970545884,
+      0.07754037119792047,
+      0.13886398826403928,
+      -0.10271127348394354,
+      -0.10038673987617021,
+      -0.20203884628260144,
+      -0.10265151205085349
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7386368748851925,
+    "r2": 0.7975078238139506,
+    "r2_timing_only": 0.22524581041376113
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 168,
+    "terms": [
+      "(phase == GO) * np.exp(-((ep_trial-72)/18.0)**2) * (belief < 0.3) * (prev_reward == 1)",
+      "(phase == GO) * np.exp(-((ep_trial-72)/18.0)**2) * last_is(\"a2 S2 r\")",
+      "(phase == GO) * np.exp(-((ep_trial-72)/18.0)**2) * (belief < 0.1) * (prev_reward == 1)",
+      "(phase == GO) * np.exp(-((ep_trial-72)/18.0)**2) * (prev_reward == 0)",
+      "(phase == GO) * np.exp(-((ep_trial-72)/18.0)**2) * (belief > 0.5)",
+      "(phase == GO) * np.exp(-((ep_trial-72)/18.0)**2) * last_is(\"a2 S1 r\")",
+      "(phase == GO) * np.exp(-((ep_trial-72)/18.0)**2) * last_is(\"a1 S2 r\")"
+    ],
+    "weights": [
+      0.19712100970545884,
+      0.07754037119792047,
+      0.13886398826403928,
+      -0.10271127348394354,
+      -0.10038673987617021,
+      -0.20203884628260144,
+      -0.10265151205085349
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7500108981019216,
+    "r2": 0.8077648695084786,
+    "r2_timing_only": 0.23102595660391456
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The 'pushed down' claims overstate the effect. The profile residuals show every previous-trial pattern other than a2 S2 r sits at the same level at GO: a2 S1 r -0.055, a1 S2 r -0.048, a1 S1 r -0.056, a2 S2 u -0.056. Belief deciles 5-9 are flat at about -0.055 too. The negative weights on a2 S1 r (-0.20), a1 S2 r (-0.10), prev_reward==0 and belief>0.5 mostly cancel the windowed timing baseline and the positive belief<0.3 * rewarded term. They show the feature is simply off in those cases, not specifically suppressed after rare rewarded trials. In my decomposition, a2 S1 r * (belief<0.3) gets -0.145 and a1 S2 r * (belief<0.3) gets -0.10, about the same as an unrewarded trial (-0.145).",
+      "The individual terms do earn their place on test. The 5 terms alone score 0.717. Adding a2 S1 r gives 0.734 and adding a1 S2 r gives 0.720, so a2 S1 r helps a little and a1 S2 r almost nothing. Dropping prev_reward==0 gives 0.697, dropping the belief terms gives 0.503, and dropping the episode window gives 0.365, which matches the additive ceiling. The belief and window claims hold.",
+      "The window is hand-tuned and asymmetric. Moving the Gaussian to 76/14 gives 0.658, 78/12 gives 0.577 and a box over trials 40-92 gives 0.621. A piecewise-linear window (rising slowly from trial 30, peaking at 75, falling sharply after 85) with the same 7 terms gives 0.761 test. So 'peaking near 70' is approximate.",
+      "The misses show no large systematic error class. The biggest mean errors by (phase, previous trial) are GO after a1 S1 r -0.021, GO after a2 S1 u -0.019, GO after a1 S2 u +0.013 and GO after unknown +0.012, all small. The worst windows are GO steps late in a run of a2 S2 r trials, mostly the first of the run, where the prediction is 0.03-0.16 against an actual 0.6. That points to an under-modelled build-up over repeated a2 S2 r trials and to the belief being weak at window starts (low belief_cover). Neither a two-back streak term nor a belief_cover<5 term recovered much (+0.01 to +0.03)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO only, mid-late episode (trials ~40-90): fires after a rewarded trial when the observed belief says S2 is good, strongest after common rewarded a2->S2; otherwise off",
+    "better_terms": "W = (phase == GO) * np.interp(ep_trial, [30,45,55,65,75,85,92,100], [0,0.3,0.55,0.85,1,0.7,0.1,0]); W*(belief<0.3)*(prev_reward==1) ;; W*last_is(\"a2 S2 r\") ;; W*(belief<0.1)*(prev_reward==1) ;; W*(prev_reward==0) ;; W*(belief>0.5) ;; W*last_is(\"a2 S1 r\") ;; W*last_is(\"a1 S2 r\") ;; W*(belief<0.3)*(prev_reward==1)*(belief_cover<5)",
+    "better_terms_test_r2_beyond_timing": 0.763
+  },
+  "final_label": "GO only, mid-late episode (trials ~40-90): fires after a rewarded trial when the observed belief says S2 is good, strongest after common rewarded a2->S2; otherwise off"
+}

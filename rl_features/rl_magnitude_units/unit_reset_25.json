@@ -1,0 +1,91 @@
+{
+  "label": "At D1, high after reaching S1, low after reaching S2, lowest after rewarded S2.",
+  "short_terms": "(phase == D1) * (prev_state == S1) ;; (phase == D1) * (prev_state == S2) ;; (phase == D1) * (prev_state == S2) * (prev_reward == 1)",
+  "terms": "(phase == D1) * (prev_state == S1) ;; (phase == D1) * (prev_state == S2) ;; (phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_state == S1) * ep_dec ;; (phase == D1) * (prev_state == S2) * ep_dec ;; (phase == GO) * (prev_reward == 1) ;; (phase == D1) * belief_lo ;; (phase == D1) * (prev_reward == 1) * ep_dec",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r of unit 25 varies beyond timing almost only at D1, where it encodes the state reached on the previous trial: about +0.16 after S1 vs -0.12 after S2 (relative to the window-start case), with an extra drop after a rewarded S2 visit (reward lowers it a little after S1 too). The previous choice and common/rare transition matter little; GO and D2 residuals are small (GO slightly lower after reward). The free fit adds episode-progress scaling of the state effect (it grows late in the episode, when the gate overall drops), a small GO reward term, and belief_lo at D1, gaining about 0.03 R^2. No future, hidden or model-output variables used.",
+  "full_test_scores": {
+    "gate": "unit_reset",
+    "feature": 25,
+    "terms": [
+      "(phase == D1) * (prev_state == S1)",
+      "(phase == D1) * (prev_state == S2)",
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_state == S1) * ep_dec",
+      "(phase == D1) * (prev_state == S2) * ep_dec",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == D1) * belief_lo",
+      "(phase == D1) * (prev_reward == 1) * ep_dec"
+    ],
+    "weights": [
+      0.10543955237820317,
+      -0.09015196170334824,
+      -0.026711931742476516,
+      0.009338462687047636,
+      -0.005756076013716777,
+      -0.024728287089238715,
+      0.004693816747741949,
+      -0.0016727761732122355
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7265486755202442,
+    "r2": 0.8988431301182672,
+    "r2_timing_only": 0.6300735786371309
+  },
+  "gate": "unit_reset",
+  "feature": 25,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 25,
+    "terms": [
+      "(phase == D1) * (prev_state == S1)",
+      "(phase == D1) * (prev_state == S2)",
+      "(phase == D1) * (prev_state == S2) * (prev_reward == 1)"
+    ],
+    "weights": [
+      0.14145212434232254,
+      -0.09539293035458239,
+      -0.062320349052176385
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6949830123994155,
+    "r2": 0.8871661573220332,
+    "r2_timing_only": 0.6300735786371309
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 25,
+    "terms": [
+      "(phase == D1) * (prev_state == S1)",
+      "(phase == D1) * (prev_state == S2)",
+      "(phase == D1) * (prev_state == S2) * (prev_reward == 1)"
+    ],
+    "weights": [
+      0.14145212434232254,
+      -0.09539293035458239,
+      -0.062320349052176385
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6973956673758284,
+    "r2": 0.8876585389691148,
+    "r2_timing_only": 0.628751313450588
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The S2-specific reward term barely beats a generic D1 reward term (test 0.695 vs 0.693 with (phase==D1)*(prev_reward==1)). Reward lowers the gate after S1 as well (residuals: a1 S1 r +0.136 vs a1 S1 u +0.172; a2 S1 r +0.109 vs a2 S1 u +0.15), so 'lowest after rewarded S2' is true, but the reward effect is not specific to S2.",
+      "Misses shows a systematic error late in the episode: in trials 95-99, after runs of rewarded S2 visits, D1 values are about 0.23 against a prediction of about 0.37, so the gate drops more than the model allows. Adding ep_dec interactions did not help as a short form (0.610 and 0.687 on test).",
+      "Also under-modeled: rewarded S2 after a rare transition (D1 after a1 S2 r, -0.061 over-predicted) and a small GO effect after unrewarded trials (+0.03 to +0.04). Rare-transition terms did not improve the short form (0.680, 0.677, 0.694 on test).",
+      "Remaining gap: the short form scores 0.695 on test, against 0.74 for the last-trial table and an observed ceiling of 0.77. No variant I tried beat the recorded short form, and none of its terms are disguised curve fitting."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "At D1, high after reaching S1, low after reaching S2, lowest after rewarded S2.",
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "At D1, high after reaching S1, low after reaching S2, lowest after rewarded S2."
+}

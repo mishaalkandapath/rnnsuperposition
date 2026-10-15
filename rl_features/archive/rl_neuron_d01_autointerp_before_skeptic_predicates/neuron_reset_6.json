@@ -1,0 +1,64 @@
+{
+  "label": "D2 after a rare a1->S2 transition while the policy still favors a1",
+  "predicate": "(phase == D2) & (action == 1) & (state == 2) & (choice > 2.78)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (100% of mass), and only when this trial chose a1 and reached S2, i.e. a rare transition after a1 (99.8% of mass; never after a2->S2 common or any S1 arrival). Within a1->S2R steps it is gated by the model policy logit at that step: active when logit(a1)-logit(a2) is above about 2.8 (a1 still preferred), so it fires mostly when S1 is good (86% of mass) and the agent keeps choosing a1. Magnitude is largest after an unrewarded previous trial (prev_reward==0 holds 93% of mass; activations after a rewarded previous trial are ~0.1-0.3 of max), with value in the mid range 5.2-7.5. Using prev_reward==0 instead of the choice threshold gives dev F1 0.66 (precision 0.92 and F1 0.80 if both are combined). All variables are observed at D2; choice is the model own policy readout, not a future variable. Does not fire at D1 or GO, on rewarded inputs, or on a2 trials.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 6,
+    "predicate": "(phase == D2) & (action == 1) & (state == 2) & (choice > 2.78)",
+    "split": "test",
+    "precision": 0.7577947845804989,
+    "recall": 0.9207852591699672,
+    "f1": 0.8313768172277074,
+    "mass_recall": 0.9840213334901116,
+    "correlation": 0.7663497290186309,
+    "n_active": 11614,
+    "n_predicted": 14112,
+    "coverage_by_activation_quartile": [
+      0.712465564738292,
+      0.9721074380165289,
+      0.998622115053393,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 6,
+    "predicate": "(phase == D2) & (action == 1) & (state == 2) & (choice > 2.78)",
+    "split": "dev",
+    "precision": 0.7649614576033636,
+    "recall": 0.9349892933618844,
+    "f1": 0.8414723453459241,
+    "mass_recall": 0.9864670360763628,
+    "correlation": 0.7701873899929037,
+    "n_active": 11675,
+    "n_predicted": 14270,
+    "coverage_by_activation_quartile": [
+      0.763275094210346,
+      0.9773895169578622,
+      0.999314833847208,
+      1.0
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 6,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "I reproduced the reported test scores exactly: P 0.758, R 0.921, F1 0.831, mass recall 0.984. Every activation is at D2 (D1 and GO have 0 active steps), and in_rew==1 has 0 active steps.",
+      "'Never fires after common a2->S2' is very slightly overstated. On dev, 48 active steps (0.2% of mass) have action==2 & state==2, and the predicate (phase==D2)&(action==2)&(state==2) has precision 0.0003. That is noise, not a counterexample class.",
+      "The choice threshold 2.78 is not optimal. With choice>3.0 test F1 is 0.856 (P 0.817, R 0.899, mass recall 0.978), and dev F1 rises from about 0.83 to 0.868. This is a refinement, not a refutation.",
+      "The remaining false positives (3418 test steps) cluster where the previous trial was rewarded. On dev, a1->S2 & prev_reward==1 & choice>2.78 has precision only 0.51 and holds 7% of the mass. This matches the explanation's point that the previous-reward effect is weaker, and the explanation already notes it.",
+      "The 'policy still favors a1' gate is the model's own D2 logit readout, not a clean task variable. Replacing it with observed history works much worse: prev_action==1 gives F1 0.38, and prev_reward==0 & prev_action==1 gives F1 0.58. So the gate depends on the internal policy state, as the label says. The label does not overclaim.",
+      "The test misses are scattered across rel positions and hold 1.6% of the mass. No systematic missed class was found."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == D2) & (action == 1) & (state == 2) & (choice > 3.0)",
+    "better_predicate_test_f1": 0.856
+  }
+}

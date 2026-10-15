@@ -1,0 +1,85 @@
+{
+  "label": "z17 drops at D1 after a1->S2 (rare) or a1->a2 switch; GO tracks belief toward S2",
+  "terms": "(phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D1) * (prev_action == 2) * (prev_state == 1) ;; (phase == D1) * (prev_action == 2) * (tv(\"action\", -2) == 1) ;; (phase == D1) * last_is(\"a2 S2 u\") ;; (phase == GO) * last_is(\"a1 S1 r\") ;; (phase == GO) * (prev_action == 2) ;; (phase == GO) * belief_lo ;; (phase == D1) * (prev_action == 1) * (prev_state == 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 17 sits near 1 (mean 0.92) and dips mostly at D1. Its main driver is the previous trial at D1: after a1 that reached S2 (rare) it falls by about 0.21 regardless of reward; after a2 reaching S1 (rare) it rises by about 0.09; after a1 reaching S1 it rises by about 0.04; after a2 S2 unrewarded it dips slightly. A second D1 driver is a switch from a1 to a2 (previous trial a2, the one before a1): about -0.13. At GO it is lower after a1 S1 rewarded (-0.056), higher after any a2 choice (+0.026), and falls graded with the ideal-observer log-odds that S1 is good (higher when belief favours S2). D2 barely varies. Reward alone matters little at D1 (rewarded and unrewarded give the same dip). Observed-only test R^2 beyond timing 0.64 (dev 0.66), against all-observed reference 0.73 and all ceiling 0.83; the earlier model-policy version is replaced here by belief_lo at GO, and the policy-decile table alone reached 0.50, so belief_lo plus trial history loses little. Unexplained: residual dips building up late in the episode and some dips after a2 S2 common trials.",
+  "gate": "unit_update",
+  "feature": 17,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 17,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 1)",
+      "(phase == D1) * (prev_action == 2) * (tv(\"action\", -2) == 1)",
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == GO) * last_is(\"a1 S1 r\")",
+      "(phase == GO) * (prev_action == 2)",
+      "(phase == GO) * belief_lo",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 1)"
+    ],
+    "weights": [
+      -0.20567960441130498,
+      0.09422582578309471,
+      -0.12668806650037753,
+      -0.022286975580680057,
+      -0.05552479012916359,
+      0.0258176681184579,
+      -0.01102354310830432,
+      0.03864376128641097
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6432995680482512,
+    "r2": 0.7881613631547917,
+    "r2_timing_only": 0.40611611910281087
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 17,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 1)",
+      "(phase == D1) * (prev_action == 2) * (tv(\"action\", -2) == 1)",
+      "(phase == D1) * last_is(\"a2 S2 u\")",
+      "(phase == GO) * last_is(\"a1 S1 r\")",
+      "(phase == GO) * (prev_action == 2)",
+      "(phase == GO) * belief_lo",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 1)"
+    ],
+    "weights": [
+      -0.20567960441130498,
+      0.09422582578309471,
+      -0.12668806650037753,
+      -0.022286975580680057,
+      -0.05552479012916359,
+      0.0258176681184579,
+      -0.01102354310830432,
+      0.03864376128641097
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6588132851315831,
+    "r2": 0.7966180105769625,
+    "r2_timing_only": 0.40389827458119376
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The numbers in the claims hold up. Profile D1 residuals: a1 S2 r -0.206 and a1 S2 u -0.203 (so 'with or without reward' is right); a2 S1 +0.08 to +0.09; a1 S1 +0.04; a2 S2 u -0.03. GO: a1 S1 r -0.09. The GO belief gradient is monotone, from +0.057 at decile 0 to -0.078 at decile 9. D2 sits near 0.99 with residuals of 0.015 or less. Test R^2 0.643 reproduces exactly.",
+      "Two of the eight terms add little. Dropping (phase==D1)*last_is('a2 S2 u') leaves test R^2 near 0.637 (the 6-term base goes 0.613 -> 0.619 when it is added). The D1 a1 S1 term adds about 0.024 and partly acts as a D1 intercept shift.",
+      "A better observed cue was missed. After an a2 trial at D1, z is lower when the belief before that trial favoured S1, i.e. the a2 choice went against the evidence. Adding (phase==D1)*(prev_action==2)*tv('belief',-1) (weight -0.08) lifts test R^2 from 0.643 to 0.659. The a1->a2 switch term partly stands in for this.",
+      "The loss from dropping the model's policy is measurable but was not reported. Putting (phase==GO)*choice in place of GO belief_lo in the same 8-term set gives test 0.678 against 0.643, a loss of about 0.035. On its own at GO, belief_lo scores 0.18 against 0.24 for choice.",
+      "The worst misses are large one-off D1 dips (actual about 0.47-0.57, predicted about 0.80-0.87) after common trials (a1 S1c, a2 S2c). Neither observed history (trial-before tables, belief_cover, |belief|, reward surprise) nor future cues (the upcoming choice or stay at D1) capture them. They do not group by phase or previous trial: the largest phase x previous-trial mean error is only +0.03 (GO after a2 S2 u, under-predicted), and D2 after a1 S2 u is -0.015.",
+      "The note that 'dips build up late in the episode' remain unexplained is misleading. The late-episode D1 drop (the D1 baseline falls to 0.815 in decile 9) is part of the timing baseline already. What is actually left over is the scattered large D1 dips after common trials.",
+      "There is still a gap of about 0.09 to the all-observed reference (0.73). A richer last-trial table plus trial-before terms only reaches 0.66, so the gap is not a simple missing additive cue."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "z17 drops at D1 after a1->S2 rare trials and after a2 chosen against the belief or as an a1->a2 switch; at GO it is lower after a1 S1 rewarded and when the belief favours S1",
+    "better_terms": "(phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D1) * (prev_action == 2) * (prev_state == 1) ;; (phase == D1) * (prev_action == 2) * (tv('action', -2) == 1) ;; (phase == GO) * last_is('a1 S1 r') ;; (phase == GO) * (prev_action == 2) ;; (phase == GO) * belief_lo ;; (phase == D1) * (prev_action == 1) * (prev_state == 1) ;; (phase == D1) * (prev_action==2) * tv('belief', -1)",
+    "better_terms_test_r2_beyond_timing": 0.6585
+  },
+  "final_label": "z17 drops at D1 after a1->S2 rare trials and after a2 chosen against the belief or as an a1->a2 switch; at GO it is lower after a1 S1 rewarded and when the belief favours S1"
+}

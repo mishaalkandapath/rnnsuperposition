@@ -1,0 +1,71 @@
+{
+  "label": "D1 after a1 went rare to S2; larger if unrewarded and S1 believed good",
+  "terms": "(phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * belief_lo ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * np.clip(ep_trial - 90, 0, 9) ;; (phase == D1) * (prev_state >= 1) * ((prev_action != 1) | (prev_state != 2))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Active only at D1 (zero at GO and D2). Magnitude is set by the previous trial: about +2.4 above baseline when the previous choice was a1 and it reached S2 (rare transition), and near zero after any other known previous trial (a1 S1, a2 S1, a2 S2: about -0.3 vs baseline). Inside a1->S2 trials it is somewhat smaller when that trial was unrewarded (-0.6 relative to rewarded, once belief is controlled for) and it grows with the ideal-observer log-odds that S1 is good (+0.3 per unit belief_lo). It fades in the last ~10 trials of the episode (-0.36 per trial beyond trial 90). All terms are observed-only (no future, hidden or model-output variables). Test R^2 beyond timing 0.775 (dev 0.779), against an all-cue ceiling of 0.79 and all-observed 0.76; the earlier value/policy explanation is not needed, since policy decile alone gives only 0.28 and dropping model outputs costs essentially nothing.",
+  "gate": "reset",
+  "feature": 18,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 18,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * belief_lo",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * np.clip(ep_trial - 90, 0, 9)",
+      "(phase == D1) * (prev_state >= 1) * ((prev_action != 1) | (prev_state != 2))"
+    ],
+    "weights": [
+      2.317301100815661,
+      -0.6241466803000731,
+      0.3220664753403137,
+      -0.3612728583833289,
+      -0.34161090835736296
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.774613284701057,
+    "r2": 0.7956425555323636,
+    "r2_timing_only": 0.09330306270897304
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 18,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * belief_lo",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * np.clip(ep_trial - 90, 0, 9)",
+      "(phase == D1) * (prev_state >= 1) * ((prev_action != 1) | (prev_state != 2))"
+    ],
+    "weights": [
+      2.317301100815661,
+      -0.6241466803000731,
+      0.3220664753403137,
+      -0.3612728583833289,
+      -0.34161090835736296
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7785628369673049,
+    "r2": 0.7992989270053025,
+    "r2_timing_only": 0.09364322480475351
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The label's claim 'larger if rewarded' does not hold up. Without conditioning, unrewarded a1->S2 trials sit higher: the D1 residual is +2.61 after 'a1 S2 u' and +2.34 after 'a1 S2 r'. Scoring A + last_is('a1 S2 u') alone gives a +0.27 weight on the unrewarded term (test 0.674). The sign only turns negative (-0.62) when belief_lo is added, and belief_lo at D1 already includes that same trial's outcome. So the 'rewarded' effect is just a re-parametrization of the belief update.",
+      "The reward and belief effects cannot be told apart. If the a1->S2 terms use the belief from BEFORE that trial (tv('belief',-1) as log-odds) instead of the post-outcome belief_lo, the unrewarded term flips to +0.26 and test R^2 is 0.7744, against 0.7746 for the original terms. The data fit 'higher if S1 was believed good beforehand, slightly higher if unrewarded' just as well as 'higher if rewarded and S1 believed good'. The label picks one reading the data do not prefer.",
+      "One systematic miss class is left. The worst-fit windows are all at the first D1 of a window (prev_action = -1, previous trial unknown): actual is about 3.9 and predicted 0.43. Adding (phase==D1)*(prev_action==-1)*belief_lo plus a constant for that case raises test R^2 from 0.775 to 0.788. Part of this is a window-truncation limit, but belief carries some signal there.",
+      "The late-episode fade claim (past trial 90) holds: weight -0.36 per trial. Starting the ramp at trial 80 fits about as well. 'Only at D1' is confirmed: the GO and D2 baselines and residuals are exactly 0. The 'other previous trial is about -0.3' claim is confirmed (-0.34).",
+      "The headline fit reproduces: test R^2 beyond timing is 0.775, above the 0.76 observed-only additive ceiling. So the feature is well explained; the problem is how the reward/belief part is worded in the label."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a1 went rare to S2; scaled by belief that S1 is good (reward effect not separable from the belief update); fades after trial 90",
+    "better_terms": "(phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * belief_lo ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * np.clip(ep_trial - 90, 0, 9) ;; (phase == D1) * (prev_state >= 1) * ((prev_action != 1) | (prev_state != 2)) ;; (phase==D1)*(prev_action==-1)*belief_lo ;; (phase==D1)*(prev_action==-1)",
+    "better_terms_test_r2_beyond_timing": 0.7875
+  },
+  "final_label": "D1 after a1 went rare to S2; scaled by belief that S1 is good (reward effect not separable from the belief update); fades after trial 90"
+}

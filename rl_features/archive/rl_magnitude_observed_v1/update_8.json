@@ -1,0 +1,72 @@
+{
+  "label": "D1 after a1->S2 rare rewarded; strongest if the trial before was also unrewarded a1 / S2",
+  "terms": "(phase == D1) * last_is(\"a1 S2 r\") ;; (phase == D1) * last_is(\"a1 S2 r\") * belief_lo ;; (phase == D1) * last_is(\"a1 S2 r\") * (tv(\"action\", -2) == 1) * (tv(\"reward\", -2) == 0) ;; (phase == D1) * last_is(\"a1 S2 r\") * (tv(\"state\", -2) == 2) * (tv(\"reward\", -2) == 0) ;; (phase == D1) * last_is(\"a1 S2 r\") * (tv(\"action\", -2) == -9)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Sparse feature (nonzero on 0.6% of steps), active only at D1. It fires almost only when the previous trial was a1 -> S2 (rare) and rewarded (residual +0.29 vs about -0.01 for every other pattern). That indicator alone gives dev R^2 0.33 beyond timing. Its magnitude depends on the trial before: it is largest when the trial two back was unrewarded, especially an unrewarded a1 -> S2 rare trial (fitted weights +0.28 for unrewarded a1 two back, +0.36 for unrewarded S2 two back), and it is weak when that trial was rewarded. When the trial two back lies outside the window it takes a moderate value. Observed belief log-odds toward S1 adds a small positive graded effect (weight 0.08); belief_cover, episode decile and |belief| add nothing. GO and D2 are always zero. Test R^2 beyond timing is 0.50, above the profile all-cue ceiling of 0.38 because these terms are interactions. The worst misses are full-size firings at the window first trial, where the previous trial is unseen. No model outputs are used, and the model-based value/policy cues are not needed to reach this score.",
+  "gate": "update",
+  "feature": 8,
+  "test_scores": {
+    "gate": "update",
+    "feature": 8,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * last_is(\"a1 S2 r\") * belief_lo",
+      "(phase == D1) * last_is(\"a1 S2 r\") * (tv(\"action\", -2) == 1) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * last_is(\"a1 S2 r\") * (tv(\"state\", -2) == 2) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * last_is(\"a1 S2 r\") * (tv(\"action\", -2) == -9)"
+    ],
+    "weights": [
+      0.08924345989797992,
+      0.0770791381420306,
+      0.27624635631564565,
+      0.36450450865089734,
+      0.14495059507680444
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.49562736532795004,
+    "r2": 0.5020827095405624,
+    "r2_timing_only": 0.012798759823299477
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 8,
+    "terms": [
+      "(phase == D1) * last_is(\"a1 S2 r\")",
+      "(phase == D1) * last_is(\"a1 S2 r\") * belief_lo",
+      "(phase == D1) * last_is(\"a1 S2 r\") * (tv(\"action\", -2) == 1) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * last_is(\"a1 S2 r\") * (tv(\"state\", -2) == 2) * (tv(\"reward\", -2) == 0)",
+      "(phase == D1) * last_is(\"a1 S2 r\") * (tv(\"action\", -2) == -9)"
+    ],
+    "weights": [
+      0.08924345989797992,
+      0.0770791381420306,
+      0.27624635631564565,
+      0.36450450865089734,
+      0.14495059507680444
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5135891712928046,
+    "r2": 0.5200535795094522,
+    "r2_timing_only": 0.013290017070197724
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claim holds. The feature is zero at GO and D2 and only fires at D1 when the previous trial was a1->S2 rare and rewarded: the D1 residual is +0.287 there and about -0.01 for every other pattern. That indicator alone gives test R^2 0.319 beyond timing, and the full term set reproduces test 0.496.",
+      "The belief_lo term is a proxy for the two-back history, not a real graded effect. Once the two-back pattern is modelled properly, the belief_lo weight falls to -0.002 (test 0.4969 vs 0.4926 without it). belief_cover, ep_dec, belief and the pre-last-trial belief tv('belief',-1) add nothing either (<= +0.006). So 'belief adds a small graded effect (+0.08)' should be dropped.",
+      "The additive 'unrewarded a1 two back +0.28, unrewarded S2 two back +0.36' description misstates the shape. One separate indicator per two-back pattern, given last = a1 S2 r, gives (test 0.468): a1 S2 u +0.84, a2 S2 u +0.37, a1 S1 u +0.25, a1 S1 r +0.18. a1 S2 r, a2 S1 r and a2 S2 r are all about 0. The effect is concentrated in one pattern: an unrewarded a1->S2 trial followed by a rewarded a1->S2 trial.",
+      "'Weak when that trial was rewarded' is only partly true. A rewarded common a1->S1 trial two back still gives +0.18. Rewarded trials that reached S2, and rewarded a2 trials, give about 0.",
+      "The label leaves out three-back history. Adding (tv('reward',-3)==0) and (tv('state',-3)==2) under last = a1 S2 r raises test R^2 from about 0.49 to 0.547, with weights +0.14 and +0.15. The magnitude grows with a longer run of unrewarded / S2-reaching trials before the rare reward, not just with the trial two back.",
+      "The remaining worst misses are full-size firings (about 1.2) at D1 of the window's first trial, where the previous trial is not visible. They are unavoidable within the window, and an observed proxy such as (first trial & prev_reward == 1) gets weight about 0. The misses output shows no other systematic phase or previous-trial error: the largest mean errors are under 0.01."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 only, after a rewarded rare a1->S2 trial; largest when it follows an unrewarded a1->S2 trial (also, less so, unrewarded a2->S2 or any a1->S1 trial) and grows with further unrewarded / S2 trials three back. About 0 if the trial two back was a rewarded S2 or rewarded a2 trial.",
+    "better_terms": "L = (phase == D1) * last_is(\"a1 S2 r\"); terms: L * (tv(\"action\", -2) == -9) ;; L * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 2) * (tv(\"reward\", -2) == 0) ;; L * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 1) ;; L * (tv(\"action\", -2) == 2) * (tv(\"state\", -2) == 2) * (tv(\"reward\", -2) == 0) ;; L * (tv(\"reward\", -3) == 0) ;; L * (tv(\"state\", -3) == 2)",
+    "better_terms_test_r2_beyond_timing": 0.547
+  },
+  "final_label": "D1 only, after a rewarded rare a1->S2 trial; largest when it follows an unrewarded a1->S2 trial (also, less so, unrewarded a2->S2 or any a1->S1 trial) and grows with further unrewarded / S2 trials three back. About 0 if the trial two back was a rewarded S2 or rewarded a2 trial."
+}

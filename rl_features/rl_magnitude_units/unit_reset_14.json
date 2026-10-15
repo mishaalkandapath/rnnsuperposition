@@ -1,0 +1,112 @@
+{
+ "label": "Rises at D1 after unrewarded S1, at GO after unrewarded S2; drops at D1 after rewarded S2.",
+ "short_terms": "(prev_reward == 0) * ((phase == GO) == (prev_state == S2)) * (phase != D2) ;; (phase == D1) * (prev_reward == 1) * (prev_state == S2) ;; (phase == GO) * (prev_state == S1) * (prev_action == 2)",
+ "terms": "(phase == D1) * (prev_reward == 0) * (prev_state == S1) ;; (phase == GO) * (prev_reward == 0) * (prev_state == S2) ;; (phase == D1) * (prev_reward == 1) * (prev_state == S2) ;; (phase == GO) * (prev_reward == 1) * (prev_state == S1) ;; (phase == GO) * (prev_state == S1) * (prev_action == 2) ;; (phase == GO) * belief_lo ;; (phase == D1) * (tv(\"reward\", -2) == 0) ;; (phase == GO) * (tv(\"reward\", -2) == 0)",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Raw reset gate r of unit 14; timing (high at GO, low at D2, declining over the episode) explains R^2 0.88. Beyond timing the magnitude depends on the outcome of the previous trial, and the state that matters changes with phase. At D1 it rises after an unrewarded S1 trial (+0.09, whichever action was taken) and falls after a rewarded S2 trial (-0.05). At GO it rises after an unrewarded S2 trial (+0.08) and falls a little after S1 trials (more so after a2 -> S1 rare). Overall it encodes evidence against the state just visited (lack of reward), with S1 read out at D1 and S2 at GO. The free fit adds an unrewarded trial two back at D1 (runs of unrewarded trials push it higher), a small GO term for ideal-observer belief log-odds (higher when S1 looks good), and the GO S1 terms. D2 barely varies. Choice, future reward and the hidden good state add little.",
+ "full_test_scores": {
+  "gate": "unit_reset",
+  "feature": 14,
+  "terms": [
+   "(phase == D1) * (prev_reward == 0) * (prev_state == S1)",
+   "(phase == GO) * (prev_reward == 0) * (prev_state == S2)",
+   "(phase == D1) * (prev_reward == 1) * (prev_state == S2)",
+   "(phase == GO) * (prev_reward == 1) * (prev_state == S1)",
+   "(phase == GO) * (prev_state == S1) * (prev_action == 2)",
+   "(phase == GO) * belief_lo",
+   "(phase == D1) * (tv(\"reward\", -2) == 0)",
+   "(phase == GO) * (tv(\"reward\", -2) == 0)"
+  ],
+  "weights": [
+   0.0920127518524493,
+   0.0796936274286536,
+   -0.05428767445422056,
+   -0.025564853095995044,
+   -0.032494324663271325,
+   0.005820080848670444,
+   0.035182353803682447,
+   0.00020218721378464273
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6465410515695964,
+  "r2": 0.9586683835295052,
+  "r2_timing_only": 0.8830652989433848
+ },
+ "gate": "unit_reset",
+ "feature": 14,
+ "test_scores": {
+  "gate": "unit_reset",
+  "feature": 14,
+  "terms": [
+   "(prev_reward == 0) * ((phase == GO) == (prev_state == S2)) * (phase != D2)",
+   "(phase == D1) * (prev_reward == 1) * (prev_state == S2)",
+   "(phase == GO) * (prev_state == S1) * (prev_action == 2)"
+  ],
+  "weights": [
+   0.08844587493414384,
+   -0.04477211836270401,
+   -0.05109739830682496
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5854116161574103,
+  "r2": 0.9515202312738216,
+  "r2_timing_only": 0.8830652989433848
+ },
+ "dev_scores": {
+  "gate": "unit_reset",
+  "feature": 14,
+  "terms": [
+   "(prev_reward == 0) * ((phase == GO) == (prev_state == S2)) * (phase != D2)",
+   "(phase == D1) * (prev_reward == 1) * (prev_state == S2)",
+   "(phase == GO) * (prev_state == S1) * (prev_action == 2)"
+  ],
+  "weights": [
+   0.08844587493414384,
+   -0.04477211836270401,
+   -0.05109739830682496
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.5850033286491614,
+  "r2": 0.9525378639466207,
+  "r2_timing_only": 0.8856324897766352
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The label leaves out a systematic effect as large as one it does include. At GO after a2 reached S1 by a rare transition, the recorded short form over-predicts by -0.052 (rewarded) and -0.048 (unrewarded), per misses. These are the two largest over-prediction cells. The profile residuals agree (GO a2 S1 r -0.058, a2 S1 u -0.054), which is bigger than the D1 drop after rewarded S2 (-0.043) that the label does mention. The explanation calls this effect 'small', but it is not.",
+   "The core claims hold. Fitted weights are D1 after unrewarded S1 +0.104 (residuals a1 +0.093, a2 +0.102, so the action taken doesn't matter), GO after unrewarded S2 +0.093, and D1 after rewarded S2 -0.043. The recorded short form scores 0.533 on test, matching the report.",
+   "The D1 and GO terms describe one rule ('unrewarded at the state read out in this phase') and can share a single term, at almost the same weight. Merging them frees a slot for the GO a2->S1 decrease. The resulting short form passes --short and scores 0.585 on test, against 0.533 for the recorded one. Replacing prev_action == 2 with prev_common == 0 gives the identical 0.585, so this is the rare-transition-to-S1 condition.",
+   "There is still an error from runs of unrewarded trials. The worst-fit windows are D1 steps after two or more unrewarded trials, with actual about 0.36 against predicted about 0.20. A short-form term for the trial two back (tv('reward',-2)==0) does not improve the test score (0.537 to 0.539 in place of other terms, and 0.485 in place of the D1 S2-rewarded term), so this can only be noted, not captured in 3 terms.",
+   "Swapping in other single terms scores lower: the GO prev_state==S1 term alone scores 0.471, last_is('a2 S1 r') at GO 0.479, D1 prev_state==S2 0.506, and D1 prev_reward==1 0.482. The 'last trial' reference table reaches 0.62 and 'all observed' 0.69, so a gap remains that 3 terms can't close."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Rises after no reward at S1 (D1) or S2 (GO); falls after rewarded S2 (D1) and rare a2->S1 (GO).",
+  "better_short_terms": "(prev_reward == 0) * ((phase == GO) == (prev_state == S2)) * (phase != D2) ;; (phase == D1) * (prev_reward == 1) * (prev_state == S2) ;; (phase == GO) * (prev_state == S1) * (prev_action == 2)",
+  "better_short_terms_test_r2_beyond_timing": 0.5854
+ },
+ "final_label": "Rises after no reward at S1 (D1) or S2 (GO); falls after rewarded S2 (D1) and rare a2->S1 (GO).",
+ "original_short_terms": "(phase == D1) * (prev_reward == 0) * (prev_state == S1) ;; (phase == GO) * (prev_reward == 0) * (prev_state == S2) ;; (phase == D1) * (prev_reward == 1) * (prev_state == S2)",
+ "original_test_scores": {
+  "gate": "unit_reset",
+  "feature": 14,
+  "terms": [
+   "(phase == D1) * (prev_reward == 0) * (prev_state == S1)",
+   "(phase == GO) * (prev_reward == 0) * (prev_state == S2)",
+   "(phase == D1) * (prev_reward == 1) * (prev_state == S2)"
+  ],
+  "weights": [
+   0.10396689745138243,
+   0.09335771332624576,
+   -0.043455281191768995
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.532642856044117,
+  "r2": 0.9453497320848454,
+  "r2_timing_only": 0.8830652989433848
+ },
+ "terms_from": "skeptic"
+}

@@ -1,0 +1,63 @@
+{
+  "label": "D2 after a1 -> S1 (common), when policy not strongly committed to a1",
+  "predicate": "(phase == D2) & (action == 1) & (state == S1) & (choice < 2.78)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (DELAY_2) and essentially only when the agent chose a1 and reached S1 via the common transition (in_action=1 & in_state=S1: 99.3% recall, 99.8% of mass). Never fires at D1/GO, on a2 choices, or on S2 (rare a1->S2 gets only tiny activations). Within a1->S1c steps it is silent or weak during long stable runs of rewarded a1 when the model is strongly committed to a1 (high choice logit); adding choice < 2.78 raises dev F1 from 0.78 to 0.84 (precision 0.64 -> 0.78). Magnitude is largest when a1 is an unusual choice: a single a1 trial inside a run of a2 choices while S2 is good (top examples), i.e. a surprising/exploratory a1->S1 visit. All variables are observed at D2 (choice is the model own policy logit).",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 108,
+    "predicate": "(phase == D2) & (action == 1) & (state == S1) & (choice < 2.78)",
+    "split": "test",
+    "precision": 0.7886216016490996,
+    "recall": 0.917404730394652,
+    "f1": 0.848152427961161,
+    "mass_recall": 0.973169017917906,
+    "correlation": 0.6850918315598368,
+    "n_active": 88407,
+    "n_predicted": 102844,
+    "coverage_by_activation_quartile": [
+      0.7810605375079178,
+      0.909374717220161,
+      0.9796850963713691,
+      0.9995022849644812
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 108,
+    "predicate": "(phase == D2) & (action == 1) & (state == S1) & (choice < 2.78)",
+    "split": "dev",
+    "precision": 0.7770053422135477,
+    "recall": 0.9193191286751577,
+    "f1": 0.842192500831484,
+    "mass_recall": 0.9731837144949441,
+    "correlation": 0.6775940161731242,
+    "n_active": 84010,
+    "n_predicted": 99397,
+    "coverage_by_activation_quartile": [
+      0.7894110365185926,
+      0.9113936104366043,
+      0.9767165031901723,
+      0.9997619274354823
+    ]
+  },
+  "gate": "reset",
+  "feature": 108,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Factual claims check out on dev. Feature is active only at D2 (D1 0/380619, GO 0/380619 steps). It never fires on a2 (in_action 2: 0 active). S2 gets 563 actives holding 0.2% of mass. Base predicate a1->S1 at D2: P 0.644, R 0.993, mass recall 0.998, F1 0.782 (test 0.793). Adding choice<2.78: dev F1 0.842, test P 0.789, R 0.917, F1 0.848, mass recall 0.973. These match the reported numbers.",
+      "The 'unusual a1' claim, which the original agent did not measure, holds up. a1->S1 with prev_action==2 has precision 0.991. With good==S2 it has precision 0.868. With good==S1 precision falls to 0.628.",
+      "No systematic counterexample class remains. On test, misses are 7302 steps holding 2.7% of mass: weak activations on a1->S1 with choice >= 2.78, plus a few tiny S2R ones. Precision for choice>=2.78 within a1->S1 is only 0.21, and those cases hold 2.4% of mass. The false positives are a1->S1 inside long rewarded a1 runs, where activation is near zero and choice sits just under the threshold. This is graded falloff, not a separate class.",
+      "Minor caveat: 'choice' is the policy logit read out at the D2 step itself (the variable list says it is meaningful at GO), not the logit at GO. The 2.78 cutoff is a quantile-bin edge. Cutoffs from 2.0 to 3.5 give similar F1 (0.83 to 0.85; 2.0 gives test F1 0.849), so the exact cutoff does not matter.",
+      "Predicates built only on observed history do worse than the choice predicate. Excluding stay & prev_reward & prev_common gives F1 0.61. choice<2.78 & prev_reward==1 gives F1 0.70. value>8.1 gives F1 0.41. So the policy logit is the best available summary of 'not committed to a1'. No future variables are used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

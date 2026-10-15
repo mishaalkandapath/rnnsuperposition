@@ -1,0 +1,73 @@
+{
+  "label": "D2 state-reached gate: high for S2, low for S1, larger after rare transitions",
+  "terms": "(phase == D2) * (state == S2) ;; (phase == D2) * (action == 2) ;; (phase == D1) * np.tanh(choice) ;; (phase == GO) * np.tanh(choice) ;; (phase == D2) * (stay == 1) ;; (phase == D2) * (prev_reward == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r44. Timing alone explains 0.79 of variance: about 0.85 at D1, 0.92 at GO, 0.5 at D2, and it drops in the last episode decile. Beyond timing, the main driver is the D2 state input. Reaching S2 adds about +0.33 and choosing a2 adds about -0.2, so the order is a1->S2 (rare) highest, then a2->S2 (common), then a1->S1 (common), with a2->S1 (rare) lowest. These two D2 terms alone give dev R^2 0.76 beyond timing. At D2 it is also lower when the choice repeated the previous one (-0.04) and when the previous trial was rewarded (-0.04), which matches lower values in long a1-S1-rewarded streaks. At D1/GO it is slightly higher when the policy leans to a1, captured by the observed choice logit (tanh). Using the future upcoming action instead does only a little better (test 0.895 vs 0.887). Previous-trial patterns, value, the hidden good state and trials since reversal add little. Recorded observed-only terms: test R^2 beyond timing about 0.89; the all ceiling is 0.97.",
+  "gate": "unit_reset",
+  "feature": 44,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 44,
+    "terms": [
+      "(phase == D2) * (state == S2)",
+      "(phase == D2) * (action == 2)",
+      "(phase == D1) * np.tanh(choice)",
+      "(phase == GO) * np.tanh(choice)",
+      "(phase == D2) * (stay == 1)",
+      "(phase == D2) * (prev_reward == 1)"
+    ],
+    "weights": [
+      0.3599426750856809,
+      -0.1762665006284654,
+      0.028585579908916886,
+      0.020640619374634014,
+      -0.052762959397134844,
+      -0.051396604772538164
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8873863710038598,
+    "r2": 0.9759942725556428,
+    "r2_timing_only": 0.786831064247294
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 44,
+    "terms": [
+      "(phase == D2) * (state == S2)",
+      "(phase == D2) * (action == 2)",
+      "(phase == D1) * np.tanh(choice)",
+      "(phase == GO) * np.tanh(choice)",
+      "(phase == D2) * (stay == 1)",
+      "(phase == D2) * (prev_reward == 1)"
+    ],
+    "weights": [
+      0.3599426750856809,
+      -0.1762665006284654,
+      0.028585579908916886,
+      0.020640619374634014,
+      -0.052762959397134844,
+      -0.051396604772538164
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8909092953194998,
+    "r2": 0.976755679182804,
+    "r2_timing_only": 0.7869266599269583
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The label's claim 'larger after rare transitions' is false. The D2 residual by choice x state is a1->S1 -0.113, a1->S2 +0.271, a2->S1 -0.263, a2->S2 +0.109. That fits two additive effects (S2 about +0.36, a2 about -0.18) with almost no interaction: (0.271+0.113) - (0.109+0.263) = 0.012. Rare a2->S1 is the LOWEST cell, so rarity does not raise the gate. The high rare a1->S2 cell is just the S2 bonus plus the a1 bonus.",
+      "A direct rarity test agrees. Adding (phase==D2)*(common==0) to the recorded terms gets weight -0.009 (slightly negative) and moves test R^2 only from 0.887 to 0.888. On its own, rare plus S2 gives only 0.486 beyond timing, against 0.758 for S2 plus action.",
+      "The explanation text itself is accurate. The fitted weights are +0.36 for S2 and -0.18 for a2, the cell order is right, the two D2 terms give 0.758 on test, and the stay (-0.053) and prev_reward (-0.051) terms each help a little. Dropping both lowers test R^2 to 0.793, and dropping the tanh(choice) terms lowers it to 0.852. The recorded terms are observed-only and score 0.887 on test.",
+      "Misses show no large systematic error. The biggest mean errors by phase x previous trial are about +-0.05, for example D1 after a1 S1 u at +0.030 and D2 after a1 S2 u at -0.049. There is a small D1/GO raise after unrewarded trials: adding (phase==D1)*(prev_reward==0) and (phase==GO)*(prev_reward==0) lifts test R^2 to 0.895. Late-episode interactions (ep_dec>=8 for GO choice and for D2 S2) add nothing (about 0.888)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 state/choice gate: high when S2 is reached, lower if a2 was chosen (a1->S2 > a2->S2 > a1->S1 > a2->S1, additive, no rarity effect)",
+    "better_terms": "(phase == D2) * (state == S2) ;; (phase == D2) * (action == 2) ;; (phase == D1) * np.tanh(choice) ;; (phase == GO) * np.tanh(choice) ;; (phase == D2) * (stay == 1) ;; (phase == D2) * (prev_reward == 1) ;; (phase == D1) * (prev_reward == 0) ;; (phase == GO) * (prev_reward == 0)",
+    "better_terms_test_r2_beyond_timing": 0.8952
+  },
+  "final_label": "D2 state/choice gate: high when S2 is reached, lower if a2 was chosen (a1->S2 > a2->S2 > a1->S1 > a2->S1, additive, no rarity effect)"
+}

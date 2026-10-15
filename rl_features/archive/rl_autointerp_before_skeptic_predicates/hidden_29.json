@@ -1,0 +1,65 @@
+{
+  "label": "D2: chose a1 and reached S1 (common), after a previous trial that was unrewarded or rare",
+  "predicate": "(phase == D2) & (action == 1) & (state == 1) & ((prev_reward == 0) | (prev_common == 0))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (never at D1 or GO), and only when the agent chose a1 and the common transition took it to S1 (in_action=1, in_state=1; 12 of 47k activations elsewhere). Inside a1->S1 D2 steps it is gated by the previous trial: it is mostly silent when the previous trial was common-rewarded, and fires when the previous trial was unrewarded (86% of mass) or rare-rewarded. Every variable is observed at D2. On dev: plain a1->S1c at D2 gets recall ~1.0 but precision 0.36; adding prev_reward==0 gives F1 0.83; adding the rare-previous clause gives F1 0.90 and mass recall 0.98. Magnitude: the strongest activations come more often after an unrewarded previous a2 (a switch to a1) or after runs of unrewarded a1 trials; after an unrewarded previous a1 it covers only 41% of the top quartile. It is weaker late in the episode (trials 90-99) and goes with high value-head output. It does not fire on a2, on rare transitions, or at the S2 state.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 29,
+    "predicate": "(phase == D2) & (action == 1) & (state == 1) & ((prev_reward == 0) | (prev_common == 0))",
+    "split": "test",
+    "precision": 0.8613558229480017,
+    "recall": 0.9488727143617965,
+    "f1": 0.902998732929748,
+    "mass_recall": 0.9786174835521756,
+    "correlation": 0.7952975455351077,
+    "n_active": 50697,
+    "n_predicted": 55848,
+    "coverage_by_activation_quartile": [
+      0.8485207100591716,
+      0.972305507337857,
+      0.9857187943821998,
+      0.9889537636105412
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 29,
+    "predicate": "(phase == D2) & (action == 1) & (state == 1) & ((prev_reward == 0) | (prev_common == 0))",
+    "split": "dev",
+    "precision": 0.8594914342782515,
+    "recall": 0.9485978336901456,
+    "f1": 0.9018489596453222,
+    "mass_recall": 0.9788295871558097,
+    "correlation": 0.7984750023153183,
+    "n_active": 47177,
+    "n_predicted": 52068,
+    "coverage_by_activation_quartile": [
+      0.8461212378126325,
+      0.9737154485331525,
+      0.9856706800067832,
+      0.9888926572833644
+    ]
+  },
+  "gate": "hidden",
+  "feature": 29,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced the reported scores. Dev: P 0.859, R 0.949, F1 0.902, mass recall 0.979. Test: P 0.861, R 0.949, F1 0.903, mass recall 0.979.",
+      "The phase claims hold. There are 0 activations at D1 and GO; 100% of mass is at D2, all with in_state=1. Only 12 of 47177 active steps have in_action=2 and only 12 are on rare transitions, so the claims of no a2, no rare and no S2 are true.",
+      "The previous-trial gating holds. On a1->S1 common D2 steps, precision is 0.021 after a1-common-rewarded and 0.058 after a rewarded window-first trial, so both are essentially silent. Precision is 0.92 after a1-rare-unrewarded, 0.98 after a1-rare-rewarded and 0.99 after a2-common-unrewarded.",
+      "The largest false-positive source is graded, not a categorical gap: after an a1-common-unrewarded previous trial, precision is only 0.70 (11282 predicted steps). The feature is suppressed when the trial before that was rewarded (0.62 vs 0.96) and late in the episode (ep_bucket 5: 0.47 vs 0.93 in ep_bucket 4). So a single unrewarded trial after a reward streak only partly turns it on. Adding that exception lifts test F1 only from 0.903 to 0.913.",
+      "There is a smaller false-positive class after a2-rare-rewarded previous trials (a2 led to S1, which paid), with precision 0.61 over 3297 steps and 1.3% of mass. This suggests the real suppressor is 'S1 was just rewarded'. But the alternative (prev_reward==0)|(prev_state==2) scores lower (dev F1 0.891), so the original predicate is the better simple one.",
+      "Misses are 2.1% of activation mass. They are mostly weak activations on the window's first trial, where prev_common is unknown, plus scattered noise.",
+      "One magnitude claim is wrong as worded. In the top activation quartile, coverage is 41% after an unrewarded previous a1 and 32% after an unrewarded previous a2, so the strongest activations do NOT come 'more often' after a2. The a2 case is just far more concentrated in the top quartile relative to how often it occurs (1-5% of the lower quartiles vs 32% of the top). The explanation should say this, but it does not affect the label or predicate."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == D2) & (action == 1) & (state == 1) & ((prev_reward == 0) | (prev_common == 0)) & ~((ep_bucket==5)&(prev_action==1)&(prev_common==1)&(tv('prev_reward',-1)==1))",
+    "better_predicate_test_f1": 0.913
+  }
+}

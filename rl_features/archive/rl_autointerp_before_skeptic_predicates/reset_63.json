@@ -1,0 +1,64 @@
+{
+  "label": "GO step, choosing a2 after a rewarded common trial, late in the episode (trials ~45-95)",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (ep_trial >= 45) & (ep_trial < 95) & (prev_common != 0)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO, never at D1/D2. It needs all of these: the previous trial was rewarded (no activity when prev_reward=0), the agent is about to choose a2 (model_act==2; 90% of mass is in the most negative choice-logit bin; it essentially never fires for a1), and the step is late in the episode (none before trial 40, most at 50-89, falling off at 90-99). It is suppressed when the previous transition was rare. The simpler GO & prev_reward==1 & model_act==2 has recall ~1.0 but precision 0.42; adding ep_trial>=50 gives F1 0.81 and the full predicate gives dev F1 0.91. Magnitude rises with a stronger a2 preference (more negative choice logit) and, from the examples, across runs of consecutive rewarded a2 trials. The episode-time dependence is odd and may track an internal clock or accumulated evidence. The predicate uses only observed history plus the agent own upcoming choice.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 63,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (ep_trial >= 45) & (ep_trial < 95) & (prev_common != 0)",
+    "split": "test",
+    "precision": 0.8606381057160216,
+    "recall": 0.959487414187643,
+    "f1": 0.9073785533741907,
+    "mass_recall": 0.9924382174173224,
+    "correlation": 0.820793248872769,
+    "n_active": 54625,
+    "n_predicted": 60899,
+    "coverage_by_activation_quartile": [
+      0.8403748993190305,
+      0.9976567076742824,
+      0.9999267721148213,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 63,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (ep_trial >= 45) & (ep_trial < 95) & (prev_common != 0)",
+    "split": "dev",
+    "precision": 0.8641892224611395,
+    "recall": 0.9652220144465222,
+    "f1": 0.9119157522798327,
+    "mass_recall": 0.9936085154495833,
+    "correlation": 0.8219884663437467,
+    "n_active": 54546,
+    "n_predicted": 60923,
+    "coverage_by_activation_quartile": [
+      0.8630197257461318,
+      0.998093422306959,
+      0.9997799941331769,
+      1.0
+    ]
+  },
+  "gate": "reset",
+  "feature": 63,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "All factual claims checked out on dev. The feature fires only at GO (54546 of 54546 active steps). It fires 57 times with prev_reward==0 against 54489 with prev_reward==1. It fires 15 times for action a1 against 54531 for a2. It never fires at trials 0-39. 89.9% of the activation mass is in the most negative choice-logit bin. Rate is 0.005 after a rare transition versus 0.062 after a common one. Test scores reproduce: P 0.861, R 0.959, F1 0.907, mass recall 0.992.",
+      "False positives cluster at the two episode-time cut-offs. Precision is 0.68 at ep_trial 45-49 and 0.52 at 90-94, against 0.93-0.96 at 55-89. This looks like a gradual onset and offset in episode time, not a separate class of counterexamples. Tightening the cut-offs does not help (42-93 gives F1 0.901).",
+      "Misses are scattered, low-activation residue: 0.8% of the activation mass on test. A few strong activations after a rare-rewarded a2 trial are the main exception, and they are rare (B & prev_common==0 has precision 0.07).",
+      "Minor overclaim in the label: 'choosing a2 after a rewarded common trial' hides the fact that the previous trial was effectively always a2 reaching S2. Only 19 predicted steps have prev_action==1, so the feature is really 'staying on a2 after a2 to S2 was rewarded'. A2 preference is also confounded with good==S2: 80% of recall falls there, with precision 0.66 when good==S1, though n is small.",
+      "Small gain only: adding choice < -6 gives test F1 0.913 against 0.907. The choice logit is the agent's own upcoming preference, so no future variables are needed."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step, staying on a2 after the previous a2 trial was rewarded via a common transition, late in the episode (trials ~45-95)",
+    "better_predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (ep_trial >= 45) & (ep_trial < 95) & (prev_common != 0) & (choice < -6)",
+    "better_predicate_test_f1": 0.913
+  },
+  "final_label": "GO step, staying on a2 after the previous a2 trial was rewarded via a common transition, late in the episode (trials ~45-95)"
+}

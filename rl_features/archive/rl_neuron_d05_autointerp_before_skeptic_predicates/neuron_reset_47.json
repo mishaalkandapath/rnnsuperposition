@@ -1,0 +1,64 @@
+{
+  "label": "D2: rare transition a1 -> S2",
+  "predicate": "(phase == D2) & (in_action == 1) & (in_state == 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Reset-gate unit that fires at D2 when the agent chose a1 and the shown state is S2, i.e. the rare transition after a1 (both are current inputs, so no future variables). Precision ~1.0, 96% of activation mass on dev. Never fires at D1, never on S1 at D2, and never when a reward input is present. Missed activations (4% of mass) are weak: GO steps (mostly before an a2 choice) and S2 reached commonly after a2. Magnitude is largest for an isolated rare a1->S2 transition while S1 is the good state; it is weaker when rare a1->S2 transitions repeat in nearby trials, and the few inactive cases where the predicate is true come after a recent a1->S2 or when S2 has become good.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 47,
+    "predicate": "(phase == D2) & (in_action == 1) & (in_state == 2)",
+    "split": "test",
+    "precision": 0.9990420844242928,
+    "recall": 0.7826565496539648,
+    "f1": 0.8777094125787811,
+    "mass_recall": 0.952050342197429,
+    "correlation": 0.9607401160816795,
+    "n_active": 59965,
+    "n_predicted": 46977,
+    "coverage_by_activation_quartile": [
+      0.16335378868729988,
+      0.967313721566273,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 47,
+    "predicate": "(phase == D2) & (in_action == 1) & (in_state == 2)",
+    "split": "dev",
+    "precision": 0.9994089963883113,
+    "recall": 0.8083064830223419,
+    "f1": 0.8937565453993795,
+    "mass_recall": 0.959447557375559,
+    "correlation": 0.9634451273173069,
+    "n_active": 56486,
+    "n_predicted": 45685,
+    "coverage_by_activation_quartile": [
+      0.24267100977198697,
+      0.9905820705282538,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 47,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The main claims check out. Test scores reproduce: P 0.999, R 0.783, F1 0.878, mass recall 0.952. Active on 0 of 380619 D1 steps and on 0 steps with in_rew == 1. At D2 it is never active when S1 is shown (0 of 183887 in_state == 1 steps).",
+      "The explanation describes the misses wrongly. It calls them 'steps where S2 was reached by the common transition after a2', but that class as a whole has precision 0.043 (151k steps) and holds only 2.3% of the mass. The real systematic weak class is narrower: D2 & a2 -> S2 & prev_action == 1 & prev_reward == 0, i.e. the agent switches away from a1 after no reward and lands in S2. That class has test precision 0.73 on 5803 steps and covers 28% of the lowest activation quartile, which the recorded predicate covers at only 16%. Adding a1 at the previous trial (without the reward condition) already gives dev precision 0.43, against 0.17 when you condition on good == S1 instead.",
+      "Count recall (0.78) is well below mass recall (0.95). About 13k test active steps are missed. They are weak, but they are not scattered noise: one part is the switch-from-a1 class above, and the other is diffuse GO activity (GO precision 0.012, 1.7% of the mass).",
+      "The magnitude claims check out roughly. a1->S2 with good == S1 has mass recall 0.81 against 0.09 for good == S2, and a1->S2 when the previous trial did not reach S2 has mass recall 0.82. These are consistent with the explanation but were not tested in detail.",
+      "A better observed-only predicate, (D2 & a1 & S2) | (D2 & a2 & S2 & prev_action == 1 & prev_reward == 0), gets test P 0.970, R 0.853, F1 0.908, mass recall 0.970. It improves on the recorded F1 of 0.878."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2: S2 shown after choosing a1 (rare a1->S2); weakly also S2 reached after switching from an unrewarded a1",
+    "better_predicate": "((phase == D2) & (in_action == 1) & (in_state == 2)) | ((phase == D2) & (in_action == 2) & (in_state == 2) & (prev_action == 1) & (prev_reward == 0))",
+    "better_predicate_test_f1": 0.908
+  },
+  "final_label": "D2: S2 shown after choosing a1 (rare a1->S2); weakly also S2 reached after switching from an unrewarded a1"
+}

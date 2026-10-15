@@ -1,0 +1,64 @@
+{
+  "label": "GO step after a rare a1->S2 transition that was rewarded (late in episode)",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (prev_common == 0) & (prev_action == 1) & (ep_trial >= 45)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO (never at D1 or D2), with essentially all of its mass on trials whose previous trial was a1 -> S2 (rare) -> rewarded. That is the rare-rewarded case where a model-based agent should switch to a2. It is asymmetric: the mirror case (a2 -> S1 rare, rewarded) barely activates it. It is gated by time in the episode: it is silent before trial ~10, weak for trials 10-49, and 99% of its mass is at ep_trial >= 50. Adding ep_trial >= 45 lifts dev precision from 0.55 to 0.94 (F1 0.83, mass recall 0.82). The predicate uses only observed variables (the previous trials action, transition and reward, and the trial count). No future variable was needed. Upcoming switch/next_stay is not a better fit: the feature fires whether the agent then switches or stays. Misses are mostly low-magnitude activations at GO after other rewarded S2 visits (e.g. common a2 -> S2 rewarded) or earlier in the episode. Activations covered by the predicate are the largest (90% of the top quartile covered vs 39-62% of the bottom quartile). It never fires when the reward input is 0 or at steps with nonzero state/action inputs.",
+  "test_scores": {
+    "gate": "update",
+    "feature": 134,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (prev_common == 0) & (prev_action == 1) & (ep_trial >= 45)",
+    "split": "test",
+    "precision": 0.9377003484320557,
+    "recall": 0.709106239460371,
+    "f1": 0.8075376582848227,
+    "mass_recall": 0.7965016565164798,
+    "correlation": 0.7701853410582298,
+    "n_active": 9488,
+    "n_predicted": 7175,
+    "coverage_by_activation_quartile": [
+      0.5796795952782462,
+      0.5860033726812817,
+      0.7634907251264755,
+      0.9072512647554806
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 134,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (prev_common == 0) & (prev_action == 1) & (ep_trial >= 45)",
+    "split": "dev",
+    "precision": 0.9448401272920139,
+    "recall": 0.7381318811412336,
+    "f1": 0.8287917054366609,
+    "mass_recall": 0.8183915740149986,
+    "correlation": 0.7804491371523842,
+    "n_active": 8447,
+    "n_predicted": 6599,
+    "coverage_by_activation_quartile": [
+      0.5890151515151515,
+      0.6605113636363636,
+      0.803030303030303,
+      0.9000473709142587
+    ]
+  },
+  "gate": "update",
+  "feature": 134,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Claims hold on dev. The feature fires only at GO (D1 and D2 have 0 activations). It never fires when in_action or in_state is nonzero, and only fires when prev_reward == 1. ep_bucket 0-3 (trials before 10) have 0 activations and 99.3% of the mass is at ep_bucket 5. The mirror case (prev a2->S1 rare, rewarded, ep_trial >= 45) gets precision 0.000 and coverage 0 in every quartile, so the asymmetry is real. The test scores reproduce: P 0.938, R 0.709, F1 0.808, mass recall 0.797.",
+      "The trial-count dependence is a sharp ramp, not a cutoff. Within the core pattern (GO after a rewarded rare a1->S2 trial), precision by ep_trial is: below 40, 0.00; 40-44, 0.10; 45-49, 0.69; 50-69, 0.93; 70 and up, 0.996. Magnitude also rises late (63% of the mass is at trial 70 or later). The core pattern gets 0 activations before trial 40, so the 'weak between trials 10 and 49' firing (0.7% of the mass) comes from other patterns. The label's '(late in episode)' should really read 'from about trial 45 on, strengthening with trial count'.",
+      "The predicate does not depend on the good state. With good == 1 precision is 0.956, with good == 2 it is 0.912, and with good unknown it is 0.959.",
+      "The test-split misses hold 20% of the mass, but they are not one clean class the predicate gets wrong. About 10% of the mass is at the window's first trial (rel -3), where prev_action and prev_common are unknown (-1). Those cases cannot be checked and are probably the same pattern; some have large activations (e.g. 0.96). Another ~8% of the mass is at GO after a common a2->S2 rewarded trial (precision 0.025 overall). Within that, the subset where the agent chose a1 two trials back reaches precision 0.47, but it carries only 3% of the mass.",
+      "Trying a broader predicate, GO after a rewarded S2 visit, late in the episode, where a1 was chosen on either of the last two trials, gives test F1 0.816 against 0.808. The gain is marginal and is not a systematic gap that would overturn the label. The false positives (447 on test) look scattered."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step after a rare a1->S2 transition that was rewarded, from about episode trial 45 on (grows stronger with trial count)",
+    "better_predicate": "(phase == GO) & (prev_reward == 1) & (prev_state == 2) & (ep_trial >= 45) & ((prev_action == 1) | (tv('action',-2)==1))",
+    "better_predicate_test_f1": 0.816
+  },
+  "final_label": "GO step after a rare a1->S2 transition that was rewarded, from about episode trial 45 on (grows stronger with trial count)"
+}

@@ -1,0 +1,64 @@
+{
+  "label": "D1 after a reward while the policy leans toward a2 (first ~60 trials of the episode)",
+  "predicate": "(phase == D1) & (in_rew == 1) & (choice < -1.5) & (ep_trial < 60)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires almost only at D1 (99.9% of mass), and only when the reward input is 1 (99.7% of mass), i.e. the previous trial was rewarded. On top of that it needs the agent to be leaning toward a2: the policy logit(a1)-logit(a2) is moderately negative (99% of mass falls in choice between -4.4 and -1.5), and the upcoming choice is a2 (99.9% of mass). It also needs to be early in the episode: it fires strongly in trials 0-59 and almost never after trial 60, probably a slow drift in the hidden state. D1 & in_rew==1 & choice<-1.5 & ep_trial<60 gives dev F1 0.90 (P 0.87, R 0.94, mass 0.99). Using the upcoming choice instead (action==2, the agent's own choice, which is allowed) gives F1 0.84. Without the ep_trial term F1 falls to 0.66. Both predicates use only observed or self-computed quantities: no future reward or transition. It does not fire at GO (zero activity), barely fires at D2, and does not fire on unrewarded D1 steps or when the agent leans toward a1. Its preference for good==S2 (1.9x lift) and low_first episodes is a side effect of the agent favouring a2. Magnitude, by eye from the example windows only (not quantified): it seems to grow over runs of consecutive rewarded a2 trials.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 9,
+    "predicate": "(phase == D1) & (in_rew == 1) & (choice < -1.5) & (ep_trial < 60)",
+    "split": "test",
+    "precision": 0.862819703189138,
+    "recall": 0.9370884773662551,
+    "f1": 0.8984218313332237,
+    "mass_recall": 0.986129531104272,
+    "correlation": 0.8150666206068565,
+    "n_active": 58320,
+    "n_predicted": 63340,
+    "coverage_by_activation_quartile": [
+      0.7731824417009602,
+      0.9789437585733882,
+      0.9962962962962963,
+      0.9999314128943758
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 9,
+    "predicate": "(phase == D1) & (in_rew == 1) & (choice < -1.5) & (ep_trial < 60)",
+    "split": "dev",
+    "precision": 0.8699602859412232,
+    "recall": 0.9420790972114707,
+    "f1": 0.9045845343200006,
+    "mass_recall": 0.9880780805072249,
+    "correlation": 0.8192915158938624,
+    "n_active": 58131,
+    "n_predicted": 62950,
+    "coverage_by_activation_quartile": [
+      0.7867611642468864,
+      0.9845868024495975,
+      0.9969724076240281,
+      1.0
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 9,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The factual claims hold up on dev. 99.9% of activation mass is at D1. There are 0 active steps at GO. D2 has 488 active steps (0.1% of mass). 99.7% of mass has in_rew==1. 99.0% of mass has choice in [-4.44,-1.52], and 99.9% has action==2. 76.6% of mass has good==2 (1.9x lift). Only 533 of 58131 active steps fall at ep_trial>=60, and 530 of those are in trials 60-69.",
+      "The ep_trial cutoff is graded, not sharp. The firing rate falls from about 0.09 per step in trials 0-49 to 0.056 in trials 50-59, then 0.004 in trials 60-69. In the predicate's trials 50-59 slice precision is 0.58, against 0.99 for trials 0-9. The phrase 'first ~60 trials' is right, but the falloff starts around trial 50.",
+      "The false positives have a modest systematic part. When the trial before the previous one was unrewarded (tv('prev_reward',-1)==0), precision is 0.675, against 0.91 when it was rewarded. This is weak evidence for the unmeasured claim that magnitude builds up over consecutive rewards. Removing that case when ep_trial>=40 changes test F1 only from 0.898 to 0.904, so it does not count as a missing class.",
+      "Missed activations hold 1.4% of mass on test. The test misses look scattered: weak D1 activations right after an unrewarded trial, rare D2 activations, and a few a1 windows. I found no systematic class.",
+      "Changing the cutoff (ep_trial<55 or <57) or the logit bound (choice<-2) gives dev F1 of 0.90-0.906, so the recorded predicate is close to the best of its form. It uses no future random variables: choice is the agent's own logit and ep_trial can be counted by the agent.",
+      "Two parts of the explanation are not checked by any score: the guess that hidden-state drift causes the ep_trial dependence, and the claim that magnitude grows. The explanation already hedges both, so the label does not overclaim."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

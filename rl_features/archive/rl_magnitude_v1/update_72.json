@@ -1,0 +1,65 @@
+{
+  "label": "D1 after a2->S1 rewarded following an unrewarded S2 trial, fading over episode",
+  "terms": "(phase == D1) * last_is(\"a2 S1 r\") * (tv(\"action\", -2) == 2) * (tv(\"state\", -2) == 2) * (tv(\"reward\", -2) == 0) * (1 - ep_trial / 100) ;; (phase == D1) * last_is(\"a2 S1 r\") * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 2) * (tv(\"reward\", -2) == 0) * (1 - ep_trial / 100) ;; (phase == D1) * last_is(\"a2 S1 r\") * (1 - ep_trial / 100) ;; (phase == D1) * last_is(\"a2 S1 r\")",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Sparse feature (nonzero on 1.3% of steps), active only at D1. Its magnitude is set by the last two trials, all of them observed. It is largest at D1 after a rare-rewarded a2->S1 trial when the trial before was an unrewarded visit to S2: if that earlier trial was a2 S2 u, the fitted weight is about +0.52*(1-ep_trial/100); if it was a1 S2 u, about +0.28*(1-ep_trial/100). After a2 S1 r with any other trial before, it stays small (about +0.05). So it signals that S1 now looks better than S2, i.e. evidence for a reversal toward S1. The response shrinks roughly linearly over the episode, which a ramp beats exp(-t/20..70). Other previous-trial patterns, the choice or state of the current trial, the hidden good state, value and policy add almost nothing. Scores, R^2 beyond timing: last trial alone 0.23 (reference), the 3-term reward-history model 0.22 dev, last x before-trial cross 0.49 dev, plus the episode ramp 0.61 dev / 0.64 test. That is above the additive 'all' ceiling of 0.33 because the terms are interactions. The remaining misses are mostly firing on the window's first trial, where the history is outside the window.",
+  "gate": "update",
+  "feature": 72,
+  "test_scores": {
+    "gate": "update",
+    "feature": 72,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S1 r\") * (tv(\"action\", -2) == 2) * (tv(\"state\", -2) == 2) * (tv(\"reward\", -2) == 0) * (1 - ep_trial / 100)",
+      "(phase == D1) * last_is(\"a2 S1 r\") * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 2) * (tv(\"reward\", -2) == 0) * (1 - ep_trial / 100)",
+      "(phase == D1) * last_is(\"a2 S1 r\") * (1 - ep_trial / 100)",
+      "(phase == D1) * last_is(\"a2 S1 r\")"
+    ],
+    "weights": [
+      0.5207290892541891,
+      0.2827366597765909,
+      0.047869510481970926,
+      0.010406975529970365
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6376137971555746,
+    "r2": 0.6446202642444514,
+    "r2_timing_only": 0.019334254543583174
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 72,
+    "terms": [
+      "(phase == D1) * last_is(\"a2 S1 r\") * (tv(\"action\", -2) == 2) * (tv(\"state\", -2) == 2) * (tv(\"reward\", -2) == 0) * (1 - ep_trial / 100)",
+      "(phase == D1) * last_is(\"a2 S1 r\") * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 2) * (tv(\"reward\", -2) == 0) * (1 - ep_trial / 100)",
+      "(phase == D1) * last_is(\"a2 S1 r\") * (1 - ep_trial / 100)",
+      "(phase == D1) * last_is(\"a2 S1 r\")"
+    ],
+    "weights": [
+      0.5207290892541891,
+      0.2827366597765909,
+      0.047869510481970926,
+      0.010406975529970365
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6116146241209863,
+    "r2": 0.6186419170604922,
+    "r2_timing_only": 0.018093608503155778
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The time-course claim is wrong. The explanation says the response 'shrinks roughly linearly over the episode'. Fitting the main condition (D1 after a2 S1 r, with a2 S2 u the trial before) per episode decile gives weights +0.405 for deciles 0-4 pooled, then 0.377 / 0.329 / 0.223 / 0.046 / 0.001 for deciles 5-9. That is a flat plateau of about 0.40 up to around trial 55, then a fall to roughly zero by trial 85-90. A single plateau-then-drop term, M*clip((85-ep_trial)/25,0,1), scores test 0.646 against 0.609 for M*(1-ep_trial/100). The '+0.52*(1-ep_trial/100)' scale overstates the early value (about 0.40, not 0.52) and understates how sharply it falls late in the episode.",
+      "The history core holds. Of the 16 last=S1-rewarded x before-trial cells, only last a2 S1 r with before a2 S2 u is large (test R^2 0.486 alone, mean +0.27). Before a1 S2 u gives +0.15. Every other cell is 0.04 or less, so 'about +0.05 otherwise' roughly holds. The 3-back trial adds nothing: each of the 8 patterns changes test R^2 by at most 0.003.",
+      "The explanation leaves out a small related class: D1 after a1 S1 r (a common rewarded trial, not a rare one) when the trial before was a2 S2 u. It averages about +0.04 to +0.06, and examples show it reaching 0.30-0.37. So 'S1 rewarded after S2 unrewarded' covers more than the rare a2 -> S1 transition, though the rare case is far stronger.",
+      "The remaining misses are mostly firing on the window's first trial, where the earlier history is outside the window, as the other agent said. There is also some scattered zero firing where the full pattern predicts about 0.5. No large systematic class by phase or previous trial is left: the largest phase x previous-trial errors are about \u00b10.004. Value, policy, good state and since_rev add at most 0.02 over the ramp term."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a rewarded a2->S1 (rare) trial that followed an unrewarded S2 trial (a2 strongest, a1 weaker); flat for about 55 trials, then falling to zero by about trial 85",
+    "better_terms": "L=(phase == D1) * last_is('a2 S1 r'); B=(tv('state',-2)==2) * (tv('reward',-2)==0); C=np.clip((85 - ep_trial)/25, 0, 1). Terms: L * (tv('action',-2)==2) * B * C ;; L * (tv('action',-2)==1) * B * C ;; L * (tv('action',-2)==-9) * C ;; L * C ;; (phase==D1) * last_is('a1 S1 r') * (tv('action',-2)==2) * B * C ;; L   [fitted weights 0.369, 0.203, 0.063, 0.029, 0.064, 0.005; dev 0.663, test 0.692]",
+    "better_terms_test_r2_beyond_timing": 0.6918
+  },
+  "final_label": "D1 after a rewarded a2->S1 (rare) trial that followed an unrewarded S2 trial (a2 strongest, a1 weaker); flat for about 55 trials, then falling to zero by about trial 85"
+}

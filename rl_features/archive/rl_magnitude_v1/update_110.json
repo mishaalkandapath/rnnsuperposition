@@ -1,0 +1,66 @@
+{
+  "label": "GO after unrewarded common a2->S2, before trial ~75, larger when policy favours a2",
+  "terms": "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial < 75) ;; (phase == GO) * last_is(\"a2 S2 u\") * (ep_trial < 75) * np.clip(-choice, -5, 5) ;; (phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 75) * np.clip(85 - ep_trial, 0, 10) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * (ep_trial < 75) * (choice < 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Zero at D1 and D2. Fires only at GO, and almost only when the previous trial was a2 -> S2 (common) and unrewarded: about +0.27 over timing in that cell, and about -0.03 in every other previous-trial cell. Within that cell it is about 0.5-0.75 before episode trial ~75 and fades to zero by trial ~85; the coarse timing baseline does not capture this cutoff because it is multiplicative with the history. It grows with the policy preference for a2 (-choice, weight ~0.05 per logit unit). Windows whose first trial has no recorded previous choice but saw reward 0 and lean a2 show the same pattern (the previous trial is probably a2 S2 u). The trial before last, the hidden good state, value and future variables add little. Dev R^2 beyond timing: 0.43 for the a2 S2 u indicator alone, 0.58 (test) with the episode cutoff, 0.77 (test) with all 4 terms; the additive all-cue ceiling is 0.53. No future variables are used; choice is a model output that the agent computes at GO.",
+  "gate": "update",
+  "feature": 110,
+  "test_scores": {
+    "gate": "update",
+    "feature": 110,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial < 75)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial < 75) * np.clip(-choice, -5, 5)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 75) * np.clip(85 - ep_trial, 0, 10)",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0) * (ep_trial < 75) * (choice < 0)"
+    ],
+    "weights": [
+      0.21989738197886988,
+      0.053056050016961225,
+      0.012017307662236715,
+      0.14584024351347533
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7656263493679624,
+    "r2": 0.7812267165714075,
+    "r2_timing_only": 0.0665619499520339
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 110,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial < 75)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial < 75) * np.clip(-choice, -5, 5)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 75) * np.clip(85 - ep_trial, 0, 10)",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0) * (ep_trial < 75) * (choice < 0)"
+    ],
+    "weights": [
+      0.21989738197886988,
+      0.053056050016961225,
+      0.012017307662236715,
+      0.14584024351347533
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7590289363924081,
+    "r2": 0.7737694580503083,
+    "r2_timing_only": 0.061171335002713656
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The magnitude claim is overstated. The explanation says that after a2 S2 u the value is 'about 0.5-0.75 until trial ~75', but it is strongly graded by the policy logit. I binned choice inside the a2 S2 u, ep_trial<75 cell and added a term for all other GO steps (fitted -0.024, roughly the true zero). The test weights were: choice<-4 +0.48, -4..-2 +0.27, -2..0 +0.23, 0..2 +0.14, >=2 +0.005. So when the policy favours a1 (the model-based switch after common-unrewarded), the feature is about 0. Values of 0.6-0.75 appear only under strong a2 preference, mostly in the first-trial windows with no recorded previous trial. The choice gradient is most of the story, not a small modulation: test R^2 goes from 0.57 (indicator plus cutoff) to 0.72 when the -choice slope is added.",
+      "The episode cutoff checks out. Moving the cut between 65 and 85 peaks at 75 (test 0.575). After a2 S2 u, trials 75-84 have weight +0.056 and trials >=85 have +0.008, so 'fades to zero by ~85' is right. The fade term itself adds almost nothing (0.574 -> 0.577).",
+      "The windows with no recorded previous trial ('?') are the only remaining systematic error. The worst misses are GO steps at rel -3 with actual 0.74-0.76 and predicted ~0.19, and misses reports 'GO after ?' over-predicted by -0.019. Adding prev_reward==0 x -choice terms for '?' windows only raises test from 0.766 to 0.771. That is expected, since the previous trial is not in the data, so it is not a flaw in the hypothesis.",
+      "The -0.03 offsets after other previous-trial patterns come from the additive timing baseline, not from the feature. One extra term for 'all other GO steps before trial 75' raises test R^2 to 0.805.",
+      "These claims hold: zero at D1/D2; GO residual +0.266 after a2 S2 u and about -0.03 after every other pattern; the trial before last adds little (weights for a2-u, a2-r and outside-window at t-2 are all about -0.01); value and since_rev add little (0.724 -> 0.728). No future variables are used. Reported scores reproduce: 0.433 for the indicator, 0.574 with the cutoff, 0.7656 with all 4 terms. choice is the agent's own GO-step logit, observable to the model but not an environment input."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after unrewarded common a2->S2 (before trial ~75), graded by how strongly the policy still favours a2: about 0.5 when the policy is strongly a2, about 0 when it is switching to a1",
+    "better_terms": "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial < 75) ;; (phase == GO) * last_is(\"a2 S2 u\") * (ep_trial < 75) * np.clip(-choice, -5, 5) ;; (phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 75) * np.clip(85 - ep_trial, 0, 10) ;; (phase == GO) * (prev_action == -1) * (ep_trial < 75) * (prev_reward == 0) ;; (phase == GO) * (prev_action == -1) * (ep_trial < 75) * (prev_reward == 0) * np.clip(-choice, -5, 5) ;; (phase == GO) * (ep_trial < 75) * (1 - last_is(\"a2 S2 u\")) * (prev_action != -1)",
+    "better_terms_test_r2_beyond_timing": 0.8053
+  },
+  "final_label": "GO after unrewarded common a2->S2 (before trial ~75), graded by how strongly the policy still favours a2: about 0.5 when the policy is strongly a2, about 0 when it is switching to a1"
+}

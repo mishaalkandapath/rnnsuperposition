@@ -1,0 +1,64 @@
+{
+  "label": "late-episode GO after a reward, choosing a1",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (ep_trial >= 68) & (model_act == 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO steps, only when the previous trial was rewarded (in_rew=1 at D1), only late in the episode (no activity before ep_trial 60, onset around 60-70, rate rising to ~11% in trials 80-99), and overwhelmingly when the agent is choosing a1 (95% of mass at model_act==1; choice logit > 8 holds 70% of mass; good=S1 holds 83%). Never fires at D1/D2, after an unrewarded trial, or early in the episode. Rarely fires for a2 choices, and then only weakly. Magnitude grows over runs of consecutive rewarded a1 trials and is lower on the first rewarded trial after an unrewarded one (adding tv(prev_reward,-1)!=0 raises precision to 0.93 but drops recall). Value < 7.3 is a correlate of late episode position. model_act is the GO policy output of the agent itself, so no future variable is used. Dev: P 0.84, R 0.83, F1 0.83, mass recall 0.95.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 144,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (ep_trial >= 68) & (model_act == 1)",
+    "split": "test",
+    "precision": 0.8188643954575818,
+    "recall": 0.8144899803327487,
+    "f1": 0.8166713301621563,
+    "mass_recall": 0.9429364930325375,
+    "correlation": 0.7555417703809855,
+    "n_active": 37626,
+    "n_predicted": 37425,
+    "coverage_by_activation_quartile": [
+      0.469862868076964,
+      0.863505899861805,
+      0.9362109291941314,
+      0.9884116521369338
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 144,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (ep_trial >= 68) & (model_act == 1)",
+    "split": "dev",
+    "precision": 0.8387977410807483,
+    "recall": 0.8294516197332205,
+    "f1": 0.8340985002727986,
+    "mass_recall": 0.9491158813689903,
+    "correlation": 0.7704893945927735,
+    "n_active": 37784,
+    "n_predicted": 37363,
+    "coverage_by_activation_quartile": [
+      0.4991530806690663,
+      0.8815371585856447,
+      0.9475968663984755,
+      0.9895193732796951
+    ]
+  },
+  "gate": "hidden",
+  "feature": 144,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "All the factual claims hold on dev. Activity is GO-only (D1 and D2 have 0 active steps). There are 0 activations after prev_reward==0 and 0 before ep_trial 60. Rate is 0.022 in trials 60-69, 0.083 in 70-79 and about 0.11 in 80-99. model_act==1 holds 95.2% of mass, choice>8.07 holds 70% and good=S1 holds 83%. value>=7.54 has 0 activations.",
+      "Reported test scores reproduce exactly: P 0.819, R 0.814, F1 0.817, mass 0.943. Dev: P 0.839, R 0.829, F1 0.834, mass 0.949.",
+      "Minor nuance the label leaves out: the weak a2-choice firing is concentrated where the PREVIOUS trial was a rewarded a1. With model_act==2 & tv('action',-1)==1, precision is 0.56 (1915 steps, 2.4% of mass). With model_act==2 & prev a2 it is 0.098. So part of the signal is 'just got rewarded for a1', not only 'choosing a1 now'. Example: after a rare-rewarded a1 trial the agent switches to a2 and the feature still fires at 0.64.",
+      "False positives are mostly the first rewarded trial after an unrewarded one, or trials 68-75. This is consistent with the stated ramp-up and the stated run-length dependence. It is not a new class.",
+      "Missed activations are tiny (0.01-0.1) and come from long rewarded a2 runs with good=S2. They are 1.6% of mass: scattered and weak.",
+      "Alternatives give only small gains. On dev, the predicate GO & prev_reward==1 & value<7.2 & (prev action a1 | model_act a1) scores F1 0.847, mass 0.97. On test, adding the prev-a1 OR gives F1 0.825 vs 0.817. These are not enough to count as a systematic refutation."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == GO) & (prev_reward == 1) & (ep_trial >= 68) & ((tv('action',-1) == 1) | (model_act == 1))",
+    "better_predicate_test_f1": 0.825
+  }
+}

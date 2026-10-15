@@ -1,0 +1,75 @@
+{
+  "label": "GO after common-unrewarded a1->S1, larger late in episode and when policy favours a1",
+  "terms": "(phase == GO) * last_is(\"a1 S1 u\") ;; (phase == GO) * last_is(\"a1 S1 u\") * np.minimum(ep_trial, 80) ;; (phase == GO) * last_is(\"a1 S1 u\") * (choice > 0) ;; (phase == GO) * last_is(\"a2 S1 u\") ;; (phase == GO) * last_is(\"a2 S1 u\") * (choice > 0) ;; (phase == GO) * (ep_trial > 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Candidate feature active only at GO. Magnitude is driven by the previous trial being a1 -> S1 (common) unrewarded: that indicator alone gives dev R^2 beyond timing 0.59. Within those trials it grows with episode trial (interaction with ep_trial, capped at 80) and is much larger when the model policy at GO favours a1 (choice > 0, i.e. the agent is about to stay despite the common-unrewarded outcome); when the agent is switching to a2 it stays near zero. A weak, smaller contribution after a2 -> S1 rare unrewarded, again when choice > 0. Elsewhere at GO it is ~0 (negative offset vs the timing baseline). Value, hidden good state, trial-before history add little. Using the future action (action == 1) instead of choice > 0 scored the same (0.732 vs 0.734 dev), so the observed-only policy version was recorded. Dev 0.751, test 0.753 beyond timing, exceeding the additive all-cues ceiling 0.65 thanks to interactions. Residual misses: window-first trials whose previous trial is unknown.",
+  "gate": "hidden",
+  "feature": 136,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 136,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S1 u\")",
+      "(phase == GO) * last_is(\"a1 S1 u\") * np.minimum(ep_trial, 80)",
+      "(phase == GO) * last_is(\"a1 S1 u\") * (choice > 0)",
+      "(phase == GO) * last_is(\"a2 S1 u\")",
+      "(phase == GO) * last_is(\"a2 S1 u\") * (choice > 0)",
+      "(phase == GO) * (ep_trial > 0)"
+    ],
+    "weights": [
+      -0.02219830832582234,
+      0.007006214075700774,
+      0.1567322027568135,
+      0.0299632804347673,
+      0.05260970048570384,
+      -0.027350655908502046
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.752535468200726,
+    "r2": 0.7692726106924438,
+    "r2_timing_only": 0.06763451057016034
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 136,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S1 u\")",
+      "(phase == GO) * last_is(\"a1 S1 u\") * np.minimum(ep_trial, 80)",
+      "(phase == GO) * last_is(\"a1 S1 u\") * (choice > 0)",
+      "(phase == GO) * last_is(\"a2 S1 u\")",
+      "(phase == GO) * last_is(\"a2 S1 u\") * (choice > 0)",
+      "(phase == GO) * (ep_trial > 0)"
+    ],
+    "weights": [
+      -0.02219830832582234,
+      0.007006214075700774,
+      0.1567322027568135,
+      0.0299632804347673,
+      0.05260970048570384,
+      -0.027350655908502046
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7509218918916869,
+    "r2": 0.7668574356542,
+    "r2_timing_only": 0.06397809861147452
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The scores reproduce (test R^2 beyond timing 0.7525) and misses shows no large systematic class. The only notable under-prediction is GO after an unknown previous trial (+0.021), at the start of a window, and that cannot be observed. The verdict 'explained' is fair; the problem is the description.",
+      "The claim 'When the agent is switching to a2, the feature stays near zero' is false. Splitting the a1 S1 u GO steps by policy sign gives weights of 0.459 for choice>0 and 0.291 for choice<=0 (test). The claimed fit itself has weights -0.022 + 0.007*ep_trial + 0.157*(choice>0), so a late-episode switch trial is still predicted at about 0.4. Example windows also show a2 choices after a1 S1 u at 0.71 and 0.36.",
+      "The label puts the two modifiers in the wrong order. The episode-trial ramp adds +0.117 on test (0.588 to 0.705), while the policy sign adds only +0.024 (0.588 to 0.612; 0.705 to 0.726 on top of the ramp). Binned by episode trial the weights are 0.06 (trials <10), 0.18 (10-29), 0.41 (30-59), 0.64 (60-79) and 0.52 (80+). So the episode-trial effect is a strong ramp that dips after trial 80, and the policy effect is minor.",
+      "Using the future action (action==1) instead of choice>0 does about the same (0.609 vs 0.612 test), so recording the observed-only version was right.",
+      "'Value adds little' is understated. Adding last_is('a1 S1 u')*value raises test from 0.7525 to 0.784 (dev 0.785), more than the policy term contributes. The trial before the last one and the hidden good state do add about 0, as claimed.",
+      "The a2 S1 u contribution is very weak. Adding it to the three a1 S1 u terms changes test only from 0.7264 to 0.7270, so it barely matters."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after common-unrewarded a1->S1. Grows strongly with episode trial (peaks around trials 60-80) and somewhat with value. Only modestly larger when the policy favours staying with a1, and still clearly active on switch trials.",
+    "better_terms": "(phase == GO) * last_is('a1 S1 u') ;; (phase == GO) * last_is('a1 S1 u') * np.minimum(ep_trial, 80) ;; (phase == GO) * last_is('a1 S1 u') * np.clip(choice,-4,4) ;; (phase == GO) * last_is('a2 S1 u') ;; (phase == GO) * last_is('a2 S1 u') * np.clip(choice,-4,4) ;; (phase == GO) * (ep_trial > 0) ;; (phase == GO) * last_is('a1 S1 u') * value ;; (phase == GO) * last_is('a1 S1 u') * np.minimum(ep_trial, 80)**2",
+    "better_terms_test_r2_beyond_timing": 0.7899
+  },
+  "final_label": "GO after common-unrewarded a1->S1. Grows strongly with episode trial (peaks around trials 60-80) and somewhat with value. Only modestly larger when the policy favours staying with a1, and still clearly active on switch trials."
+}

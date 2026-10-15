@@ -1,0 +1,65 @@
+{
+  "label": "D1 after a rare-rewarded a2 trial (a2 -> S1, rewarded)",
+  "predicate": "(phase == D1) & (prev_reward == 1) & (prev_action == 2) & (prev_common == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (never GO or D2), and only when the reward input is 1 and the previous trial was a2 that went rarely to S1. All of these are observed. Dev scores: P 0.81, R 0.90, F1 0.85, mass recall 0.91. Rare-rewarded trials after a1 (a1 -> S2) do not activate it (P drops to 0.48 without the prev_action == 2 term), and neither do unrewarded D1s or common transitions. About 9% of the missed mass is at the window first trial (rel -3), where the previous trial is outside the window, so the predicate cannot see it. These are probably the same pattern. Magnitude: when the agent then repeats a2 (action == 2, its own upcoming choice), P rises to 0.94, and activations are larger in the upper quartiles. The weak activations and the false positives are mostly trials where the agent goes on to switch to a1. That is the model-based response, so this feature is larger when the agent will not switch. Recorded the simpler, fully observed predicate.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 104,
+    "predicate": "(phase == D1) & (prev_reward == 1) & (prev_action == 2) & (prev_common == 0)",
+    "split": "test",
+    "precision": 0.8000105340777415,
+    "recall": 0.9053466054717768,
+    "f1": 0.8494253837765288,
+    "mass_recall": 0.9073736934511206,
+    "correlation": 0.7452852007425842,
+    "n_active": 16777,
+    "n_predicted": 18986,
+    "coverage_by_activation_quartile": [
+      0.8951132300357568,
+      0.9117787315212208,
+      0.9132093466857415,
+      0.9012875536480687
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 104,
+    "predicate": "(phase == D1) & (prev_reward == 1) & (prev_action == 2) & (prev_common == 0)",
+    "split": "dev",
+    "precision": 0.8092017062766605,
+    "recall": 0.9031490172073726,
+    "f1": 0.8535981743965545,
+    "mass_recall": 0.9089465896349133,
+    "correlation": 0.7577230993902166,
+    "n_active": 14703,
+    "n_predicted": 16410,
+    "coverage_by_activation_quartile": [
+      0.8832970620239391,
+      0.9121327529923831,
+      0.9034276387377584,
+      0.9137414965986395
+    ]
+  },
+  "gate": "hidden",
+  "feature": 104,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claims hold. All activation is at D1: GO and D2 have 0 active steps each. Of the 14703 active steps, 14696 have in_rew==1. 90.9% of activation mass has prev_action==2 & prev_common==0, and only 77 steps have prev_common==1. Dropping the prev_action term cuts P to 0.48. The test scores reproduce: P 0.800, R 0.905, F1 0.849, mass recall 0.907.",
+      "The misses are as described. 9.3% of mass is at the first trial of the window (rel -3), where prev_action is unknown (-1), so they can't be checked from inside the window.",
+      "There is one systematic false-positive class the explanation does not mention: the previous a2 choice was itself a switch (the trial two back was a1). For B & (tv('stay',-1)==0), dev P is 0.27 on 1485 predicted steps, against P 0.88 when the a2 choice was a repeat. So the feature wants a run of a2 choices followed by a rare reward, not just one a2 trial.",
+      "The firing also depends on the hidden good state. If S2 is good (the rare reward came from the bad state), P is 0.96. If S1 is good, P is 0.71.",
+      "The claimed modulation by the upcoming choice checks out. Adding action==2 gives P 0.94 and F1 0.849. On upcoming switches to a1 (action==1), P is 0.44 and these steps carry only 6% of mass.",
+      "Including the history only helps a little. Adding tv('action',-2) != 1 gives test F1 0.868 (P 0.854, R 0.882), up from 0.849. That is a refinement, not a refutation."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a rare-rewarded a2 trial (a2 -> S1, rewarded), mainly when the agent had been repeating a2",
+    "better_predicate": "(phase == D1) & (prev_reward == 1) & (prev_action == 2) & (prev_common == 0) & (tv('action',-2) != 1)",
+    "better_predicate_test_f1": 0.868
+  },
+  "final_label": "D1 after a rare-rewarded a2 trial (a2 -> S1, rewarded), mainly when the agent had been repeating a2"
+}

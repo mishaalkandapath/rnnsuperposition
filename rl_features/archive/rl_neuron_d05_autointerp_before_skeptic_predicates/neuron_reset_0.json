@@ -1,0 +1,65 @@
+{
+  "label": "late-episode D2 clock (earlier onset after choosing a1)",
+  "predicate": "(phase == D2) & (((in_action == 1) & (ep_trial >= 78)) | ((in_action == 2) & (ep_trial >= 88)))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Reset gate 0 tracks time within the episode. It never fires before about trial 60 of 100, and almost all of its activity (96% of mass) is at D2, when the reached state is shown. It never fires at GO. Its rate climbs steeply over the episode: 4% of steps in trials 70-79, 14% in 80-89 and 33% in 90-99. The onset depends on the action just taken, which is the in_action input at D2: after a1 it starts firing around trial 78, after a2 only around trial 88. Overall a1 accounts for 73% of activation mass and a2 for 23%. Because of this clock it correlates strongly with the low value-head output at the end of the episode (value < 5.22 alone gives F1 0.67). It is mostly blind to reward, transition type, stay/switch and the good state. Phase plus ep_trial >= 80 alone gives F1 0.73 with mass recall 0.94; adding the action-dependent onset raises dev F1 to 0.84. Its remaining activity is weak firing at late-episode D1 steps (about 4% of mass), and misses are concentrated in the lowest activation quartile.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 0,
+    "predicate": "(phase == D2) & (((in_action == 1) & (ep_trial >= 78)) | ((in_action == 2) & (ep_trial >= 88)))",
+    "split": "test",
+    "precision": 0.7915733267867554,
+    "recall": 0.8760400747155714,
+    "f1": 0.8316675264379675,
+    "mass_recall": 0.9454167596721706,
+    "correlation": 0.7240943333403252,
+    "n_active": 58890,
+    "n_predicted": 65174,
+    "coverage_by_activation_quartile": [
+      0.7069890647286559,
+      0.8782177545337227,
+      0.9277951365303627,
+      0.9911696780328759
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 0,
+    "predicate": "(phase == D2) & (((in_action == 1) & (ep_trial >= 78)) | ((in_action == 2) & (ep_trial >= 88)))",
+    "split": "dev",
+    "precision": 0.8099995197156716,
+    "recall": 0.8789805597540001,
+    "f1": 0.8430813837232555,
+    "mass_recall": 0.949836357999161,
+    "correlation": 0.7363652688970743,
+    "n_active": 57561,
+    "n_predicted": 62463,
+    "coverage_by_activation_quartile": [
+      0.7042596066986311,
+      0.8784572619874913,
+      0.9397498262682419,
+      0.9934676858929813
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 0,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Every factual claim I tested holds. GO never fires (0 of 380619 steps). Nothing fires before trial 60. Trials 60-69 hold 138 active steps, about 0% of mass. Rates by 10-trial bin are 4% / 14% / 33%. D2 holds 96.2% of mass. in_action 1 holds 73.4% and in_action 2 holds 22.8%. Value < 5.22 has a rate of 0.307 and holds 74% of mass.",
+      "The action-dependent onset is real. For a2 at D2 in trials 80-87, precision is 0.014. For a2 at trials >= 88 it is 0.687, and at >= 92 it is 0.894. For a1 at trials 75-77 it is 0.33, at 78-79 it is 0.53, and at >= 90 it is 1.0. The onset is a graded ramp, not a step, so the exact cutoffs are somewhat arbitrary. Using cutoffs of 80 and 90 instead gives test F1 0.847 vs 0.832, which is not a systematic gap.",
+      "The input is the action, not the reached state. Swapping in_action for in_state in the predicate lowers dev F1 from 0.843 to 0.786. The reached state does add a mild secondary effect: S1 slightly raises the rate given the action. At trials >= 80, a1 to S1 has precision 0.948 and a1 to S2 has 0.881. At trials >= 90, a2 to S1 has 0.886 and a2 to S2 has 0.767. The label does not mention this.",
+      "The apparent effect of the hidden good state is a confound with choice. Conditioned on in_action, precision barely changes with good: 0.93 vs 0.84 for a1, 0.44 vs 0.38 for a2.",
+      "The explanation leaves out what drives the residual D1 firing (about 4% of mass): it occurs almost only when the previous trial's reward is being shown. At trials >= 85, D1 with in_rew == 1 has precision 0.097 and D1 with in_rew == 0 has 0.008. So 'mostly blind to reward' holds at D2 but not for the small D1 component.",
+      "On the test split, the misses are mostly late-episode D1 steps in windows where D2 fires strongly, plus low-magnitude D2 steps near the onset. The false positives are mostly a2 D2 steps near the a2 onset, where activation is weak or zero. Both are boundary effects of the graded ramp. Neither is a new class of counterexample.",
+      "The reported test scores reproduce exactly: precision 0.792, recall 0.876, F1 0.832, mass recall 0.945."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": "(phase == D2) & (((in_action == 1) & (ep_trial >= 80)) | ((in_action == 2) & (ep_trial >= 90)))",
+    "better_predicate_test_f1": 0.847
+  }
+}

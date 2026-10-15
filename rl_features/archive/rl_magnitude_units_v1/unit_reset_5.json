@@ -1,0 +1,80 @@
+{
+  "label": "Reset gate drops after unrewarded trials (esp. a1, loss streaks), growing late in episode",
+  "terms": "(prev_reward == 0) * ep_trial ;; (prev_reward == 0) * (phase == GO) * ep_trial ;; (prev_action == 1) * (prev_reward==0) * ep_trial ;; (tv(\"reward\", -2) == 0) * ep_trial ;; (prev_reward==0)*(tv(\"reward\", -2) == 0) * ep_trial ;; choice * (phase == GO) * ep_trial ;; (action == 1) * (phase == D2) * ep_trial",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw reset gate r5 sits near 1 (mean 0.968) and dips below its timing baseline mainly after unrewarded trials. The dip is deepest at GO, larger when the unrewarded trial was an a1 choice, larger again when the trial before was also unrewarded (loss streaks), and it shrinks after rewarded trials. All effects grow roughly linearly with trial-in-episode: they are tiny early and largest in the last deciles, where the baseline itself also falls. Linear ep_trial scaling did better than unscaled terms (dev 0.38 -> 0.45) and better than exponential scaling. Choosing a1 also lowers it: at GO through the policy logit (more a1 = lower) and at D2 through the observed choice action==1. The reached state, value and the hidden good state add little once these are in. All terms are observed (the policy logit is the model own output). Test R^2 beyond timing 0.476 vs an all-cue ceiling of 0.56 (about 85%); dev 0.476. The largest single-window late-episode dips (to ~0.57) are still under-predicted.",
+  "gate": "unit_reset",
+  "feature": 5,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 5,
+    "terms": [
+      "(prev_reward == 0) * ep_trial",
+      "(prev_reward == 0) * (phase == GO) * ep_trial",
+      "(prev_action == 1) * (prev_reward==0) * ep_trial",
+      "(tv(\"reward\", -2) == 0) * ep_trial",
+      "(prev_reward==0)*(tv(\"reward\", -2) == 0) * ep_trial",
+      "choice * (phase == GO) * ep_trial",
+      "(action == 1) * (phase == D2) * ep_trial"
+    ],
+    "weights": [
+      -4.063269472903357e-05,
+      -0.00031350174309610585,
+      -0.00029560029880526837,
+      -8.076085876536186e-05,
+      -0.00016939050532694438,
+      -2.4671524139760394e-05,
+      -0.0003375534395213728
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.4760991327189499,
+    "r2": 0.724299220087073,
+    "r2_timing_only": 0.4737539158051719
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 5,
+    "terms": [
+      "(prev_reward == 0) * ep_trial",
+      "(prev_reward == 0) * (phase == GO) * ep_trial",
+      "(prev_action == 1) * (prev_reward==0) * ep_trial",
+      "(tv(\"reward\", -2) == 0) * ep_trial",
+      "(prev_reward==0)*(tv(\"reward\", -2) == 0) * ep_trial",
+      "choice * (phase == GO) * ep_trial",
+      "(action == 1) * (phase == D2) * ep_trial"
+    ],
+    "weights": [
+      -4.063269472903357e-05,
+      -0.00031350174309610585,
+      -0.00029560029880526837,
+      -8.076085876536186e-05,
+      -0.00016939050532694438,
+      -2.4671524139760394e-05,
+      -0.0003375534395213728
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.4764467947940696,
+    "r2": 0.7274306303040836,
+    "r2_timing_only": 0.47938553907103654
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The claim that the reached state adds little is wrong. In the GO residual table, a1 S1 u (common, unrewarded) gives -0.047 and a1 S2 u gives -0.027; a2 S1 u gives -0.007 and a2 S2 u gives -0.000. After the original terms, misses still show GO after a1 S1 u over-predicted (-0.016) and GO after a1 S2 u under-predicted (+0.013). That is a systematic state x reward error. Adding (prev_state==1)*(prev_reward==0)*(phase==GO)*ep_trial cuts the a1 S1 u error to -0.008 and raises test R^2 from 0.515 to 0.532.",
+      "The claim that the gate stays near baseline after rewarded trials is wrong for a1 S2 r (rare, rewarded) at D1. The residual there is -0.015, and misses over-predict it by -0.022, the single worst error class. A D1 term for 'previous trial was a1 reaching S2' fixes most of it.",
+      "The label is built around reward, but choice matters more. The two choice terms alone (policy logit at GO, action at D2) score test R^2 0.211 beyond timing. The two reward terms alone score 0.162. The label puts a1 in only as a modifier of the loss dip.",
+      "The policy logit also matters at D1, which the explanation leaves out. Adding choice*(phase!=D2)*ep_trial raises test R^2 from 0.476 to 0.501.",
+      "Without the policy logit (a model output), the original terms score 0.386 on test, against an all-observed ceiling of 0.51. The explanation gives only the 0.476 figure, which includes the model's output.",
+      "The loss-streak claim is weak. Dropping both streak terms lowers test R^2 only from 0.476 to 0.446.",
+      "The deepest late dips are still under-predicted. Worst windows have GO at about 0.57 to 0.62 against predictions of 0.80 to 0.84, persisting across consecutive late-episode trials, including rewarded ones. This is also true of the improved terms."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Reset gate falls late in the episode with a1-leaning policy (D1/GO logit, D2 a1 choice) and after unrewarded trials, deepest at GO after a common a1->S1 loss; also dips at D1 after a1->S2",
+    "better_terms": "choice*(phase!=D2)*ep_trial ;; choice*(phase==GO)*ep_trial ;; (action==1)*(phase==D2)*ep_trial ;; (prev_reward==0)*(phase==GO)*ep_trial ;; (prev_action==1)*(prev_reward==0)*ep_trial ;; (prev_action==1)*(phase==D1)*(prev_state==2)*ep_trial ;; np.exp(ep_trial/15.)*(prev_reward==0)*(tv(\"reward\",-2)==0) ;; (prev_state==1)*(prev_reward==0)*(phase==GO)*ep_trial",
+    "better_terms_test_r2_beyond_timing": 0.532
+  },
+  "final_label": "Reset gate falls late in the episode with a1-leaning policy (D1/GO logit, D2 a1 choice) and after unrewarded trials, deepest at GO after a common a1->S1 loss; also dips at D1 after a1->S2"
+}

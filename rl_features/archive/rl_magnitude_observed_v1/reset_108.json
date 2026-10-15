@@ -1,0 +1,84 @@
+{
+  "label": "D2 a1->S1 common, larger after surprising last trial and weaker S1 belief",
+  "terms": "(phase==D2)*(action==1)*(state==1) ;; (phase==D2)*(action==1)*(state==1)*last_is(\"a1 S2 r\") ;; (phase==D2)*(action==1)*(state==1)*last_is(\"a1 S1 u\") ;; (phase==D2)*(action==1)*(state==1)*last_is(\"a2 S1 r\") ;; (phase==D2)*(action==1)*(state==1)*(prev_action==2) ;; (phase==D2)*(action==1)*(state==1)*np.clip(belief_lo,-3,3) ;; (phase==D2)*(action==1)*(state==1)*belief_cover ;; (phase==D2)*(1-(action==1)*(state==1))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Silent at D1 and GO; at D2 it fires almost only when a1 has just led to S1 (common), which the agent sees at that step. The a1->S1 indicator alone gives dev R^2 0.22 beyond timing. Size within that cell depends on the previous trial: largest after a1->S2 rewarded (+1.37, a rare-rewarded trial that pointed to switching), also raised after a2->S1 rewarded (+0.82) and after any a2 choice (+0.44, i.e. a switch to a1), and a little after a1->S1 unrewarded (+0.23). It falls as the ideal-observer belief that S1 is good rises (-0.135 per unit of clipped log-odds), so it is biggest when a1->S1 comes against a weak or S2-leaning belief, and it rises a little with belief_cover. Other D2 outcomes sit slightly below baseline (-0.16). Observed-only, 8 terms: dev 0.634, test 0.648 beyond timing, against an all-observed ceiling of 0.50 and an all ceiling of 0.70 (so about 93% of the all ceiling). The earlier model-based label (policy not committed to a1) is matched by belief and last-trial history, so dropping value and policy costs little. Not captured: the long runs of about 2.0-2.6 during repeated rewarded a1->S1 streaks in some episodes, which are under-predicted.",
+  "gate": "reset",
+  "feature": 108,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 108,
+    "terms": [
+      "(phase==D2)*(action==1)*(state==1)",
+      "(phase==D2)*(action==1)*(state==1)*last_is(\"a1 S2 r\")",
+      "(phase==D2)*(action==1)*(state==1)*last_is(\"a1 S1 u\")",
+      "(phase==D2)*(action==1)*(state==1)*last_is(\"a2 S1 r\")",
+      "(phase==D2)*(action==1)*(state==1)*(prev_action==2)",
+      "(phase==D2)*(action==1)*(state==1)*np.clip(belief_lo,-3,3)",
+      "(phase==D2)*(action==1)*(state==1)*belief_cover",
+      "(phase==D2)*(1-(action==1)*(state==1))"
+    ],
+    "weights": [
+      0.3304371306485789,
+      1.3663577323460332,
+      0.23432105084578364,
+      0.8206193800170059,
+      0.44128498386546744,
+      -0.13521948359813485,
+      0.03362084095269242,
+      -0.16078101816760837
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6481913462805102,
+    "r2": 0.6824672500060179,
+    "r2_timing_only": 0.09742768792957912
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 108,
+    "terms": [
+      "(phase==D2)*(action==1)*(state==1)",
+      "(phase==D2)*(action==1)*(state==1)*last_is(\"a1 S2 r\")",
+      "(phase==D2)*(action==1)*(state==1)*last_is(\"a1 S1 u\")",
+      "(phase==D2)*(action==1)*(state==1)*last_is(\"a2 S1 r\")",
+      "(phase==D2)*(action==1)*(state==1)*(prev_action==2)",
+      "(phase==D2)*(action==1)*(state==1)*np.clip(belief_lo,-3,3)",
+      "(phase==D2)*(action==1)*(state==1)*belief_cover",
+      "(phase==D2)*(1-(action==1)*(state==1))"
+    ],
+    "weights": [
+      0.3304371306485789,
+      1.3663577323460332,
+      0.23432105084578364,
+      0.8206193800170059,
+      0.44128498386546744,
+      -0.13521948359813485,
+      0.03362084095269242,
+      -0.16078101816760837
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6341901438916004,
+    "r2": 0.6699911609197389,
+    "r2_timing_only": 0.09786783059647708
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The scores reproduce exactly: test R^2 beyond timing is 0.648 and the fitted weights match the claims (+1.37 after a1 S2 r, +0.82 after a2 S1 r, +0.44 after prev a2, +0.23 after a1 S1 u, -0.135 per unit of clipped belief_lo, +0.034 per unit of belief_cover, -0.16 for other D2 outcomes). The profile confirms the residual is 0 at D1 and GO and +0.31 only in the D2 a1->S1 cell.",
+      "The label leans too hard on belief. Its main drivers are the D2 a1->S1 cell plus the previous trial. Dropping the belief term only lowers test from 0.648 to 0.626. Belief and cover alone inside the cell reach only 0.458. 'Weaker S1 belief' is a secondary effect worth about 0.02 R^2.",
+      "Most of the gain over 'cell only' comes from the term for other D2 outcomes (-0.16). Cell only scores 0.235 and cell plus that term scores 0.310. That term re-centres the D2 timing baseline, which is pooled across the cell. It is not a substantive behavioural driver.",
+      "The belief effect is linear: belief-bin tables, squared log-odds, |log-odds| and threshold terms add nothing (0.634-0.641). The non-monotonic pooled belief-decile residual (peak in deciles 5-6) comes from who chooses a1, not from curvature.",
+      "One small systematic over-prediction remains: D2 after a1 S2 u (rare, unrewarded), mean error -0.14. A term for it gets weight -0.23 but does not raise test R^2 (0.646 vs 0.648), so it is minor.",
+      "The largest unexplained class is the one the label already admits. Some episodes show sustained activations of about 2.0-2.7 over streaks of rewarded a1->S1 trials, predicted at only 0.3-0.6. Nothing I tried captures it, whether observed or hidden: streak terms using tv over the last 2-3 trials (weights -0.06 / +0.10), start_high, episode position, belief_cover==10, the hidden good state, p_s1 and since_rev all add 0.00-0.004. It looks like a persistent internal state, not something an additive model over observable history can explain, which fits the all ceiling of 0.70."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 a1->S1 common, larger after the last trial was a2 or a1->S2 rewarded (mildly lower with stronger S1 belief)",
+    "better_terms": null,
+    "better_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "D2 a1->S1 common, larger after the last trial was a2 or a1->S2 rewarded (mildly lower with stronger S1 belief)"
+}

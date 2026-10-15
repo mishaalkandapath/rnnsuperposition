@@ -1,0 +1,79 @@
+{
+  "label": "z low at D1 after S2 / a1, high when policy favors a2",
+  "terms": "(phase == D1) * (prev_action == 2) ;; (phase == D1) * (prev_state == 2) ;; (phase == D1) * (prev_action == 2) * (prev_state == 2) * (prev_reward == 0) ;; (phase == GO) * last_is(\"a1 S2 u\") ;; (phase == D1) * np.maximum(choice, 0) ;; (phase == GO) * choice ;; (phase == D1) * value",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 10 (mean 0.83; timing baseline rises D1 ~0.67 < GO ~0.88 < D2 ~0.98 and drops late in the episode). Beyond timing, the magnitude is mostly set at D1 by the previous trial and the policy: at D1 z is lower when the previous trial reached S2 (strongest after a1->S2 rare, about -0.26 to -0.35) and higher after a2 choices (a2->S1 about +0.19); a2->S2 unrewarded is lowered further. z at D1 also decreases with the model policy leaning to a1 (rectified positive choice logit; the most-a1 decile is about -0.28) and slightly increases with value. At GO the same pattern is weaker: lower after a1 S2 u and with the policy toward a1 (graded choice). D2 is near saturation and barely varies. The trial reward itself and future variables are not needed; all terms are observed or internal model quantities. Dev R^2 beyond timing 0.745, vs ceilings all 0.87 / all observed 0.71 / policy decile alone 0.68.",
+  "gate": "unit_update",
+  "feature": 10,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 10,
+    "terms": [
+      "(phase == D1) * (prev_action == 2)",
+      "(phase == D1) * (prev_state == 2)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 2) * (prev_reward == 0)",
+      "(phase == GO) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * np.maximum(choice, 0)",
+      "(phase == GO) * choice",
+      "(phase == D1) * value"
+    ],
+    "weights": [
+      0.09305345211632957,
+      -0.1508734358600823,
+      -0.06605875405188845,
+      -0.044548768863129654,
+      -0.06186056094336501,
+      -0.009770842882995507,
+      0.020131924641051173
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7301183494316774,
+    "r2": 0.8904497807429349,
+    "r2_timing_only": 0.5940805200117463
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 10,
+    "terms": [
+      "(phase == D1) * (prev_action == 2)",
+      "(phase == D1) * (prev_state == 2)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 2) * (prev_reward == 0)",
+      "(phase == GO) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * np.maximum(choice, 0)",
+      "(phase == GO) * choice",
+      "(phase == D1) * value"
+    ],
+    "weights": [
+      0.09305345211632957,
+      -0.1508734358600823,
+      -0.06605875405188845,
+      -0.044548768863129654,
+      -0.06186056094336501,
+      -0.009770842882995507,
+      0.020131924641051173
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7453537488697217,
+    "r2": 0.8955203658255366,
+    "r2_timing_only": 0.5897067649308878
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Systematic miss at D1 after a1 -> S2 rewarded (rare rewarded). Misses on the recorded terms show actual is 0.146 below predicted. Adding (phase==D1)*last_is('a1 S2 r') removes the gap. The explanation says z is lowest after a1 -> S2 rare trials (-0.26 to -0.35), but the recorded terms only capture the unrewarded side via prev_state==2.",
+      "There is a second D1 error after a2 S1 u: actual is 0.038 below predicted, rising to 0.108 once choice is linear. With the policy controlled, a2 -> S1 unrewarded gets a weight of -0.17. The '+0.19 after a2 led to S1' figure is the raw residual and is largely carried by the policy, not by a separate history effect.",
+      "The 'positive part of the choice logit' framing is not supported. At D1, linear choice alone scores test 0.456 against 0.312 for np.maximum(choice,0), and splitting choice into positive and negative parts gives two near-equal weights (-0.041 and -0.040). Within the base model, swapping max(choice,0) for choice raises test from 0.650 to 0.700. So z falls across the whole a2-to-a1 range, not only when the policy leans to a1.",
+      "'Rises slightly with value' is a suppression effect. (phase==D1)*value alone scores test 0.000, and the profile shows D1 residuals in value deciles 7-8 of -0.21 and -0.30, which is the opposite direction. Value gets a positive weight only when choice is controlled; it adds about 0.08 there (0.650 -> 0.730).",
+      "The claimed GO pattern rests on small weights: GO*choice -0.010 and GO*last_is('a1 S2 u') -0.045. Misses still show GO after a1 S2 r at -0.046 and GO after a2 S1 r at +0.034.",
+      "Smaller remaining errors: D1 after a1 S1 r +0.06 and D1 after a1 S1 u -0.06. Even the improved terms reach only test 0.757, against the 'all' ceiling of 0.87."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 z falls linearly as the policy shifts from a2 to a1 and is lower after the last trial reached S2 (most after a1->S2, rewarded or not); weak echo at GO",
+    "better_terms": "(phase == D1) * (prev_action == 2) ;; (phase == D1) * (prev_state == 2) ;; (phase == D1) * (prev_action == 2) * (prev_state == 2) * (prev_reward == 0) ;; (phase == D1) * choice ;; (phase == GO) * choice ;; (phase == D1) * value ;; (phase==D1)*last_is('a1 S2 r') ;; (phase==D1)*last_is('a2 S1 u')",
+    "better_terms_test_r2_beyond_timing": 0.7566
+  },
+  "final_label": "D1 z falls linearly as the policy shifts from a2 to a1 and is lower after the last trial reached S2 (most after a1->S2, rewarded or not); weak echo at GO"
+}

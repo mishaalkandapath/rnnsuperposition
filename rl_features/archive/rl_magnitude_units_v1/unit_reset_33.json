@@ -1,0 +1,79 @@
+{
+  "label": "Previous-trial outcome by phase plus policy toward a2 (raised), a1 lowers",
+  "terms": "(phase == D1) * table(((prev_action-1)*4+(prev_state-1)*2+(1-prev_reward)), {0:0.08,1:-0.135,2:-0.126,3:-0.359,6:0.088,7:-0.182,4:0.2,5:0.059}) ;; (phase == GO) * table(((prev_action-1)*4+(prev_state-1)*2+(1-prev_reward)), {0:-0.191,1:-0.026,2:-0.01,3:-0.1,6:0.112,7:0.114,4:-0.041,5:0.217}) ;; (phase == D2) * table(((prev_action-1)*4+(prev_state-1)*2+(1-prev_reward)), {0:-0.089,1:-0.03,2:0.035,3:-0.136,6:0.086,7:0.013,4:0.045,5:0.08})  ;; (phase == D1) * choice ;; (phase == GO) * choice ;; (phase == D2) * choice ;; (phase == D2) * (action == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate of unit 33 (timing R^2 0.60). Beyond timing, the last trial's choice x state x reward pattern dominates (phase-specific tables, dev 0.70): at D1 it is high after rewarded trials (a2 S1 r +0.20, a1 S1 r / a2 S2 r +0.08) and low after unrewarded ones, lowest after a1 S2 u (-0.36), a2 S2 u (-0.18), a1 S1 u (-0.14); at GO and D2 it is higher after a2 trials (a2 S1 u +0.22, a2 S2 r/u +0.11 at GO) and lower after a1 S1 r (-0.19). Adding the model's policy logit (a1 - a2) at each phase (negative weight: leaning to a2 raises it) and choosing a1 at D2 (lowers it) brings it to 0.79 test R^2 beyond timing (ceiling all 0.91, all observed 0.84). The value head, the trial before, trials since reversal and this trial's reward add little. No future variables are used.",
+  "gate": "unit_reset",
+  "feature": 33,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 33,
+    "terms": [
+      "(phase == D1) * table(((prev_action-1)*4+(prev_state-1)*2+(1-prev_reward)), {0:0.08,1:-0.135,2:-0.126,3:-0.359,6:0.088,7:-0.182,4:0.2,5:0.059})",
+      "(phase == GO) * table(((prev_action-1)*4+(prev_state-1)*2+(1-prev_reward)), {0:-0.191,1:-0.026,2:-0.01,3:-0.1,6:0.112,7:0.114,4:-0.041,5:0.217})",
+      "(phase == D2) * table(((prev_action-1)*4+(prev_state-1)*2+(1-prev_reward)), {0:-0.089,1:-0.03,2:0.035,3:-0.136,6:0.086,7:0.013,4:0.045,5:0.08})",
+      "(phase == D1) * choice",
+      "(phase == GO) * choice",
+      "(phase == D2) * choice",
+      "(phase == D2) * (action == 1)"
+    ],
+    "weights": [
+      0.8991055165047204,
+      0.2990780591040595,
+      0.0393356040105072,
+      -0.010308605838766942,
+      -0.012815348128063557,
+      -0.018839625171437526,
+      -0.05550327787213464
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7936771868954913,
+    "r2": 0.9179178725083285,
+    "r2_timing_only": 0.6021664969733889
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 33,
+    "terms": [
+      "(phase == D1) * table(((prev_action-1)*4+(prev_state-1)*2+(1-prev_reward)), {0:0.08,1:-0.135,2:-0.126,3:-0.359,6:0.088,7:-0.182,4:0.2,5:0.059})",
+      "(phase == GO) * table(((prev_action-1)*4+(prev_state-1)*2+(1-prev_reward)), {0:-0.191,1:-0.026,2:-0.01,3:-0.1,6:0.112,7:0.114,4:-0.041,5:0.217})",
+      "(phase == D2) * table(((prev_action-1)*4+(prev_state-1)*2+(1-prev_reward)), {0:-0.089,1:-0.03,2:0.035,3:-0.136,6:0.086,7:0.013,4:0.045,5:0.08})",
+      "(phase == D1) * choice",
+      "(phase == GO) * choice",
+      "(phase == D2) * choice",
+      "(phase == D2) * (action == 1)"
+    ],
+    "weights": [
+      0.8991055165047204,
+      0.2990780591040595,
+      0.0393356040105072,
+      -0.010308605838766942,
+      -0.012815348128063557,
+      -0.018839625171437526,
+      -0.05550327787213464
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7970045511752197,
+    "r2": 0.9190796196351103,
+    "r2_timing_only": 0.6013684994744005
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The reported score reproduces: the 7 terms give test R^2 beyond timing 0.794 (dev 0.80). The D1 and GO previous-trial tables and the negative policy-logit weights (leaning toward a2 raises the gate) also hold up.",
+      "The D2 claim 'having chosen a1 at D2 lowers it' gets the driver wrong. At D2 the residual by this trial's choice x reached state is a1 S1 -0.026, a1 S2 -0.235, a2 S1 +0.123, a2 S2 +0.049. So the reached state matters (S2 lowers, S1 raises), and the strongest drop is after a1 -> S2, a rare transition. Choosing a1 by itself is not what lowers it.",
+      "Swapping the D2 (action==1) term for (phase==D2)*(state==2) raises test R^2 from 0.794 to 0.817. A D2 action x state table raises it to 0.835 (dev 0.840). Dropping the action term altogether costs only about 0.011 (0.783 without it). So the label is missing the term that actually matters at D2.",
+      "Misses on the original terms show a systematic error: in the worst-fit windows, D2 after a1 S2R (rare) is over-predicted on almost every occurrence (actual about 0.50-0.53 vs predicted 0.68-0.70).",
+      "Errors left after the fix are moderate (at most about 0.06): GO after a2 S1 r is over-predicted by 0.063, and GO after a1 S2 u and D1 after a1 S1 r are under-predicted by about 0.05-0.06. Adding the trial before or the value head gains at most 0.005, which agrees with the original claim that they add little.",
+      "Minor: the large worst-window error at a window's first D1 (actual about 0.2 vs predicted 0.57) happens because the previous trial is unknown ('?') at that step. It is a window-edge artifact, not a gap in the explanation."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Previous-trial outcome at D1 (high after rewarded, lowest after a1 S2 u); policy toward a2 raises it at all phases; at D2 the reached state matters: high after S1, low after S2, lowest after a1 -> S2 (rare)",
+    "better_terms": "(phase == D1) * table(((prev_action-1)*4+(prev_state-1)*2+(1-prev_reward)), {0:0.08,1:-0.135,2:-0.126,3:-0.359,6:0.088,7:-0.182,4:0.2,5:0.059}) ;; (phase == GO) * table(((prev_action-1)*4+(prev_state-1)*2+(1-prev_reward)), {0:-0.191,1:-0.026,2:-0.01,3:-0.1,6:0.112,7:0.114,4:-0.041,5:0.217}) ;; (phase == D2) * table(((prev_action-1)*4+(prev_state-1)*2+(1-prev_reward)), {0:-0.089,1:-0.03,2:0.035,3:-0.136,6:0.086,7:0.013,4:0.045,5:0.08}) ;; (phase == D1) * choice ;; (phase == GO) * choice ;; (phase == D2) * choice ;; (phase == D2) * table(3*action+state, {4:-0.026,5:-0.235,7:0.123,8:0.049})",
+    "better_terms_test_r2_beyond_timing": 0.835
+  },
+  "final_label": "Previous-trial outcome at D1 (high after rewarded, lowest after a1 S2 u); policy toward a2 raises it at all phases; at D2 the reached state matters: high after S1, low after S2, lowest after a1 -> S2 (rare)"
+}

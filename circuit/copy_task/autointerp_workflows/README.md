@@ -16,6 +16,7 @@ scored on held-out sequences. A skeptic agent then tries to refute every
 | `circuit/copy_task/autointerp.py` | The agents' tool: `variables`, `profile`, `score`, `misses`, `record`, plus `report` |
 | `circuit/copy_task/autointerp_workflows/interpret_features.js` | Workflow: one interpreter per transcoder feature, skeptic on "explained" |
 | `circuit/copy_task/autointerp_workflows/interpret_units.js` | Same protocol, for GRU units |
+| `circuit/copy_task/autointerp_workflows/interpret_magnitude.js` | Magnitude explanations for dense features (tool: `circuit/copy_task/autointerp_magnitude.py`); see `docs/autointerp_guide.md` |
 | `circuit/copy_task/autointerp_runs.py` | Build workflow inputs (`items`), record sparse features (`sparse`), merge skeptic verdicts (`merge`) |
 | `circuit/copy_task/scorecards.py` | Fitted scorecards for features no short predicate explains |
 | `circuit/copy_task/autointerp_plots.py` | Figures (specificity by activation level) |

@@ -1,0 +1,85 @@
+{
+  "label": "D2 rare a1->S2; larger after switching from a2 or a1 S1 unrewarded, belief favouring S2",
+  "terms": "(phase == D2) & (action == 1) & (state == 2) ;; ((phase == D2) & (action == 1) & (state == 2)) * last_is(\"a1 S1 u\") ;; ((phase == D2) & (action == 1) & (state == 2)) * (prev_action == 1) ;; ((phase == D2) & (action == 1) & (state == 2)) * (prev_reward == 1) ;; ((phase == D2) & (action == 1) & (state == 2)) * belief ;; ((phase == D2) & (action == 1) & (state == 2)) * (belief - 0.5)**2 ;; ((phase == D2) & (action == 1) & (state == 2)) * ep_dec ;; ((phase == D2) & (action == 1) & (state == 2)) * (prev_action == -1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Zero at D1 and GO. Fires only at D2 when a1 led rarely to S2; that gate alone gives test R^2 0.17 beyond timing. Within those steps the magnitude is set by observed history. It is higher after switching to a1 from a2 (prev_action==1 weight -0.82), and higher still when the previous trial was a1 S1 unrewarded (+0.72 on top). It is lower after a rewarded previous trial (-0.26). It falls as the ideal-observer belief that S1 is good rises (belief weight -0.77), partly offset by a positive (belief-0.5)^2 term, so it peaks when belief is uncertain or leans S2. It declines later in the episode (ep_dec -0.05 per decile) and is lower on window-first trials where the previous trial is unknown. All terms are observed at D2 (the choice and state are seen by then); none use future, hidden or model-output variables. Test R^2 beyond timing is 0.70 against an additive all-cue ceiling of 0.31 (all observed 0.29). The earlier value/policy-based explanation loses nothing: the observed belief plus history replaces it. Remaining misses: some very large activations (~2.5) are under-predicted (~0.6), mostly after a2 trials.",
+  "gate": "update",
+  "feature": 29,
+  "test_scores": {
+    "gate": "update",
+    "feature": 29,
+    "terms": [
+      "(phase == D2) & (action == 1) & (state == 2)",
+      "((phase == D2) & (action == 1) & (state == 2)) * last_is(\"a1 S1 u\")",
+      "((phase == D2) & (action == 1) & (state == 2)) * (prev_action == 1)",
+      "((phase == D2) & (action == 1) & (state == 2)) * (prev_reward == 1)",
+      "((phase == D2) & (action == 1) & (state == 2)) * belief",
+      "((phase == D2) & (action == 1) & (state == 2)) * (belief - 0.5)**2",
+      "((phase == D2) & (action == 1) & (state == 2)) * ep_dec",
+      "((phase == D2) & (action == 1) & (state == 2)) * (prev_action == -1)"
+    ],
+    "weights": [
+      1.9352439831408939,
+      0.7233638123917826,
+      -0.8155950259851955,
+      -0.2575910529708028,
+      -0.7730089041234316,
+      0.35674881273094927,
+      -0.04581530779350768,
+      -0.7720276369983872
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6993976770204231,
+    "r2": 0.7073396912919203,
+    "r2_timing_only": 0.02642033565401536
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 29,
+    "terms": [
+      "(phase == D2) & (action == 1) & (state == 2)",
+      "((phase == D2) & (action == 1) & (state == 2)) * last_is(\"a1 S1 u\")",
+      "((phase == D2) & (action == 1) & (state == 2)) * (prev_action == 1)",
+      "((phase == D2) & (action == 1) & (state == 2)) * (prev_reward == 1)",
+      "((phase == D2) & (action == 1) & (state == 2)) * belief",
+      "((phase == D2) & (action == 1) & (state == 2)) * (belief - 0.5)**2",
+      "((phase == D2) & (action == 1) & (state == 2)) * ep_dec",
+      "((phase == D2) & (action == 1) & (state == 2)) * (prev_action == -1)"
+    ],
+    "weights": [
+      1.9352439831408939,
+      0.7233638123917826,
+      -0.8155950259851955,
+      -0.2575910529708028,
+      -0.7730089041234316,
+      0.35674881273094927,
+      -0.04581530779350768,
+      -0.7720276369983872
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6932065746063834,
+    "r2": 0.7012572436883304,
+    "r2_timing_only": 0.026241335099075003
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The headline score holds up. The 8 terms give test R^2 beyond timing 0.699 (dev 0.693), well above the additive 'all' ceiling of 0.31. The gate term alone gives 0.17. Firing really is limited to D2 a1->S2: the D1 and GO residuals are exactly 0.",
+      "The (belief-0.5)^2 term does nothing. Dropping it leaves test R^2 at 0.6994, unchanged. With weights -0.77*b + 0.36*(b-0.5)^2 the fitted curve keeps falling across b in [0,1], so it peaks at belief = 0 (S2 good), not 'when uncertain'. The 'peaks when belief is uncertain' claim is unsupported.",
+      "Belief barely matters once trial history is in the model. Removing both belief terms drops test R^2 only from 0.699 to 0.686. belief_lo or a window-first x belief interaction adds less than 0.001. 'Belief favouring S2' in the label overstates a minor effect. Belief alone with the gate (0.39) mostly stands in for history.",
+      "The window-first term (prev_action == -1, -0.77) is an artefact of the 5-trial window, not something the agent sees: the agent did observe that previous trial. The worst-fit windows in misses are mostly window-first (rel -3) a1 S2R trials, e.g. actual 2.62 vs predicted 0.43, 1.92 vs 0.51, 2.43 vs 0.89, 2.18 vs 0.69. Neither belief nor belief_cover recovers them. So the error class 'large activations under-predicted' is mostly window-first trials, not 'after a2' as the explanation says.",
+      "The history claims check out on test. Dropping a1 S1 u: 0.699 -> 0.627. Dropping prev_reward: -> 0.662. Dropping ep_dec: -> 0.650. Dropping the window-first term: -> 0.636. History terms with no belief or episode terms: 0.593. The prev_action==1 effect (-0.82) means activation is highest after an a2 trial, i.e. on a switch to a1. a1 S1 u (+0.72) brings it back to about the a2 level, not 'higher still'.",
+      "The claim that going observed-only 'loses nothing' compared with the value/policy explanation can't be checked with observed-only tools. The policy and value reference tables give only 0.04 each.",
+      "No large systematic error remains in the phase x previous-trial means; the worst cell is -0.034. The extra terms I tried (prev a2 S2, the trial before last, ep_trial<3, belief_cover) each add at most 0.003."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 rare a1->S2; largest after an a2 trial or an a1 S1 unrewarded trial, lower after rewarded trials and later in the episode (belief adds little)",
+    "better_terms": "((phase == D2) & (action == 1) & (state == 2)) ;; ((phase == D2) & (action == 1) & (state == 2)) * last_is(\"a1 S1 u\") ;; ((phase == D2) & (action == 1) & (state == 2)) * (prev_action == 1) ;; ((phase == D2) & (action == 1) & (state == 2)) * (prev_reward == 1) ;; ((phase == D2) & (action == 1) & (state == 2)) * belief ;; ((phase == D2) & (action == 1) & (state == 2)) * ep_dec ;; ((phase == D2) & (action == 1) & (state == 2)) * (prev_action == -1) ;; ((phase == D2) & (action == 1) & (state == 2)) * (ep_trial < 3)",
+    "better_terms_test_r2_beyond_timing": 0.7024
+  },
+  "final_label": "D2 rare a1->S2; largest after an a2 trial or an a1 S1 unrewarded trial, lower after rewarded trials and later in the episode (belief adds little)"
+}

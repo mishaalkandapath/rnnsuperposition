@@ -1,0 +1,65 @@
+{
+  "label": "D1 after a reward that favours a2/S2 (reward seen, agent about to choose a2)",
+  "predicate": "(phase == D1) & (in_rew == 1) & ((prev_state == 2) | (action == 2))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 and only when the reward input is 1 (99% recall, 100% of mass for D1 & in_rew==1, but that alone has precision 0.50). Within rewarded D1 steps it fires when the reward points towards a2: the previous trial reached S2 (observed) or the agent is about to choose a2 (its own upcoming choice, which is legitimate to compute; action at D1 is the upcoming GO choice). No unobservable random outcome is used. Magnitude is largest (top windows, ~3.6) when the previous trial was a1 -> rare S2 and rewarded, i.e. the model-based switch to a2. It is small (~0.1-0.25 of max) on long a2/S2-common reward streaks, rising slightly over the streak. Silent at GO and D2, after unrewarded trials, and after rewards at S1 when the agent keeps choosing a1. Dev: P 0.89, R 0.98, F1 0.93, mass recall 0.98. Most false positives are rewarded D1 steps in long a2 streaks, often at the window start.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 8,
+    "predicate": "(phase == D1) & (in_rew == 1) & ((prev_state == 2) | (action == 2))",
+    "split": "test",
+    "precision": 0.8773536823626016,
+    "recall": 0.9852461883336778,
+    "f1": 0.9281750578508684,
+    "mass_recall": 0.982438279320022,
+    "correlation": 0.7021182407957837,
+    "n_active": 125798,
+    "n_predicted": 141268,
+    "coverage_by_activation_quartile": [
+      0.9627344992050875,
+      0.9999046104928457,
+      0.9997456198925244,
+      0.9786002734586156
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 8,
+    "predicate": "(phase == D1) & (in_rew == 1) & ((prev_state == 2) | (action == 2))",
+    "split": "dev",
+    "precision": 0.8890265951242272,
+    "recall": 0.9847378791304628,
+    "f1": 0.9344377863940782,
+    "mass_recall": 0.9829412029692934,
+    "correlation": 0.7098019065869975,
+    "n_active": 123836,
+    "n_predicted": 137168,
+    "coverage_by_activation_quartile": [
+      0.9598178235731128,
+      0.9995800897961821,
+      0.9999353984301819,
+      0.9796182047223747
+    ]
+  },
+  "gate": "hidden",
+  "feature": 8,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The 'or the agent is about to choose a2' part of the label is wrong. On rewarded D1 steps where the previous trial reached S1 and the agent then chooses a2, the predicate is true on 12,324 dev steps and the feature is active on none of them (precision 0.000 on dev, 0.000 on test). That is exactly the 'model-based switch towards a2 after an S1 reward' case the label covers, and the feature is silent there.",
+      "The feature does not depend on the upcoming choice. After a rewarded S2 trial where the agent then chooses a1, it fires every time: (D1)&(in_rew==1)&(prev_state==2)&(action==1) has precision 1.000 on 6,357 steps and holds 16% of the activation mass.",
+      "The action==2 term only matters on the window's first trial, where prev_state is -1 because that trial's previous trial lies outside the window. There, action==2 stands in for the unseen previous trial, not for a choice the agent computes: with prev_state==-1, action==2 gives precision 0.944 and action==1 gives 0.028. The best purely observed proxy, good==2, gives 0.96.",
+      "Because of this, the original predicate gives a systematic class of false positives (rewarded at S1, about to choose a2). Removing it raises dev precision from 0.889 to 0.977 with no loss of recall (0.985), and test precision from 0.877 to 0.973.",
+      "The other claims check out. GO and D2 never fire (0 of 761k steps). Unrewarded D1 steps almost never fire (930 of 894k active, holding 0.000 of the mass). Rewarded D1 after S1 almost never fires (precision 0.003). After a rare S2 reward, the feature covers 34% of the top activation quartile from about 9% of active steps, so the magnitude story is roughly supported.",
+      "Remaining misses after the fix are scattered, small edge cases at the window start, holding 1.7% of the mass. They are not systematic."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after the previous trial reached S2 and was rewarded (reward shown at S2), whatever the agent chooses next; strongest after rare a1->S2 rewarded trials",
+    "better_predicate": "(phase == D1) & (in_rew == 1) & ((prev_state == 2) | ((prev_state == -1) & (action == 2)))",
+    "better_predicate_test_f1": 0.979
+  },
+  "final_label": "D1 after the previous trial reached S2 and was rewarded (reward shown at S2), whatever the agent chooses next; strongest after rare a1->S2 rewarded trials"
+}

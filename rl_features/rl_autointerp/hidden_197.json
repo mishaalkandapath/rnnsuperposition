@@ -1,0 +1,104 @@
+{
+  "label": "GO step, choosing a2 after a rewarded trial (mid/late episode)",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (prev_action != 1) & (ep_trial >= 45) & (ep_trial < 92)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO (0 activations at D1/D2), and only when the previous trial was rewarded (99% of mass) and the agent is about to choose a2 (model_act==2 / strongly negative policy logit; 99.8% of mass). Uses only observed variables plus the agent own current policy output. Mostly not conditioned on previous action (requiring prev_action==2 drops recall to 0.73) or transition type. It is strongly gated by episode position: silent before about trial 40, ramps up through trials 45-89, and drops off in trials 90-99, so the trial window is included (F1 0.83 with ep_trial>=45 alone, 0.87 with the upper cutoff on dev). Magnitude goes up as the a2 preference gets stronger (87% of mass at choice logit < -8.9) and at moderate value levels; it builds over runs of consecutive rewarded a2 choices in the example windows. It does not fire for a1 choices, after unrewarded trials, or early in the episode. Remaining false positives are concentrated in particular episodes, which points to slow drift in hidden state rather than a clean trial variable.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 197,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (prev_action != 1) & (ep_trial >= 45) & (ep_trial < 92)",
+    "split": "test",
+    "precision": 0.8629418579166537,
+    "recall": 0.8892097239921924,
+    "f1": 0.875878889957019,
+    "mass_recall": 0.9713847442667153,
+    "correlation": 0.8007995765041384,
+    "n_active": 61991,
+    "n_predicted": 63878,
+    "coverage_by_activation_quartile": [
+      0.6407923603045554,
+      0.9269583172022197,
+      0.9890953671441476,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 197,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (prev_action != 1) & (ep_trial >= 45) & (ep_trial < 92)",
+    "split": "dev",
+    "precision": 0.8748127237458405,
+    "recall": 0.9000356957424714,
+    "f1": 0.8872449836453643,
+    "mass_recall": 0.9771696050635925,
+    "correlation": 0.8085275977619558,
+    "n_active": 61632,
+    "n_predicted": 63409,
+    "coverage_by_activation_quartile": [
+      0.6590732087227414,
+      0.9461967808930426,
+      0.9948727933541017,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 197,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The explanation says the previous action mostly doesn't matter. That is false. When the previous choice was a1, the feature is essentially silent: prev_action==1 holds 0.1% of activation mass (200 of 61632 active dev steps). Within the predicate, the subset with prev_action==1 (switching to a2 after a rewarded a1) has precision 0.039 on 2255 predicted steps, about 20% of all false positives. That is a systematic false-positive class, not noise.",
+      "The recall drop to 0.73 under prev_action==2, which the other agent offered as evidence, is an artifact of the window edge. On the window's first trial prev_action is -1 (unknown); that subset has precision 0.90 and carries 23% of mass. The right restriction is prev_action != 1, not 'previous action irrelevant'.",
+      "There is a second, weaker systematic false-positive class: the previous trial was rewarded but reached S1 (a2 then a rare transition, then reward). Within the predicate, prev_state==1 has precision 0.48 and only 2.3% of mass recall. So the feature favours 'a2 led to S2 and was rewarded, now repeating a2', not just any rewarded trial.",
+      "Checks that hold up: the feature fires only at GO (D1 and D2 have zero activations). prev_reward==1 carries 99.2% of mass. model_act==2 carries 99.9% of mass. Activations are concentrated in trials 45-91 (none before trial 30, few in 40-49 and 90-99). Mass rises at choice logits below -8.9 (87%). Activations build over runs of rewarded a2 choices. Reported test scores reproduce exactly (P 0.829, R 0.891, F1 0.859, mass recall 0.972).",
+      "The label 'choosing a2 after a rewarded trial' overclaims relative to the data. It should say the agent is repeating a2 after a rewarded a2 trial (win-stay on a2), not switching into a2 after a rewarded a1."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step, repeating a2 after a rewarded a2 trial (win-stay on a2; mid/late episode); silent when switching to a2 from a1",
+    "better_predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (prev_action != 1) & (ep_trial >= 45) & (ep_trial < 92)",
+    "better_predicate_test_f1": 0.876
+  },
+  "final_label": "GO step, repeating a2 after a rewarded a2 trial (win-stay on a2; mid/late episode); silent when switching to a2 from a1",
+  "original_predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (ep_trial >= 45) & (ep_trial < 92)",
+  "original_test_scores": {
+    "gate": "hidden",
+    "feature": 197,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (ep_trial >= 45) & (ep_trial < 92)",
+    "split": "test",
+    "precision": 0.8292979662951726,
+    "recall": 0.8906615476440128,
+    "f1": 0.858885112274343,
+    "mass_recall": 0.9718552390490498,
+    "correlation": 0.783794323862283,
+    "n_active": 61991,
+    "n_predicted": 66578,
+    "coverage_by_activation_quartile": [
+      0.6449219254097303,
+      0.9285714285714286,
+      0.989159891598916,
+      1.0
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "hidden",
+    "feature": 197,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (ep_trial >= 45) & (ep_trial < 92)",
+    "split": "dev",
+    "precision": 0.846125730994152,
+    "recall": 0.9014797507788161,
+    "f1": 0.8729260935143287,
+    "mass_recall": 0.9777115379985177,
+    "correlation": 0.7941186831692947,
+    "n_active": 61632,
+    "n_predicted": 65664,
+    "coverage_by_activation_quartile": [
+      0.6627076843198338,
+      0.9479491173416407,
+      0.9952622014537902,
+      1.0
+    ]
+  },
+  "predicate_from": "skeptic"
+}

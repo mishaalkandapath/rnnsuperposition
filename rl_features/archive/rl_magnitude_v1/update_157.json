@@ -1,0 +1,62 @@
+{
+  "label": "GO, late episode (>=70), after unrewarded S2 trial, scaled by a2 preference",
+  "terms": "(phase == GO) * (prev_reward == 0) * (prev_state != 1) * (ep_trial >= 70) * np.clip(-choice, 0, 6) ;; (phase == GO) * (prev_reward == 0) * (prev_state != 1) * (ep_trial >= 80) * np.clip(-choice, 0, 6) ;; (phase == GO) * (prev_reward == 0) * (prev_state != 1) * (ep_trial >= 70) * (prev_action == -1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Active only at GO, and only late in the episode (trial >= 70, stronger >= 80). Its magnitude is large when the previous trial was unrewarded and did not reach S1 (mainly a2 S2 u) and the agent leans toward a2 now; it grows with the model policy logit for a2 (-choice). If the agent goes on to switch to a1, it is about zero. Using the future choice (action == 2) in place of the graded logit scored lower (dev 0.56 vs 0.59). Window-start trials with an unknown previous trial get a smaller boost. Rewarded trials, a1 choices, prev S1 and early episode give ~0. The trial before adds nothing (dev +0.001). Dev R^2 beyond timing 0.59; profile all-cue additive ceiling only 0.19, because the effect is an interaction with episode time.",
+  "gate": "update",
+  "feature": 157,
+  "test_scores": {
+    "gate": "update",
+    "feature": 157,
+    "terms": [
+      "(phase == GO) * (prev_reward == 0) * (prev_state != 1) * (ep_trial >= 70) * np.clip(-choice, 0, 6)",
+      "(phase == GO) * (prev_reward == 0) * (prev_state != 1) * (ep_trial >= 80) * np.clip(-choice, 0, 6)",
+      "(phase == GO) * (prev_reward == 0) * (prev_state != 1) * (ep_trial >= 70) * (prev_action == -1)"
+    ],
+    "weights": [
+      0.04927761328951572,
+      0.024296328346856355,
+      -0.1372670571194901
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.612277220901797,
+    "r2": 0.6465133843067998,
+    "r2_timing_only": 0.08830062418471274
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 157,
+    "terms": [
+      "(phase == GO) * (prev_reward == 0) * (prev_state != 1) * (ep_trial >= 70) * np.clip(-choice, 0, 6)",
+      "(phase == GO) * (prev_reward == 0) * (prev_state != 1) * (ep_trial >= 80) * np.clip(-choice, 0, 6)",
+      "(phase == GO) * (prev_reward == 0) * (prev_state != 1) * (ep_trial >= 70) * (prev_action == -1)"
+    ],
+    "weights": [
+      0.04927761328951572,
+      0.024296328346856355,
+      -0.1372670571194901
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5922672711876804,
+    "r2": 0.6259396187927615,
+    "r2_timing_only": 0.08258436280836479
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The claim that the effect is 'stronger from trial 80' and stays high is wrong at the end of the episode: it collapses on trials 95-99. With cumulative ep_trial thresholds on last_is('a2 S2 u')*clip(-choice), the fitted increments are +0.010 (>=65), +0.024 (>=70), +0.036 (>=75), +0.026 (>=80), +0.017 (>=85), -0.024 (>=90), -0.071 (>=95). The slope peaks around trials 85-89 and falls to about 0.02 by trial 95 or later. The worst misses confirm this: in windows at t96-t99 the model predicts 0.34-0.48 and the actual value is 0. Splitting by decile gives weights of 0.038 / 0.084 / 0.062 for deciles 7 / 8 / 9 (trials <95) and -0.011 for trials 95 and later.",
+      "(prev_state != 1) also takes in a1 S2 u trials, but the profile shows no raise after a1 S2 u at GO (residual -0.013, the same as other non-a2-S2-u patterns). The real condition is last_is('a2 S2 u'). The explanation hedges with 'mostly a2 S2 u', but the terms do not reflect it.",
+      "The dependence on the a2 logit is strongly convex, not proportional: with choice bins under a2-S2-u late, the weights are 0.005 (0 to -1), 0.026, 0.070, 0.118, and 0.417 (<= -4). Adding a hinge clip(-choice-3, 0, 6) together with the hump-shaped time window raises test R^2 from 0.61 to 0.65.",
+      "The model's value output adds signal the label leaves out: adding value*clip(-choice) and value terms to the original terms raises test R^2 from 0.612 to 0.661.",
+      "Minor: the label states the window-start case as a 'negative correction', but the weight on that term is fitted against the whole slope (-0.137). This is a modelling artefact, not a property of the feature. Core claims that hold: only at GO, after a2 S2 u, late in the episode, scaled by the a2 logit, near zero after rewarded or S1 trials and on a1 choices. Using the future action instead of the logit does worse (test 0.49), so 'no future variables' is correct."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after an unrewarded a2 S2 trial in the second half of the episode, scaled convexly by a2 preference (mostly when the a2 logit is <= -4). It peaks around trials 80-94 and fades on trials 95-99.",
+    "better_terms": "G=(phase == GO) * last_is('a2 S2 u'); terms: G*np.clip(-choice-3,0,6)*(ep_trial>=65) ;; G*np.clip(-choice,0,6)*(ep_dec==6) ;; G*np.clip(-choice,0,6)*(ep_dec==7) ;; G*np.clip(-choice,0,6)*(ep_dec==8) ;; G*np.clip(-choice,0,6)*(ep_dec==9)*(ep_trial<95) ;; G*(ep_trial>=95)*np.clip(-choice,0,6) ;; (phase==GO)*(prev_action==-1)*(prev_reward==0)*(ep_trial>=65)*np.clip(-choice,0,6) ;; G*(ep_trial>=65)*value*np.clip(-choice,0,6)   (all observed or model-internal, no future variables)",
+    "better_terms_test_r2_beyond_timing": 0.7197
+  },
+  "final_label": "GO after an unrewarded a2 S2 trial in the second half of the episode, scaled convexly by a2 preference (mostly when the a2 logit is <= -4). It peaks around trials 80-94 and fades on trials 95-99."
+}

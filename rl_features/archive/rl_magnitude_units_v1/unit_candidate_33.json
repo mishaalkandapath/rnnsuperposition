@@ -1,0 +1,82 @@
+{
+  "label": "late-episode decay deepened by a2 / S2 history, lifted by reward",
+  "terms": "(ep_trial/99.0)**6 * (prev_action==2) ;; (ep_trial/99.0)**6 * (phase==D2)*(action==2) ;; (ep_trial/99.0)**6*(phase==D1)*(prev_reward==1) ;; (ep_trial/99.0)**6*(phase==GO)*((prev_state == 1) == (prev_reward == 1)) ;; (ep_trial/99.0)**6*(phase==D1)*(prev_state==2) ;; (ep_trial/99.0)**6*(phase!=D2)*choice ;; (phase==GO)*(((prev_state==1)&(prev_reward==0))*1.0 - ((prev_state==2)&(prev_reward==1))) ;; (phase==D1)*(prev_reward==0)*(prev_action==2)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw candidate n of unit 33 sits near +1 early in the episode and falls steeply over the last ~30 trials (timing alone R^2 0.83). Beyond timing, the history effects are mostly multiplicative with that late decay (they are weighted by (ep_trial/99)^6): late in the episode the unit drops further after a2 choices (previous a2; this trial a2 at D2, where the choice is already observed) and at D1 after reaching S2, and it is lifted at D1 after a rewarded trial. At GO it is higher when the previous outcome points model-based toward a1 (S1 rewarded or S2 unrewarded) and higher with the a1-favouring policy logit. There are also small unscaled effects: GO up after S1 unrewarded and down after S2 rewarded, and D1 down after an unrewarded a2 trial. The many late-episode windows of repeated a2 choices are the deepest negative values. Every term is observable at its step (action is used only at D2; choice is the model policy logit). Dev R^2 beyond timing 0.48, test 0.45, above the additive all ceiling of 0.31 because of the lateness interaction. Without the lateness scaling, unscaled previous-trial indicators reach only about 0.10.",
+  "gate": "unit_candidate",
+  "feature": 33,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 33,
+    "terms": [
+      "(ep_trial/99.0)**6 * (prev_action==2)",
+      "(ep_trial/99.0)**6 * (phase==D2)*(action==2)",
+      "(ep_trial/99.0)**6*(phase==D1)*(prev_reward==1)",
+      "(ep_trial/99.0)**6*(phase==GO)*((prev_state == 1) == (prev_reward == 1))",
+      "(ep_trial/99.0)**6*(phase==D1)*(prev_state==2)",
+      "(ep_trial/99.0)**6*(phase!=D2)*choice",
+      "(phase==GO)*(((prev_state==1)&(prev_reward==0))*1.0 - ((prev_state==2)&(prev_reward==1)))",
+      "(phase==D1)*(prev_reward==0)*(prev_action==2)"
+    ],
+    "weights": [
+      -0.10182606011422558,
+      -0.15617987252508592,
+      0.4133292249431697,
+      0.038400174821992504,
+      -0.31609330292947374,
+      0.027997280285742592,
+      0.08646756204922831,
+      -0.11806670778171706
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.4534903400283087,
+    "r2": 0.9095690736704333,
+    "r2_timing_only": 0.8345300495982981
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 33,
+    "terms": [
+      "(ep_trial/99.0)**6 * (prev_action==2)",
+      "(ep_trial/99.0)**6 * (phase==D2)*(action==2)",
+      "(ep_trial/99.0)**6*(phase==D1)*(prev_reward==1)",
+      "(ep_trial/99.0)**6*(phase==GO)*((prev_state == 1) == (prev_reward == 1))",
+      "(ep_trial/99.0)**6*(phase==D1)*(prev_state==2)",
+      "(ep_trial/99.0)**6*(phase!=D2)*choice",
+      "(phase==GO)*(((prev_state==1)&(prev_reward==0))*1.0 - ((prev_state==2)&(prev_reward==1)))",
+      "(phase==D1)*(prev_reward==0)*(prev_action==2)"
+    ],
+    "weights": [
+      -0.10182606011422558,
+      -0.15617987252508592,
+      0.4133292249431697,
+      0.038400174821992504,
+      -0.31609330292947374,
+      0.027997280285742592,
+      0.08646756204922831,
+      -0.11806670778171706
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.47834728504292756,
+    "r2": 0.9107099127722199,
+    "r2_timing_only": 0.8288323157004409
+  },
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The claim that it 'drops at D1 after the agent reached S2' is misattributed. Scored alone at D1, late-scaled prev_reward==1 (+0.56), prev_action==2 (-0.60) and prev_state==2 (-0.06) give test R^2 0.275, so the D1 drop comes from having CHOSEN a2, not from reaching S2. The residual table agrees: D1 after a2 S1 u is -0.137 and after a1 S2 r is +0.069. Swapping the D1 prev_state==2 term for a D1 prev_action==2 term raises test R^2 from 0.453 to 0.469. In that fit the D1 a2 weight is -0.47 and the generic late prev_action==2 term falls to about 0.",
+      "The late GO term 'higher when the outcome points a model-based agent toward a1' is weak. Alone it scores test R^2 0.005 beyond timing, and its weight falls to 0.009 once the D1 term is fixed. What is actually there late at GO is two separate effects: up after S1 (+0.42) and DOWN after a reward (-0.31), together 0.093. So 'lifted by reward' holds at D1 only. At GO, reward lowers the unit.",
+      "The non-scaled GO term (+ after S1 u, - after S2 r) scores 0.085 alone. That roughly matches the residual table, but GO after a1 S1 r (+0.064) and a2 S1 u (+0.073) are also up, so 'S1 raises it at GO' describes it more simply than an MB-direction framing.",
+      "A systematic error class remains. The worst-fit late windows (t85-t97) are off by a persistent offset of about +/-0.4 to 0.6 that holds across every step of the window. In one, the unit stays near +0.4 to 0.7 at GO and D2 over a2/S2 trials when -0.1 to -0.5 is predicted. In another, GO stays near -0.3 over repeated rewarded a1 S1 trials when +0.36 is predicted. (ep_trial/99)^6 is standing in for an episode-specific decay level that the terms do not capture. A smooth lateness term with no history scores only 0.05, so the history interaction is real, but the episode-level offset is unexplained.",
+      "The test R^2 of 0.453 is just at the 'explained' threshold, and several individual claims in the explanation are wrong or weak (see above), so the evidence is mixed."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "late-episode decay deepened after choosing a2 (not reaching S2), lifted at D1 by reward; at GO raised after S1",
+    "better_terms": "(ep_trial/99.0)**6 * (prev_action==2) ;; (ep_trial/99.0)**6 * (phase==D2)*(action==2) ;; (ep_trial/99.0)**6*(phase==D1)*(prev_reward==1) ;; (ep_trial/99.0)**6*(phase==GO)*((prev_state == 1) == (prev_reward == 1)) ;; (ep_trial/99.0)**6*(phase!=D2)*choice ;; (phase==GO)*(((prev_state==1)&(prev_reward==0))*1.0 - ((prev_state==2)&(prev_reward==1))) ;; (phase==D1)*(prev_reward==0)*(prev_action==2) ;; (ep_trial/99.0)**6*(phase==D1)*(prev_action==2)",
+    "better_terms_test_r2_beyond_timing": 0.469
+  },
+  "final_label": "late-episode decay deepened after choosing a2 (not reaching S2), lifted at D1 by reward; at GO raised after S1"
+}

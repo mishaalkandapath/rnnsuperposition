@@ -1,0 +1,55 @@
+{
+  "label": "Late-episode ramp unit; deviations scale with ramp: a1 choice, a2/S1 at D2, last outcome",
+  "terms": "np.exp((ep_trial-99)/20) * (phase == GO) * np.tanh(choice) ;; np.exp((ep_trial-99)/20) * (phase == D2) * table(3*action+state, {4: 0, 5: -1, 7: 1, 8: 0.5}) ;; np.exp((ep_trial-99)/20) * (phase == D1) * table(4*prev_action+2*prev_state+prev_reward, {7: 16, 6: -22, 9: 37, 8: -18, 13: 4, 12: -37, 11: 40, 10: -12}) ;; np.exp((ep_trial-99)/20) * (phase == GO) * table(4*prev_action+2*prev_state+prev_reward, {7: 72, 6: -15, 9: 5, 8: -21, 13: -28, 12: -52, 11: 18, 10: -45}) ;; np.exp((ep_trial-99)/20) * (phase == D2) * table(4*prev_action+2*prev_state+prev_reward, {7: -10, 6: 10, 9: -6, 8: 31, 13: -12, 12: 22, 11: -8, 10: 20})",
+  "verdict": "partially_explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "GRU candidate unit 18 is dominated by a steep late-episode ramp (timing R^2 0.90; the D1 mean goes from -0.95 to -0.17). The residual effects all grow with that ramp, so every term is multiplied by exp((ep_trial-99)/20). Unscaled versions of the same terms reach only 0.10 R^2 beyond timing on dev. At GO the unit is higher when the policy favours a1 (tanh of the policy logit; the actual upcoming action fits the same). At D2 it is higher after a2 (a2->S1 rare highest, a2->S2 common positive) and lower after a1->S2 rare. Signed tables over the last trial (choice, state, reward), one per phase, carry the rest. At D1 it is raised after rewarded trials and after rare-rewarded ones most (a2 S1 r, a1 S2 r) and lowered after unrewarded ones (a2 S2 u, a1 S1 u). At GO it is high after a1 S1 r and low after a2 S2 u / a2 S1 u. At D2 it is slightly higher after unrewarded trials. Hidden good state, trials since reversal and future reward add little. The model value term adds only about 0.01. Test R^2 beyond timing 0.40 (dev 0.38), above the additive 'all' ceiling of 0.29 because of the ramp scaling. No future variables are used: at GO the policy logit stands in for the upcoming action. Remaining misses: windows near the episode end with long reward streaks, where the unit is higher than predicted.",
+  "gate": "unit_candidate",
+  "feature": 18,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 18,
+    "terms": [
+      "np.exp((ep_trial-99)/20) * (phase == GO) * np.tanh(choice)",
+      "np.exp((ep_trial-99)/20) * (phase == D2) * table(3*action+state, {4: 0, 5: -1, 7: 1, 8: 0.5})",
+      "np.exp((ep_trial-99)/20) * (phase == D1) * table(4*prev_action+2*prev_state+prev_reward, {7: 16, 6: -22, 9: 37, 8: -18, 13: 4, 12: -37, 11: 40, 10: -12})",
+      "np.exp((ep_trial-99)/20) * (phase == GO) * table(4*prev_action+2*prev_state+prev_reward, {7: 72, 6: -15, 9: 5, 8: -21, 13: -28, 12: -52, 11: 18, 10: -45})",
+      "np.exp((ep_trial-99)/20) * (phase == D2) * table(4*prev_action+2*prev_state+prev_reward, {7: -10, 6: 10, 9: -6, 8: 31, 13: -12, 12: 22, 11: -8, 10: 20})"
+    ],
+    "weights": [
+      0.051312907694287396,
+      0.1043140828814291,
+      0.004104438169396953,
+      0.003189907973694345,
+      0.004484130721040617
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.40049561074853823,
+    "r2": 0.9386605624509446,
+    "r2_timing_only": 0.8976830884830661
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 18,
+    "terms": [
+      "np.exp((ep_trial-99)/20) * (phase == GO) * np.tanh(choice)",
+      "np.exp((ep_trial-99)/20) * (phase == D2) * table(3*action+state, {4: 0, 5: -1, 7: 1, 8: 0.5})",
+      "np.exp((ep_trial-99)/20) * (phase == D1) * table(4*prev_action+2*prev_state+prev_reward, {7: 16, 6: -22, 9: 37, 8: -18, 13: 4, 12: -37, 11: 40, 10: -12})",
+      "np.exp((ep_trial-99)/20) * (phase == GO) * table(4*prev_action+2*prev_state+prev_reward, {7: 72, 6: -15, 9: 5, 8: -21, 13: -28, 12: -52, 11: 18, 10: -45})",
+      "np.exp((ep_trial-99)/20) * (phase == D2) * table(4*prev_action+2*prev_state+prev_reward, {7: -10, 6: 10, 9: -6, 8: 31, 13: -12, 12: 22, 11: -8, 10: 20})"
+    ],
+    "weights": [
+      0.051312907694287396,
+      0.1043140828814291,
+      0.004104438169396953,
+      0.003189907973694345,
+      0.004484130721040617
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.3811465526539045,
+    "r2": 0.9366911615660127,
+    "r2_timing_only": 0.8976997886890956
+  },
+  "final_verdict": "partially_explained"
+}

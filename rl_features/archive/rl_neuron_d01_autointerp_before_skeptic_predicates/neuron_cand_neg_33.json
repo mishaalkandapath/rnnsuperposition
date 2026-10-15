@@ -1,0 +1,65 @@
+{
+  "label": "GO step near episode end (low value) when choosing a2",
+  "predicate": "(phase == GO) & (value < 4) & (choice < -3)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires almost only at GO (97% of mass), only in the last ~10 trials of the episode (trials 90-99 hold 99.7% of mass, nothing before trial 80), and only when the agent is about to choose a2 (model_act==2 holds 96% of mass, a1 almost never). In the profile, the value head output being in its lowest bin (<5.22) captures 100% of the mass; that reflects the shrinking remaining-episode return, so the unit is an end-of-episode timer gated by an a2 choice. Recorded with value<4 and policy logit(a1)-logit(a2) < -3. Both are the model own outputs, so no FUTURE variable is used; ep_trial>=93 & choice<-3 gives similar F1 (0.73). Magnitude grows over the episode tail (activation goes up across successive trials of a window) and with strong, repeated a2 preference after rewarded a2 trials. Weak activations at D1/D2 are rare. It does not fire at a1 choices, before trial ~85, or on any rewarded-input step (in_rew==1). False positives are mostly a2 GO steps that follow unrewarded or rare trials, where the a2 preference is weaker.",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 33,
+    "predicate": "(phase == GO) & (value < 4) & (choice < -3)",
+    "split": "test",
+    "precision": 0.7711895569038426,
+    "recall": 0.7331760181786401,
+    "f1": 0.7517025089605736,
+    "mass_recall": 0.89634041703633,
+    "correlation": 0.7729902293946225,
+    "n_active": 11442,
+    "n_predicted": 10878,
+    "coverage_by_activation_quartile": [
+      0.2719328905976931,
+      0.7343586158685774,
+      0.9339160839160839,
+      0.9926573426573426
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 33,
+    "predicate": "(phase == GO) & (value < 4) & (choice < -3)",
+    "split": "dev",
+    "precision": 0.800108489286683,
+    "recall": 0.747024563180552,
+    "f1": 0.7726558407543216,
+    "mass_recall": 0.9169875938457879,
+    "correlation": 0.7954704706231603,
+    "n_active": 11847,
+    "n_predicted": 11061,
+    "coverage_by_activation_quartile": [
+      0.25827143821742066,
+      0.7592842673869007,
+      0.9723160027008778,
+      0.9983113812901047
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 33,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most factual claims check out on dev: GO holds 96.9% of mass; trials 90-99 hold 99.7% and the unit never fires before trial 80; value < 5.22 holds 100%; model_act==2 holds 95.9%; dev P0.800 R0.747 F0.773 M0.917, and ep_trial>=93 & choice<-3 scores F0.732. On test the original predicate scores P0.771 R0.733 F0.752 M0.896.",
+      "The false positives form one systematic class, not noise. They are GO steps after an UNREWARDED previous trial. Splitting the predicate by prev_reward: with prev_reward==1 it has dev P0.960 (test P0.936); with prev_reward==0 it has dev P0.518 (test P0.509), i.e. about half of its firings there are wrong. The misses output shows the same thing: nearly every false-positive window has r0 at that trial's D1. The explanation mentions this ('after unrewarded or rare trials') but files it under weaker a2 preference. In fact choice is already below -3 on those steps, so the predicate does not capture this effect.",
+      "The cause is the value threshold, which depends on the previous reward. After a reward the unit fires up to value of about 4.3. After no reward it needs value below about 3.5. A single value<4 cut is too strict after rewarded trials (misses there) and too loose after unrewarded ones (false positives).",
+      "The claim 'does not fire on any step with reward input 1' is true only trivially, because in_rew is nonzero only at D1, where the unit rarely fires anyway. It is also misleading: 81% of the activation mass falls on trials whose previous trial WAS rewarded (prev_reward==1), at the GO step that follows.",
+      "The label overclaims a little: 'near episode end' is a proxy. The value-head output is the tighter variable (ep_trial>=93 is worse, F0.732), so 'low value' should come first. The bottom activation quartile is only 26% covered, consistent with the threshold being wrong after rewarded trials.",
+      "The better predicate uses only observed or model-internal variables (prev_reward is the D1 reward input; value and choice are model outputs). It improves test F1 from 0.752 to 0.844 and mass recall from 0.896 to 0.939, so the original predicate leaves a correctable systematic gap."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step with a strong a2 preference when the model's value estimate is very low (last ~10 trials of the episode); the value cutoff is higher after a rewarded previous trial (~4.3) than after an unrewarded one (~3.5)",
+    "better_predicate": "(phase == GO) & (choice < -2) & (((prev_reward == 1) & (value < 4.3)) | ((prev_reward == 0) & (value < 3.5)))",
+    "better_predicate_test_f1": 0.844
+  },
+  "final_label": "GO step with a strong a2 preference when the model's value estimate is very low (last ~10 trials of the episode); the value cutoff is higher after a rewarded previous trial (~4.3) than after an unrewarded one (~3.5)"
+}

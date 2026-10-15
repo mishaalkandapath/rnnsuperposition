@@ -1,0 +1,90 @@
+{
+  "label": "At GO after trial ~85, grows with episode time when last trial was a2 to S2 rewarded.",
+  "short_terms": "(phase == GO) * last_is(\"a2 S2 r\") * np.maximum(ep_trial - 84, 0) ;; (phase == GO) * np.maximum(ep_trial - 84, 0) * belief_lo ;; (phase == GO) * np.maximum(ep_trial - 84, 0)",
+  "terms": "(phase == GO) * last_is(\"a2 S2 r\") * np.maximum(ep_trial - 84, 0) ;; (phase == GO) * np.maximum(ep_trial - 84, 0) * belief_lo ;; (phase == GO) * np.maximum(ep_trial - 84, 0) ;; (phase == GO) * (prev_state == -1) * (prev_reward == 1) * np.maximum(ep_trial - 84, 0) ;; (phase == GO) * last_is(\"a2 S2 r\") * (tv(\"reward\", -2) == 1) * (tv(\"state\", -2) == 2) * np.maximum(ep_trial - 84, 0) ;; (phase == GO) * last_is(\"a2 S2 r\") * np.maximum(ep_trial - 84, 0) * belief_lo ;; (phase == GO) * last_is(\"a2 S2 r\") * (ep_trial >= 85)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Only fires at GO late in the episode (timing baseline is nonzero only in deciles 8-9). Beyond timing, magnitude is a ramp in episode trial past ~84, gated by the previous trial being a2 -> S2 rewarded (strong positive weight); otherwise the ramp is slightly negative, and an S2-favoring belief (negative belief_lo) adds a bit. It is silent at D1 and D2. After other previous patterns (incl. rare a2->S1 rewarded, a2 S2 unrewarded) it stays near zero. The free fit adds: windows whose first trial has no observed previous state (prev reward 1), a further boost when the trial before was also rewarded in S2 (streak), and a step onset at trial 85; these lift dev R^2 from 0.72 to 0.80. No future or model-output variables used.",
+  "full_test_scores": {
+    "gate": "hidden",
+    "feature": 96,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 r\") * np.maximum(ep_trial - 84, 0)",
+      "(phase == GO) * np.maximum(ep_trial - 84, 0) * belief_lo",
+      "(phase == GO) * np.maximum(ep_trial - 84, 0)",
+      "(phase == GO) * (prev_state == -1) * (prev_reward == 1) * np.maximum(ep_trial - 84, 0)",
+      "(phase == GO) * last_is(\"a2 S2 r\") * (tv(\"reward\", -2) == 1) * (tv(\"state\", -2) == 2) * np.maximum(ep_trial - 84, 0)",
+      "(phase == GO) * last_is(\"a2 S2 r\") * np.maximum(ep_trial - 84, 0) * belief_lo",
+      "(phase == GO) * last_is(\"a2 S2 r\") * (ep_trial >= 85)"
+    ],
+    "weights": [
+      0.1217477962193983,
+      -0.0029499925252786446,
+      -0.03333560630759936,
+      0.062184424926470264,
+      0.008480171103780316,
+      -0.00419981623681485,
+      -0.14423969866015307
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7678855880683118,
+    "r2": 0.8221708660285878,
+    "r2_timing_only": 0.23387293149316535
+  },
+  "gate": "hidden",
+  "feature": 96,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 96,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 r\") * np.maximum(ep_trial - 84, 0)",
+      "(phase == GO) * np.maximum(ep_trial - 84, 0) * belief_lo",
+      "(phase == GO) * np.maximum(ep_trial - 84, 0)"
+    ],
+    "weights": [
+      0.11032127978003312,
+      -0.004563607929513758,
+      -0.023856926960668594
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.691524309481868,
+    "r2": 0.763668423517722,
+    "r2_timing_only": 0.23387293149316535
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 96,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 r\") * np.maximum(ep_trial - 84, 0)",
+      "(phase == GO) * np.maximum(ep_trial - 84, 0) * belief_lo",
+      "(phase == GO) * np.maximum(ep_trial - 84, 0)"
+    ],
+    "weights": [
+      0.11032127978003312,
+      -0.004563607929513758,
+      -0.023856926960668594
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7232510775657106,
+    "r2": 0.7953822405918272,
+    "r2_timing_only": 0.2606375569293973
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The label leaves out the belief_lo term. Its effect is small: dropping it lowers test R^2 beyond timing from 0.691 to 0.672 (the fitted weight is -0.005, so a belief favouring S2 adds a little). The label is still adequate, but it is incomplete.",
+      "The ramp-from-84 shape holds up. Using last_is('a2 S2 r') * ramp alone scores 0.495 on test. Shifting the onset to 80 gives 0.645 and to 88 gives 0.682, against 0.691 at 84. A step at 85 in place of the ramp scores worse (0.50 combined, and the step gets a negative weight). So 'grows with episode time' is real, though the growth is mild: in the examples activation goes from about 1.7 at t90 to 2.1 at t99.",
+      "The trigger really is 'a2 S2 r' and not just any rewarded S2 trial. The residual after 'a1 S2 r' is -0.03, against +0.111 after 'a2 S2 r'. Using (prev_reward == 1) * ramp in place of the last_is term adds almost nothing (0.685).",
+      "The largest worst-fit misses are at the first trial of a window, where the previous trial is unknown ('?'). There the actual value is about 2.0 and the prediction about 0.2, and the GO-after-'?' cell averages +0.024. This is a windowing artifact (the real previous trial was most likely a2 S2 r), not an error in the description. Adding (phase == GO) * (prev_state == -1) * ramp in place of the belief term raises test R^2 to 0.716. I did not adopt it because it describes the data windowing, not the component.",
+      "The remaining systematic errors are small. GO after 'a2 S1 u' is over-predicted by 0.035 and other non-a2S2r cells by about 0.015, because the per-decile timing baseline (0.43 at GO in decile 9) is only partly cancelled by the negative general ramp. No phase-level bias: mean errors are D1 +0.001, GO -0.002, D2 +0.001."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "At GO after trial ~84, ramps up with episode time if last trial was a2\u2192S2 rewarded.",
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "At GO after trial ~84, ramps up with episode time if last trial was a2\u2192S2 rewarded."
+}

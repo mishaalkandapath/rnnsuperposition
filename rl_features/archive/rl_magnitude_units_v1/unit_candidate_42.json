@@ -1,0 +1,74 @@
+{
+  "label": "GO-phase candidate: strongly negative on episode trial 0; tracks model-based a1 preference",
+  "terms": "(phase == GO) * (ep_trial == 0) ;; (phase == GO) * table(tv(\"state\",-1)*10+tv(\"reward\",-1), {11: 1, 10: -1, 21: -1, 20: 1}) ;; (phase == D1) * (ep_trial/100.0) * ((tv(\"reward\",-1)==0)*1 + (tv(\"reward\",-1)==0)*(tv(\"reward\",-2)==0) + (tv(\"reward\",-1)==0)*(tv(\"reward\",-2)==0)*(tv(\"reward\",-3)==0)) ;; (phase == GO) * last_is(\"a2 S1 u\") * (1 + (tv(\"state\",-2)==1) * (tv(\"reward\",-2)==0)) ;; (phase == GO) * (ep_trial/100.0) * (prev_action==2) * (prev_reward==0) ;; (phase == GO) * choice",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw candidate n of unit 42 sits near -0.98 at D1/D2 and +0.87 at GO (timing). Beyond timing, almost all variance is at GO. Biggest single effect: GO on the episodes first trial is about 0.82 lower (dev R^2 beyond timing 0.14 alone). At GO it is higher when the last outcome favours a1 under a model-based reading (S1 rewarded or S2 unrewarded: +; S1 unrewarded or S2 rewarded: -), with an extra drop after a2 S1 u (rare unrewarded, the MB repeat-a2 case), larger when the trial before was also S1 unrewarded; plus a small positive graded term for the policy logit (a1 - a2). Late in the episode, after unrewarded a2 trials GO is somewhat higher, and at D1 it rises with runs of consecutive losses scaled by episode time. Remaining misses: deep GO dips during late-episode runs of unrewarded a2/S1 trials, not fully captured. Test R^2 beyond timing 0.655 with the policy logit (model output, observed by the network); 0.580 using only observed task variables. Ceiling all 0.63, all observed 0.58 (our terms exceed them via the trial-0 effect). No future variables used.",
+  "gate": "unit_candidate",
+  "feature": 42,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 42,
+    "terms": [
+      "(phase == GO) * (ep_trial == 0)",
+      "(phase == GO) * table(tv(\"state\",-1)*10+tv(\"reward\",-1), {11: 1, 10: -1, 21: -1, 20: 1})",
+      "(phase == D1) * (ep_trial/100.0) * ((tv(\"reward\",-1)==0)*1 + (tv(\"reward\",-1)==0)*(tv(\"reward\",-2)==0) + (tv(\"reward\",-1)==0)*(tv(\"reward\",-2)==0)*(tv(\"reward\",-3)==0))",
+      "(phase == GO) * last_is(\"a2 S1 u\") * (1 + (tv(\"state\",-2)==1) * (tv(\"reward\",-2)==0))",
+      "(phase == GO) * (ep_trial/100.0) * (prev_action==2) * (prev_reward==0)",
+      "(phase == GO) * choice"
+    ],
+    "weights": [
+      -0.8197074756626095,
+      0.020265055310853854,
+      0.026141685710862166,
+      -0.09264736668872332,
+      0.057128359202755864,
+      0.0038217911956539576
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6552232587661952,
+    "r2": 0.9989334147915656,
+    "r2_timing_only": 0.9969064467498081
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 42,
+    "terms": [
+      "(phase == GO) * (ep_trial == 0)",
+      "(phase == GO) * table(tv(\"state\",-1)*10+tv(\"reward\",-1), {11: 1, 10: -1, 21: -1, 20: 1})",
+      "(phase == D1) * (ep_trial/100.0) * ((tv(\"reward\",-1)==0)*1 + (tv(\"reward\",-1)==0)*(tv(\"reward\",-2)==0) + (tv(\"reward\",-1)==0)*(tv(\"reward\",-2)==0)*(tv(\"reward\",-3)==0))",
+      "(phase == GO) * last_is(\"a2 S1 u\") * (1 + (tv(\"state\",-2)==1) * (tv(\"reward\",-2)==0))",
+      "(phase == GO) * (ep_trial/100.0) * (prev_action==2) * (prev_reward==0)",
+      "(phase == GO) * choice"
+    ],
+    "weights": [
+      -0.8197074756626095,
+      0.020265055310853854,
+      0.026141685710862166,
+      -0.09264736668872332,
+      0.057128359202755864,
+      0.0038217911956539576
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6713084452190536,
+    "r2": 0.9990026410234644,
+    "r2_timing_only": 0.9969656689926204
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor overclaim in the label: the model-based last-outcome table term on its own has a small weight (+0.020). Dropping it costs only 0.027 of test R^2 beyond timing (0.655 -> 0.628). Most of the non-trial-0 fit comes from the a2 S1 u term (dropping it: 0.655 -> 0.580) and the policy logit (dropping it: 0.655 -> 0.580). The MB reading is still supported: the signs of all 8 GO residual cells for the previous trial match MB-for-a1 (e.g. a2 S1 u -0.134, a1 S2 u +0.057, a1 S2 r -0.054), and the MB table beats a model-free action x reward table (0.611 vs 0.638 with the a2 S1 u term unmultiplied).",
+      "The trial-0 drop holds and does not depend on the action taken: at GO on trial 0, weights are -0.841 for a1 and -0.840 for a2. That term alone gives test R^2 0.139.",
+      "The extra drop after a2 S1 u when the trial before also reached S1 unrewarded is confirmed: split weights are -0.086 base and -0.112 extra. The multiplier version scores test 0.655 vs 0.638 without it.",
+      "The late-episode terms are real but small. D1 loss-run term: weight +0.026, dropping it costs 0.023. GO late a2-unrewarded term: weight +0.057, dropping it costs 0.013.",
+      "The admitted gap remains: misses shows deep GO dips (to ~0.15-0.4 vs ~0.85 predicted) during late-episode (t>60) runs of unrewarded a2 trials, with D1 drifting up to ~-0.4 alongside. None of my targeted terms closed it: unrewarded-a2 run counts with ep_trial^3 scaling scored 0.649; loss runs x ep_trial^2 scored 0.665; |choice| / exp(-|choice|) x ep_trial scored 0.669; tanh/choice^2 scored 0.667. The per-(phase, previous trial) systematic errors are all small (max |0.034|, GO after a1 S2 r), so the leftover looks like nonlinear dynamics in rare windows rather than an error class the terms leave out."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO candidate: big drop on episode trial 0 (any action); lower after a2 S1 u (MB repeat-a2), tracks policy logit and MB a1 preference",
+    "better_terms": "(phase == GO) * (ep_trial == 0) ;; (phase == GO) * table(tv('state',-1)*10+tv('reward',-1), {11: 1, 10: -1, 21: -1, 20: 1}) ;; (phase == D1) * (ep_trial/100.0) * ((tv('reward',-1)==0)*1 + (tv('reward',-1)==0)*(tv('reward',-2)==0) + (tv('reward',-1)==0)*(tv('reward',-2)==0)*(tv('reward',-3)==0)) ;; (phase == GO) * last_is('a2 S1 u') * (1 + (tv('state',-2)==1) * (tv('reward',-2)==0)) ;; (phase == GO) * (ep_trial/100.0) * (prev_action==2) * (prev_reward==0) ;; (phase == GO) * choice ;; (phase==GO)*np.abs(choice) ;; (phase==GO)*(ep_trial/100.0)*np.exp(-np.abs(choice))",
+    "better_terms_test_r2_beyond_timing": 0.669
+  },
+  "final_label": "GO candidate: big drop on episode trial 0 (any action); lower after a2 S1 u (MB repeat-a2), tracks policy logit and MB a1 preference"
+}

@@ -1,0 +1,89 @@
+{
+  "label": "Fires at D2 when a1 rarely reaches S2, stronger after no reward and when S2 believed bad.",
+  "short_terms": "(in_state == 2) * (in_action == 1) ;; (in_state == 2) * (in_action == 1) * (prev_reward == 0) ;; (in_state == 2) * (in_action == 1) * belief_lo",
+  "terms": "(phase == D2) * (action == 1) * (state == 2) ;; (phase == D2) * (action == 1) * (state == 2) * (prev_reward == 0) ;; (phase == D2) * (action == 1) * (state == 2) * last_is(\"a1 S1 u\") ;; (phase == D2) * (action == 1) * (state == 2) * belief_lo ;; (phase == D2) * (action == 1) * (state == 2) * (prev_action == 1) ;; (phase == D2) * (action == 1) * (state == 2) * ep_dec ;; (phase == D2) * (action == 1) * (state == 2) * np.abs(belief_lo)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Silent at D1 and GO; at D2 it is active essentially only on a1 -> S2 rare transitions (observed at D2 via the state and last-action inputs). Within those, magnitude is larger when the previous trial was unrewarded (strongest after a1 S1 unrewarded, i.e. a1 failed twice) and lower when the ideal observer already believes S1 is good (negative weight on belief_lo, so larger when belief is near 0.5 or favors S2... the free fit also adds a positive |belief_lo| term). The free fit adds the specific a1 S1 u pattern, a negative weight for previous choice a1 beyond that, a decline over the episode, and the |belief_lo| term (dev 0.62 vs short 0.51). Other transitions (a1 S1, a2 S2, a2 S1) give near zero. No future variables used.",
+  "full_test_scores": {
+    "gate": "update",
+    "feature": 29,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 2)",
+      "(phase == D2) * (action == 1) * (state == 2) * (prev_reward == 0)",
+      "(phase == D2) * (action == 1) * (state == 2) * last_is(\"a1 S1 u\")",
+      "(phase == D2) * (action == 1) * (state == 2) * belief_lo",
+      "(phase == D2) * (action == 1) * (state == 2) * (prev_action == 1)",
+      "(phase == D2) * (action == 1) * (state == 2) * ep_dec",
+      "(phase == D2) * (action == 1) * (state == 2) * np.abs(belief_lo)"
+    ],
+    "weights": [
+      0.6200649164663262,
+      0.32410706799089306,
+      0.6561710768748724,
+      -0.1796120898679798,
+      -0.24627253897386783,
+      -0.04677066556009244,
+      0.12233593288895174
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6387691327175549,
+    "r2": 0.6483129734797481,
+    "r2_timing_only": 0.02642033565401536
+  },
+  "gate": "update",
+  "feature": 29,
+  "test_scores": {
+    "gate": "update",
+    "feature": 29,
+    "terms": [
+      "(in_state == 2) * (in_action == 1)",
+      "(in_state == 2) * (in_action == 1) * (prev_reward == 0)",
+      "(in_state == 2) * (in_action == 1) * belief_lo"
+    ],
+    "weights": [
+      0.5927948941920678,
+      0.4471317254234024,
+      -0.18630158130347968
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5356386990814349,
+    "r2": 0.5479072805164387,
+    "r2_timing_only": 0.02642033565401536
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 29,
+    "terms": [
+      "(in_state == 2) * (in_action == 1)",
+      "(in_state == 2) * (in_action == 1) * (prev_reward == 0)",
+      "(in_state == 2) * (in_action == 1) * belief_lo"
+    ],
+    "weights": [
+      0.5927948941920678,
+      0.4471317254234024,
+      -0.18630158130347968
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.513326622953308,
+    "r2": 0.5260975821241889,
+    "r2_timing_only": 0.026241335099075003
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The label gets the belief direction backwards. The fitted weight on (in_state==2)*(in_action==1)*belief_lo is -0.186, so the feature is weaker when the observer believes S1 is good (which is the same as believing S2 is bad). The label says 'stronger when S2 believed bad', which is the opposite. The explanation text has the sign right ('bigger when that belief favors S2').",
+      "The belief effect sits almost entirely on the S1-confident side. Using np.maximum(belief_lo,0) gives test 0.531, about the same as linear belief_lo at 0.536. Using np.minimum(belief_lo,0) gives only 0.444. So 'weaker the more confident S1 is good' describes it better than 'grows with evidence for S2'.",
+      "The other claims hold up on test. a1->S2 alone scores 0.175. Adding prev_reward==0 brings it to 0.415, adding belief_lo brings it to 0.536, and the profile shows D1 and GO are exactly zero. last_is('a1 S1 u') in place of prev_reward==0 does a bit worse (0.492), so the general 'previous trial unrewarded' wording is fine.",
+      "Error that remains: misses on the short form over-predict D2 after a1 S2 u (-0.081) and a1 S2 r (-0.068), so the feature is weaker when the previous trial also reached S2. Adding a prev_state==1 or prev_common==1 term only raises test to 0.547 (dev 0.52) and does not remove the a1 S2 u over-prediction. Within a1->S2 trials the worst windows still show actual activations of about 2.3-2.6 against predictions of about 0.44, so roughly half the variance is unexplained. That is still well above the additive ceiling of 0.31."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Fires at D2 on a1->S2 rare transitions; stronger after no reward, weaker when S1 believed good.",
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "Fires at D2 on a1->S2 rare transitions; stronger after no reward, weaker when S1 believed good."
+}

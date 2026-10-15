@@ -1,0 +1,84 @@
+{
+  "label": "a2-vs-a1 choice signal; at D1 rewarded-last-trial and a2-last-trial raise it",
+  "terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_action == 1) ;; (phase == D1) * (prev_action == 1) * (prev_reward == 1) ;; (phase != D1) * (prev_action == 2) ;; (phase == GO) * np.tanh(choice/2) ;; (phase == D2) * (action == 2) ;; (phase == D2) * (state == 2) ;; (phase == D2) * (action == 2) * (state == 2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw candidate n of unit 19 is a signed a2(+)/a1(-) choice signal, modulated by reward at D1. D1: higher after a rewarded previous trial (+0.8) and lower after a previous a1 choice (-0.7, partly undone if that a1 was rewarded); a1-unrewarded trials give the most negative values. GO: higher when the policy favours a2 (graded tanh of logit a1-a2, negative weight) and when the previous choice was a2. D2: higher when this trial chose a2 and reached S2 (a2 S2 most positive, a1 S1 most negative). Value and trials-since-reversal add nothing. Observed-only version recorded (GO uses the model policy logit); swapping it for the future GO choice (action == 2) raises dev R^2 beyond timing from 0.77 to 0.84. Dev R^2 beyond timing 0.77; ceiling all 0.93, all observed 0.88.",
+  "gate": "unit_candidate",
+  "feature": 19,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 19,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_action == 1)",
+      "(phase == D1) * (prev_action == 1) * (prev_reward == 1)",
+      "(phase != D1) * (prev_action == 2)",
+      "(phase == GO) * np.tanh(choice/2)",
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * (state == 2)",
+      "(phase == D2) * (action == 2) * (state == 2)"
+    ],
+    "weights": [
+      0.7869448645324142,
+      -0.7514742628061775,
+      0.5321343925501257,
+      0.3302129937241854,
+      -0.3457400261673612,
+      0.24000090878382663,
+      -0.05271481888141953,
+      0.6410142668472402
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7600663746653895,
+    "r2": 0.7905081162644617,
+    "r2_timing_only": 0.1268756788741815
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 19,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_action == 1)",
+      "(phase == D1) * (prev_action == 1) * (prev_reward == 1)",
+      "(phase != D1) * (prev_action == 2)",
+      "(phase == GO) * np.tanh(choice/2)",
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * (state == 2)",
+      "(phase == D2) * (action == 2) * (state == 2)"
+    ],
+    "weights": [
+      0.7869448645324142,
+      -0.7514742628061775,
+      0.5321343925501257,
+      0.3302129937241854,
+      -0.3457400261673612,
+      0.24000090878382663,
+      -0.05271481888141953,
+      0.6410142668472402
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7655874079663761,
+    "r2": 0.7956706440662098,
+    "r2_timing_only": 0.12833455676953787
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Coding bug in the D2 terms. (phase==D2)*(action==2), (state==2) and their product leave no D2-specific baseline for a1/S1. The fit's only intercept is global, and the timing baseline centres each phase, so the a1 S1 cell (residual -0.78) cannot be fitted. Swapping in signed codes, (phase==D2)*table(action,{1:-1,2:1}) and (phase==D2)*table(state,{1:-1,2:1}), and keeping the agent's other terms raises test R^2 from 0.76 to 0.846. That uses the same number of terms or fewer.",
+      "The claim that the combined a2-and-S2 term carries most of D2 (+0.64) comes from that coding and is false. With signed codes the D2 weights are action +0.46, state +0.25 and action x state only +0.05. The profile cell means agree: a1S1 -0.78, a1S2 -0.37, a2S1 +0.16, a2S2 +0.73. Action dominates, state adds about +0.4 to +0.55, and the interaction is small.",
+      "The claim that a2 last trial raises GO is weak. Once D2 is coded properly, the signed (phase!=D1)*prev_action term gets a weight of only +0.08.",
+      "There is a systematic D1 miss that the terms ignore: the state reached on the previous trial matters after a loss. The profile shows D1 after a2 S2 u at -0.64 but after a2 S1 u at +0.01, and after a1 S2 u at -1.21 versus a1 S1 u at -0.95. Misses on the agent's terms under-predict D1 after a2 S1 u (+0.35) and over-predict D1 after a2 S2 u (-0.29). Even with signed D2 terms, D1 after a2 S2 u is still over-predicted by -0.55. Adding (phase==D1)*last_is('a2 S2 u') (weight -0.63) removes most of this error.",
+      "The agent's misses run also show phase-level bias: mean error at GO +0.17 and at D2 -0.16, largest at D2 after a1 S2 u (-0.48) and a2 S2 u (-0.39). This is systematic, not noise.",
+      "The scores leave a large gap. The recorded terms get 0.76 test. My 8 observed-only terms get 0.89 test, at or above the 'all observed' reference of 0.88 because they use the model's policy logit. So 'explained' at 0.76 undersells what is achievable, and several mechanistic details in the explanation are wrong.",
+      "The core reading holds up: a signed a2-vs-a1 signal, with a reward effect at D1 and a graded policy-logit effect at GO. Value and since_rev indeed add nothing (their profile tables are flat)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Signed a2-vs-a1 signal. At D1, the previous reward raises it; a previous a1 lowers it, and a previous a2 that went unrewarded at S2 also lowers it. At GO and D1 it follows the policy logit towards a2. At D2 it is set by this trial's action (strong) plus the reached state (S2 above S1), with little interaction.",
+    "better_terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * (prev_action == 1) ;; (phase == D1) * (prev_action == 1) * (prev_reward == 1) ;; (phase == D1) * last_is('a2 S2 u') ;; (phase == D1) * np.tanh(choice/2) ;; (phase == GO) * np.tanh(choice/2) ;; (phase == D2) * table(action, {1: -1, 2: 1}) ;; (phase == D2) * table(state, {1: -1, 2: 1})",
+    "better_terms_test_r2_beyond_timing": 0.89
+  },
+  "final_label": "Signed a2-vs-a1 signal. At D1, the previous reward raises it; a previous a1 lowers it, and a previous a2 that went unrewarded at S2 also lowers it. At GO and D1 it follows the policy logit towards a2. At D2 it is set by this trial's action (strong) plus the reached state (S2 above S1), with little interaction."
+}

@@ -1,0 +1,106 @@
+{
+  "label": "D2 after choosing a2, late in the episode (ramps up with trial index)",
+  "predicate": "(phase==D2)&(action==2)&(((state==2)&(ep_trial>=50))|((state==1)&(ep_trial>=60)))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (100% of mass), almost exclusively after the agent chose a2 (in_action == 2, 98% of mass); never at D1, essentially never at GO, never after a1 except weakly. Strongly gated by position in the episode: ~0 in trials 0-29, rising steadily through trials 50-99 (rate 0.08 at trials 50-59 to 0.24 at 90-99; 54% of mass in trials 90-99), so it looks like a slow drift in the hidden state across the episode. Magnitude: larger when the reached state is S2 (common after a2) than S1 (rare), larger late in the episode, and associated with low value-head output. Both action (the last-action input at D2) and ep_trial are observed at D2, so there are no future variables. Plain (phase==D2)&(action==2) gets mass recall 0.98 but precision 0.47 because of early-episode D2 steps; adding ep_trial>=50 gives dev F1 0.84 (P 0.82, R 0.86, mass recall 0.97). The misses are weak activations on earlier trials and a few after a1 rare transitions to S2.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 2,
+    "predicate": "(phase==D2)&(action==2)&(((state==2)&(ep_trial>=50))|((state==1)&(ep_trial>=60)))",
+    "split": "test",
+    "precision": 0.8540024653543012,
+    "recall": 0.8623860132210518,
+    "f1": 0.8581737649382764,
+    "mass_recall": 0.965526869881362,
+    "correlation": 0.6767032599262639,
+    "n_active": 106043,
+    "n_predicted": 107084,
+    "coverage_by_activation_quartile": [
+      0.6286447135151446,
+      0.888235072234167,
+      0.9338765040926408,
+      0.9987929083364768
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 2,
+    "predicate": "(phase==D2)&(action==2)&(((state==2)&(ep_trial>=50))|((state==1)&(ep_trial>=60)))",
+    "split": "dev",
+    "precision": 0.8643813741146043,
+    "recall": 0.8632565602802184,
+    "f1": 0.8638186010309431,
+    "mass_recall": 0.9698832513986549,
+    "correlation": 0.6758729873302884,
+    "n_active": 102206,
+    "n_predicted": 102073,
+    "coverage_by_activation_quartile": [
+      0.6110284909204758,
+      0.8969552285535379,
+      0.9460295096082345,
+      0.9990215647137098
+    ]
+  },
+  "gate": "reset",
+  "feature": 2,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Phase claims check out. D2 holds 100% of activation mass, D1 has 0 active steps and GO has 9 of 380k. (phase==GO) gets mass recall 1e-5.",
+      "The a2 claim checks out. in_action==2 holds 97.7% of mass. (phase==D2)&(action==2) scores precision 0.471, recall 0.947, mass recall 0.977, as reported. After a1 at trial 50+, precision is 0.06 and mass is 2.3%.",
+      "The trial ramp is real and monotone. Rate over all steps by 10-trial bin: 0.003, 0.006, 0.015, 0.019, 0.029, 0.081, 0.128, 0.169, 0.183, 0.238. Trials 90-99 hold 54% of mass. Within the predicate, precision is 0.45 in trials 50-59, 0.72 in 60-69 and 1.00 in 90-99. Before trial 50, D2&a2 steps have precision 0.087 and hold 0.7% of mass.",
+      "Threshold claims reproduce on dev. Trial >= 50 gives F1 0.841, >= 60 gives 0.834, >= 70 gives 0.756. Adding state==2 gives 0.777. Test F1 is 0.836, matching the report.",
+      "One systematic false-positive pocket, which the label leaves out: a2 followed by a rare transition to S1. Within the predicate, precision is 0.62 when state==1 versus 0.89 when state==2. These steps are about half of the false positives, and the false-positive windows show many inactive a2->S1R cells. Gating S1 at a later trial threshold (>= 60) lifts test F1 from 0.836 to 0.858 (precision 0.854, recall 0.862) with no loss of mass recall. This is a modest refinement, not a refutation. The explanation already notes that S2 activations are larger.",
+      "Value-based alternatives explain less. (D2&a2&value<7.13) gets F1 0.68, so the trial-position gate is not just standing in for low value output.",
+      "Misses on the test split are 3.4% of mass and look scattered: weak activations in earlier trials and a few a1->S2 rare transitions, as the explanation says. No future variables are used. The agent sees its action and the reached state at D2."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after choosing a2, late in the episode (ramps up with trial index; weaker and later-onset when a2 led by a rare transition to S1)",
+    "better_predicate": "(phase==D2)&(action==2)&(((state==2)&(ep_trial>=50))|((state==1)&(ep_trial>=60)))",
+    "better_predicate_test_f1": 0.858
+  },
+  "final_label": "D2 after choosing a2, late in the episode (ramps up with trial index; weaker and later-onset when a2 led by a rare transition to S1)",
+  "original_predicate": "(phase == D2) & (action == 2) & (ep_trial >= 50)",
+  "original_test_scores": {
+    "gate": "reset",
+    "feature": 2,
+    "predicate": "(phase == D2) & (action == 2) & (ep_trial >= 50)",
+    "split": "test",
+    "precision": 0.8103758133770086,
+    "recall": 0.8631970049885423,
+    "f1": 0.8359528397519612,
+    "mass_recall": 0.9655731231806431,
+    "correlation": 0.6569826211881489,
+    "n_active": 106043,
+    "n_predicted": 112955,
+    "coverage_by_activation_quartile": [
+      0.6317754894194862,
+      0.8883482328090226,
+      0.9338765040926408,
+      0.9987929083364768
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "reset",
+    "feature": 2,
+    "predicate": "(phase == D2) & (action == 2) & (ep_trial >= 50)",
+    "split": "dev",
+    "precision": 0.8189650375591209,
+    "recall": 0.864029509030781,
+    "f1": 0.8408939419908968,
+    "mass_recall": 0.9699300838860321,
+    "correlation": 0.6556704644000817,
+    "n_active": 102206,
+    "n_predicted": 107830,
+    "coverage_by_activation_quartile": [
+      0.6141202254226675,
+      0.8969552285535379,
+      0.9460295096082345,
+      0.9990215647137098
+    ]
+  },
+  "predicate_from": "skeptic"
+}

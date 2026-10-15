@@ -1,0 +1,66 @@
+{
+  "label": "GO step, confident a2 choice, high value (early-mid episode)",
+  "predicate": "(phase == GO) & (choice < -4.44) & (value > 7.7)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires almost only at GO (99.8% of mass), and only when the agent is about to choose a2 with a confident policy (logit(a1)-logit(a2) < -4.4; 99.7% of mass). It never fires on a1 choices, at D2, or when the reward/action/state inputs are nonzero. A second gate is the value head: it is active only when value is in the upper-middle range (about 7.7-8.1). In practice that means early-to-mid episode, ep_trial 3-59; it is silent from trial 60 on and in the first 3 trials. GO & action==2 alone gets recall 0.99 but precision 0.28. Adding ep_trial<50 gives F1 0.72, and value>7.7 gives F1 0.81. A tighter band (7.75-8.1) reaches dev F1 0.85, but that only tunes the cutoff. Magnitude is largest on the first GO of an a2 streak, or the first after a reward (e.g. 1.0, then 0.36, then decaying over consecutive a2 repeats). Uses only observed quantities and the policy/value outputs of the model itself.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 43,
+    "predicate": "(phase == GO) & (choice < -4.44) & (value > 7.7)",
+    "split": "test",
+    "precision": 0.7156312546603352,
+    "recall": 0.9207425859225098,
+    "f1": 0.8053320771104913,
+    "mass_recall": 0.9548087345349509,
+    "correlation": 0.6519763531022469,
+    "n_active": 59414,
+    "n_predicted": 76443,
+    "coverage_by_activation_quartile": [
+      0.8656927426955702,
+      0.9237915712939275,
+      0.8955766511815795,
+      0.9979128795529523
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 43,
+    "predicate": "(phase == GO) & (choice < -4.44) & (value > 7.7)",
+    "split": "dev",
+    "precision": 0.7147288931219811,
+    "recall": 0.9219495928110082,
+    "f1": 0.8052210836124503,
+    "mass_recall": 0.9538842158863369,
+    "correlation": 0.6490522336346923,
+    "n_active": 56976,
+    "n_predicted": 73495,
+    "coverage_by_activation_quartile": [
+      0.8755265374894693,
+      0.9243190115136197,
+      0.8920949171581016,
+      0.9958579050828419
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 43,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most of the factual claims hold. The recorded predicate reproduces (dev F1 0.805, test F1 0.805, mass recall 0.955). GO carries 99.8% of the activation mass and D2 has none. Units with choice > -4.44 have F1 0.003. Units with ep_trial >= 60 have 0.1% recall, and ep_trial < 3 has 0.2% recall. There is no activity when in_rew, in_action or in_state is nonzero.",
+      "There is a systematic false-positive class the explanation misses: the unit stays silent at GO right after a RARE transition on the previous trial. Predicate & (prev_common==0) has precision 0.009 on 8318 predicted dev steps (test: 0.012 on 8351). That is about 38% of all false positives. In the whole profile, prev_common==0 has 166 active steps out of 252894. This is a real dependence on the observed history, not cutoff tuning.",
+      "Adding (prev_common != 0) to the recorded predicate raises precision from 0.715 to 0.805 at the same recall (0.921), giving dev F1 0.859 and test F1 0.856.",
+      "The magnitude claim is wrong. The explanation says magnitude is largest on 'the first GO after a reward'. Per active step it is about 2x larger after an UNREWARDED trial. Mass-share / count-recall at GO is 1.64 for prev_reward==0 (with a prev_common==1 a2 choice) versus 0.83 for prev_reward==1. The 'decays over consecutive a2 repeats' part is not clearly supported either: the ratio is about 1.0 for stay==1 and for two stays in a row.",
+      "The remaining false positives sit mostly in the value 7.70-7.75 band (precision 0.23, about 12k of 21k FPs), which is the cutoff tuning the original agent already noted. The 'value < 8.1' upper bound is vacuous: adding it changes nothing.",
+      "'early-mid episode' is a correlate of the value head, not a separate condition. ep_trial < 60 adds nothing once value > 7.7 is in the predicate.",
+      "Neither the original predicate nor the improved one uses future variables. choice and value are the model's own outputs; prev_common is observed history."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step, confident a2 choice, high value, not right after a rare transition",
+    "better_predicate": "(phase==GO) & (choice < -4.44) & (value > 7.75) & (prev_common != 0)",
+    "better_predicate_test_f1": 0.865
+  },
+  "final_label": "GO step, confident a2 choice, high value, not right after a rare transition"
+}

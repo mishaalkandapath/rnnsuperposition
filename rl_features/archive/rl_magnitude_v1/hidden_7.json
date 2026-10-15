@@ -1,0 +1,75 @@
+{
+  "label": "D1 after unrewarded S2 visit, growing steeply after trial ~60; quenched by two misses in a row",
+  "terms": "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * np.clip(ep_trial - 60, 0, None)**2 ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * np.clip(ep_trial - 60, 0, None) ;; (phase == D1) * (1 - (prev_state == 2) * (prev_reward == 0)) * np.clip(ep_trial - 60, 0, None) ;; (phase == D1) * (prev_state == -1) * (prev_reward == 0) * np.clip(ep_trial - 60, 0, None)**2 ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * (prev_common == 0) * np.clip(ep_trial - 60, 0, None) ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * np.clip(ep_trial - 60, 0, None)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1, late in the episode. Magnitude grows about quadratically with trials past ~60 when the previous trial reached S2 and went unrewarded. It is near zero after any rewarded trial or any S1 visit (a negative late-ramp term on those D1 steps cancels the timing baseline). Within S2-unrewarded cases it is lower when the transition was rare (a1 -> S2) and much lower when the trial before was also unrewarded, so it peaks on the first miss at S2 after a reward. On the window first trial (previous state unknown, unrewarded) a smaller quadratic ramp covers the cases where S2 cannot be checked. Value/policy and the hidden good state add nothing. All terms are observed. Dev R^2 beyond timing 0.66, against an additive-table ceiling of 0.15 (the ceiling misses the reward x state x episode-time interaction).",
+  "gate": "hidden",
+  "feature": 7,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 7,
+    "terms": [
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * np.clip(ep_trial - 60, 0, None)**2",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * np.clip(ep_trial - 60, 0, None)",
+      "(phase == D1) * (1 - (prev_state == 2) * (prev_reward == 0)) * np.clip(ep_trial - 60, 0, None)",
+      "(phase == D1) * (prev_state == -1) * (prev_reward == 0) * np.clip(ep_trial - 60, 0, None)**2",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * (prev_common == 0) * np.clip(ep_trial - 60, 0, None)",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * np.clip(ep_trial - 60, 0, None)"
+    ],
+    "weights": [
+      0.0006909128904371254,
+      0.005887577594018208,
+      -0.004156877699190344,
+      0.0003947100059957681,
+      -0.004202954877228549,
+      -0.0226293390438486
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6603295923997546,
+    "r2": 0.7008517669236575,
+    "r2_timing_only": 0.11929851296199168
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 7,
+    "terms": [
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * np.clip(ep_trial - 60, 0, None)**2",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * np.clip(ep_trial - 60, 0, None)",
+      "(phase == D1) * (1 - (prev_state == 2) * (prev_reward == 0)) * np.clip(ep_trial - 60, 0, None)",
+      "(phase == D1) * (prev_state == -1) * (prev_reward == 0) * np.clip(ep_trial - 60, 0, None)**2",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * (prev_common == 0) * np.clip(ep_trial - 60, 0, None)",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * np.clip(ep_trial - 60, 0, None)"
+    ],
+    "weights": [
+      0.0006909128904371254,
+      0.005887577594018208,
+      -0.004156877699190344,
+      0.0003947100059957681,
+      -0.004202954877228549,
+      -0.0226293390438486
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6631994826199655,
+    "r2": 0.7016361748539903,
+    "r2_timing_only": 0.11412302015751996
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The consecutive-miss term uses tv(\"reward\", -2). On the window's second trial that value is outside the window, so the term is lost there, even though the same quantity can be observed as tv(\"prev_reward\", -1) (the reward input at the previous D1). Swapping in tv(\"prev_reward\", -1) raises test R^2 beyond timing from 0.660 to 0.708 with the same 6 terms. Adding a quadratic version of the consecutive-miss term and a linear first-trial term brings it to 0.713. Example: the worst-fit window starting at t96 predicts 1.34 at t97, but the actual value is 0 after two misses in a row.",
+      "The claim that S2-unrewarded activation is lower after a rare transition is directionally right (weight -0.004), but the effect is tiny. Dropping the term moves test R^2 only from 0.660 to 0.657, so it should not be stated as a major factor.",
+      "The consecutive-miss quenching is the main modifier and holds up: without it test R^2 falls from 0.66 to 0.52.",
+      "The first-trial term (prev_state == -1) is a weak stand-in: window-first D1 steps are badly under-predicted (actual about 2.1, predicted 0.28 to 0.49). Nothing in the window can fix this, so it limits the fit rather than undermining the label.",
+      "The peaks of first misses are under-predicted by about half (for example 2.45 actual vs 1.29 predicted at t96). Extras within 8 terms add only 0.005 to 0.02 each: value, |choice|, good state, the state two trials back, three misses in a row, a reward streak. No large systematic class remains. Mean error is at most 0.006 in every phase and previous-trial cell.",
+      "Ramp onset barely matters: start at 50 gives 0.705, 60 gives 0.713, 70 gives 0.715, and an exponential ramp gives 0.691. 'Past about 60' is fine."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after an unrewarded S2 visit, ramping late in the episode (after about trial 60); strongest on the first miss after a reward, quenched by consecutive misses",
+    "better_terms": "(phase == D1) * (prev_state == 2) * (prev_reward == 0) * np.clip(ep_trial - 60, 0, None)**2 ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * np.clip(ep_trial - 60, 0, None) ;; (phase == D1) * (1 - (prev_state == 2) * (prev_reward == 0)) * np.clip(ep_trial - 60, 0, None) ;; (phase == D1) * (prev_state == -1) * (prev_reward == 0) * np.clip(ep_trial - 60, 0, None)**2 ;; (phase == D1) * (prev_state == -1) * (prev_reward == 0) * np.clip(ep_trial - 60, 0, None) ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * (prev_common == 0) * np.clip(ep_trial - 60, 0, None) ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv(\"prev_reward\", -1) == 0) * np.clip(ep_trial - 60, 0, None) ;; (phase == D1) * (prev_state == 2) * (prev_reward == 0) * (tv(\"prev_reward\", -1) == 0) * np.clip(ep_trial - 60, 0, None)**2",
+    "better_terms_test_r2_beyond_timing": 0.7132
+  },
+  "final_label": "D1 after an unrewarded S2 visit, ramping late in the episode (after about trial 60); strongest on the first miss after a reward, quenched by consecutive misses"
+}

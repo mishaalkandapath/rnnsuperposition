@@ -1,0 +1,64 @@
+{
+  "label": "D1 after an unrewarded trial, late in the episode, when the agent is about to choose a2",
+  "predicate": "(phase == D1) & (prev_reward == 0) & (action == 2) & (ep_trial >= 40)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": true,
+  "explanation": "Fires only at D1 (0 activations at GO/D2) and essentially only when the reward input is 0 (previous trial unrewarded; prev_reward==0 covers 99.9% of activations). Within those steps it is selective for the agent upcoming choice being a2 (98% of mass; action==1 trials almost silent) and for late episode trials (ep_trial >= ~40; rate rises steadily from ~0 at trials 0-19 to ~7% at 90-99, and activation mass concentrates in the last trials). Correspondingly it co-occurs with low value (<7.5) and negative policy logit (favouring a2). The only FUTURE variable is action, the agent own upcoming GO choice, which it legitimately computes; no random outcome is used. Observed-only alternative (phase D1 & prev_reward 0 & ep_trial>=40) gives dev F1 0.68 (P 0.54, R 0.94); using choice<-1.5 instead of action gives F1 0.79. Does not fire after rewarded trials, at GO or D2, or early in the episode.",
+  "test_scores": {
+    "gate": "reset",
+    "feature": 104,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (action == 2) & (ep_trial >= 40)",
+    "split": "test",
+    "precision": 0.9009805465858076,
+    "recall": 0.877483316713968,
+    "f1": 0.8890767078573094,
+    "mass_recall": 0.9635874964190411,
+    "correlation": 0.7629669454942192,
+    "n_active": 52148,
+    "n_predicted": 50788,
+    "coverage_by_activation_quartile": [
+      0.6560558410677303,
+      0.8618547211781852,
+      0.9920994093733221,
+      0.9999232952366341
+    ]
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 104,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (action == 2) & (ep_trial >= 40)",
+    "split": "dev",
+    "precision": 0.9050658669808289,
+    "recall": 0.8876867161074813,
+    "f1": 0.8962920537949174,
+    "mass_recall": 0.968481065200061,
+    "correlation": 0.7618013643203901,
+    "n_active": 47599,
+    "n_predicted": 46685,
+    "coverage_by_activation_quartile": [
+      0.6710084033613445,
+      0.8889915966386555,
+      0.9908403361344538,
+      0.999915959324313
+    ]
+  },
+  "gate": "reset",
+  "feature": 104,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The claims check out. By phase, activation is D1 47599, GO 0, D2 0. prev_reward==0 holds 100% of the activation mass (58 activations after rewarded trials). action==2 holds 98.2% of the mass, and the predicate with action==1 instead has P 0.07.",
+      "The episode-trial effect is a gradual ramp, not a step. Rate by 10-trial bin: 0.000, 0.001, 0.006, 0.014, 0.042, ... 0.074. So ep_trial>=40 is only a rough cut-off. Inside the predicate, precision is 0.77 for trials 40-59, against 0.905 overall. Moving the cut-off to 30 gives F1 0.862, so 40 is a reasonable choice.",
+      "The low-value claim is a weaker refinement than the label suggests. Inside the predicate, steps with value>=7.4 have precision 0.59 and hold only 2.2% of the mass. This is consistent with the claim, but value adds little beyond the predicate.",
+      "Test misses hold 3.6% of the activation mass. They are mostly weak activations (<0.25 of max) at early-ish trials or before a1 choices, with no systematic class. The false positives look scattered. The subgroup where the previous choice was a1 and the agent switches to a2 has lower precision (0.72), but it is small (4030 steps).",
+      "The predicates with only observed variables are clearly worse. D1 & prev_reward==0 & ep_trial>=40 scores dev F1 0.684. Using the previous action instead of the upcoming one (tv('action',-1)==2) gives F1 0.775. Using the policy logit (choice<-1.5) gives test F1 0.763. The upcoming action is the agent's own choice, which it can legitimately compute, so recording the action version is justified.",
+      "The reported test scores reproduce: P 0.901, R 0.877, F1 0.889, mass recall 0.964."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "label": "Late-episode GO after a2 S2 unrewarded, larger when belief favours S2",
+  "terms": "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 65) ;; (phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 65) * (ep_trial >= 75) ;; (phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 65) * (tv(\"reward\", -2) == 0) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * (ep_trial >= 70) ;; (phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 65) * np.clip(-belief_lo, -3, 3) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * (ep_trial >= 70) * np.clip(-belief_lo, -3, 3)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Active only at GO, late in the episode (from about trial 65, and much more from 75). Magnitude is carried almost entirely by the previous trial being a2 -> S2 common, unrewarded (residual +0.10 at GO; every other pattern is slightly negative, including a2 S1 u). It is smaller when the trial before that was also unrewarded (two losses in a row), and larger the more the ideal-observer belief favours S2 being good (graded -belief_lo). Window-first trials with an unrewarded outcome shown (where the previous choice is outside the window) stand in for the same case. The belief term recovers what the future upcoming choice explains: adding (action == 2) instead gives dev 0.548, versus 0.550 for the observed-only belief version, so going observed-only loses essentially nothing here. D1 and D2 are always zero. Scores: timing alone R^2 0.09; last_is(a2 S2 u) x late-episode indicators alone reach dev 0.38-0.45 beyond timing; the full 6-term set gives dev 0.550 and test 0.558 beyond timing, well above the additive all ceiling of 0.19, which lacks the episode-time x pattern interaction.",
+  "gate": "update",
+  "feature": 157,
+  "test_scores": {
+    "gate": "update",
+    "feature": 157,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 65)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 65) * (ep_trial >= 75)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 65) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0) * (ep_trial >= 70)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 65) * np.clip(-belief_lo, -3, 3)",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0) * (ep_trial >= 70) * np.clip(-belief_lo, -3, 3)"
+    ],
+    "weights": [
+      0.15664990818478272,
+      0.2481363756816516,
+      -0.07364218855724036,
+      0.0686212848576305,
+      0.08897682118193405,
+      0.02317958323759956
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5582640858945012,
+    "r2": 0.5972696428348213,
+    "r2_timing_only": 0.08830062418471274
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 157,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 65)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 65) * (ep_trial >= 75)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 65) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0) * (ep_trial >= 70)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 65) * np.clip(-belief_lo, -3, 3)",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0) * (ep_trial >= 70) * np.clip(-belief_lo, -3, 3)"
+    ],
+    "weights": [
+      0.15664990818478272,
+      0.2481363756816516,
+      -0.07364218855724036,
+      0.0686212848576305,
+      0.08897682118193405,
+      0.02317958323759956
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5498491963300673,
+    "r2": 0.5870246136188221,
+    "r2_timing_only": 0.08258436280836479
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The explanation leaves out that the feature switches off at the very end of the episode. It says the feature is 'much more from trial 75', which suggests it stays high. In fact the a2 S2 u x single-trial test R^2 falls steadily: t90 0.042, t94 0.008, t96 0.002, t98 0.000. Weights fall the same way: t90 +0.43, t95 +0.14, t97 +0.035, t98-99 about 0. Adding the term GO*a2S2u*(ep_trial>=65)*(ep_trial>=95) gets weight -0.31 to -0.36 and raises test R^2 from 0.558 to 0.602.",
+      "The 'two losses in a row' effect is mostly the same thing as the belief effect. Without the belief term, the tv('reward',-2)==0 weight is -0.19. With it, the weight is -0.07, because an extra loss at S2 already pushes the belief toward S1.",
+      "The claim that windows whose first trial is unrewarded 'stand in for the same case' is only partly handled. The worst-fit windows are first-trial GO steps with actual 0.78-0.91 against predicted 0.10-0.22. Gating those terms on belief < 0.4 helps slightly (0.558 to 0.562).",
+      "The claims that do hold: the feature is zero at D1 and D2, and the GO residual is +0.10 after a2 S2 u while every other pattern is between -0.003 and -0.015. It really is specific to a2 S2 u: the a2 S1 u x late terms score 0.0003, and prev_reward==0 x late x belief scores 0.015. The belief term adds about 0.11 (0.447 to 0.553 test).",
+      "What going observed-only costs: the future variable action==2 adds real signal. The 2-term a2S2u x late set goes from 0.388 to 0.495 when gated on action==2. The worst misses that remain are a2 S2 u GO steps where the agent then chose a1 (actual 0, predicted 0.1-0.5). The belief terms recover most of this (full observed-only set 0.558)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after a2 S2 unrewarded in late episode (trials ~65-94; peaks ~75-92, off by ~97), larger when belief favours S2",
+    "better_terms": "(phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 65) ;; (phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 65) * (ep_trial >= 75) ;; (phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 65) * (ep_trial >= 95) ;; (phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 65) * (tv(\"reward\", -2) == 0) ;; (phase == GO) * last_is(\"a2 S2 u\") * (ep_trial >= 65) * np.clip(-belief_lo, -3, 3) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * (ep_trial >= 70) * (ep_trial < 95) * (belief < 0.4) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * (ep_trial >= 80) * (ep_trial < 95) * (belief < 0.4)",
+    "better_terms_test_r2_beyond_timing": 0.6041
+  },
+  "final_label": "GO after a2 S2 unrewarded in late episode (trials ~65-94; peaks ~75-92, off by ~97), larger when belief favours S2"
+}

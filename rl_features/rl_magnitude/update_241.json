@@ -1,0 +1,91 @@
+{
+  "label": "Fires at D2 after a2->S2; stronger when belief favors S2 less and last trial unrewarded.",
+  "short_terms": "(in_state == 2) * (action == 2) ;; (in_state == 2) * (action == 2) * belief_lo ;; (in_state == 2) * (action == 2) * (prev_reward == 1)",
+  "terms": "(phase == D2) * (action == 2) * (state == 2) ;; (phase == D2) * (action == 2) * (state == 2) * belief_lo ;; (phase == D2) * (action == 2) * (state == 2) * (prev_reward == 1) ;; (phase == D2) * (action == 2) * (state == 2) * last_is(\"a1 S1 u\") ;; (phase == D2) * (action == 2) * (state == 2) * last_is(\"a1 S2 r\") ;; (phase == D2) * (action == 2) * (state == 2) * last_is(\"a2 S2 u\") ;; (phase == D2) * (action == 2) * (state == 2) * (tv(\"reward\", -2) == 1) ;; (phase == D2) * (action == 2) * (state == 2) * (prev_state == 1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Silent at D1 and GO. It fires only at D2 on common a2->S2 trials; other choice/state combos at D2 sit below the timing baseline. Within a2->S2 trials it is larger when the ideal observer is less sure that S2 is good (belief_lo higher, i.e. closer to or above 0; the belief-decile residual peaks at the middle deciles) and smaller when the previous trial was rewarded (fitted weight about -0.28). The free fit adds the previous-trial pattern: largest after a1 S1 u, a2 S2 u and a1 S2 r (switching to a2, or staying after a loss), near zero after a2 S2 r, low after a2 S1 trials, plus a small negative effect of reward two trials back. That lifts dev R^2 from 0.42 to 0.52. Timing alone already gives the decline in D2 firing over the episode. The hidden good state, future reward and next choice add essentially nothing. Observed-only: no model outputs are used.",
+  "full_test_scores": {
+    "gate": "update",
+    "feature": 241,
+    "terms": [
+      "(phase == D2) * (action == 2) * (state == 2)",
+      "(phase == D2) * (action == 2) * (state == 2) * belief_lo",
+      "(phase == D2) * (action == 2) * (state == 2) * (prev_reward == 1)",
+      "(phase == D2) * (action == 2) * (state == 2) * last_is(\"a1 S1 u\")",
+      "(phase == D2) * (action == 2) * (state == 2) * last_is(\"a1 S2 r\")",
+      "(phase == D2) * (action == 2) * (state == 2) * last_is(\"a2 S2 u\")",
+      "(phase == D2) * (action == 2) * (state == 2) * (tv(\"reward\", -2) == 1)",
+      "(phase == D2) * (action == 2) * (state == 2) * (prev_state == 1)"
+    ],
+    "weights": [
+      0.43663952583687216,
+      0.08246277429137576,
+      -0.2116431415443839,
+      0.8007241724571399,
+      0.4625381529298204,
+      0.3074553840013201,
+      -0.05734532981715204,
+      -0.1166820711703152
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5302190003917915,
+    "r2": 0.5684498740958523,
+    "r2_timing_only": 0.08138020425675996
+  },
+  "gate": "update",
+  "feature": 241,
+  "test_scores": {
+    "gate": "update",
+    "feature": 241,
+    "terms": [
+      "(in_state == 2) * (action == 2)",
+      "(in_state == 2) * (action == 2) * belief_lo",
+      "(in_state == 2) * (action == 2) * (prev_reward == 1)"
+    ],
+    "weights": [
+      0.6042056973997624,
+      0.13082329814313776,
+      -0.27879874499659574
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.43209949530185854,
+    "r2": 0.47831535437171036,
+    "r2_timing_only": 0.08138020425675996
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 241,
+    "terms": [
+      "(in_state == 2) * (action == 2)",
+      "(in_state == 2) * (action == 2) * belief_lo",
+      "(in_state == 2) * (action == 2) * (prev_reward == 1)"
+    ],
+    "weights": [
+      0.6042056973997624,
+      0.13082329814313776,
+      -0.27879874499659574
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.41930128177403847,
+    "r2": 0.46280472951838303,
+    "r2_timing_only": 0.07491569445382595
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Over-prediction at D2 after a previous a2->S1 trial (rewarded or not, -0.145 mean error per misses) is not covered by the short form. The free fit's prev_state term only partly handles it. It is a modest residual class, not a large one.",
+      "The activation looks bimodal on a2->S2 trials: in the worst-fit windows actual values are about 1.5-2.2 against predictions of 0.3-0.7. So the linear short form gets the ordering right but shrinks the scale. That is expected for a linear fit and does not reverse any claim.",
+      "The 'peaks at middle deciles' remark is about D2 as a whole, where it is confounded with choice. Within a2->S2, a linear belief_lo fits best: |belief_lo| gives 0.348, min(belief_lo,0) gives 0.411, max(belief_lo,0) gives 0.363, clip(belief_lo,-3,3) gives 0.430, and plain belief_lo gives 0.432 on test. So the label's 'belief favors S2 less' (monotone) is the right reading.",
+      "Every term checks out on --split test. Dropping belief_lo lowers R^2 from 0.432 to 0.259. Replacing prev_reward with last_is('a2 S2 r') gives 0.366, with stay 0.368, with prev_state==2 0.372, and with prev_reward==prev_common 0.365. None of the alternatives I tried beat the recorded short form.",
+      "The label leaves out that the feature is silent at D1 and GO, but 'fires at D2' already implies this."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  }
+}

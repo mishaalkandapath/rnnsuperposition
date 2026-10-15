@@ -1,0 +1,82 @@
+{
+  "label": "D2 lowered by recent non-reward, raised by a1 choice; GO tracks last choice",
+  "terms": "(phase == GO) * (prev_action == 2) ;; (phase == GO) * (prev_action == 1) * (prev_reward == 1) ;; (phase == D2) * (prev_reward == 1) * (prev_state == 1) ;; (phase == D2) * (prev_reward == 0) ;; (phase == D2) * (tv(\"reward\", -2) == 0) ;; (phase == D2) * (action == 1) ;; (phase == D2) * (state == 1) ;; (phase == D2) * (tv(\"reward\", -3) == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw GRU candidate n of unit 43. D1 is pinned near -0.99 (no structure). At GO it is higher after an a2 choice on the last trial (+0.11) and lower after a rewarded a1 trial (-0.18). Most of the variance is at D2: it drops after an unrewarded last trial (-0.29), and further for each earlier unrewarded trial (2 back -0.19, 3 back -0.08), so a run of losses drives it strongly negative; it is higher after a rewarded trip to S1 (+0.22), higher when the current choice is a1 (+0.31) and somewhat lower when S1 is reached (-0.10). All terms are observed at their step (no future/hidden/model variables). Dev R^2 beyond timing 0.757; profile ceilings: all 0.78, all observed 0.74.",
+  "gate": "unit_candidate",
+  "feature": 43,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 43,
+    "terms": [
+      "(phase == GO) * (prev_action == 2)",
+      "(phase == GO) * (prev_action == 1) * (prev_reward == 1)",
+      "(phase == D2) * (prev_reward == 1) * (prev_state == 1)",
+      "(phase == D2) * (prev_reward == 0)",
+      "(phase == D2) * (tv(\"reward\", -2) == 0)",
+      "(phase == D2) * (action == 1)",
+      "(phase == D2) * (state == 1)",
+      "(phase == D2) * (tv(\"reward\", -3) == 0)"
+    ],
+    "weights": [
+      0.10976236179321666,
+      -0.1792129761324007,
+      0.22373197310880502,
+      -0.29302300263208264,
+      -0.18798292485565624,
+      0.31132131314704886,
+      -0.09886322505648087,
+      -0.07859897551630038
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.750381427406398,
+    "r2": 0.9818998722925333,
+    "r2_timing_only": 0.9274888582231615
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 43,
+    "terms": [
+      "(phase == GO) * (prev_action == 2)",
+      "(phase == GO) * (prev_action == 1) * (prev_reward == 1)",
+      "(phase == D2) * (prev_reward == 1) * (prev_state == 1)",
+      "(phase == D2) * (prev_reward == 0)",
+      "(phase == D2) * (tv(\"reward\", -2) == 0)",
+      "(phase == D2) * (action == 1)",
+      "(phase == D2) * (state == 1)",
+      "(phase == D2) * (tv(\"reward\", -3) == 0)"
+    ],
+    "weights": [
+      0.10976236179321666,
+      -0.1792129761324007,
+      0.22373197310880502,
+      -0.29302300263208264,
+      -0.18798292485565624,
+      0.31132131314704886,
+      -0.09886322505648087,
+      -0.07859897551630038
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7565325418134317,
+    "r2": 0.9826332581246982,
+    "r2_timing_only": 0.9286691453360727
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the label says 'GO tracks last choice', but GO also depends on the last reward. Lowering is specific to rewarded a1 (weight -0.18; prev-trial residuals a1 S1 r -0.18, a1 S2 r -0.20 vs a1 S1 u +0.03). The explanation states this; the label leaves it out.",
+      "Minor: the D2 term 'raised after rewarded S1' really is about the state reached, not the action taken. Swapping prev_state==1 for prev_action==1 drops test R^2 from 0.750 to 0.713, which supports the claim as worded.",
+      "The D2 state==1 term is small (-0.10). Dropping it costs about 0.017 test R^2 (0.733), so it is a real effect but secondary.",
+      "Remaining systematic errors are small: D2 after a1 S2 r is over-predicted by 0.10, D2 after a1 S2 u is under-predicted by 0.07, and GO after a2 S1 u/r is off by about 0.06. None is a large error class. Mean error by phase is about 0.",
+      "Test R^2 beyond timing of 0.750 matches dev (0.757) and is above the additive 'all observed' ceiling of 0.74. No future, hidden or model-output variables are used. My alternatives (prev_common at GO; splitting D2 non-reward by state) did not improve on it."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 lowered by a run of recent non-rewards, raised after rewarded S1 and by an a1 choice; GO higher after a2, lower after rewarded a1",
+    "better_terms": null,
+    "better_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "D2 lowered by a run of recent non-rewards, raised after rewarded S1 and by an a1 choice; GO higher after a2, lower after rewarded a1"
+}

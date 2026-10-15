@@ -1,0 +1,103 @@
+{
+ "label": "At GO after a rare unrewarded a2 trial, from trial ~76, growing later in the episode.",
+ "short_terms": "(phase == GO) * last_is(\"a2 S1 u\") * np.clip(ep_trial - 75, 0, None)",
+ "terms": "(phase == GO) * last_is(\"a2 S1 u\") * np.clip(ep_trial - 75, 0, 25) ;; (phase == GO) * last_is(\"a2 S1 u\") * (ep_trial >= 76) ;; (phase == GO) * last_is(\"a2 S1 u\") * (ep_trial >= 76) * np.clip(-belief_lo, 0, None) ;; (phase == GO) * (prev_reward == 0) * np.clip(ep_trial - 75, 0, 25) * (belief_lo < 0) ;; (phase == GO) * (prev_reward == 0) * (ep_trial >= 76) * np.clip(-belief_lo, 0, None) ;; (phase == GO) * last_is(\"a2 S1 u\") * (ep_trial >= 70) ;; (phase == GO) * (ep_trial >= 80) * (belief_lo < 0) ;; (phase == GO) * last_is(\"a2 S1 u\") * (tv(\"reward\", -2) == 0)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "The feature is silent at D1 and D2. It fires (about 2.5, close to on/off) only at GO in the last quarter of the episode. Its magnitude is driven by the previous trial: a2 that rarely reached S1 and went unrewarded (residual +0.32 at GO, every other previous-trial pattern is slightly negative). It is gated by episode time, starting around trial 76 and growing towards trial 99. A model-based agent reads this pattern as evidence to stay with a2. The short form, a last_is(a2 S1 u) term with a ramp from trial 75 plus a step at trial 76, captures most of it. The free fit adds a smaller second route: other unrewarded trials late in the episode while the observer belief favours S2 (belief_lo < 0) also drive it, graded by -belief_lo. Without the previous-trial conjunction, belief alone or prev_reward alone x late time explains little (about 0.11-0.15). The additive profile ceiling (0.16) is far below these scores because the feature is a 3-way conjunction of phase, last-trial pattern and episode time. Only observed variables are used; nothing future, hidden or model output.",
+ "full_test_scores": {
+  "gate": "update",
+  "feature": 49,
+  "terms": [
+   "(phase == GO) * last_is(\"a2 S1 u\") * np.clip(ep_trial - 75, 0, 25)",
+   "(phase == GO) * last_is(\"a2 S1 u\") * (ep_trial >= 76)",
+   "(phase == GO) * last_is(\"a2 S1 u\") * (ep_trial >= 76) * np.clip(-belief_lo, 0, None)",
+   "(phase == GO) * (prev_reward == 0) * np.clip(ep_trial - 75, 0, 25) * (belief_lo < 0)",
+   "(phase == GO) * (prev_reward == 0) * (ep_trial >= 76) * np.clip(-belief_lo, 0, None)",
+   "(phase == GO) * last_is(\"a2 S1 u\") * (ep_trial >= 70)",
+   "(phase == GO) * (ep_trial >= 80) * (belief_lo < 0)",
+   "(phase == GO) * last_is(\"a2 S1 u\") * (tv(\"reward\", -2) == 0)"
+  ],
+  "weights": [
+   0.12553401942051254,
+   -0.7869702481528699,
+   -0.029231738117302414,
+   -0.002813524319247969,
+   0.258575533685425,
+   0.015170219285572642,
+   -0.1549936189694247,
+   0.009040755992004896
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7778658148131228,
+  "r2": 0.7972164955584861,
+  "r2_timing_only": 0.08711257445171683
+ },
+ "gate": "update",
+ "feature": 49,
+ "test_scores": {
+  "gate": "update",
+  "feature": 49,
+  "terms": [
+   "(phase == GO) * last_is(\"a2 S1 u\") * np.clip(ep_trial - 75, 0, None)"
+  ],
+  "weights": [
+   0.11182378924042795
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7189097991380189,
+  "r2": 0.7433962901882563,
+  "r2_timing_only": 0.08711257445171683
+ },
+ "dev_scores": {
+  "gate": "update",
+  "feature": 49,
+  "terms": [
+   "(phase == GO) * last_is(\"a2 S1 u\") * np.clip(ep_trial - 75, 0, None)"
+  ],
+  "weights": [
+   0.11182378924042795
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.7303939379723736,
+  "r2": 0.7536644425673962,
+  "r2_timing_only": 0.08631298725263115
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": true,
+  "issues": [
+   "The step term (ep_trial >= 76) is close to redundant. The ramp alone, (phase == GO) * last_is(\"a2 S1 u\") * np.clip(ep_trial - 75, 0, None), scores test R^2 0.7189 beyond timing against 0.7199 for both terms. The step alone scores 0.537. So the 'growing later in the episode' ramp carries the fit, and the second term is a fitted correction that adds 0.001.",
+   "The explanation calls the feature 'close to on/off' (about 2.5), but a linear ramp beats any step. Steps at >=70, >=76 and >=80 score 0.43, 0.54 and 0.61 on test. Activations rise from about 2.2 to 2.9 across trials 91-99, so 'growing' (the label) is right and 'on/off' is not.",
+   "Ramp onsets 73, 75 and 78 score 0.713, 0.719 and 0.717 on test, so 'from ~76' is fine. Onsets 70 and 80 score lower (0.697 and 0.704).",
+   "The pattern is specific, as claimed. At GO the residual after a2 S1 u is +0.324; every other previous-trial pattern is about -0.03, including the other rare-unrewarded pattern a1 S2 u (-0.024). The phase restriction also holds: D1 and D2 are exactly 0.",
+   "The free fit's second route (other unrewarded trials late in the episode, graded by belief) adds little. Adding (prev_reward == 0) * ramp gives 0.723; adding (prev_reward == 0) * clip(-belief_lo) gives 0.721. Belief, belief_cover and tv('action',-2) conditioned on a2 S1 u add nothing (0.719).",
+   "Misses show no large systematic class. The mean GO error per previous-trial pattern is at most -0.03. The worst windows are mostly firing at the first window step, where the previous trial is unknown ('?'), plus a few cases after a2 S1 u where the feature did not fire. No observed variable tested explains those cases."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "At GO after a rare unrewarded a2 trial (a2 reached S1, no reward), ramping up from trial ~75.",
+  "better_short_terms": "(phase == GO) * last_is(\"a2 S1 u\") * np.clip(ep_trial - 75, 0, None)",
+  "better_short_terms_test_r2_beyond_timing": 0.7189
+ },
+ "final_label": "At GO after a rare unrewarded a2 trial (a2 reached S1, no reward), ramping up from trial ~75.",
+ "original_short_terms": "(phase == GO) * last_is(\"a2 S1 u\") * np.clip(ep_trial - 75, 0, None) ;; (phase == GO) * last_is(\"a2 S1 u\") * (ep_trial >= 76)",
+ "original_test_scores": {
+  "gate": "update",
+  "feature": 49,
+  "terms": [
+   "(phase == GO) * last_is(\"a2 S1 u\") * np.clip(ep_trial - 75, 0, None)",
+   "(phase == GO) * last_is(\"a2 S1 u\") * (ep_trial >= 76)"
+  ],
+  "weights": [
+   0.11815658484301539,
+   -0.10076759138982008
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7199028044751752,
+  "r2": 0.7443027922740486,
+  "r2_timing_only": 0.08711257445171683
+ },
+ "terms_from": "skeptic"
+}

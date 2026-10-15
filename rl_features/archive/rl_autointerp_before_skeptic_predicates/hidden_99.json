@@ -1,0 +1,64 @@
+{
+  "label": "GO step after a rewarded trial when the agent is choosing a2 (before about trial 75 of the episode)",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (ep_trial < 75)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO (never at D1 or D2), only when the previous trial was rewarded (in_rew=0 at GO, prev_reward=1 accounts for 100% of activation mass), and mostly (95% of mass) when the agent picks a2: model_act==2, policy logit strongly favouring a2 (choice < -4.4 holds 91% of mass). Using the recorded upcoming action instead (action==2, marked FUTURE but it is the agent own choice) scores almost the same; I recorded model_act because it is computed at that step. Firing also depends on time in the episode: about 10% rate for trials 10-69, falling to near zero after trial 80, so ep_trial<75 brings dev F1 from 0.71 to 0.82. In the profile the strongest activations (near max) come at the first a2 choice after a run of rewarded a1 trials, often right after a rare-rewarded a1 trial. Typical activations, around 0.3 of max, come on repeated rewarded a2 choices. Requiring two rewards in a row raised precision but lowered recall, and it lowered F1. It does not fire on a1 choices, after unrewarded trials, or on D1/D2 steps. Leftover false positives are mostly the first rewarded trial after an unrewarded one.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 99,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (ep_trial < 75)",
+    "split": "test",
+    "precision": 0.763891683096608,
+    "recall": 0.8794135698817643,
+    "f1": 0.8175921190751756,
+    "mass_recall": 0.937183319894641,
+    "correlation": 0.7270538787760119,
+    "n_active": 86353,
+    "n_predicted": 99412,
+    "coverage_by_activation_quartile": [
+      0.6879892537866507,
+      0.9134704465443765,
+      0.9656290531776913,
+      0.950574393181397
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 99,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 2) & (ep_trial < 75)",
+    "split": "dev",
+    "precision": 0.7764787507248778,
+    "recall": 0.8767070433074549,
+    "f1": 0.8235546085581232,
+    "mass_recall": 0.9378384413815644,
+    "correlation": 0.7356711237016168,
+    "n_active": 85528,
+    "n_predicted": 96568,
+    "coverage_by_activation_quartile": [
+      0.6771583574969601,
+      0.9084744177345431,
+      0.9659994387802825,
+      0.9551959592180339
+    ]
+  },
+  "gate": "hidden",
+  "feature": 99,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "All factual claims check out on dev. The feature fires only at GO (D1 and D2 rates are 0.000). prev_reward==1 carries 100% of activation mass. model_act==2 carries 94.7% of mass, action==2 carries 94.9%, and choice < -4.44 carries 91%. Firing rate is about 0.10 for trials 10-69, 0.050 for trials 70-79, 0.006 for trials 80-89 and 0.000 for trials 90-99. Adding ep_trial<75 raises dev F1 from 0.707 to 0.824.",
+      "The reported test scores reproduce exactly: precision 0.764, recall 0.879, F1 0.818, mass recall 0.937.",
+      "The claim that leftover false positives are 'mostly' the first rewarded trial after an unrewarded one is only about half true. That subset has precision 0.54 (about 10k false positives out of about 21.6k). The rest are spread over cases where the agent picks a2 while S1 is the good state (precision 0.52) and the ep_trial 70-74 tail. Excluding the after-unrewarded subset lowers F1 to 0.787, as the other agent reported.",
+      "The claim that the strongest activations come at the first a2 choice after rewarded a1 trials holds for the top windows. But that case (prev_action==1) is only 5% of mass, so it describes the peaks, not the bulk of the feature.",
+      "A small a1 component is real but weak: rewarded GO steps where the agent picks a1 have precision 0.079 and hold 5.3% of mass, with activations around 0.1 of max. This is minor.",
+      "The episode-time cutoff has no observed-variable explanation among the variables I tried. Requiring value<8.1 changes nothing, and value>7.13 gives F1 0.825, about the same. The cutoff is an empirical description, not a mechanism. Small alternatives score about the same: swapping model_act==2 for choice<-4.4 gives dev F1 0.830. I found no systematic counterexample class."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

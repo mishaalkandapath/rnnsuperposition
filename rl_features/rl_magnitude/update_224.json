@@ -1,0 +1,112 @@
+{
+ "label": "Fires at D2 when a1 reaches S1, much stronger if the previous trial went unrewarded.",
+ "short_terms": "(in_state == 1) * (action == 1) * (9 - ep_dec) ;; (phase == D2) ;; (in_state == 1) * (action == 1) * (prev_reward == 0)",
+ "terms": "(in_state == 1) * (action == 1) ;; (phase == D2) ;; (in_state == 1) * (action == 1) * (prev_reward == 0) ;; (in_state == 1) * (action == 1) * last_is(\"a1 S2 u\") ;; (in_state == 1) * (action == 1) * (tv(\"reward\", -2) == 0) ;; (in_state == 1) * (action == 1) * (tv(\"reward\", -3) == 0) ;; (in_state == 1) * (action == 1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) ;; (in_state == 1) * (action == 1) * ep_dec",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Silent at D1 and GO; active only at D2 on a1 -> S1 (common) trials (other D2 choice x state cells sit about 0.19 below the timing baseline, which the phase==D2 term absorbs). Its magnitude depends mainly on the previous reward: large after an unrewarded trial (largest after a1 S2 u), small after a rewarded one, so it habituates over runs of rewarded a1/S1 trials. The free fit adds an unrewarded trial two back (+0.34), extra for a1 S2 u (+0.38), a small decline over the episode (ep_dec) and a sub-additive interaction, taking dev R^2 from 0.565 to 0.69. Belief log-odds adds almost nothing once reward history is in. Observed variables only; action and state are both known at D2.",
+ "full_test_scores": {
+  "gate": "update",
+  "feature": 224,
+  "terms": [
+   "(in_state == 1) * (action == 1)",
+   "(phase == D2)",
+   "(in_state == 1) * (action == 1) * (prev_reward == 0)",
+   "(in_state == 1) * (action == 1) * last_is(\"a1 S2 u\")",
+   "(in_state == 1) * (action == 1) * (tv(\"reward\", -2) == 0)",
+   "(in_state == 1) * (action == 1) * (tv(\"reward\", -3) == 0)",
+   "(in_state == 1) * (action == 1) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+   "(in_state == 1) * (action == 1) * ep_dec"
+  ],
+  "weights": [
+   0.6122836945796641,
+   -0.18807589671967717,
+   0.7486471349911216,
+   0.37877439789283823,
+   0.3365433601083963,
+   0.05575221766177692,
+   -0.16176538593859124,
+   -0.09275178734654087
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6961440141992583,
+  "r2": 0.7428762339150679,
+  "r2_timing_only": 0.15379726547975592
+ },
+ "gate": "update",
+ "feature": 224,
+ "test_scores": {
+  "gate": "update",
+  "feature": 224,
+  "terms": [
+   "(in_state == 1) * (action == 1) * (9 - ep_dec)",
+   "(phase == D2)",
+   "(in_state == 1) * (action == 1) * (prev_reward == 0)"
+  ],
+  "weights": [
+   0.07145245880796132,
+   -0.2057659100920142,
+   0.8546280226859715
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6508645593437374,
+  "r2": 0.7045606353987404,
+  "r2_timing_only": 0.15379726547975592
+ },
+ "dev_scores": {
+  "gate": "update",
+  "feature": 224,
+  "terms": [
+   "(in_state == 1) * (action == 1) * (9 - ep_dec)",
+   "(phase == D2)",
+   "(in_state == 1) * (action == 1) * (prev_reward == 0)"
+  ],
+  "weights": [
+   0.07145245880796132,
+   -0.2057659100920142,
+   0.8546280226859715
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.6488146417535139,
+  "r2": 0.7025980746101047,
+  "r2_timing_only": 0.1531482779496801
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The core claims hold. The feature is zero at D1 and GO. At D2 the residual is +0.365 for a1->S1 and about -0.19 for the other three choice x state cells. After an unrewarded previous trial it is much higher: the short form gives the prev_reward==0 term +0.906 against +0.245 for the a1/S1 base. The recorded short form reproduces at test R^2 beyond timing 0.565.",
+   "The label and explanation leave out a large episode-time effect, and the explanation calls it 'a small decline over the episode'. It is not small. The a1/S1 response itself fades across the episode, over and above the D2 timing baseline. Replacing the a1/S1 base term with (in_state==1)*(action==1)*(9-ep_dec) raises test R^2 beyond timing from 0.565 to 0.651, which closes most of the gap to the free fit's 0.696. The misses output shows this directly: late-episode a1 S1 trials (t87-t94) have actual 0 but the recorded form predicts about 0.96.",
+   "There is a systematic error by previous-trial pattern, and it survives both forms. Prediction is too high after a1 S1 u (-0.21 on the recorded form, -0.21 on the improved one) and too low after a1 S2 u (+0.14 / +0.15). The raw residuals tell the same story: +0.79 after a1 S2 u but only +0.18 after a1 S1 u. So 'previous trial unrewarded' mostly means 'previous a1 trial ended unrewarded in S2'. The label's 'much stronger if previous unrewarded' overstates the a1 S1 u case.",
+   "Belief log-odds adds almost nothing (0.651 -> 0.651), so that claim checks out. Adding last_is('a1 S2 u') as a 4th term gives 0.668, and adding a reward-two-trials-back term gives 0.663. Neither of these will fit within 3 terms alongside the ep-decay and D2 terms. Swapping last_is('a1 S2 u') in for prev_reward==0 makes things worse (0.559).",
+   "No future variables are used. Action and state are both observed at D2."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Fires at D2 on a1->S1, stronger after unrewarded trials, fading over the episode.",
+  "better_short_terms": "(in_state == 1) * (action == 1) * (9 - ep_dec) ;; (phase == D2) ;; (in_state == 1) * (action == 1) * (prev_reward == 0)",
+  "better_short_terms_test_r2_beyond_timing": 0.6509
+ },
+ "final_label": "Fires at D2 on a1->S1, stronger after unrewarded trials, fading over the episode.",
+ "original_short_terms": "(in_state == 1) * (action == 1) ;; (phase == D2) ;; (in_state == 1) * (action == 1) * (prev_reward == 0)",
+ "original_test_scores": {
+  "gate": "update",
+  "feature": 224,
+  "terms": [
+   "(in_state == 1) * (action == 1)",
+   "(phase == D2)",
+   "(in_state == 1) * (action == 1) * (prev_reward == 0)"
+  ],
+  "weights": [
+   0.2451834217964513,
+   -0.18807589671967748,
+   0.9060652386879783
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.5651284210240008,
+  "r2": 0.6320104807053732,
+  "r2_timing_only": 0.15379726547975592
+ },
+ "terms_from": "skeptic"
+}

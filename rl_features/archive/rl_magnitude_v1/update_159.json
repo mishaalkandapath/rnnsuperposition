@@ -1,0 +1,60 @@
+{
+  "label": "GO after a2->S1 rare-rewarded trial, late episode (peak trials 80-89), stronger if a2 favoured",
+  "terms": "(phase == GO) * last_is(\"a2 S1 r\") * table(ep_dec, {6: 0.25, 7: 0.7, 8: 1.0, 9: 0.3}) ;; (phase == GO) * last_is(\"a2 S1 r\") * table(ep_dec, {6: 0.25, 7: 0.7, 8: 1.0, 9: 0.3}) * (tv(\"reward\", -2) == 1) ;; (phase == GO) * last_is(\"a2 S1 r\") * table(ep_dec, {6: 0.25, 7: 0.7, 8: 1.0, 9: 0.3}) * np.clip(-choice, -3, 3)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Sparse feature (nonzero on 1.4% of steps), and only at GO. Its magnitude is set almost entirely by the previous trial being a2 -> S1 (rare) and rewarded. Other previous-trial patterns, including a1 S1 r, add nothing once that is in the model. The effect depends on time in the episode: about zero before trial 60, then rising (fitted per-decile weights about 0.16 for 60s, 0.46 for 70s, 0.65 for 80s, 0.21 for 90s). That alone gives dev R^2 beyond timing 0.54. Within a2-S1-r GO steps it is larger when the trial before was also rewarded (tv reward -2 == 1), and larger the more the GO policy logit favours a2 (-choice, clipped; observed model output). Using the future choice action == 2 instead gives about the same score (dev 0.638 vs 0.648), so the observed policy logit was recorded. The trial-before state and the value head add under 0.01. Three terms: dev 0.648, test 0.655 beyond timing. This is well above the profile additive all ceiling of 0.21 because the drivers are interactions. Remaining misses: some late-episode (90s) firing after other rewarded patterns (e.g. a1 S1 r) and a few a2 S1 r trials where it stays silent.",
+  "gate": "update",
+  "feature": 159,
+  "test_scores": {
+    "gate": "update",
+    "feature": 159,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S1 r\") * table(ep_dec, {6: 0.25, 7: 0.7, 8: 1.0, 9: 0.3})",
+      "(phase == GO) * last_is(\"a2 S1 r\") * table(ep_dec, {6: 0.25, 7: 0.7, 8: 1.0, 9: 0.3}) * (tv(\"reward\", -2) == 1)",
+      "(phase == GO) * last_is(\"a2 S1 r\") * table(ep_dec, {6: 0.25, 7: 0.7, 8: 1.0, 9: 0.3}) * np.clip(-choice, -3, 3)"
+    ],
+    "weights": [
+      0.37090070595106495,
+      0.26947338385274,
+      0.09134501981989092
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.654534501560116,
+    "r2": 0.6762710646077017,
+    "r2_timing_only": 0.06291963494400332
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 159,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S1 r\") * table(ep_dec, {6: 0.25, 7: 0.7, 8: 1.0, 9: 0.3})",
+      "(phase == GO) * last_is(\"a2 S1 r\") * table(ep_dec, {6: 0.25, 7: 0.7, 8: 1.0, 9: 0.3}) * (tv(\"reward\", -2) == 1)",
+      "(phase == GO) * last_is(\"a2 S1 r\") * table(ep_dec, {6: 0.25, 7: 0.7, 8: 1.0, 9: 0.3}) * np.clip(-choice, -3, 3)"
+    ],
+    "weights": [
+      0.37090070595106495,
+      0.26947338385274,
+      0.09134501981989092
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6479570422890117,
+    "r2": 0.6693055666013532,
+    "r2_timing_only": 0.0606418161327561
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: the state two trials back is not quite negligible. Adding $B*(tv('action',-2)==2) and $B*(tv('state',-2)==1) (both get negative weights) raises test R^2 from 0.655 to 0.664. The explanation says these add under 0.01, and +0.009 is borderline but still consistent with that.",
+      "Many of the worst-fit windows are first-step (-3) GO cells that fire strongly (about 0.85-0.99) with predictions near 0.05. The previous trial falls outside the 5-trial window there, so last_is() cannot see it. This is a window-edge limit, not a missing driver.",
+      "Firing in the 90s after a1 S1 r (for example 0.57 against a predicted 0.02) is real but rare. Adding (GO)*a1S1r*(ep_dec==9) and (GO)*prev_reward*(ep_dec==9) gives about +0.0002 test, so these cases are scattered noise, not a systematic gap.",
+      "Each claim checks out on test. last_is('a2 S1 r') at GO alone gives 0.18. With the late-episode table it gives 0.533, versus 0.410 with a flat late-episode indicator, so the 80s peak is real. Adding reward two trials back raises it to 0.605. Adding -choice instead raises it to 0.628 (weight positive, so a2-favoured is correct). All three together give 0.655. Using the future action==2 instead of -choice gives 0.640 on test, so the observed logit is the right one to record. The misses output shows mean error by phase of at most 0.005, with no systematic previous-trial class."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_terms": null,
+    "better_terms_test_r2_beyond_timing": null
+  }
+}

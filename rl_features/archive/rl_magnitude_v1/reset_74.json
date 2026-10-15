@@ -1,0 +1,53 @@
+{
+  "label": "D1 after a1->S2 (rare), ramping up over the last ~15 trials of the episode",
+  "terms": "(phase == D1) * (prev_action == 1) * (prev_state == 2) * np.clip(ep_trial - 85, 0, None)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Sparse feature (0.9% of steps), active only at D1 and only late in the episode. Its magnitude is a conjunction: the previous trial was a1 that reached S2 (the rare a1 transition), times a ramp in episode trial that starts near trial 85 and grows roughly linearly to trial 99 (about 0.3 per trial). This one observed-only term gives test R^2 beyond timing of about 0.67, far above the additive ceiling (all = 0.10), because the effect is an interaction between last-trial pattern and episode time, not an additive one. The previous reward barely matters (a1 S2 r vs u differ by little; adding a reward term changes nothing). Choice/policy, value, the hidden good state and trials since reversal add nothing. Remaining errors are mostly first-trial-of-window D1 steps where the previous trial is outside the window, plus some late-episode firing after other patterns. Zero at GO and D2.",
+  "gate": "reset",
+  "feature": 74,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 74,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * np.clip(ep_trial - 85, 0, None)"
+    ],
+    "weights": [
+      0.3021496545955959
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6740760871146401,
+    "r2": 0.7116889353251715,
+    "r2_timing_only": 0.11540376978648215
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 74,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * np.clip(ep_trial - 85, 0, None)"
+    ],
+    "weights": [
+      0.3021496545955959
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6620171067664762,
+    "r2": 0.7019983096082154,
+    "r2_timing_only": 0.11829356941481306
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claims hold on test. The claimed term scores R^2 beyond timing 0.674 with weight +0.30 per trial, which matches 'about 0.3 per trial'. Splitting by previous reward adds nothing (0.674), so the label is right not to mention reward. Dropping the a1 condition (prev_state==2 only) falls to 0.096, and dropping the S2 condition (prev_action==1 only) falls to 0.092, so the rare a1->S2 conjunction is essential. A ramp starting at 85 fits better than one starting at 80 (0.651) or 88 (0.646), and better than a squared ramp (0.631). Adding a step indicator at trial 85 barely helps (0.675). The profile confirms the feature is exactly zero at GO and D2.",
+      "Minor overclaim: the explanation says the remaining errors are 'mostly D1 steps on the window's first trial'. But adding a term (phase==D1)*(prev_action==-1)*ramp does not improve test R^2 (0.675 vs 0.674), so first-trial misses are not a large systematic class this term can fix. The worst-fit windows mostly show large firings (2-5) after a2 S2c, a1 S1c or unknown previous trials late in the episode. These look scattered rather than tied to one pattern: in misses, the bias for every (phase, previous trial) cell is at most |0.044|.",
+      "Adding late-ramp terms for the other previous-trial patterns raises test R^2 to 0.728, but their weights are small and negative (-0.018 and -0.041). They only correct the timing baseline's spread of late-D1 mass onto non-a1S2 trials, so they add no new pattern. The trial before last (tv(-2) a1 S2) adds only about 0.01.",
+      "About 27-29% of the variance stays unexplained: occasional large late-episode D1 firings after other patterns. These are not captured by any simple observed cue I tried."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after a1->S2 (rare, rewarded or not), ramping up over the last ~15 trials of the episode",
+    "better_terms": "(phase == D1) * (prev_action == 1) * (prev_state == 2) * np.clip(ep_trial - 85, 0, None) ;; (phase == D1) * (prev_state == 2) * (prev_action==2) * np.clip(ep_trial - 85, 0, None) ;; (phase == D1) * (prev_state == 1) * np.clip(ep_trial - 85, 0, None)",
+    "better_terms_test_r2_beyond_timing": 0.728
+  },
+  "final_label": "D1 after a1->S2 (rare, rewarded or not), ramping up over the last ~15 trials of the episode"
+}

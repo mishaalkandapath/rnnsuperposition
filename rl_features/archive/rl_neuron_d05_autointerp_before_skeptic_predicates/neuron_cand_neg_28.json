@@ -1,0 +1,64 @@
+{
+  "label": "end-of-episode clock (D1/GO steps of the last ~10 trials)",
+  "predicate": "((phase == D1) & (ep_trial >= 88)) | ((phase == GO) & (ep_trial >= 92))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Episode-position unit: completely silent before episode trial ~78, ramps on in trials 80-89 and fires on ~46% of steps in trials 90-99 (94% of activation mass). Within those trials it fires on fixation steps: D1 first (from ~trial 88) and GO later (from ~trial 92); almost never at D2 (0.4% mass, only in S1 states, never S2). Magnitude grows steadily with trial index toward the episode end, and is larger at D1 than GO and larger when the previous trial was rewarded (in_rew=1 at D1). It mirrors the value head: 98% of mass falls in the lowest value bin (value < 5.2), consistent with the value falling as remaining reward shrinks near the end. It does NOT depend on choice, state, transition type, good state, or stay/switch. Adding prev_reward == 1 conditions raised F1 only slightly (0.81 vs 0.80), so the simpler phase x episode-trial predicate is recorded; it uses only observed variables (the agent can count trials).",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 28,
+    "predicate": "((phase == D1) & (ep_trial >= 88)) | ((phase == GO) & (ep_trial >= 92))",
+    "split": "test",
+    "precision": 0.7156553734158018,
+    "recall": 0.9129235220887588,
+    "f1": 0.8023420000147854,
+    "mass_recall": 0.9718003593092646,
+    "correlation": 0.7139464074686918,
+    "n_active": 59442,
+    "n_predicted": 75827,
+    "coverage_by_activation_quartile": [
+      0.7413363838234305,
+      0.9230872754188817,
+      0.9880888290713324,
+      0.999192462987887
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 28,
+    "predicate": "((phase == D1) & (ep_trial >= 88)) | ((phase == GO) & (ep_trial >= 92))",
+    "split": "dev",
+    "precision": 0.7208246324611439,
+    "recall": 0.9021908821414163,
+    "f1": 0.8013742384817937,
+    "mass_recall": 0.9675870606051561,
+    "correlation": 0.7178085601444067,
+    "n_active": 57009,
+    "n_predicted": 71353,
+    "coverage_by_activation_quartile": [
+      0.7125517434925981,
+      0.9140471512770137,
+      0.9830199270277856,
+      0.9991580129104687
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 28,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core clock structure holds. Dev and test reproduce (test P 0.716 / R 0.913 / F1 0.802 / MR 0.972). The unit is never active before trial 80 (ep_trial < 80 has 0 actives). At D2 it is nearly silent (rate 0.003, 0.4% of mass) and fires only when S1 is shown: (phase==D2)&(state==2) has 0 actives.",
+      "The claim 'choice, state, good state and stay/switch do not matter' is false where the unit switches on. D1 at trials 85-89: action==2 has precision 0.497, action==1 has 0.115. good==S2 gives 0.536, good==S1 gives 0.144. prev_action==2 gives 0.485, prev_action==1 gives 0.127. D1 at trials 90+: action==2 gives 0.907, action==1 gives 0.731. Choice and good state shift when the unit turns on (it switches on earlier when the agent is on a2/S2), so the label should not say they do not matter.",
+      "prev_reward is more than a magnitude modulator. D1 at trials 90+: prev_reward==1 gives precision 0.965, prev_reward==0 gives 0.592. D1 at trials 90-93 with prev_action==1: precision 0.846 when rewarded, 0.061 when unrewarded. On the test split, the false positives are mostly unrewarded D1 steps (r0) inside the predicted range, so this is a systematic class of false positives, not noise.",
+      "The stated finding that adding prev_reward only moves F1 from 0.80 to 0.81 understates the effect. The D1 rule gated by reward (D1 & ep_trial>=87 & prev_reward==1, or D1 & ep_trial>=93, or GO & ep_trial>=92) scores dev F1 0.831 and test F1 0.834 (P 0.766, R 0.913, MR 0.972).",
+      "The value-head claim checks out: 98% of mass is in value < 5.22. A value-only predicate ((D1 & value<5.0) | (GO & value<4.5)) reaches test F1 0.809. So the unit fits a 'low expected value / end of episode' reading about as well as a pure trial counter. The trial clock alone does not fully explain it: recent reward and the current choice/state also matter, consistent with low value."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "end-of-episode / low-value signal at D1/GO in the last ~12 trials. It switches on earlier (from ~trial 87) at D1 after a rewarded trial, and when the agent is on a2/S2. Silent at D2 except when S1 is shown.",
+    "better_predicate": "((phase == D1) & (ep_trial >= 87) & (prev_reward == 1)) | ((phase == D1) & (ep_trial >= 93)) | ((phase == GO) & (ep_trial >= 92))",
+    "better_predicate_test_f1": 0.834
+  },
+  "final_label": "end-of-episode / low-value signal at D1/GO in the last ~12 trials. It switches on earlier (from ~trial 87) at D1 after a rewarded trial, and when the agent is on a2/S2. Silent at D2 except when S1 is shown."
+}

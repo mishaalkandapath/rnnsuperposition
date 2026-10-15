@@ -1,0 +1,111 @@
+{
+ "label": "Update gate dips after a1 led to S2, and at D2 when belief favors S1.",
+ "short_terms": "(phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D2) * belief_lo ;; (phase == D2) * (action == 1) * (prev_reward == 0)",
+ "terms": "(phase == D2) * (action == 1) ;; (phase == D2) * belief_lo ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D2) * last_is(\"a1 S2 u\") ;; (phase == D2) * (action == 1) * (state == 2) ;; (phase == D1) * belief_lo ;; (phase == D2) * (prev_action == 1) * (prev_action == 1) * (action == 1) ;; (phase == D2) * (prev_action == 1) * (prev_state == 2)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "z13 sits near 1 (barely updating) and drops (more updating) in specific cases. At D1 it drops ~0.12 when the previous trial was a1 with a rare transition to S2, whatever the reward. At D2 it falls as the observer belief shifts toward S1 being good (graded belief_lo, negative weight), and falls a further ~0.1 at the D2 right after an a1 -> S2 unrewarded trial. GO barely varies. Late-episode decline is in the timing baseline. The free fit adds the D2 choice (a1 lowers it; this is known at D2, so observed) and an interaction with the previous a1 choice, and lifts dev R^2 from 0.66 to 0.71. Remaining errors: long late-episode runs of unrewarded a1 trials, where the gate goes lower than predicted. Reward on its own matters little except in the a1 S2 u case. No future variables are used.",
+ "full_test_scores": {
+  "gate": "unit_update",
+  "feature": 13,
+  "terms": [
+   "(phase == D2) * (action == 1)",
+   "(phase == D2) * belief_lo",
+   "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+   "(phase == D2) * last_is(\"a1 S2 u\")",
+   "(phase == D2) * (action == 1) * (state == 2)",
+   "(phase == D1) * belief_lo",
+   "(phase == D2) * (prev_action == 1) * (prev_action == 1) * (action == 1)",
+   "(phase == D2) * (prev_action == 1) * (prev_state == 2)"
+  ],
+  "weights": [
+   -0.046302855812117544,
+   -0.0152698340777047,
+   -0.11558173651823157,
+   -0.14344702546516364,
+   0.0038757805260953133,
+   -0.002597155351576016,
+   0.01594510445378454,
+   0.05518458821874986
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6950505944454654,
+  "r2": 0.7747198676280174,
+  "r2_timing_only": 0.2612540694666302
+ },
+ "gate": "unit_update",
+ "feature": 13,
+ "test_scores": {
+  "gate": "unit_update",
+  "feature": 13,
+  "terms": [
+   "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+   "(phase == D2) * belief_lo",
+   "(phase == D2) * (action == 1) * (prev_reward == 0)"
+  ],
+  "weights": [
+   -0.11972667058529936,
+   -0.019241309250954488,
+   -0.0810245378561696
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6807806908284852,
+  "r2": 0.7641780344018699,
+  "r2_timing_only": 0.2612540694666302
+ },
+ "dev_scores": {
+  "gate": "unit_update",
+  "feature": 13,
+  "terms": [
+   "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+   "(phase == D2) * belief_lo",
+   "(phase == D2) * (action == 1) * (prev_reward == 0)"
+  ],
+  "weights": [
+   -0.11972667058529936,
+   -0.019241309250954488,
+   -0.0810245378561696
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.6944688125420995,
+  "r2": 0.7748145868284789,
+  "r2_timing_only": 0.2629707787112582
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": true,
+  "issues": [
+   "The factual claims hold up on the test split. The D1 dip after a previous a1 -> S2 trial has weight -0.118, and the profile shows it is the same whether that trial was rewarded or not (residual -0.111 for both a1 S2 r and a1 S2 u). The D2 belief_lo weight is negative (-0.020): residual runs from +0.069 at belief decile 0 to -0.102 at decile 9. The D2 a1 S2 u term has weight -0.098, close to the claimed 'about 0.1'. Short form test R^2 beyond timing is 0.652, as reported.",
+   "The third term is not the best choice. The D2 dip comes more from choosing a1 on the current trial after an unrewarded previous trial than from the previous trial being a1 -> S2. Replacing (phase == D2) * last_is('a1 S2 u') with (phase == D2) * (action == 1) * (prev_reward == 0) raises test R^2 beyond timing from 0.652 to 0.681 (weight -0.081). The current D2 choice is observable at D2.",
+   "Ablations show every term is needed. Swapping D2 belief_lo for D2 (action == 1) drops R^2 to 0.575. Spreading belief_lo over D1 and D2 drops it to 0.542 / 0.579. Raw belief instead of log-odds gives 0.471. Late-episode scaling (belief_lo * ep_dec) gives 0.623.",
+   "A systematic miss remains, which the original explanation admits. In late-episode (t > 90) runs of a1 choices, the worst-fit windows show deep D1 dips (actual 0.62-0.81 vs predicted 0.96). These follow unrewarded a1 -> S1 common trials, which no term covers, and D2 also sits about 0.1-0.2 below prediction. On average D1 after a1 S1 u is +0.012, so this is a late-episode interaction rather than a main effect. Leftover phase x previous-trial errors are small (at most +0.047, at D2 after a2 S1 r / a2 S2 u / a1 S2 r)."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Update gate dips at D1 after a1 reached S2, and at D2 when belief favors S1 or a1 follows a loss.",
+  "better_short_terms": "(phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D2) * belief_lo ;; (phase == D2) * (action == 1) * (prev_reward == 0)",
+  "better_short_terms_test_r2_beyond_timing": 0.6808
+ },
+ "final_label": "Update gate dips at D1 after a1 reached S2, and at D2 when belief favors S1 or a1 follows a loss.",
+ "original_short_terms": "(phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D2) * belief_lo ;; (phase == D2) * last_is(\"a1 S2 u\")",
+ "original_test_scores": {
+  "gate": "unit_update",
+  "feature": 13,
+  "terms": [
+   "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+   "(phase == D2) * belief_lo",
+   "(phase == D2) * last_is(\"a1 S2 u\")"
+  ],
+  "weights": [
+   -0.11778600772669853,
+   -0.019904395285035504,
+   -0.09787693533797945
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6517082943796113,
+  "r2": 0.7427009198344114,
+  "r2_timing_only": 0.2612540694666302
+ },
+ "terms_from": "skeptic"
+}

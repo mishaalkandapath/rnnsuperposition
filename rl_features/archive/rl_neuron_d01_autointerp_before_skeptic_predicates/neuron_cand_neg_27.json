@@ -1,0 +1,64 @@
+{
+  "label": "D2 after choosing a1 and reaching S2 (rare a1 transition), late in the episode (trial >= ~75)",
+  "predicate": "(phase == D2) & (action == 1) & (state == 2) & (ep_trial >= 75)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (100% of mass), when the in_action input is a1 and in_state is S2, i.e. a rare transition after choosing a1 (98.5% of mass). Both are observed at D2, so no future variables are used. A strong episode-time gate sits on top of this: it never fires before episode trial ~60, the rate climbs over trials 70-99, and it is silent in the first 50 trials. Without the time condition precision is 0.24 (F1 0.38); with ep_trial >= 75 F1 is 0.89 on dev. Low model value (< ~7.1) is an observed correlate of late episode and works almost as well (value < 6.5: F1 0.86). Misses are tiny activations (3% of mass), mostly on a2->S2 common D2 steps. It does not fire on D1 or GO, on S1 states, on a2 choices beyond a trace, or on reward-input steps. Magnitude rises later in the episode (the low-activation quartile is concentrated near trials 70-80).",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 27,
+    "predicate": "(phase == D2) & (action == 1) & (state == 2) & (ep_trial >= 75)",
+    "split": "test",
+    "precision": 0.9003963467172152,
+    "recall": 0.877782444351113,
+    "f1": 0.8889455999319468,
+    "mass_recall": 0.9697580503056054,
+    "correlation": 0.8379157650938168,
+    "n_active": 11905,
+    "n_predicted": 11606,
+    "coverage_by_activation_quartile": [
+      0.5932146456163924,
+      0.918010752688172,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 27,
+    "predicate": "(phase == D2) & (action == 1) & (state == 2) & (ep_trial >= 75)",
+    "split": "dev",
+    "precision": 0.8952069331446764,
+    "recall": 0.889230498945889,
+    "f1": 0.8922087079146837,
+    "mass_recall": 0.9703103071977123,
+    "correlation": 0.8377200925384971,
+    "n_active": 11384,
+    "n_predicted": 11308,
+    "coverage_by_activation_quartile": [
+      0.6300070274068869,
+      0.9290231904427266,
+      0.9978917779339423,
+      1.0
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 27,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claims hold. All activation mass is at D2: 11383 of 11384 dev active steps, 1 stray at GO, none at D1. in_action=a1 carries 98.5% of mass and in_state=S2 carries 100%. Activation is zero whenever a reward is shown (in_rew=1: 0 of 246822 steps). Dev F1 is 0.892; test P/R/F1 is 0.900/0.878/0.889 with mass recall 0.970. Without the time condition: P 0.239, F1 0.382. value<6.5 version: F1 0.856. Both match the explanation.",
+      "Small factual error about the misses. They are not 'mostly common a2->S2 D2 steps'. a2->S2 D2 accounts for about 481 of the 1261 dev misses (4.2% of active steps, 1.5% of mass). The larger group is a1->S2 at trials 60-74, just before the cutoff. Trials 65-74 alone give about 773 active steps, though with low magnitude (1.4% of mass). So the time gate ramps up gradually and is not a step at 75.",
+      "Secondary modulation the explanation does not mention: the response weakens when the previous trial was also a1->S2 (repeated rare transitions). With that condition, precision is 0.71 (2067 predicted). Without it, precision is 0.94. About 600 of the roughly 1185 dev false positives come from this case. Excluding it raises test precision to 0.942 but cuts recall to 0.753 (test F1 0.837), so it is a gradation within the predicate, not a missed class. prev_reward=0 also gives somewhat lower precision (0.84 vs 0.92).",
+      "The magnitude claim is supported, and more strongly than stated. For a1->S2 at D2 with ep_trial>=90, precision is 0.999 and this slice covers 96% of the top activation quartile. The 75-84 slice covers mainly the lower two quartiles. Magnitude rises with episode time.",
+      "The hidden good state is only a correlate. Adding good==1 drops F1 to 0.81 and adding good!=2 gives 0.85, so the time gate is not standing in for the good state. Test misses and false positives show no systematic class beyond the two gradations above."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after choosing a1 and reaching S2 (rare a1 transition), late in the episode (graded onset ~trial 65-75, strongest at 90+); weaker when the previous trial was also a1->S2",
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "final_label": "D2 after choosing a1 and reaching S2 (rare a1 transition), late in the episode (graded onset ~trial 65-75, strongest at 90+); weaker when the previous trial was also a1->S2"
+}

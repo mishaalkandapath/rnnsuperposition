@@ -1,0 +1,72 @@
+{
+  "label": "GO after common a2->S2 loss, larger the more belief still favours S2",
+  "terms": "(phase == GO) * last_is(\"a2 S2 u\") ;; (phase == GO) * last_is(\"a2 S2 u\") * belief_lo ;; (phase == GO) * last_is(\"a2 S2 u\") * belief_lo**2 ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) ;; (phase == GO) * last_is(\"a2 S2 u\") * belief_cover",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO, essentially only right after a common, unrewarded a2->S2 trial (that indicator alone: dev R^2 beyond timing 0.32). Magnitude is graded by the ideal-observer belief: the more the observed history still says S2 is good (negative belief_lo, after the loss is counted), the larger it is (fit roughly 0.54 - 0.25*lo + 0.045*lo^2: about 1.2 at lo=-2, 0.5 at lo=0, 0.2 at lo=+2), and a bit smaller when belief rests on more history (belief_cover, small negative weight). Adding belief raises the score from 0.32 to 0.55 (dev). A small term for window-first trials with an unrewarded previous trial (previous choice unknown) adds about 0.02. The trial before (reward / state two back) adds less than 0.01. Silent at D1 and D2. Future and hidden variables are not needed. Test R^2 beyond timing 0.575, above the all-cue additive ceiling (0.51) and the observed-only ceiling (0.45). The earlier explanation (choosing a2 with a moderate a1-a2 logit preference) used the policy; observed belief stands in for that preference, apparently with little loss (policy decile alone scored 0.20 as a reference). Remaining misses are mostly window-first trials whose previous trial is outside the window.",
+  "gate": "hidden",
+  "feature": 65,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 65,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 u\")",
+      "(phase == GO) * last_is(\"a2 S2 u\") * belief_lo",
+      "(phase == GO) * last_is(\"a2 S2 u\") * belief_lo**2",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * belief_cover"
+    ],
+    "weights": [
+      0.5362330823658695,
+      -0.249179868895581,
+      0.04534924342535829,
+      0.0784927224224935,
+      -0.02979810723511206
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5747194987396524,
+    "r2": 0.5907235013742373,
+    "r2_timing_only": 0.03763163979339723
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 65,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S2 u\")",
+      "(phase == GO) * last_is(\"a2 S2 u\") * belief_lo",
+      "(phase == GO) * last_is(\"a2 S2 u\") * belief_lo**2",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0)",
+      "(phase == GO) * last_is(\"a2 S2 u\") * belief_cover"
+    ],
+    "weights": [
+      0.5362330823658695,
+      -0.249179868895581,
+      0.04534924342535829,
+      0.0784927224224935,
+      -0.02979810723511206
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5734102158870241,
+    "r2": 0.5887463415861206,
+    "r2_timing_only": 0.0359505226572302
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claim holds. The test R^2 beyond timing is 0.5747, as reported. The indicator (GO) * last_is('a2 S2 u') alone scores 0.299 on test (0.32 was the dev or table figure). Adding belief_lo and belief_lo^2 brings it to 0.550. The component is zero at D1 and D2, which the profile confirms.",
+      "The fitted-curve numbers in the explanation extrapolate beyond the data. After a common a2->S2 loss, belief_lo never falls below about -1.5: the floor(lo*4) bins -8 and -7 are empty and the rounded lo<=-2 bins have no rows. So '1.2 at lo=-2' is never observed. The quoted values also leave out the -0.03*belief_cover term, which subtracts 0.15-0.3 at typical cover; without the cover term the fit is about 1.0 at lo=-2 and 0.37 at lo=0. Binned activation is about 0.75 at lo -1.5..-1, 0.4-0.5 near 0, about 0.08 at lo>0.75 and about 0 beyond 2.5. That looks more like a soft step around lo\u22480.25-0.5 than a broad quadratic.",
+      "Missed systematic effect: within last_is('a2 S2 u'), the magnitude falls over the episode much more than the GO timing baseline accounts for. Adding A*ep_dec takes test R^2 from 0.575 to 0.609 (weight -0.043 per decile, about -0.39 from decile 0 to 9). Adding A*ep_dec*belief_lo as well (the belief slope flattens later in the episode) gives more. This is larger than the window-first effect (+0.01-0.02) that the explanation does mention, and ep_trial is observable.",
+      "The belief_cover effect is not the smooth 'smaller with more history' described. Per-cover bins inside A show a bump for cover<=4 (+0.1 to +0.18), with cover 5-10 near zero or slightly negative. A*(belief_cover<=2) adds about +0.28 activation. The worst misses include GO steps right after an a2S2u loss at the start of the window, where belief rests on 1-2 trials, reads lo>0, and predicts 0.23 against an actual 1.97.",
+      "The largest single misses are window-first GO steps (rel -3) with prev_reward 0, where the actual is 1.6-1.9 and the prediction about 0.12. The previous trial is outside the window and cannot be recovered from observed variables. Letting the W term depend on belief (W*belief_lo, W*belief_lo^2) adds only 0.01. The explanation flags this correctly; it is a real limit, not a modelling error.",
+      "Using the upcoming choice instead of belief costs little: adding the future A*(action==2) and W*(action==2) raises test R^2 only to 0.596. So the claim that observed belief stands in for the policy with little loss holds up. Variables from two trials back add under 0.01 (0.5785), as claimed."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after a common a2->S2 loss: larger when the observed belief still favours S2 (lo below about 0.5; lo never falls below -1.5), when the belief rests on only 1-2 trials, and early in the episode (falls by about 0.4 by the last decile)",
+    "better_terms": "(phase == GO) * last_is(\"a2 S2 u\") ;; (phase == GO) * last_is(\"a2 S2 u\") * belief_lo ;; (phase == GO) * last_is(\"a2 S2 u\") * belief_lo**2 ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) ;; (phase == GO) * last_is(\"a2 S2 u\") * ep_dec ;; (phase == GO) * last_is(\"a2 S2 u\") * ep_dec * belief_lo ;; (phase == GO) * last_is(\"a2 S2 u\") * (belief_cover <= 2) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * belief_lo",
+    "better_terms_test_r2_beyond_timing": 0.6459
+  },
+  "final_label": "GO after a common a2->S2 loss: larger when the observed belief still favours S2 (lo below about 0.5; lo never falls below -1.5), when the belief rests on only 1-2 trials, and early in the episode (falls by about 0.4 by the last decile)"
+}

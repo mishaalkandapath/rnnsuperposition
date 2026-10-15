@@ -1,0 +1,84 @@
+{
+  "label": "high when belief favours S2 (a2 side), S2 shown at D2; grows late in episode",
+  "terms": "(1+2*(ep_trial/100)**3)*(phase == D1) * (belief-0.5) ;; (1+2*(ep_trial/100)**3)*(phase == GO) * (belief-0.5) ;; (1+2*(ep_trial/100)**3)*(phase == D2) * (belief-0.5) ;; (1+2*(ep_trial/100)**3)*(phase == D2) * (state == S2) ;; (1+2*(ep_trial/100)**3)*(phase == D2) * (action == 2) ;; (1+2*(ep_trial/100)**3)*(phase == GO) * (prev_action == 2) ;; (1+2*(ep_trial/100)**3)*(phase == D1) * (prev_reward == 1) ;; (1+2*(ep_trial/100)**3)*(phase != D1)*(prev_action == 2)*(prev_state == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r of unit 42 (always on, mean 0.13), observed-only terms. Its main driver is the ideal-observer belief: the gate is higher when belief favours S2 as the good state (the a2 side) and lower when it favours S1, at all three phases. The effect is strongest at GO (weight about -0.07 per unit of belief-0.5). At D2 the reached state matters more than the choice: S2 shown raises it (+0.07) and choosing a2, given the state, lowers it slightly (-0.04). So at D2 it tracks the state, not the action. Smaller history effects: being rewarded on the previous trial raises it at D1 (+0.03), a previous a2 choice raises it at GO (+0.014), and a previous a2 that landed in S1 (rare) raises it further at GO and D2 (+0.025). All the effects scale up multiplicatively late in the episode, like the timing baseline (shape 1+2*(t/100)^3); adding this scaling raised dev R^2 beyond timing from 0.62 to 0.69-0.73. Test R^2 beyond timing is 0.71, against the profile references: all-observed 0.76, all 0.80 (89% of the all ceiling), belief decile alone 0.42, policy decile (model) 0.56. So observed belief plus history recovers about what the model policy explained and more, and dropping model outputs costs little. Remaining misses: under-predicted after a2 S1 trials and over-predicted at D1 after unrewarded S1 trials.",
+  "gate": "unit_reset",
+  "feature": 42,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 42,
+    "terms": [
+      "(1+2*(ep_trial/100)**3)*(phase == D1) * (belief-0.5)",
+      "(1+2*(ep_trial/100)**3)*(phase == GO) * (belief-0.5)",
+      "(1+2*(ep_trial/100)**3)*(phase == D2) * (belief-0.5)",
+      "(1+2*(ep_trial/100)**3)*(phase == D2) * (state == S2)",
+      "(1+2*(ep_trial/100)**3)*(phase == D2) * (action == 2)",
+      "(1+2*(ep_trial/100)**3)*(phase == GO) * (prev_action == 2)",
+      "(1+2*(ep_trial/100)**3)*(phase == D1) * (prev_reward == 1)",
+      "(1+2*(ep_trial/100)**3)*(phase != D1)*(prev_action == 2)*(prev_state == 1)"
+    ],
+    "weights": [
+      -0.060355030754459076,
+      -0.06983678646283915,
+      -0.06299486984873594,
+      0.06844119998121435,
+      -0.040392241382831914,
+      0.01380180937224253,
+      0.029358884527046145,
+      0.025424675406016242
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.713597555539214,
+    "r2": 0.838514913443469,
+    "r2_timing_only": 0.4361602364792614
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 42,
+    "terms": [
+      "(1+2*(ep_trial/100)**3)*(phase == D1) * (belief-0.5)",
+      "(1+2*(ep_trial/100)**3)*(phase == GO) * (belief-0.5)",
+      "(1+2*(ep_trial/100)**3)*(phase == D2) * (belief-0.5)",
+      "(1+2*(ep_trial/100)**3)*(phase == D2) * (state == S2)",
+      "(1+2*(ep_trial/100)**3)*(phase == D2) * (action == 2)",
+      "(1+2*(ep_trial/100)**3)*(phase == GO) * (prev_action == 2)",
+      "(1+2*(ep_trial/100)**3)*(phase == D1) * (prev_reward == 1)",
+      "(1+2*(ep_trial/100)**3)*(phase != D1)*(prev_action == 2)*(prev_state == 1)"
+    ],
+    "weights": [
+      -0.060355030754459076,
+      -0.06983678646283915,
+      -0.06299486984873594,
+      0.06844119998121435,
+      -0.040392241382831914,
+      0.01380180937224253,
+      0.029358884527046145,
+      0.025424675406016242
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7285862641153724,
+    "r2": 0.8451861078122532,
+    "r2_timing_only": 0.4296018523780425
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced: the claimed 8 terms give test R^2 beyond timing 0.7136, with weights matching the explanation (belief -0.060/-0.070/-0.063 at D1/GO/D2, D2 state==S2 +0.068, D2 action==2 -0.040, D1 prev_reward +0.029, prev a2->S1 +0.025). The belief direction is right: in the profile, belief decile 0 (S2 favoured) has residual +0.05 to +0.08 and decile 9 has -0.04 to -0.07, at all phases, largest at GO.",
+      "Late-episode scaling holds up: without the (1+2*(t/100)^3) factor the same terms score test 0.672, with it 0.714. An exponential scaling exp(3t/100) does worse (0.608).",
+      "The GO prev_action==2 term (+0.014) adds almost nothing. Swapping it for D1 prev_action terms scores 0.690-0.710, and dropping all three history terms gives 0.610, so most of the history gain comes from the D1 prev_reward and prev a2->S1 terms.",
+      "Systematic D1 error, which the explanation does mention: misses show over-prediction at D1 after a1 S1 u (-0.047) and a2 S1 u (-0.038), and under-prediction at D1 after a2 S1 r (+0.036). After an unrewarded S1 visit the ideal-observer belief moves toward S2, so the terms predict a higher gate, but the gate actually drops at D1. A belief-only story misses this because the D1 profile shows the previous choice (a2) and reward mattering more than what belief implies: a2 S1 r is +0.058 even though it is evidence for S1. Adding a D1 (prev_reward==0)*(prev_state==1) term (weight -0.05) and making the a2->S1 term apply at every phase raises test R^2 to 0.738. After that, misses are all under 0.031 in absolute size.",
+      "Belief alone (three phase-specific belief terms) gets only 0.430, and belief_lo through tanh is the same. The fit relies heavily on the D2 state/action terms and the trial-history terms, so 'main driver is belief' is a bit generous: the D2 reached-state term adds about 0.18 on its own.",
+      "The comparison with the 'policy decile (model)' score of 0.56 is somewhat unfair: that reference is a single additive table, while the observed fit uses 8 terms with late-episode scaling. 'Dropping model outputs costs little' is still supported, since all-observed scores 0.76 against 0.80 for all."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "high when belief favours S2 (a2 side) and when S2 is shown at D2; raised after a2->S1 trials, lowered at D1 after unrewarded S1 trials; effects grow late in episode",
+    "better_terms": "(1+2*(ep_trial/100)**3)*(phase == D1) * (belief-0.5) ;; (1+2*(ep_trial/100)**3)*(phase == GO) * (belief-0.5) ;; (1+2*(ep_trial/100)**3)*(phase == D2) * (belief-0.5) ;; (1+2*(ep_trial/100)**3)*(phase == D2) * (state == S2) ;; (1+2*(ep_trial/100)**3)*(phase == D2) * (action == 2) ;; (1+2*(ep_trial/100)**3)*(phase==D1)*(prev_reward==0)*(prev_state==1) ;; (1+2*(ep_trial/100)**3)*(phase == D1) * (prev_reward == 1) ;; (1+2*(ep_trial/100)**3)*(prev_action == 2)*(prev_state == 1)",
+    "better_terms_test_r2_beyond_timing": 0.7379
+  },
+  "final_label": "high when belief favours S2 (a2 side) and when S2 is shown at D2; raised after a2->S1 trials, lowered at D1 after unrewarded S1 trials; effects grow late in episode"
+}

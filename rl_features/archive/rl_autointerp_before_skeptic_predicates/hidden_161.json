@@ -1,0 +1,65 @@
+{
+  "label": "D2 after a2 -> S2 (common), in the middle-late episode window (trials ~45-89)",
+  "predicate": "(phase == D2) & (action == 2) & (state == 2) & (ep_trial >= 45) & (ep_trial < 90)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2, and only when the agent chose a2 and reached S2 by the common transition (in_action=2, in_state=2). It never fires at D1 or GO, after a1, or after any rare transition. It is also gated by time in the episode: it is silent for trials 0-39, ramps up around trial 40-49, is strongest at trials 50-89 and stops by trial 90. So it is a conjunction of the D2 a2->S2 common input with an episode clock. The predicate uses only variables observed at D2 (action and state are inputs there). All four activation quartiles are covered (dev P 0.82, R 0.98, mass recall 0.997). The remaining false positives are mostly windows where the model policy is not strongly favoring a2, or where S1 is the hidden good state: adding choice < -1.5 raises dev F1 only to 0.91, so I kept the simpler predicate. Magnitude: higher when the agent has been repeatedly choosing a2 with a strongly a2-leaning policy (rate is highest in the most negative choice-logit bins), and higher when good = S2. It is lower after a recent switch or after unrewarded and rare trials earlier in the window.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 161,
+    "predicate": "(phase == D2) & (action == 2) & (state == 2) & (ep_trial >= 45) & (ep_trial < 90)",
+    "split": "test",
+    "precision": 0.8047588048518022,
+    "recall": 0.975867124192483,
+    "f1": 0.8820916821994409,
+    "mass_recall": 0.9962267136755878,
+    "correlation": 0.7881911569418814,
+    "n_active": 62073,
+    "n_predicted": 75271,
+    "coverage_by_activation_quartile": [
+      0.9048907790450416,
+      0.998582291532414,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 161,
+    "predicate": "(phase == D2) & (action == 2) & (state == 2) & (ep_trial >= 45) & (ep_trial < 90)",
+    "split": "dev",
+    "precision": 0.8174778455677332,
+    "recall": 0.9797346479618846,
+    "f1": 0.8912817734434964,
+    "mass_recall": 0.9969544176483193,
+    "correlation": 0.7963253819748987,
+    "n_active": 60448,
+    "n_predicted": 72446,
+    "coverage_by_activation_quartile": [
+      0.9199973530968767,
+      0.9989412387506618,
+      1.0,
+      1.0
+    ]
+  },
+  "gate": "hidden",
+  "feature": 161,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The factual claims hold up. All activation mass is at D2 (D1 and GO have 0 active steps). (D2 & a1 & S2), i.e. rare after a1, gives P 0.0001. The a1 rows show only 6 active steps out of 175k. The feature never fires after a2 -> S1 rare, since in_state = 2 is required. On the episode clock, a2 -> S2 at ep_trial < 40 and ep_trial >= 90 has P about 0. Trials 40-44 give P 0.14 and mass 0.3%, and the profile shows the ramp from 40-49 into 50-89.",
+      "Dev scores reproduce: P 0.817, R 0.980, F1 0.891, mass recall 0.997, and all four quartiles are covered at 0.92 or above.",
+      "One false-positive class the explanation does not name: the first a2 trial after an a1 trial (stay == 0, prev_action == 1). Here the predicate has precision of only 0.20 (dev 3918 predicted, test 4849). That is about 30% of all false positives. Excluding it, (stay != 0), raises test F1 from 0.882 to 0.900.",
+      "The window edges are soft. Precision is about 0.59 at trials 45-49 and about 0.53 at 85-89, against about 0.9 in the middle. The 45/90 cutoffs approximate a ramp, not a hard gate.",
+      "When good = S1, precision is 0.52 (9.9k predicted, 6% of mass). Together with choice >= -1.5 (P 0.29), this backs the stated link to the agent's lean toward a2. Adding choice < -1.5 gives test F1 0.908. This only refines the predicate and is not a counterexample to the label.",
+      "No future variables are involved: action, state and the transition are all observed at D2. The label does not overclaim relative to the predicate."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after a2 -> S2 (common) on a repeated a2 choice, during episode trials ~45-89 (strongest when the policy strongly favors a2)",
+    "better_predicate": "(phase==2)&(action==2)&(state==2)&(ep_trial>=45)&(ep_trial<90)&(stay!=0)&(choice<-1.5)",
+    "better_predicate_test_f1": 0.909
+  },
+  "final_label": "D2 after a2 -> S2 (common) on a repeated a2 choice, during episode trials ~45-89 (strongest when the policy strongly favors a2)"
+}

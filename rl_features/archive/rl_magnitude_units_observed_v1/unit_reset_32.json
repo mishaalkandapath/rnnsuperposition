@@ -1,0 +1,75 @@
+{
+  "label": "reset unit closes at D1 after a1 reached rare S2, deeper late in episode/repeats",
+  "terms": "(phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * (ep_trial >= 80) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 2) ;; (phase == D1) * (prev_state == 1) ;; (phase == D1) * (prev_reward == 0) * belief_lo ;; (phase == D2) * last_is(\"a1 S2 u\")",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r32 sits near 1 (mean 0.97) and its variance beyond timing is almost entirely at D1. Its main drop is at D1 after the previous trial was a1 -> S2 (a rare transition), rewarded or not (about -0.14 to -0.20; the r/u split adds little once the other terms are in). The drop deepens by about -0.07 late in the episode (trials 80+) and by another -0.07 when the trial before was also a1 -> S2, so repeated a1->S2 trials push it down to about 0.45-0.6. At D1 it is slightly higher (+0.026) after the previous trial reached S1. After an unrewarded trial it is lower the more the ideal observer believes S1 is good (graded in belief_lo, -0.015 per logit). At D2 it dips slightly (-0.03) when the last trial was a1 S2 u. GO is nearly flat. Scores (observed only): test R^2 beyond timing 0.64 (dev 0.66). Profile ceilings: all observed 0.69, all 0.75, last trial table 0.61. The earlier model-output explanation (policy decile reference 0.35) is not needed: observed history alone gets about 86% of the all ceiling, so dropping value/policy costs little.",
+  "gate": "unit_reset",
+  "feature": 32,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 32,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (ep_trial >= 80)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 2)",
+      "(phase == D1) * (prev_state == 1)",
+      "(phase == D1) * (prev_reward == 0) * belief_lo",
+      "(phase == D2) * last_is(\"a1 S2 u\")"
+    ],
+    "weights": [
+      -0.1355702609503234,
+      -0.06683805066214361,
+      -0.06952196357139594,
+      0.02621584187699648,
+      -0.014707257455403081,
+      -0.03030748640889843
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6434857928151252,
+    "r2": 0.7409451336490175,
+    "r2_timing_only": 0.2733673409636478
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 32,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (ep_trial >= 80)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * (tv(\"action\", -2) == 1) * (tv(\"state\", -2) == 2)",
+      "(phase == D1) * (prev_state == 1)",
+      "(phase == D1) * (prev_reward == 0) * belief_lo",
+      "(phase == D2) * last_is(\"a1 S2 u\")"
+    ],
+    "weights": [
+      -0.1355702609503234,
+      -0.06683805066214361,
+      -0.06952196357139594,
+      0.02621584187699648,
+      -0.014707257455403081,
+      -0.03030748640889843
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6580581836647362,
+    "r2": 0.7499133948020942,
+    "r2_timing_only": 0.26862818979500513
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor: 'rewarded or not' hides a difference. The profile residuals at D1 are -0.16 after a1 S2 r and -0.203 after a1 S2 u. Adding a separate (prev_reward==0) term on a1->S2 adds nothing (test 0.6436 vs 0.6435), because the belief_lo*(prev_reward==0) term already absorbs it, so the wording is acceptable but loose.",
+      "Each claim holds on test. The a1->S2 D1 main term alone scores 0.51. Removing the D2 a1 S2 u term drops the score to 0.635, and removing the belief_lo term drops it to 0.597. The weights match the explanation: -0.136 main, -0.067 at trial 80 and later, -0.070 for a repeated a1->S2, +0.026 after reaching S1, -0.015 per logit of belief_lo after an unrewarded trial, -0.030 at D2.",
+      "Some individual windows stay unexplained. Deep drops at D1 (0.45-0.6) also follow a2->S2 unrewarded or a1->S1 trials late in the episode, e.g. t83/t85/t97/t98 actual about 0.55 vs predicted 0.90. Terms for repeated S2 visits barely help (a2->S2 after an earlier S2 visit: 0.651; S2 count over the last 3 trials: 0.647; extra late-episode terms: at most 0.646). These cases are scattered, not a systematic class.",
+      "Systematic errors by phase x previous trial are small: at most +0.025 (D1 after a2 S1 r) and -0.022 (D1 after a2 S1 u). Mean error by phase is within 0.004.",
+      "The 0.64 test score is close to the 0.69 ceiling for all observed cues. No future, hidden or model-output variables are used, so the observed-only requirement is met."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Reset closes at D1 after a1 reached rare S2, deeper late/repeated",
+    "better_terms": "original 6 terms ;; (phase == D1) * (prev_action == 2) * (prev_state == 2) * (tv(\"state\", -2) == 2)",
+    "better_terms_test_r2_beyond_timing": 0.651
+  },
+  "final_label": "Reset closes at D1 after a1 reached rare S2, deeper late/repeated"
+}

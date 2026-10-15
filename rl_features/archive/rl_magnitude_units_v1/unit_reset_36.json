@@ -1,0 +1,75 @@
+{
+  "label": "D1 reset gate up after reward, after reaching S2 (esp. via a1), and with a1-leaning policy",
+  "terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * table(prev_action, {1: 1, 2: -1}) ;; (phase == D1) * table(prev_state, {2: 1, 1: -1}) ;; (phase == D1) * (last_is(\"a1 S2 r\") + last_is(\"a1 S2 u\")) ;; (phase == D1) * choice ;; (phase == D1) * value",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r36. Timing explains R^2 0.79: high at D1 (0.33 rising to 0.71 late in episode), near 0 at GO/D2. Beyond timing, almost all of the variance is at D1 and depends on the previous trial: rewarded raises it by about 0.22-0.27 for every choice/state pair; reaching S2 raises it and S1 lowers it, most of all for a1->S2 (rare) trials (a1 S2 r +0.37, a1 S2 u +0.14 vs a2 S1 u -0.31, a1 S1 u -0.19, a2 S2 u -0.16). GO and D2 residuals are small (+/-0.05, a slight a1/S2 bias). An observed-only 8-indicator table of the previous trial at D1 gets test R^2 0.66 beyond timing. Adding the model D1 policy logit (choice, positive = a1-leaning) and value (negative weight) raises it to test 0.79 (all ceiling 0.81). The trial before adds about 0.01; hidden good state, since_rev and future reward add little.",
+  "gate": "unit_reset",
+  "feature": 36,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 36,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * table(prev_action, {1: 1, 2: -1})",
+      "(phase == D1) * table(prev_state, {2: 1, 1: -1})",
+      "(phase == D1) * (last_is(\"a1 S2 r\") + last_is(\"a1 S2 u\"))",
+      "(phase == D1) * choice",
+      "(phase == D1) * value"
+    ],
+    "weights": [
+      0.22382630665725806,
+      0.0069212091927306684,
+      0.06254016746663063,
+      0.13717928182631278,
+      0.023739670471565222,
+      -0.023922314628273857
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7906024777183505,
+    "r2": 0.9565379458457883,
+    "r2_timing_only": 0.7924423666496244
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 36,
+    "terms": [
+      "(phase == D1) * (prev_reward == 1)",
+      "(phase == D1) * table(prev_action, {1: 1, 2: -1})",
+      "(phase == D1) * table(prev_state, {2: 1, 1: -1})",
+      "(phase == D1) * (last_is(\"a1 S2 r\") + last_is(\"a1 S2 u\"))",
+      "(phase == D1) * choice",
+      "(phase == D1) * value"
+    ],
+    "weights": [
+      0.22382630665725806,
+      0.0069212091927306684,
+      0.06254016746663063,
+      0.13717928182631278,
+      0.023739670471565222,
+      -0.023922314628273857
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7924914849808117,
+    "r2": 0.9579853101759883,
+    "r2_timing_only": 0.7975278758072817
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced: the claimed terms score test R^2 0.7906 beyond timing against an 'all' ceiling of 0.81. Timing alone gives 0.79. The 8-indicator D1 previous-trial table scores 0.655 on test, and the profile residual table matches the quoted residuals (a1 S2 r +0.37, a2 S1 u -0.31, and so on). A reward raises the gate by 0.215-0.27 within each choice/state pair.",
+      "The prev_action term has a fitted weight of about +0.007 in the full model and adds nothing. The label's 'most via a1' is carried by the last_is(a1 S2) term (+0.137), and the a1 lean is otherwise absorbed by 'choice'. In the raw table, a1 beats a2 at every state/reward cell (+0.12 to +0.31), so 'a1 previous choice raises it' is true but is not shown by its own term.",
+      "The negative weight on 'value' is a collinearity/suppression effect, not a direct one. Profile residuals at D1 rise with value decile (+0.28 in decile 8). Without value, the prev_reward weight drops from 0.22 to 0.10 and test R^2 drops from 0.79 to 0.56. The explanation should not be read as 'higher value lowers the gate'.",
+      "The jump from observed cues (0.66) to 0.79 depends on model outputs. With only prev_reward, prev_state and a1->S2 terms (no table and no choice/value), the score is 0.31. So the 'explained' verdict depends on the policy logit and value as summary statistics; the explanation discloses this.",
+      "Residual systematic error is small. In misses, the largest phase x previous-trial biases are D1 after a1 S2 r +0.068, GO after a1 S2 u +0.055, and D1 after a2 S1 r -0.057. The worst-fit windows are late-episode (t90-99) a1 runs where GO/D2 values (0.2-0.45) are under-predicted (prediction 0.14/0.10). This is a GO/D2 policy-lean effect that the terms ignore. Adding (phase != D1)*choice lifts the test score to 0.809, and adding np.tanh(choice) at D1 as well gives 0.813. The 'GO/D2 within about 0.05' claim holds on average but not in late a1-heavy episodes.",
+      "Interaction checks add nothing: choice*ep_dec, |choice| and choice^2 at D1, a1 x reward at D1, and the hidden good state each add <= 0.005."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 reset gate rises after reward, after an a1 choice (especially a1->S2), and with an a1-leaning policy logit; a small a1-lean also at GO/D2 late in the episode",
+    "better_terms": "(phase == D1) * (prev_reward == 1) ;; (phase == D1) * table(prev_state, {2: 1, 1: -1}) ;; (phase == D1) * (last_is(\"a1 S2 r\") + last_is(\"a1 S2 u\")) ;; (phase == D1) * choice ;; (phase == D1) * value ;; (phase != D1) * choice ;; (phase == D1) * np.tanh(choice)",
+    "better_terms_test_r2_beyond_timing": 0.813
+  },
+  "final_label": "D1 reset gate rises after reward, after an a1 choice (especially a1->S2), and with an a1-leaning policy logit; a small a1-lean also at GO/D2 late in the episode"
+}

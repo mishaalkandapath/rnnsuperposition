@@ -1,0 +1,64 @@
+{
+  "label": "GO step, late in episode (trial >= ~65), after a rewarded trial, when the policy picks a1",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 1) & (ep_trial >= 65)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO (never D1/D2), only when the previous trial was rewarded (in_rew at D1 = 1; 0 activations otherwise), only when the policy at this step prefers a1 (model_act == 1 carries 99.9% of mass; strongly a1 logit, choice > 8 holds 84% of mass), and only late in the episode: zero activity before ep_trial ~55, ramping from 60 to plateau by 80-99. The episode-time gating suggests a slow drift in the hidden state over the episode rather than a task variable. Does not depend on transition type or core pattern beyond these; does not fire on a2-choice GO steps or after unrewarded trials. Dev: P 0.77, R 0.95, F1 0.85, mass recall 0.99 (ep_trial >= 60 gives R 0.99, P 0.70). Uses only the agent own current policy output and observed reward; no future variables. Magnitude is small (max 0.022) and not further characterized.",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 37,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 1) & (ep_trial >= 65)",
+    "split": "test",
+    "precision": 0.761086851043183,
+    "recall": 0.952513966480447,
+    "f1": 0.8461082043260154,
+    "mass_recall": 0.990613592524691,
+    "correlation": 0.7765960218260164,
+    "n_active": 32936,
+    "n_predicted": 41220,
+    "coverage_by_activation_quartile": [
+      0.8178285159096429,
+      0.9938061695409278,
+      0.9985426281272771,
+      0.9998785523439397
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 37,
+    "predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 1) & (ep_trial >= 65)",
+    "split": "dev",
+    "precision": 0.7729283110571081,
+    "recall": 0.9477071600965407,
+    "f1": 0.8514408855456359,
+    "mass_recall": 0.9895335376210098,
+    "correlation": 0.7849767014743356,
+    "n_active": 33561,
+    "n_predicted": 41150,
+    "coverage_by_activation_quartile": [
+      0.7991896079132403,
+      0.9927294398092967,
+      0.9989272943980929,
+      1.0
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 37,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The factual claims hold on dev. Activity is only at GO (D1 and D2 have 0 of 380619 steps each). Only 45 of 33561 active steps have prev_reward==0. model_act==1 holds 0.999 of the mass and choice>8.07 holds 0.844. The activation rate is 0 for trials 0-49, 139 actives in trials 50-59, then 0.039, 0.073, 0.086 and 0.088 for the 60s to 90s, so it does level off. The original predicate reproduces on dev (P 0.773 R 0.948 F1 0.851) and on test (P 0.761 R 0.953 F1 0.846, mass recall 0.991).",
+      "The explanation is wrong that the late-episode dependence is 'a slow drift in the hidden state, not a task variable'. The agent's own value estimate fully replaces ep_trial. No active step has value >= 7.73 and almost none have value in [7.54, 7.73) (60 steps). On dev, GO & prev_reward==1 & model_act==1 & value<7.5 with no ep_trial term gets recall 0.994 and F1 0.82. Adding ep_trial>=55 on top of value<7.4 & choice>5 leaves the test scores unchanged (identical n_predicted, 37472), so the value condition already implies late episode. The simplest reading is that the unit is gated by a low value estimate, which falls as the episode nears its end. It is not best described as an unexplained time drift.",
+      "There is a systematic class of false positives: GO steps where the policy only weakly prefers a1. On test, many false-positive windows have good=S2 or recent switches, which are cases with a lower a1 logit. Adding choice>5 raises dev precision from 0.77 to 0.85 at almost no recall cost (0.948 to 0.926). Combined with value<7.4, test F1 rises from 0.846 to 0.891. The explanation reports the choice>8 mass share but leaves logit strength out of the predicate.",
+      "The missed activations are scattered and weak (test: 1564 steps holding 0.9% of the mass, all at near-zero activation). They are not a systematic class.",
+      "The 'no future variables' claim holds. value, choice and model_act are the agent's own outputs at that step."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO step after a rewarded trial, when the policy strongly favours a1 and the agent's value estimate is low (which happens late in the episode, trial >= ~60)",
+    "better_predicate": "(phase == GO) & (prev_reward == 1) & (model_act == 1) & (value < 7.4) & (choice > 5)",
+    "better_predicate_test_f1": 0.891
+  },
+  "final_label": "GO step after a rewarded trial, when the policy strongly favours a1 and the agent's value estimate is low (which happens late in the episode, trial >= ~60)"
+}

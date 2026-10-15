@@ -1,0 +1,85 @@
+{
+  "label": "D2 update gate: low after choosing a1 (esp. reaching S1) / S1-belief, high after a2",
+  "terms": "(phase == D2) * (action == 1) ;; (phase == D2) * (state == 1) ;; (phase == D2) * (action == 1) * (state == 1) ;; (phase == D2) * np.tanh(belief_lo/2) ;; (phase == D2) * (stay == 1) * (action == 2) ;; (phase == D2) * (action == 2) * (belief_cover < 5) ;; (phase == D2) * last_is(\"a1 S2 r\") ;; (phase != D2) * np.tanh(belief_lo/2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 32 sits near 1 at D1 and GO (beyond-timing variation there is tiny, ~0.01, slightly lower when the observer believes S1 is good) and drops at D2 (baseline ~0.70). All magnitude variation is at D2 and is set by the choice just made plus the observed belief: choosing a1 and reaching S1 (common) pulls it lowest (residual ~-0.34), a1->S2 less (-0.14), a2 choices push it up toward 1 (+0.2 to +0.26). On top of that, a stronger ideal-observer belief that S1 is good lowers it (graded tanh(belief_lo/2), weight ~-0.12), a2 choices that repeat the previous choice, a2 choices with little history (belief_cover < 5) and trials right after a1 S2 rewarded (the model-based switch to a2) raise it further. All terms are observed at D2 (action/state/stay are known by then); no future or model-output terms. Test R^2 beyond timing 0.89 (dev 0.90), vs all-observed ceiling 0.95 and all ceiling 0.98; the earlier explanation using the model policy is matched by the current choice plus belief, so little is lost going observed-only. Remaining errors: D2 after a1 S2 u slightly over-predicted, after a2 S1 r under-predicted (~0.07).",
+  "gate": "unit_update",
+  "feature": 32,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 32,
+    "terms": [
+      "(phase == D2) * (action == 1)",
+      "(phase == D2) * (state == 1)",
+      "(phase == D2) * (action == 1) * (state == 1)",
+      "(phase == D2) * np.tanh(belief_lo/2)",
+      "(phase == D2) * (stay == 1) * (action == 2)",
+      "(phase == D2) * (action == 2) * (belief_cover < 5)",
+      "(phase == D2) * last_is(\"a1 S2 r\")",
+      "(phase != D2) * np.tanh(belief_lo/2)"
+    ],
+    "weights": [
+      -0.05572988216029782,
+      -0.02536834486486471,
+      -0.17921005101055315,
+      -0.12054910693087054,
+      0.1316903734238311,
+      0.07821059478991574,
+      0.2327653715308609,
+      -0.0044538340499462445
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8932085723792462,
+    "r2": 0.9389979116556426,
+    "r2_timing_only": 0.42877354762038633
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 32,
+    "terms": [
+      "(phase == D2) * (action == 1)",
+      "(phase == D2) * (state == 1)",
+      "(phase == D2) * (action == 1) * (state == 1)",
+      "(phase == D2) * np.tanh(belief_lo/2)",
+      "(phase == D2) * (stay == 1) * (action == 2)",
+      "(phase == D2) * (action == 2) * (belief_cover < 5)",
+      "(phase == D2) * last_is(\"a1 S2 r\")",
+      "(phase != D2) * np.tanh(belief_lo/2)"
+    ],
+    "weights": [
+      -0.05572988216029782,
+      -0.02536834486486471,
+      -0.17921005101055315,
+      -0.12054910693087054,
+      0.1316903734238311,
+      0.07821059478991574,
+      0.2327653715308609,
+      -0.0044538340499462445
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8999745863355052,
+    "r2": 0.9431408165907446,
+    "r2_timing_only": 0.4315526292150863
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The term set has no D2 constant, and that misstates the model. Terms are fitted on top of the timing baseline, so a D2-wide offset has to be its own term. Adding (phase == D2) * (action == 2), which equals a D2 constant since nearly every D2 step has a valid choice, raises test R^2 from 0.893 to 0.934. As a check, (phase==D2)*(action==1) alone scores 0.54, but a1 and a2 together score 0.86.",
+      "The claim that a2 choices repeating the previous choice add +0.13 is an artifact. Once a D2 constant is in, the (stay==1)*(action==2) weight falls to -0.004 and test R^2 does not change (0.9239 -> 0.9239).",
+      "The claim that a2 with little history (belief_cover < 5) adds +0.08 is also an artifact. With the D2 constant its weight is +0.01, and test R^2 moves from 0.9239 to 0.9241.",
+      "The belief weight is overstated. It is -0.12 in the original fit but about -0.08 once the D2 offset is modelled.",
+      "The a1 S2 r term is described as the trials where a model-based agent switches to a2, but the effect does not depend on switching. Restricted to a current a1 choice it is +0.27, larger than when restricted to a2 (+0.19). It is a previous-trial effect, not a switch-to-a2 effect.",
+      "Previous-trial errors at D2 remain that the label leaves out. In misses on the original terms, D2 after a1 S2 u is over-predicted by 0.073 and D2 after a2 S1 r is under-predicted by 0.075. Adding last_is('a1 S2 u') (weight -0.10) and last_is('a2 S1 r') (weight +0.06) removes both. So the gate tracks the last rare transition and its outcome beyond what the ideal-observer belief captures.",
+      "The worst-fit windows show runs of a1 S1 common trials where the actual value is about 0.72 but the prediction is about 0.35. Some of the variation within the a1->S1 cell is not explained by belief, so the model's own value or policy may still add something. The 'all' ceiling of 0.98 against 0.95 for 'all observed' fits this."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 update gate: dropped by choosing a1 (lowest a1->S1), raised by a2; lowered by S1 belief; raised after a1 S2 r and a2 S1 r, lowered after a1 S2 u",
+    "better_terms": "(phase == D2) ;; (phase == D2) * (action == 1) ;; (phase == D2) * (state == 1) ;; (phase == D2) * (action == 1) * (state == 1) ;; (phase == D2) * np.tanh(belief_lo/2) ;; (phase == D2) * last_is('a1 S2 r') ;; (phase == D2) * last_is('a1 S2 u') ;; (phase == D2) * last_is('a2 S1 r')",
+    "better_terms_test_r2_beyond_timing": 0.9427
+  },
+  "final_label": "D2 update gate: dropped by choosing a1 (lowest a1->S1), raised by a2; lowered by S1 belief; raised after a1 S2 r and a2 S1 r, lowered after a1 S2 u"
+}

@@ -1,0 +1,61 @@
+{
+  "label": "z40 tracks the policy: high when leaning a2, low when leaning a1 (D1/GO)",
+  "terms": "(phase == D1) * np.tanh(choice) ;; (phase == GO) * np.tanh(choice) ;; (phase == GO) * np.tanh(choice/3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw update gate of unit 40. At D2 it is saturated near 1 (about 0.996) and does not vary. At D1 and GO its magnitude follows the model policy logit(a1)-logit(a2), and the effect is stronger at GO. It is high when the agent leans toward a2 and low when it leans toward a1. A graded tanh(choice) term per phase (plus a wider GO term) gives test R^2 beyond timing 0.89, against an all-cues ceiling of 0.96; the policy-decile reference alone is 0.93. In observed terms this is the choice the agent is about to make. The last trial alone scores 0.66 as a table (previous a2, and a2-favoring outcomes such as a2 S1 u, a2 S2 r and a1 S1 r on the low side, move it). The upcoming GO choice (action==2) scores about 0.82 overall R^2, but that choice is future at D1/GO, so I did not record it. Value and trials since a reversal do not matter. The hidden good state matters only through its link to choice.",
+  "gate": "unit_update",
+  "feature": 40,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 40,
+    "terms": [
+      "(phase == D1) * np.tanh(choice)",
+      "(phase == GO) * np.tanh(choice)",
+      "(phase == GO) * np.tanh(choice/3)"
+    ],
+    "weights": [
+      -0.1834237269784884,
+      0.38757799484069333,
+      -0.8037707303555276
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8933270230254137,
+    "r2": 0.9566184568997782,
+    "r2_timing_only": 0.5933220921493834
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 40,
+    "terms": [
+      "(phase == D1) * np.tanh(choice)",
+      "(phase == GO) * np.tanh(choice)",
+      "(phase == GO) * np.tanh(choice/3)"
+    ],
+    "weights": [
+      -0.1834237269784884,
+      0.38757799484069333,
+      -0.8037707303555276
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8964464405574444,
+    "r2": 0.9572615031022493,
+    "r2_timing_only": 0.5872812375758172
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The core claim holds up. The three recorded terms score test R^2 beyond timing 0.893, which reproduces the reported number. GO terms alone give 0.743, and adding the D1 tanh(choice) term brings it to 0.893, so both phases matter and GO is the stronger one. The weights fit 'high when leaning a2': the policy logit is a1 - a2 and the D1 weight is negative. At GO the two tanh terms have opposite signs, so the fitted curve in choice is not monotone. Given that, the policy-decile reference of 0.93 says more about the policy relation than the label's graded-tanh wording.",
+      "One part of the explanation overclaims at D1. It says 'a2-favoring outcomes raise it, a1-favoring outcomes lower it'. That holds at GO: after a2 S1 r (rare rewarded, favors a1) the residual is +0.007, against +0.374 after a2 S2 r, and a1 S2 r sits at -0.10, above the other a1 patterns. At D1 the previous choice and the rare transition dominate instead. After a2 S1 r the D1 residual is +0.229, higher than +0.113 after a2 S2 r. After a1 S2 r (favors a2) it is -0.195, the lowest of all patterns. So at D1 the unit tracks the previous action more than a model-based policy reading of the outcome would predict.",
+      "Misses on the recorded terms show some systematic residuals. D1 after a2 S1 r is under-predicted by +0.152 and D1 after a2 S1 u by +0.150. GO after a2 S2 u is under by +0.055, while GO after a2 S1 r is over-predicted by -0.163. The worst windows include long a1-rewarded streaks where D1 is under-predicted by about 0.3. Patching these does not help much: adding D1 prev_action/rare and GO last_is('a2 S1 r') terms reaches 0.913-0.916, and adding prev_reward interactions at D1 reaches 0.913. These are small gains for a moderate error class, not a large unexplained component.",
+      "The negative claims check out. Adding value terms changes test R^2 from 0.893 to 0.896, the good state adds 0.0013 (to 0.895), and choice x ep_dec interactions reach 0.898. The 'saturated at D2' claim also holds: D2 residuals are below 0.03 for every pattern. No future variables are used in the recorded terms."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "z40 tracks the policy: high when leaning a2, low when leaning a1 (strongest at GO; at D1 partly tracks the previous choice and rare transitions)",
+    "better_terms": "(phase == D1) * np.tanh(choice) ;; (phase == GO) * np.tanh(choice) ;; (phase == GO) * np.tanh(choice/3) ;; (phase==D1)*np.tanh(choice/3) ;; (phase==D1)*np.abs(np.tanh(choice)) ;; (phase==GO)*np.abs(np.tanh(choice))",
+    "better_terms_test_r2_beyond_timing": 0.9187
+  },
+  "final_label": "z40 tracks the policy: high when leaning a2, low when leaning a1 (strongest at GO; at D1 partly tracks the previous choice and rare transitions)"
+}

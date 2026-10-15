@@ -1,0 +1,70 @@
+{
+  "label": "GO late in episode (t>=77) after a2 -> rare S1 unrewarded, larger when belief favours S2",
+  "terms": "(phase == GO) * last_is(\"a2 S1 u\") * np.clip(ep_trial - 69, 0, 8) ;; (phase == GO) * last_is(\"a2 S1 u\") * (ep_trial >= 77) ;; (phase == GO) * last_is(\"a2 S1 u\") * (ep_trial >= 77) * (belief < 0.5) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * (ep_trial >= 77) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * (ep_trial >= 77) * (belief < 0.5)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at GO and only very late in the episode (ramps from trial ~70, mostly from trial 77). Magnitude is driven by the previous trial being a2 -> S1 (rare) unrewarded, the model-based stay-on-a2 case: residual +0.32 at GO after a2 S1 u, about -0.03 after every other pattern, including a2 S2 u. Within those trials it is about 3x larger when the ideal-observer belief favours S2 (belief < 0.5). For the window first trial, where the previous choice/state is not in the window, prev_reward == 0 plus late plus belief < 0.5 stands in for it. Zero at D1 and D2. Uses only observed variables (no value/policy, nothing from the future). Test R^2 beyond timing 0.60 (dev 0.61); timing alone 0.09. That is far above the profile additive all ceiling (0.16) and all observed (0.15), because the effect is a conjunction (late x pattern x belief) and the additive tables cannot express it. The earlier label (agent strongly commits to a2) is replaced by belief < 0.5 after a rare a2 loss, and the fit is no worse than the policy-decile reference (0.03).",
+  "gate": "update",
+  "feature": 49,
+  "test_scores": {
+    "gate": "update",
+    "feature": 49,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S1 u\") * np.clip(ep_trial - 69, 0, 8)",
+      "(phase == GO) * last_is(\"a2 S1 u\") * (ep_trial >= 77)",
+      "(phase == GO) * last_is(\"a2 S1 u\") * (ep_trial >= 77) * (belief < 0.5)",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0) * (ep_trial >= 77)",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0) * (ep_trial >= 77) * (belief < 0.5)"
+    ],
+    "weights": [
+      0.008723982668605782,
+      0.3249730458882229,
+      1.0139316255683632,
+      -0.06524663619244121,
+      0.7470859010448055
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5975409866161738,
+    "r2": 0.6326002273833369,
+    "r2_timing_only": 0.08711257445171683
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 49,
+    "terms": [
+      "(phase == GO) * last_is(\"a2 S1 u\") * np.clip(ep_trial - 69, 0, 8)",
+      "(phase == GO) * last_is(\"a2 S1 u\") * (ep_trial >= 77)",
+      "(phase == GO) * last_is(\"a2 S1 u\") * (ep_trial >= 77) * (belief < 0.5)",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0) * (ep_trial >= 77)",
+      "(phase == GO) * (prev_action == -1) * (prev_reward == 0) * (ep_trial >= 77) * (belief < 0.5)"
+    ],
+    "weights": [
+      0.008723982668605782,
+      0.3249730458882229,
+      1.0139316255683632,
+      -0.06524663619244121,
+      0.7470859010448055
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6114837314841488,
+    "r2": 0.6450177312159973,
+    "r2_timing_only": 0.08631298725263115
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The timing claim is wrong. The label says the feature is 'mostly on from trial 77', but its size keeps growing all the way to trial 99. With a single step term L*(ep_trial>=t), where L = (phase == GO) * last_is('a2 S1 u'), the fitted weight rises steadily with t: 0.39 at t=77 (with the belief term), 1.57 at t=80, 1.85 at t=84, 2.16 at t=90. Per-decile weights are 0.085 (trials 70-79), 0.99 (80-89) and 2.17 (90-99). One linear-ramp term, L*clip(ep_trial-70,0,30), scores 0.697 on test, already above the claimed 5-term model (0.598). Adding a quadratic ramp gives 0.712.",
+      "The belief claim is overstated. For windows where the previous trial is known, adding L*(ep_trial>=77)*(belief<0.5) raises test R^2 only from 0.5546 to 0.5562. On top of the ramp terms, belief<0.5 adds 0.002 and belief_lo adds 0.010. The '3x larger when belief favours S2' figure comes from the ratio of two fitted weights (0.39 vs 1.01+0.39) and explains almost no variance. Belief does matter in one place: as a stand-in on a window's first trial, where the previous trial is not visible. There it adds about 0.03 (0.733 to 0.764).",
+      "The misses on the original terms are systematic. The worst-fit windows are first-of-window trials with the feature at about 2.5 but predicted at 0.16, and late a2 S1 u trials predicted at a flat 1.63 when the real values range from about 0.1 to 3.0 depending on ep_trial. Both point to the missing ramp. Some under-firing after a2 S1 u when the trial two back was a1 (a recent switch to a2) remains, but it is small (+0.008 R^2).",
+      "These parts check out: the feature is zero at D1 and D2; at GO the previous-trial pattern a2 S1 u gives residual +0.324 against about -0.03 for every other pattern, including a2 S2 u; prev_action==2 & prev_reward==0 alone scores only 0.17; the upcoming choice adds nothing (action==2 alone scores 0.02, and adding action==2 to the a2 S1 u term changes nothing); and no future variables are used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after a2 -> rare S1 unrewarded (the model-based 'stay on a2' case), growing steeply with episode trial from about 70 through 99; belief favouring S2 matters mainly as a stand-in when the previous trial is outside the window",
+    "better_terms": "(phase == GO) * last_is('a2 S1 u') * np.clip(ep_trial-70,0,30) ;; (phase == GO) * last_is('a2 S1 u') * np.clip(ep_trial-70,0,30)**2 ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * np.clip(ep_trial-70,0,30) ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * np.clip(ep_trial-70,0,30)**2 ;; (phase == GO) * (prev_action == -1) * (prev_reward == 0) * np.clip(ep_trial-70,0,30) * (belief<0.5)",
+    "better_terms_test_r2_beyond_timing": 0.7638
+  },
+  "final_label": "GO after a2 -> rare S1 unrewarded (the model-based 'stay on a2' case), growing steeply with episode trial from about 70 through 99; belief favouring S2 matters mainly as a stand-in when the previous trial is outside the window"
+}

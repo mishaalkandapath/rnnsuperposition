@@ -1,0 +1,78 @@
+{
+  "label": "D2 update gate: high when S2 reached, low for S1 (deeper late-episode, after rewarded S1)",
+  "terms": "(phase == D2) * (state == S2) ;; (phase == D2) * (action == 2) ;; (phase == D2) * (state == S2) * (action == 2) ;; (phase == D2) * (state == S1) * ep_dec ;; (phase == D2) * (state == S1) * np.maximum(ep_dec - 5, 0)**2 ;; (phase == D2) * (state == S1) * (prev_state == S1) * (prev_reward == 1) ;; (phase == D2) * (state == S2) * (prev_state == S2) * (prev_reward == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 25 sits near 0.98 at D1/GO (residuals there about 0.01 or less) and only varies at D2, where it encodes the reached state (observed at D2). Reaching S2 raises z by about 0.10 and choosing a2 adds about 0.06 more, so a2->S2 is highest and a1->S1 lowest. In S1 trials z falls further as the episode goes on (about -0.026 per episode decade, partly undone by a late hinge term), and it is about 0.07 lower again when the previous trial also reached S1 and was rewarded. The matching S2-after-rewarded-S2 term gets almost no weight. Choice x state alone: dev 0.53; adding the state x episode-decade interaction: 0.85; adding the previous-rewarded-S1 history: dev 0.885, test 0.885 (all ceiling 0.96). All terms are observed at D2; no future variables, and hidden good state or value were not needed.",
+  "gate": "unit_update",
+  "feature": 25,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 25,
+    "terms": [
+      "(phase == D2) * (state == S2)",
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * (state == S2) * (action == 2)",
+      "(phase == D2) * (state == S1) * ep_dec",
+      "(phase == D2) * (state == S1) * np.maximum(ep_dec - 5, 0)**2",
+      "(phase == D2) * (state == S1) * (prev_state == S1) * (prev_reward == 1)",
+      "(phase == D2) * (state == S2) * (prev_state == S2) * (prev_reward == 1)"
+    ],
+    "weights": [
+      0.10289309465009057,
+      0.0566214965598916,
+      -0.00910729388257788,
+      -0.02609219507870159,
+      0.003996693114068611,
+      -0.07330467533791912,
+      0.002654856892814298
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8847283617382671,
+    "r2": 0.9517639952362225,
+    "r2_timing_only": 0.5815449013203569
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 25,
+    "terms": [
+      "(phase == D2) * (state == S2)",
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * (state == S2) * (action == 2)",
+      "(phase == D2) * (state == S1) * ep_dec",
+      "(phase == D2) * (state == S1) * np.maximum(ep_dec - 5, 0)**2",
+      "(phase == D2) * (state == S1) * (prev_state == S1) * (prev_reward == 1)",
+      "(phase == D2) * (state == S2) * (prev_state == S2) * (prev_reward == 1)"
+    ],
+    "weights": [
+      0.10289309465009057,
+      0.0566214965598916,
+      -0.00910729388257788,
+      -0.02609219507870159,
+      0.003996693114068611,
+      -0.07330467533791912,
+      0.002654856892814298
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8848780887177106,
+    "r2": 0.9522408303118647,
+    "r2_timing_only": 0.5851426617559758
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The 'late-episode deepening' and 'after rewarded S1' story stands in for the model's value estimate. Adding two value terms, (phase==D2)*(state==S1)*value and (phase==D2)*(state==S2)*value, to the choice x state terms shrinks the S1*ep_dec weight from -0.026 to -0.002. The hinge weight also flips sign, from +0.004 to -0.009. Test R^2 beyond timing rises from 0.885 to 0.955, against an 'all' ceiling of 0.96.",
+      "The explanation says the model's value output was not needed. That overclaims. A single (phase==D2)*value term plus the three choice x state terms already scores 0.892 test, more than the claimed 7-term set (0.885).",
+      "Misses on the claimed terms show a systematic error class. D2 after 'a1 S2 u' is over-predicted by 0.055 and D2 after '?' by 0.026. The worst windows are all early-episode (t2-t8) a1->S1 D2 steps: actual about 0.60 against predicted 0.72-0.80. So S1-reached z can be deeply low early in the episode too, which contradicts the purely 'late-episode' framing. With the value terms these errors fall to 0.03 or less.",
+      "The hidden variable 'good' also beats the rewarded-S1 history term: swapping it for good==1 / good==2 gives 0.895 test, against 0.885. This again suggests the history term is a belief proxy: z at D2 is lower when the reached state is believed to be good.",
+      "Some core claims hold: z sits near 0.98 at D1 and GO with residuals of 0.01 or less, a2->S2 is highest and a1->S1 lowest at D2, and the claimed terms reproduce 0.885 on both dev and test. The 0.53 -> 0.85 build-up also checks out (0.531 and 0.849 test)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 update gate: encodes the reached state (S2 high, S1 low; a2 adds). On S1 it is lower the higher the model's value, i.e. when S1 is believed good. That belief proxy, not the episode position, accounts for the 'late-episode' and 'after rewarded S1' effects.",
+    "better_terms": "(phase == D2) * (state == S2) ;; (phase == D2) * (action == 2) ;; (phase == D2) * (state == S2) * (action == 2) ;; (phase == D2) * (state == S1) * value ;; (phase == D2) * (state == S2) * value ;; (phase == D2) * (state == S1) * ep_dec ;; (phase == D2) * (state == S1) * np.maximum(ep_dec - 5, 0)**2",
+    "better_terms_test_r2_beyond_timing": 0.955
+  },
+  "final_label": "D2 update gate: encodes the reached state (S2 high, S1 low; a2 adds). On S1 it is lower the higher the model's value, i.e. when S1 is believed good. That belief proxy, not the episode position, accounts for the 'late-episode' and 'after rewarded S1' effects."
+}

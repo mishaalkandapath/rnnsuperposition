@@ -1,0 +1,82 @@
+{
+  "label": "D2 after a1 -> S1 (common), when the policy readout mildly favors a2 (episode first ~80 trials)",
+  "predicate": "(phase == D2) & (in_state == 1) & (in_action == 1) & (choice < -1.5) & (choice > -6) & (ep_trial < 80)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 and only when the agent chose a1 and reached S1 by the common transition (in_action==1, in_state==1). It never fires at D1/GO, after a2, or after a rare transition. That base condition has 100% recall but only 15% precision. Activity within it depends on the model state: the feature is active when the D2 policy readout choice (logit a1 - logit a2) is mildly negative (about -6 to -1.5) and value is high. It is mostly absent late in the episode (none after trial ~90, rare after 80). Adding these terms gives dev P=0.81, R=0.73, F1=0.77, mass recall 0.88; top-quartile activations are 97% covered, and most misses are weak activations. Magnitude is largest when a1 is a switch away from a2 (stay==0, especially after a rewarded trial; precision 0.68 in that subset) and when S1 is the good state, e.g. returning to a1/S1 after a rare-rewarded a2 trial. Long a1 streaks give weak or no activation. No future variables are used: choice and value are the model's own readouts at that step.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 225,
+    "predicate": "(phase == D2) & (in_state == 1) & (in_action == 1) & (choice < -1.5) & (choice > -6) & (ep_trial < 80)",
+    "split": "test",
+    "precision": 0.8205937353903693,
+    "recall": 0.7146055979643766,
+    "f1": 0.763941026059518,
+    "mass_recall": 0.8662248134138754,
+    "correlation": 0.7054688086337416,
+    "n_active": 19650,
+    "n_predicted": 17112,
+    "coverage_by_activation_quartile": [
+      0.42336657846529613,
+      0.6244657032363118,
+      0.8436482084690554,
+      0.9670195439739414
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 225,
+    "predicate": "(phase == D2) & (in_state == 1) & (in_action == 1) & (choice < -1.5) & (choice > -6) & (ep_trial < 80)",
+    "split": "dev",
+    "precision": 0.8129402711182147,
+    "recall": 0.7276147080640034,
+    "f1": 0.7679145581122263,
+    "mass_recall": 0.8765758363226674,
+    "correlation": 0.7065522459152465,
+    "n_active": 18874,
+    "n_predicted": 16893,
+    "coverage_by_activation_quartile": [
+      0.43759271031998304,
+      0.6526806526806527,
+      0.8452734209410767,
+      0.9749894022891056
+    ]
+  },
+  "gate": "hidden",
+  "feature": 225,
+  "final_verdict": "partially_explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The base claims check out (dev). The feature never fires at D1 or GO: the predicate phase!=D2 has P=R=0. At D2 it never fires except after a1->S1: D2 & ~(in_state==1 & in_action==1) has R=0, and the base condition has R=1.0, P=0.146. So it fires only on common a1 trials, never after a2 or a rare transition.",
+      "The '-6' lower bound and the word 'mildly' in the label are wrong. When base & choice<=-6, P=0.99 (n=103): the feature fires on almost every one of those steps, so the predicate wrongly excludes them. Firing grows monotonically as choice gets more negative (choice<-2 gives P=0.91, choice>=-1.5 gives P=0.044). It is a one-sided threshold, not a 'mildly favors a2' band. Dropping the -6 bound slightly raises dev F1 (0.768 -> 0.771).",
+      "The 'value is high' claim is vacuous. Value>0.6 holds on all 129k base steps and value<0.3 on none, so it adds no information. Adding value>0.5 to the predicate leaves the scores unchanged.",
+      "'Absent late in the episode / ep_trial<80' is a gradual decline, not a cutoff. The base-condition firing rate by 5-trial bin falls steadily: 0.37 (0-4), 0.26 (10-14), 0.21 (20-24), 0.17 (40-44), 0.14 (60-64), 0.10 (70-74), 0.07 (75-79), 0.04 (80-84), 0.02 (85-89), then 0 from 90 on. A choice threshold that drifts with ep_trial models this better than a hard cutoff at 80.",
+      "The stay/prev_reward magnitude claims are minor. Most firing is on stay==1 trials: recall 0.655 vs 0.15 for stay==0. stay==0 & prev_reward==1 has P=0.68 but recall of only 0.12. The 'S1 is good' claim: good==1 gives recall 0.745 but P=0.138, while good==2 has the higher precision (0.316). So which state is good does not discriminate well either way.",
+      "No observed task-history variable replaces the gating by the 'choice' readout: prev_reward, stay and good each give precision of 0.14-0.36 within the base condition. The explanation is therefore partly circular, in that it describes the feature by the network's own policy readout at D2. The caveat states this, but the verdict should be 'partial'.",
+      "Misses on the test split are mostly weak activations: 13.4% of activation mass, spread across rel positions and patterns. Their pattern matches the soft threshold (choice near the cutoff, or late ep_trial). There is no separate category of systematic false positives."
+    ],
+    "revised_verdict": "partially_explained",
+    "revised_label": "D2 after a1 -> S1 (common transition) when the model's D2 policy readout leans toward a2 (logit a1 - a2 below a threshold that tightens over the episode; firing declines steadily with episode trial)",
+    "better_predicate": "(phase == D2) & (in_state == 1) & (in_action == 1) & (choice < -0.5 - 0.03*ep_trial)",
+    "better_predicate_test_f1": 0.785
+  },
+  "final_label": "D2 after a1 -> S1 (common transition) when the model's D2 policy readout leans toward a2 (logit a1 - a2 below a threshold that tightens over the episode; firing declines steadily with episode trial)",
+  "scorecard": {
+    "format": "top40",
+    "summary": "Weighted combination of 40 cues. Raise it: phase=D2 & choice_bin=decile 1 (9 = most a1) (+7.98), phase=D2 & choice_bin=decile 2 (9 = most a1) (+4.72), choice_bin=decile 2 (9 = most a1) (+4.55), phase=D2 & this=a1 S1 (+4.21), phase=D2 & choice_bin=decile 3 (9 = most a1) (+3.70), choice_bin=decile 3 (9 = most a1) (+3.43). Lower it: choice_bin=decile 8 (9 = most a1) (-5.11), ep_bucket=5 (-4.95), common=0 (-4.70), action=2 (-4.58).",
+    "test_f1": 0.8858370898417025,
+    "test_precision": 0.9132173349184048,
+    "test_recall": 0.8600508905852418,
+    "full_test_f1": 0.8900065146579805,
+    "full_n_cues": 84,
+    "top40_test_f1": 0.8858370898417025,
+    "slot2_test_f1": 0.791324442464571,
+    "slot2_slots": [
+      "this trial",
+      "policy (model)"
+    ],
+    "file": "scorecards/hidden_225.json"
+  }
+}

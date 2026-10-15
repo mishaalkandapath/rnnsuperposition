@@ -1,0 +1,79 @@
+{
+  "label": "D2 candidate drops sharply on rare a1->S2; higher after choosing a2",
+  "terms": "(phase == D2) * (action == 1) * (state == 2) ;; (phase == D2) * (action == 2) ;; (phase == D2) * (action == 2) * (state == 1) ;; (phase == D2) * table(prev_action, {1: -1, 2: 1}) ;; (phase == D2) * (action == 1) * (state == 2) * ep_dec ;; (phase != D2) * (prev_action == 2) ;; (phase == D2) * last_is(\"a1 S2 r\")",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw GRU candidate n of unit 1 sits near +1 at D1/GO and lower at D2 (falling across the episode). Beyond timing, almost all variance is at D2 and is set by the just-made choice x reached state (both observed at D2): a rare a1->S2 transition drives it strongly negative (about -0.94 vs a1->S1, deepening slightly later in the episode), while choosing a2 raises it (+0.21, a further +0.15 for rare a2->S1). Secondary D2 effects: higher if the previous choice was a2 (+0.15) and after a previous rewarded a1->S2 trial (+0.35). At D1/GO only a tiny shift (+0.04 when the previous choice was a2). Choice x state alone gives dev R^2 beyond timing 0.83; the 7-term model 0.87 dev. Reward of the current trial and value contribute nothing. No future variables used.",
+  "gate": "unit_candidate",
+  "feature": 1,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 1,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 2)",
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * (action == 2) * (state == 1)",
+      "(phase == D2) * table(prev_action, {1: -1, 2: 1})",
+      "(phase == D2) * (action == 1) * (state == 2) * ep_dec",
+      "(phase != D2) * (prev_action == 2)",
+      "(phase == D2) * last_is(\"a1 S2 r\")"
+    ],
+    "weights": [
+      -0.939241022128187,
+      0.21349013368825778,
+      0.14931060324094755,
+      0.14942772984731412,
+      -0.01393614664398144,
+      0.03986631172667091,
+      0.3522919420529275
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8667979977793434,
+    "r2": 0.9151621919477877,
+    "r2_timing_only": 0.36308909297268843
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 1,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 2)",
+      "(phase == D2) * (action == 2)",
+      "(phase == D2) * (action == 2) * (state == 1)",
+      "(phase == D2) * table(prev_action, {1: -1, 2: 1})",
+      "(phase == D2) * (action == 1) * (state == 2) * ep_dec",
+      "(phase != D2) * (prev_action == 2)",
+      "(phase == D2) * last_is(\"a1 S2 r\")"
+    ],
+    "weights": [
+      -0.939241022128187,
+      0.21349013368825778,
+      0.14931060324094755,
+      0.14942772984731412,
+      -0.01393614664398144,
+      0.03986631172667091,
+      0.3522919420529275
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8724406219334213,
+    "r2": 0.9191570290376248,
+    "r2_timing_only": 0.366232634654428
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claim holds. The 3 choice x state terms alone give test R^2 beyond timing 0.821. The full 7-term set gives 0.867 on test. The a1->S2 weight is -0.94 to -1.0; a2 is +0.21 and a2->S1 adds +0.15; previous choice a2 at D2 adds +0.15; last_is a1 S2 r adds +0.35; the D1/GO shift is +0.04.",
+      "The claim that the rare a1->S2 dip 'gets slightly deeper later in the episode' contributes essentially nothing. Dropping the (action==1)*(state==2)*ep_dec term moves test R^2 from 0.8668 to 0.8661 (weight -0.014 per decile).",
+      "Over the episode, the D2 drift depends on the action, and the explanation misses this. Adding (D2)*(a1,S1)*ep_dec (weight -0.023 per decile) and (D2)*(a2)*ep_dec (+0.022 per decile) raises test R^2 from 0.866 to 0.885. That is above the stated 'all observed' ceiling of 0.88. So the D2 decline that the baseline attributes to the phase is mainly the a1->S1 value falling, while a2 values rise relative to it.",
+      "The model's policy logit at D2 (the 'choice' variable) still carries a lot: adding (phase==D2)*choice to the original 6 non-trivial terms gives test 0.903, and the 8-term set with the action-specific trends gives 0.923, close to the 0.93 'all' ceiling. So the D2 magnitude also follows the agent's current preference, not just the choice and state reached.",
+      "Misses show a systematic sign pattern at D2 that depends on the previous trial's reward. After unrewarded trials the model over-predicts: a1 S2 u -0.087, a2 S2 u -0.079. After a1 S1 u it under-predicts (+0.071). The worst windows are runs of unrewarded a2->S2 late in the episode, where the actual value dives to about -0.6 against a prediction of +0.6. A simple prev_reward term does not fix this (it adds 0.000); prev_reward x action adds 0.005.",
+      "The ep_dec term is the label's only time-related part, and it is the wrong one. The real gap is the action-specific episode trend plus the dependence on the agent's preference (policy logit)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 candidate is set by choice x state: sharply negative on rare a1->S2, higher after a2 (more if a2->S1). Across the episode the a1->S1 value falls and a2 values rise. It also tracks the agent's current a1/a2 preference (policy logit).",
+    "better_terms": "(phase == D2) * (action == 1) * (state == 2) ;; (phase == D2) * (action == 2) ;; (phase == D2) * (action == 2) * (state == 1) ;; (phase == D2) * table(prev_action, {1: -1, 2: 1}) ;; (phase == D2) * last_is(\"a1 S2 r\") ;; (phase == D2) * (action == 1) * (state == 1) * ep_dec ;; (phase == D2) * (action == 2) * ep_dec ;; (phase == D2) * choice   [test R^2 beyond timing 0.923; this set uses the policy logit, a model-output cue. The observed-only version, which replaces the last term with (phase != D2) * (prev_action == 2), gives 0.885]",
+    "better_terms_test_r2_beyond_timing": 0.9228
+  },
+  "final_label": "D2 candidate is set by choice x state: sharply negative on rare a1->S2, higher after a2 (more if a2->S1). Across the episode the a1->S1 value falls and a2 values rise. It also tracks the agent's current a1/a2 preference (policy logit)."
+}

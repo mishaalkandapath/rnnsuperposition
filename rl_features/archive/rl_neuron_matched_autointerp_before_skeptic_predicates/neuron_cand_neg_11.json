@@ -1,0 +1,63 @@
+{
+  "label": "End-of-episode / low-value unit (last ~10 trials), silent at D2 in S2",
+  "predicate": "(value < 3.8) & ~((phase == D2) & (state == 2))",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only in the final trials of an episode: 99.9% of activations are on episode trials 90-99 (none before trial 80), and 100% are on steps where the model value-head output is in its lowest bin (< 5.2). The value falls as the episode nears its end, so value < 3.8 is a sharp proxy (dev P 0.67, R 0.95). The unit is suppressed at D2 when the reached state is S2 (in_state S2 rate 0.006 vs 0.024 for S1), and excluding those steps brings dev F1 to 0.85 (P 0.79, R 0.92, mass recall 0.97). ep_trial >= 90 alone gets only P 0.30, so value tracks it more closely than trial count. Further excluding D2 after a1 nudges dev F1 to 0.852, which is not worth the extra clause. Magnitude: in example windows activation grows over consecutive late trials, peaking around GO/D1, and the largest values are at D2 after an a2 to S1 rare transition. It also leans toward a2 choices and S2-good episodes (action a2 rate 1.3x). It does not fire on any trial before ~80, whatever the reward, transition or stay/switch history. value is the model own internal output, so the predicate uses no future variables.",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 11,
+    "predicate": "(value < 3.8) & ~((phase == D2) & (state == 2))",
+    "split": "test",
+    "precision": 0.7750736015701668,
+    "recall": 0.9314503051567061,
+    "f1": 0.8460971919064771,
+    "mass_recall": 0.9766636049064159,
+    "correlation": 0.7547772190899781,
+    "n_active": 33917,
+    "n_predicted": 40760,
+    "coverage_by_activation_quartile": [
+      0.7800707547169812,
+      0.9683924991154618,
+      0.9834886189409129,
+      0.9938672013209104
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 11,
+    "predicate": "(value < 3.8) & ~((phase == D2) & (state == 2))",
+    "split": "dev",
+    "precision": 0.7856186149118891,
+    "recall": 0.9181424756760075,
+    "f1": 0.8467264853236719,
+    "mass_recall": 0.9718157494663268,
+    "correlation": 0.7636462234155698,
+    "n_active": 32581,
+    "n_predicted": 38077,
+    "coverage_by_activation_quartile": [
+      0.7449054750797938,
+      0.9462246777163904,
+      0.9850214855739717,
+      0.996439533456108
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 11,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Every factual claim checked out. 100% of activations fall in the lowest value bin (<5.22). Trials 90-99 hold 99.9% of activation mass, trials 80-89 only 73 steps, and there are none before 80. ep_trial>=90 has precision 0.30. Test scores reproduce exactly (P 0.775, R 0.931, F1 0.846, mass recall 0.977).",
+      "Minor gap: the label says the unit is silent at D2 in S2, but it is also mostly silent at D2 after a1 reached S1 by a common transition. On that subset, value<3.8 has precision 0.37, against 0.87 for D2 S1 reached after a2. So D2 activity is essentially restricted to S1 reached after an a2 choice (a rare transition). The explanation says excluding D2 after a1 does little (F1 0.852), and that figure is accurate, so this is a small wording point.",
+      "The remaining misses and false positives sit at the edges of the threshold during the late-episode ramp: a weak activation just as the value crosses the threshold, or low-value steps just before onset. Precision also differs by phase: GO 0.90, D1 0.74 (0.81 when in_rew=1, 0.63 when in_rew=0). Using a separate threshold per phase raises test F1 only to 0.868 (P 0.866, R 0.870), against 0.846. That is a refinement of the threshold, not a missing class of cases.",
+      "value is the model's own output, so the predicate uses no future variables. 'End-of-episode' is an observed correlate, and value<3.8 is the tighter description."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Late-episode / low-value unit (value < 3.8, trials ~88-99), mostly at GO and D1; at D2 it fires mainly when S1 is reached after an a2 choice",
+    "better_predicate": "((value < 3.8)&(phase==GO)) | ((value<3.6)&(phase==D1)) | ((value<3.8)&(phase==D2)&(state==1)&(action==2))",
+    "better_predicate_test_f1": 0.868
+  },
+  "final_label": "Late-episode / low-value unit (value < 3.8, trials ~88-99), mostly at GO and D1; at D2 it fires mainly when S1 is reached after an a2 choice"
+}

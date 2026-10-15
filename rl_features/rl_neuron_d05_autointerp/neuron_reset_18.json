@@ -1,0 +1,105 @@
+{
+  "label": "D1 reward-seen while leaning moderately toward a2 (late episode)",
+  "predicate": "(phase==D1)&(in_rew==1)&(prev_state!=1)&(choice<-1.5)&(ep_trial>=45)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1 steps where the reward input is 1 (never at GO/D2, never on unrewarded D1). Essentially all activation (>99.99%) falls on trials where the agent then picks a2, and the policy logit at D1 sits in a moderate a2-leaning band (logit(a1)-logit(a2) between about -4.4 and -1.5); it goes silent once a long reward streak pushes the a2 preference to extremes, and it is almost never active when the agent leans to a1. Rate rises strongly with trial index in the episode (near zero before trial ~20, saturating after ~50), and correlates with low value and good=S2. A simpler predicate with only observed inputs plus the upcoming choice, D1 & in_rew==1 & action==2 & ep_trial>=45, gives dev F1 0.78 (mass recall 0.96); without the ep_trial term it is precision 0.45 / recall 1.0. Recorded the choice-band version (dev F1 0.84, mass recall 0.96); choice is the model own policy readout, not a future variable. Magnitude is largest on the first rewarded D1 after an unrewarded trial and decays across consecutive rewarded trials.",
+  "test_scores": {
+    "gate": "neuron_reset",
+    "feature": 18,
+    "predicate": "(phase==D1)&(in_rew==1)&(prev_state!=1)&(choice<-1.5)&(ep_trial>=45)",
+    "split": "test",
+    "precision": 0.8825941305789161,
+    "recall": 0.8799686874836914,
+    "f1": 0.8812794536537776,
+    "mass_recall": 0.9608649508937914,
+    "correlation": 0.7807531042895083,
+    "n_active": 57485,
+    "n_predicted": 57314,
+    "coverage_by_activation_quartile": [
+      0.6896047870860006,
+      0.8477489388351541,
+      0.9825342704056781,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 18,
+    "predicate": "(phase==D1)&(in_rew==1)&(prev_state!=1)&(choice<-1.5)&(ep_trial>=45)",
+    "split": "dev",
+    "precision": 0.8869621836500403,
+    "recall": 0.8778618186751688,
+    "f1": 0.8823885380176771,
+    "mass_recall": 0.9597524676362239,
+    "correlation": 0.7845830049333611,
+    "n_active": 58966,
+    "n_predicted": 58361,
+    "coverage_by_activation_quartile": [
+      0.681386514719848,
+      0.8507665174331841,
+      0.9793094091309952,
+      1.0
+    ]
+  },
+  "gate": "neuron_reset",
+  "feature": 18,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Omitted systematic false-positive class: the unit is silent whenever the reward seen at D1 came from S1 (prev_state==1). D1 & in_rew==1 & prev_state==1 has precision 0.000 over 96,584 steps. With the recorded predicate restricted to prev_common==0, precision is 0.004 over 5,524 steps. Those are mostly rare-rewarded a2->S1 trials, after which the logit can still lean a2. Adding prev_state!=1 raises dev F1 from 0.843 to 0.882 and test F1 from 0.837 to 0.881. The unit really responds to reward obtained in S2 (in this data only after a2->S2 common), not to any rewarded D1.",
+      "The upper choice bound (choice > -4.44) does nothing. D1 & in_rew==1 & choice<=-4.44 covers only 34 steps, and dropping the bound leaves F1 the same (0.843 dev). So 'moderately', the 'moderate band', and 'goes silent once a long reward streak pushes the a2 preference to an extreme' are not supported. The streak-related decline is in magnitude, and the choice band does not capture it.",
+      "'Levelling off after ~50' is only half true. Precision levels off (0.87 for ep_trial 60-79, 0.90 for >=80), but activation mass keeps growing: ep_trial>=80 holds 60% of the mass with 35% of the active steps. Recall in the 45-59 bucket is 0.18 and mass 0.07, so the rise in magnitude continues to the end of the episode.",
+      "Claims that check out: it never fires at GO/D2 or on unrewarded D1 (recall 0 for both). Mass on action==2 is 0.99993. Activity with action==2 & choice>=-1.5 is near zero (precision 0.026). It is very rarely active with good==1 (mass 0.037) and concentrates in below-median value (mass 0.93 vs 0.03).",
+      "The magnitude claim gets weak support. When the previous trial was unrewarded (first reward after a miss), mass recall 0.228 exceeds recall 0.162. When it was rewarded, mass 0.521 is about equal to recall 0.525. So activations on first rewards are larger, but within streaks the unit fires more often (precision 0.73 vs 0.53).",
+      "The lowest activation quartile is still poorly covered (0.69 test) under every variant. These misses are mostly weak D1 activations before ep_trial 45 and in the window's first trial (prev_state unknown)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after being rewarded in S2 (a2->S2 common), late in the episode, while the agent leans a2",
+    "better_predicate": "(phase==D1)&(in_rew==1)&(prev_state!=1)&(choice<-1.5)&(ep_trial>=45)",
+    "better_predicate_test_f1": 0.881
+  },
+  "final_label": "D1 after being rewarded in S2 (a2->S2 common), late in the episode, while the agent leans a2",
+  "original_predicate": "(phase == D1) & (in_rew == 1) & (choice < -1.5) & (choice > -4.44) & (ep_trial >= 45)",
+  "original_test_scores": {
+    "gate": "neuron_reset",
+    "feature": 18,
+    "predicate": "(phase == D1) & (in_rew == 1) & (choice < -1.5) & (choice > -4.44) & (ep_trial >= 45)",
+    "split": "test",
+    "precision": 0.7986766888797651,
+    "recall": 0.879829520744542,
+    "f1": 0.8372913062552251,
+    "mass_recall": 0.9606353587791423,
+    "correlation": 0.7404316576645149,
+    "n_active": 57485,
+    "n_predicted": 63326,
+    "coverage_by_activation_quartile": [
+      0.68939604787086,
+      0.8477489388351541,
+      0.9825342704056781,
+      0.9996520770997147
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "neuron_reset",
+    "feature": 18,
+    "predicate": "(phase == D1) & (in_rew == 1) & (choice < -1.5) & (choice > -4.44) & (ep_trial >= 45)",
+    "split": "dev",
+    "precision": 0.8107574713363824,
+    "recall": 0.8778279008242038,
+    "f1": 0.8429606709551339,
+    "mass_recall": 0.9597134592314494,
+    "correlation": 0.7480351126866345,
+    "n_active": 58966,
+    "n_predicted": 63844,
+    "coverage_by_activation_quartile": [
+      0.6813186813186813,
+      0.8507665174331841,
+      0.9793094091309952,
+      0.9999321619971508
+    ]
+  },
+  "predicate_from": "skeptic"
+}

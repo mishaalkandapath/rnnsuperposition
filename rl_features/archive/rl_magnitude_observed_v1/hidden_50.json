@@ -1,0 +1,81 @@
+{
+  "label": "Late-episode D1 ramp, steeper after reaching S1 (esp. unrewarded / via rare a2)",
+  "terms": "(phase == D1) * (ep_trial >= 90) * (ep_trial - 90) ;; (phase == D1) * (ep_trial >= 90) * (ep_trial - 90)**2 ;; (phase == D1) * (ep_trial >= 90) * (prev_state == S1) * (ep_trial - 90) ;; (phase == D1) * (ep_trial >= 90) * (prev_reward == 0) * (prev_state == S1) * (ep_trial - 90) ;; (phase == D1) * (ep_trial >= 90) * (prev_state == S1) * (prev_action == 2) ;; (phase == D1) * (ep_trial >= 90) * (prev_state == S1) ;; (phase == D1) * (ep_trial >= 90) * (tv(\"state\", -2) == S1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "hidden/50 is active only at D1 in the last ~10 trials of the episode (timing alone R^2 0.28). Beyond timing, its magnitude is a ramp in ep_trial within trials 90-99 (convex), and the ramp is much steeper when the previous trial reached S1 (prev_state == S1 x (ep_trial-90)), steeper still when that S1 visit was unrewarded; a previous rare a2->S1 transition adds a further step. Having reached S1 two trials back slightly lowers it. Reaching S2 last trial (especially rewarded) keeps it low. Belief (ideal-observer log-odds) added nothing once trial history was included. The phase-specific additive tables score only 0.03 (all observed) / 0.05 (all) because the effect is a time x last-trial interaction confined to the final decile. GO and D2 are essentially zero. 7 observed-only terms: dev R^2 beyond timing 0.655, test 0.643. No model outputs used; the earlier firing label relied on low model value at episode end, but here observed trial history and episode time account for the magnitude well, so little is lost.",
+  "gate": "hidden",
+  "feature": 50,
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 50,
+    "terms": [
+      "(phase == D1) * (ep_trial >= 90) * (ep_trial - 90)",
+      "(phase == D1) * (ep_trial >= 90) * (ep_trial - 90)**2",
+      "(phase == D1) * (ep_trial >= 90) * (prev_state == S1) * (ep_trial - 90)",
+      "(phase == D1) * (ep_trial >= 90) * (prev_reward == 0) * (prev_state == S1) * (ep_trial - 90)",
+      "(phase == D1) * (ep_trial >= 90) * (prev_state == S1) * (prev_action == 2)",
+      "(phase == D1) * (ep_trial >= 90) * (prev_state == S1)",
+      "(phase == D1) * (ep_trial >= 90) * (tv(\"state\", -2) == S1)"
+    ],
+    "weights": [
+      -0.12069413118820212,
+      0.01575496039950556,
+      0.16494979504216106,
+      0.08894662818186164,
+      0.28051438608181084,
+      -0.33234274180060414,
+      -0.19324305600616778
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6430689562484898,
+    "r2": 0.7445370636379787,
+    "r2_timing_only": 0.2842793003461177
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 50,
+    "terms": [
+      "(phase == D1) * (ep_trial >= 90) * (ep_trial - 90)",
+      "(phase == D1) * (ep_trial >= 90) * (ep_trial - 90)**2",
+      "(phase == D1) * (ep_trial >= 90) * (prev_state == S1) * (ep_trial - 90)",
+      "(phase == D1) * (ep_trial >= 90) * (prev_reward == 0) * (prev_state == S1) * (ep_trial - 90)",
+      "(phase == D1) * (ep_trial >= 90) * (prev_state == S1) * (prev_action == 2)",
+      "(phase == D1) * (ep_trial >= 90) * (prev_state == S1)",
+      "(phase == D1) * (ep_trial >= 90) * (tv(\"state\", -2) == S1)"
+    ],
+    "weights": [
+      -0.12069413118820212,
+      0.01575496039950556,
+      0.16494979504216106,
+      0.08894662818186164,
+      0.28051438608181084,
+      -0.33234274180060414,
+      -0.19324305600616778
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.655343323299518,
+    "r2": 0.7531575990982307,
+    "r2_timing_only": 0.2838020627806276
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The score reproduces: the 7 terms give test R^2 beyond timing 0.643 (total R^2 0.745, timing alone 0.284). The core is real. The ramp alone gives 0.20. Adding the slope for 'previous trial reached S1' brings it to 0.57, and the S1 step term brings it to 0.60.",
+      "One claim is not supported: 'a rare a2->S1 transition on the previous trial adds a further step up'. Dropping the term (prev_state==S1)*(prev_action==2) leaves test R^2 at 0.6428 against 0.6431 with it. Swapping in (prev_common==0)*(prev_state==S1) splits the weight 0.14/0.14 with no gain. The term only takes signal that the tv('state',-2)==S1 term already carries: dropping that term instead costs 0.018 (0.625). The higher raw residual after a2 S1 (+0.087 u / +0.05 r, against +0.044 / +0.01 for a1 S1) is explained by what happened two trials back. It is not a separate rare-transition effect.",
+      "'Steeper still when that S1 visit went unrewarded' holds but is small. Dropping that term costs 0.014 (0.629), weight +0.089.",
+      "'Reaching S2 on the last trial (especially with a reward) keeps it low' is not encoded in any term. When tested, it is only partly a separate effect: adding (prev_state==S2)*(prev_reward==1) raises test R^2 to 0.656 (weight -0.14).",
+      "'Belief log-odds added nothing' is confirmed. belief_lo gives 0.642, belief_lo*(t-90) gives 0.640 and |belief_lo|*(t-90) gives 0.644, all with weights near zero. Previous reward without state, a slope for previous action a2, a lead-in at trials 85-89 and S1 three trials back add 0.001 or less each.",
+      "The misses output shows no large systematic error class. Mean error by phase is at most 0.003, and the largest phase x previous-trial biases are about 0.013 (D1 after a1 S2 r/u is over-predicted). The worst-fit windows are runs of consecutive late-episode D1s where the activation stays high (1.5-2.9) and is under-predicted by about 1 for several trials in a row, for example repeated a1 S1c trials and trials after S2c. This looks like persistence across trials that a last-trial / two-back description cannot capture, and about 35% of the variance beyond timing is left over. The only extra term that helped is a window-edge indicator (tv('state',-2)==-9, giving 0.6635), which is an artifact, not behaviour.",
+      "'Convex ramp' is technically true (weights -0.12 linear, +0.016 squared), but for prev-S2 trials the fitted shape dips then rises within trials 90-99. 'Ramps up' mainly describes the trials after S1."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Late-episode D1 ramp (trials 90-99), much steeper after the previous trial reached S1 (more so if unrewarded); lowered by S1 two trials back and by a rewarded S2 last trial; belief adds nothing",
+    "better_terms": "(phase == D1) * (ep_trial >= 90) * (ep_trial - 90) ;; (phase == D1) * (ep_trial >= 90) * (ep_trial - 90)**2 ;; (phase == D1) * (ep_trial >= 90) * (prev_state == S1) * (ep_trial - 90) ;; (phase == D1) * (ep_trial >= 90) * (prev_reward == 0) * (prev_state == S1) * (ep_trial - 90) ;; (phase == D1) * (ep_trial >= 90) * (prev_state == S1) ;; (phase == D1) * (ep_trial >= 90) * (tv('state', -2) == S1) ;; (phase == D1) * (ep_trial >= 90) * (prev_state == S2) * (prev_reward == 1)",
+    "better_terms_test_r2_beyond_timing": 0.6557
+  },
+  "final_label": "Late-episode D1 ramp (trials 90-99), much steeper after the previous trial reached S1 (more so if unrewarded); lowered by S1 two trials back and by a rewarded S2 last trial; belief adds nothing"
+}

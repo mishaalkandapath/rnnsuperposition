@@ -1,0 +1,104 @@
+{
+  "label": "GO after an unrewarded trial, confidently choosing a1, early in the episode",
+  "predicate": "(phase == GO) & (prev_reward == 0) & (prev_state != 1) & (choice > 6) & (ep_trial < 35)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at GO steps (never D1/D2), only when the previous trial was unrewarded (reward input 0 at D1; never after a reward), only when the agent is about to choose a1 (99.7% of mass; policy logit a1-a2 > 8 holds 86% of mass), and only in the first ~40 trials of an episode (zero activity from trial 40 on; rate highest in trials 0-9). Enriched after a rare transition from a1 (prev_common = 0, 3x lift) and when S1 is the good state, which is consistent with the agent still preferring a1 despite the missed reward. All variables are observed or the agent own policy output; no future variable used. Magnitude is larger for stronger a1 preference (top quartile is almost all choice > 8). Misses are mostly weak activations with choice logit between ~3 and 8; false positives are mostly later in the 30-40 trial range or confident a1 choices that do not activate. Using the upcoming action (action == 1) instead of choice gives recall 0.99 but lower precision (F1 0.66).",
+  "test_scores": {
+    "gate": "update",
+    "feature": 146,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (prev_state != 1) & (choice > 6) & (ep_trial < 35)",
+    "split": "test",
+    "precision": 0.8884580703336339,
+    "recall": 0.8455333390543208,
+    "f1": 0.8664644066306115,
+    "mass_recall": 0.9348125166801233,
+    "correlation": 0.820267896679651,
+    "n_active": 11653,
+    "n_predicted": 11090,
+    "coverage_by_activation_quartile": [
+      0.641729581331503,
+      0.7473395125300377,
+      0.9931342258839684,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 146,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (prev_state != 1) & (choice > 6) & (ep_trial < 35)",
+    "split": "dev",
+    "precision": 0.8900937327697115,
+    "recall": 0.8555025613849143,
+    "f1": 0.8724554134390199,
+    "mass_recall": 0.9353969528721309,
+    "correlation": 0.8196761520920325,
+    "n_active": 11322,
+    "n_predicted": 10882,
+    "coverage_by_activation_quartile": [
+      0.6817379018014835,
+      0.751324620275521,
+      0.9890459363957598,
+      1.0
+    ]
+  },
+  "gate": "update",
+  "feature": 146,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The label leaves out the main condition: the previous trial's reached state was S2. In the dev split, every activation has prev_state == 2, or prev_state unknown at the window's first trial. For (GO & prev_reward==0 & prev_state==1) the activation count is exactly 0. by prev_action/prev_common: the 7644 activations after a rare transition from a1 and the 1399 after a common transition from a2 are both cases of 'landed in S2'. So the '3x lift for prev_common=0' the explanation gives is a side effect of prev_state == S2. It is not a separate rare-transition effect.",
+      "The explanation reads this as 'still prefers a1 despite the missed reward', but the actual pattern is the reverse. The feature fires when S2 went unrewarded and the agent turns to a1, the action whose common outcome is S1. That is the model-based response to an unrewarded S2, not persistence. The 'choice > 8' term only works because it stands in for this: with choice > 8 added, prev_state==1 & prev_reward==0 never occurs (n_predicted=0).",
+      "The time cutoff is set loosely. Firing is 0.010 in trials 30-39 and zero from 40 on. Most of the predicate's false positives sit in trials 30-40. Changing the cutoff to ep_trial < 35 raises dev precision from 0.805 to 0.932 at the same recall (F1 0.786 to 0.836).",
+      "Claims that check out: GO only (zero firing at D1/D2), prev_reward==0 only (zero after a reward), action a1 for 99.7% of activation mass, choice > 8 for 86% of mass, and the original test scores (P 0.805, R 0.753, F1 0.778, mass recall 0.858). The predicate uses no future variables.",
+      "On the test split the predicate misses 14.2% of activation mass. These misses are weak activations with choice between about 3 and 8, all GO after an unrewarded S2. A looser choice threshold combined with the S2 condition recovers them."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after an unrewarded visit to S2 (previous trial reached S2, no reward), with the agent strongly choosing a1, early in the episode (before about trial 35)",
+    "better_predicate": "(phase == GO) & (prev_reward == 0) & (prev_state != 1) & (choice > 6) & (ep_trial < 35)",
+    "better_predicate_test_f1": 0.866
+  },
+  "final_label": "GO after an unrewarded visit to S2 (previous trial reached S2, no reward), with the agent strongly choosing a1, early in the episode (before about trial 35)",
+  "original_predicate": "(phase == GO) & (prev_reward == 0) & (choice > 8) & (ep_trial < 40)",
+  "original_test_scores": {
+    "gate": "update",
+    "feature": 146,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (choice > 8) & (ep_trial < 40)",
+    "split": "test",
+    "precision": 0.8053617333822989,
+    "recall": 0.7527675276752768,
+    "f1": 0.7781769793745841,
+    "mass_recall": 0.8583763211375081,
+    "correlation": 0.7594148626459922,
+    "n_active": 11653,
+    "n_predicted": 10892,
+    "coverage_by_activation_quartile": [
+      0.5566231983527797,
+      0.6065911431513903,
+      0.852385856505321,
+      0.9955372468245794
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "update",
+    "feature": 146,
+    "predicate": "(phase == GO) & (prev_reward == 0) & (choice > 8) & (ep_trial < 40)",
+    "split": "dev",
+    "precision": 0.8053858967240421,
+    "recall": 0.7686804451510334,
+    "f1": 0.7866052060737527,
+    "mass_recall": 0.8613590359870409,
+    "correlation": 0.7568109633466794,
+    "n_active": 11322,
+    "n_predicted": 10806,
+    "coverage_by_activation_quartile": [
+      0.6096785588131403,
+      0.6206287530907807,
+      0.8484098939929329,
+      0.996113074204947
+    ]
+  },
+  "predicate_from": "skeptic"
+}

@@ -1,0 +1,76 @@
+{
+  "label": "GO-only; largest after unrewarded a1 trials (esp. a1 S2 u), graded by belief S1",
+  "terms": "(phase == GO) * last_is(\"a1 S2 u\") ;; (phase == GO) * last_is(\"a1 S1 u\") ;; (phase == GO) * last_is(\"a2 S2 u\") ;; (phase == GO) * (prev_reward == 1) ;; (phase == GO) * belief_lo ;; (phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Active only at GO (D1/D2 essentially zero). Magnitude is set mainly by the previous trial: biggest after a1 S2 u (common-unrewarded a1, +3.2), smaller after a1 S1 u (+0.7) and a2 S2 u (+0.2); lowered after any rewarded trial (-0.6). It also rises with two unrewarded trials in a row (+0.65) and grades with the ideal-observer log-odds that S1 is good (belief_lo, +0.15 per unit). So it tracks evidence that a1 is no longer paying off or that S1 is good. These are all observed quantities. Test R^2 beyond timing is 0.69, against 0.74 for all observed cues and a 0.77 all ceiling. The earlier policy-based explanation reached about this level, so dropping model outputs costs little: the policy decile alone scored 0.27 and belief decile 0.23, but the last-trial pattern (0.63) does most of the work. Under-predicted at GO after rewarded S2 trials and on window-first trials; over-predicted after a2 S1 trials.",
+  "gate": "reset",
+  "feature": 15,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 15,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S2 u\")",
+      "(phase == GO) * last_is(\"a1 S1 u\")",
+      "(phase == GO) * last_is(\"a2 S2 u\")",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == GO) * belief_lo",
+      "(phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)"
+    ],
+    "weights": [
+      3.159848045968917,
+      0.7406028754605583,
+      0.19004392312269253,
+      -0.6013871977324351,
+      0.147251074689889,
+      0.6475463678259679
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6938886572690965,
+    "r2": 0.7487482242361673,
+    "r2_timing_only": 0.17921442073218674
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 15,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S2 u\")",
+      "(phase == GO) * last_is(\"a1 S1 u\")",
+      "(phase == GO) * last_is(\"a2 S2 u\")",
+      "(phase == GO) * (prev_reward == 1)",
+      "(phase == GO) * belief_lo",
+      "(phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0)"
+    ],
+    "weights": [
+      3.159848045968917,
+      0.7406028754605583,
+      0.19004392312269253,
+      -0.6013871977324351,
+      0.147251074689889,
+      0.6475463678259679
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7011037805199827,
+    "r2": 0.7534365657537142,
+    "r2_timing_only": 0.1750868088086679
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Wrong structure: the belief grading is mostly an interaction with no reward on the previous trial, and it is one-sided, not a main effect. Adding (GO)*(prev_reward==0)*belief_lo and its rectified version clip(belief_lo,0) raises test R^2 beyond timing from 0.694 to 0.791. That is above both the 'all observed' score (0.74) and the 'all' ceiling (0.77). Adding only (GO)*(prev_reward==0)*belief_lo plus a first-trial term gives 0.768.",
+      "The last-trial weights in the label are inflated by fitting additively. Once belief x no-reward is in the model, the a1 S2 u weight falls from +3.2 to about +1.1 (or +2.2 with the linear interaction only). The a2 S2 u weight falls to about 0 (-0.02), so the claimed a2 S2 u effect of +0.2 is entirely belief. In the original fit, a1 S1 u is +0.74, and +0.41 with the interaction.",
+      "Wrong interpretation: 'evidence that a1 has stopped paying off' does not fit the biggest case. a1 S2 u (a1 chosen, rare transition to S2, no reward) is evidence that S1 is good, the model-based 'stay on a1' case. The residual by belief decile at GO runs monotonically from -0.81 (decile 0) to +1.17 (decile 9). So the feature tracks 'no reward last trial AND S1 believed good', not a1 failing.",
+      "The original terms leave systematic errors (misses): GO after a2 S1 u is over-predicted by -0.45 because there is no a2 S1 u term and the 'two unrewarded in a row' term catches it. The first trial of the window (prev = ?) is under-predicted by +0.31. Adding a2 S1 u and first-trial terms alone gives 0.713.",
+      "Ablation: without belief_lo the original set scores 0.624. Without the two-unrewarded term it scores 0.680. So both terms are real, but belief contributes through the interaction rather than the +0.15/unit main effect the explanation claims.",
+      "Claims that check out: active only at GO (D1 and D2 residuals about 1e-4); lower after any rewarded trial (about -0.6); higher after two unrewarded trials (+0.43 to +0.81 across fits); no future variables used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO-only; after an unrewarded previous trial, rises with the ideal observer's belief that S1 is good (one-sided); extra boost after a1 S2 u and after 2 unrewarded trials; low after rewarded trials",
+    "better_terms": "(phase == GO) * (prev_reward == 0) * belief_lo ;; (phase == GO) * (prev_reward == 0) * np.clip(belief_lo,0,None) ;; (phase == GO) * last_is('a1 S2 u') ;; (phase == GO) * last_is('a1 S1 u') ;; (phase == GO) * (prev_reward == 0) * (tv('reward', -2) == 0) ;; (phase == GO) * (prev_action == -1) ;; (phase == GO) * (prev_reward == 1) ;; (phase == GO) * belief_lo",
+    "better_terms_test_r2_beyond_timing": 0.7914
+  },
+  "final_label": "GO-only; after an unrewarded previous trial, rises with the ideal observer's belief that S1 is good (one-sided); extra boost after a1 S2 u and after 2 unrewarded trials; low after rewarded trials"
+}

@@ -1,0 +1,80 @@
+{
+  "label": "D1 update gate drops late in episode, most after reaching S2 (esp. rare a1->S2, rewarded)",
+  "terms": "(phase == D1) * np.exp((ep_trial-99)/8.0) ;; (phase == D1) * (prev_state == 2) * np.exp((ep_trial-99)/8.0) ;; (phase == D1) * (prev_state == 2) * (prev_reward == 1) * np.exp((ep_trial-99)/8.0) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * np.exp((ep_trial-99)/8.0) ;; (phase == D1) * (prev_state == 2) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D1) * value * np.exp((ep_trial-99)/8.0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw z of unit 39 sits near 1 (mean 0.987); GO and D2 are almost flat, and nearly all variance beyond timing is at D1. At D1 z falls sharply in the last ~10-15 trials of the episode, and the drop is shaped by the previous trial: it is much deeper when the last trial reached S2 than S1, deeper again when that S2 visit was rewarded, and deepest after a rare a1->S2 transition (a1 S2 r is the lowest cell). There is a small all-episode dip after a1->S2 too. Modelled as a late-episode ramp exp((ep_trial-99)/8) times prev-state / prev-reward / prev-action indicators, plus late-episode value at D1 (weight positive: at a fixed history, higher value means less drop). Test R^2 beyond timing 0.57 (dev 0.59), above the additive all ceiling of 0.41 because of the history x late-episode interaction. Without the value term (observed cues only) dev R^2 is 0.535. Hidden good state, since_rev, the trial before and future variables add essentially nothing.",
+  "gate": "unit_update",
+  "feature": 39,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 39,
+    "terms": [
+      "(phase == D1) * np.exp((ep_trial-99)/8.0)",
+      "(phase == D1) * (prev_state == 2) * np.exp((ep_trial-99)/8.0)",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 1) * np.exp((ep_trial-99)/8.0)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * np.exp((ep_trial-99)/8.0)",
+      "(phase == D1) * (prev_state == 2)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D1) * value * np.exp((ep_trial-99)/8.0)"
+    ],
+    "weights": [
+      -0.07515533482575203,
+      -0.11626970323744915,
+      -0.06963998432247555,
+      -0.10184378793967767,
+      -0.0057166425394466445,
+      -0.029782285197835264,
+      0.04097999381946056
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5700953149792835,
+    "r2": 0.8196161389312278,
+    "r2_timing_only": 0.5804096411275915
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 39,
+    "terms": [
+      "(phase == D1) * np.exp((ep_trial-99)/8.0)",
+      "(phase == D1) * (prev_state == 2) * np.exp((ep_trial-99)/8.0)",
+      "(phase == D1) * (prev_state == 2) * (prev_reward == 1) * np.exp((ep_trial-99)/8.0)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2) * np.exp((ep_trial-99)/8.0)",
+      "(phase == D1) * (prev_state == 2)",
+      "(phase == D1) * (prev_action == 1) * (prev_state == 2)",
+      "(phase == D1) * value * np.exp((ep_trial-99)/8.0)"
+    ],
+    "weights": [
+      -0.07515533482575203,
+      -0.11626970323744915,
+      -0.06963998432247555,
+      -0.10184378793967767,
+      -0.0057166425394466445,
+      -0.029782285197835264,
+      0.04097999381946056
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5901801602940333,
+    "r2": 0.8296249460891675,
+    "r2_timing_only": 0.5842684091793324
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Reproduced the reported score: the claimed 7 terms give test R^2 beyond timing of 0.570. tau=8 is the best ramp scale (tau 5 gives 0.553, tau 12 gives 0.559).",
+      "Checked the ordering of previous-trial cells. With one D1 x last_is(pattern) x ramp term per pattern (test R^2 0.468), the weights are a1S2r -0.313 < a1S2u -0.187 < a2S2r -0.126 < a2S2u -0.069 < the S1 cells (+0.08 to +0.13). So the drop is deeper after S2 than S1, deeper again when rewarded, and deepest after rare a1->S2 rewarded, as claimed. Reward also deepens the drop slightly after S1 visits (a1S1r +0.092 vs a1S1u +0.119), which the label does not mention.",
+      "The 'small dip across the whole episode' wording undersells the flat terms. Dropping the two non-ramp terms cuts test R^2 from 0.570 to 0.476. Alone, (D1)*(prev_action==1)*(prev_state==2) scores 0.19. The effect is small early in the episode (weight -0.0025 for ep_trial<80 when fitted next to the flat a1->S2 term), so the flat terms mostly capture mid-to-late trials that the exp ramp does not fit, not a uniform dip across the episode.",
+      "The value term is worth about 0.055 on test (0.515 without it vs 0.570 with it). Its positive weight is confirmed. Value alone at D1 scores 0.000, so it only works through the late-episode interaction.",
+      "Main systematic miss: the worst-fit windows are mostly at the window's first trial (rel -3), where prev_state is -1 (unknown). There the model predicts about 0.92 against actual values of 0.6 to 0.7 late in the episode. This is an artifact of how windows are cut, not missing mechanism. Adding (D1)*(prev_state==-1)*ramp raises test R^2 to 0.612.",
+      "After that fix, the remaining errors by previous-trial cell are small: at most +0.014 (D1 after a2 S1 u) and -0.014 (D1 after a1 S2 r), compared with effects of 0.07 to 0.3. GO and D2 errors are 0.005 or less. No large error class remains.",
+      "Other variables add little, as claimed: adding the state reached two trials back gives 0.573 (+0.003)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 update gate drops late in episode, most after reaching S2 (esp. rare a1->S2, rewarded); a1->S2 dip also mid-episode",
+    "better_terms": "(phase == D1) * np.exp((ep_trial-99)/8.0) ;; (phase == D1) * (prev_state == 2) * np.exp((ep_trial-99)/8.0) ;; (phase == D1) * (prev_state == 2) * (prev_reward == 1) * np.exp((ep_trial-99)/8.0) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) * np.exp((ep_trial-99)/8.0) ;; (phase == D1) * (prev_state == 2) ;; (phase == D1) * (prev_action == 1) * (prev_state == 2) ;; (phase == D1) * value * np.exp((ep_trial-99)/8.0) ;; (phase == D1) * (prev_state == -1) * np.exp((ep_trial-99)/8.0)",
+    "better_terms_test_r2_beyond_timing": 0.6122
+  },
+  "final_label": "D1 update gate drops late in episode, most after reaching S2 (esp. rare a1->S2, rewarded); a1->S2 dip also mid-episode"
+}

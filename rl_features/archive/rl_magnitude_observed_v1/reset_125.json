@@ -1,0 +1,71 @@
+{
+  "label": "GO after a1-rare-unrewarded (S2 loss) following a non-reward, larger when belief favours S1",
+  "terms": "(phase == GO) * last_is(\"a1 S2 u\") ;; (phase == GO) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 1) ;; (phase == GO) * last_is(\"a1 S2 u\") * np.clip(belief_lo, -3, 3) ;; (phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (1 - last_is(\"a1 S2 u\")) ;; (phase == GO) * (prev_reward == 0) * (1 - last_is(\"a1 S2 u\")) * np.clip(belief_lo, -3, 3)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Active almost only at GO; D1 and D2 are ~0. The main driver is a previous trial of a1 -> S2 (rare) unrewarded: residual about +1.0 at GO there, and ~-0.11 after any rewarded trial. Within a1 S2 u its size depends on the trial before: it is near zero if that trial was rewarded (fitted -0.63, cancelling the +0.63 base), and it grows with the ideal-observer log-odds that S1 is good (+0.26 per unit, clipped at +/-3). So it is largest when the agent has lost twice in a row and still believes S1 is good, which is the situation where a model-based agent repeats a1. Other unrewarded trials add a little: +0.07 after two losses in a row and +0.05 per unit of belief_lo. Previous-trial pattern alone gives 0.48. These 5 observed-only terms give dev R^2 beyond timing 0.53 and test 0.50, against an all-cues ceiling of 0.54 (all observed 0.53). Model-output cues (policy decile 0.10) add almost nothing on top of the observed ceiling, so dropping value and policy costs very little. What is left unexplained is the variability of large GO activations (~1-2.4) after other unrewarded trials when the agent goes on to choose a1, which observed belief only captures roughly.",
+  "gate": "reset",
+  "feature": 125,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 125,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S2 u\")",
+      "(phase == GO) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 1)",
+      "(phase == GO) * last_is(\"a1 S2 u\") * np.clip(belief_lo, -3, 3)",
+      "(phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (1 - last_is(\"a1 S2 u\"))",
+      "(phase == GO) * (prev_reward == 0) * (1 - last_is(\"a1 S2 u\")) * np.clip(belief_lo, -3, 3)"
+    ],
+    "weights": [
+      0.6233560541680369,
+      -0.6270017908320741,
+      0.2618639605141045,
+      0.07490428914825509,
+      0.05416634320883055
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5017999521058512,
+    "r2": 0.5269665879666641,
+    "r2_timing_only": 0.05051512131961877
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 125,
+    "terms": [
+      "(phase == GO) * last_is(\"a1 S2 u\")",
+      "(phase == GO) * last_is(\"a1 S2 u\") * (tv(\"reward\", -2) == 1)",
+      "(phase == GO) * last_is(\"a1 S2 u\") * np.clip(belief_lo, -3, 3)",
+      "(phase == GO) * (prev_reward == 0) * (tv(\"reward\", -2) == 0) * (1 - last_is(\"a1 S2 u\"))",
+      "(phase == GO) * (prev_reward == 0) * (1 - last_is(\"a1 S2 u\")) * np.clip(belief_lo, -3, 3)"
+    ],
+    "weights": [
+      0.6233560541680369,
+      -0.6270017908320741,
+      0.2618639605141045,
+      0.07490428914825509,
+      0.05416634320883055
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5300195005720989,
+    "r2": 0.5549934382635137,
+    "r2_timing_only": 0.05313824237774767
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The main claim holds. At GO the residual after a1 S2 u is +1.01, against about -0.11 after any rewarded trial. At D1 and D2 the activation is about 0 (D2 timing baseline is exactly 0). The previous-trial table gives 0.48 on test, and the claimed terms reproduce dev 0.530 / test 0.502.",
+      "The claim 'if the trial before was rewarded, it is near zero' is wrong as stated. It comes from the parametrisation: the -0.63 weight only cancels the base at belief_lo = 0. Indicator terms alone give a1 S2 u with the trial before rewarded = +0.77 and with the trial before unrewarded = +1.66 (test 0.396). Splitting the earlier trial by choice: an a1 reward before a1 S2 u gives +0.79 to +0.81, and an a2 reward gives +0.001. So the activation is near zero only when the earlier reward came from a2, which is a switch from a rewarded a2 to a1 followed by a rare loss. It is not near zero after rewards in general.",
+      "The claim that it 'grows with belief_lo, +0.26 per unit' is mostly a stand-in for the two-back history. Once a1 S2 u is split by whether the trial before was unrewarded or a2-rewarded, the belief slope inside a1 S2 u falls to +0.08. Dropping belief entirely from the a1 S2 u terms raises test R^2 to 0.517, above the claimed 0.502. Belief matters much less than the label says.",
+      "There is a systematic gap the terms leave open. On the claimed terms, misses shows the worst windows are GO after a1 S1 u, a2 S2 u and a2 S1 u trials where the agent then picks a1: actual activations 1.2-2.4, predicted 0.03-0.3. This is also the most under-predicted cell (GO after a2 S1 u +0.049). Adding the future choice (action == 1 after a loss) lifts test only from 0.444 to 0.489. The observed belief terms catch only a small part. The explanation admits this, but it is a large error class in activation size.",
+      "A rough check on the explanation's '93% of ceiling' claim: the 'all' ceiling is 0.54, and the claimed 0.50 is reachable with simpler, more accurate observed-only terms. My 7-term set gives test 0.529."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO after an a1-rare-unrewarded trial (about 1.66 after two losses in a row, about 0.8 if an a1 reward came before, about 0 if an a2 reward came before); small rise after other losses when belief favours S1",
+    "better_terms": "(phase == GO) * last_is('a1 S2 u') ;; (phase == GO) * last_is('a1 S2 u') * (tv('reward', -2) == 1) * (tv('action', -2) == 2) ;; (phase == GO) * last_is('a1 S2 u') * (tv('reward', -2) == 0) ;; (phase == GO) * last_is('a1 S2 u') * (tv('reward', -2) == 0) * (tv('action', -2) == 2) ;; (phase == GO) * (prev_reward == 0) * (1 - last_is('a1 S2 u')) * (tv('reward', -2) == 0) ;; (phase == GO) * (prev_reward == 0) * (1 - last_is('a1 S2 u')) * np.clip(np.clip(belief_lo, -3, 3), 0, 3) ;; (phase == GO) * (prev_reward == 0) * (1 - last_is('a1 S2 u')) * (tv('action', -2) == 1) * (tv('reward', -2) == 1)",
+    "better_terms_test_r2_beyond_timing": 0.5291
+  },
+  "final_label": "GO after an a1-rare-unrewarded trial (about 1.66 after two losses in a row, about 0.8 if an a1 reward came before, about 0 if an a2 reward came before); small rise after other losses when belief favours S1"
+}

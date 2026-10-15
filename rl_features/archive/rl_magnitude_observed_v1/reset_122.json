@@ -1,0 +1,80 @@
+{
+  "label": "late-episode (trial>~85) D2 after a1->S1, growing with trial; larger after unrewarded/S2 trial",
+  "terms": "(phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 85, 0, 20) ;; (phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 85, 0, 20) * (prev_reward == 0) ;; (phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 85, 0, 20) * belief_lo ;; (phase == D2) * (ep_trial >= 70) ;; (phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 85, 0, 20) * (prev_state == 2) ;; (phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 85, 0, 20) * (prev_action == 2) ;; (phase == D2) * (1 - (action == 1) * (state == 1)) * (ep_trial >= 70)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 when the agent chose a1 and reached S1 (common), in the last ~15 trials of the episode; zero at D1/GO and at D2 for any other choice/state (a negative term removes the late-decile timing baseline from non-a1-S1 D2 steps). Magnitude grows roughly linearly with ep_trial past ~85 (about 0.02-0.07 per trial, reaching ~2-4 by trial 99). On a1-S1 D2 steps it is larger when the previous trial was unrewarded (about +0.03/trial), when the previous trial reached S2 (e.g. a1 S2 rare; about +0.13/trial past 85), and when the ideal-observer belief favours S1 (belief_lo, positive slope); it is smaller when the previous choice was a2 (switch to a1; about -0.14/trial). All terms are observed at D2 (action, state reached, previous trial, belief), no model outputs or future variables. Dev R^2 beyond timing 0.69 vs ~0.43 for the late-ramp a1-S1 term alone; profile 'all' additive-table ceiling is only 0.12 because those tables lack the within-decile episode ramp. The earlier value/policy description (low value, a1-leaning policy at D2) is replaced by observed quantities with no apparent loss (the profile showed value/policy deciles add ~0.04 as tables).",
+  "gate": "reset",
+  "feature": 122,
+  "test_scores": {
+    "gate": "reset",
+    "feature": 122,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 85, 0, 20)",
+      "(phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 85, 0, 20) * (prev_reward == 0)",
+      "(phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 85, 0, 20) * belief_lo",
+      "(phase == D2) * (ep_trial >= 70)",
+      "(phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 85, 0, 20) * (prev_state == 2)",
+      "(phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 85, 0, 20) * (prev_action == 2)",
+      "(phase == D2) * (1 - (action == 1) * (state == 1)) * (ep_trial >= 70)"
+    ],
+    "weights": [
+      0.0229929313206769,
+      0.03472235167182992,
+      0.023987650427027496,
+      0.023339704062615554,
+      0.12784302832568445,
+      -0.13575953421239292,
+      -0.20796320221381812
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7056918222756126,
+    "r2": 0.760589145116773,
+    "r2_timing_only": 0.18653006269017247
+  },
+  "dev_scores": {
+    "gate": "reset",
+    "feature": 122,
+    "terms": [
+      "(phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 85, 0, 20)",
+      "(phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 85, 0, 20) * (prev_reward == 0)",
+      "(phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 85, 0, 20) * belief_lo",
+      "(phase == D2) * (ep_trial >= 70)",
+      "(phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 85, 0, 20) * (prev_state == 2)",
+      "(phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 85, 0, 20) * (prev_action == 2)",
+      "(phase == D2) * (1 - (action == 1) * (state == 1)) * (ep_trial >= 70)"
+    ],
+    "weights": [
+      0.0229929313206769,
+      0.03472235167182992,
+      0.023987650427027496,
+      0.023339704062615554,
+      0.12784302832568445,
+      -0.13575953421239292,
+      -0.20796320221381812
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6860282194165287,
+    "r2": 0.7464126006171368,
+    "r2_timing_only": 0.19232423082224914
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The score reproduces: test R^2 beyond timing is 0.7057 with the 7 claimed terms. The core claims also hold. The feature is zero at D1 and GO, and the a1-S1 ramp at D2 is real: per-trial weights for a1-S1 at D2 rise steadily, about 0.15 at t84, 0.44 at t88, 0.68 at t92, 1.07 at t94, 1.48 at t96 and 1.76 at t98.",
+      "The claim 'larger when the previous trial was unrewarded' is wrong as a general statement. It comes almost entirely from one pattern, a1 S2 u (rare transition, unrewarded). Scored one at a time with the base ramp and the clearing term (test): last_is('a1 S2 u') gets +0.184 per trial (R^2 0.681). last_is('a1 S1 u') gets -0.097, so a common-unrewarded previous trial LOWERS the activation. last_is('a1 S2 r') is about +0.02. prev_reward==0 alone gives only 0.588.",
+      "The 'larger when the previous trial reached S2' claim is the same a1 S2 u effect described a second way. It is not a general S2 effect: last_is('a2 S2 u') is -0.02.",
+      "Belief adds little. Once the previous-trial pattern is modelled properly, the belief_lo weight drops to about 0.006. Dropping it changes test R^2 from 0.712 to 0.700, so the 'positive belief_lo slope' claim is weak.",
+      "'Zero at D2 for any other choice or state' is slightly overstated: a2->S1 (rare) D2 steps late in the episode sometimes fire, e.g. 0.36 at t98.",
+      "One systematic error class remains. The ramp starts at different times in different episodes: the worst-fit windows have about 3-3.9 at t92-93 a1-S1 D2 where about 1 is predicted. The prev_action==2 term also produces negative predictions, e.g. -0.83 at t99 against an actual 1.5. The misses tables still show under-prediction at D2 after a1 S2 u (+0.056)."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 after a1->S1, ramps over the last ~15 trials; strongly boosted when the previous trial was a1->S2 rare unrewarded (the model-based 'stay on a1' case), lowered after a1->S1 unrewarded or a switch from a2",
+    "better_terms": "B = (phase == D2) * (action == 1) * (state == 1) * np.clip(ep_trial - 85, 0, 20). Terms: B ;; B * last_is('a1 S2 u') ;; B * last_is('a1 S1 u') ;; B * (prev_action == 2) ;; B * belief_lo ;; (phase == D2) * (1 - (action == 1) * (state == 1)) * (ep_trial >= 70) ;; (phase == D2) * (action == 2) * (state == 1) * np.clip(ep_trial - 85, 0, 20) ;; B * last_is('a1 S2 r'). Fitted weights: +0.086, +0.170, -0.054, -0.050, +0.006, -0.166, -0.028, +0.055. Dev R^2 beyond timing 0.693, test 0.712. All terms are observed-only.",
+    "better_terms_test_r2_beyond_timing": 0.7122
+  },
+  "final_label": "D2 after a1->S1, ramps over the last ~15 trials; strongly boosted when the previous trial was a1->S2 rare unrewarded (the model-based 'stay on a1' case), lowered after a1->S1 unrewarded or a switch from a2"
+}

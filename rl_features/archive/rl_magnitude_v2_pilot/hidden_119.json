@@ -1,0 +1,112 @@
+{
+ "label": "Fires only at GO, graded by observed evidence that S2 is good (a2 preferred).",
+ "short_terms": "(phase == GO) * np.clip(-belief_lo, -3, 3) ;; (phase == GO) * (prev_action == 2) ;; (phase == GO) * last_is(\"a1 S1 u\")",
+ "terms": "(phase == GO) * (belief < 0.5) ;; (phase == GO) * np.clip(-belief_lo, -3, 3) ;; (phase == GO) * (prev_action == 2) ;; (phase == GO) * last_is(\"a2 S2 u\") ;; (phase == GO) * last_is(\"a1 S2 r\") ;; (phase == GO) * last_is(\"a2 S1 r\") ;; (phase == GO) * (tv(\"action\", -2) == 2) ;; (phase == GO) * (prev_action == 2) * (belief < 0.5)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Active essentially only at GO (zero at D1/D2). Its magnitude tracks the ideal observer belief that S2 is the good state: clipped -belief_lo alone gives dev R^2 0.74 beyond timing. Two last-trial corrections add a little: after a rare-rewarded a1->S2 trial it is lower than belief predicts, and after a rare-rewarded a2->S1 trial higher (the model stays with the previous choice more than the ideal observer after rare rewards). Short form dev 0.77; 8-term free fit (adds prev_action, a2 S2 u, belief sign, trial-before choice) only 0.78. Future reward and since-reversal add nothing; no future variables used.",
+ "full_test_scores": {
+  "gate": "hidden",
+  "feature": 119,
+  "terms": [
+   "(phase == GO) * (belief < 0.5)",
+   "(phase == GO) * np.clip(-belief_lo, -3, 3)",
+   "(phase == GO) * (prev_action == 2)",
+   "(phase == GO) * last_is(\"a2 S2 u\")",
+   "(phase == GO) * last_is(\"a1 S2 r\")",
+   "(phase == GO) * last_is(\"a2 S1 r\")",
+   "(phase == GO) * (tv(\"action\", -2) == 2)",
+   "(phase == GO) * (prev_action == 2) * (belief < 0.5)"
+  ],
+  "weights": [
+   -0.1030278545690349,
+   0.6662649937105142,
+   0.29186793347912376,
+   0.26359861126907624,
+   -1.0652526648561202,
+   1.1069885254124467,
+   0.029860940475867046,
+   -0.017842102550374002
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7635242583009558,
+  "r2": 0.8655862086655209,
+  "r2_timing_only": 0.4315958568573024
+ },
+ "gate": "hidden",
+ "feature": 119,
+ "test_scores": {
+  "gate": "hidden",
+  "feature": 119,
+  "terms": [
+   "(phase == GO) * np.clip(-belief_lo, -3, 3)",
+   "(phase == GO) * (prev_action == 2)",
+   "(phase == GO) * last_is(\"a1 S1 u\")"
+  ],
+  "weights": [
+   0.6220438627270739,
+   0.4512909051613416,
+   -1.5824745185604843
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7843624227228565,
+  "r2": 0.877430707658418,
+  "r2_timing_only": 0.4315958568573024
+ },
+ "dev_scores": {
+  "gate": "hidden",
+  "feature": 119,
+  "terms": [
+   "(phase == GO) * np.clip(-belief_lo, -3, 3)",
+   "(phase == GO) * (prev_action == 2)",
+   "(phase == GO) * last_is(\"a1 S1 u\")"
+  ],
+  "weights": [
+   0.6220438627270739,
+   0.4512909051613416,
+   -1.5824745185604843
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.7980035467112396,
+  "r2": 0.885274589496314,
+  "r2_timing_only": 0.4320424510638198
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The core claim holds. The feature is zero at D1 and D2 (all residuals there are about 1e-5). At GO it falls steadily across belief deciles, from +2.24 at decile 0 (sure S2 is good) to -1.98 at decile 9. Clipped -belief_lo on its own scores test R^2 0.722 (dev 0.744).",
+   "The recorded short form leaves a large systematic error. Running misses on it shows GO after 'a1 S1 u' over-predicted by -1.59, much the largest error class. The next largest is GO after 'a2 S2 u', under-predicted by +0.50. So after a common-unrewarded a1 trial the feature stays low, even though the ideal observer swings toward S2. The two rare-rewarded corrections it chose to add are smaller effects.",
+   "Replacing those two corrections with prev_action==2 and last_is('a1 S1 u') raises test R^2 from 0.754 to 0.784 (dev 0.798). That 3-term form beats the recorded 8-term free fit (test 0.764), so the claim that the free fit is near-optimal does not hold; its search was incomplete. Fitted weights: belief +0.62, prev a2 +0.45, a1 S1 u -1.58.",
+   "The explanation says both corrections lean toward repeating the previous choice. That is only partly right. The cleaner reading is a perseveration lean toward a2 after an a2 choice, plus a weak switch away from a1 after an unrewarded common a1 trial. Even after the fix, rare-rewarded trials still leave residuals: GO after a2 S1 r +0.89, after a1 S2 r -1.12. In both, the feature leans toward repeating more than the ideal observer would.",
+   "The label says nothing about the history corrections. A reader could predict the main sign from it, but not the a1 S1 u dip or the lean toward the previous choice."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Fires only at GO, graded by belief S2 is good; leans toward repeating a2, damped after a1-S1-unrewarded.",
+  "better_short_terms": "(phase == GO) * np.clip(-belief_lo, -3, 3) ;; (phase == GO) * (prev_action == 2) ;; (phase == GO) * last_is(\"a1 S1 u\")",
+  "better_short_terms_test_r2_beyond_timing": 0.7843624227228565
+ },
+ "final_label": "Fires only at GO, graded by belief S2 is good; leans toward repeating a2, damped after a1-S1-unrewarded.",
+ "original_short_terms": "(phase == GO) * np.clip(-belief_lo, -3, 3) ;; (phase == GO) * last_is(\"a1 S2 r\") ;; (phase == GO) * last_is(\"a2 S1 r\")",
+ "original_test_scores": {
+  "gate": "hidden",
+  "feature": 119,
+  "terms": [
+   "(phase == GO) * np.clip(-belief_lo, -3, 3)",
+   "(phase == GO) * last_is(\"a1 S2 r\")",
+   "(phase == GO) * last_is(\"a2 S1 r\")"
+  ],
+  "weights": [
+   0.6841292377590085,
+   -1.1112618055602945,
+   1.33066397270518
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7539105566012585,
+  "r2": 0.8601217407884749,
+  "r2_timing_only": 0.4315958568573024
+ },
+ "terms_from": "skeptic"
+}

@@ -1,0 +1,90 @@
+{
+  "label": "At GO, high after reward in S1, low after no reward in S2, tracks belief S1 good.",
+  "short_terms": "(phase == GO) * (prev_state == 1) * (prev_reward == 1) ;; (phase == GO) * (prev_state == 2) * (prev_reward == 0) ;; (phase == GO) * np.clip(belief_lo,-4,4)",
+  "terms": "(phase == GO) * (prev_state == 1) * (prev_reward == 1) ;; (phase == GO) * (prev_state == 2) * (prev_reward == 0) ;; (phase == GO) * np.clip(belief_lo,-4,4) ;; (phase == GO) * last_is(\"a2 S1 u\") ;; (phase == GO) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 1) ;; (phase == GO) * (tv(\"state\", -2) == 2) * (tv(\"reward\", -2) == 0) ;; (phase == GO) * (prev_action == 1) ;; (phase == D2) * (prev_reward == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw candidate n of unit 29 is saturated at D1 (~+0.98) and D2 (~-0.96); nearly all variance beyond timing is at GO. At GO it is an S1-is-good evidence signal keyed on the reached state and reward rather than on the choice: raised after the last trial was rewarded in S1 (either action; strongest after a1 S1 r), strongly lowered after the last trial was unrewarded in S2 (either action), and graded with the ideal-observer log-odds that S1 is good. It is not model-based stay/switch (a1 S2 u, which a model-based agent would follow with a1, pushes it down). The free fit adds the same state x reward evidence from the trial before (mostly S2 unrewarded two trials back lowering it) and small terms, going from ~0.69 to ~0.73 dev. Future reward and hidden reversal timing add essentially nothing.",
+  "full_test_scores": {
+    "gate": "unit_candidate",
+    "feature": 29,
+    "terms": [
+      "(phase == GO) * (prev_state == 1) * (prev_reward == 1)",
+      "(phase == GO) * (prev_state == 2) * (prev_reward == 0)",
+      "(phase == GO) * np.clip(belief_lo,-4,4)",
+      "(phase == GO) * last_is(\"a2 S1 u\")",
+      "(phase == GO) * (tv(\"state\", -2) == 1) * (tv(\"reward\", -2) == 1)",
+      "(phase == GO) * (tv(\"state\", -2) == 2) * (tv(\"reward\", -2) == 0)",
+      "(phase == GO) * (prev_action == 1)",
+      "(phase == D2) * (prev_reward == 0)"
+    ],
+    "weights": [
+      0.3311573820650836,
+      -0.4289594598405072,
+      0.07504243312905533,
+      -0.0014050516684316978,
+      0.0798693218984472,
+      -0.22120302446687348,
+      -0.04789837295933104,
+      0.02467694059423346
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7253177466630482,
+    "r2": 0.9806902183783743,
+    "r2_timing_only": 0.929701386285271
+  },
+  "gate": "unit_candidate",
+  "feature": 29,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 29,
+    "terms": [
+      "(phase == GO) * (prev_state == 1) * (prev_reward == 1)",
+      "(phase == GO) * (prev_state == 2) * (prev_reward == 0)",
+      "(phase == GO) * np.clip(belief_lo,-4,4)"
+    ],
+    "weights": [
+      0.29010597042525044,
+      -0.46988189565544114,
+      0.07487798032780331
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6818543432299236,
+    "r2": 0.9776348013697016,
+    "r2_timing_only": 0.929701386285271
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 29,
+    "terms": [
+      "(phase == GO) * (prev_state == 1) * (prev_reward == 1)",
+      "(phase == GO) * (prev_state == 2) * (prev_reward == 0)",
+      "(phase == GO) * np.clip(belief_lo,-4,4)"
+    ],
+    "weights": [
+      0.29010597042525044,
+      -0.46988189565544114,
+      0.07487798032780331
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6936103929944787,
+    "r2": 0.9781679678843443,
+    "r2_timing_only": 0.9287442145018245
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Minor systematic error: misses on the short form over-predict GO after rare rewarded trials (a2 S1 r by -0.139, a1 S2 r by -0.125). Adding (phase==GO)*(prev_common==0)*(prev_reward==1) gets weight -0.15 but only lifts test R^2 from 0.682 to 0.693, so this is a small correction, not a missing mechanism. The label and explanation do not mention it.",
+      "'Either action' mostly holds. With belief controlled, last_is weights at GO are a1 S1 r +0.33, a2 S1 r +0.15, a1 S2 u -0.51, a2 S2 u -0.43. All the signs match the claim, but a2 S1 r is about half as strong (the explanation does say a1 S1 r is strongest).",
+      "Each part checks out on test: belief_lo alone gives 0.33 and the two state-by-reward terms alone give 0.50; together they give 0.68. Swapping the belief term for prev_action==1 drops it to 0.52, and widening the second term to all unrewarded trials drops it to 0.63. That supports reading it as evidence from state and reward rather than from the choice.",
+      "Swapping term 1 for last_is('a1 S1 r') gives 0.684, essentially the same, so it is not worth replacing. D1 and D2 residuals are all below 0.035, which supports the claim that the variance is GO-only."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  }
+}

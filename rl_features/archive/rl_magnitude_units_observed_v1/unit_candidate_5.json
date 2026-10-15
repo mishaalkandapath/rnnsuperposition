@@ -1,0 +1,75 @@
+{
+  "label": "a2-vs-a1 preference: high when belief favors S2 / last chose a2",
+  "terms": "np.tanh(belief_lo) ;; (phase==D1)*np.tanh(belief_lo) ;; (phase==D2)*(action==2) ;; (prev_action==2) ;; (phase==D1)*(prev_reward==0)*(prev_action==1) ;; (phase==D1)*(prev_reward==1)*(prev_action==2)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw candidate n of unit 5 is a signed choice-preference signal: positive (up to ~+1) when the agent leans toward a2/S2, negative (to ~-1) when it leans a1/S1, at all phases. Observed-only drivers: the ideal-observer belief log-odds (tanh(belief_lo), strongly negative weight; somewhat weaker at D1), the previous choice being a2 (+), at D2 the choice just made being a2 (+), and at D1 the just-shown outcome of the last trial: after an unrewarded a1 trial it drops sharply (about -0.9 extra, regardless of the state reached), after a rewarded a2 trial it rises (+0.3). Test R^2 beyond timing 0.755 (dev 0.771), vs observed-only reference ceiling 0.88 and all ceiling 0.96; the policy-decile reference alone gets 0.83, so using observed quantities instead of the model policy loses roughly 0.08-0.2. Residual errors: windows where the agent persists with a choice the belief contradicts (its own internal belief lags the ideal observer), D1 after a1 S2 u is over-predicted negative. Reward of the current trial (future) adds nothing (reference 0.00).",
+  "gate": "unit_candidate",
+  "feature": 5,
+  "test_scores": {
+    "gate": "unit_candidate",
+    "feature": 5,
+    "terms": [
+      "np.tanh(belief_lo)",
+      "(phase==D1)*np.tanh(belief_lo)",
+      "(phase==D2)*(action==2)",
+      "(prev_action==2)",
+      "(phase==D1)*(prev_reward==0)*(prev_action==1)",
+      "(phase==D1)*(prev_reward==1)*(prev_action==2)"
+    ],
+    "weights": [
+      -0.5775546927328644,
+      0.36671337836691476,
+      0.17772879074257306,
+      0.2082198359483445,
+      -0.8829711033423319,
+      0.3082603457552289
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7551712348388864,
+    "r2": 0.768779927419484,
+    "r2_timing_only": 0.05558453301695221
+  },
+  "dev_scores": {
+    "gate": "unit_candidate",
+    "feature": 5,
+    "terms": [
+      "np.tanh(belief_lo)",
+      "(phase==D1)*np.tanh(belief_lo)",
+      "(phase==D2)*(action==2)",
+      "(prev_action==2)",
+      "(phase==D1)*(prev_reward==0)*(prev_action==1)",
+      "(phase==D1)*(prev_reward==1)*(prev_action==2)"
+    ],
+    "weights": [
+      -0.5775546927328644,
+      0.36671337836691476,
+      0.17772879074257306,
+      0.2082198359483445,
+      -0.8829711033423319,
+      0.3082603457552289
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7712284649389057,
+    "r2": 0.7837833754465956,
+    "r2_timing_only": 0.05487968817596567
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The test R^2 replicates exactly (0.755). The main claims hold: tanh(belief_lo) has a weight of -0.58, smaller at D1 (+0.37 offset); prev_action==2 +0.21; D2 action==2 +0.18; at D1 an unrewarded a1 trial gives -0.88 and a rewarded a2 trial +0.31. 'Whichever state was reached' also holds: splitting the term into a1 S1 u (-0.85) and a1 S2 u (-0.91) gives no gain (0.755).",
+      "Overclaim: the unrewarded-a1 drop is not D1-only. It carries into GO and D2. Adding (phase!=D1)*(prev_reward==0)*(prev_action==1) gets weight -0.34 and raises test R^2 from 0.755 to 0.774. Misses on the original terms show it as a systematic over-prediction: GO after a1 S1 u -0.36, D2 after a1 S2 u -0.34, D2 after a1 S1 u -0.28 (actual is more negative than predicted).",
+      "Second systematic class: after a rare-rewarded a2 trial (a2 S1 r) the unit stays high, unlike a model-based switch. Under-predictions: GO +0.24, D2 +0.23, and D1 +0.20 even with refined terms. Also GO after a2 S2 u +0.19. The unit holds on to the previous a2 choice more than the ideal-observer belief predicts. The explanation does not mention this; it puts the residual down to a vaguely described 'internal belief lag'.",
+      "The belief response saturates: tanh(2*belief_lo) plus tanh(belief_lo/3) fits better than a single tanh(belief_lo).",
+      "Even the improved terms (0.785) are about 0.1 below the observed-only ceiling of 0.88. The worst windows are runs where the unit sits at about -0.8 (a1-leaning) while every term predicts positive, so part of the agent's preference is not captured by the ideal observer or by last-trial history."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "signed a2-vs-a1 preference: tracks the ideal belief (saturating) plus stickiness to the last choice; drops after unrewarded a1 trials (strongly at D1, persisting through GO and D2); stays high after rare-rewarded a2",
+    "better_terms": "np.tanh(2*belief_lo) ;; (phase==D1)*np.tanh(belief_lo) ;; (phase==D2)*(action==2) ;; (prev_action==2) ;; (prev_reward==0)*(prev_action==1) ;; (phase==D1)*(prev_reward==0)*(prev_action==1) ;; last_is('a2 S1 r')+(phase==D1)*(prev_reward==1)*(prev_action==2) ;; np.tanh(belief_lo/3)",
+    "better_terms_test_r2_beyond_timing": 0.785
+  },
+  "final_label": "signed a2-vs-a1 preference: tracks the ideal belief (saturating) plus stickiness to the last choice; drops after unrewarded a1 trials (strongly at D1, persisting through GO and D2); stays high after rare-rewarded a2"
+}

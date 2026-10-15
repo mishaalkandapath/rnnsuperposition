@@ -1,0 +1,64 @@
+{
+  "label": "D2: reached S2 while the agent does not strongly prefer a2 (S2 unexpected / S1 believed good)",
+  "predicate": "(phase == D2) & (state == 2) & (choice > -1)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 and only when the reached state is S2 (100% of mass; never at D1/GO, never on S1). Within S2 arrivals it is gated by the agent belief: it fires when the policy logit at that step is not strongly a2-favouring (choice > -1), i.e. S2 arrives while the agent leans toward a1/S1. Hence highest on rare transitions after choosing a1 (a1->S2, rate high, 81% of mass) and on common a2->S2 when S1 is the good state (good==1 lifts 1.7x); silent on S2 when the agent firmly believes S2 is good. Simpler observed-history predicate D2 & S2 & (action==1 | prev_action==1) gets F1 0.82; D2 & S2 & a1 (rare a1->S2) gets F1 0.78 with precision 0.86. Magnitude is largest for a1->S2 rare and for S2 arrivals after a1 history; coverage of the top quartile is 100%. Misses are mostly weak activations near window start. All variables are observed or model-computed (choice is the model own logit), no future variables.",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 30,
+    "predicate": "(phase == D2) & (state == 2) & (choice > -1)",
+    "split": "test",
+    "precision": 0.8340491871082689,
+    "recall": 0.869399396411634,
+    "f1": 0.8513574954533646,
+    "mass_recall": 0.9455477852519748,
+    "correlation": 0.8120806427585178,
+    "n_active": 60306,
+    "n_predicted": 62862,
+    "coverage_by_activation_quartile": [
+      0.6258539497247463,
+      0.8723884061816011,
+      0.9800344919076678,
+      0.9993366940833113
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 30,
+    "predicate": "(phase == D2) & (state == 2) & (choice > -1)",
+    "split": "dev",
+    "precision": 0.8554808686659773,
+    "recall": 0.884050227090569,
+    "f1": 0.8695309420575483,
+    "mass_recall": 0.9531560443082063,
+    "correlation": 0.829522574717698,
+    "n_active": 56145,
+    "n_predicted": 58020,
+    "coverage_by_activation_quartile": [
+      0.6530597706062549,
+      0.9018238814477059,
+      0.9822599031062981,
+      0.9990738102023369
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 30,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Most of the factual claims hold. On dev, phase share is D1 0 / GO 0 / D2 1.000, and in_state==2 carries all of the mass, so the unit never fires at D1, at GO, or on S1. in_action==a1 holds 80.6% of the mass. good==S1 has 1.7x lift. Test scores reproduce exactly: P 0.834, R 0.869, F1 0.851, MR 0.946. The top quartile is covered at 0.999. The simpler predicates score as claimed: D2&S2&a1 gives P 0.865 / F1 0.776, D2&S2&(a1|prev a1) gives F1 0.816, and the choice > -1.52 cut gives F1 0.872.",
+      "Systematic false-positive class: the trial right after S1 went unrewarded (prev_state==1 & prev_reward==0). Inside the predicate, this slice has precision 0.465 on 8493 steps, which is about 4.5k of the roughly 8.4k dev false positives, and only 3.1% of the mass. For the core case the label stresses, rare a1->S2 after an unrewarded S1 trial, precision is 0.388 and mass is 0.008. So 'strongest on rare a1->S2' depends on S1 having just paid off, and the choice logit does not capture this. Excluding the slice raises dev precision from 0.855 to 0.922 with F1 about the same (0.865).",
+      "The S2-arrival effect depends on the previous outcome. With prev_state==1 & prev_reward==1, precision is 0.970. With prev_state==1 & prev_reward==0, it is 0.465. With prev_reward==1 overall it is 0.969, against 0.732 for prev_reward==0. This fits 'S1 believed good' only if belief is read as recent S1 reward. The choice-logit gate is a stand-in for that belief, not the belief itself.",
+      "The label overclaims a little with 'S2 is unexpected'. About 6% of the mass (D2&S2&a2, MR 0.06) comes from common a2->S2, where S2 is the expected result of the action. Also, 'choice' at D2 is the policy readout of the same hidden state that contains this unit, so gating on it is partly circular. The observed-only predicates (a1 / prev a1) reach only F1 of about 0.78-0.82.",
+      "The misses (active but choice <= -1, about 12% of active steps, 5.4% of the mass) are low activations: first-quartile coverage is 0.63. They look scattered, with no clear pattern."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 arrival at S2 while the agent favours a1/S1 (mostly rare a1->S2), suppressed when S1 has just gone unrewarded",
+    "better_predicate": "(phase == 2) & (state == 2) & (choice > -1.5) & ~((prev_state==1) & (prev_reward==0) & (choice < 0))",
+    "better_predicate_test_f1": 0.86
+  },
+  "final_label": "D2 arrival at S2 while the agent favours a1/S1 (mostly rare a1->S2), suppressed when S1 has just gone unrewarded"
+}

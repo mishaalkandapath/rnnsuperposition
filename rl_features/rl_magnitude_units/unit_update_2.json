@@ -1,0 +1,113 @@
+{
+ "label": "Higher when belief favours S2 and the latest choice was a2; lower after unrewarded a1.",
+ "short_terms": "belief_lo ;; (np.where(phase == D2, action, prev_action) == 2) ;; (prev_action == 1) * (prev_reward == 0)",
+ "terms": "belief_lo ;; (prev_action == 2) * (phase != D2) ;; (action == 2) * (phase == D2) ;; belief_lo*ep_dec ;; (prev_action == 2) * (phase != D2) *ep_dec ;; (action == 2) * (phase == D2)*ep_dec ;; (prev_reward==1)*ep_dec ;; (prev_reward==1)",
+ "verdict": "explained",
+ "confidence": "medium",
+ "uses_future": false,
+ "explanation": "Raw update gate z of unit 2 is dominated by a timing decay (near 0.9 early in the episode, falling to about 0.25 late; timing alone R^2 0.84). Beyond timing it is raised when the ideal observer believes S2 is good (negative belief_lo, graded, about equally in all phases) and when the most recent choice was a2 (prev_action at D1/GO, this trial s choice once it is shown at D2), and lowered at GO/D2 after an unrewarded a1 trial (especially a1 S2 u). It is thus an a2/S2-side bias, not a reward signal: this trial s future reward adds nothing (ref 0.00) and hidden time since reversal adds nothing. The free fit adds scaling of these effects with episode decile and a prev-reward term, a small gain (dev 0.446 vs short 0.419). Remaining errors are mostly late-episode windows where the activation is low and varies by episode in ways no observed cue captures. The action at D2 is observed at that step (in_action), so no future variables are used.",
+ "full_test_scores": {
+  "gate": "unit_update",
+  "feature": 2,
+  "terms": [
+   "belief_lo",
+   "(prev_action == 2) * (phase != D2)",
+   "(action == 2) * (phase == D2)",
+   "belief_lo*ep_dec",
+   "(prev_action == 2) * (phase != D2) *ep_dec",
+   "(action == 2) * (phase == D2)*ep_dec",
+   "(prev_reward==1)*ep_dec",
+   "(prev_reward==1)"
+  ],
+  "weights": [
+   -0.0038650241204187725,
+   0.03772512550954782,
+   0.0603776066120522,
+   -0.0016791111417304833,
+   8.119816864166586e-05,
+   -0.0015790769049545596,
+   0.0015883804407029773,
+   0.023807164618835287
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.46360548722660677,
+  "r2": 0.9136133181262497,
+  "r2_timing_only": 0.8389493557137757
+ },
+ "gate": "unit_update",
+ "feature": 2,
+ "test_scores": {
+  "gate": "unit_update",
+  "feature": 2,
+  "terms": [
+   "belief_lo",
+   "(np.where(phase == D2, action, prev_action) == 2)",
+   "(prev_action == 1) * (prev_reward == 0)"
+  ],
+  "weights": [
+   -0.01211127969858012,
+   0.02941413047650798,
+   -0.05511686125248497
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.4374496854371993,
+  "r2": 0.9094009093962427,
+  "r2_timing_only": 0.8389493557137757
+ },
+ "dev_scores": {
+  "gate": "unit_update",
+  "feature": 2,
+  "terms": [
+   "belief_lo",
+   "(np.where(phase == D2, action, prev_action) == 2)",
+   "(prev_action == 1) * (prev_reward == 0)"
+  ],
+  "weights": [
+   -0.01211127969858012,
+   0.02941413047650798,
+   -0.05511686125248497
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.4319878857606254,
+  "r2": 0.9099078799499604,
+  "r2_timing_only": 0.8413904953934264
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The (phase != D1) restriction on the unrewarded-a1 term is wrong. The profile shows the drop at D1 as well: D1 residual after a1 S1 u is -0.077 and after a1 S2 u is -0.078, against -0.05 after a1 S1 r. Running misses on the recorded short form, the single largest systematic error is 'D1 after a1 S1 u' over-predicted by -0.064. With the restriction removed, (prev_action == 1) * (prev_reward == 0), test R^2 goes from 0.424 to 0.437 (dev 0.432), and that D1 error class goes away. So the explanation's claim that it 'drops at GO and D2' is inaccurate: it drops in all three phases.",
+   "The claim 'most of all after a1 S2 u' is only weakly supported. Using last_is('a1 S2 u') as the third term scores 0.428 on test, and adding prev_state == 2 to the a1-unrewarded term also gives 0.428. Both are below the plain a1-unrewarded term (0.437).",
+   "The third term adds little in any form. The first two terms alone score 0.395 on test, so the unrewarded-a1 effect is a small extra.",
+   "Belief being 'graded': belief_lo scores 0.437 and tanh(belief_lo) 0.436, against 0.425 for the sign alone (belief_lo > 0). Graded is slightly better, so the claim holds.",
+   "The D2-action switch holds up: prev_action alone at every phase scores 0.410, the np.where version 0.424.",
+   "The remaining errors after the fix are small (|error| <= 0.05). One residual pattern: steps after reaching S1 are slightly under-predicted and steps after reaching S2 slightly over-predicted. The worst windows are late-episode, where the level shifts for a whole episode. Scaling the terms by ep_trial gets 0.453 on test but only 0.433 on dev, so that gain is not reliable."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Higher when belief favours S2 and the latest choice was a2; lower after unrewarded a1, all phases.",
+  "better_short_terms": "belief_lo ;; (np.where(phase == D2, action, prev_action) == 2) ;; (prev_action == 1) * (prev_reward == 0)",
+  "better_short_terms_test_r2_beyond_timing": 0.4374
+ },
+ "final_label": "Higher when belief favours S2 and the latest choice was a2; lower after unrewarded a1, all phases.",
+ "original_short_terms": "belief_lo ;; (np.where(phase == D2, action, prev_action) == 2) ;; (phase != D1) * (prev_action == 1) * (prev_reward == 0)",
+ "original_test_scores": {
+  "gate": "unit_update",
+  "feature": 2,
+  "terms": [
+   "belief_lo",
+   "(np.where(phase == D2, action, prev_action) == 2)",
+   "(phase != D1) * (prev_action == 1) * (prev_reward == 0)"
+  ],
+  "weights": [
+   -0.012115262691012624,
+   0.03401910362016234,
+   -0.05417826134789377
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.42418869000328663,
+  "r2": 0.9072652175377345,
+  "r2_timing_only": 0.8389493557137757
+ },
+ "terms_from": "skeptic"
+}

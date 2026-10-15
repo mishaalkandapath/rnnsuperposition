@@ -1,0 +1,92 @@
+{
+  "label": "Late in the episode, update gate drops at GO/D2 when belief favors S1 or after no reward.",
+  "short_terms": "(phase != D1) * belief_lo * (ep_trial >= 80) ;; (phase != D1) * (prev_reward == 0) * (ep_trial >= 80) ;; (phase != D1) * last_is(\"a1 S2 u\") * (ep_trial >= 70)",
+  "terms": "(phase != D1) * belief_lo * (ep_trial >= 80) ;; (phase != D1) * belief_lo * (ep_trial >= 90) ;; (phase == D2) * belief_lo * (ep_trial >= 80) ;; (phase != D1) * (prev_reward == 0) * (ep_trial >= 80) ;; (phase != D1) * (prev_reward == 0) * (ep_trial >= 90) ;; (phase != D1) * (tv(\"reward\",-2) == 0) * (ep_trial >= 80) ;; (phase != D1) * last_is(\"a1 S2 u\") ;; (phase == D2) * (action == 1) * (ep_trial >= 80)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "z20 sits near 1 and drops mostly late in the episode (last 20 trials), at GO and D2; D1 hardly moves. Beyond timing, those late drops get deeper when the ideal observer believes S1 is good (belief_lo > 0; at D2 that matches having chosen a1), after an unrewarded trial, and especially after a1 -> S2 unrewarded (a rare-unrewarded trial, which is evidence for S1). The free fit adds terms for the last 10 trials, the trial-before reward and a D2 a1-choice term (test 0.46 vs 0.40 short, 88%). Some episodes stay low for many late trials in a way no observed cue predicts, so part of the variance looks like per-episode state.",
+  "full_test_scores": {
+    "gate": "unit_update",
+    "feature": 20,
+    "terms": [
+      "(phase != D1) * belief_lo * (ep_trial >= 80)",
+      "(phase != D1) * belief_lo * (ep_trial >= 90)",
+      "(phase == D2) * belief_lo * (ep_trial >= 80)",
+      "(phase != D1) * (prev_reward == 0) * (ep_trial >= 80)",
+      "(phase != D1) * (prev_reward == 0) * (ep_trial >= 90)",
+      "(phase != D1) * (tv(\"reward\",-2) == 0) * (ep_trial >= 80)",
+      "(phase != D1) * last_is(\"a1 S2 u\")",
+      "(phase == D2) * (action == 1) * (ep_trial >= 80)"
+    ],
+    "weights": [
+      -0.011257011096632102,
+      -0.017176807218150413,
+      -0.02540618222069235,
+      -0.03400134331097499,
+      -0.045911974345837527,
+      -0.010660957357822527,
+      -0.07713880116516604,
+      -0.0016116279206340772
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.4567723922231959,
+    "r2": 0.7707236234226797,
+    "r2_timing_only": 0.5779368108413167
+  },
+  "gate": "unit_update",
+  "feature": 20,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 20,
+    "terms": [
+      "(phase != D1) * belief_lo * (ep_trial >= 80)",
+      "(phase != D1) * (prev_reward == 0) * (ep_trial >= 80)",
+      "(phase != D1) * last_is(\"a1 S2 u\") * (ep_trial >= 70)"
+    ],
+    "weights": [
+      -0.030086867423779386,
+      -0.040473303986348096,
+      -0.157697495530214
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.40182140174068615,
+    "r2": 0.7475308331322033,
+    "r2_timing_only": 0.5779368108413167
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 20,
+    "terms": [
+      "(phase != D1) * belief_lo * (ep_trial >= 80)",
+      "(phase != D1) * (prev_reward == 0) * (ep_trial >= 80)",
+      "(phase != D1) * last_is(\"a1 S2 u\") * (ep_trial >= 70)"
+    ],
+    "weights": [
+      -0.030086867423779386,
+      -0.040473303986348096,
+      -0.157697495530214
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.3849317871884562,
+    "r2": 0.7489115895590936,
+    "r2_timing_only": 0.5917714406128161
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The label leaves out the biggest effect. The a1->S2 unrewarded term has a fitted weight of -0.158, against -0.030 for belief_lo and -0.040 for no reward. With only that term dropped, test R^2 beyond timing falls from 0.40 to 0.34. A reader of the label alone would not expect the very deep drop after a1 S2 u. The profile residual after a1 S2 u is -0.10 at GO and at D2; the matching S2-favoring case a2 S1 u gives +0.02 to +0.05.",
+      "The ep_trial >= 70 gate on the third term is a tuned threshold. Using >= 80 gives test 0.386 and removing the gate gives 0.392, against 0.402 recorded. It is a small amount of curve fitting but harmless.",
+      "Misses on the short form show a moderate systematic error tied to the previous choice. The model under-predicts after a2 at D2 (+0.023 to +0.035) and over-predicts after a1 (-0.024 to -0.036 at D2, -0.032 at GO after a1 S2 u). Terms for previous action or current action do not fix this: test 0.343 to 0.351 against 0.342 for the first two terms alone.",
+      "The worst-fit windows are late episodes where z stays low (0.1 to 0.5) for many trials in a row, at D1 as well (D1 values of 0.43 to 0.75 in those windows). Per-episode internal state looks like the cause, as the explanation already says. On average D1 is small: adding D1 belief and no-reward terms only raises test from 0.402 to 0.412.",
+      "Every other claim checks out. Tests below are on the test split, R^2 beyond timing. Belief_lo late at GO/D2 alone gives 0.30. No reward adds about 0.04. The 'late in episode' gating is real: without the time gates the same three terms give only 0.215. No future variables are used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "Late-episode update gate dips at GO/D2, deepest after a1->S2 unrewarded, also with S1 belief or no reward.",
+    "better_short_terms": null,
+    "better_short_terms_test_r2_beyond_timing": null
+  },
+  "final_label": "Late-episode update gate dips at GO/D2, deepest after a1->S2 unrewarded, also with S1 belief or no reward."
+}

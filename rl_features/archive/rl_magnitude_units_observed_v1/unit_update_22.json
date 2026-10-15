@@ -1,0 +1,80 @@
+{
+  "label": "GO-phase a2 lean: high after unrewarded a2 trials and when belief favors S2",
+  "terms": "(phase == GO) * np.clip(belief_lo, -4, 4) ;; (phase == GO) * (prev_reward == 0) * np.clip(belief_lo, -4, 4) ;; (phase == GO) * (prev_action == 2) * (prev_reward == 0) ;; (phase == GO) * last_is(\"a2 S1 u\") ;; (phase == GO) * (prev_action == 1) * (prev_reward == 1) ;; (phase == D1) * (prev_common == 0) * table(prev_action, {1: -1, 2: 1}) ;; (phase != D2) * (prev_reward == 0)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 22. Timing dominates (D2 ~0.98 saturated, D1 ~0.25, GO ~0.15-0.22; timing R^2 0.94). Beyond timing the variance is mostly at GO and tracks an observed-only a2/S2 lean: z rises when the ideal-observer belief favors S2 (negative belief_lo, steeper after an unrewarded trial), after an unrewarded a2 trial (+0.10), especially a2 -> S1 unrewarded (extra +0.06; total about +0.3 in the residual table), and falls after a rewarded a1 trial (-0.07). At D1 it is shifted by the previous rare transition (+0.08 after a2->S1 rare, -0.08 after a1->S2 rare); there is a small +0.03 lift after any unrewarded trial at D1/GO. D2 is saturated and barely varies. No future, hidden or model-output terms. Test R^2 beyond timing 0.63 (dev 0.64), vs all-observed reference 0.74 and all ceiling 0.83; the model policy decile alone gave 0.56, so dropping the model value/policy loses little: belief plus last-trial history covers it. Remaining misses are small (<0.04) per previous-trial cell.",
+  "gate": "unit_update",
+  "feature": 22,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 22,
+    "terms": [
+      "(phase == GO) * np.clip(belief_lo, -4, 4)",
+      "(phase == GO) * (prev_reward == 0) * np.clip(belief_lo, -4, 4)",
+      "(phase == GO) * (prev_action == 2) * (prev_reward == 0)",
+      "(phase == GO) * last_is(\"a2 S1 u\")",
+      "(phase == GO) * (prev_action == 1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_common == 0) * table(prev_action, {1: -1, 2: 1})",
+      "(phase != D2) * (prev_reward == 0)"
+    ],
+    "weights": [
+      -0.019675167847194294,
+      -0.023091918849620967,
+      0.10001274328219024,
+      0.05771876062765398,
+      -0.06682842163726523,
+      0.08457199084950831,
+      0.027877323475865582
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.6282418051267052,
+    "r2": 0.9760936500736197,
+    "r2_timing_only": 0.9356938185733115
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 22,
+    "terms": [
+      "(phase == GO) * np.clip(belief_lo, -4, 4)",
+      "(phase == GO) * (prev_reward == 0) * np.clip(belief_lo, -4, 4)",
+      "(phase == GO) * (prev_action == 2) * (prev_reward == 0)",
+      "(phase == GO) * last_is(\"a2 S1 u\")",
+      "(phase == GO) * (prev_action == 1) * (prev_reward == 1)",
+      "(phase == D1) * (prev_common == 0) * table(prev_action, {1: -1, 2: 1})",
+      "(phase != D2) * (prev_reward == 0)"
+    ],
+    "weights": [
+      -0.019675167847194294,
+      -0.023091918849620967,
+      0.10001274328219024,
+      0.05771876062765398,
+      -0.06682842163726523,
+      0.08457199084950831,
+      0.027877323475865582
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.6406118005379395,
+    "r2": 0.9767112369774787,
+    "r2_timing_only": 0.935198865579392
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The stated scores reproduce exactly: test R^2 beyond timing is 0.628 (timing-only 0.936). Dropping any single term costs 0.01-0.06 (drop belief_lo*prev_unrewarded -> 0.577, drop last_is('a2 S1 u') -> 0.570, drop (phase!=D2)*unrewarded -> 0.565, drop D1 rare term -> 0.592), so every term contributes.",
+      "The D1 rare-transition claim needs a qualifier because it depends on reward for a2. The D1 residual table shows a2 S1 r at only +0.040 against a2 S1 u at +0.104, and misses reports D1 after a2 S1 r over-predicted by -0.037. The symmetric '+0.08 after a2->S1' holds mainly for unrewarded trials.",
+      "The claim that any unrewarded trial adds +0.03 at D1 is shaky. The D1 residual after a2 S2 u is -0.014, and misses over-predicts D1 after a2 S2 u by -0.034 and GO after a1 S1 u by -0.042. Those are the largest cell errors, but they are still small (<=0.042).",
+      "There is a remaining gap of about 0.11 to the all-observed reference (0.74), and I could not close it with simple terms. Adding 2-back history, a2 streaks, a belief nonlinearity (tanh, squared), belief_cover interactions or D1/D2 belief each gave <=0.004. The best single addition, (phase==GO)*ep_dec*clip(belief_lo), reached only 0.640. So the gap is spread out, not one systematic class.",
+      "The worst-fit windows are late-episode runs of unrewarded a2 trials (mostly a2->S1 rare unrewarded), where GO z reaches 0.85-0.9 against a prediction of about 0.53. That is a real under-prediction for the most extreme 'stuck on a2' runs. Streak terms recover almost none of it on average, so it is rare rather than systematic.",
+      "'Loses little' versus the model's policy is loosely supported. The only comparison given is policy decile alone (0.56) against 7 observed terms (0.63). The earlier policy-based explanation's own score is not reported, so the size of the loss is not actually quantified."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "GO-phase a2 lean: z rises when the observed belief favours S2 (more so after no reward) and after unrewarded a2 trials (most after a2->S1 unrewarded), falls after rewarded a1; small D1 bump after rare unrewarded a2->S1 and dip after a1->S2",
+    "better_terms": "(phase == GO) * np.clip(belief_lo, -4, 4) ;; (phase == GO) * (prev_reward == 0) * np.clip(belief_lo, -4, 4) ;; (phase == GO) * (prev_action == 2) * (prev_reward == 0) ;; (phase == GO) * last_is('a2 S1 u') ;; (phase == GO) * (prev_action == 1) * (prev_reward == 1) ;; (phase == D1) * (prev_common == 0) * table(prev_action, {1: -1, 2: 1}) ;; (phase != D2) * (prev_reward == 0) ;; (phase == GO) * ep_dec * np.clip(belief_lo, -4, 4)",
+    "better_terms_test_r2_beyond_timing": 0.6404
+  },
+  "final_label": "GO-phase a2 lean: z rises when the observed belief favours S2 (more so after no reward) and after unrewarded a2 trials (most after a2->S1 unrewarded), falls after rewarded a1; small D1 bump after rare unrewarded a2->S1 and dip after a1->S2"
+}

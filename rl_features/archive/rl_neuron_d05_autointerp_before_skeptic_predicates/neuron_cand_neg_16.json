@@ -1,0 +1,66 @@
+{
+  "label": "D2 after a repeated common a2->S2 transition (mid-episode, trials ~25-79)",
+  "predicate": "(phase == D2) & (action == 2) & (state == 2) & (prev_common != 0) & (prev_action != 1) & (ep_trial >= 25) & (ep_trial < 80)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2, and only when the agent chose a2 and reached S2 through a common transition (never on a1, S1, or rare trials). It also needs the previous trial to have been a common a2->S2 trial as well (prev_action 2 with prev_common 1, or unknown at the window start): it almost never fires after a1 or after a rare transition. All predicate variables can be observed at D2. There is a strong episode-time dependence: the unit is nearly silent before trial ~20 and from trial 80 on, and its rate peaks at trials 40-79. Adding the window 25 <= ep_trial < 80 raises dev F1 from 0.67 to 0.83 (P 0.77, R 0.89, mass 0.90). Magnitude is larger when this trial D1 showed no reward (prev_reward 0: 28% of activations but 47% of mass), and it is higher in high-value steps. Silent on D1 and GO.",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 16,
+    "predicate": "(phase == D2) & (action == 2) & (state == 2) & (prev_common != 0) & (prev_action != 1) & (ep_trial >= 25) & (ep_trial < 80)",
+    "split": "test",
+    "precision": 0.7793389535661716,
+    "recall": 0.8785786121354341,
+    "f1": 0.8259886382438917,
+    "mass_recall": 0.8854517315885834,
+    "correlation": 0.6940806787923387,
+    "n_active": 59660,
+    "n_predicted": 67257,
+    "coverage_by_activation_quartile": [
+      0.8508213208179685,
+      0.9422728796513576,
+      0.8584646329198793,
+      0.862755615152531
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 16,
+    "predicate": "(phase == D2) & (action == 2) & (state == 2) & (prev_common != 0) & (prev_action != 1) & (ep_trial >= 25) & (ep_trial < 80)",
+    "split": "dev",
+    "precision": 0.774486011264252,
+    "recall": 0.8935023771790809,
+    "f1": 0.8297480929137335,
+    "mass_recall": 0.8963830327464606,
+    "correlation": 0.6907940313270841,
+    "n_active": 56790,
+    "n_predicted": 65517,
+    "coverage_by_activation_quartile": [
+      0.8726581208620933,
+      0.9533032821524159,
+      0.882087765020779,
+      0.865957596675354
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 16,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "All structural claims check out on dev. The unit is never active at D1 or GO (0 of 380619 steps each), never on action a1, state S1 or a rare transition (0 activations each). Only 103 of 56790 activations follow an a1 or rare previous trial. The base condition (D2 & a2 & S2 & prev not a1/rare) has R 0.998, P 0.508.",
+      "Reported test scores reproduce exactly: P 0.779, R 0.879, F1 0.826, MR 0.885. Dev is P 0.774, R 0.894, F1 0.830.",
+      "Mild overclaim on 'nearly silent before trial ~20'. The time dependence is a gradual ramp, not a gate. Within the structural condition precision is 0.135 at trials 0-4, 0.24 at 15-19, 0.33 at 20-24, 0.44 at 25-29 and 0.83 at 40-44, then falls from 0.86 at trial 74 to 0.48 at 79, 0.28 at 80 and 0.03 at 82. So the unit fires on about 20% of qualifying steps before trial 20, though only 6.7% of all activations happen there. The 25/80 cutoffs are a reasonable discretisation of a smooth ramp-up and a sharper ramp-down.",
+      "In 'repeated a2->S2', the condition prev_common != 0 also lets in the window's first trial (rel -3), where the previous trial is unknown. That subgroup's precision is lower (0.633 vs 0.831 for rel != -3) because the real, unseen previous trial was sometimes a1 or rare. This is a data artifact, not a flaw in the explanation, which already says 'or unknown at the window start'.",
+      "No systematic false-positive class remains. Precision is roughly flat across subgroups: prev_reward 0 0.71, prev_reward 1 0.80, good=S1 0.80, good=S2 0.77, value high/low 0.77/0.78. Long runs of rewarded a2->S2 trials have somewhat lower precision (0.72-0.78), and a rewarded trial right after an unrewarded one has higher precision (0.93). This shows up as decaying activation over long stable runs, but it is graded modulation, not a separable class. Adding value or the choice logit does not improve F1 (0.697 and 0.793).",
+      "The magnitude claim checks out: prev_reward 0 accounts for 28% of activations (16098 of 56790) and 46.6% of activation mass.",
+      "Missed activations (11.5% of mass on test) are mostly qualifying steps just outside the ep_trial window, plus small activations after an a2 rare trial. Nothing systematic.",
+      "No FUTURE variables are used. Every variable in the predicate is observable at D2."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

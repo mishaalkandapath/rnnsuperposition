@@ -1,0 +1,114 @@
+{
+ "label": "Rises after rewarded trials at D1, and after the latest a2 choice; lower when S1 is believed good.",
+ "short_terms": "(phase == D1) * prev_reward ;; np.tanh(belief_lo) ;; np.where(phase == D1, 0 - (prev_action==1)*(prev_reward==0), 1*(np.where(phase == D2, action, prev_action) == 2))",
+ "terms": "np.tanh(belief_lo/2) * (phase != D1) ;; np.tanh(belief_lo/2) * (phase == D1) ;; (phase == D1) * (prev_reward == 1) ;; (phase == D2) * (state == S2) ;; (phase == D2) * (action == 2) ;; (phase == GO) * (prev_action == 2) ;; (phase == D1) * (prev_action == 2) ;; (phase==D2)*(prev_action==2)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Raw candidate n of unit 19. At D1 it mostly tracks the reward input: high after rewarded trials, strongly negative after unrewarded ones, a1 more than a2. At GO and D2 it tracks the most recent choice the agent has seen: positive when that choice was a2 (the previous choice at GO, this trial's choice at D2), negative for a1. Throughout, it is pushed down by the observer belief that S1 is good (tanh of belief log-odds), so in effect it encodes reward and an a2/S2 preference. All terms are observed-only. At GO, action means the choice from the previous trial, so nothing about the future is used. The free fit adds the reached state at D2 (S2 raises it beyond the choice) and separate belief slopes per phase, reaching dev R^2 0.79 against 0.74 for the short form.",
+ "full_test_scores": {
+  "gate": "unit_candidate",
+  "feature": 19,
+  "terms": [
+   "np.tanh(belief_lo/2) * (phase != D1)",
+   "np.tanh(belief_lo/2) * (phase == D1)",
+   "(phase == D1) * (prev_reward == 1)",
+   "(phase == D2) * (state == S2)",
+   "(phase == D2) * (action == 2)",
+   "(phase == GO) * (prev_action == 2)",
+   "(phase == D1) * (prev_action == 2)",
+   "(phase==D2)*(prev_action==2)"
+  ],
+  "weights": [
+   -0.3186243628513908,
+   -0.3293121077365544,
+   0.8045582487883285,
+   0.41039912355233044,
+   0.4726174126769793,
+   0.5732754155612957,
+   -0.13838583167650864,
+   -0.018261295914946848
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7823989497618729,
+  "r2": 0.81000723073457,
+  "r2_timing_only": 0.1268756788741815
+ },
+ "gate": "unit_candidate",
+ "feature": 19,
+ "test_scores": {
+  "gate": "unit_candidate",
+  "feature": 19,
+  "terms": [
+   "(phase == D1) * prev_reward",
+   "np.tanh(belief_lo)",
+   "np.where(phase == D1, 0 - (prev_action==1)*(prev_reward==0), 1*(np.where(phase == D2, action, prev_action) == 2))"
+  ],
+  "weights": [
+   0.6885907269167476,
+   -0.23396356337484883,
+   0.6480679961699296
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7755818580196497,
+  "r2": 0.804055062135089,
+  "r2_timing_only": 0.1268756788741815
+ },
+ "dev_scores": {
+  "gate": "unit_candidate",
+  "feature": 19,
+  "terms": [
+   "(phase == D1) * prev_reward",
+   "np.tanh(belief_lo)",
+   "np.where(phase == D1, 0 - (prev_action==1)*(prev_reward==0), 1*(np.where(phase == D2, action, prev_action) == 2))"
+  ],
+  "weights": [
+   0.6885907269167476,
+   -0.23396356337484883,
+   0.6480679961699296
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.7839499342360555,
+  "r2": 0.8116766236659009,
+  "r2_timing_only": 0.12833455676953787
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "Large systematic error in the recorded short form: misses show D1 after a1 S2 u over-predicted by -0.594 and D1 after a1 S1 u by -0.500. The profile shows the D1 drop after an unrewarded trial is mostly an a1 effect (residual a1 S1 u -0.945, a1 S2 u -1.21, but a2 S1 u +0.008). The explanation text says 'the drop is larger after a1 than after a2', but the short form has no term for it, and the label doesn't mention it.",
+   "Adding (phase==D1)*(prev_action==1)*(prev_reward==0) as a 4th term raises test R^2 from 0.733 to 0.776. Folding it into a legal 3-term short form gives test 0.7756, and misses then drop to at most about 0.29 per cell (mean D1 error -0.031 vs -0.094 before).",
+   "Simpler ways of adding a1/a2 at D1 make things worse: (phase==D1)*(prev_reward+(prev_action==2)) scores test 0.648. Belief takes up the plain a2 main effect, so what is missing is specifically the a1-unrewarded interaction.",
+   "The label 'after the latest a2 choice' doesn't say which phases. The short form limits it to GO/D2, and spreading the choice term to D1 drops test R^2 to 0.596.",
+   "The belief claim holds strongly at GO/D2 (residual by belief decile goes from +0.65 to -0.70 at D2). At D1 it is weaker and not monotonic (deciles 5-9: -0.355, -0.266, -0.124, -0.076, -0.28). Making belief GO/D2-only gives 0.689, so a shared slope is fine.",
+   "The D2 state effect (S2 > S1 given the same action; residual a2 S1 +0.157 vs a2 S2 +0.727) is left out of the short form. Its gain is small next to the D1 a1-unrewarded fix.",
+   "Checked: no future variables are used. At GO the choice term correctly uses prev_action."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "D1: high after reward, lowest after unrewarded a1; GO/D2: high if latest choice a2; lower when S1 believed good.",
+  "better_short_terms": "(phase == D1) * prev_reward ;; np.tanh(belief_lo) ;; np.where(phase == D1, 0 - (prev_action==1)*(prev_reward==0), 1*(np.where(phase == D2, action, prev_action) == 2))",
+  "better_short_terms_test_r2_beyond_timing": 0.7756
+ },
+ "final_label": "D1: high after reward, lowest after unrewarded a1; GO/D2: high if latest choice a2; lower when S1 believed good.",
+ "original_short_terms": "(phase == D1) * prev_reward ;; np.tanh(belief_lo) ;; (phase != D1) * (np.where(phase == D2, action, prev_action) == 2)",
+ "original_test_scores": {
+  "gate": "unit_candidate",
+  "feature": 19,
+  "terms": [
+   "(phase == D1) * prev_reward",
+   "np.tanh(belief_lo)",
+   "(phase != D1) * (np.where(phase == D2, action, prev_action) == 2)"
+  ],
+  "weights": [
+   0.7510779776118529,
+   -0.23710711174430102,
+   0.7127536238732365
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.7331219495121497,
+  "r2": 0.7669822833444138,
+  "r2_timing_only": 0.1268756788741815
+ },
+ "terms_from": "skeptic"
+}

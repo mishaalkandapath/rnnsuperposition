@@ -1,0 +1,64 @@
+{
+  "label": "D2 after choosing a2: strong on rare a2->S1, weak late-episode drift on a2->S2",
+  "predicate": "(phase == D2) & (action == 2) & ((state == 1) | (ep_trial >= 40))",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 (none at D1, about 6 GO steps). The strongest activations (top quartile, about 0.4-1.0 of max) are a2 followed by a rare transition to S1. That case fires on 100% of its steps and holds about 61% of activation mass, and it is strongest when the agent strongly prefers a2 and S2 is good. It also fires very weakly (about 0.01-0.15 of max) on a2->S2 common D2 steps, almost only in later trials of the episode (ep_trial >= 40, where precision is 0.98). This is a slow drift across the episode, not an event. Late in the episode it also fires weakly on a1->S1 common, so adding that clause raises dev F1 from 0.88 to 0.91; it was left out for simplicity. It never fires on a1->S2 rare or on any rewarded-input (D1) step. Magnitude follows the a2-preference policy logit: most mass is where choice < -4.4. It does not depend on reward, prev_reward or stay. All variables are observable at D2. ep_trial is a proxy for elapsed time in the episode. Dev: P 0.95, R 0.83, F1 0.88, mass recall 0.90.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 204,
+    "predicate": "(phase == D2) & (action == 2) & ((state == 1) | (ep_trial >= 40))",
+    "split": "test",
+    "precision": 0.9375123540626534,
+    "recall": 0.8320233143762555,
+    "f1": 0.8816235241915658,
+    "mass_recall": 0.9015137704034807,
+    "correlation": 0.7098678127486647,
+    "n_active": 176715,
+    "n_predicted": 156831,
+    "coverage_by_activation_quartile": [
+      0.7884741619321397,
+      0.7308902419701668,
+      0.8153647660653252,
+      0.9933677395988953
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 204,
+    "predicate": "(phase == D2) & (action == 2) & ((state == 1) | (ep_trial >= 40))",
+    "split": "dev",
+    "precision": 0.9450167920786791,
+    "recall": 0.8266827091559003,
+    "f1": 0.8818979080019315,
+    "mass_recall": 0.9011879378010745,
+    "correlation": 0.7117316076335096,
+    "n_active": 171212,
+    "n_predicted": 149773,
+    "coverage_by_activation_quartile": [
+      0.7782164801532603,
+      0.7254164427727029,
+      0.8080274747097166,
+      0.9950704389879214
+    ]
+  },
+  "gate": "hidden",
+  "feature": 204,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "Some claims check out: the feature fires only at D2 (GO has 6 of 171k active steps, D1 has none). a2->S1 rare has precision 1.0 and holds 61% of activation mass. a1->S2 never fires (precision 0.0). Early-episode a2->S2 (ep_trial<40) almost never fires (precision 0.008).",
+      "The label undersells a2->S2. Late a2->S2 (ep_trial>=40) has precision 0.914 and is 51% of all active steps, with 29% of mass, so it is the most common firing case, not a side note. Its strength is also misreported: the profile's top windows show a2->S2c firing at 0.43-0.50 of max, not the claimed 0.01-0.15.",
+      "There is a systematic missed class: a1->S1 common late in the episode. The predicate misses 29,674 active steps (17% of active steps, 9.9% of mass), and the misses on both dev and test are nearly all a1->S1c D2 steps, rising slowly across a window (e.g. 0.18 -> 0.19 -> 0.23 -> 0.27). On its own, (phase==D2)&(action==1)&(state==1)&(ep_trial>=80) scores precision 0.991, recall 0.145 (test: 0.992 / 0.142). The explanation mentions this case but leaves it out of the predicate and label, and labels it 'weak' even though it reaches about 0.33 of max.",
+      "The late drift starts at different points for the two choices: after about trial 40 for a2 and about trial 80 for a1. So 'late-episode drift on a2->S2' is incomplete; the drift covers common transitions after either choice, starting earlier for a2.",
+      "Adding the a1->S1 late clause raises test F1 from 0.882 to 0.959 and mass recall from 0.902 to 0.998, with no loss of precision (0.945). That is too large a gap to treat as optional simplification."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 only: strong after rare a2->S1 (always fires, about 0.4-1.0 of max). Plus a slow drift through the episode on common transitions: a2->S2 after about trial 40 (up to about 0.5 of max), a1->S1 after about trial 80 (up to about 0.3 of max). Never fires on a1->S2.",
+    "better_predicate": "(phase == D2) & (((action == 2) & ((state == 1) | (ep_trial >= 40))) | ((ep_trial >= 80) & (common == 1)))",
+    "better_predicate_test_f1": 0.959
+  },
+  "final_label": "D2 only: strong after rare a2->S1 (always fires, about 0.4-1.0 of max). Plus a slow drift through the episode on common transitions: a2->S2 after about trial 40 (up to about 0.5 of max), a1->S1 after about trial 80 (up to about 0.3 of max). Never fires on a1->S2."
+}

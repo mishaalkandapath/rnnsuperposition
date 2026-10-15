@@ -1,0 +1,63 @@
+{
+  "label": "D2 rare transition a1->S2 when the agent expects low value",
+  "predicate": "(phase == D2) & (in_state == 2) & (in_action == 1) & (value < 7.6)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D2 and only when the shown state is S2 (100% of activations and mass). About 90% of the mass comes from rare transitions after choosing a1 (in_action==1, S2 reached); the remaining ~10% is weaker firing on common a2->S2 steps, mostly when value is low. The bare rare a1->S2 predicate gets F1 0.72 (precision 0.61). Adding the model value-head output (value < 7.6) removes most false positives (dev F1 0.83, P 0.84, R 0.83, mass recall 0.90). Lower value means more firing and larger activations: at value < 7.0, precision is 0.94. Firing also grows over the episode (rate goes from 0.6% of steps in trials 0-9 to 6% in trials 90-99). It never fires at D1 or GO, at S1, or when a reward is input. All variables used are observed at D2; value is the output the agent computes itself, not a future variable.",
+  "test_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 35,
+    "predicate": "(phase == D2) & (in_state == 2) & (in_action == 1) & (value < 7.6)",
+    "split": "test",
+    "precision": 0.8217395261353639,
+    "recall": 0.800466916871066,
+    "f1": 0.810963743600491,
+    "mass_recall": 0.8704291235730451,
+    "correlation": 0.7523851457239974,
+    "n_active": 33839,
+    "n_predicted": 32963,
+    "coverage_by_activation_quartile": [
+      0.6124113475177305,
+      0.8056737588652483,
+      0.8516548463356974,
+      0.9321432793474406
+    ]
+  },
+  "dev_scores": {
+    "gate": "neuron_cand_neg",
+    "feature": 35,
+    "predicate": "(phase == D2) & (in_state == 2) & (in_action == 1) & (value < 7.6)",
+    "split": "dev",
+    "precision": 0.8363062058714232,
+    "recall": 0.8271109613794371,
+    "f1": 0.8316831683168316,
+    "mass_recall": 0.8960523133805388,
+    "correlation": 0.772285410129376,
+    "n_active": 32651,
+    "n_predicted": 32292,
+    "coverage_by_activation_quartile": [
+      0.6288129364204337,
+      0.8453999754992038,
+      0.8792110743599167,
+      0.9550355305072287
+    ]
+  },
+  "gate": "neuron_cand_neg",
+  "feature": 35,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Every factual claim reproduced. Phase: D1 and GO have 0 activations; D2 has all 32651 dev activations. in_state: S2 holds 100% of the mass and S1 none. in_reward=1 has 0 activations. in_action: a1 has 90.2% of the mass and a2 9.8%. Episode position: 0.6% of steps fire in trials 0-9 and 6.1% in trials 90-99.",
+      "Scores reproduced. Dev: rare a1->S2 alone F1 0.717 (precision 0.615); adding value<7.6 gives F1 0.832 (precision 0.836, recall 0.827, mass recall 0.896); value<7.0 gives precision 0.944, recall 0.414. Test: F1 0.811, precision 0.822, recall 0.800, mass recall 0.870.",
+      "Residual misses (13% of mass on test) are mostly weak common a2->S2 firing. None of the slices I tried isolates them. With good==1, precision is 0.11. With previous choice a1, precision is 0.23, rising to 0.44 when also value<7.6, but that covers only 6% recall. Adding 'or the previous choice was a1' raises dev F1 only slightly, 0.832 to 0.835, so this is diffuse rather than a systematic gap.",
+      "Using the hidden good state instead of value works worse: rare a1->S2 with good==S1 scores F1 0.68. So the value term is doing real work. It is observed, not a future variable (it is the agent's own output at D2).",
+      "Episode position adds little once value is in the predicate. Restricting to trials 10 and later barely changes F1 (0.831), and a value threshold that moves with episode trial does not help (F1 0.80). The growth over the episode is mostly explained by value."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  }
+}

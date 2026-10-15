@@ -1,0 +1,81 @@
+{
+  "label": "D1 only: high after previous trial reached S1 (esp. via a1), low after S2",
+  "terms": "(phase == D1) * (prev_action == 1) * (prev_state == 1) ;; (phase == D1) * (prev_action == 2) * (prev_state == 1) ;; (phase == D1) * (prev_state == 2) ;; (phase == D1) * last_is(\"a1 S1 u\") ;; (phase == D1) * last_is(\"a1 S2 u\") ;; (phase == D1) * belief_lo ;; (phase == D1) * (prev_state > 0) * (tv(\"state\", -2) == 1)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (zero at GO and D2). Its D1 magnitude is set mostly by the previous trial: it is high when that trial reached S1, highest after a1 S1 (and higher still if that trial was unrewarded), lower after a2 S1 (the rare route), and near zero after any trial that reached S2 (lowest after a1 S2 u). A smaller graded part follows the ideal-observer belief that S1 is good (belief_lo, positive weight), plus a small negative correction when the trial before also reached S1. These terms use only observed quantities, no future or model-output terms. Test R^2 beyond timing 0.72 (dev 0.72), against an all-observed ceiling of 0.78 and an all-cues ceiling of 0.84. The policy decile alone reached 0.51, so explaining it from observed quantities loses little or nothing compared with using the model value/policy. The remaining error is concentrated at D1 after a2 S2 r (under-predicted) and after a2 S2 u / a1 S2 r (over-predicted).",
+  "gate": "update",
+  "feature": 18,
+  "test_scores": {
+    "gate": "update",
+    "feature": 18,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 1)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 1)",
+      "(phase == D1) * (prev_state == 2)",
+      "(phase == D1) * last_is(\"a1 S1 u\")",
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * belief_lo",
+      "(phase == D1) * (prev_state > 0) * (tv(\"state\", -2) == 1)"
+    ],
+    "weights": [
+      1.2000135302176838,
+      -0.2330235533236609,
+      -0.5934648423831901,
+      0.5475548435068516,
+      -0.6643149280489308,
+      0.14188430997554358,
+      -0.19770576139326154
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.7166588511165476,
+    "r2": 0.7914348286578947,
+    "r2_timing_only": 0.2639079351375998
+  },
+  "dev_scores": {
+    "gate": "update",
+    "feature": 18,
+    "terms": [
+      "(phase == D1) * (prev_action == 1) * (prev_state == 1)",
+      "(phase == D1) * (prev_action == 2) * (prev_state == 1)",
+      "(phase == D1) * (prev_state == 2)",
+      "(phase == D1) * last_is(\"a1 S1 u\")",
+      "(phase == D1) * last_is(\"a1 S2 u\")",
+      "(phase == D1) * belief_lo",
+      "(phase == D1) * (prev_state > 0) * (tv(\"state\", -2) == 1)"
+    ],
+    "weights": [
+      1.2000135302176838,
+      -0.2330235533236609,
+      -0.5934648423831901,
+      0.5475548435068516,
+      -0.6643149280489308,
+      0.14188430997554358,
+      -0.19770576139326154
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.7212382569281421,
+    "r2": 0.7949656907142784,
+    "r2_timing_only": 0.2644818940134518
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core label holds. The feature is D1 only (GO and D2 baselines are exactly 0). It is high after the previous trial reached S1, mostly via a1 (raw residuals: a1 S1 r +1.56, a1 S1 u +1.67, a2 S1 r -0.34, a2 S1 u -0.66), and it is near zero after any S2 trial.",
+      "The claim 'lowest after a1 S2 u' is wrong. The raw D1 residuals after the four S2 patterns are all the same (-0.903, -0.903, -0.900, -0.895), meaning the activation is about 0 after any S2 trial. The fitted -0.66 weight on last_is('a1 S2 u') only offsets the global belief_lo term. Once the belief slope is allowed to differ after S2, that weight drops to -0.011.",
+      "The belief effect is described wrongly. It is not a global graded term at D1; it only applies after S1 trials. With a separate (prev_state==2)*belief_lo term the fitted slopes are +0.314 overall and -0.313 after S2, so there is no belief dependence at all after S2. Adding that one term raises test R^2 from about 0.73 to 0.75.",
+      "A systematic error class remained under the original terms. Misses show D1 after a2 S2 u over-predicted by -0.336, D1 after a1 S2 r by -0.254, and D1 after a2 S2 r under-predicted by +0.162. This comes from the global belief_lo term leaking into S2 trials where the feature is flat at 0. The new terms reduce all of these errors to <= 0.004.",
+      "The 'negative correction when the trial before also reached S1' term is weak and generic. Added on top of a base of 4 terms it gives +0.003 test R^2. The effect that actually holds is narrower: lower after two a1 S1 rewarded trials in a row (weight -0.565). There is also a lower level after a2 S1 rewarded once belief is controlled for (weight -0.78).",
+      "'Higher still if unrewarded' (a1 S1 u > a1 S1 r) holds only weakly in raw residuals (+1.67 vs +1.56). The large fitted weight (+0.55 to +1.0) mostly corrects for the belief drop after an unrewarded S1 trial.",
+      "Observed-only terms reach 0.764 test R^2 beyond timing, against an observed ceiling of 0.78. The model's policy decile alone scores 0.51, so leaving out model outputs costs nothing."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 only: on after the previous trial reached S1 (mostly via a1), scaling with belief that S1 is good; off (about 0) after any S2 trial, whatever the belief",
+    "better_terms": "(phase == D1) * (prev_action == 1) * (prev_state == 1) ;; (phase == D1) * (prev_action == 2) * (prev_state == 1) ;; (phase == D1) * (prev_state == 2) ;; (phase == D1) * last_is('a1 S1 u') ;; (phase == D1) * belief_lo ;; (phase==D1)*(prev_state==2)*belief_lo ;; (phase==D1)*(prev_action==1)*(prev_state==1)*(tv('reward',-2)==1)*(tv('state',-2)==1)*(tv('action',-2)==1) ;; (phase==D1)*(prev_action==2)*(prev_state==1)*(prev_reward==1)",
+    "better_terms_test_r2_beyond_timing": 0.764
+  },
+  "final_label": "D1 only: on after the previous trial reached S1 (mostly via a1), scaling with belief that S1 is good; off (about 0) after any S2 trial, whatever the belief"
+}

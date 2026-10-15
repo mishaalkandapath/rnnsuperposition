@@ -1,0 +1,75 @@
+{
+  "label": "D2 reached-state gate: high after S2, low after S1, strongest on rare transitions",
+  "terms": "(phase == D2) * (state == S2) ;; (phase == D2) * (common == 0) * np.where(state == S2, 1, -1) ;; (phase != D2) * np.tanh(belief_lo) ;; (phase == D2) * np.tanh(belief_lo) * np.where(state == S2, 1, -1) ;; (phase == D2) * np.tanh(belief_lo) ;; (phase == D1) * (prev_reward == 0)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Raw reset gate r44. Timing (high ~0.85-0.93 at D1/GO, ~0.5 at D2, dropping late in episode) explains R^2 0.79. Beyond timing the magnitude is dominated by the D2 state just shown: S2 raises it, S1 lowers it, and the effect is ~3x larger on rare transitions (a1->S2 about +0.27, a2->S1 about -0.26, common a1->S1 -0.11, a2->S2 +0.11); i.e. it encodes reached state signed by surprise (equivalently choice x state). At D1/GO it is modestly higher when the ideal-observer belief favours S1 (tanh(belief_lo), ~+/-0.02-0.03) and slightly higher at D1 after an unrewarded previous trial. At D2 belief modulates slightly (lower when belief favours S1, interacting with state). Observed-only terms reach dev R^2 beyond timing 0.86 vs the all-observed ceiling 0.95 and all ceiling 0.97; model value/policy are not needed since the dominant driver is the observed state input at D2. Future reward, next choice and hidden good state add ~nothing.",
+  "gate": "unit_reset",
+  "feature": 44,
+  "test_scores": {
+    "gate": "unit_reset",
+    "feature": 44,
+    "terms": [
+      "(phase == D2) * (state == S2)",
+      "(phase == D2) * (common == 0) * np.where(state == S2, 1, -1)",
+      "(phase != D2) * np.tanh(belief_lo)",
+      "(phase == D2) * np.tanh(belief_lo) * np.where(state == S2, 1, -1)",
+      "(phase == D2) * np.tanh(belief_lo)",
+      "(phase == D1) * (prev_reward == 0)"
+    ],
+    "weights": [
+      0.08856155640653506,
+      0.2664569645561505,
+      0.022744901521093517,
+      0.01940589275745285,
+      -0.0522189757588847,
+      0.031490085017724045
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.8552060594252888,
+    "r2": 0.9691344297842482,
+    "r2_timing_only": 0.786831064247294
+  },
+  "dev_scores": {
+    "gate": "unit_reset",
+    "feature": 44,
+    "terms": [
+      "(phase == D2) * (state == S2)",
+      "(phase == D2) * (common == 0) * np.where(state == S2, 1, -1)",
+      "(phase != D2) * np.tanh(belief_lo)",
+      "(phase == D2) * np.tanh(belief_lo) * np.where(state == S2, 1, -1)",
+      "(phase == D2) * np.tanh(belief_lo)",
+      "(phase == D1) * (prev_reward == 0)"
+    ],
+    "weights": [
+      0.08856155640653506,
+      0.2664569645561505,
+      0.022744901521093517,
+      0.01940589275745285,
+      -0.0522189757588847,
+      0.031490085017724045
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.8614915441184101,
+    "r2": 0.9704875406769501,
+    "r2_timing_only": 0.7869266599269583
+  },
+  "final_verdict": "explained",
+  "observed_only": true,
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The core claim holds. At D2 the gate goes up after reaching S2 and down after S1, and the shift is about 2-3x larger on rare transitions. The profile's D2 choice x state residuals are a1->S1 -0.113, a1->S2 +0.271, a2->S1 -0.263, a2->S2 +0.109. The two state/rarity terms alone score test R^2 0.758, and a full D2 choice x state table scores 0.763.",
+      "'Almost all of the variance beyond timing comes from the reached state' overclaims. The state terms give 0.758. The claimed set gets to 0.855 only because it adds belief terms: dropping the two non-D2 terms gives 0.819. Belief at D2 therefore adds roughly 0.1 to 0.15 of R^2, which is not small.",
+      "The D2 belief effect is described wrongly. It does not mainly interact with the state reached; it depends on this trial's choice. With separate belief terms after a1 and after a2, the fitted weights are about -0.105 x tanh(belief_lo) after a1 and +0.01 after a2. The state x belief and rare x belief weights are only about 0.008 and 0.024. So after choosing a1, D2 r44 is about 0.1 lower when the observer believes S1 is good. That is as large as the common-transition effect. Using choice-specific belief terms raises test R^2 from 0.855 to 0.903.",
+      "Misses on the claimed terms show a systematic D2 error. In the worst windows, a1->S1 common trials sit at an actual 0.20-0.40 but are predicted at about 0.50-0.55. D2 is over-predicted by 0.017 on average (D2 after a1 S2 u -0.031, after a2 S1 r -0.027, after a2 S2 r -0.027). This is the a1 x belief effect the claimed terms leave out.",
+      "The smaller claims hold, at small size. At D1 and GO the gate rises when belief favours S1, from about -0.03 to +0.025 across belief deciles. At D1 it is slightly higher after an unrewarded trial, weight +0.03. None of the claimed terms uses a future variable."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D2 reached-state gate: high after S2, low after S1, about 3x stronger on rare transitions; after choosing a1 it is lower the more the observer believes S1 is good",
+    "better_terms": "(phase == D2) * (state == S2) ;; (phase == D2) * (common == 0) * np.where(state == S2, 1, -1) ;; (phase == D2) * (action==1) * np.tanh(belief_lo) ;; (phase == D2) * (state==S2) * np.tanh(belief_lo) ;; (phase == D2) * (common==0) * np.tanh(belief_lo) ;; (phase != D2) * np.tanh(belief_lo) ;; (phase == D1) * (prev_reward == 0) ;; (phase==D2)*(action==1)*(belief_cover/10)",
+    "better_terms_test_r2_beyond_timing": 0.9107
+  },
+  "final_label": "D2 reached-state gate: high after S2, low after S1, about 3x stronger on rare transitions; after choosing a1 it is lower the more the observer believes S1 is good"
+}

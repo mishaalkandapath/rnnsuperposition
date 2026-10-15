@@ -1,0 +1,74 @@
+{
+  "label": "late-episode dip, deepest at D2 after a1 (esp. rare a1->S2), deepened by a1 runs",
+  "terms": "(phase == D2) * (action == 1) * np.exp((ep_trial-99)/8.0) ;; (phase == D2) * (action == 1) * (state == 2) * np.exp((ep_trial-99)/8.0) ;; (phase == D2) * ((tv(\"action\",-1)==1)*1.0+(tv(\"action\",-2)==1)+(tv(\"action\",-3)==1)) * np.exp((ep_trial-99)/8.0) ;; (phase == GO) * np.exp((ep_trial-99)/8.0) * (prev_action==1) ;; (phase != D2) * ((tv(\"action\",-1)==1)*1.0+(tv(\"action\",-2)==1)+(tv(\"action\",-3)==1)) * np.exp((ep_trial-99)/8.0) ;; np.exp((ep_trial-99)/8.0) * (phase == D2)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Raw update gate z of unit 14 sits near 1 (mean 0.994) and dips only late in the episode (last ~10 trials), most at D2. Beyond the per-decile timing, the dip grows smoothly (about exp((ep_trial-99)/8)) toward trial 99 and is carried almost entirely by a1 choices: at D2 after choosing a1 it falls strongly, more again if a1 led rarely to S2 (down to ~0.7 at t99); a2 choices keep it near 1. Runs of recent a1 choices (count of a1 over the last 3 trials) deepen the dip in all phases; at GO the previous choice being a1 lowers it modestly. Reward, value and the hidden good state add little. All terms are observed at their step (D2 terms use this trial's choice/state, shown at D2; the GO term uses the previous choice). Test R^2 beyond timing 0.56 (dev 0.54); a version using the upcoming GO choice (future) scores 0.566 test, so the future variable adds nothing. The additive profile ceiling (0.26) is far exceeded because the effect is an interaction of a1 choice with within-decile episode time.",
+  "gate": "unit_update",
+  "feature": 14,
+  "test_scores": {
+    "gate": "unit_update",
+    "feature": 14,
+    "terms": [
+      "(phase == D2) * (action == 1) * np.exp((ep_trial-99)/8.0)",
+      "(phase == D2) * (action == 1) * (state == 2) * np.exp((ep_trial-99)/8.0)",
+      "(phase == D2) * ((tv(\"action\",-1)==1)*1.0+(tv(\"action\",-2)==1)+(tv(\"action\",-3)==1)) * np.exp((ep_trial-99)/8.0)",
+      "(phase == GO) * np.exp((ep_trial-99)/8.0) * (prev_action==1)",
+      "(phase != D2) * ((tv(\"action\",-1)==1)*1.0+(tv(\"action\",-2)==1)+(tv(\"action\",-3)==1)) * np.exp((ep_trial-99)/8.0)",
+      "np.exp((ep_trial-99)/8.0) * (phase == D2)"
+    ],
+    "weights": [
+      -0.08601077382413118,
+      -0.07699011569336796,
+      -0.011242696782958892,
+      -0.007745987112911367,
+      -0.006261408157314514,
+      0.042543318675321136
+    ],
+    "split": "test",
+    "r2_beyond_timing": 0.5618458425249889,
+    "r2": 0.7628086537875276,
+    "r2_timing_only": 0.4586577756574183
+  },
+  "dev_scores": {
+    "gate": "unit_update",
+    "feature": 14,
+    "terms": [
+      "(phase == D2) * (action == 1) * np.exp((ep_trial-99)/8.0)",
+      "(phase == D2) * (action == 1) * (state == 2) * np.exp((ep_trial-99)/8.0)",
+      "(phase == D2) * ((tv(\"action\",-1)==1)*1.0+(tv(\"action\",-2)==1)+(tv(\"action\",-3)==1)) * np.exp((ep_trial-99)/8.0)",
+      "(phase == GO) * np.exp((ep_trial-99)/8.0) * (prev_action==1)",
+      "(phase != D2) * ((tv(\"action\",-1)==1)*1.0+(tv(\"action\",-2)==1)+(tv(\"action\",-3)==1)) * np.exp((ep_trial-99)/8.0)",
+      "np.exp((ep_trial-99)/8.0) * (phase == D2)"
+    ],
+    "weights": [
+      -0.08601077382413118,
+      -0.07699011569336796,
+      -0.011242696782958892,
+      -0.007745987112911367,
+      -0.006261408157314514,
+      0.042543318675321136
+    ],
+    "split": "dev",
+    "r2_beyond_timing": 0.5392318688718829,
+    "r2": 0.7593974168258858,
+    "r2_timing_only": 0.47782286377958205
+  },
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": false,
+    "issues": [
+      "The explanation says 'reward, value and the hidden good state add little', but that is wrong for value. Adding (phase==D2)*value*E and (phase==D2)*(action==1)*value*E to the six recorded terms raises test R^2 beyond timing from 0.562 to 0.634. The 8-term set with value and choice reaches 0.649. The value weight is positive (+0.024): when value at D2 is high, the late-episode dip is shallower. Value is a model output, not a future variable, so this is a real omission.",
+      "The core claims hold on test. D2 x a1 x exp((t-99)/8) plus the a1->S2 extra term and the D2 timing term give 0.513 on their own. Swapping the a1&S2 term for 'rare' (0.465) or for 'S2' in general (0.491) does worse, so the a1->S2 (rare) specificity is right. Tau=8 is the best of 4/6/8/12 (0.474/0.509/0.516/0.503).",
+      "The D1/GO claims ('a run of a1 deepens the dip in every phase', 'prev a1 lowers GO slightly') are real but tiny. All the D1/GO a1-count and prev-a1 terms together explain only about 0.03-0.04. The D2 run-count term weight is -0.011, against -0.086 for the D2 a1 term.",
+      "There are systematic misses at D2 by previous trial. After a1 S2 r the fit under-predicts by +0.007, and after a1 S2 u it over-predicts by -0.007. After a1 S1 r it over-predicts by -0.005. So the previous trial's outcome changes the depth of the D2 dip, and the terms ignore it. Adding value only partly fixes this (+0.006 / -0.008 remain).",
+      "The worst-fit windows show long a1 runs whose actual D2 values fall about 0.1 below the prediction (e.g. 0.708 vs 0.839, 0.675 vs 0.79). D1/GO values in these runs are also under-predicted by 0.03-0.06. There are also a2 S2-common runs with no reward that dip to 0.82 at t99 while the prediction is 0.98. That contradicts 'after a2 choices it stays near 1' in a minority of cases."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "late-episode dip (~exp((t-99)/8)), deepest at D2 after a1 (esp. rare a1->S2); shallower when the model's value at D2 is high; small extra dip with recent a1 runs",
+    "better_terms": "(phase==D2)*(action==1)*E ;; (phase==D2)*(action==1)*(state==2)*E ;; (phase==D2)*E ;; (phase==D2)*value*E ;; (phase==D2)*(action==1)*value*E ;; (phase==D2)*C*E ;; (phase!=D2)*C*E ;; (phase!=D2)*choice*E   where E=np.exp((ep_trial-99)/8.0), C=((tv(\"action\",-1)==1)*1.0+(tv(\"action\",-2)==1)+(tv(\"action\",-3)==1))",
+    "better_terms_test_r2_beyond_timing": 0.6486
+  },
+  "final_label": "late-episode dip (~exp((t-99)/8)), deepest at D2 after a1 (esp. rare a1->S2); shallower when the model's value at D2 is high; small extra dip with recent a1 runs"
+}

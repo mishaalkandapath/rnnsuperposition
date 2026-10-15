@@ -1,0 +1,109 @@
+{
+ "label": "Late-episode (trials 90-99) D1 after an a1 choice that reached S2 (rare); suppressed after S1.",
+ "short_terms": "(phase == D1) * np.maximum(ep_trial - 85, 0) * (prev_state - prev_action == 1) ;; (phase == D1) * np.maximum(ep_trial - 94, 0) * last_is('a2 S2 u') ;; (phase == D1) * (ep_trial >= 90) * (prev_state == 1)",
+ "terms": "(phase == D1) * (ep_trial >= 90) * (prev_action == 1) * (prev_state == 2) ;; (phase == D1) * np.maximum(ep_trial - 94, 0) ;; (phase == D1) * np.maximum(ep_trial - 94, 0) * (prev_state == 2) ;; (phase == D1) * np.maximum(ep_trial - 94, 0) * (prev_action == 1) ;; (phase == D1) * (ep_trial >= 90) * (prev_state == 1) ;; (phase == D1) * np.maximum(ep_trial - 94, 0) * (prev_reward == 1)",
+ "verdict": "explained",
+ "confidence": "high",
+ "uses_future": false,
+ "explanation": "Sparse feature (about 1% of steps), active only at D1 in the last decile of the episode. On top of the late-episode timing baseline, its magnitude is set mainly by the previous trial: it is strongly raised (about +2.1) when that trial was a1 leading to S2 (rare transition), whether or not it was rewarded. It is lowered when the previous trial reached S1. After S2 (including a2 S2 common), it also ramps up over the final trials (95-99). The previous reward hardly matters, and belief_lo, the trial before and the GO/D2 phases add nothing. The free fit adds an ep_trial ramp after a1 and a small negative ramp after reward (dev 0.635 vs 0.617 for the short form).",
+ "full_test_scores": {
+  "gate": "update",
+  "feature": 83,
+  "terms": [
+   "(phase == D1) * (ep_trial >= 90) * (prev_action == 1) * (prev_state == 2)",
+   "(phase == D1) * np.maximum(ep_trial - 94, 0)",
+   "(phase == D1) * np.maximum(ep_trial - 94, 0) * (prev_state == 2)",
+   "(phase == D1) * np.maximum(ep_trial - 94, 0) * (prev_action == 1)",
+   "(phase == D1) * (ep_trial >= 90) * (prev_state == 1)",
+   "(phase == D1) * np.maximum(ep_trial - 94, 0) * (prev_reward == 1)"
+  ],
+  "weights": [
+   1.9263535294314327,
+   -9.952828330294539e-05,
+   0.20336046876543878,
+   0.12235053680923302,
+   -0.454158595495395,
+   -0.10724492572595413
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6329795485863443,
+  "r2": 0.6894905395875959,
+  "r2_timing_only": 0.15397232166106178
+ },
+ "gate": "update",
+ "feature": 83,
+ "test_scores": {
+  "gate": "update",
+  "feature": 83,
+  "terms": [
+   "(phase == D1) * np.maximum(ep_trial - 85, 0) * (prev_state - prev_action == 1)",
+   "(phase == D1) * np.maximum(ep_trial - 94, 0) * last_is('a2 S2 u')",
+   "(phase == D1) * (ep_trial >= 90) * (prev_state == 1)"
+  ],
+  "weights": [
+   0.25557009562350186,
+   0.20566091723682045,
+   -0.4412732149168167
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6922241024711471,
+  "r2": 0.7396130719649816,
+  "r2_timing_only": 0.15397232166106178
+ },
+ "dev_scores": {
+  "gate": "update",
+  "feature": 83,
+  "terms": [
+   "(phase == D1) * np.maximum(ep_trial - 85, 0) * (prev_state - prev_action == 1)",
+   "(phase == D1) * np.maximum(ep_trial - 94, 0) * last_is('a2 S2 u')",
+   "(phase == D1) * (ep_trial >= 90) * (prev_state == 1)"
+  ],
+  "weights": [
+   0.25557009562350186,
+   0.20566091723682045,
+   -0.4412732149168167
+  ],
+  "split": "dev",
+  "r2_beyond_timing": 0.6880151652577319,
+  "r2": 0.7368587087671219,
+  "r2_timing_only": 0.15655742866392808
+ },
+ "final_verdict": "explained",
+ "observed_only": true,
+ "skeptic": {
+  "upheld": false,
+  "issues": [
+   "The core claim holds. In the profile's residuals, D1 after a1 S2 is about +0.26 and after any S1 about -0.05; GO and D2 are exactly 0. The recorded short form reproduces 0.611 on test.",
+   "The a1 S2 effect is a ramp over the late episode, not a step at trial 90. Swapping (ep_trial >= 90) for np.maximum(ep_trial - 85, 0) on the a1 S2 term raises test R^2 from 0.611 to 0.675 with the other terms unchanged. Adding an a1 S2 ramp term on top of the original also helps (+0.32 weight, test 0.634).",
+   "The claim that it ramps after S2 'including a2 S2 common' is misleading. Adding a step term for D1 late * last_is('a2 S2 r') gets weight -0.44, i.e. it cancels the decile-9 baseline: little or no firing after a rewarded a2 S2. Misses on the recorded form say the same: D1 after a2 S2 r is the most over-predicted cell (-0.039). The S2 ramp comes from unrewarded a2 S2. Restricting the ramp to last_is('a2 S2 u') raises test R^2 to 0.692.",
+   "The claim that 'belief_lo adds little' is not quite right. As a 4th term, (late D1) * (prev_state == 2) * belief_lo gets a positive weight and lifts test R^2 from 0.611 to 0.677, so the response after reaching S2 is larger when the observer believes S1 is good. That term needs 4 factors, so it cannot go in a short form.",
+   "The trial before adds a little: (tv('action', -2) == 1) after S2 gives test 0.624.",
+   "Remaining worst misses are mostly windows whose first trial has no previous-trial information (prev unknown), plus a2 S2 cases. After the revision, systematic errors by phase x previous trial are all under 0.025."
+  ],
+  "revised_verdict": "explained",
+  "revised_label": "Late-episode D1 after a rare a1->S2 trial, rising toward episode end; zero after S1.",
+  "better_short_terms": "(phase == D1) * np.maximum(ep_trial - 85, 0) * (prev_state - prev_action == 1) ;; (phase == D1) * np.maximum(ep_trial - 94, 0) * last_is('a2 S2 u') ;; (phase == D1) * (ep_trial >= 90) * (prev_state == 1)",
+  "better_short_terms_test_r2_beyond_timing": 0.692
+ },
+ "final_label": "Late-episode D1 after a rare a1->S2 trial, rising toward episode end; zero after S1.",
+ "original_short_terms": "(phase == D1) * (ep_trial >= 90) * (prev_state - prev_action == 1) ;; (phase == D1) * np.maximum(ep_trial - 94, 0) * (prev_state == 2) ;; (phase == D1) * (ep_trial >= 90) * (prev_state == 1)",
+ "original_test_scores": {
+  "gate": "update",
+  "feature": 83,
+  "terms": [
+   "(phase == D1) * (ep_trial >= 90) * (prev_state - prev_action == 1)",
+   "(phase == D1) * np.maximum(ep_trial - 94, 0) * (prev_state == 2)",
+   "(phase == D1) * (ep_trial >= 90) * (prev_state == 1)"
+  ],
+  "weights": [
+   2.100402200838981,
+   0.1604397294666446,
+   -0.4411204332004575
+  ],
+  "split": "test",
+  "r2_beyond_timing": 0.6114489786999021,
+  "r2": 0.6712750815332549,
+  "r2_timing_only": 0.15397232166106178
+ },
+ "terms_from": "skeptic"
+}

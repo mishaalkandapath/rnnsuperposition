@@ -1,0 +1,104 @@
+{
+  "label": "D1 after an unrewarded trial while the policy strongly favours a2 (typically after a2 -> S1 rare, unrewarded), episode trials < 80",
+  "predicate": "(phase == D1) & (prev_reward == 0) & (choice < -4.0) & (ep_trial < 75)",
+  "verdict": "explained",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Fires only at D1 (never GO/D2), only when the reward input is 0 (previous trial unrewarded), and only when the agent is about to choose a2 with a strongly negative logit(a1)-logit(a2) (choice in roughly [-8.9,-4.4]). The typical case is a2 -> S1 (rare) unrewarded, i.e. a rare-unrewarded trial after which a model-based agent stays on a2 (prev_action=2 & prev_common=0 gives F1 0.71 with only observed history). It also fires on the window-first D1 where history is unknown. It is silent after rewarded trials, when the upcoming choice is a1, and essentially never at episode trials >= 80 (an empirical time cutoff; without ep_trial<80 the dev F1 drops from 0.91 to 0.80). Activation mass is concentrated where value is in [7.13,7.54) and choice in [-8.9,-4.4]; the weakest activations are the misses, at less extreme choice logits. All variables are observed or computed by the model at that step (choice is the model policy logit), so no future variable is used.",
+  "test_scores": {
+    "gate": "hidden",
+    "feature": 72,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (choice < -4.0) & (ep_trial < 75)",
+    "split": "test",
+    "precision": 0.954846973786541,
+    "recall": 0.9358801901174783,
+    "f1": 0.9452684495369217,
+    "mass_recall": 0.9836537386883865,
+    "correlation": 0.9065870281672607,
+    "n_active": 22302,
+    "n_predicted": 21859,
+    "coverage_by_activation_quartile": [
+      0.7621951219512195,
+      0.9813486370157819,
+      1.0,
+      1.0
+    ]
+  },
+  "dev_scores": {
+    "gate": "hidden",
+    "feature": 72,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (choice < -4.0) & (ep_trial < 75)",
+    "split": "dev",
+    "precision": 0.9561012567965059,
+    "recall": 0.9380821199003018,
+    "f1": 0.9470059814156753,
+    "mass_recall": 0.9858026765082576,
+    "correlation": 0.9092166276362772,
+    "n_active": 22869,
+    "n_predicted": 22438,
+    "coverage_by_activation_quartile": [
+      0.7661769849597762,
+      0.9863564806716809,
+      1.0,
+      0.9998250830855344
+    ]
+  },
+  "gate": "hidden",
+  "feature": 72,
+  "final_verdict": "explained",
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "The factual claims hold on dev. The feature is active only at D1 (0 activations at GO or D2), never after rewarded trials (in_rew=1: 0 of 246822 steps), almost never when the upcoming choice is a1 (1 of 22869 activations), and has 1 activation at ep_trial >= 80. 81% of activation mass is at prev_action=2 & prev_common=0 & unrewarded. The other 19% is at the first D1 of a window (prev_common=-1). After a1->S2 (rare, unrewarded) it never fires (0 activations), so the feature is specific to a2, as the label says.",
+      "The ep_trial<80 term is not a sharp cutoff; activity fades over trials 70-79. Activation rate is about 0.027 for trials 10-69, 0.025 in 60-69, 0.013 in 70-79, and 0 from 80 on. Within 70-79 the predicate's precision is only 0.52 and that bin holds 1.6% of the mass. Moving the cutoff to ep_trial<75 raises dev precision from 0.92 to 0.97.",
+      "The choice threshold of -4.44 is a quantile-bin edge and is slightly too strict. Most misses come from the low-activation tail at choice between about -4.4 and -3.8. With choice<-4.0 and ep_trial<75: dev F1 0.947; test precision 0.955, recall 0.936, F1 0.945, mass recall 0.984 (original predicate on test: F1 0.908, mass recall 0.943).",
+      "The test false positives contain no systematic class. The predicate fires after a2->S2 common-unrewarded trials only 108 times on test (precision 0.15), because the agent rarely still strongly favours a2 there. Other false positives are scattered a2->S1 rare-unrewarded D1s with no activation.",
+      "The observed-history-only predicate (D1 & prev_reward==0 & prev_action==2 & prev_common==0 & ep_trial<80) reaches only dev F1 0.80 (precision 0.80, recall 0.81). The choice logit carries real extra precision, so a predicate built on the agent's own policy logit is justified. No future variable is used."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": "D1 after an unrewarded trial while the policy strongly favours a2 (choice logit < about -4); mostly after a2 -> S1 (rare, unrewarded), also at a window's first D1; fades over episode trials 70-79 and is silent from trial 80",
+    "better_predicate": "(phase == D1) & (prev_reward == 0) & (choice < -4.0) & (ep_trial < 75)",
+    "better_predicate_test_f1": 0.945
+  },
+  "final_label": "D1 after an unrewarded trial while the policy strongly favours a2 (choice logit < about -4); mostly after a2 -> S1 (rare, unrewarded), also at a window's first D1; fades over episode trials 70-79 and is silent from trial 80",
+  "original_predicate": "(phase == D1) & (prev_reward == 0) & (choice < -4.44) & (ep_trial < 80)",
+  "original_test_scores": {
+    "gate": "hidden",
+    "feature": 72,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (choice < -4.44) & (ep_trial < 80)",
+    "split": "test",
+    "precision": 0.9234403223565374,
+    "recall": 0.8940005380683347,
+    "f1": 0.9084819902945799,
+    "mass_recall": 0.9431727356120847,
+    "correlation": 0.8740526091597742,
+    "n_active": 22302,
+    "n_predicted": 21591,
+    "coverage_by_activation_quartile": [
+      0.7462338593974175,
+      0.8305236728837877,
+      0.9992825112107623,
+      1.0
+    ]
+  },
+  "original_dev_scores": {
+    "gate": "hidden",
+    "feature": 72,
+    "predicate": "(phase == D1) & (prev_reward == 0) & (choice < -4.44) & (ep_trial < 80)",
+    "split": "dev",
+    "precision": 0.9235540878257765,
+    "recall": 0.9049368140277231,
+    "f1": 0.9141506725268901,
+    "mass_recall": 0.9511011598086557,
+    "correlation": 0.87715959073753,
+    "n_active": 22869,
+    "n_predicted": 22408,
+    "coverage_by_activation_quartile": [
+      0.7600559636236446,
+      0.8604163022564282,
+      0.9994752492566031,
+      0.9998250830855344
+    ]
+  },
+  "predicate_from": "skeptic"
+}
