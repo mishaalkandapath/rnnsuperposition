@@ -15,9 +15,24 @@
                probed features (rl_probe/*_probe.json)
   scorecards   agent predicate F1 vs fitted scorecard F1 (scorecard fields in the results)
   time         activation mass by episode trial for features in the choice / value cores
+  magnitude    magnitude explanations, features vs units: timing alone, short form, free fit
+  ranked       budget-matched ranked fidelity by explanation tier (abandoned analysis)
+  substitution whole-set substitution by explanations (abandoned analysis)
+  conditional  per-component importance and first-round substitution (its clamp figure goes to archived/)
   breakdown    how the features that matter are explained (refined), firing-rule coverage and discrete levels, vs units
   clock        the value head's late fall and the late-onset candidate features that mirror it
   tests        blind simulation, per-component substitution and story test: features (first / current) vs units
+  credit       stay table, credit to the state vs the action, what h keeps; steering the credit detectors (rl_circuits/)
+  circuit      the credit circuit: contrastive graph of a rewarded a1->S1 trial vs the same trial ending in S2
+  reversal     switching after a reversal: behaviour, choice logit, flow of each previous outcome into the switch
+  checks       minimal circuits: sufficiency and necessity of the top-k features per step vs random features
+  value        the value circuit: V vs the return-to-go, what V ignores, the features carrying episode time into V
+  bayes        phase portraits (logit vs logit change), agent vs ideal observer, and what separates the bands
+  axis         one belief or two values: survival of an outcome's effect, S1 vs S2 evidence in the graph
+  band_circuit the bands in the attribution graph: offset features, patching, history-specific detectors
+  lag          the switching lag: miss readers in stick vs follow trials, through vs around the belief, patching
+  swap         does the agent act on the belief information: memory-part swaps and later choices
+  trace_rpe    the reward trace's share of the bands and its behavioural role; RPEs as in Wang et al.
 
 Inputs default to the paths used in the RL runs (rl_features/...). fidelity, sets, substitutes, probe, scorecards,
 time, ranked and substitution belong to abandoned analyses: they write to <out>/archived and `all` skips them
@@ -1132,10 +1147,557 @@ def tests(out):
     return [p]
 
 
+CIRCUITS = "rl_features/rl_circuits"
+GATE_OF = {"r": "reset", "z": "update", "n": "candidate"}
+# short names of the features drawn in the circuit diagram (from their firing explanations, rl_features/rl_autointerp)
+SHORT = {"n:219": "a1→S1", "n:147": "a1→S2", "n:210": "a2→S1", "n:167": "a2→S2", "n:243": "a1→S2, fades",
+         "n:10": "a1→S1, fades", "r:80": "a1→S2", "r:98": "D2, S2 higher", "r:10": "after a1", "r:108": "a1→S1",
+         "r:120": "rewarded S1", "n:77": "rewarded a1→S1", "r:59": "rewarded S2", "n:215": "rewarded S2",
+         "r:18": "a1→S2 rare", "n:8": "rewarded S2", "z:250": "after S2", "n:66": "rewarded S1",
+         "n:208": "unrewarded, not S1", "n:18": "unrewarded a1→S1", "n:165": "unrewarded a1→S2",
+         "z:55": "after rewarded S1", "n:121": "S1-directed choice", "z:235": "after rewarded a1→S2",
+         "n:235": "after rewarded a1→S2", "z:206": "a1 after unrewarded S2", "n:146": "after unrewarded S2",
+         "z:5": "after unrewarded a1→S1", "n:145": "rewarded a1→S2 rare", "n:55": "after rewarded, a1", "z:150": "", "z:134": ""}
+
+
+def credit(out):
+    """Model-based credit: the stay table, the factorial effects on the next choice, what h keeps, and steering."""
+    matplotlib, plt = _plt()
+    beh = json.load(open(os.path.join(CIRCUITS, "reversal_flow.json")))["behaviour"]
+    fac = json.load(open(os.path.join(CIRCUITS, "credit_factorial.json")))
+    fig, axes = plt.subplots(1, 3, figsize=(17, 4.8), facecolor=SURFACE)
+    ax = axes[0]
+    style(ax, "Behaviour: P(repeat the choice)")
+    st = beh["stay_table"]
+    for j, (r, color) in enumerate((("rewarded", "#2a78d6"), ("unrewarded", "#eb6834"))):
+        vals = [st[f"common {r}"], st[f"rare {r}"]]
+        ax.bar(np.arange(2) + (j - 0.5) * 0.36, vals, 0.34, color=color, label=f"previous trial {r}")
+        for i, v in enumerate(vals):
+            ax.text(i + (j - 0.5) * 0.36, v + 0.015, f"{v:.2f}", ha="center", fontsize=8, color=INK_2)
+    ax.set_xticks(range(2), ["common transition", "rare transition"]); ax.set_ylim(0, 1.25)
+    ax.legend(fontsize=8, frameon=False, labelcolor=INK_2, loc="upper center", ncol=2)
+    ax = axes[1]
+    style(ax, "Next-choice logit: what a reward is credited to")
+    rows = [("credit_to_state", "reward × state\n(credit to the state)"), ("credit_to_action", "reward × action\n(credit to the action)"),
+            ("perseveration", "action taken\n(repeat bias)"), ("reward_x_state_x_action", "reward × state × action")]
+    for i, (k, name) in enumerate(rows):
+        m, (lo, hi) = fac[k]["mean"], fac[k]["q10_q90"]
+        ax.barh(i, m, 0.55, color="#2a78d6" if i == 0 else INK_2)
+        ax.plot([lo, hi], [i, i], color=INK, linewidth=1)
+        ax.text(max(m, hi) + 0.4, i, f"{m:+.1f}", va="center", fontsize=8.5, color=INK)
+    ax.set_yticks(range(len(rows)), [n for _, n in rows], fontsize=8.5); ax.invert_yaxis()
+    ax.axvline(0, color=GRID); ax.grid(axis="x", color=GRID, linewidth=0.8); ax.grid(axis="y", visible=False)
+    ax.set_xlabel("Effect on logit a1 − a2 (mean; line = 10th–90th percentile of windows)", fontsize=8.5, color=INK)
+    ax = axes[2]
+    style(ax, "How much of the state / action the hidden state keeps")
+    held = fac["held_in_h"]
+    steps = ["c.D2", "c+1.D1", "c+1.GO"]
+    for which, color in (("state", "#2a78d6"), ("action", "#eb6834")):
+        v = [np.mean([held[f"{which} effect after {s}, r={r}"]["norm_mean"] for r in (1, 0)]) for s in steps]
+        ax.plot(range(3), v, color=color, linewidth=2, marker="o", markersize=8, label=f"{which} swapped")
+        for i, x in enumerate(v):
+            ax.text(i, x + 0.08, f"{x:.2f}", ha="center", fontsize=8, color=INK_2)
+    ax.set_xticks(range(3), ["after D2\n(state shown)", "after next D1\n(reward shown)", "after next GO\n(choice)"])
+    ax.set_ylabel("|Δh| between the two runs", fontsize=9, color=INK); ax.set_ylim(0, 3.3)
+    ax.legend(fontsize=8, frameon=False, labelcolor=INK_2)
+    fig.tight_layout(rect=(0, 0.06, 1, 1))
+    p1 = save(fig, out, "credit_assignment.png",
+              "Left: 3000 closed-loop episodes. Middle and right: 600 held-out trace windows, the core trial rerun in all 8 "
+              "choice × state × reward combinations (rl_circuits/credit_factorial.json); right: mean over reward 1 and 0.")
+    plt.close(fig)
+    stg = json.load(open(os.path.join(CIRCUITS, "credit_steering.json")))["results"]
+    fig, ax = plt.subplots(figsize=(11, 4.8), facecolor=SURFACE)
+    style(ax, "Steering the next-D1 candidate detectors by label (input unchanged)")
+    swaps = [("state_swap", "state swap\n(other state, same reward)"), ("reward_swap", "reward swap\n(same state, other reward)"),
+             ("double_swap", "double swap\n(other state and reward:\npredicted ≈ no change)")]
+    bars = [("off_only", "this cell's detectors off", "#86b6ef"), ("on_only", "other cell's detectors on", "#2a78d6"),
+            ("both", "both", "#184f95"), ("control", "random features (both)", "#c3c2b7"), ("real", "real input swapped", INK)]
+    w = 0.16
+    for i, (s, _) in enumerate(swaps):
+        for j, (k, name, color) in enumerate(bars):
+            key = (f"{s}/real_input" if k == "real" else f"{s}/c+1.D1/n" if k == "both" else f"{s}/c+1.D1/n/{k}")
+            v = stg[key + "/shift_vs_state_swap"]["median"]
+            ax.bar(i + (j - 2) * w, v, w * 0.92, color=color, label=name if i == 0 else None)
+            ax.text(i + (j - 2) * w, v + (0.02 if v >= 0 else -0.08), f"{v:.2f}", ha="center", fontsize=7, color=INK_2)
+    ax.set_xticks(range(3), [n for _, n in swaps], fontsize=8.5)
+    ax.axhline(0, color=GRID); ax.set_ylim(-0.15, 1.25)
+    ax.set_ylabel("Shift of the next choice\n(units of a real state swap's effect, median)", fontsize=9, color=INK)
+    ax.legend(fontsize=8, frameon=False, labelcolor=INK_2, loc="upper right", ncol=2)
+    fig.tight_layout(rect=(0, 0.07, 1, 1))
+    p2 = save(fig, out, "credit_steering.png",
+              "396 held-out windows (selection on another 400). Detectors: features at the next D1 at least 3× more active in one "
+              "(state, reward) cell than in any other. Steered only at the next D1, candidate features "
+              "(rl_circuits/credit_steering.json).")
+    plt.close(fig)
+    return [p1, p2]
+
+
+def circuit(out):
+    """The credit circuit for one pattern: rewarded a1→S1 vs the same trial ending in S2 (state contrast)."""
+    matplotlib, plt = _plt()
+    from matplotlib.lines import Line2D
+    g = json.load(open(os.path.join(CIRCUITS, "contrast_flow.json")))["contrasts"]["state"]["a1->S1 r=1"]
+    steps = [("c.D2", "D2: state shown\n(S1 vs S2)"), ("c+1.D1", "next D1: reward shown"), ("c+1.GO", "next GO: choice")]
+    per = {"c.D2": 6, "c+1.D1": 8, "c+1.GO": 5}
+    pos, nodes = {}, []
+    for i, (s, _) in enumerate(steps):
+        top = g["top_features_by_step"][s][:per[s]]
+        for j, f in enumerate(top):
+            y = 1 - j / (per[s] - 1) if per[s] > 1 else 0.5
+            pos[f"{s}/{f['feature']}"] = (i, y)
+            nodes.append((s, f))
+    fig, ax = plt.subplots(figsize=(15, 7.2), facecolor=SURFACE)
+    ax.set_facecolor(SURFACE); ax.axis("off")
+    emax = max(abs(v) for v in g["top_edges"].values())
+    for e, v in sorted(g["top_edges"].items(), key=lambda kv: abs(kv[1])):
+        a, b = e.split(" -> ")
+        if a in pos and b in pos and abs(v) >= 0.03 * emax and pos[a][0] < pos[b][0]:
+            (x0, y0), (x1, y1) = pos[a], pos[b]
+            ax.plot([x0 + 0.52, x1 - 0.04], [y0, y1], color=INK if v > 0 else INK_2, alpha=0.75,
+                    linewidth=0.6 + 5 * abs(v) / emax, linestyle="-" if v > 0 else "--", zorder=1)
+    fmax = max(abs(f["flow"]) for _, f in nodes)
+    for s, f in nodes:
+        x, y = pos[f"{s}/{f['feature']}"]
+        k = f["feature"]
+        ax.scatter([x], [y], s=120 + 1400 * abs(f["flow"]) / fmax, color=GATE_COLORS[GATE_OF[k[0]]],
+                   edgecolor=SURFACE, linewidth=2, zorder=3)
+        name = {"r": "reset", "z": "update", "n": "cand."}[k[0]] + " " + k[2:]
+        ax.text(x + 0.07, y, f"{name}  {SHORT.get(k, '')}\nflow {f['flow']:+.1f}", fontsize=8, color=INK, va="center", zorder=4)
+    for i, (_, t) in enumerate(steps):
+        ax.text(i, 1.13, t, ha="center", fontsize=10.5, color=INK)
+    ax.text(3.25, 0.5, f"next choice\nΔ logit a1−a2\n= {g['d_target_mean']:+.1f}", fontsize=10.5, color=INK, va="center", ha="center")
+    ax.annotate("", xy=(3.02, 0.5), xytext=(2.72, 0.5), arrowprops=dict(arrowstyle="->", color=INK))
+    ax.set_xlim(-0.15, 3.45); ax.set_ylim(-0.12, 1.22)
+    handles = [Line2D([], [], marker="o", linestyle="", color=GATE_COLORS[gt], markersize=9, label=f"{gt} gate feature")
+               for gt in ("reset", "update", "candidate")]
+    handles += [Line2D([], [], color=INK, label="edge pushes towards a1 (flow > 0)"),
+                Line2D([], [], color=INK_2, linestyle="--", label="edge pushes towards a2")]
+    ax.legend(handles=handles, fontsize=8, frameon=False, labelcolor=INK_2, loc="lower center", ncol=5, bbox_to_anchor=(0.5, -0.06))
+    p = save(fig, out, "credit_circuit.png",
+             "Contrastive graph, mean over 300 held-out windows whose core trial was a rewarded a1→S1, against the same windows with "
+             "the state swapped to S2 (rl_circuits/contrast_flow.json). Node size = |flow| (its total effect on the change); "
+             "features of all three gates, top features per step, edges between steps; opposite pairs at a step largely cancel.")
+    plt.close(fig)
+    return [p]
+
+
+def reversal(out):
+    """Switching after a reversal: behaviour, the choice logit, and where the switch's evidence comes from."""
+    matplotlib, plt = _plt()
+    d = json.load(open(os.path.join(CIRCUITS, "reversal_flow.json")))
+    beh = d["behaviour"]
+    ks = sorted(int(k) for k in beh["p_new_action_by_trials_since_reversal"])
+    fig, axes = plt.subplots(1, 3, figsize=(17, 4.6), facecolor=SURFACE)
+    ax = axes[0]
+    style(ax, "P(choose the new good action)")
+    for who, color, name in (("agent", "#2a78d6", "agent"), ("ideal_observer", INK_2, "ideal observer (greedy)")):
+        ax.plot(ks, [beh["p_new_action_by_trials_since_reversal"][str(k)][who] for k in ks], color=color, linewidth=2, label=name)
+    ax.axvline(0, color=GRID, linestyle=":")
+    ax.set_xlabel("Trials since the reversal", fontsize=9, color=INK); ax.set_ylim(0, 1)
+    ax.legend(fontsize=8, frameon=False, labelcolor=INK_2, loc="lower right")
+    ax = axes[1]
+    style(ax, "Agent's choice logit, towards the new action")
+    lg = beh["choice_logit_towards_new_action"]
+    m = [lg[str(k)]["mean"] for k in ks]
+    ax.fill_between(ks, [lg[str(k)]["q10_q90"][0] for k in ks], [lg[str(k)]["q10_q90"][1] for k in ks], color="#86b6ef", alpha=0.5, linewidth=0)
+    ax.plot(ks, m, color="#2a78d6", linewidth=2)
+    ax.axhline(0, color=INK_2, linewidth=0.8); ax.axvline(0, color=GRID, linestyle=":")
+    ax.set_xlabel("Trials since the reversal (band: 10th–90th percentile)", fontsize=9, color=INK)
+    for a in axes[:2]:
+        a.set_xticks(range(-5, 15, 5))
+    ax = axes[2]
+    style(ax, "Where the switch comes from (600 switches)")
+    src = d["old_world"]["flow_by_source"]
+    lab = ["S−1", "S−2", "S−3", "S−4", "S−5"]
+    vals = [src.get(f"input@{'S' if k == 0 else f'S-{k}'}.D1", 0.0) for k in range(5)]
+    ax.bar(range(5), vals, 0.6, color="#2a78d6")
+    for i, v in enumerate(vals):
+        ax.text(i, v + 0.15, f"{v:.1f}", ha="center", fontsize=8, color=INK_2)
+    ax.set_xticks(range(5), lab)
+    ax.set_xlabel("Outcome of trial (S = the switch trial)", fontsize=9, color=INK)
+    ax.set_ylabel("Flow from that trial's outcome (logit)", fontsize=9, color=INK)
+    ax.text(4.3, max(vals) * 0.9, f"all replaced: {d['old_world']['d_target_mean']:.1f}\nS−1 alone: {d['last']['d_target_mean']:.1f}",
+            ha="right", fontsize=8.5, color=INK)
+    fig.tight_layout(rect=(0, 0.06, 1, 1))
+    p = save(fig, out, "reversal_switch.png",
+             "3000 closed-loop episodes, reversals after which the agent had settled. Right: each switch rerun with the outcomes of "
+             "the 5 trials before replaced by those the old belief expects; exact flow from each trial's reward input to the switch "
+             "trial's choice (rl_circuits/reversal_flow.json).")
+    plt.close(fig)
+    return [p]
+
+
+def checks(out):
+    """Minimal circuits: sufficiency and necessity of each window's top-k features per step."""
+    matplotlib, plt = _plt()
+    d = json.load(open(os.path.join(CIRCUITS, "circuit_checks.json")))
+    ks = (1, 3, 5, 10, 20)
+    fig, axes = plt.subplots(1, 3, figsize=(17, 4.6), facecolor=SURFACE, sharey=True)
+    names = {"state": "State swap → next choice", "reward": "Reward swap → next choice", "reversal": "Recent outcomes → the switch"}
+    modes = [("sufficiency_free", "sufficiency, free", "#2a78d6", "-"), ("sufficiency_clamped", "sufficiency, clamped", "#2a78d6", "--"),
+             ("necessity_free", "necessity, free", "#eb6834", "-"), ("necessity_clamped", "necessity, clamped", "#eb6834", "--")]
+    for ax, c in zip(axes, ("state", "reward", "reversal")):
+        style(ax, f"{names[c]} (n={d[c]['n']})")
+        for m, name, color, ls in modes:
+            ax.plot(range(5), [min(d[c][f"top{k}"][m + "_share"], 1.3) for k in ks], color=color, linestyle=ls, linewidth=2,
+                    marker="o", markersize=7, label=name)
+        for m, ls in (("sufficiency_free", "-"), ("necessity_free", "--")):
+            ax.plot(range(5), [d[c][f"random{k}"][m + "_share"] for k in ks], color="#c3c2b7", linestyle=ls, linewidth=1.6,
+                    label=f"random features, {m.split('_')[0]}")
+        ax.set_xticks(range(5), [str(k) for k in ks]); ax.set_xlabel("Features per step (top by |flow|)", fontsize=9, color=INK)
+        ax.axhline(1, color=GRID, linewidth=0.8)
+    axes[0].set_ylabel("Share of the choice change carried (median)", fontsize=9, color=INK)
+    axes[0].legend(fontsize=7.5, frameon=False, labelcolor=INK_2, loc="center right")
+    fig.tight_layout(rect=(0, 0.06, 1, 1))
+    p = save(fig, out, "circuit_checks.png",
+             "Real GRU; patched gates are transcoder reconstructions plus the patched run's own error, kept in the gate's range. "
+             "Free: the rest recomputed; clamped: every other feature held. Values above 1.3 drawn at 1.3 (single features that "
+             "overshoot when their cancelling partner is not patched). rl_circuits/circuit_checks.json.")
+    plt.close(fig)
+    return [p]
+
+
+def value(out):
+    """The value circuit: V vs the return-to-go, what V ignores, and the features carrying episode time into V."""
+    matplotlib, plt = _plt()
+    d = json.load(open(os.path.join(CIRCUITS, "value_circuit.json")))
+    w = d["what"]
+    fig, axes = plt.subplots(1, 3, figsize=(17, 4.6), facecolor=SURFACE)
+    ax = axes[0]
+    style(ax, "Value head vs discounted return-to-go (γ = 0.97)")
+    ax.plot(range(100), w["V_by_trial"], color="#2a78d6", linewidth=2, label="value output V")
+    ax.plot(range(100), w["G_by_trial"], color=INK_2, linewidth=2, linestyle="--", label="actual return-to-go G (own policy)")
+    ax.set_xlabel("Episode trial", fontsize=9, color=INK); ax.set_ylim(0, 8.5)
+    ax.legend(fontsize=8, frameon=False, labelcolor=INK_2, loc="lower left")
+    ax = axes[1]
+    style(ax, "What V reacts to beyond time")
+    ks = sorted(int(k) for k in w["around_reversals_beyond_time"])
+    ax.plot(ks, [w["around_reversals_beyond_time"][str(k)]["V"] for k in ks], color="#2a78d6", linewidth=2, marker="o",
+            markersize=7, label="V around a reversal")
+    ax.plot(ks, [w["around_reversals_beyond_time"][str(k)]["G"] for k in ks], color=INK_2, linewidth=2, linestyle="--",
+            label="G around a reversal (true)")
+    d2 = w["at_D2_by_state_reached"]
+    ax.axhline(d2["believed-good state"]["V_beyond_time_at_D2"], color="#1baf7a", linewidth=1.6, label="V at D2, believed-good state reached")
+    ax.axhline(d2["believed-bad state"]["V_beyond_time_at_D2"], color="#eb6834", linewidth=1.6, label="V at D2, believed-bad state reached")
+    ax.axhline(0, color=GRID)
+    ax.set_xlabel("Trials since a reversal", fontsize=9, color=INK)
+    ax.set_ylabel("Beyond the time profile", fontsize=9, color=INK)
+    ax.legend(fontsize=7.5, frameon=False, labelcolor=INK_2, loc="lower right")
+    ax = axes[2]
+    t = d["time"]["value"]
+    style(ax, f"Late vs early episode, same recent trials: ΔV = {t['d_target_mean']:.2f}")
+    feats = list(t["features_by_total_flow"].items())[:10]
+    for i, (k, v) in enumerate(feats):
+        ax.barh(i, v, 0.6, color=GATE_COLORS[GATE_OF[k[0]]])
+        ax.text(v - 0.05 if v < 0 else v + 0.05, i, f"{v:+.2f}", va="center", ha="right" if v < 0 else "left", fontsize=8, color=INK_2)
+    ax.set_yticks(range(len(feats)), [{"r": "reset ", "z": "update ", "n": "cand. "}[k[0]] + k[2:] for k, _ in feats], fontsize=8.5)
+    ax.invert_yaxis(); ax.axvline(0, color=GRID); ax.grid(axis="x", color=GRID, linewidth=0.8); ax.grid(axis="y", visible=False)
+    ax.set_xlabel("Flow into the value at the next GO (summed over steps)", fontsize=9, color=INK)
+    ax.set_xlim(min(v for _, v in feats) * 1.25, 0.4)
+    fig.tight_layout(rect=(0, 0.06, 1, 1))
+    p = save(fig, out, "value_circuit.png",
+             "3000 closed-loop episodes (rl_circuits/value_circuit.json). Right: 400 pairs of a late (trials 80-95) and an early "
+             "(30-50) carried state with the same good state and the same previous 3 trials, run on the same inputs; bars = features "
+             "(colour = gate) carrying the value difference.")
+    plt.close(fig)
+    return [p]
+
+
+def bayes(out):
+    """Phase portraits (Ji-An et al. 2025 style): the agent vs the ideal observer, and what the bands are."""
+    matplotlib, plt = _plt()
+    from matplotlib.lines import Line2D
+    d = json.load(open(os.path.join(CIRCUITS, "bayes_vs_mb.json")))
+    P = {k: np.asarray(v) for k, v in d["portrait"]["points"].items()}
+    types = ["S1 R=1", "S1 R=0", "S2 R=1", "S2 R=0"]
+    tcol = {0: "#184f95", 1: "#86b6ef", 2: "#a8381b", 3: "#f2a07e"}     # S1 dark / light blue, S2 dark / light orange
+    fig, axes = plt.subplots(2, 2, figsize=(13, 10.5), facecolor=SURFACE)
+    for ax, (x, y, title) in zip(axes[0], ((P["L"], P["dL"], "Our agent: logit vs logit change"),
+                                           (P["observer_belief_logit"], P["observer_dlam"], "Ideal observer (belief logit), same trials"))):
+        style(ax, title)
+        for t in range(4):
+            k = P["typ"] == t
+            ax.scatter(x[k], y[k], s=4, color=tcol[t], alpha=0.35, linewidths=0)
+        ax.axhline(0, color=GRID); ax.axvline(0, color=GRID)
+        ax.set_xlabel("Logit L(t)", fontsize=9, color=INK); ax.set_ylabel("Logit change L(t+1) − L(t)", fontsize=9, color=INK)
+    axes[0][0].legend(handles=[Line2D([], [], marker="o", linestyle="", color=tcol[t], markersize=7, label=types[t]) for t in range(4)],
+                      fontsize=8, frameon=False, labelcolor=INK_2, loc="lower left", ncol=2)
+    ax = axes[1][0]
+    style(ax, "One input type (S1 R=1): its bands are the previous trial")
+    pcol = {0: "#184f95", 1: "#86b6ef", 2: "#a8381b", 3: "#f2a07e"}
+    for pt in range(4):
+        k = (P["typ"] == 0) & (P["prev_typ"] == pt)
+        ax.scatter(P["L"][k], P["dL"][k], s=6, color=pcol[pt], alpha=0.5, linewidths=0, label=f"previous trial {types[pt]}")
+    ax.axhline(0, color=GRID); ax.axvline(0, color=GRID)
+    ax.set_xlabel("Logit L(t)", fontsize=9, color=INK); ax.set_ylabel("Logit change", fontsize=9, color=INK)
+    ax.legend(fontsize=8, frameon=False, labelcolor=INK_2, markerscale=2, loc="upper right")
+    ax = axes[1][1]
+    style(ax, "What separates the bands (share of the spread around the curves)")
+    add = d["bands"]["added"]
+    rows = [("previous input type and transition", "previous input type\n+ transition"), ("previous input type", "previous input type"),
+            ("previous reward only", "previous reward only"), ("MB-RL Q(S1) + Q(S2) beyond the belief (quintiles)", "MB-RL Q(S1)+Q(S2)\nbeyond the belief"),
+            ("previous state only", "previous state only"), ("input type two trials back", "input type 2 back"),
+            ("episode time (decile)", "episode time"), ("current transition", "current transition")]
+    go = d["go_split"]["bands_explained"]["GO write beyond L (quintiles)"]
+    vals = [add[k]["share_of_spread_explained"] for k, _ in rows] + [go]
+    labels = [n for _, n in rows] + ["GO write beyond L\n(circuit variable)"]
+    for i, v in enumerate(vals):
+        ax.barh(i, v, 0.6, color="#1baf7a" if i == len(vals) - 1 else "#2a78d6")
+        ax.text(v + 0.01, i, f"{v:.2f}", va="center", fontsize=8, color=INK_2)
+    ax.set_yticks(range(len(vals)), labels, fontsize=8); ax.invert_yaxis(); ax.set_xlim(0, 1)
+    ax.grid(axis="x", color=GRID, linewidth=0.8); ax.grid(axis="y", visible=False)
+    fig.tight_layout(rect=(0, 0.04, 1, 1))
+    p = save(fig, out, "phase_portrait.png",
+             f"3000 closed-loop episodes, 6000 sampled trials (rl_circuits/bayes_vs_mb.json). A curve per input type explains "
+             f"{d['bands']['r2_curve_per_input_type']:.2f} of the logit change; bottom right: share of the rest each history variable explains.")
+    plt.close(fig)
+    return [p]
+
+
+def axis(out):
+    """One belief or two values: survival of an outcome's effect, and S1 vs S2 evidence in the graph."""
+    matplotlib, plt = _plt()
+    d = json.load(open(os.path.join(CIRCUITS, "belief_axis.json")))
+    sv = d["survival_median"]
+    fig, axes = plt.subplots(1, 2, figsize=(15, 4.8), facecolor=SURFACE)
+    ax = axes[0]
+    style(ax, "How much of an outcome's effect survives the next trial")
+    cells = [("same state, common transition, confirming", "same state\nconfirming"),
+             ("other state, common transition, confirming", "other state\nconfirming"),
+             ("same state, common transition, opposing", "same state\nopposing"),
+             ("other state, common transition, opposing", "other state\nopposing"),
+             ("other state, rare transition", "other state\nby a rare transition")]
+    who = [("agent", "agent", "#2a78d6"), ("ideal observer", "ideal observer", INK_2), ("fitted Bayesian", "fitted Bayesian", "#1baf7a"),
+           ("fitted MB-RL", "fitted MB-RL (two values)", "#eb6834")]
+    wd = 0.2
+    for j, (k, name, color) in enumerate(who):
+        vals = [sv[k][c]["median"] for c, _ in cells]
+        ax.bar(np.arange(len(cells)) + (j - 1.5) * wd, vals, wd * 0.92, color=color, label=name)
+    ax.set_xticks(range(len(cells)), [n for _, n in cells], fontsize=8)
+    ax.set_ylabel("Effect on the choice one trial later / right after", fontsize=9, color=INK)
+    ax.legend(fontsize=8, frameon=False, labelcolor=INK_2, loc="upper left")
+    ax = axes[1]
+    style(ax, "S1 vs S2 evidence on the way to the choice two trials later")
+    steps = list(d["graph"])
+    labels = ["reward read\n(next D1)", "next GO", "next D2", "D1 after", "GO after\n(target)"]
+    ax.plot(range(len(steps)), [d["graph"][s]["flow_vector_cosine_S1_vs_S2_evidence"] for s in steps], color="#2a78d6",
+            linewidth=2, marker="o", markersize=8, label="same features? (cosine of the flow vectors)")
+    ax.plot(range(len(steps)), [d["graph"][s]["dh_rest_cosine_oriented_by_reward"] for s in steps], color=INK_2,
+            linewidth=2, linestyle="--", marker="o", markersize=7, label="rest of the change in h, aligned by reward")
+    ax.axhline(0, color=GRID)
+    ax.set_xticks(range(len(steps)), labels, fontsize=8); ax.set_ylim(-0.4, 1)
+    ax.set_ylabel("Cosine between S1-outcome and S2-outcome evidence", fontsize=9, color=INK)
+    ax.legend(fontsize=8, frameon=False, labelcolor=INK_2, loc="lower right")
+    fig.tight_layout(rect=(0, 0.06, 1, 1))
+    p = save(fig, out, "belief_axis.png",
+             "3000 events from closed-loop episodes: one trial's reward swapped (rl_circuits/belief_axis.json). Left: medians; "
+             "'confirming' = the next trial's outcome is evidence for the same state. Right: exact attribution graphs to the choice at "
+             "the GO two trials later.")
+    plt.close(fig)
+    return [p]
+
+
+FEAT_NAME = lambda k: {"r": "reset", "z": "update", "n": "cand."}[k[0]] + " " + k[2:]
+
+
+def band_circuit(out):
+    """The bands in the attribution graph: the features carrying the band offset, patching, history-specific
+    detectors at matched logit."""
+    matplotlib, plt = _plt()
+    d = json.load(open(os.path.join(CIRCUITS, "band_flow.json")))
+    g = d["contrasts"]["prev_reward"]
+    fig, axes = plt.subplots(1, 3, figsize=(20, 5.2), facecolor=SURFACE, gridspec_kw={"width_ratios": [1.6, 1, 1]})
+    ax = axes[0]
+    style(ax, "Features carrying the band offset (previous reward swapped)")
+    steps = ["t.D1", "t.D2", "t.GO", "t+1.D1", "t+1.GO"]
+    names = {"t.D1": "D1 of trial t\n(reads trial t−1's reward)", "t.D2": "D2 of trial t\n(its state shown)",
+             "t.GO": "GO of trial t", "t+1.D1": "next D1\n(reads trial t's reward)", "t+1.GO": "next GO"}
+    feats = [(k.split("/")[0], k.split("/")[1], v) for k, v in g["top_offset_features"].items()]
+    fmax = max(abs(v) for _, _, v in feats)
+    per = {s: [f for f in feats if f[0] == s] for s in steps}
+    for i, s in enumerate(steps):
+        for j, (_, k, v) in enumerate(sorted(per[s], key=lambda f: -abs(f[2]))):
+            y = 1 - j * 0.16
+            ax.scatter([1.4 * i], [y], s=80 + 900 * abs(v) / fmax, color=GATE_COLORS[GATE_OF[k[0]]], edgecolor=SURFACE, linewidth=2, zorder=3)
+            ax.text(1.4 * i + 0.17, y, f"{FEAT_NAME(k)}  {v:+.1f}", fontsize=7.5, color=INK, va="center")
+        ax.text(1.4 * i + 0.3, 1.2, names[s], ha="center", fontsize=8, color=INK_2)
+    ax.set_xlim(-0.4, 6.9); ax.set_ylim(-0.25, 1.35); ax.axis("off")
+    ax = axes[1]
+    style(ax, "Patching the top features per step carries the band")
+    ks = [1, 3, 5, 10]
+    pat = g["patching_offset_share_median"]
+    for mode, ls in (("sufficiency", "-"), ("necessity", "--")):
+        ax.plot(range(4), [pat[f"top{k}/{mode}"] for k in ks], color="#2a78d6", linestyle=ls, linewidth=2, marker="o",
+                markersize=7, label=f"top features, {mode}")
+        ax.plot(range(4), [pat[f"random{k}/{mode}"] for k in ks], color="#c3c2b7", linestyle=ls, linewidth=1.6,
+                label=f"random features, {mode}")
+    ax.axhline(1, color=GRID); ax.axhline(0, color=GRID)
+    ax.set_xticks(range(4), [str(k) for k in ks]); ax.set_xlabel("Features patched per step", fontsize=9, color=INK)
+    ax.set_ylabel("Share of the band offset carried (median)", fontsize=9, color=INK)
+    ax.legend(fontsize=7.5, frameon=False, labelcolor=INK_2, loc="center right")
+    ax = axes[2]
+    m = d["matched_logit"]["S1 R=1, logit 6 to 10"]
+    style(ax, "Same logit, same new outcome (rewarded S1)")
+    prevs = [("previous S1 R=1", "trial before:\nrewarded S1", "#184f95"), ("previous S2 R=0", "trial before:\nunrewarded S2", "#f2a07e")]
+    dets = [("77", "cand. 77\n'rewarded a1→S1'"), ("118", "cand. 118\n'rewarded S1,\nabout to repeat a1'")]
+    w = 0.36
+    for j, (pk, lab, color) in enumerate(prevs):
+        vals = [m[pk]["detectors_next_D1"][f] for f, _ in dets]
+        ax.bar(np.arange(2) + (j - 0.5) * w, vals, w * 0.92, color=color,
+               label=f"{lab.replace(chr(10), ' ')} (logit {m[pk]['logit']:.1f}; next change {m[pk]['next_change']:+.2f})")
+    ax.set_xticks(range(2), [n for _, n in dets], fontsize=8)
+    ax.set_ylabel("Activation at the next D1 (reading the new outcome)", fontsize=9, color=INK)
+    ax.set_ylim(0, 2.8)
+    ax.legend(fontsize=7.5, frameon=False, labelcolor=INK_2, loc="upper right")
+    fig.tight_layout(rect=(0, 0.06, 1, 1))
+    p = save(fig, out, "band_circuit.png",
+             "rl_circuits/band_flow.json, 400 closed-loop events: the same window with trial t−1's reward swapped, trial t's input kept. "
+             "Left: top features by flow into the band offset (exact attribution graph; colour = gate; opposite pairs largely cancel). "
+             "Right: feature activations at matched logit (both previous outcomes are evidence for S1).")
+    plt.close(fig)
+    return [p]
+
+
+def lag_circuit(out):
+    """The switching lag: miss readers in stick vs follow trials, through-belief vs around-belief, patching."""
+    matplotlib, plt = _plt()
+    d = json.load(open(os.path.join(CIRCUITS, "choice_lag.json")))
+    fig, axes = plt.subplots(1, 3, figsize=(18, 5), facecolor=SURFACE)
+    ax = axes[0]
+    style(ax, "Readers of a missed reward: stick vs follow trials")
+    act = d["graph"]["d1_feature_activations_mean"]
+    order = [("n:208", "cand. 208\n'after an unrewarded\ntrial' (switch)"), ("n:11", "cand. 11\n'after an unrewarded trial,\nfades late' (switch)"),
+             ("r:4", "reset 4\n'a2→S2, stronger\nunrewarded' (switch)"), ("n:220", "cand. 220\n'unrewarded a2→S2,\nafter runs of a2' (stay)")]
+    w = 0.2
+    cols = [("reads trial t-2's outcome (t-1.D1)", "stick", "#eb6834", "stick, 1st miss"), ("reads trial t-2's outcome (t-1.D1)", "follow", "#2a78d6", "follow, 1st miss"),
+            ("reads trial t-1's outcome (t.D1)", "stick", "#f2a07e", "stick, 2nd miss"), ("reads trial t-1's outcome (t.D1)", "follow", "#86b6ef", "follow, 2nd miss")]
+    for j, (when, grp, color, lab) in enumerate(cols):
+        ax.bar(np.arange(4) + (j - 1.5) * w, [act[f][when][grp] for f, _ in order], w * 0.92, color=color, label=lab)
+    ax.set_xticks(range(4), [n for _, n in order], fontsize=7.5)
+    ax.set_ylabel("Mean activation", fontsize=9, color=INK)
+    ax.set_ylim(0, 2.6)
+    ax.legend(fontsize=7.5, frameon=False, labelcolor=INK_2, loc="upper left", ncol=2)
+    ax = axes[1]
+    sp = d["split"]
+    style(ax, "Through the belief or around it?")
+    parts = [("belief subspace", "belief\ndirections"), ("choice read-out (outside the belief subspace)", "choice read-out\ndirection"),
+             ("the rest", "the rest")]
+    tot = sp["graph_flow_of_each_part_mean"]["whole"]
+    gv = [sp["graph_flow_of_each_part_mean"][k] / tot for k, _ in parts]
+    sv = [sp["swap_share_of_difference_removed_median"][k] for k, _ in parts]
+    ax.bar(np.arange(3) - 0.19, gv, 0.36, color="#2a78d6", label="attribution graph: share of the flow (from the carried-in difference)")
+    ax.bar(np.arange(3) + 0.19, sv, 0.36, color="#eb6834", label="real network: share removed by swapping that part (just before GO)")
+    for i in range(3):
+        ax.text(i - 0.19, gv[i] + 0.02, f"{gv[i]:.2f}", ha="center", fontsize=8, color=INK_2)
+        ax.text(i + 0.19, sv[i] + 0.02, f"{sv[i]:.2f}", ha="center", fontsize=8, color=INK_2)
+    ax.set_xticks(range(3), [n for _, n in parts], fontsize=8.5); ax.set_ylim(0, 1)
+    ax.set_ylabel("Share of the stick-vs-follow difference", fontsize=9, color=INK)
+    ax.legend(fontsize=7.5, frameon=False, labelcolor=INK_2, loc="upper right")
+    ax = axes[2]
+    style(ax, "Patching the top features per step")
+    pat = d["patching_share_of_difference_carried_median"]
+    ks = [1, 3, 5, 10]
+    ax.plot(range(4), [pat[f"top{k}"] for k in ks], color="#2a78d6", linewidth=2, marker="o", markersize=7, label="top features by flow")
+    ax.plot(range(4), [pat[f"random{k}"] for k in ks], color="#c3c2b7", linewidth=1.6, marker="o", markersize=6, label="random changed features")
+    ax.axhline(1, color=GRID); ax.set_ylim(-0.05, 1.3)
+    ax.set_xticks(range(4), [str(k) for k in ks]); ax.set_xlabel("Features patched per step (from the follow run)", fontsize=9, color=INK)
+    ax.set_ylabel("Share of the difference carried (median)", fontsize=9, color=INK)
+    ax.legend(fontsize=8, frameon=False, labelcolor=INK_2)
+    fig.tight_layout(rect=(0, 0.06, 1, 1))
+    p = save(fig, out, "lag_circuit.png",
+             "rl_circuits/choice_lag.json, 400 pairs. Stick trial: the choice repeats the previous action against the belief information; "
+             "follow trial: the choice agrees with it; same two previous trials and belief, run on identical inputs from their own memory. "
+             "Typical case: two missed rewards on a2→S2.")
+    plt.close(fig)
+    return [p]
+
+
+def belief_swap_fig(out):
+    """Does the agent act on the belief information? Swapping parts of the memory between runs."""
+    matplotlib, plt = _plt()
+    d = json.load(open(os.path.join(CIRCUITS, "belief_swap.json")))
+    fig, axes = plt.subplots(1, 2, figsize=(15, 4.8), facecolor=SURFACE)
+    steps = ["t.GO", "(t+1).GO", "(t+2).GO"]
+    parts = [("belief subspace", "belief directions", "#2a78d6"), ("choice read-out (outside the belief subspace)", "choice read-out direction", "#eb6834"),
+             ("random", "random directions (mean of 3)", "#c3c2b7")]
+    for ax, moment in zip(axes, ("entering t.D1", "entering t.GO")):
+        style(ax, f"Swapped just before {'D1' if 'D1' in moment else 'GO'}")
+        r = d[moment]
+        w = 0.26
+        for j, (k, lab, color) in enumerate(parts):
+            if k == "random":
+                vals = [np.mean([r[f"random subspace {i}"][f"share of the whole-state swap at {s}"] for i in range(3)]) for s in steps]
+            else:
+                vals = [r[k][f"share of the whole-state swap at {s}"] for s in steps]
+            ax.bar(np.arange(3) + (j - 1) * w, vals, w * 0.92, color=color, label=lab)
+            for i, v in enumerate(vals):
+                ax.text(i + (j - 1) * w, v + 0.01, f"{v:.2f}", ha="center", fontsize=7.5, color=INK_2)
+        ax.set_xticks(range(3), ["this trial's choice", "next trial's choice", "the one after"])
+        ax.set_ylim(0, 0.8)
+        ax.set_ylabel("Change in the choice, as a share of\nswapping the whole memory (median)", fontsize=9, color=INK)
+        ax.legend(fontsize=8, frameon=False, labelcolor=INK_2, loc="upper right")
+    fig.tight_layout(rect=(0, 0.07, 1, 1))
+    p = save(fig, out, "belief_swap.png",
+             f"rl_circuits/belief_swap.json, {d['n_pairs']} pairs of memory states from different episodes with the same two previous trials and ideal "
+             "beliefs at least 2 apart; one part of the donor's memory given to the recipient, which then runs on its own inputs (real GRU).")
+    plt.close(fig)
+    return [p]
+
+
+def trace_rpe(out):
+    """The reward trace's share of the bands and its (lack of) behavioural role; RPEs as in Wang et al."""
+    matplotlib, plt = _plt()
+    rt = json.load(open(os.path.join(CIRCUITS, "rare_and_trace.json")))["trace"]
+    tr = json.load(open(os.path.join(CIRCUITS, "trace_role.json")))
+    rp = json.load(open(os.path.join(CIRCUITS, "rpe_analysis.json")))
+    fig, axes = plt.subplots(1, 3, figsize=(18, 4.8), facecolor=SURFACE)
+    ax = axes[0]
+    style(ax, "How much of the bands the reward trace carries")
+    dims = [1, 3, 5]
+    plain = [rt["results"][f"trace/{k}d"]["offset_removed_share_median"] for k in dims]
+    prot = [rt["preference_protected"][f"trace/{k}d"]["offset_removed_share_median"] for k in dims]
+    rnd = [np.mean([rt["preference_protected"][f"random_{j}/{k}d"]["offset_removed_share_median"] for j in range(5)]) for k in dims]
+    w = 0.26
+    for j, (vals, lab, color) in enumerate(((plain, "whole trace difference removed", "#86b6ef"),
+                                            (prot, "only the part the action preference\ncannot explain removed", "#184f95"),
+                                            (rnd, "random directions (same method, mean of 5)", "#c3c2b7"))):
+        ax.bar(np.arange(3) + (j - 1) * w, vals, w * 0.92, color=color, label=lab)
+    ax.set_xticks(range(3), [f"{k} direction{'s' if k > 1 else ''}" for k in dims])
+    ax.set_ylabel("Band offset removed (median per event)", fontsize=9, color=INK); ax.set_ylim(-0.05, 1)
+    ax.legend(fontsize=7.5, frameon=False, labelcolor=INK_2, loc="upper left")
+    ax = axes[1]
+    style(ax, "Switching after a reversal without the trace")
+    ks = [str(k) for k in range(1, 7)]
+    for name, r, color, ls in (("intact", tr["intact"], INK, "-"), ("trace removed (plain)", tr["ablated"]["trace"], "#86b6ef", "--"),
+                               ("trace removed (clean: belief-predicted part kept)", tr["conditional"]["trace"], "#184f95", "-")):
+        ax.plot(range(1, 7), [r["p_new_action_after_reversal"][k] for k in ks], color=color, linestyle=ls, linewidth=2,
+                marker="o", markersize=6, label=name)
+    ax.set_xlabel("Trials since the reversal", fontsize=9, color=INK)
+    ax.set_ylabel("P(choosing the newly good action)", fontsize=9, color=INK); ax.set_ylim(0, 1)
+    ax.legend(fontsize=7.5, frameon=False, labelcolor=INK_2, loc="lower right")
+    ax = axes[2]
+    style(ax, "RPEs as in Wang et al.: correlation with the agent's")
+    refs = [("bayesian", "Bayesian\n(Wang's 'model-based')"), ("mb_rl", "model-based RL\n(Daw)"), ("model_free", "model-free\n(SARSA)"),
+            ("reward_only", "reward only\n(no learning)")]
+    c = rp["correlation_with_agent_rpe"]
+    vals = [c[k]["pooled (reveal and outcome)"] for k, _ in refs]
+    ax.bar(range(4), vals, 0.6, color=["#2a78d6", "#2a78d6", "#2a78d6", "#c3c2b7"])
+    for i, v in enumerate(vals):
+        ax.text(i, v + 0.01, f"{v:.2f}", ha="center", fontsize=8, color=INK_2)
+    ax.set_xticks(range(4), [n for _, n in refs], fontsize=8); ax.set_ylim(0, 1)
+    ax.set_ylabel("Correlation (state-reveal and reward steps)", fontsize=9, color=INK)
+    fig.tight_layout(rect=(0, 0.06, 1, 1))
+    p = save(fig, out, "trace_rpe.png",
+             "Left: rl_circuits/rare_and_trace.json (band contrast, removal after the current choice). Middle: rl_circuits/trace_role.json, "
+             "3000 closed-loop episodes. Right: rl_circuits/rpe_analysis.json; the references' RPEs correlate 0.85–0.91 with each other.")
+    plt.close(fig)
+    return [p]
+
+
 COMMANDS = {"interp": interp, "fidelity": fidelity, "sets": sets, "substitutes": substitutes, "probe": probe,
             "scorecards": scorecards, "time": time_profiles, "magnitude": magnitude, "ranked": ranked,
             "substitution": substitution, "conditional": conditional, "breakdown": breakdown, "clock": clock,
-            "tests": tests}
+            "tests": tests, "credit": credit, "circuit": circuit, "reversal": reversal, "checks": checks, "value": value, "bayes": bayes, "axis": axis, "band_circuit": band_circuit, "lag": lag_circuit, "swap": belief_swap_fig, "trace_rpe": trace_rpe}
 # figures of abandoned analyses (docs/figures/rl/archived/README.md): written to <out>/archived, skipped by `all`
 ARCHIVED = {"fidelity", "sets", "substitutes", "probe", "scorecards", "time", "ranked", "substitution"}
 

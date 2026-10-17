@@ -4,7 +4,8 @@ Model: a GRU agent with 48 hidden units on the two-step task (`data/models/rl_tr
 Transcoders replace one gate each, JumpReLU: reset (128 features), update (256) and candidate (256). Baseline: the
 GRU's own 48 units per gate, either thresholded so each unit "fires" on a fixed share of steps (firing rules) or
 as raw gate values (magnitude explanations). Copy-task counterpart: `docs/interpretability_findings.md`; worked
-examples of RL explanations: `docs/rl_well_explained_examples.md`.
+examples of RL explanations: `docs/rl_well_explained_examples.md`; circuits (model-based credit, switching after a
+reversal): `docs/rl_circuits.md`.
 
 Code is in `circuit/rl_task/` (each script's docstring has its command line); results are in `rl_features/`
 (not tracked), indexed in `rl_features/README.md`, with run logs in `rl_features/*RUNS.md`. Figures:

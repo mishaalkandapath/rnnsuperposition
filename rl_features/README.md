@@ -85,5 +85,6 @@ simulators' per-chunk predictions before they were combined.
 
 | Entry | What it holds | Status |
 |---|---|---|
+| `rl_circuits/` | Circuit analysis: contrastive attribution graphs, credit factorial, reversal switches, minimal-circuit and steering checks (`rl_circuits/README.md`; doc `docs/rl_circuits.md`) | current |
 | `rl_probe/` | Dense-feature probe results (`update_probe.json`, `candidate_probe.json`), from `circuit/rl_task/feature_probe.py` | abandoned (conditions used the model's policy / value bins; replaced by magnitude explanations) |
 | `archive/` | Superseded explanation runs and words (`archive/README.md`) | archived |
