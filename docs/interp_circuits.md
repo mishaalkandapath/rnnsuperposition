@@ -15,8 +15,10 @@ token output one step earlier (token k-1) and the model outputs token k. Token j
    outputs the oldest token still in memory, and a token leaves memory only when it is fed back ("pop"). Skipping a
    copy step delays the rest of the output by one; it never skips.
 2. **The circuit has four stages**, all in candidate features:
-   - **write:** mostly sparse "input X" features (68% of the flow at the write step), plus dense token-set features;
-   - **relay:** dense features hold it and hand it on each step (90% of the flow after the write step);
+   - **write:** mostly sparse "input X" features (47% of the output logit's dependence on the token passes through
+     them at the write step, against 36% through dense token-set features);
+   - **relay:** dense features hold it and hand it on (about half the dependence passes through them at each relay
+     step; the rest is carried past in h by the update gate);
    - **read-out:** dense "flipper" features write it into the logit at its output step;
    - **pop:** the fed-back token cancels its own stored copy in the candidate's next write; for most tokens one
      token-specific "fed-back X" feature carries this.
@@ -31,8 +33,9 @@ token output one step earlier (token k-1) and the model outputs token k. Token j
    (mainly the `<DEL>` feature 123 and the positional part of the dense relay features). Neither carries token content.
 5. **After the write step the circuit runs on dense candidate features** (active in almost every sequence). Their
    information is in their magnitude, so they needed magnitude explanations; most of these can be said in a sentence
-   ("a signed tally of recent inputs; in the copy phase, of the queue"), and their predicted effects hold when the
-   features are clamped. Many of them merge a timing signal with a token set, which is a transcoder-training issue.
+   ("a signed tally of recent inputs; in the copy phase, of the queue"), and their predicted effects hold: shifting a
+   feature up makes the model output the tokens its explanation says raise it (15 of 16 features; §3, per-feature
+   clamp tests). Many of them merge a timing signal with a token set, which is a transcoder-training issue.
 6. **Labels are not use.** Measured where each feature takes part, 190 of 512 candidate features cost ≥ 20%, most of
    them sparse (an average over all sequences found 22); 226 (44%) do nothing measurable, mostly low-norm duplicates
    of a used feature with the same label (§3).
@@ -133,6 +136,62 @@ diagrams below use. *Code:* `feature_circuits.py` (`change_flow`).
 **Slot-token tables.** For every candidate feature, step and slot, the mean activation given the token in that slot.
 They give each carrier a magnitude code (which tokens raise / lower it) and let us *steer* features by magnitude.
 
+### What goes into the graph: the choices, and why candidate features only
+
+**Why a choice is needed.** An attribution graph adds up contributions, so every edge must be linear: the effect of a
+node on another is a fixed number times the node's value. One GRU step is
+
+  h_t = (1 − z_t) · h_{t−1} + z_t · n_t,  n_t = tanh(W x_t + U (r_t · h_{t−1}))
+
+where z (update gate) decides how much new content is written, r (reset gate) how much memory the candidate reads, and
+n (candidate) is the new content. The products z · n, (1 − z) · h and r · h are not linear: the effect of n depends on
+z, and z itself depends on h. Transformer graphs have the same problem with attention (pattern × values); Ameisen et
+al. freeze the attention pattern and explain why it is what it is separately (QK attributions, Kamath et al.). There
+are three transcoders here (reset, update, candidate), so one has to choose which features become graph nodes.
+
+**The options.**
+
+| option | nodes | exact? | what it gives / costs |
+|---|---|---|---|
+| **A. Freeze the gates at their real values (what we did)** | candidate features, inputs, error nodes, logits | yes: with z and r fixed, everything written into h is linear | shows how token content moves; the gates appear only as fixed multipliers on edges, so their features are not nodes |
+| B. Freeze the candidate, gate features as nodes | update / reset features | yes | shows what the gates do, but the token content (written through the candidate) becomes fixed multipliers: the wrong side for a copy task |
+| C. Split every product at the midpoint of two runs | features of all three transcoders | yes, but only for a *contrast* between two runs (for two factors, a·b − a'·b' = ā·Δb + b̄·Δa exactly, with ā, b̄ the two runs' means) | every gate feature gets its share; no single-run graph. Used in the RL task (`rl_circuits.md` §3), where frozen gates left 3–7 of a 6–9 logit change unexplained |
+| D. Linearise locally (gradient × activation through the gates) | all features | no: error grows with the nonlinearity | single-run graphs with gate nodes, but contributions no longer add up to the real change |
+| E. GRU units instead of transcoder features | 128 units per gate | yes (with A or C) | no transcoder error, but units mix unrelated roles; the features were the point |
+
+A further choice inside A: the 128 hidden coordinates are *folded* into the edges (as the paper folds the residual
+stream), so an edge goes straight from a candidate feature at one step to one at a later step, through the carry and
+the reset gate of the steps in between.
+
+**Why A.** The token's content is written and rewritten through the candidate: 96–99% of the candidate's change comes
+from reading the stored token through the reset gate, and gate changes add 0–5% (§5). The gate features are clocks
+that carry no token content (§8). And measured directly, in the exact contrastive flow (Fix 2) the gates' changes
+carry 1.8–3.3 logits of the 25–28 logit change per slot (7–12%), against 21–22 from the token's own input write; in
+the pop, the gate part of the matched-vs-mismatched difference is −0.1 of −32.5 (§6). So freezing them loses little,
+and in exchange every edge is exact.
+
+**How the gate features were still analysed** (the gates' side, kept separate from the main graph, as the paper keeps
+QK separate). Each transcoder outputs its gate value directly, so a gate value is an exact sum of its features plus a
+bias and an error term. That gives exact gate-feature views without making them nodes (`circuit/edge_att.py`):
+- **split an edge by a gate's features:** an edge that passes through one step's gate is split exactly into the shares
+  of that gate's features (`split_edge_by_gate`);
+- **rank gate features by their effect on a target:** how much the target logit would drop if one gate feature were
+  removed from its gate, everything else fixed (`gate_feature_ranking` / `gate_scores`). An update feature counts twice:
+  it lets the candidate in and erases the old memory;
+- **why a gate feature fired:** its connections from earlier candidate features (carried through h), the input and
+  its bias, averaged over the steps where it fires (`gate_features.py` drivers → §8: mainly `<DEL>` 123 and the
+  positional part of the dense relay features). For one sequence, `gate_feature_graph` builds a graph rooted at a
+  gate feature;
+- **which gate features let the token through:** the reset features that let each candidate feature read the stored
+  token, and the update features that admit or erase it (`gate_features.py` reads / writes, §8);
+- in the contrastive flow, the gates' changes are a separate source per step ("gates" above), and in the circuit
+  diagrams the gate features with the largest share at each step are grey tags (`gate_mechanism.py`);
+- what the gate features *do* was then tested causally, not read off a graph: time-shifts and reset combinations (§8).
+
+**Limitation.** With option A a gate feature can never show up as a carrier of content. If the gates term were large,
+the graph would hide part of the computation; check its size before trusting a frozen-gate graph. In the copy task it
+is small (above); in the RL task it was not, which is why that analysis used option C.
+
 ### Three kinds of intervention
 
 Results in this doc come from three kinds of experiment. Each result below says which, or the code does.
@@ -159,11 +218,27 @@ at first misled us.
 - **Help as infrastructure.** Freezing the gates makes the GRU exactly linear in what it writes. That exactness is what
   the contrastive flow (DeepLIFT rescale), the gate-feature splits (`gate_scores`, `gate_features.py`), and the
   rotation / reversal decompositions are built on.
-- **Findings that came from the graph's edges.** The rotation itself was first seen in the trace in h, but *which
-  features turn it* came from the graph: keepers and flippers are the angles of each feature's write in the
-  step-to-step feature→feature edges, and the cause of the reversal (flippers read the keepers with the opposite sign)
-  was read off those edges before the interventions confirmed it (`rotation_edges.py`). These used the edges' signs
-  and angles, not the features' labels.
+- **Findings that came from the graph.** The rotation itself was first seen in the trace in h (the token's code turns
+  about 180° between write and read-out, §5); *which features turn it, and why*, came from the graph. Two quantities
+  were used, neither of which needs to know what a feature means (its label):
+  1. **The angle of a feature's write.** Not a property of an edge: the direction of what one feature adds to h for
+     one stored token, in a 2-D frame per token. e1 = the token's code as first written (original minus
+     token-swapped run, in h, at the write step); e2 = the direction the output layer reads that token from, with its
+     overlap with e1 removed. The angle of the write's projection on (e1, e2): 0° = writes the token as written, 180°
+     = writes the opposite. This split the carriers into **keepers** (487, 283, 145, …: about +30°) and **flippers**
+     (8, 426, 348, …: about 155°). The same projection of each step-to-step contribution shows which ones turn the
+     code from e1 towards e2 (`rotation_edges.py`).
+  2. **The signs of the edges between features.** An edge in the contrastive flow is how much of the change in one
+     feature at one step carries into another feature at a later step, with its sign. Grouping a flipper's incoming
+     edges by source: from keepers −0.40 / −0.49 (1 / 2 steps after the write), from the flipper's own response to the
+     input +0.47 / −0.02. So flippers read the keepers' copy with the opposite sign. At the write step this is hidden,
+     because the flipper's own response to the input points the same way; one step later the input is another token,
+     the negative read dominates, and the code reverses.
+  3. **How this helped.** Without the graph we had only the trace turning. The graph's exact decomposition gave, in
+     order: *who* turns it (the write angles → keepers and flippers), *why* it reverses (the edge signs → flippers read
+     keepers negatively, a hypothesis), and *what to test*: the interventions followed from that hypothesis (remove
+     flippers at the write step → they reverse one step early; remove 10 keepers → the reversal weakens; random
+     controls → no change; §5). The labels came in afterwards, to describe what the groups carry.
 - **Where they misled or fell short.** Single graphs gave partner credit (+57 from a token that has no effect;
   feature effects of ±60–110 cancelling each other); this needed swap tests, contrast and the rescale to fix. Pruned
   graphs were never used; the diagrams come from flows averaged over 300 sequences. A graph explains one run, not
@@ -269,8 +344,17 @@ The clamped modes above hold the circuit at its values too.
 
 ### Does each feature do what its explanation says? (per-feature clamp tests)
 
-Kind 2: one candidate feature is clamped in the real GRU, in the situation its explanation describes, and the effect
-the explanation implies is checked. L = 4 and 7, 1000 sequences each. The prediction comes from the label alone:
+*Why:* an explanation is fitted to a feature's *activations*: it says what the feature correlates with. That does not
+show the model uses the feature to mean that. A label can describe a feature's activity perfectly while the model
+ignores the feature or reads it differently. This test checks the causal side: change the feature, and see whether
+the model's behaviour changes the way the label says it should.
+
+*What "clamp" means here* (kind 2): one candidate feature's activation is changed inside the real GRU and everything
+downstream responds. The candidate value becomes n + (a_new − a) · d_f, where d_f is the feature's decoder direction and
+a its activation; the rest of the computation, including the transcoder's error, is the model's own. For firing
+features a_new is a fixed value (0, or the feature's mean active value); for magnitude features it is a **shift**,
+a ± 1.5 standard deviations of its input-phase activation (floored at 0), at every input step. The situation and the
+predicted effect come from the label alone. L = 4 and 7, 1000 sequences each:
 
 | explanation | clamp | predicted effect |
 |---|---|---|
@@ -291,6 +375,24 @@ features, a random 15 explained "copy input X" features, and the 16 magnitude fe
 | firing "input X" (29) | 13 (incl. 120, 36, 215, 408): X ranks 1st, logit ±8 … 20 | 9 (X ranks 2nd–20th, or small effects) | 4 (250, 275, 358, 370) | 3 (245, 292, 431) |
 | firing "copy input X" (17) | 6 (95, 316, 304, 484, 345, 193): on → X's logit −11 … −42; off → X repeated (up to 71% for 316) | 1 | 10 | 0 |
 | magnitude (16) | 15: boost moves the S+/S− logit gap by +9 … +27, z ≈ 4–5 against random sets, same sign in 97–100% of sequences; suppress the other way | | 1 (440) | |
+
+**Worked example: feature 145.** Its magnitude explanation says it is high when recent inputs are in S+ = {c, 3, t,
+2, v, j} and low when they are in S− = {n, r, i, m, b, 0}. If the model reads 145 that way, pushing it up should look
+to the model like "S+ tokens were in the input", so the outputs should move towards S+ tokens; pushing it down, away
+from them. Measured: the change in the mean logit of the S+ tokens minus that of the S− tokens at the output steps,
+against the same measure for 200 random token sets of the same sizes (which rules out "any large push breaks the
+outputs"). The boost is +1.28 (1.5 standard deviations).
+
+| | L = 4 | L = 7 |
+|---|---|---|
+| boost: S+ minus S− logit gap | +16.2 (random sets −0.2 ± 3.5; about 4.7 SD) | +23.6 (about 4.6 SD) |
+| boost: sequences moving the predicted way | 100% | 100% |
+| boost: outputs that are S+ tokens | 20% → 51% | 20% → 85% |
+| suppress: S+ minus S− logit gap | −11.1 (about 4.7 SD) | −12.3 |
+| suppress: outputs that are S+ tokens | 20% → 14% | 20% → 9% |
+
+So boosting 145 makes the model output c, 3, t, 2, v and j in place of the correct tokens: accuracy falls from 100% to
+68% (L = 4) and 29% (L = 7), and the errors are the ones the label predicts.
 
 What this says:
 - **Most labels predict their feature's effect**, including magnitude labels. The one magnitude failure, 440, has the
@@ -313,9 +415,21 @@ Several earlier rankings averaged a feature's effect over all sequences. A featu
 present then looks unimportant. Three of them, redone with the average taken only where the feature takes part
 (kind 2, real GRU; new figures, the earlier ones are unchanged):
 
-**1. Single-feature importance.** Each candidate feature mean-ablated alone, 2000 sequences per length. Measured three
-ways: the accuracy drop over all sequences (the earlier ranking); over only the sequences where the feature is active;
-and on the outputs of the one token it hurts most (this treats dense and sparse features alike).
+**1. Single-feature importance.** Each candidate feature mean-ablated alone (replaced by its average value at each
+step), 2000 sequences per length. Accuracy here is always per output: the share of individual outputs (sequence ×
+output position) that are correct, not the share of sequences with every output correct. Measured three ways:
+- **over all sequences** (the earlier ranking; the x-axis of the figure);
+- **over the sequences where the feature is active** (above 0 at some step in the clean run), counting all of their
+  outputs (figure, top row). Example: 94 "first input is b or f" is active only in sequences starting with b or f
+  (about 6%); removing it makes about 70 percentage points more of their outputs wrong, while over all sequences that
+  is only 4%;
+- **on the outputs of the one token it hurts most:** for each token, the outputs whose correct answer is that token,
+  over all sequences; the worst token is kept (figure, bottom row).
+
+*Why two conditional measures:* the top row only helps sparse features. A dense feature is active in essentially every
+sequence, so its "active sequences" are all sequences and it sits on the y = x line. The bottom row treats both kinds
+alike: it asks which output token the feature's removal hurts most, so dense features that carry particular tokens show
+up too (e.g. 162 hurts outputs of "o" by 70–79%).
 
 | | L = 4 | L = 7 |
 |---|---|---|
@@ -357,10 +471,45 @@ pairs the feature takes part in (|flow| > 0.1).
 
 - **Sparse token features carry 3–7× more than any dense feature when they take part** (94 and 299: 21–22 per pair;
   120, 465, 443, 414, 408: 11–13; the top dense feature 8: 3.4). Averaged over all pairs none of them made the top 20.
-- **They act at the write step only, writing at 0°** (the token's code as written): they carry 68% of the |flow| at
-  the write step, and 8–10% at each later step. The rotation, relay and read-out stay dense, as in §5.
+- **They act at the write step only, writing at 0°** (the token's code as written). The rotation, relay and read-out
+  stay dense, as in §5.
 - So the write → relay → read-out picture holds, but the write is mostly sparse token features, which the averaged
   diagrams understated.
+
+**How much of the output's dependence on the token passes through each step's features.** *Why:* the shares above
+are of the flow *among features*, which says who is busy but not how much of the effect on the output a group
+carries. *What "flow" means here:* compare the original run with one where the slot's token is swapped (feedback
+matched). At the token's output step, the logit of the correct token differs between the two runs by about 26
+logits: that difference is the target change, the 100% below. A feature's flow at a step is the part of it that
+passes through that feature at that step, by any route to the output; features whose change never reaches this logit
+get zero. Each step is a separate cut: the same flow passes through features at several steps (a sparse write
+feature, then a keeper, then a flipper), so the rows do not add up. Mean over 100 sequences × 4 slots, L = 4
+(dense = active in ≥ 90% of sequences):
+
+| steps since the write | passes through that step's features | of which sparse | of which dense | not through them (carried past in h) | sum of \|flow\| (activity, incl. cancelling pushes) |
+|---|---|---|---|---|---|
+| 0 (write) | 82% | 47% | 36% | — | 138% |
+| 1 | 57% | 4% | 54% | about 43% | 71% |
+| 2 | 51% | 4% | 47% | about 49% | 66% |
+| 3 | 57% | 5% | 52% | about 43% | 72% |
+| 4 (output step) | 85% | 7% | 78% | — | 102% |
+
+At the output step, 85% is written straight into the logit by that step's features. The rest of the 100% enters
+through the gates and the transcoder's error and bias writes (§2).
+
+- **At the write step** the sparse "input X" features carry the largest share (47% of the change, against 36% for
+  dense token-set features); by absolute flow, 62% of the activity there.
+- **After the write the sparse features drop out** (4–7%): they read the current input, which one step later is a
+  different token. From then on the token exists only in h, and the features that read h are the dense memory
+  features, so they carry it (47–54%). They do not carry *more* than the write features did; they carry the same
+  token later, as the only ones still reading it.
+- **At each relay step only about half the change passes through that step's features.** The other half is carried
+  past them in h by the update gate's carry (the 30–60% that survives a step without being rewritten, §5) and reaches
+  later steps or the output without passing through that step's features.
+- **The absolute sums exceed the signed ones** (138% vs 82% at the write) because features push in opposite directions
+  and partly cancel.
+
+*Code:* `conditional_analyses.py --sections step_shares`; output `step_shares.json`.
 
 ![carrier flow conditional](figures/circuits/carrier_flow_conditional_L4.png)
 ![rotation wheel conditional](figures/circuits/rotation_wheel_conditional_L4.png)
@@ -400,8 +549,9 @@ effect of the three ablations, on its own sequences or its worst output token:
 
 **Most carriers are dense.** In the `g` example, 18 of 20 carriers are active in 97–100% of sequences; only 120
 ("input g") and 411 are sparse (10–15% of sequences). By count the carriers are dense; by size the write step is not:
-when a sparse token feature takes part it carries 3–7× more than any dense one, and sparse features carry 68% of the
-flow at the write step (§3, "Measuring a feature where it matters"). Firing labels ("copy phase", F1 0.96) are right about *when* they
+when a sparse token feature takes part it carries 3–7× more than any dense one, and at the write step 47% of the
+output logit's dependence on the token passes through sparse features, 36% through dense ones (§3, "Measuring a
+feature where it matters"). Firing labels ("copy phase", F1 0.96) are right about *when* they
 fire but say nothing about what they carry.
 
 **Magnitude explanations.** For the 70 candidate features that fire on ≥ 20% of steps (65 of them active in ≥ 90% of
@@ -508,6 +658,56 @@ feature→feature edges, so the turn is spread over the whole dense population. 
 Most flippers already respond at the write step (about −20°) and reverse 2 steps later. The trace turns smoothly
 because it is a blend that shifts from keepers to flippers.
 
+**Which dense features are keepers and which are flippers.** A feature is a keeper if its mean write angle is within
+90° of the written code, a flipper otherwise (`rotation_phases_L4.json`). The 5 dense features no firing predicate
+explains (`interpretability_findings.md` §4) are both:
+
+| feature | group | write angle |
+|---|---|---|
+| 162 | keeper | 22° |
+| 284 | keeper | 51° |
+| 487 | keeper | 31° |
+| 214 | flipper | 157° |
+| 388 | flipper | 153° |
+
+All dense candidate features at L = 4 (active in ≥ 90% of sequences), by whether they matter (best of mean, zero and
+time-shift ablation on their own sequences or worst output token, L = 4 / 7; §3). "Other" = writes too little in the
+token's 2-D frame to have an angle:
+
+| dense features | n | keepers | flippers | other |
+|---|---|---|---|---|
+| all | 68 | 19 | 29 | 20 |
+| that matter (≥ 20%) | 44 | 19 | 24 | 1 (`<DEL>` 123: timing, not a token) |
+| inert (< 1%) | 17 | 0 | 2 | 15 |
+
+Every dense keeper matters, and most dense flippers do; the dense features outside both groups barely write the token
+and are almost all inert. Read-out is done by flippers (the 12 features with the most flow at the output step are all
+flippers); holding the token is done by both. Note: the keeper list in the file (65 features) also contains the sparse
+"input X" write features, which write at about 0°; among dense features there are 19 keepers.
+
+**Keepers vs the features that write the token.**
+
+| | sparse "input X" write features (e.g. 120 "input g") | keepers (e.g. 145, 487, 283) |
+|---|---|---|
+| active in | only sequences containing their token (≈ 5–15%) | almost every sequence (dense) |
+| active when | only at the step the token arrives | at the arrival step and the following steps |
+| respond to | the current input token | a running tally of recent inputs (145: current and previous input about equally, fading over ~3 steps): the input at first, then what is stored in h |
+| carry the token | on / off ("the input is g") | by magnitude: a signed scale over many tokens |
+| share of the output's dependence on the token (§3) | 47% at the write step, 4–7% after | part of the dense share: 36% at the write step, about half the change at each relay step |
+| write angle | about 0° | about +13° … +39°, fading by the output step |
+
+A write feature puts the token in once; a keeper holds it for the next few steps. Keepers are needed because:
+- **memory leaks:** only 30–60% of a token's trace survives a step (above), so something must rewrite it every step;
+- **the write features cannot:** they read the current input, which one step later is another token; rewriting has
+  to come from features that read h, and for the first steps (before the flip) those are the keepers;
+- **the flippers build on them:** the flip is the flippers reading the keepers' copy with the opposite sign; removing
+  10 keepers one step after the write weakens it (below, test A);
+- **they matter for behaviour:** 145, 487, 283 and 488 each cost 20–26% at L = 7 when removed alone, and every dense
+  keeper is in the "matters" group.
+
+Caveat: that keepers read h rather than the input after the write rests on their magnitude labels and the flow shares;
+a keeper's activation has not been split into input-driven and memory-driven parts.
+
 ![angle wheel](figures/circuits/rotation_wheel_L4.png)
 
 **When the flip happens.** Write angle (and in-plane weight) by steps since the token was read in, L = 4
@@ -522,6 +722,32 @@ because it is a blend that shifts from keepers to flippers.
 
 So a flipper active at a given step writes *every* stored token at once, each at its own stage: the token read in
 now and the one before it weakly and unflipped, all older ones flipped, more strongly as their output step nears.
+
+**Why the flip comes 2 steps after the write, not 1.** Note first that flippers do *not* write the token flipped at
+the write step: there they respond to the input, and write at about −20°, close to the token as written. "Flipper"
+describes what they write from 2 steps on. A flipper's response to a stored token is the sum of what it reads from
+h. The numbers are contributions to the sign test (below, "Flippers store the token as the opposite…"; + = responds to
+the stored token the way it responds to it as an input, not flipped; − = the opposite way, flipped):
+
+| what the flipper reads from h | 1 step after the write | 2 steps after |
+|---|---|---|
+| the keepers' copy (written at about +30°, read with the opposite sign) | −0.40 | −0.49 |
+| the flippers' own write from the write step (input-driven, at about −20°, read back with the same sign) | +0.47 | −0.02 |
+| net (sign test) | +0.09: not flipped yet | −0.63: flipped |
+
+1. At the write step the flippers respond to the input through their input weights and write the token in its
+   input orientation, next to the keepers' write.
+2. One step later they read both back. The keepers' copy is read negatively (the flip); their own earlier write is
+   read positively, as a feature reading back what it just wrote responds the way it did when writing it. The two
+   roughly cancel, so the code is not flipped yet.
+3. Two steps later their own input-driven write has faded (+0.47 → −0.02), the negative read of the keepers
+   dominates, and the code is flipped.
+
+A GRU reads its memory once per step, so a flipper can read what the keepers wrote at step s only from step s + 1: the
+flip cannot appear at the write step, and without the masking it would appear one step later. Test B below confirms
+the masking: removing the flippers at the write step (so their input-driven write never happens) makes them reverse
+one step early. Not known: *why* the model works this way (e.g. whether something needs the token in its input
+orientation for a step), and whether the lag stays at 2 steps at other lengths (measured at L = 4 only).
 
 **"Flipper" names the direction a feature writes in, not the flipping.** The flip happens once, in the memory flippers,
 2 steps after the read. After that the code still has to be rewritten every step (only 30–60% survives a step, above),

@@ -13,6 +13,8 @@ sequence. These sections redo three such analyses with the average taken only wh
   ablations   every candidate feature: decoder norm x activation (and the part the update gate lets into h), and
               zero / time-shift ablations (its per-step mean taken from the step before or after), which remove
               timing features that a per-step mean cannot
+  step_shares per step since the write: the share of the output logit's change (original vs token-swapped run) that
+              passes through that step's candidate features, sparse vs dense, signed and absolute
   flows       the exact contrastive flow (circuit/copy_task/feature_circuits.change_flow) and write angles
               (circuit/copy_task/rotation_edges.feature_angles) per (sequence, slot), averaged per feature over all
               (sequence, slot) pairs and over only the pairs it takes part in (|flow| > --min_flow at some step)
@@ -236,6 +238,46 @@ def flows(rnn, tcs, trace_path, n, min_flow, seed):
     return {"L": L, "n": len(x), "min_flow": min_flow, "features": feats, "by_step": steps}
 
 
+def step_shares(rnn, tcs, trace_path, n, n_rate, seed):
+    """Per step since the write: what share of the change in the output logit (original minus token-swapped run) passes
+    through the candidate features active at that step, split into sparse and dense features (dense = active in >= 90%
+    of sequences), signed and absolute; and the share written straight into the logit at that step. Each step is a
+    separate cut: the same flow passes through features at several steps, so shares do not add across steps; what does
+    not pass through a step's features is carried past it in h by the update gate's carry."""
+    tracer = CircuitTracer(rnn, tcs["update"], tcs["candidate"], device="cpu", reset_transcoder=tcs["reset"])
+    x_rate, _, L = load_data(trace_path, n_rate)
+    dense = (clean_acts(rnn, x_rate, L, tcs)["candidate"] > 0).any(1).float().mean(0).numpy() >= 0.9
+    x, orig, L = load_data(trace_path, 4 * n)
+    rows = [s for s in range(len(x)) if len(set(orig[s].tolist())) == L][:n]
+    rng = np.random.default_rng(seed)
+    keys = ("through_features", "sparse", "dense", "abs_through_features", "written_to_logit")
+    acc = {k: [[] for _ in range(L + 1)] for k in keys}
+    changes = []
+    for s in rows:
+        o = orig[s].tolist()
+        run_o = tracer.run_forward_pass(gru_trace(rnn, x[s]))
+        for i in range(L):
+            new = int(rng.choice([v for v in range(30) if v not in o]))
+            run_s = tracer.run_forward_pass(gru_trace(rnn, swap_token(x[s], L, i, new)))
+            fl = change_flow(tracer, run_o, run_s, L, o, i)
+            T = fl["dtarget"]
+            changes.append(T)
+            direct = fl["target_direct"].numpy()
+            for k in range(L + 1):
+                vals = [(v, f) for (t, f), v in fl["nodes"].items() if t == i + k]
+                acc["through_features"][k].append(sum(v for v, _ in vals) / T)
+                acc["sparse"][k].append(sum(v for v, f in vals if not dense[f]) / T)
+                acc["dense"][k].append(sum(v for v, f in vals if dense[f]) / T)
+                acc["abs_through_features"][k].append(sum(abs(v) for v, _ in vals) / T)
+                acc["written_to_logit"][k].append(
+                    sum(direct[g] for g, (t, _) in enumerate(fl["node_list"]) if t == i + k) / T)
+    steps = [{"steps_since_write": k, **{key: float(np.mean(acc[key][k])) for key in keys}} for k in range(L + 1)]
+    for r in steps:
+        print(f"step +{r['steps_since_write']}: " + ", ".join(f"{k} {r[k]:.2f}" for k in keys))
+    return {"L": L, "n_sequences": len(rows), "n_pairs": len(changes), "mean_logit_change": float(np.mean(changes)),
+            "steps": steps}
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--rnn", required=True)
@@ -245,6 +287,7 @@ def main():
     ap.add_argument("--sections", nargs="+", default=["importance", "pop", "flows"])
     ap.add_argument("--n", type=int, default=2000)
     ap.add_argument("--n_flow", type=int, default=300)
+    ap.add_argument("--n_step_shares", type=int, default=100, help="sequences (distinct tokens) for step_shares")
     ap.add_argument("--min_flow", type=float, default=0.1)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out_dir", required=True)
@@ -272,6 +315,8 @@ def main():
         save("conditional_ablations.json", other_ablations(rnn, tcs, args.traces, args.n))
     if "pop" in args.sections:
         save("conditional_pop.json", {"features": pop(rnn, tcs, args.traces, min(args.n, 1000), firing, args.seed)})
+    if "step_shares" in args.sections:
+        save("step_shares.json", step_shares(rnn, tcs, args.traces[0], args.n_step_shares, args.n, args.seed))
     if "flows" in args.sections:
         save("conditional_flows.json", flows(rnn, tcs, args.traces[0], args.n_flow, args.min_flow, args.seed))
 

@@ -936,6 +936,67 @@ def rotation_wheel_plots(path, outdir, n_labels=3):
     return [p]
 
 
+def set_controls_plot(path, out):
+    """Figure for explained_fidelity.py --set_controls: each F1 selection with and without the fixed set, against
+    random sets of the same size (dots), with 95% bootstrap intervals and empirical p-values."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    d = json.load(open(path))
+    sel = d["selections"]
+    taus = sorted({r["tau"] for r in sel}, reverse=True)
+    fig, ax = plt.subplots(figsize=(10, 4.8), facecolor=SURFACE, layout="constrained")
+    ax.set_facecolor(SURFACE)
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    for side in ("left", "bottom"):
+        ax.spines[side].set_color(GRID)
+    ax.tick_params(colors=INK_2, labelsize=8.5)
+    ax.grid(axis="y", color=GRID, lw=0.6)
+    ax.set_axisbelow(True)
+    w = 0.36
+    colors = {False: SOURCE_COLORS[0], True: SOURCE_COLORS[2]}
+    jitter = np.random.default_rng(0)
+    for i, tau in enumerate(taus):
+        for j, with_set in enumerate((False, True)):
+            r = next(x for x in sel if x["tau"] == tau and x["with_set"] == with_set)
+            x = i + (j - 0.5) * w
+            ax.bar(x, 100 * r["top1"], width=w * 0.9, color=colors[with_set])
+            lo, hi = 100 * r["ci"][0], 100 * r["ci"][1]
+            ax.errorbar(x, 100 * r["top1"], yerr=[[100 * r["top1"] - lo], [hi - 100 * r["top1"]]], fmt="none",
+                        ecolor=INK, lw=1, capsize=3)
+            key = "random_with_set" if with_set else "random_any"
+            pkey = "p_vs_random_with_set" if with_set else "p_vs_random_any"
+            vals = 100 * np.array(r[key])
+            ax.scatter(x + jitter.uniform(-w * 0.25, w * 0.25, len(vals)), vals, s=12, facecolor=SURFACE,
+                       edgecolor=INK, lw=0.8, zorder=3)
+            n_below = int((np.array(r[key]) < r["top1"]).sum())
+            ax.text(x, 103, f"{r['n_kept']} kept\n{n_below}/{len(vals)} random below", ha="center", va="bottom",
+                    fontsize=7, color=INK_2)
+    ax.axhline(100 * d["full"]["top1"], color=INK_2, lw=0.8, ls=":")
+    ax.text(len(taus) - 0.5, 100 * d["full"]["top1"] - 1, "full transcoder", ha="right", va="top", fontsize=7.5, color=INK_2)
+    ax.set_xticks(range(len(taus)), [f"F1 ≥ {t}" for t in taus], fontsize=9)
+    ax.set_ylim(0, 118)
+    ax.set_ylabel("top-1 agreement with the original GRU (%)", fontsize=9, color=INK_2)
+    handles = [matplotlib.patches.Patch(color=colors[False], label="features with F1 ≥ threshold"),
+               matplotlib.patches.Patch(color=colors[True], label=f"… plus the dense set {', '.join(map(str, d['set']))}"),
+               plt.Line2D([], [], marker="o", ls="none", markerfacecolor=SURFACE, markeredgecolor=INK,
+                          label="random sets of the same size (for the + set bars: always including the set)")]
+    ax.legend(handles=handles, frameon=False, fontsize=8, loc="upper left", bbox_to_anchor=(0, -0.1), ncol=1)
+    fig.suptitle("Candidate gate: keeping the explained features, with and without the 5 dense ones, against chance",
+                 fontsize=11.5, color=INK, x=0.01, ha="left")
+    fig.text(0.01, -0.2, textwrap.fill(
+        "Candidate transcoder spliced into the GRU; features not kept are set to their mean. 20,000 held-out sequences, "
+        "lengths 3–9. Error bars: 95% bootstrap interval over sequences. Dots: 20 random sets of the same size, drawn "
+        "from all features that fire; for the '+ set' bars they always include the dense set. 'Random below' = random "
+        "sets scoring lower than the bar (p for 'the selection beats chance' = (1 + random at or above) / 21). "
+        "explained_fidelity.py --set_controls.", 170), fontsize=7.5, color=INK_2)
+    os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
+    fig.savefig(out, dpi=170, facecolor=SURFACE, bbox_inches="tight")
+    plt.close(fig)
+    return out
+
+
 def conditional_plots(d, outdir, n_labels=8):
     """Figures for circuit/copy_task/conditional_analyses.py: effects averaged over all sequences vs over only the
     sequences a feature takes part in. File names end in _conditional so no earlier figure is replaced."""
@@ -1374,7 +1435,12 @@ def main():
     cs.add_argument("dir", help="features/copy_circuits"); cs.add_argument("--out", help="output directory (default: DIR/plots)")
     cd = sub.add_parser("conditional", help="figures for circuit/copy_task/conditional_analyses.py output")
     cd.add_argument("dir", help="features/copy_circuits"); cd.add_argument("--out", help="output directory (default: DIR/plots)")
+    sc = sub.add_parser("set_controls", help="figure for explained_fidelity.py --set_controls output")
+    sc.add_argument("json"); sc.add_argument("--out", required=True, help="output PNG")
     args = ap.parse_args()
+    if args.cmd == "set_controls":
+        print(set_controls_plot(args.json, args.out))
+        return
     if args.cmd == "coverage_plots":
         units = {k: json.load(open(v)) for k, v in (u.rsplit("=", 1) for u in args.units)}
         for p in coverage_plots(json.load(open(args.features_json)), units,

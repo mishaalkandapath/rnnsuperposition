@@ -31,6 +31,7 @@ slots) and `docs/figures/circuits/` (the ones the doc shows; index `docs/figures
 | `conditional_ablations.json` | `conditional_analyses.py --sections ablations` | Every candidate feature, L = 4 and 7: decoder norm × activation, gated write, zero and time-shift ablations | 3 |
 | `conditional_pop.json` | `conditional_analyses.py --sections pop` | All 210 "copy-phase input X" features: on / off clamp results at L = 4 and 7, write size, direct logit effect | 3, 6 |
 | `conditional_flows.json` | `conditional_analyses.py --sections flows` | Per feature: mean \|flow\| over all (sequence, slot) pairs vs the pairs it takes part in, write angle, per-step breakdown | 3, 4, 5 |
+| `step_shares.json` | `conditional_analyses.py --sections step_shares` | Per step since the write: share of the output logit's change (original vs swapped) through that step's candidate features, sparse vs dense, signed and absolute; share written straight to the logit | 3 |
 | `L9/conditional_importance.json`, `L9/conditional_ablations.json` | `conditional_analyses.py --sections importance ablations` on the L = 9 traces | The same two analyses at L = 9 (late-position features) | 3 |
 | `verbal_rules_145.json` | `verbal_rules.py` | Feature 145's magnitude explanation as verbal rules with nothing fitted (Spearman, R², per phase) vs the fitted version | 4 |
 
@@ -44,4 +45,4 @@ Each prints the model, then progress and the "wrote" line of the run that produc
 | `run_contrast.log` | `copy_circuits.py --sections contrast` (added to `circuits.json`) |
 | `run_feature_circuits_L4.log` | `feature_circuits.py` |
 | `run_circuit_tests_L4.log` | `circuit_tests.py` (after the reset-gate fix, §9) |
-| `run_conditional_importance.log`, `run_conditional_ablations.log`, `run_conditional_pop.log`, `run_conditional_flows.log`, `run_conditional_L9.log` | the `conditional_analyses.py` sections |
+| `run_conditional_importance.log`, `run_conditional_ablations.log`, `run_conditional_pop.log`, `run_conditional_flows.log`, `run_conditional_L9.log`, `run_step_shares.log` | the `conditional_analyses.py` sections |

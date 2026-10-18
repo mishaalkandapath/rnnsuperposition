@@ -128,18 +128,81 @@ def run(rnn, x, gate=None, fn=None):
 
 
 @torch.no_grad()
-def splice(rnn, groups, references, gate, fn):
+def splice(rnn, groups, references, gate, fn, per_sequence=False):
+    """Splice metrics; per_sequence also returns (agreeing outputs, outputs) per eval sequence, for bootstraps."""
     kl = agree = correct = n = 0.0
+    seq_agree, seq_n = [], []
     for g, ref in zip(groups, references):
         x = g["inputs"]
         out = torch.cat([run(rnn, x[i:i + 4096], gate, fn) for i in range(0, len(x), 4096)])
         true = x[:, :ref.shape[1], :-1].argmax(-1)
         log_p, log_q = F.log_softmax(ref, -1), F.log_softmax(out, -1)
         kl += (log_p.exp() * (log_p - log_q)).sum().item()
-        agree += (ref.argmax(-1) == out.argmax(-1)).sum().item()
+        same = ref.argmax(-1) == out.argmax(-1)
+        agree += same.sum().item()
         correct += (out.argmax(-1) == true).sum().item()
         n += true.numel()
-    return {"splice_kl": kl / n, "top1_agreement": agree / n, "task_acc": correct / n}
+        seq_agree.append(same.sum(1).numpy())
+        seq_n.append(np.full(len(same), same.shape[1]))
+    res = {"splice_kl": kl / n, "top1_agreement": agree / n, "task_acc": correct / n}
+    if per_sequence:
+        return res, np.concatenate(seq_agree), np.concatenate(seq_n)
+    return res
+
+
+def bootstrap(agree, n_out, n_boot=2000, seed=0):
+    """Bootstrap replicates of top-1 agreement, resampling evaluation sequences (same draws for every selection,
+    so differences between selections are paired)."""
+    rng = np.random.default_rng(seed)
+    idx = rng.integers(0, len(agree), size=(n_boot, len(agree)))
+    return agree[idx].sum(1) / n_out[idx].sum(1)
+
+
+def ci(reps):
+    return [float(np.percentile(reps, 2.5)), float(np.percentile(reps, 97.5))]
+
+
+def compare_selections(rnn, groups, refs, gate, ids, feature_f1, feature_fn, unit_sources, taus):
+    """Each F1 selection of transcoder features, alone and with a fixed set added (e.g. the dense features no
+    predicate explains), against the same F1 selection of GRU units at each density. All are scored on the same
+    evaluation sequences; significance is a paired bootstrap over sequences: the 95% interval of
+    (features - units) and the two-sided p-value 2 * min(P(diff <= 0), P(diff >= 0)).
+
+    unit_sources: {name: (f1, make_fn)}."""
+    width = len(feature_f1)
+    s = torch.zeros(width, dtype=torch.bool)
+    s[ids] = True
+
+    def evaluate(keep, fn):
+        res, a, n = splice(rnn, groups, refs, gate, fn(keep), per_sequence=True)
+        return res["top1_agreement"], bootstrap(a, n)
+
+    def entry(top1, reps, k, n_total):
+        return {"top1": top1, "ci": ci(reps), "n_kept": k, "n_total": n_total}
+
+    out = {"gate": gate, "set": list(ids), "selections": []}
+    top1, reps = evaluate(torch.ones(width, dtype=torch.bool), feature_fn)
+    out["full"] = entry(top1, reps, width, width)
+    for tau in taus:
+        row = {"tau": tau}
+        reps_of = {}
+        for name, keep in (("features", feature_f1 >= tau), ("features + set", (feature_f1 >= tau) | s)):
+            top1, reps = evaluate(keep, feature_fn)
+            row[name] = entry(top1, reps, int(keep.sum()), width)
+            reps_of[name] = reps
+        for name, (uf1, ufn) in unit_sources.items():
+            keep = uf1 >= tau
+            top1, reps = evaluate(keep, ufn)
+            row[f"units {name}"] = entry(top1, reps, int(keep.sum()), len(uf1))
+            for fname in ("features", "features + set"):
+                diff = reps_of[fname] - reps
+                row[f"units {name}"][f"{fname} minus units"] = {
+                    "diff": row[fname]["top1"] - top1, "ci": ci(diff),
+                    "p": float(min(1.0, 2 * min((diff <= 0).mean(), (diff >= 0).mean())))}
+        out["selections"].append(row)
+        msg = " | ".join(f"{k} {v['top1']:.3f} ({v['n_kept']})" for k, v in row.items() if isinstance(v, dict))
+        print(f"  F1 >= {tau}: {msg}", flush=True)
+    return out
 
 
 @torch.no_grad()
@@ -284,6 +347,9 @@ def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--drop_sets", nargs="*", default=[], metavar="GATE=ID,ID,...",
                     help="feature sets to test as what the F1 selection misses, e.g. candidate=162,214")
+    ap.add_argument("--compare_set", metavar="GATE=ID,ID,...",
+                    help="instead of the main run: feature F1 selections with and without this set, against the "
+                         "--units selections, with paired-bootstrap significance (compare_selections), written to --out")
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
     torch.set_grad_enabled(False)
@@ -305,6 +371,21 @@ def main():
     for g, ref in zip(groups, refs):       # the traces must come from this RNN
         true = g["inputs"][:, :ref.shape[1], :-1].argmax(-1)
         print(f"  length {ref.shape[1]}: original copy accuracy {(ref.argmax(-1) == true).float().mean():.3f}")
+
+    if args.compare_set:
+        gate, ids = args.compare_set.split("=", 1)
+        X, Y = teacher_forced(groups, gate)
+        tc = load_transcoder(transcoders[gate])
+        means, _, _ = components(X, Y, tc)
+        f1, _ = load_f1(args.feature_results, [GATES[gate][1]], tc.n_feats)
+        unit_means, _, _ = components(X, Y)
+        unit_sources = {name: (load_f1(results, GATES[gate][2], Y.shape[1])[0],
+                               lambda keep: Ablated(keep, unit_means)) for name, results in units.items()}
+        res = compare_selections(rnn, groups, refs, gate, [int(i) for i in ids.split(",")], f1,
+                                 lambda keep: Ablated(keep, means, tc), unit_sources, args.taus)
+        json.dump({"args": vars(args), **res}, open(args.out, "w"), indent=1)
+        print(f"wrote {args.out}")
+        return
 
     drop_sets = {g: [int(i) for i in ids.split(",")] for g, ids in (s.split("=", 1) for s in args.drop_sets)}
     rows, summaries, drops = [], [], []

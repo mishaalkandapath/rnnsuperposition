@@ -42,6 +42,24 @@ as too sparse without an agent.
 | Data | 1M sequences | 200k subsample | 200k | 200k |
 | Firing rate | learned | reset 0.03%, update 0.26%, candidate 0.98% | 1% | 5% |
 
+**How "matched density" was set.** Each GRU unit is switched "on" on its own top share of steps, and that share is
+the **median firing rate over all features of the same gate's transcoder** (firing rate = share of all sequence steps
+on which a feature is active; `matched_densities()` in `circuit/copy_task/neuron_baseline.py`, values recorded in the
+unit store's `metadata.pkl`). It is set per gate and uses every feature, not only the ones that matter:
+
+| gate | features | median firing rate (used) | mean firing rate |
+|---|---|---|---|
+| reset | 512 | 0.030% | 1.74% |
+| update | 1024 | 0.26% | 0.81% |
+| candidate | 512 | 0.98% | 7.98% |
+
+The mean is much higher than the median because most features are very sparse while a few dense ones (the copy-phase
+carriers) fire on most steps. For the candidate gate, the features that matter fire at about the same median rate:
+those costing ≥ 20% when ablated on their own sequences or worst output token (148) at 1.16% (mean 18.2%), those
+costing ≥ 5% (211) at 1.01% (mean 13.6%), against 0.99% for the 268 that do nothing measurable
+(`docs/interp_circuits.md` §3; reset and update features were not tested this way). This rate is per step; "dense" in
+these docs means active in most *sequences*, a different measure.
+
 ## 2. Per-item explanation quality (held-out F1)
 
 | Gate | Source | n | F1 >= 0.8 | 0.5-0.8 | 0.2-0.5 | < 0.2 / none | median F1 |
@@ -172,6 +190,48 @@ the time, so random looks better. Testing them directly:
   candidate gate is fragile under recurrence, and the 62 features with F1
   0.5-0.8 matter too (F1 >= 0.8 + the dense 5: 36.9%).
 - Units fare worse: no subset short of (nearly) all 128 gets above 25%.
+
+**Features vs units, with and without the dense 5, with significance.** *Why:* the bars above give no sense of
+whether the differences are noise, and the dense 5 had only been added to the feature selections, never compared with
+the units. *Method:* the candidate transcoder (or the GRU's candidate units) runs inside the GRU, everything not kept
+is set to its mean; each F1 selection of features, alone and with the dense 5 added, against the same F1 selection
+of units at matched, 1% and 5% density. All on the same 20,000 held-out sequences, so the differences can be tested
+with a paired bootstrap: resample sequences 2,000 times and recompute features minus units each time.
+
+| F1 ≥ | selection | kept | top-1 (95% interval) | features − units | features + dense 5 − units |
+|---|---|---|---|---|---|
+| 0.8 | features | 445 / 512 (87%) | 24.3% (24.1–24.6) | | |
+| | features + dense 5 | 450 / 512 (88%) | 36.9% (36.6–37.2) | | |
+| | units, matched | 2 / 128 (2%) | 3.4% | +21.0 (+20.7 to +21.2) | +33.5 (+33.2 to +33.8) |
+| | units, 1% | 2 / 128 (2%) | 3.4% | +21.0 | +33.5 |
+| | units, 5% | 7 / 128 (5%) | 3.5% | +20.8 | +33.4 |
+| 0.5 | features | 502 / 512 (98%) | 54.7% (54.4–55.1) | | |
+| | features + dense 5 | 507 / 512 (99%) | 98.5% (98.4–98.6) | | |
+| | units, matched | 47 / 128 (37%) | 4.1% | +50.6 | +94.4 |
+| | units, 1% | 57 / 128 (45%) | 5.8% | +48.9 | +92.7 |
+| | units, 5% | 99 / 128 (77%) | 10.9% | +43.9 | +87.6 |
+| 0.2 | features | 505 / 512 (99%) | 58.6% (58.2–58.9) | | |
+| | features + dense 5 | 507 / 512 (99%) | 98.5% (98.4–98.6) | | |
+| | units, matched | 128 / 128 (100%) | 100% | −41.4 | −1.5 |
+| | units, 1% | 127 / 128 (99%) | 93.8% | −35.2 | +4.7 |
+| | units, 5% | 128 / 128 (100%) | 100% | −41.4 | −1.5 |
+| | all 512 features | 512 | 98.5% (98.4–98.6) | | |
+
+Differences in points of top-1; every one has p < 0.001 (none of the 2,000 resamples crossed zero), and every
+interval is within about ±0.4 points, so sampling noise is negligible.
+
+- At F1 ≥ 0.8 and ≥ 0.5 the explained features beat the explained units by 21–51 points, and by 33–94 with the
+  dense 5 added; the explained units recover almost nothing (3–11%).
+- At F1 ≥ 0.2 the units win, because that selection keeps all or all but one of the 128 units, i.e. the real gate with
+  no transcoder error (100%); the features' ceiling is the full transcoder's 98.5%.
+- **The comparison is confounded by how much each side keeps:** the explained features are 87–99% of all features,
+  the explained units 2–77% of all units. So the gap mostly says that explanations cover the features the model uses
+  and do not cover the units, not that an explained feature is more useful than an explained unit of equal share.
+  For the same reason (nearly every feature is kept), random sets of features cannot be told apart from the F1
+  selection here.
+
+*Code:* `explained_fidelity.py --compare_set candidate=162,214,284,388,487` (with `--units`); output
+`features/explained_fidelity/dense_set_vs_units.json`.
 
 ## 5. Caveats
 
