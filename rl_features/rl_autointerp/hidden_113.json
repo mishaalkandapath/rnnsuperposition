@@ -1,104 +1,153 @@
 {
+  "gate": "hidden",
+  "feature": 113,
+  "final_verdict": "explained",
+  "final_label": "D1 after a rewarded a2->S2 (common) trial: win-stay on a2",
+  "with_model_outputs": {
+    "label": "D1 after a rewarded a2->S2 (common) trial: win-stay on a2",
+    "predicate": "(phase == D1) & (in_rew == 1) & (((prev_action == 2) & (prev_state == 2)) | ((prev_state == -1) & (action == 2))) & (ep_trial < 90)",
+    "verdict": "explained",
+    "confidence": "high",
+    "uses_future": true,
+    "explanation": "Fires only at D1 (never GO/D2), only when the reward input is 1, and essentially only when the previous trial was a2 with a common transition to S2 (prev_common=0 or prev_action=1 carry ~0.2% of mass). On the window first trial the previous trial is not in the window, so that clause falls back to the agent own upcoming choice action==2 (a FUTURE variable but the agent own computed choice, which here is a win-stay repeat of a2); the purely observed version prev_action==2 & prev_state==2 & in_rew==1 has dev precision 0.88 but recall 0.75 only because of the missing first-trial history. Simpler (D1 & in_rew==1 & action==2) gives dev F1 0.86. Activation corresponds to a strongly a2-leaning policy (choice logit in [-4.4,-1.5] holds 93% of mass) and mid-high value. Does not fire after unrewarded trials, after a1 or rare trials, and is nearly silent in episode trials 90-99. False positives are mostly weaker/zero activations in long reward streaks or right after a S1R rare outcome earlier in the window.",
+    "test_scores": {
+      "gate": "hidden",
+      "feature": 113,
+      "predicate": "(phase == D1) & (in_rew == 1) & (((prev_action == 2) & (prev_state == 2)) | ((prev_state == -1) & (action == 2))) & (ep_trial < 90)",
+      "split": "test",
+      "precision": 0.9470229903861884,
+      "recall": 0.9694987389659521,
+      "f1": 0.9581290740299002,
+      "mass_recall": 0.996966342971228,
+      "correlation": 0.9283403913101518,
+      "n_active": 101504,
+      "n_predicted": 103913,
+      "coverage_by_activation_quartile": [
+        0.8785860655737705,
+        0.9994482976040353,
+        1.0,
+        0.9999605926860026
+      ]
+    },
+    "dev_scores": {
+      "gate": "hidden",
+      "feature": 113,
+      "predicate": "(phase == D1) & (in_rew == 1) & (((prev_action == 2) & (prev_state == 2)) | ((prev_state == -1) & (action == 2))) & (ep_trial < 90)",
+      "split": "dev",
+      "precision": 0.953900087642419,
+      "recall": 0.9729343172991926,
+      "f1": 0.9633231876717919,
+      "mass_recall": 0.9975351983533415,
+      "correlation": 0.9334756413220437,
+      "n_active": 100681,
+      "n_predicted": 102690,
+      "coverage_by_activation_quartile": [
+        0.8920583210837869,
+        0.9996821613031387,
+        1.0,
+        1.0
+      ]
+    },
+    "skeptic": {
+      "upheld": false,
+      "issues": [
+        "Systematic false-positive class: episode trials 90-99. On test, the original predicate restricted to ep_trial >= 90 predicts 10878 steps with precision 0.08 (dev 0.058). That accounts for roughly 10k of the predicate's ~15k dev false positives. The explanation says the feature is 'almost silent in episode trials 90-99' but leaves this out of the predicate. It also blames most false positives on 'late in long reward streaks', when the dominant cause is the late-episode cutoff.",
+        "Adding & (ep_trial < 90) raises test precision from 0.865 to 0.947, keeps recall at 0.969 and mass recall at 0.997, and lifts test F1 from 0.918 to 0.958 (dev 0.921 -> 0.963). So the reported predicate is not the best description, and the label is missing the late-episode suppression.",
+        "Confirmed claims: firing is D1-only (GO and D2 have 0 active steps). in_rew == 1 holds 100% of the mass. prev_action == 1 and prev_common == 0 each hold about 0.2% of the mass. The observed-only predicate scores dev P 0.876 / R 0.746, and its gap is entirely the window's first trial. Using good == 2 in place of action == 2 on the first trial drops the first-trial recall (0.175 vs 0.233). For the first trial, the future upcoming choice (action == 2) is a legitimate stand-in, since the agent computes it itself.",
+        "The policy correlation exists but is weaker than the predicate: D1 & in_rew == 1 & choice < -1 gives dev F1 0.878 and choice < -1.5 gives 0.845, so the policy logit alone is not a better explanation.",
+        "Residual false positives after the fix look scattered: first wins on a2 after unrewarded or switch trials, where activation is weak or zero. No further systematic class was found."
+      ],
+      "revised_verdict": "explained",
+      "revised_label": "D1 after a rewarded a2->S2 (common) trial, i.e. win-stay on a2, except in the last ~10 trials of the episode (silent at ep_trial >= 90)",
+      "better_predicate": "(phase == D1) & (in_rew == 1) & (((prev_action == 2) & (prev_state == 2)) | ((prev_state == -1) & (action == 2))) & (ep_trial < 90)",
+      "better_predicate_test_f1": 0.958
+    },
+    "original_predicate": "(phase == D1) & (in_rew == 1) & (((prev_action == 2) & (prev_state == 2)) | ((prev_state == -1) & (action == 2)))",
+    "original_test_scores": {
+      "gate": "hidden",
+      "feature": 113,
+      "predicate": "(phase == D1) & (in_rew == 1) & (((prev_action == 2) & (prev_state == 2)) | ((prev_state == -1) & (action == 2)))",
+      "split": "test",
+      "precision": 0.8648151858595186,
+      "recall": 0.9780205706179067,
+      "f1": 0.9179407753299892,
+      "mass_recall": 0.998022240574914,
+      "correlation": 0.8798144962187743,
+      "n_active": 101504,
+      "n_predicted": 114791,
+      "coverage_by_activation_quartile": [
+        0.9126733921815889,
+        0.9994482976040353,
+        1.0,
+        0.9999605926860026
+      ]
+    },
+    "original_dev_scores": {
+      "gate": "hidden",
+      "feature": 113,
+      "predicate": "(phase == D1) & (in_rew == 1) & (((prev_action == 2) & (prev_state == 2)) | ((prev_state == -1) & (action == 2)))",
+      "split": "dev",
+      "precision": 0.8694367513979785,
+      "recall": 0.979082448525541,
+      "f1": 0.9210077595429297,
+      "mass_recall": 0.9982070559531699,
+      "correlation": 0.8844436399767034,
+      "n_active": 100681,
+      "n_predicted": 113378,
+      "coverage_by_activation_quartile": [
+        0.9166501132255374,
+        0.9996821613031387,
+        1.0,
+        1.0
+      ]
+    },
+    "predicate_from": "skeptic",
+    "final_verdict": "explained",
+    "final_label": "D1 after a rewarded a2->S2 (common) trial, i.e. win-stay on a2, except in the last ~10 trials of the episode (silent at ep_trial >= 90)"
+  },
   "label": "D1 after a rewarded a2->S2 (common) trial: win-stay on a2",
-  "predicate": "(phase == D1) & (in_rew == 1) & (((prev_action == 2) & (prev_state == 2)) | ((prev_state == -1) & (action == 2))) & (ep_trial < 90)",
+  "predicate": "(phase == D1) & (in_rew == 1) & (((prev_action == 2) & (prev_state == 2)) | ((prev_state == -1) & (belief < 0.5))) & (ep_trial < 90)",
   "verdict": "explained",
-  "confidence": "high",
-  "uses_future": true,
-  "explanation": "Fires only at D1 (never GO/D2), only when the reward input is 1, and essentially only when the previous trial was a2 with a common transition to S2 (prev_common=0 or prev_action=1 carry ~0.2% of mass). On the window first trial the previous trial is not in the window, so that clause falls back to the agent own upcoming choice action==2 (a FUTURE variable but the agent own computed choice, which here is a win-stay repeat of a2); the purely observed version prev_action==2 & prev_state==2 & in_rew==1 has dev precision 0.88 but recall 0.75 only because of the missing first-trial history. Simpler (D1 & in_rew==1 & action==2) gives dev F1 0.86. Activation corresponds to a strongly a2-leaning policy (choice logit in [-4.4,-1.5] holds 93% of mass) and mid-high value. Does not fire after unrewarded trials, after a1 or rare trials, and is nearly silent in episode trials 90-99. False positives are mostly weaker/zero activations in long reward streaks or right after a S1R rare outcome earlier in the window.",
+  "confidence": "medium",
+  "uses_future": false,
+  "explanation": "Same rule as before, except the window-start clause (previous trial outside the window), which used the agent's upcoming choice, now uses the ideal-observer belief in its place (a1 -> belief > 0.5, a2 -> belief < 0.5). Earlier explanation: Fires only at D1 (never GO/D2), only when the reward input is 1, and essentially only when the previous trial was a2 with a common transition to S2 (prev_common=0 or prev_action=1 carry ~0.2% of mass). On the window first trial the previous trial is not in the window, so that clause falls back to the agent own upcoming choice action==2 (a FUTURE variable but the agent own computed choice, which here is a win-stay repeat of a2); the purely observed version prev_action==2 & prev_state==2 & in_rew==1 has dev precision 0.88 but recall 0.75 only because of the missing first-trial history. Simpler (D1 & in_rew==1 & action==2) gives dev F1 0.86. Activation corresponds to a strongly a2-leaning policy (choice logit in [-4.4,-1.5] holds 93% of mass) and mid-high value. Does not fire after unrewarded trials, after a1 or rare trials, and is nearly silent in episode trials 90-99. False positives are mostly weaker/zero activations in long reward streaks or right after a S1R rare outcome earlier in the window.",
   "test_scores": {
     "gate": "hidden",
     "feature": 113,
-    "predicate": "(phase == D1) & (in_rew == 1) & (((prev_action == 2) & (prev_state == 2)) | ((prev_state == -1) & (action == 2))) & (ep_trial < 90)",
+    "predicate": "(phase == D1) & (in_rew == 1) & (((prev_action == 2) & (prev_state == 2)) | ((prev_state == -1) & (belief < 0.5))) & (ep_trial < 90)",
     "split": "test",
-    "precision": 0.9470229903861884,
-    "recall": 0.9694987389659521,
-    "f1": 0.9581290740299002,
-    "mass_recall": 0.996966342971228,
-    "correlation": 0.9283403913101518,
+    "precision": 0.9433292094025622,
+    "recall": 0.9314706809583859,
+    "f1": 0.9373624412586997,
+    "mass_recall": 0.9588623698345741,
+    "correlation": 0.9073318711308962,
     "n_active": 101504,
-    "n_predicted": 103913,
+    "n_predicted": 100228,
     "coverage_by_activation_quartile": [
-      0.8785860655737705,
-      0.9994482976040353,
-      1.0,
-      0.9999605926860026
+      0.8411885245901639,
+      0.9585040983606558,
+      0.9545633669609079,
+      0.9716267339218159
     ]
   },
   "dev_scores": {
     "gate": "hidden",
     "feature": 113,
-    "predicate": "(phase == D1) & (in_rew == 1) & (((prev_action == 2) & (prev_state == 2)) | ((prev_state == -1) & (action == 2))) & (ep_trial < 90)",
+    "predicate": "(phase == D1) & (in_rew == 1) & (((prev_action == 2) & (prev_state == 2)) | ((prev_state == -1) & (belief < 0.5))) & (ep_trial < 90)",
     "split": "dev",
-    "precision": 0.953900087642419,
-    "recall": 0.9729343172991926,
-    "f1": 0.9633231876717919,
-    "mass_recall": 0.9975351983533415,
-    "correlation": 0.9334756413220437,
+    "precision": 0.9507089056269384,
+    "recall": 0.9377439636078306,
+    "f1": 0.9441819300061504,
+    "mass_recall": 0.9619633052684055,
+    "correlation": 0.9136461746984392,
     "n_active": 100681,
-    "n_predicted": 102690,
+    "n_predicted": 99308,
     "coverage_by_activation_quartile": [
-      0.8920583210837869,
-      0.9996821613031387,
-      1.0,
-      1.0
+      0.8599976163044774,
+      0.9630115216527613,
+      0.9566150178784267,
+      0.9713547874453715
     ]
   },
-  "gate": "hidden",
-  "feature": 113,
-  "final_verdict": "explained",
-  "skeptic": {
-    "upheld": false,
-    "issues": [
-      "Systematic false-positive class: episode trials 90-99. On test, the original predicate restricted to ep_trial >= 90 predicts 10878 steps with precision 0.08 (dev 0.058). That accounts for roughly 10k of the predicate's ~15k dev false positives. The explanation says the feature is 'almost silent in episode trials 90-99' but leaves this out of the predicate. It also blames most false positives on 'late in long reward streaks', when the dominant cause is the late-episode cutoff.",
-      "Adding & (ep_trial < 90) raises test precision from 0.865 to 0.947, keeps recall at 0.969 and mass recall at 0.997, and lifts test F1 from 0.918 to 0.958 (dev 0.921 -> 0.963). So the reported predicate is not the best description, and the label is missing the late-episode suppression.",
-      "Confirmed claims: firing is D1-only (GO and D2 have 0 active steps). in_rew == 1 holds 100% of the mass. prev_action == 1 and prev_common == 0 each hold about 0.2% of the mass. The observed-only predicate scores dev P 0.876 / R 0.746, and its gap is entirely the window's first trial. Using good == 2 in place of action == 2 on the first trial drops the first-trial recall (0.175 vs 0.233). For the first trial, the future upcoming choice (action == 2) is a legitimate stand-in, since the agent computes it itself.",
-      "The policy correlation exists but is weaker than the predicate: D1 & in_rew == 1 & choice < -1 gives dev F1 0.878 and choice < -1.5 gives 0.845, so the policy logit alone is not a better explanation.",
-      "Residual false positives after the fix look scattered: first wins on a2 after unrewarded or switch trials, where activation is weak or zero. No further systematic class was found."
-    ],
-    "revised_verdict": "explained",
-    "revised_label": "D1 after a rewarded a2->S2 (common) trial, i.e. win-stay on a2, except in the last ~10 trials of the episode (silent at ep_trial >= 90)",
-    "better_predicate": "(phase == D1) & (in_rew == 1) & (((prev_action == 2) & (prev_state == 2)) | ((prev_state == -1) & (action == 2))) & (ep_trial < 90)",
-    "better_predicate_test_f1": 0.958
-  },
-  "final_label": "D1 after a rewarded a2->S2 (common) trial, i.e. win-stay on a2, except in the last ~10 trials of the episode (silent at ep_trial >= 90)",
-  "original_predicate": "(phase == D1) & (in_rew == 1) & (((prev_action == 2) & (prev_state == 2)) | ((prev_state == -1) & (action == 2)))",
-  "original_test_scores": {
-    "gate": "hidden",
-    "feature": 113,
-    "predicate": "(phase == D1) & (in_rew == 1) & (((prev_action == 2) & (prev_state == 2)) | ((prev_state == -1) & (action == 2)))",
-    "split": "test",
-    "precision": 0.8648151858595186,
-    "recall": 0.9780205706179067,
-    "f1": 0.9179407753299892,
-    "mass_recall": 0.998022240574914,
-    "correlation": 0.8798144962187743,
-    "n_active": 101504,
-    "n_predicted": 114791,
-    "coverage_by_activation_quartile": [
-      0.9126733921815889,
-      0.9994482976040353,
-      1.0,
-      0.9999605926860026
-    ]
-  },
-  "original_dev_scores": {
-    "gate": "hidden",
-    "feature": 113,
-    "predicate": "(phase == D1) & (in_rew == 1) & (((prev_action == 2) & (prev_state == 2)) | ((prev_state == -1) & (action == 2)))",
-    "split": "dev",
-    "precision": 0.8694367513979785,
-    "recall": 0.979082448525541,
-    "f1": 0.9210077595429297,
-    "mass_recall": 0.9982070559531699,
-    "correlation": 0.8844436399767034,
-    "n_active": 100681,
-    "n_predicted": 113378,
-    "coverage_by_activation_quartile": [
-      0.9166501132255374,
-      0.9996821613031387,
-      1.0,
-      1.0
-    ]
-  },
-  "predicate_from": "skeptic"
+  "observed_only_round": "rl_features/rl_observed/hidden_113.json"
 }

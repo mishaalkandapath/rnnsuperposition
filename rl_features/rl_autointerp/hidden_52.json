@@ -1,105 +1,169 @@
 {
-  "label": "D1 after a reward, in the last ~10 trials of the episode, when the agent is about to choose a2",
-  "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (action == 2) & (prev_state != 1)",
+  "gate": "hidden",
+  "feature": 52,
+  "final_verdict": "explained",
+  "final_label": "D1 after a rewarded visit to S2 (or unknown previous state at the window start), in the last ~10 trials of the episode, when the observed history favours S2 (belief < 0.5)",
+  "with_model_outputs": {
+    "label": "D1 after a reward, in the last ~10 trials of the episode, when the agent is about to choose a2",
+    "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (action == 2) & (prev_state != 1)",
+    "verdict": "explained",
+    "confidence": "high",
+    "uses_future": false,
+    "explanation": "Fires only at D1 steps where the reward input is 1 (previous trial rewarded). It is silent on GO and D2, on unrewarded D1s, and before episode trial 80; 97% of activation mass falls in trials 90-99. Nearly every activation (11419 of 11436) comes before an upcoming a2 choice, and the policy logit is mildly a2-leaning (-4.4 to -1.5). The upcoming choice is the agent's own decision, so it is legitimate; no future random outcome is used. Activations coincide with low model value (<5.2), which fits the approach of the episode end. The predicate (value<5.22 in place of ep_trial>=90) scores about the same (dev F1 0.85, mass recall 0.996); I recorded the ep_trial version because it is simpler to interpret. Magnitude: grows steadily over consecutive rewarded D1s toward the episode end (e.g. 0.6 -> 0.68 -> 0.76 -> 0.83 -> 0.89 in successive trials). Weak activations occur at trials 80-89, and on rewarded D1s inside the window that come before the a2 run. False positives are mostly rewarded late D1s where the agent had recently been choosing a1 or where S1 is good. Dev: P 0.79, R 0.89, F1 0.84, mass recall 0.97.",
+    "test_scores": {
+      "gate": "hidden",
+      "feature": 52,
+      "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (action == 2) & (prev_state != 1)",
+      "split": "test",
+      "precision": 0.8706062149770759,
+      "recall": 0.9036749801709703,
+      "f1": 0.8868324324324324,
+      "mass_recall": 0.9725096719540196,
+      "correlation": 0.8103238959165074,
+      "n_active": 11347,
+      "n_predicted": 11778,
+      "coverage_by_activation_quartile": [
+        0.6968628833274586,
+        0.924920690870638,
+        0.9929502996122664,
+        1.0
+      ]
+    },
+    "dev_scores": {
+      "gate": "hidden",
+      "feature": 52,
+      "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (action == 2) & (prev_state != 1)",
+      "split": "dev",
+      "precision": 0.8907094300156876,
+      "recall": 0.8936691150752011,
+      "f1": 0.8921868179834134,
+      "mass_recall": 0.968022290210422,
+      "correlation": 0.8302975533592558,
+      "n_active": 11436,
+      "n_predicted": 11474,
+      "coverage_by_activation_quartile": [
+        0.6687653025533403,
+        0.9139559286463799,
+        0.9919552291010842,
+        1.0
+      ]
+    },
+    "skeptic": {
+      "upheld": false,
+      "issues": [
+        "The label leaves out the feature's most important condition. The feature never fires when the previous trial reached S1: (prev_state == 1) has 0 active steps out of about 444k (dev) and 459k (test). So the feature is really 'a reward shown at D1 that came from S2', not just 'a reward'.",
+        "Most of the claimed false positives come from this missing condition. Adding (prev_state != 1) to the original predicate leaves recall unchanged (dev 0.894, test 0.904) and raises precision from 0.79 to 0.89 (dev) and from 0.75 to 0.87 (test). Test F1 goes from 0.821 to 0.887. That is a systematic class of false positives, not scattered noise.",
+        "The 'upcoming a2' term is mostly an observed correlate. A model-based agent repeats a2 after S2 is rewarded, and the reached state is already observed at D1. The observed-only predicate D1 & in_rew==1 & ep_trial>=90 & prev_state!=1 scores test F1 0.813, about the same as the original 0.821 that uses the upcoming action. Using prev_state==2 instead drops recall to 0.73 only because prev_state is unknown (-1) on each window's first trial.",
+        "These claims check out: the feature never fires at GO or D2, never on unrewarded D1s (precision 0 on both), and never before trial 80. Trials 80-89 hold 3.2% of activation mass. The upcoming action is almost always a2 (action==1 precision about 5e-5 on test).",
+        "The explanation's account of false positives ('the agent had recently been choosing a1 or S1 is good') is only a proxy. The precise cause is that the reward on display came from S1. Within the predicate, good==1 has precision 0.42 and prev_action==1 has 0.50.",
+        "start_high splits the data in opposite directions on dev and test (with start_high==1 added, dev F1 is 0.79 but test F1 is 0.36). It reflects which episodes are in each split, so it is not a usable rule."
+      ],
+      "revised_verdict": "explained",
+      "revised_label": "D1 in the last ~10 trials of the episode where the reward on display came from S2 (the previous trial was rewarded in S2), as the agent goes on to choose a2; never fires when the previous trial reached S1",
+      "better_predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (action == 2) & (prev_state != 1)",
+      "better_predicate_test_f1": 0.887
+    },
+    "original_predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (action == 2)",
+    "original_test_scores": {
+      "gate": "hidden",
+      "feature": 52,
+      "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (action == 2)",
+      "split": "test",
+      "precision": 0.7524214851775756,
+      "recall": 0.9036749801709703,
+      "f1": 0.8211411411411412,
+      "mass_recall": 0.9725096719540196,
+      "correlation": 0.7526910733531644,
+      "n_active": 11347,
+      "n_predicted": 13628,
+      "coverage_by_activation_quartile": [
+        0.6968628833274586,
+        0.924920690870638,
+        0.9929502996122664,
+        1.0
+      ]
+    },
+    "original_dev_scores": {
+      "gate": "hidden",
+      "feature": 52,
+      "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (action == 2)",
+      "split": "dev",
+      "precision": 0.7912666460204397,
+      "recall": 0.8936691150752011,
+      "f1": 0.8393561103810775,
+      "mass_recall": 0.968022290210422,
+      "correlation": 0.782044488121736,
+      "n_active": 11436,
+      "n_predicted": 12916,
+      "coverage_by_activation_quartile": [
+        0.6687653025533403,
+        0.9139559286463799,
+        0.9919552291010842,
+        1.0
+      ]
+    },
+    "predicate_from": "skeptic",
+    "final_verdict": "explained",
+    "final_label": "D1 in the last ~10 trials of the episode where the reward on display came from S2 (the previous trial was rewarded in S2), as the agent goes on to choose a2; never fires when the previous trial reached S1"
+  },
+  "label": "D1 after a rewarded visit to S2 (or unknown previous state at the window start), in the last ~10 trials of the episode, when the observed history favours S2 (belief < 0.5)",
+  "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (belief < 0.5) & (prev_state != 1)",
   "verdict": "explained",
-  "confidence": "high",
+  "confidence": "medium",
   "uses_future": false,
-  "explanation": "Fires only at D1 steps where the reward input is 1 (previous trial rewarded). It is silent on GO and D2, on unrewarded D1s, and before episode trial 80; 97% of activation mass falls in trials 90-99. Nearly every activation (11419 of 11436) comes before an upcoming a2 choice, and the policy logit is mildly a2-leaning (-4.4 to -1.5). The upcoming choice is the agent's own decision, so it is legitimate; no future random outcome is used. Activations coincide with low model value (<5.2), which fits the approach of the episode end. The predicate (value<5.22 in place of ep_trial>=90) scores about the same (dev F1 0.85, mass recall 0.996); I recorded the ep_trial version because it is simpler to interpret. Magnitude: grows steadily over consecutive rewarded D1s toward the episode end (e.g. 0.6 -> 0.68 -> 0.76 -> 0.83 -> 0.89 in successive trials). Weak activations occur at trials 80-89, and on rewarded D1s inside the window that come before the a2 run. False positives are mostly rewarded late D1s where the agent had recently been choosing a1 or where S1 is good. Dev: P 0.79, R 0.89, F1 0.84, mass recall 0.97.",
+  "explanation": "Fires only at D1 steps where the reward input is 1, and only late in the episode (trial 90 onward; a few hits at 88-89). It also needs the evidence so far to say S2 is the good state: ideal-observer belief P(S1 good) < 0.5. That condition replaces the banned upcoming choice of a2 (dev F1 rises from 0.60 without it to 0.85 with it). Thresholds from 0.4 to 0.7 all score within 0.01, and adding prev_action/prev_state does not help. Activation tends to grow over consecutive rewarded late trials. Many misses and false positives sit on the window-start D1 (rel -3), where activations are weak or missing. Magnitude was not checked systematically.",
   "test_scores": {
     "gate": "hidden",
     "feature": 52,
-    "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (action == 2) & (prev_state != 1)",
+    "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (belief < 0.5) & (prev_state != 1)",
     "split": "test",
-    "precision": 0.8706062149770759,
-    "recall": 0.9036749801709703,
-    "f1": 0.8868324324324324,
-    "mass_recall": 0.9725096719540196,
-    "correlation": 0.8103238959165074,
+    "precision": 0.892067018420809,
+    "recall": 0.8492993742839517,
+    "f1": 0.8701580135440181,
+    "mass_recall": 0.935580580442058,
+    "correlation": 0.8140253468912552,
     "n_active": 11347,
-    "n_predicted": 11778,
+    "n_predicted": 10803,
     "coverage_by_activation_quartile": [
-      0.6968628833274586,
-      0.924920690870638,
-      0.9929502996122664,
-      1.0
+      0.6045118082481494,
+      0.861825872400423,
+      0.9481847021501586,
+      0.982722143864598
     ]
   },
   "dev_scores": {
     "gate": "hidden",
     "feature": 52,
-    "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (action == 2) & (prev_state != 1)",
+    "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (belief < 0.5) & (prev_state != 1)",
     "split": "dev",
-    "precision": 0.8907094300156876,
-    "recall": 0.8936691150752011,
-    "f1": 0.8921868179834134,
-    "mass_recall": 0.968022290210422,
-    "correlation": 0.8302975533592558,
+    "precision": 0.9146901659323147,
+    "recall": 0.8531829310947884,
+    "f1": 0.882866579197394,
+    "mass_recall": 0.9430582605807238,
+    "correlation": 0.8390279364556288,
     "n_active": 11436,
-    "n_predicted": 11474,
+    "n_predicted": 10667,
     "coverage_by_activation_quartile": [
-      0.6687653025533403,
-      0.9139559286463799,
-      0.9919552291010842,
-      1.0
+      0.5883175935641832,
+      0.869884575026233,
+      0.9646729625743267,
+      0.9898565932144107
     ]
   },
-  "gate": "hidden",
-  "feature": 52,
-  "final_verdict": "explained",
   "skeptic": {
     "upheld": false,
     "issues": [
-      "The label leaves out the feature's most important condition. The feature never fires when the previous trial reached S1: (prev_state == 1) has 0 active steps out of about 444k (dev) and 459k (test). So the feature is really 'a reward shown at D1 that came from S2', not just 'a reward'.",
-      "Most of the claimed false positives come from this missing condition. Adding (prev_state != 1) to the original predicate leaves recall unchanged (dev 0.894, test 0.904) and raises precision from 0.79 to 0.89 (dev) and from 0.75 to 0.87 (test). Test F1 goes from 0.821 to 0.887. That is a systematic class of false positives, not scattered noise.",
-      "The 'upcoming a2' term is mostly an observed correlate. A model-based agent repeats a2 after S2 is rewarded, and the reached state is already observed at D1. The observed-only predicate D1 & in_rew==1 & ep_trial>=90 & prev_state!=1 scores test F1 0.813, about the same as the original 0.821 that uses the upcoming action. Using prev_state==2 instead drops recall to 0.73 only because prev_state is unknown (-1) on each window's first trial.",
-      "These claims check out: the feature never fires at GO or D2, never on unrewarded D1s (precision 0 on both), and never before trial 80. Trials 80-89 hold 3.2% of activation mass. The upcoming action is almost always a2 (action==1 precision about 5e-5 on test).",
-      "The explanation's account of false positives ('the agent had recently been choosing a1 or S1 is good') is only a proxy. The precise cause is that the reward on display came from S1. Within the predicate, good==1 has precision 0.42 and prev_action==1 has 0.50.",
-      "start_high splits the data in opposite directions on dev and test (with start_high==1 added, dev F1 is 0.79 but test F1 is 0.36). It reflects which episodes are in each split, so it is not a usable rule."
+      "Claim 'adding prev_action/prev_state does not help' is false: within the predicate, D1s after a rewarded S1 visit (prev_state == 1) are a pure false-positive class (test precision 0.0, 1009 FP steps, ~45% of all FPs). Adding prev_state != 1 raises test F1 0.832 -> 0.870 (precision 0.816 -> 0.892, recall unchanged).",
+      "So the feature is about a reward that came from S2 (or unknown previous state at the window start), not any late reward; the label omits this.",
+      "'A few hits at 88-89' understates: about 6.5% of test active steps are at ep_trial 88-89, but lowering the threshold to 88 costs precision (F1 0.837), so 90 stays best.",
+      "Window-start (rel -3) is not specially bad: precision there 0.82 vs 0.81 elsewhere.",
+      "Model output adds almost nothing (action==2 added: F1 0.835)."
     ],
     "revised_verdict": "explained",
-    "revised_label": "D1 in the last ~10 trials of the episode where the reward on display came from S2 (the previous trial was rewarded in S2), as the agent goes on to choose a2; never fires when the previous trial reached S1",
-    "better_predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (action == 2) & (prev_state != 1)",
-    "better_predicate_test_f1": 0.887
+    "revised_label": "D1 after a rewarded visit to S2 (or unknown previous state at the window start), in the last ~10 trials of the episode, when the observed history favours S2 (belief < 0.5)",
+    "better_predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (belief < 0.5) & (prev_state != 1)",
+    "better_predicate_test_f1": 0.87
   },
-  "final_label": "D1 in the last ~10 trials of the episode where the reward on display came from S2 (the previous trial was rewarded in S2), as the agent goes on to choose a2; never fires when the previous trial reached S1",
-  "original_predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (action == 2)",
-  "original_test_scores": {
-    "gate": "hidden",
-    "feature": 52,
-    "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (action == 2)",
-    "split": "test",
-    "precision": 0.7524214851775756,
-    "recall": 0.9036749801709703,
-    "f1": 0.8211411411411412,
-    "mass_recall": 0.9725096719540196,
-    "correlation": 0.7526910733531644,
-    "n_active": 11347,
-    "n_predicted": 13628,
-    "coverage_by_activation_quartile": [
-      0.6968628833274586,
-      0.924920690870638,
-      0.9929502996122664,
-      1.0
-    ]
-  },
-  "original_dev_scores": {
-    "gate": "hidden",
-    "feature": 52,
-    "predicate": "(phase == D1) & (in_rew == 1) & (ep_trial >= 90) & (action == 2)",
-    "split": "dev",
-    "precision": 0.7912666460204397,
-    "recall": 0.8936691150752011,
-    "f1": 0.8393561103810775,
-    "mass_recall": 0.968022290210422,
-    "correlation": 0.782044488121736,
-    "n_active": 11436,
-    "n_predicted": 12916,
-    "coverage_by_activation_quartile": [
-      0.6687653025533403,
-      0.9139559286463799,
-      0.9919552291010842,
-      1.0
-    ]
-  },
-  "predicate_from": "skeptic"
+  "predicate_from": "skeptic",
+  "observed_only_round": "rl_features/rl_observed/hidden_52.json"
 }

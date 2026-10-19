@@ -16,14 +16,14 @@ Throughout, three values separated by slashes are for the reset / update / candi
 ## Summary
 
 - **Most of what matters is a firing rule.** 83 features matter individually for the agent's choices or value.
-  73 of them (88%) are explained by "fires when X", alone (59) or with one small size modifier (14; 4 of these
-  have firing F1 just under 0.8). The other 10 need a magnitude explanation, and every one of those is discrete
+  72 of them (87%) are explained by "fires when X", alone (58) or with one small size modifier (14; 4 of these
+  have firing F1 just under 0.8). The other 11 need a magnitude explanation, and every one of those is discrete
   ("high when X, low when Y"). None needs a curve.
 - **Units cannot be explained this way.** A gate unit is never off. Binarised at the features' own firing rate,
   its top tail gets a firing rule about half as often as a feature does. Even then, the rule describes only that
-  tail: it accounts for a median 0.00–0.08 of the unit's activity beyond timing, against 0.51–0.53 for a feature.
+  tail: it accounts for a median 0.00–0.08 of the unit's activity beyond timing, against 0.50–0.51 for a feature.
 - **Where both need magnitude, units do as well.** Units' values collapse into 4 discrete levels about as well
-  as the 10 magnitude-only features do (R² beyond timing 0.74 vs 0.69). But for reset and candidate units, about
+  as the 11 magnitude-only features do (R² beyond timing 0.74 vs 0.69). But for reset and candidate units, about
   85% of the variance is a timing profile (phase × stage of the episode). Their short explanation covers only the
   remainder.
 - **The explanations are predictive.**
@@ -35,7 +35,8 @@ Throughout, three values separated by slashes are for the reset / update / candi
     choices better with features (switch 0.92 / 0.95 / 0.96 vs units 0.92 / 0.83 / 0.42). Units recover the
     **value** better (0.59 / 0.50 / 0.63 vs 0.62 / 0.57 / 0.86).
 - **The features encode the task's structure.**
-  - They detect the previous trial's outcome (choice × transition × reward), mostly at D1.
+  - 50 of the 83 detect the previous trial at D1: the state it reached and whether it was rewarded, often also the
+    choice that got there.
   - They weight rare transitions differently from common ones, the signature of model-based learning.
   - They tile the episode in time. The late-onset ones share one curve, with staggered onsets, and that curve
     mirrors the value head's late fall.
@@ -67,8 +68,9 @@ score). Window-start D1 steps show the reward input, but the previous trial lies
 - `belief`: an ideal observer's P(S1 is good), computed from the inputs (reversal hazard 0.025);
 - `surprisal`: how unexpected the previous outcome was under that belief, split into transition and reward parts.
 
-The model's own value or choice is never allowed: it would leak the decision being explained. Future variables
-are not allowed either.
+The model's own value or choice is not allowed: it would leak the decision being explained. Future variables
+are not allowed either. (The first round of firing explanations allowed them if flagged; for the features that matter
+they have since been replaced, §3. Other features' and units' first-round rules can still use them.)
 
 **Explanations.**
 - **Firing explanation.** A predicate (numpy expression) for when the component is active, scored by held-out F1.
@@ -93,8 +95,15 @@ are not allowed either.
 
 ### 2.1 Previous-trial outcome detectors dominate
 
-Most important features fire at D1 on one pattern of the previous trial: choice × transition × reward. For
-example:
+Of the 83 features that matter, 50 fire at D1 on one pattern of the previous trial:
+- **16 on the state reached × reward**, e.g. "after an unrewarded S1 visit". In 4 of these (candidates 8, 66, 208,
+  215) the route changes only the size: they are stronger after a rare transition.
+- **34 on the choice × state reached × reward**, i.e. the transition (common or rare) matters too, e.g. "after an
+  unrewarded common a1→S1 trial".
+
+6 of the 50 fire only when the history also favours one state (the ideal observer's belief; candidates 52, 62, 83,
+179, 181, 230). The rest fire at GO (12), at D2 (17), or mark the phase or episode time (4). Counts are from each
+feature's current explanation (`rl_autointerp/`, `rl_refined/`, `rl_magnitude/`). For example:
 - **Candidate 208, the single most important feature.** Removing it on its worst pattern flips 99.7% of GO choices.
   It fires after an unrewarded trial that did not end in S1, and is about 3× stronger after a rare a1→S2 trip.
 - **Candidate 66:** fires after a rewarded S1 visit.
@@ -109,9 +118,17 @@ that visit was. A rare transition raises it about 2.6× more than a surprising r
 
 ### 2.3 Features tile the episode in time; the late ones share one clock
 
-**Time is everywhere.**
-- 112 of 175 magnitude explanations (64%) use the trial number.
-- 378 of 640 firing predicates (59%) use it, including 134 of the 221 accepted ones.
+**Time is everywhere.** How many explanations use the episode's trial number (`ep_trial`, `ep_bucket` or "the
+clock"), by gate (reset / update / candidate):
+
+| | Reset | Update | Candidate | Total |
+|---|---|---|---|---|
+| Features that matter (current explanation) | 1 of 9 | 7 of 13 | 33 of 61 | 41 of 83 (49%) |
+| Accepted firing predicates | 26 of 55 | 45 of 58 | 68 of 107 | 139 of 220 (63%) |
+| All firing predicates | 68 of 128 | 163 of 256 | 152 of 256 | 383 of 640 (60%) |
+| Magnitude short forms | 12 of 35 | 26 of 66 | 32 of 74 | 70 of 175 (40%) |
+
+Among the features that matter, time is mostly a candidate-gate property: reset features almost never use it.
 
 **Two kinds of time feature.**
 - **Late-onset features** switch on at staggered trials (40, 60, 70, 72, 80, 85, 88, 92, 97) and then grow.
@@ -132,7 +149,7 @@ more for value than for choice (§6.3), and they are where words lose the most (
 Several features fire on a fixed pattern but step low / medium / high with the observer's belief: update 5,
 candidates 11, 114, 185. Candidate 66's size follows how surprising the reward was (§2.2).
 
-### 2.5 The 10 magnitude-only features: weak background firing
+### 2.5 The 11 magnitude-only features: weak background firing
 
 These features fire weakly over a broad region and strongly in one named condition. For example:
 - **Candidate 66:** 99% of steps fire after a rewarded rare a2→S1, but also about 40% after a common a1→S1 reward,
@@ -158,7 +175,7 @@ the previous trial for 45% of them. Filling the previous trial in from the episo
 
 | | Reset | Update | Candidate |
 |---|---|---|---|
-| Features (own density) | 42% | 26% | 44% |
+| Features (own density) | 42% | 26% | 43% |
 | Units at matched density | 21% | 8% | 24% |
 | Units at 1% | 12% | 8% | 10% |
 | Units at 5% | 40% | 27% | 38% |
@@ -168,13 +185,13 @@ Counted over all interpreted features and units; candidate units count each end 
 that turns the unit's top tail into a larger, easier target.
 Figure: `docs/figures/rl/interp_f1_vs_rate.png`.
 
-**On the components that matter (§5)**, features have firing explanations far more often: 8 of 9 / 12 of 13 / 49
+**On the components that matter (§5)**, features have firing explanations far more often: 8 of 9 / 12 of 13 / 48
 of 61. Units that matter: 0 of 3 / 0 of 8 / 0 of 24 at 1%; 1 of 3 / 0 of 8 / 3 of 24 at matched density; 1 of 3 /
 2 of 8 / 6 of 24 at 5%. (Candidate units count only if both ends are explained; with either end, 13 of 24 at 5%.)
 
 **How much of the component a firing rule covers.** Apply the on/off rule to the component's whole value and
 measure R² beyond timing:
-- Features (median): 0.51 / 0.52 / 0.53.
+- Features (median): 0.51 / 0.50 / 0.51.
 - Units at 5% (median): 0.08 / 0.00 / 0.05.
 
 A feature is zero when its rule is false, so the rule covers everything the feature does. A unit's rule covers its
@@ -192,13 +209,35 @@ a firing rule plus one modifier (4 of them just under F1 0.8). So 11 moved from 
 
 `circuit/rl_task/refined_explanations.py` (the explanations), `rl_features/rl_refined/`, `rl_features/rl_refined_RUNS.md`.
 
+**Observed variables only.** *Why:* the first-round firing rules could use the model's own outputs (its choice
+logit, chosen action or value) and its upcoming choice, if flagged. A rule like "D1 after a reward, when the agent is
+about to choose a1" partly describes the model's output rather than what the feature responds to, so it overstates
+how well the feature is explained. 31 of the 83 features that matter had such a rule:
+- 23 used a model output or the upcoming choice in the main rule (e.g. candidate 118, update 55, candidate 230);
+- 8 used the upcoming choice only on window-start steps, as a stand-in for the previous trial that lies outside
+  the window.
+
+*How:* one agent per feature (the 23) found the best rule using only what the agent had observed by that step
+(the history, the trial number, the ideal observer's `belief`), dev split only, test scored once; the scoring tool
+rejects anything else (`autointerp score --observed`). A skeptic agent then tried to refute each rule; 7
+corrections were adopted. For the 8, the window-start stand-in was swapped for `belief` (a1 → belief > 0.5, a2 →
+belief < 0.5). Update 235 was re-explained in the main session.
+
+*Result:* 30 of the 31 are still explained (test F1 ≥ 0.8), median F1 0.89 (was 0.91). Mostly `belief`, or the
+previous trial's choice and route, replaces the model's choice: e.g. candidate 118 is now "D1 showing a reward earned
+by a1 reaching S1" (F1 0.91, was 0.95). Two got clearly better (candidate 181, reset 95). Candidate 33 lost its
+firing rule: 28% of its active steps are common a1→S1 trips made while the agent's policy leans a2, and no observed
+variable recovers that (observed rules reach F1 0.80–0.81, against 0.86 with the model's choice). It keeps its observed-only
+magnitude explanation (§4) and is counted as magnitude-only. Records: `rl_features/rl_observed/` (with the skeptic
+verdicts); `rl_autointerp/` now holds these rules, each with its earlier one under `with_model_outputs`.
+
 ## 4. Magnitude-level explanations
 
 **None needs a curve.**
 - **Formulas collapse into tables.** For every recorded magnitude explanation, cutting each graded factor into a
   few bins and merging the cells into 4 levels scores within 0.03 of the formula for 89% / 98% / 91% of features.
   Code: `circuit/rl_task/discrete_levels.py`.
-- **The 10 magnitude-only features** are each either "size fixed per condition" or "off / low / medium / high by a
+- **The 11 magnitude-only features** are each either "size fixed per condition" or "off / low / medium / high by a
   stated rule".
 
 **Modifiers come in five shapes.** Firing rules with a modifier, and the magnitude-only explanations, use one of:
@@ -245,10 +284,10 @@ is pending (§8).
 
 | | Reset | Update | Candidate | Total |
 |---|---|---|---|---|
-| Firing rule only | 7 | 9 | 43 | 59 (71%) |
+| Firing rule only | 7 | 9 | 42 | 58 (70%) |
 | Firing rule + one modifier | 1 | 3 | 6 | 10 (12%) |
 | Firing rule just under 0.8, + one modifier | 0 | 1 | 3 | 4 (5%) |
-| Discrete magnitude only | 1 | 0 | 9 | 10 (12%) |
+| Discrete magnitude only | 1 | 0 | 10 | 11 (13%) |
 | Unexplained | 0 | 0 | 0 | 0 |
 
 **Behaviour-matched sets** (`circuit/rl_task/matched_sets.py`). These are the fewest features, and the fewest units,
@@ -365,7 +404,7 @@ level fixes ("about a quarter as strong after the common route"), candidate valu
   - Unit values have only about 3 effective dimensions per gate (participation ratio 2.8 / 2.9 / 2.7; 3.8 / 3.7 /
     4.3 beyond timing).
 - **Discrete levels work for units too.** The 35 units that matter collapse into 4 levels at a median R² beyond
-  timing of 0.74, against their short forms at 0.69. The 10 magnitude-only features: 0.69 and 0.67. 94% of units
+  timing of 0.74, against their short forms at 0.69. The 11 magnitude-only features: 0.69 and 0.67. 94% of units
   that matter keep their score within 0.03. On format alone, units and features tie.
 - **The difference is coverage.** The timing profile is 85% of a reset or candidate unit's variance. A unit's
   4-level explanation recovers 74% of the remaining 15%, about 11% of the total. So a full verbal account of a unit
@@ -392,6 +431,10 @@ never off, and its short explanation is a correction to a dominant timing profil
 - **The previous trial at window starts.** Fill it in from the episode traces. This would likely lift the 4 firing
   rules just under 0.8, and could simplify the belief clauses in reset 18 and update 150.
 - **A minimum-window floor for "matters"**, so the 4 negligible features drop out formally.
+- **Model outputs outside the features that matter.** First-round firing rules of other features (81 of the 220
+  accepted use value, choice or model_act) and of units (13 of 20 / 17 of 32 / 27 of 65 accepted at 1% / matched /
+  5%) still use them, so the all-component shares in §3 count them. The per-component substitution test
+  (`component_substitution.png`) also used the earlier rules for the 31 features re-explained in §3.
 - **A matching refinement pass on the 35 important units.** Units got one firing pass at each density and one
   magnitude pass; features got the extra refinement in §3.
 - **The value channel.** Tighter time descriptions for the value-heavy candidate features beyond the 8 adopted

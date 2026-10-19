@@ -1,104 +1,164 @@
 {
-  "label": "D1 after reward, agent about to choose a1 (rewarded a1->S1 common)",
-  "predicate": "(phase == D1) & (in_rew==1) & ((prev_state==1) & (prev_action==1) | (prev_action==-1) & (action==1) | (prev_action==2) & (prev_common==0) & (action==1))",
+  "gate": "hidden",
+  "feature": 77,
+  "final_verdict": "explained",
+  "final_label": "D1 after a rewarded a1->S1 (common) trial; at window start, rewarded D1 with belief favoring S1",
+  "with_model_outputs": {
+    "label": "D1 after reward, agent about to choose a1 (rewarded a1->S1 common)",
+    "predicate": "(phase == D1) & (in_rew==1) & ((prev_state==1) & (prev_action==1) | (prev_action==-1) & (action==1) | (prev_action==2) & (prev_common==0) & (action==1))",
+    "verdict": "explained",
+    "confidence": "high",
+    "uses_future": false,
+    "explanation": "Fires only at D1 (never GO/D2) and only when a reward is shown (in_rew == 1), and almost only when the agent will choose a1 on this trial (its own upcoming choice, which it computes; not an unobservable random outcome). Observed-history view: it is the D1 right after an a1 choice that reached S1 by a common transition and was rewarded (prev_action==1 & prev_common==1 & in_rew==1: precision 0.999, recall 0.74; the missing recall is almost all window-first trials whose previous trial is outside the window). It does NOT fire after rewarded rare transitions (a1->S2 or a2->S1), after any a2 trial, or after no reward. Recorded the upcoming-choice predicate (dev F1 0.95, mass recall 0.998) because it covers window-first trials; it is effectively a reward-at-S1 / stay-on-a1 signal. Magnitude is roughly constant (median 2.07 of max 2.63); weaker activations are rarer cases such as when the agent then switches or the policy logit toward a1 is moderate.",
+    "test_scores": {
+      "gate": "hidden",
+      "feature": 77,
+      "predicate": "(phase == D1) & (in_rew==1) & ((prev_state==1) & (prev_action==1) | (prev_action==-1) & (action==1) | (prev_action==2) & (prev_common==0) & (action==1))",
+      "split": "test",
+      "precision": 0.9674388802151489,
+      "recall": 0.9895048737261852,
+      "f1": 0.9783474717421958,
+      "mass_recall": 0.9986068443404362,
+      "correlation": 0.9382010899976987,
+      "n_active": 108336,
+      "n_predicted": 110807,
+      "coverage_by_activation_quartile": [
+        0.9580933392408802,
+        0.9999261556638606,
+        1.0,
+        1.0
+      ]
+    },
+    "dev_scores": {
+      "gate": "hidden",
+      "feature": 77,
+      "predicate": "(phase == D1) & (in_rew==1) & ((prev_state==1) & (prev_action==1) | (prev_action==-1) & (action==1) | (prev_action==2) & (prev_common==0) & (action==1))",
+      "split": "dev",
+      "precision": 0.9728227244604578,
+      "recall": 0.9914045693939618,
+      "f1": 0.9820257535957677,
+      "mass_recall": 0.9989656618180174,
+      "correlation": 0.9443966765258247,
+      "n_active": 107848,
+      "n_predicted": 109908,
+      "coverage_by_activation_quartile": [
+        0.9656924560492545,
+        0.9999629107632965,
+        0.9999629107632965,
+        1.0
+      ]
+    },
+    "skeptic": {
+      "upheld": false,
+      "issues": [
+        "The recorded predicate (phase==D1 & in_rew==1 & action==1) leaves out a systematic false-positive class: D1 after a rewarded a1->S2 RARE trial where the agent then stays on a1. The predicate is true on 6332 such dev steps and the feature fires on 0.3% of them. The misses output on test shows the pattern directly ('a1 S2R' rewarded, then '*r1* a1 S1c' inactive). This class makes up most of the 10186 test false positives. So 'about to choose a1' is not what drives the feature; the observed history is.",
+        "The claim 'does NOT fire after any a2 trial / after rewarded rare a2->S1' is only partly true. After a rewarded a2->S1 rare trial where the agent then switches to a1, the feature fires on 54% of the 4340 such steps (dev). The class is small, about 2.9% recall and 0.5% of activation mass, but the 54% firing rate is a real exception to that blanket claim.",
+        "Verified claims: the feature fires only at D1 (0 activations at GO and D2) and only when in_rew==1. The observed history predicate prev_action==1 & prev_common==1 & in_rew==1 has dev precision 0.999 and recall 0.743. The missed recall is almost all window-opening trials (prev_action==-1: recall 0.228, and precision 0.963 when combined with action==1). It does not fire after a rewarded a1->S2 rare trial (0.0 recall).",
+        "The label leads with the upcoming choice ('agent about to choose a1'), which overclaims: a1 choices after a rare-rewarded a1 trial do not activate it. The core signal is observed: reward just received at S1 after a common a1 transition.",
+        "Better predicate: observed history, with the upcoming choice used only on window-opening trials where the history is unknown. Test P 0.990 / R 0.964 / F1 0.977. Adding the a2->S1 rare-rewarded -> a1 case gives test P 0.967 / R 0.990 / F1 0.978 / mass recall 0.999, compared with the recorded predicate's test F1 0.949."
+      ],
+      "revised_verdict": "explained",
+      "revised_label": "D1 right after a rewarded a1->S1 common trial (reward obtained at S1 via a1); not after a rewarded a1->S2 rare trial, even if the agent stays on a1",
+      "better_predicate": "(phase == D1) & (in_rew==1) & ((prev_state==1) & (prev_action==1) | (prev_action==-1) & (action==1) | (prev_action==2) & (prev_common==0) & (action==1))",
+      "better_predicate_test_f1": 0.978
+    },
+    "original_predicate": "(phase == D1) & (in_rew == 1) & (action == 1)",
+    "original_test_scores": {
+      "gate": "hidden",
+      "feature": 77,
+      "predicate": "(phase == D1) & (in_rew == 1) & (action == 1)",
+      "split": "test",
+      "precision": 0.9130353117956423,
+      "recall": 0.9871326244277064,
+      "f1": 0.9486392506120711,
+      "mass_recall": 0.9976972646568428,
+      "correlation": 0.9089231549420413,
+      "n_active": 108336,
+      "n_predicted": 117128,
+      "coverage_by_activation_quartile": [
+        0.9491581745680107,
+        0.9994092453108847,
+        0.9999630778319303,
+        1.0
+      ]
+    },
+    "original_dev_scores": {
+      "gate": "hidden",
+      "feature": 77,
+      "predicate": "(phase == D1) & (in_rew == 1) & (action == 1)",
+      "split": "dev",
+      "precision": 0.9197045056849038,
+      "recall": 0.9892997552110377,
+      "f1": 0.9532335374815172,
+      "mass_recall": 0.9980377566504485,
+      "correlation": 0.9155526759055995,
+      "n_active": 107848,
+      "n_predicted": 116009,
+      "coverage_by_activation_quartile": [
+        0.9577924486314071,
+        0.9997774645797789,
+        0.9997032861063719,
+        0.9999258215265929
+      ]
+    },
+    "predicate_from": "skeptic",
+    "final_verdict": "explained",
+    "final_label": "D1 right after a rewarded a1->S1 common trial (reward obtained at S1 via a1); not after a rewarded a1->S2 rare trial, even if the agent stays on a1"
+  },
+  "label": "D1 after a rewarded a1->S1 (common) trial; at window start, rewarded D1 with belief favoring S1",
+  "predicate": "(phase == D1) & (in_rew==1) & (((prev_action==1) & (prev_state==1)) | ((prev_action==-1) & (belief>0.5)))",
   "verdict": "explained",
   "confidence": "high",
   "uses_future": false,
-  "explanation": "Fires only at D1 (never GO/D2) and only when a reward is shown (in_rew == 1), and almost only when the agent will choose a1 on this trial (its own upcoming choice, which it computes; not an unobservable random outcome). Observed-history view: it is the D1 right after an a1 choice that reached S1 by a common transition and was rewarded (prev_action==1 & prev_common==1 & in_rew==1: precision 0.999, recall 0.74; the missing recall is almost all window-first trials whose previous trial is outside the window). It does NOT fire after rewarded rare transitions (a1->S2 or a2->S1), after any a2 trial, or after no reward. Recorded the upcoming-choice predicate (dev F1 0.95, mass recall 0.998) because it covers window-first trials; it is effectively a reward-at-S1 / stay-on-a1 signal. Magnitude is roughly constant (median 2.07 of max 2.63); weaker activations are rarer cases such as when the agent then switches or the policy logit toward a1 is moderate.",
+  "explanation": "Fires only at D1 and only when the reward input is 1. Within that, it fires when the previous trial was a1 with a common transition to S1 that was rewarded (the classic win-stay-for-a1 signal). On window-start steps, where the previous trial is not in the window, the ideal-observer belief that S1 is good (>0.5) stands in. Silent after a2 choices and after rare a1->S2 transitions. Adding rewarded a2->S1 rare trials with high belief only raises dev F1 from 0.958 to 0.960. Magnitude modulation not checked.",
   "test_scores": {
     "gate": "hidden",
     "feature": 77,
-    "predicate": "(phase == D1) & (in_rew==1) & ((prev_state==1) & (prev_action==1) | (prev_action==-1) & (action==1) | (prev_action==2) & (prev_common==0) & (action==1))",
+    "predicate": "(phase == D1) & (in_rew==1) & (((prev_action==1) & (prev_state==1)) | ((prev_action==-1) & (belief>0.5)))",
     "split": "test",
-    "precision": 0.9674388802151489,
-    "recall": 0.9895048737261852,
-    "f1": 0.9783474717421958,
-    "mass_recall": 0.9986068443404362,
-    "correlation": 0.9382010899976987,
+    "precision": 0.963634123456322,
+    "recall": 0.9385061290798996,
+    "f1": 0.9509041510986828,
+    "mass_recall": 0.968794276648346,
+    "correlation": 0.9322431109838811,
     "n_active": 108336,
-    "n_predicted": 110807,
+    "n_predicted": 105511,
     "coverage_by_activation_quartile": [
-      0.9580933392408802,
-      0.9999261556638606,
-      1.0,
-      1.0
+      0.8280165411312952,
+      0.9612317235268055,
+      0.9737114163343672,
+      0.9910648353271304
     ]
   },
   "dev_scores": {
     "gate": "hidden",
     "feature": 77,
-    "predicate": "(phase == D1) & (in_rew==1) & ((prev_state==1) & (prev_action==1) | (prev_action==-1) & (action==1) | (prev_action==2) & (prev_common==0) & (action==1))",
+    "predicate": "(phase == D1) & (in_rew==1) & (((prev_action==1) & (prev_state==1)) | ((prev_action==-1) & (belief>0.5)))",
     "split": "dev",
-    "precision": 0.9728227244604578,
-    "recall": 0.9914045693939618,
-    "f1": 0.9820257535957677,
-    "mass_recall": 0.9989656618180174,
-    "correlation": 0.9443966765258247,
+    "precision": 0.9696531791907514,
+    "recall": 0.9457013574660633,
+    "f1": 0.9575275076044913,
+    "mass_recall": 0.9717301916932416,
+    "correlation": 0.9385236020200706,
     "n_active": 107848,
-    "n_predicted": 109908,
+    "n_predicted": 105184,
     "coverage_by_activation_quartile": [
-      0.9656924560492545,
-      0.9999629107632965,
-      0.9999629107632965,
-      1.0
+      0.8524590163934426,
+      0.9600919813070247,
+      0.9775610117943773,
+      0.9926934203694088
     ]
   },
-  "gate": "hidden",
-  "feature": 77,
-  "final_verdict": "explained",
   "skeptic": {
-    "upheld": false,
+    "upheld": true,
     "issues": [
-      "The recorded predicate (phase==D1 & in_rew==1 & action==1) leaves out a systematic false-positive class: D1 after a rewarded a1->S2 RARE trial where the agent then stays on a1. The predicate is true on 6332 such dev steps and the feature fires on 0.3% of them. The misses output on test shows the pattern directly ('a1 S2R' rewarded, then '*r1* a1 S1c' inactive). This class makes up most of the 10186 test false positives. So 'about to choose a1' is not what drives the feature; the observed history is.",
-      "The claim 'does NOT fire after any a2 trial / after rewarded rare a2->S1' is only partly true. After a rewarded a2->S1 rare trial where the agent then switches to a1, the feature fires on 54% of the 4340 such steps (dev). The class is small, about 2.9% recall and 0.5% of activation mass, but the 54% firing rate is a real exception to that blanket claim.",
-      "Verified claims: the feature fires only at D1 (0 activations at GO and D2) and only when in_rew==1. The observed history predicate prev_action==1 & prev_common==1 & in_rew==1 has dev precision 0.999 and recall 0.743. The missed recall is almost all window-opening trials (prev_action==-1: recall 0.228, and precision 0.963 when combined with action==1). It does not fire after a rewarded a1->S2 rare trial (0.0 recall).",
-      "The label leads with the upcoming choice ('agent about to choose a1'), which overclaims: a1 choices after a rare-rewarded a1 trial do not activate it. The core signal is observed: reward just received at S1 after a common a1 transition.",
-      "Better predicate: observed history, with the upcoming choice used only on window-opening trials where the history is unknown. Test P 0.990 / R 0.964 / F1 0.977. Adding the a2->S1 rare-rewarded -> a1 case gives test P 0.967 / R 0.990 / F1 0.978 / mass recall 0.999, compared with the recorded predicate's test F1 0.949."
+      "Claims check out: 100% D1 and 100% in_rew==1. The core clause (rewarded a1->S1) has test precision 0.999. After a rewarded rare a1->S2 trial precision is 0.004. After a rewarded rare a2->S1 trial precision is 0.20, recall 0.035 (minor).",
+      "The window-start clause is the weak part (precision 0.85, recall 0.20). Most false positives are rel==-3 steps where the agent then chooses a2. Using action==1 there gives precision 0.96, so belief>0.5 is an imperfect stand-in for the unseen previous trial. This is expected and small (3.1% of mass missed)."
     ],
     "revised_verdict": "explained",
-    "revised_label": "D1 right after a rewarded a1->S1 common trial (reward obtained at S1 via a1); not after a rewarded a1->S2 rare trial, even if the agent stays on a1",
-    "better_predicate": "(phase == D1) & (in_rew==1) & ((prev_state==1) & (prev_action==1) | (prev_action==-1) & (action==1) | (prev_action==2) & (prev_common==0) & (action==1))",
-    "better_predicate_test_f1": 0.978
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
   },
-  "final_label": "D1 right after a rewarded a1->S1 common trial (reward obtained at S1 via a1); not after a rewarded a1->S2 rare trial, even if the agent stays on a1",
-  "original_predicate": "(phase == D1) & (in_rew == 1) & (action == 1)",
-  "original_test_scores": {
-    "gate": "hidden",
-    "feature": 77,
-    "predicate": "(phase == D1) & (in_rew == 1) & (action == 1)",
-    "split": "test",
-    "precision": 0.9130353117956423,
-    "recall": 0.9871326244277064,
-    "f1": 0.9486392506120711,
-    "mass_recall": 0.9976972646568428,
-    "correlation": 0.9089231549420413,
-    "n_active": 108336,
-    "n_predicted": 117128,
-    "coverage_by_activation_quartile": [
-      0.9491581745680107,
-      0.9994092453108847,
-      0.9999630778319303,
-      1.0
-    ]
-  },
-  "original_dev_scores": {
-    "gate": "hidden",
-    "feature": 77,
-    "predicate": "(phase == D1) & (in_rew == 1) & (action == 1)",
-    "split": "dev",
-    "precision": 0.9197045056849038,
-    "recall": 0.9892997552110377,
-    "f1": 0.9532335374815172,
-    "mass_recall": 0.9980377566504485,
-    "correlation": 0.9155526759055995,
-    "n_active": 107848,
-    "n_predicted": 116009,
-    "coverage_by_activation_quartile": [
-      0.9577924486314071,
-      0.9997774645797789,
-      0.9997032861063719,
-      0.9999258215265929
-    ]
-  },
-  "predicate_from": "skeptic"
+  "observed_only_round": "rl_features/rl_observed/hidden_77.json"
 }

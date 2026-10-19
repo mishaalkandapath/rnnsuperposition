@@ -1,103 +1,166 @@
 {
-  "label": "GO step late in episode (trial >= ~83) after a rewarded trial, when the policy strongly favors a2",
-  "predicate": "(phase == GO) & (prev_reward == 1) & (choice < -8) & (value < 6.2)",
+  "gate": "update",
+  "feature": 100,
+  "final_verdict": "explained",
+  "with_model_outputs": {
+    "label": "GO step late in episode (trial >= ~83) after a rewarded trial, when the policy strongly favors a2",
+    "predicate": "(phase == GO) & (prev_reward == 1) & (choice < -8) & (value < 6.2)",
+    "verdict": "explained",
+    "confidence": "high",
+    "uses_future": false,
+    "explanation": "Fires only at GO (never D1/D2), only when the previous trial was rewarded (in_rew=0 at GO, prev_reward=1 in 18647/18652), only when the agent is about to choose a2 (action=2 in all but 1 activation; policy logit a1-a2 < -8 for ~97%), and only late in the episode (ep_trial >= 80, essentially none before trial 79; rate jumps after ~82, so it behaves like a time-in-episode clock combined with a confident rewarded-a2 policy). Uses only observed variables: prev_reward, the model own policy logit at GO, and trial index; the upcoming action==2 version (F1 0.85) is weaker than the policy-logit version. Magnitude grows with consecutive rewarded a2 trials (activations ramp within a window across successive rewarded a2 GO steps) and with low value. Does not fire after unrewarded trials, on a1 choices, or on any trial before ~79. Dev: P 0.92 R 0.93 F1 0.93 mass recall 0.98.",
+    "test_scores": {
+      "gate": "update",
+      "feature": 100,
+      "predicate": "(phase == GO) & (prev_reward == 1) & (choice < -8) & (value < 6.2)",
+      "split": "test",
+      "precision": 0.943355690630895,
+      "recall": 0.9630877868720912,
+      "f1": 0.9531196230510629,
+      "mass_recall": 0.9840691168793543,
+      "correlation": 0.8271960141199282,
+      "n_active": 18693,
+      "n_predicted": 19084,
+      "coverage_by_activation_quartile": [
+        0.9039366709456568,
+        0.9760325272843997,
+        0.9779584849133319,
+        0.9944361224053071
+      ]
+    },
+    "dev_scores": {
+      "gate": "update",
+      "feature": 100,
+      "predicate": "(phase == GO) & (prev_reward == 1) & (choice < -8) & (value < 6.2)",
+      "split": "dev",
+      "precision": 0.9466042400967962,
+      "recall": 0.9647222817928373,
+      "f1": 0.9555773877485992,
+      "mass_recall": 0.9862264093376983,
+      "correlation": 0.831795354168005,
+      "n_active": 18652,
+      "n_predicted": 19009,
+      "coverage_by_activation_quartile": [
+        0.9022088784044606,
+        0.9804846665236971,
+        0.9800557580956466,
+        0.9961398241475445
+      ]
+    },
+    "skeptic": {
+      "upheld": true,
+      "issues": [
+        "Every factual claim held up. All activation is at GO (D1 and D2 have 0 of 380619 each). 18647 of 18652 activations have prev_reward==1. action==2 on 18651 of 18652. Choice is below -8.91 on 81% and below -4.44 on all but 4. There are 0 activations before trial 70 and 99 in trials 70-79. Dev F1 is 0.929 and test F1 is 0.929, matching the reported scores.",
+        "The threshold is tuned but robust. ep_trial>=80 gives F1 0.886 and >=85 gives 0.909. choice<-6 gives 0.899. Using action==2 instead of the logit gives 0.855, as claimed.",
+        "The 'late in episode' part is better captured by the model's value output than by the trial index. Replacing ep_trial>=83 with value<6.2 raises test F1 from 0.929 to 0.953 (precision 0.943, recall 0.963, mass recall 0.984). At GO, value<6.2 never occurs before trial 70 (0 steps predicted), so the two variables are confounded. Value probably acts as a countdown to the end of the episode. Treat 'episode clock' as interchangeable with 'low predicted value', which fits the 89%-of-mass-in-the-lowest-value-bin observation.",
+        "Misses and false positives on the test split look like scattered noise rather than a pattern. 1025 missed steps hold only 1.9% of the activation mass; they are mostly weak activations (0.02-0.35 of max) at window edges or with borderline logits. The 1659 false positives are a2 GO steps after a reward that sit near the thresholds. No systematic class by phase, transition, reward pattern or good state remains.",
+        "The magnitude claim (activation rises over consecutive rewarded a2 GO steps) is supported by the example windows but was not fit, as the explanation itself says. This does not overclaim."
+      ],
+      "revised_verdict": "explained",
+      "revised_label": null,
+      "better_predicate": "(phase == GO) & (prev_reward == 1) & (choice < -8) & (value < 6.2)",
+      "better_predicate_test_f1": 0.953
+    },
+    "original_predicate": "(phase == GO) & (prev_reward == 1) & (choice < -8) & (ep_trial >= 83)",
+    "original_test_scores": {
+      "gate": "update",
+      "feature": 100,
+      "predicate": "(phase == GO) & (prev_reward == 1) & (choice < -8) & (ep_trial >= 83)",
+      "split": "test",
+      "precision": 0.9141615356754799,
+      "recall": 0.9451666399186861,
+      "f1": 0.929405576012625,
+      "mass_recall": 0.9805708538208613,
+      "correlation": 0.8189201453451362,
+      "n_active": 18693,
+      "n_predicted": 19327,
+      "coverage_by_activation_quartile": [
+        0.8354728284124947,
+        0.9728225979028461,
+        0.9779584849133319,
+        0.9944361224053071
+      ]
+    },
+    "original_dev_scores": {
+      "gate": "update",
+      "feature": 100,
+      "predicate": "(phase == GO) & (prev_reward == 1) & (choice < -8) & (ep_trial >= 83)",
+      "split": "dev",
+      "precision": 0.924997344098587,
+      "recall": 0.9336264207591679,
+      "f1": 0.929291851219382,
+      "mass_recall": 0.9802173529973988,
+      "correlation": 0.8307186327122104,
+      "n_active": 18652,
+      "n_predicted": 18826,
+      "coverage_by_activation_quartile": [
+        0.7834012438344413,
+        0.9749088569590393,
+        0.9800557580956466,
+        0.9961398241475445
+      ]
+    },
+    "predicate_from": "skeptic",
+    "final_verdict": "explained"
+  },
+  "label": "GO step late in the episode (trial >= 83) after a rewarded common a2->S2 trial (window start: belief S2 good)",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (ep_trial >= 83) & (((prev_action==2)&(prev_state==2)) | ((prev_action==-1)&(belief<0.3)))",
   "verdict": "explained",
-  "confidence": "high",
+  "confidence": "medium",
   "uses_future": false,
-  "explanation": "Fires only at GO (never D1/D2), only when the previous trial was rewarded (in_rew=0 at GO, prev_reward=1 in 18647/18652), only when the agent is about to choose a2 (action=2 in all but 1 activation; policy logit a1-a2 < -8 for ~97%), and only late in the episode (ep_trial >= 80, essentially none before trial 79; rate jumps after ~82, so it behaves like a time-in-episode clock combined with a confident rewarded-a2 policy). Uses only observed variables: prev_reward, the model own policy logit at GO, and trial index; the upcoming action==2 version (F1 0.85) is weaker than the policy-logit version. Magnitude grows with consecutive rewarded a2 trials (activations ramp within a window across successive rewarded a2 GO steps) and with low value. Does not fire after unrewarded trials, on a1 choices, or on any trial before ~79. Dev: P 0.92 R 0.93 F1 0.93 mass recall 0.98.",
+  "explanation": "Fires only at GO, only from episode trial ~80 on, and only when the previous trial was rewarded; the ideal-observer belief that S1 is good is low (S2 good), so the prior choices were mostly a2 to S2 and rewarded. The earlier rule used the policy logit (strong a2 preference) and value; belief < 0.2 plus late episode time stands in for both. Activation ramps up over consecutive rewarded a2 trials. Misses are mostly window-start trials where belief has little history, and trials 80-82; false positives are mostly cases where a recent a1 trial or unrewarded trial weakens the a2 streak.",
   "test_scores": {
     "gate": "update",
     "feature": 100,
-    "predicate": "(phase == GO) & (prev_reward == 1) & (choice < -8) & (value < 6.2)",
+    "predicate": "(phase == GO) & (prev_reward == 1) & (ep_trial >= 83) & (((prev_action==2)&(prev_state==2)) | ((prev_action==-1)&(belief<0.3)))",
     "split": "test",
-    "precision": 0.943355690630895,
-    "recall": 0.9630877868720912,
-    "f1": 0.9531196230510629,
-    "mass_recall": 0.9840691168793543,
-    "correlation": 0.8271960141199282,
+    "precision": 0.9143273591017059,
+    "recall": 0.9060610923875247,
+    "f1": 0.9101754574522396,
+    "mass_recall": 0.9458905139214974,
+    "correlation": 0.80670734659182,
     "n_active": 18693,
-    "n_predicted": 19084,
+    "n_predicted": 18524,
     "coverage_by_activation_quartile": [
-      0.9039366709456568,
-      0.9760325272843997,
-      0.9779584849133319,
-      0.9944361224053071
+      0.7916131792896877,
+      0.926171624224267,
+      0.9351594264926172,
+      0.9713246308581212
     ]
   },
   "dev_scores": {
     "gate": "update",
     "feature": 100,
-    "predicate": "(phase == GO) & (prev_reward == 1) & (choice < -8) & (value < 6.2)",
+    "predicate": "(phase == GO) & (prev_reward == 1) & (ep_trial >= 83) & (((prev_action==2)&(prev_state==2)) | ((prev_action==-1)&(belief<0.3)))",
     "split": "dev",
-    "precision": 0.9466042400967962,
-    "recall": 0.9647222817928373,
-    "f1": 0.9555773877485992,
-    "mass_recall": 0.9862264093376983,
-    "correlation": 0.831795354168005,
+    "precision": 0.9275522619179294,
+    "recall": 0.8992065194081064,
+    "f1": 0.9131594707900038,
+    "mass_recall": 0.9469018760866664,
+    "correlation": 0.8186364520850021,
     "n_active": 18652,
-    "n_predicted": 19009,
+    "n_predicted": 18082,
     "coverage_by_activation_quartile": [
-      0.9022088784044606,
-      0.9804846665236971,
-      0.9800557580956466,
-      0.9961398241475445
+      0.7520909285867468,
+      0.9330902852241046,
+      0.9420973622131675,
+      0.9695475016084066
     ]
   },
-  "gate": "update",
-  "feature": 100,
-  "final_verdict": "explained",
   "skeptic": {
-    "upheld": true,
+    "upheld": false,
     "issues": [
-      "Every factual claim held up. All activation is at GO (D1 and D2 have 0 of 380619 each). 18647 of 18652 activations have prev_reward==1. action==2 on 18651 of 18652. Choice is below -8.91 on 81% and below -4.44 on all but 4. There are 0 activations before trial 70 and 99 in trials 70-79. Dev F1 is 0.929 and test F1 is 0.929, matching the reported scores.",
-      "The threshold is tuned but robust. ep_trial>=80 gives F1 0.886 and >=85 gives 0.909. choice<-6 gives 0.899. Using action==2 instead of the logit gives 0.855, as claimed.",
-      "The 'late in episode' part is better captured by the model's value output than by the trial index. Replacing ep_trial>=83 with value<6.2 raises test F1 from 0.929 to 0.953 (precision 0.943, recall 0.963, mass recall 0.984). At GO, value<6.2 never occurs before trial 70 (0 steps predicted), so the two variables are confounded. Value probably acts as a countdown to the end of the episode. Treat 'episode clock' as interchangeable with 'low predicted value', which fits the 89%-of-mass-in-the-lowest-value-bin observation.",
-      "Misses and false positives on the test split look like scattered noise rather than a pattern. 1025 missed steps hold only 1.9% of the activation mass; they are mostly weak activations (0.02-0.35 of max) at window edges or with borderline logits. The 1659 false positives are a2 GO steps after a reward that sit near the thresholds. No systematic class by phase, transition, reward pattern or good state remains.",
-      "The magnitude claim (activation rises over consecutive rewarded a2 GO steps) is supported by the example windows but was not fit, as the explanation itself says. This does not overclaim."
+      "The label puts the work on belief<0.2, but the real condition is the previous trial's type: it fires after a rewarded COMMON a2->S2 trial. Including rare a2->S1 rewarded trials drops precision from 0.92 to 0.74 (test), and prev_action==1 gives only 153 dev activations.",
+      "There is a systematic miss class (12.8% of mass): strong activations (0.7-0.9 of max) at GO after rewarded a2->S2 trials where belief>=0.2, often because the trial two back was unrewarded, or at window start where belief has little history.",
+      "Replacing belief<0.2 with the observed previous-trial clause (belief only at window start) raises test F1 from 0.874 to 0.910. This is also better than the model-output rule (choice<-4: 0.880).",
+      "Minor: activation ramps with episode time and within windows. The onset is around trial 80-83."
     ],
     "revised_verdict": "explained",
-    "revised_label": null,
-    "better_predicate": "(phase == GO) & (prev_reward == 1) & (choice < -8) & (value < 6.2)",
-    "better_predicate_test_f1": 0.953
+    "revised_label": "GO step late in the episode (trial >= 83) after a rewarded common a2->S2 trial (window start: belief S2 good)",
+    "better_predicate": "(phase == GO) & (prev_reward == 1) & (ep_trial >= 83) & (((prev_action==2)&(prev_state==2)) | ((prev_action==-1)&(belief<0.3)))",
+    "better_predicate_test_f1": 0.91
   },
-  "original_predicate": "(phase == GO) & (prev_reward == 1) & (choice < -8) & (ep_trial >= 83)",
-  "original_test_scores": {
-    "gate": "update",
-    "feature": 100,
-    "predicate": "(phase == GO) & (prev_reward == 1) & (choice < -8) & (ep_trial >= 83)",
-    "split": "test",
-    "precision": 0.9141615356754799,
-    "recall": 0.9451666399186861,
-    "f1": 0.929405576012625,
-    "mass_recall": 0.9805708538208613,
-    "correlation": 0.8189201453451362,
-    "n_active": 18693,
-    "n_predicted": 19327,
-    "coverage_by_activation_quartile": [
-      0.8354728284124947,
-      0.9728225979028461,
-      0.9779584849133319,
-      0.9944361224053071
-    ]
-  },
-  "original_dev_scores": {
-    "gate": "update",
-    "feature": 100,
-    "predicate": "(phase == GO) & (prev_reward == 1) & (choice < -8) & (ep_trial >= 83)",
-    "split": "dev",
-    "precision": 0.924997344098587,
-    "recall": 0.9336264207591679,
-    "f1": 0.929291851219382,
-    "mass_recall": 0.9802173529973988,
-    "correlation": 0.8307186327122104,
-    "n_active": 18652,
-    "n_predicted": 18826,
-    "coverage_by_activation_quartile": [
-      0.7834012438344413,
-      0.9749088569590393,
-      0.9800557580956466,
-      0.9961398241475445
-    ]
-  },
-  "predicate_from": "skeptic"
+  "predicate_from": "skeptic",
+  "observed_only_round": "rl_features/rl_observed/update_100.json",
+  "final_label": "GO step late in the episode (trial >= 83) after a rewarded common a2->S2 trial (window start: belief S2 good)"
 }

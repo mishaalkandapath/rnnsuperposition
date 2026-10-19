@@ -108,6 +108,28 @@ TRIAL_COLS = ("action", "state", "common", "reward", "prev_reward", "prev_action
               "since_rev", "belief", "belief_cover", "surprisal", "surprisal_transition", "surprisal_reward")
 FLOAT_COLS = ("value", "choice", "p_s1")
 
+# --observed: variables the agent could not use at that step. Model outputs (value, choice, model_act), hidden task
+# variables (good, p_s1, since_rev, chose_good, start_high), data-construction labels (core_pattern, is_core,
+# n_trials) and this or a later trial's choice / state / transition / reward (use in_action / in_state at D2, and
+# prev_* or tv(col, d < 0) for earlier trials).
+UNOBSERVED = ("value", "choice", "model_act", "good", "p_s1", "since_rev", "chose_good", "start_high", "core_pattern",
+              "is_core", "n_trials", "action", "state", "common", "reward", "stay", "next_action", "next_stay")
+TV_UNOBSERVED = ("good", "p_s1", "since_rev", "chose_good")
+
+
+def check_observed(expr: str):
+    """Raise ValueError if the predicate uses a variable the agent could not observe at that step."""
+    import re
+    for col, d in re.findall(r"tv\(\s*['\"](\w+)['\"]\s*,\s*([-+]?\d+)\s*\)", expr):
+        if int(d) >= 0 or col in TV_UNOBSERVED or col.startswith("next"):
+            raise ValueError(f"--observed: tv('{col}', {d}) is not observable at that step")
+    bare = re.sub(r"tv\([^)]*\)", " ", expr)
+    bare = re.sub(r"['\"][^'\"]*['\"]", " ", bare)
+    used = set(re.findall(r"(?<![\w.])([A-Za-z_]\w*)", bare)) & set(UNOBSERVED)
+    if used:
+        raise ValueError(f"--observed: {sorted(used)} not allowed (model outputs, hidden or future variables; "
+                         f"use in_action / in_state at D2, prev_* or tv(col, d < 0) for earlier trials)")
+
 
 # ----------------------------------------------------------------------------- step table
 
@@ -558,11 +580,14 @@ def main():
     p = sub.add_parser("profile"); p.add_argument("store"); p.add_argument("gate"); p.add_argument("feature", type=int)
     s = sub.add_parser("score"); s.add_argument("store"); s.add_argument("gate"); s.add_argument("feature", type=int)
     s.add_argument("predicate"); s.add_argument("--split", choices=["dev", "test"], default="dev")
+    s.add_argument("--observed", action="store_true", help="reject variables the agent could not observe")
     r = sub.add_parser("record"); r.add_argument("store"); r.add_argument("gate"); r.add_argument("feature", type=int)
     r.add_argument("result_json", help='{"label": ..., "predicate": ... or null, "verdict": ..., "notes": ...}')
     r.add_argument("--out", required=True)
+    r.add_argument("--observed", action="store_true", help="reject variables the agent could not observe")
     m = sub.add_parser("misses"); m.add_argument("store"); m.add_argument("gate"); m.add_argument("feature", type=int)
     m.add_argument("predicate"); m.add_argument("--split", choices=["dev", "test"], default="dev")
+    m.add_argument("--observed", action="store_true", help="reject variables the agent could not observe")
     rp = sub.add_parser("report"); rp.add_argument("out_dir")
     sub.add_parser("variables")
     args = ap.parse_args()
@@ -585,6 +610,13 @@ def main():
         print(f"built step table: {len(cols['step'])} rows over {len(cols['row_start']) - 1} windows, "
               f"{len(np.unique(cols['episode']))} episodes; p_s1 known on {(cols['p_s1'] >= 0).mean():.1%} of rows")
         return
+    if getattr(args, "observed", False):
+        pred = args.predicate if args.cmd != "record" else json.loads(args.result_json).get("predicate")
+        if pred:
+            try:
+                check_observed(pred)
+            except ValueError as e:
+                raise SystemExit(str(e))
     ip = Interp(args.store)
     if args.cmd == "apply_skeptic":
         print(f"{args.results}: {apply_skeptic(ip, args.results)}")

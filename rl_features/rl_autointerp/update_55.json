@@ -1,104 +1,165 @@
 {
-  "label": "GO step after a rewarded trial when the agent chooses a1",
-  "predicate": "(phase == GO) & (prev_reward == 1) & (prev_state != 2) & (choice > -4)",
+  "gate": "update",
+  "feature": 55,
+  "final_verdict": "explained",
+  "final_label": "GO step after a rewarded visit to S1 (or unknown previous state) when belief does not favor S2",
+  "with_model_outputs": {
+    "label": "GO step after a rewarded trial when the agent chooses a1",
+    "predicate": "(phase == GO) & (prev_reward == 1) & (prev_state != 2) & (choice > -4)",
+    "verdict": "explained",
+    "confidence": "high",
+    "uses_future": true,
+    "explanation": "Fires only at GO (never at D1 or D2), only when the previous trial was rewarded (prev_reward == 1; zero activity after unrewarded trials), and almost only when the agent is about to choose a1 (99% of mass). The action is the agent own upcoming choice, which it computes; the observed-only equivalent using the policy, (phase == GO) & (prev_reward == 1) & (choice > 2), scores about the same on dev (F1 0.947), as does model_act == 1. So this is a rewarded-and-choosing-a1 feature, not a future-outcome feature. Previous action and hidden good state are weaker (F1 0.78 / 0.84). Magnitude is high and near-saturated for confident a1 choices (choice logit > 8 has 74% rate); the weak lowest-quartile activations are rewarded GO steps where the agent picks a2 or has a less confident a1 preference. It does not fire on unrewarded trials, on D1/D2, or on most a2 choices.",
+    "test_scores": {
+      "gate": "update",
+      "feature": 55,
+      "predicate": "(phase == GO) & (prev_reward == 1) & (prev_state != 2) & (choice > -4)",
+      "split": "test",
+      "precision": 0.9869780362878722,
+      "recall": 0.9809403014693828,
+      "f1": 0.9839499067458858,
+      "mass_recall": 0.9988816916445571,
+      "correlation": 0.9612422585443264,
+      "n_active": 115899,
+      "n_predicted": 115190,
+      "coverage_by_activation_quartile": [
+        0.9237618636755824,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    "dev_scores": {
+      "gate": "update",
+      "feature": 55,
+      "predicate": "(phase == GO) & (prev_reward == 1) & (prev_state != 2) & (choice > -4)",
+      "split": "dev",
+      "precision": 0.9897491090017291,
+      "recall": 0.9834677419354839,
+      "f1": 0.9865984276895479,
+      "mass_recall": 0.9990647126289651,
+      "correlation": 0.9667765124973977,
+      "n_active": 114080,
+      "n_predicted": 113356,
+      "coverage_by_activation_quartile": [
+        0.9338709677419355,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    "skeptic": {
+      "upheld": false,
+      "issues": [
+        "The checkable claims hold: the feature is active only at GO (D1 and D2 have 0 active steps), never after an unrewarded trial (prev_reward==0: 0 of 401340 active), action==1 carries 99% of the mass, and the original predicate's dev F1 is 0.947. Policy-only versions (choice>2, model_act==1) do score about the same (dev F1 0.947).",
+        "There is a systematic false-positive class the explanation misses. The feature stays off when the previous reward came at S2, even if the agent now picks a1. For (phase==GO)&(prev_reward==1)&(action==1)&(prev_state==2), precision is 0.010 on 6357 dev steps. These are mostly trials where a1 had a rare transition to S2 that paid off and the agent repeated a1. The test-split misses output shows them again (rel +1 windows like '[+0] r1 a1 S2R | [+1] r1 a1'). The same subset with prev_state==1 has precision 0.999.",
+        "The same variable explains the misses. After a reward at S1, the feature also fires on many GO steps where the agent ends up choosing a2: (GO)&(prev_reward==1)&(action==2)&(prev_state==1) is active 37.6% of the time. What matters is the previous rewarded state, combined with the a1 choice logit not being strongly negative. It is not the action itself.",
+        "The explanation says prev_action predicates score worse (0.78). That is true alone, but it hides the fact that prev_state is a necessary conjunct. The label 'rewarded trial, choosing a1' overclaims: in this data the feature means 'rewarded at S1, and not strongly preferring a2'.",
+        "The window's first trial (rel -3) has prev_state -1 (unknown inside the window), which is why the feature's activity looks less dependent on prev_state there. The improved predicate treats unknown as allowed (prev_state != 2)."
+      ],
+      "revised_verdict": "explained",
+      "revised_label": "GO step after a trial rewarded at S1, unless the agent strongly prefers a2 (observed-only)",
+      "better_predicate": "(phase == GO) & (prev_reward == 1) & (prev_state != 2) & (choice > -4)",
+      "better_predicate_test_f1": 0.984
+    },
+    "original_predicate": "(phase == GO) & (prev_reward == 1) & (action == 1)",
+    "original_test_scores": {
+      "gate": "update",
+      "feature": 55,
+      "predicate": "(phase == GO) & (prev_reward == 1) & (action == 1)",
+      "split": "test",
+      "precision": 0.9367614917013866,
+      "recall": 0.9466949671696908,
+      "f1": 0.9417020345281877,
+      "mass_recall": 0.9878240154249428,
+      "correlation": 0.9406940626092115,
+      "n_active": 115899,
+      "n_predicted": 117128,
+      "coverage_by_activation_quartile": [
+        0.7874029335634167,
+        0.9994132873166522,
+        0.9999654874892149,
+        1.0
+      ]
+    },
+    "original_dev_scores": {
+      "gate": "update",
+      "feature": 55,
+      "predicate": "(phase == GO) & (prev_reward == 1) & (action == 1)",
+      "split": "dev",
+      "precision": 0.9394271134136145,
+      "recall": 0.95531206171108,
+      "f1": 0.9473030001434227,
+      "mass_recall": 0.9897879706721971,
+      "correlation": 0.9445565378676489,
+      "n_active": 114080,
+      "n_predicted": 116009,
+      "coverage_by_activation_quartile": [
+        0.821914446002805,
+        0.9995441795231417,
+        0.9999298737727911,
+        0.999859747545582
+      ]
+    },
+    "predicate_from": "skeptic",
+    "final_verdict": "explained",
+    "final_label": "GO step after a trial rewarded at S1, unless the agent strongly prefers a2 (observed-only)"
+  },
+  "label": "GO step after a rewarded visit to S1 (or unknown previous state) when belief does not favor S2",
+  "predicate": "(phase == GO) & (prev_reward == 1) & (prev_state != 2) & (belief > 0.4)",
   "verdict": "explained",
   "confidence": "high",
-  "uses_future": true,
-  "explanation": "Fires only at GO (never at D1 or D2), only when the previous trial was rewarded (prev_reward == 1; zero activity after unrewarded trials), and almost only when the agent is about to choose a1 (99% of mass). The action is the agent own upcoming choice, which it computes; the observed-only equivalent using the policy, (phase == GO) & (prev_reward == 1) & (choice > 2), scores about the same on dev (F1 0.947), as does model_act == 1. So this is a rewarded-and-choosing-a1 feature, not a future-outcome feature. Previous action and hidden good state are weaker (F1 0.78 / 0.84). Magnitude is high and near-saturated for confident a1 choices (choice logit > 8 has 74% rate); the weak lowest-quartile activations are rewarded GO steps where the agent picks a2 or has a less confident a1 preference. It does not fire on unrewarded trials, on D1/D2, or on most a2 choices.",
+  "uses_future": false,
+  "explanation": "Fires only at GO steps, only when the previous trial was rewarded (in_rew at D1 was 1), and almost only when that reward came from S1 (prev_state 1; prev_state -1 at window starts). Requiring the ideal-observer belief P(S1 good) > 0.4 removes most false positives, which are rewarded-S2 histories or window-start trials where the history favors S2. Remaining false positives are mostly window-start GO steps where the earlier history is thin. Without the belief term, prev_reward==1 & prev_state!=2 gives dev F1 0.86 (recall 1.0, precision 0.76). Magnitude not analyzed.",
   "test_scores": {
     "gate": "update",
     "feature": 55,
-    "predicate": "(phase == GO) & (prev_reward == 1) & (prev_state != 2) & (choice > -4)",
+    "predicate": "(phase == GO) & (prev_reward == 1) & (prev_state != 2) & (belief > 0.4)",
     "split": "test",
-    "precision": 0.9869780362878722,
-    "recall": 0.9809403014693828,
-    "f1": 0.9839499067458858,
-    "mass_recall": 0.9988816916445571,
-    "correlation": 0.9612422585443264,
+    "precision": 0.9405878050402288,
+    "recall": 0.9764018671429434,
+    "f1": 0.9581602888942512,
+    "mass_recall": 0.9898510887491933,
+    "correlation": 0.9288624087923969,
     "n_active": 115899,
-    "n_predicted": 115190,
+    "n_predicted": 120312,
     "coverage_by_activation_quartile": [
-      0.9237618636755824,
-      1.0,
-      1.0,
-      1.0
+      0.9312855910267472,
+      0.9897497842968076,
+      0.9916479723899914,
+      0.9929246911023676
     ]
   },
   "dev_scores": {
     "gate": "update",
     "feature": 55,
-    "predicate": "(phase == GO) & (prev_reward == 1) & (prev_state != 2) & (choice > -4)",
+    "predicate": "(phase == GO) & (prev_reward == 1) & (prev_state != 2) & (belief > 0.4)",
     "split": "dev",
-    "precision": 0.9897491090017291,
-    "recall": 0.9834677419354839,
-    "f1": 0.9865984276895479,
-    "mass_recall": 0.9990647126289651,
-    "correlation": 0.9667765124973977,
+    "precision": 0.9467191601049869,
+    "recall": 0.9801630434782609,
+    "f1": 0.9631508678237651,
+    "mass_recall": 0.9917858306836185,
+    "correlation": 0.9372444867606307,
     "n_active": 114080,
-    "n_predicted": 113356,
+    "n_predicted": 118110,
     "coverage_by_activation_quartile": [
-      0.9338709677419355,
-      1.0,
-      1.0,
-      1.0
+      0.9414095371669005,
+      0.9906732117812062,
+      0.993969144460028,
+      0.9946002805049088
     ]
   },
-  "gate": "update",
-  "feature": 55,
-  "final_verdict": "explained",
   "skeptic": {
-    "upheld": false,
+    "upheld": true,
     "issues": [
-      "The checkable claims hold: the feature is active only at GO (D1 and D2 have 0 active steps), never after an unrewarded trial (prev_reward==0: 0 of 401340 active), action==1 carries 99% of the mass, and the original predicate's dev F1 is 0.947. Policy-only versions (choice>2, model_act==1) do score about the same (dev F1 0.947).",
-      "There is a systematic false-positive class the explanation misses. The feature stays off when the previous reward came at S2, even if the agent now picks a1. For (phase==GO)&(prev_reward==1)&(action==1)&(prev_state==2), precision is 0.010 on 6357 dev steps. These are mostly trials where a1 had a rare transition to S2 that paid off and the agent repeated a1. The test-split misses output shows them again (rel +1 windows like '[+0] r1 a1 S2R | [+1] r1 a1'). The same subset with prev_state==1 has precision 0.999.",
-      "The same variable explains the misses. After a reward at S1, the feature also fires on many GO steps where the agent ends up choosing a2: (GO)&(prev_reward==1)&(action==2)&(prev_state==1) is active 37.6% of the time. What matters is the previous rewarded state, combined with the a1 choice logit not being strongly negative. It is not the action itself.",
-      "The explanation says prev_action predicates score worse (0.78). That is true alone, but it hides the fact that prev_state is a necessary conjunct. The label 'rewarded trial, choosing a1' overclaims: in this data the feature means 'rewarded at S1, and not strongly preferring a2'.",
-      "The window's first trial (rel -3) has prev_state -1 (unknown inside the window), which is why the feature's activity looks less dependent on prev_state there. The improved predicate treats unknown as allowed (prev_state != 2)."
+      "Claims check out: GO-only, zero activity after unrewarded trials, essentially zero after rewarded S2 (precision 0.0006), rewarded-S1 branch precision 0.99, belief<=0.4 after rewarded S1 precision 0.19 (so the belief cut is justified).",
+      "Remaining FPs are concentrated, as stated, on window-start GO (prev_state == -1: precision 0.80, vs 0.97 with choice>0). A stricter belief cut there (0.5) only moves test F1 0.958 -> 0.960, so it is an observability limit, not a missing rule.",
+      "Model output adds little (choice>0 added: test F1 0.965 vs 0.958)."
     ],
     "revised_verdict": "explained",
-    "revised_label": "GO step after a trial rewarded at S1, unless the agent strongly prefers a2 (observed-only)",
-    "better_predicate": "(phase == GO) & (prev_reward == 1) & (prev_state != 2) & (choice > -4)",
-    "better_predicate_test_f1": 0.984
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
   },
-  "final_label": "GO step after a trial rewarded at S1, unless the agent strongly prefers a2 (observed-only)",
-  "original_predicate": "(phase == GO) & (prev_reward == 1) & (action == 1)",
-  "original_test_scores": {
-    "gate": "update",
-    "feature": 55,
-    "predicate": "(phase == GO) & (prev_reward == 1) & (action == 1)",
-    "split": "test",
-    "precision": 0.9367614917013866,
-    "recall": 0.9466949671696908,
-    "f1": 0.9417020345281877,
-    "mass_recall": 0.9878240154249428,
-    "correlation": 0.9406940626092115,
-    "n_active": 115899,
-    "n_predicted": 117128,
-    "coverage_by_activation_quartile": [
-      0.7874029335634167,
-      0.9994132873166522,
-      0.9999654874892149,
-      1.0
-    ]
-  },
-  "original_dev_scores": {
-    "gate": "update",
-    "feature": 55,
-    "predicate": "(phase == GO) & (prev_reward == 1) & (action == 1)",
-    "split": "dev",
-    "precision": 0.9394271134136145,
-    "recall": 0.95531206171108,
-    "f1": 0.9473030001434227,
-    "mass_recall": 0.9897879706721971,
-    "correlation": 0.9445565378676489,
-    "n_active": 114080,
-    "n_predicted": 116009,
-    "coverage_by_activation_quartile": [
-      0.821914446002805,
-      0.9995441795231417,
-      0.9999298737727911,
-      0.999859747545582
-    ]
-  },
-  "predicate_from": "skeptic"
+  "observed_only_round": "rl_features/rl_observed/update_55.json"
 }

@@ -951,7 +951,8 @@ KINDS = [("firing rule only", "#184f95"), ("firing rule + one modifier", "#2a78d
 
 def explanation_kinds():
     """{gate: {kind: [ids]}} for the features that matter (rl_fidelity/matter_sets.json without the negligible ones):
-    the refined explanation's kind (rl_features/rl_refined) where one exists, else the firing record."""
+    the refined explanation's kind (rl_features/rl_refined) where one exists, else the firing record, else the
+    magnitude record (rl_features/rl_magnitude, observed variables only)."""
     matter = json.load(open(os.path.join(FIDELITY, "matter_sets.json")))
     kind_of = {"firing+modifier": KINDS[1][0], "firing~+modifier": KINDS[2][0], "magnitude": KINDS[3][0]}
     out = {}
@@ -965,6 +966,9 @@ def explanation_kinds():
                 out[gate][kind_of[json.load(open(ref))["kind"]]].append(f)
             elif json.load(open(os.path.join(FEATURES, f"{rgate}_{f}.json"))).get("final_verdict") == "explained":
                 out[gate][KINDS[0][0]].append(f)
+            elif (os.path.exists(mag := os.path.join("rl_features/rl_magnitude", f"{rgate}_{f}.json"))
+                  and json.load(open(mag)).get("final_verdict") == "explained"):
+                out[gate][KINDS[3][0]].append(f)      # no firing rule without model outputs (candidate 33)
             else:
                 out[gate]["unexplained"].append(f)
     return out
@@ -1007,7 +1011,8 @@ def breakdown(out):
             ax.text(i + (j - 0.5) * w * 1.1, (np.median(vals) if vals else 0) + 0.01, f"n={len(vals)}", ha="center",
                     fontsize=7.5, color=INK_2)
     ax.set_xticks(range(3), [t for _, _, t, _ in GATES]); ax.set_ylabel("Median R² beyond timing (on/off rule)", fontsize=9, color=INK)
-    ax.legend(fontsize=8, frameon=False, labelcolor=INK_2)
+    ax.set_ylim(0, ax.get_ylim()[1] * 1.25)          # headroom so the legend sits above the bars
+    ax.legend(fontsize=8, frameon=False, labelcolor=INK_2, loc="upper center", ncol=2)
     ax = axes[2]
     style(ax, "Discrete levels: where both need magnitude")
     mag_f = [lv_f.get(k) for g in kinds for k in [(g, i) for i in kinds[g][KINDS[3][0]]]]
@@ -1019,10 +1024,11 @@ def breakdown(out):
     cols = [("timing share\nof variance", tim_f, tim_u), ("short form", [r["short"] for r in mag_f if r], [r["short"] for r in mag_u if r]),
             ("4 levels", [r["L4"] for r in mag_f if r], [r["L4"] for r in mag_u if r])]
     for i, (lab, fv, uv) in enumerate(cols):
-        for j, (vals, color, name) in enumerate(((fv, "#eb6834", "10 discrete-magnitude features"), (uv, INK_2, "35 units that matter"))):
+        for j, (vals, color, name) in enumerate(((fv, "#eb6834", f"{len(fv)} discrete-magnitude features"), (uv, INK_2, "35 units that matter"))):
             ax.bar(i + (j - 0.5) * w * 1.1, np.median(vals), w, color=color, label=name if i == 0 else None)
     ax.set_xticks(range(3), [c[0] for c in cols]); ax.set_ylabel("Median (R² beyond timing; timing: R² of timing alone)", fontsize=9, color=INK)
-    ax.legend(fontsize=8, frameon=False, labelcolor=INK_2)
+    ax.set_ylim(0, ax.get_ylim()[1] * 1.2)
+    ax.legend(fontsize=8, frameon=False, labelcolor=INK_2, loc="upper center", ncol=2)
     fig.tight_layout(rect=(0, 0.05, 1, 1))
     p = save(fig, out, "explanation_breakdown.png",
              "Left: refined explanations (rl_features/rl_refined) where they exist, else the firing record. Middle: the on/off "
@@ -1085,9 +1091,9 @@ def _sim(gate, comp, dirs):
     return None
 
 
-def tests(out):
+def tests(out, first=True, units=True):
     """Are the explanations predictive? Blind simulation, per-component substitution and the story test,
-    features (old and current explanations) vs units."""
+    features (old and current explanations) vs units. first=False: no first explanations; units=False: no units."""
     matplotlib, plt = _plt()
     matter = json.load(open(os.path.join(FIDELITY, "matter_sets.json")))
     old_dirs, cur_dirs = ["rl_features/rl_simulation_shared"], ["rl_features/rl_simulation_clock_adopted",
@@ -1097,7 +1103,9 @@ def tests(out):
     st_old, st_cur = (json.load(open(os.path.join(FIDELITY, n))) for n in ("story_test.json", "story_test_clock.json"))
     fig, axes = plt.subplots(1, 3, figsize=(18, 5), facecolor=SURFACE)
     series = [("features, first explanations", "#86b6ef"), ("features, current explanations", "#184f95"), ("GRU units", INK_2)]
-    w = 0.26
+    keep = [j for j, on in enumerate((first, True, units)) if on]   # which series to draw
+    w = {3: 0.26, 2: 0.36, 1: 0.5}[len(keep)]
+    off = lambda j: (keep.index(j) - (len(keep) - 1) / 2) * w   # bar offset of series j
     ax = axes[0]
     style(ax, "Blind words-only simulation (100 shared windows)")
     for i, (gate, rgate, _, _) in enumerate(GATES):
@@ -1106,11 +1114,13 @@ def tests(out):
                 [s["correlation_beyond_timing"] for s in (_sim(rgate, f, cur_dirs) for f in fs) if s],
                 [s["correlation_beyond_timing"] for s in (_sim(f"unit_{gate}", u, old_dirs) for u in matter[f"{gate}/units"]) if s]]
         for j, ((name, color), x) in enumerate(zip(series, vals)):
-            ax.bar(i + (j - 1) * w, np.median(x), w, color=color, label=name if i == 0 else None)
-            ax.text(i + (j - 1) * w, np.median(x) + 0.01, f"{np.median(x):.2f}", ha="center", fontsize=7, color=INK_2)
+            if j not in keep:
+                continue
+            ax.bar(i + off(j), np.median(x), w, color=color, label=name if i == 0 else None)
+            ax.text(i + off(j), np.median(x) + 0.01, f"{np.median(x):.2f}", ha="center", fontsize=7, color=INK_2)
     ax.set_xticks(range(3), [t for _, _, t, _ in GATES]); ax.set_ylim(0, 1)
     ax.set_ylabel("Median correlation beyond timing (components that matter)", fontsize=9, color=INK)
-    fig.legend(*ax.get_legend_handles_labels(), fontsize=9, frameon=False, labelcolor=INK_2, loc="upper center", ncol=3)
+    fig.legend(*ax.get_legend_handles_labels(), fontsize=9, frameon=False, labelcolor=INK_2, loc="upper center", ncol=len(keep))
     ax = axes[1]
     style(ax, "Per-component substitution where it matters")
     for i, (gate, _, _, _) in enumerate(GATES):
@@ -1120,9 +1130,11 @@ def tests(out):
         f_cur = [r for r in f_cur if r]
         u = [sub_old[(gate, "units", x)] for x in matter[f"{gate}/units"] if (gate, "units", x) in sub_old]
         for j, ((name, color), x) in enumerate(zip(series, (f_old, f_cur, u))):
+            if j not in keep:
+                continue
             rate = np.mean([r["pass"] for r in x]) if x else 0
-            ax.bar(i + (j - 1) * w, rate, w, color=color)
-            ax.text(i + (j - 1) * w, rate + 0.01, f"{sum(r['pass'] for r in x)}/{len(x)}", ha="center", fontsize=7, color=INK_2)
+            ax.bar(i + off(j), rate, w, color=color)
+            ax.text(i + off(j), rate + 0.01, f"{sum(r['pass'] for r in x)}/{len(x)}", ha="center", fontsize=7, color=INK_2)
     ax.set_xticks(range(3), [t for _, _, t, _ in GATES]); ax.set_ylim(0, 1.1)
     ax.yaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(1.0))
     ax.set_ylabel("Share passing (recovers >= half the ablation damage)", fontsize=9, color=INK)
@@ -1132,17 +1144,22 @@ def tests(out):
     for i, (gate, _, title, _) in enumerate(GATES):
         for k, (m, mname, _) in enumerate(METRICS):
             x = i * 3.6 + k * 1.1
-            labels.append((x, f"{title.split()[0]}\n{mname.split()[0]}"))
+            labels.append((x, f"{ {'Candidate': 'Cand.'}.get(title.split()[0], title.split()[0]) }\n{mname.split()[0]}"))
+            bw = {3: 0.3, 2: 0.42, 1: 0.6}[len(keep)]
             for j, (st, src) in enumerate(((st_old, "features"), (st_cur, "features"), (st_cur, "units"))):
-                ax.bar(x + (j - 1) * 0.3, st[gate][src]["recovery"][m], 0.3, color=series[j][1])
+                if j in keep:
+                    ax.bar(x + (keep.index(j) - (len(keep) - 1) / 2) * bw, st[gate][src]["recovery"][m], bw, color=series[j][1])
     ax.set_xticks([x for x, _ in labels], [l for _, l in labels], fontsize=7)
     ax.set_ylabel("Recovery (0 = set at phase means, 1 = set kept)", fontsize=9, color=INK)
     ax.axhline(0, color=GRID, linewidth=0.8)
     fig.tight_layout(rect=(0, 0.06, 1, 0.93))
-    p = save(fig, out, "explanation_tests.png",
-             "First explanations: the original words / short forms. Current: refined (rl_features/rl_refined) and clock-round "
+    name = "explanation_tests.png" if first else "explanation_tests_current.png" if units else "explanation_tests_features.png"
+    p = save(fig, out, name,
+             ("First explanations: the original words / short forms. " if first else "") +
+             "Current: refined (rl_features/rl_refined) and clock-round "
              "words where adopted. Substitution covers components whose ablation hurts behaviour and that have an explanation. "
-             "Story test: rl_fidelity/story_test.json (first) and story_test_clock.json (current); units unchanged.")
+             "Story test: " + ("rl_fidelity/story_test.json (first) and " if first else "rl_fidelity/") +
+             "story_test_clock.json (current)" + ("; units unchanged." if units else "."))
     plt.close(fig)
     return [p]
 
@@ -1226,8 +1243,9 @@ def credit(out):
     fig.tight_layout(rect=(0, 0.07, 1, 1))
     p2 = save(fig, out, "credit_steering.png",
               "396 held-out windows (selection on another 400). Detectors: features at the next D1 at least 3× more active in one "
-              "(state, reward) cell than in any other. Steered only at the next D1, candidate features "
-              "(rl_circuits/credit_steering.json).")
+              "(state, reward) cell than in any other. Steered only at the next D1, candidate features. All bars in units of the "
+              "real state swap (per-window ratio, median). Compared window by window with the real reward swap itself, "
+              "the reward steering ('both') recovers 0.90 of it (rl_circuits/credit_steering.json).")
     plt.close(fig)
     return [p1, p2]
 
@@ -1316,8 +1334,11 @@ def reversal(out):
     ax.set_xticks(range(5), lab)
     ax.set_xlabel("Outcome of trial (S = the switch trial)", fontsize=9, color=INK)
     ax.set_ylabel("Flow from that trial's outcome (logit)", fontsize=9, color=INK)
-    ax.text(4.3, max(vals) * 0.9, f"all replaced: {d['old_world']['d_target_mean']:.1f}\nS−1 alone: {d['last']['d_target_mean']:.1f}",
-            ha="right", fontsize=8.5, color=INK)
+    tot = d["old_world"]["d_target_mean"]
+    ax.text(4.3, max(vals) * 0.97,
+            f"logit change, all 5 outcomes replaced: {tot:.1f}\n(bars sum to {sum(vals):.1f}; transcoder errors {tot - sum(vals):+.1f})\n"
+            f"logit change, only S−1's outcome replaced: {d['last']['d_target_mean']:.1f}\n(a separate rerun; not additive)",
+            ha="right", va="top", fontsize=8, color=INK)
     fig.tight_layout(rect=(0, 0.06, 1, 1))
     p = save(fig, out, "reversal_switch.png",
              "3000 closed-loop episodes, reversals after which the agent had settled. Right: each switch rerun with the outcomes of "
@@ -1333,25 +1354,30 @@ def checks(out):
     d = json.load(open(os.path.join(CIRCUITS, "circuit_checks.json")))
     ks = (1, 3, 5, 10, 20)
     fig, axes = plt.subplots(1, 3, figsize=(17, 4.6), facecolor=SURFACE, sharey=True)
-    names = {"state": "State swap → next choice", "reward": "Reward swap → next choice", "reversal": "Recent outcomes → the switch"}
+    names = {"state": "State reached swapped → next choice", "reward": "Reward swapped → next choice",
+             "reversal": "Rewards of the 5 trials before the switch\nset to the old world's → the switch"}
     modes = [("sufficiency_free", "sufficiency, free", "#2a78d6", "-"), ("sufficiency_clamped", "sufficiency, clamped", "#2a78d6", "--"),
              ("necessity_free", "necessity, free", "#eb6834", "-"), ("necessity_clamped", "necessity, clamped", "#eb6834", "--")]
     for ax, c in zip(axes, ("state", "reward", "reversal")):
         style(ax, f"{names[c]} (n={d[c]['n']})")
         for m, name, color, ls in modes:
             ax.plot(range(5), [min(d[c][f"top{k}"][m + "_share"], 1.3) for k in ks], color=color, linestyle=ls, linewidth=2,
-                    marker="o", markersize=7, label=name)
+                    marker="o", markersize=7, markerfacecolor=color if ls == "-" else "white", markeredgewidth=1.8,
+                    label=name + (" (solid, filled)" if ls == "-" else " (dashed, hollow)"))
         for m, ls in (("sufficiency_free", "-"), ("necessity_free", "--")):
             ax.plot(range(5), [d[c][f"random{k}"][m + "_share"] for k in ks], color="#c3c2b7", linestyle=ls, linewidth=1.6,
-                    label=f"random features, {m.split('_')[0]}")
+                    label=f"random features, {m.split('_')[0]}, free" + (" (solid)" if ls == "-" else " (dashed)"))
         ax.set_xticks(range(5), [str(k) for k in ks]); ax.set_xlabel("Features per step (top by |flow|)", fontsize=9, color=INK)
         ax.axhline(1, color=GRID, linewidth=0.8)
     axes[0].set_ylabel("Share of the choice change carried (median)", fontsize=9, color=INK)
-    axes[0].legend(fontsize=7.5, frameon=False, labelcolor=INK_2, loc="center right")
-    fig.tight_layout(rect=(0, 0.06, 1, 1))
+    fig.legend(*axes[0].get_legend_handles_labels(), fontsize=8, frameon=False, labelcolor=INK_2, loc="upper center",
+               ncol=3, handlelength=4.5, bbox_to_anchor=(0.5, 1.0))
+    fig.tight_layout(rect=(0, 0.06, 1, 0.9))
     p = save(fig, out, "circuit_checks.png",
              "Real GRU; patched gates are transcoder reconstructions plus the patched run's own error, kept in the gate's range. "
-             "Free: the rest recomputed; clamped: every other feature held. Values above 1.3 drawn at 1.3 (single features that "
+             "Free: the rest recomputed; clamped: every other feature held. Right: each switch trial S rerun with the rewards of "
+             "trials S−5..S−1 replaced by what the old belief expects (1 in the old good state, 0 in the old bad one; on average "
+             "2.85 of the 5 actually differ, S−1 always); target the choice at S. Values above 1.3 drawn at 1.3 (single features that "
              "overshoot when their cancelling partner is not patched). rl_circuits/circuit_checks.json.")
     plt.close(fig)
     return [p]
@@ -1539,7 +1565,7 @@ def band_circuit(out):
     m = d["matched_logit"]["S1 R=1, logit 6 to 10"]
     style(ax, "Same logit, same new outcome (rewarded S1)")
     prevs = [("previous S1 R=1", "trial before:\nrewarded S1", "#184f95"), ("previous S2 R=0", "trial before:\nunrewarded S2", "#f2a07e")]
-    dets = [("77", "cand. 77\n'rewarded a1→S1'"), ("118", "cand. 118\n'rewarded S1,\nabout to repeat a1'")]
+    dets = [("77", "cand. 77\n'rewarded a1→S1'"), ("118", "cand. 118\n'rewarded a1→S1'")]
     w = 0.36
     for j, (pk, lab, color) in enumerate(prevs):
         vals = [m[pk]["detectors_next_D1"][f] for f, _ in dets]
@@ -1697,6 +1723,8 @@ def trace_rpe(out):
 COMMANDS = {"interp": interp, "fidelity": fidelity, "sets": sets, "substitutes": substitutes, "probe": probe,
             "scorecards": scorecards, "time": time_profiles, "magnitude": magnitude, "ranked": ranked,
             "substitution": substitution, "conditional": conditional, "breakdown": breakdown, "clock": clock,
+            "tests_current": lambda out: tests(out, first=False),
+            "tests_features": lambda out: tests(out, first=False, units=False),
             "tests": tests, "credit": credit, "circuit": circuit, "reversal": reversal, "checks": checks, "value": value, "bayes": bayes, "axis": axis, "band_circuit": band_circuit, "lag": lag_circuit, "swap": belief_swap_fig, "trace_rpe": trace_rpe}
 # figures of abandoned analyses (docs/figures/rl/archived/README.md): written to <out>/archived, skipped by `all`
 ARCHIVED = {"fidelity", "sets", "substitutes", "probe", "scorecards", "time", "ranked", "substitution"}

@@ -18,13 +18,18 @@ target is the next trial's choice (logit a1 − a2 at (c+1).GO) unless stated.
    It agrees with an ideal observer's choice on 97% of trials.
 2. **A reward is credited to the state, not the action.** Rerunning a trial in all 8 choice × state × reward
    combinations: credit to the state (reward × state) +11.5 logits, credit to the action (reward × action) +0.6.
-3. **The action barely enters memory.** At D2 a state swap moves h by 2.8, an action swap by 0.65; the transition-
-   specific D2 features write mostly the state. What is left of the action is overwritten at the next D1.
+3. **The action barely enters memory.** At D2 a state swap moves h by 2.8 (Euclidean distance), an action swap by
+   0.65; the transition-specific D2 features write mostly the state. What is left of the action is overwritten at
+   the next D1.
 4. **The credit circuit has three steps:** D2 features write the state; at the next D1 conjunction detectors
    ("rewarded S1", "unrewarded S2", ...) read the reward together with that memory; at GO a few update-gate and
-   candidate features read both and write the choice. The update gate carries real flow here (unlike the copy task).
-5. **Switching after a reversal reuses the same circuit.** The agent switches 2–3 trials after a reversal, one trial
-   behind the ideal observer. The switch is the sum of the last few outcomes' evidence, decaying fast (the last
+   candidate features read both and write the choice. The update gate carries real flow here (unlike the copy task):
+   at GO, update features carry 2.2 logits of the ~6-logit next-choice change (0.38 of it), more than the
+   candidate features (1.7 logits, 0.29).
+5. **Switching after a reversal reuses the same circuit.** The agent switches a median 3 trials after a reversal,
+   against 2 for the ideal observer (who does not know when the reversal happened): on the same trial in about
+   half of reversals, one trial later in a third, rarely earlier (0.7 trials later on average). The lag is all in
+   switching away from S2 (about 1.5 trials late); away from S1 the agent is as fast as the observer (§7). The switch is the sum of the last few outcomes' evidence, decaying fast (the last
    two outcomes give 11.5 of 12.9 logits), carried from trial to trial through the hidden state.
 6. **The circuits are causally right.** About 10 features per step (3–5 for the reward) are sufficient and
    necessary for each change, even with the rest of the model held; random features do nothing. Steering the
@@ -33,19 +38,23 @@ target is the next trial's choice (logit a1 − a2 at (c+1).GO) unless stated.
 7. **The value is the return-to-go read off a trial counter.** V matches the discounted return (γ = 0.97); h holds
    a trial counter (decoded with R² 0.998), late-onset features read it at staggered thresholds, and candidate 130
    carries most of the time effect into V. V ignores the belief (no dip after a reversal) except for one TD-like
-   step when the state reached is shown. The value and choice circuits barely touch: orthogonal readouts, about 13%
+   step when the state reached is shown; beyond time it is not the expected return (a reward that signals a
+   reversal raises V although the expected return falls). The value and choice circuits barely touch: orthogonal readouts, about 13%
    of shared flow, unchanged behaviour over the episode.
 8. **Closer to a Bayesian observer than to model-based RL, with a recency term.** A Bayesian model fits the
    agent's choices better than two-value MB-RL; the belief is decoded from h (R² 0.985). The bands of its phase
    portrait are the previous trial (0.71 of their spread). In the attribution graph a few features carry each band
    (patching 3–5 per step carries all of it): the previous outcome changes which detectors read the next outcome and
-   how the next state is written, so the update depends on history beyond the belief. S1 and S2 evidence travel
-   through the same features after the reward is read, and an outcome's effect lasts according to whether the
-   next outcome agrees with it, not which state it visits: one belief, not two values.
+   how the next state is written, so the update depends on history beyond the belief. An outcome's effect lasts
+   according to whether the next outcome agrees with it, not which state it visits: one belief, not two values.
+   But evidence from the two states is carried differently: S1 evidence is wiped off the choice read-out after
+   each choice and re-created by features, S2 evidence is kept in memory on the read-out; and a confident agent
+   reads S2 outcomes weakly. So an S1 outcome counts about 2–3× an S2 outcome, and the agent switches late only
+   when leaving S2.
    The ideal observer's belief can be read from the memory almost perfectly, but the agent never acts on that
    read-out: it acts on a separate "which action" memory (its action preference), which is what lags. After a long
    run of one choice, the detectors that read a missed reward as "switch" respond less and a "stay anyway" detector
-   more, so the action preference switches about a trial late. A short "was I just rewarded" memory carries about
+   more, so the action preference often switches a trial late (0.7 trials on average). A short "was I just rewarded" memory carries about
    40% of the bands but barely affects behaviour.
 
 ## 1. Behaviour (closed-loop agent)
@@ -78,7 +87,11 @@ the 8 choice × state × reward combinations (all occur in the task), history an
 Whichever action was taken, a reward counts for the state it reached.
 
 **Why: the action barely reaches memory** (right panel; `held_in_h`). h after each step is an exact sum of writes
-(carried state, each candidate feature's write, bias and error), so the effect of a swap on h splits exactly:
+(carried state, each candidate feature's write, bias and error), so the effect of a swap on h splits exactly.
+|Δh| is the Euclidean (L2) length of the 48-unit difference in h between the two versions of the trial (S1 vs S2
+reached, averaged over the two actions; or a1 vs a2 taken, averaged over the two states), averaged over windows and
+the two rewards. For scale, two hidden states can be at most about 13.9 apart (each unit lies in −1 to 1). A write's
+share is its projection on the total difference over the difference's squared length:
 
 | | after D2 | after the next D1 | after the next GO |
 |---|---|---|---|
@@ -86,8 +99,15 @@ Whichever action was taken, a reward counts for the state it reached.
 | \|Δh\|, action swapped | 0.65 | 0.35 | 0.24 |
 
 - At D2 the candidate features are transition-specific: 219 a1→S1, 210 a2→S1, 147 a1→S2, 167 a2→S2. The state
-  difference is written almost entirely by the two S2 features (147: 0.50 of it, 167: 0.48).
-- Along the action axis their writes largely cancel (167 and 210 one way; 204, 147 and 243 the other), leaving 0.65.
+  difference (h after D2 with S1 reached minus with S2 reached, averaged over the two actions) is written almost
+  entirely by the two S2 features (147: 0.50 of it, 167: 0.48); the S1 features contribute little to it. So in what
+  h holds, "reached S2" is an active signal and "reached S1" mostly its absence. (This is the write into h; in the
+  attribution graph 219 still carries large flow because later features read it.)
+- The action difference (h after D2 with a1 taken minus with a2 taken, averaged over the two states) is a small
+  leftover of large opposing writes. Swapping the action switches which transition-specific features fire, and
+  each switch moves h a lot, but most of what they write is the same state signal, which cancels. Shares of the
+  0.65 difference: candidates 167 (+0.88) and 210 (+0.87) on one side; 204 (−0.63), 147 (−0.28), 243 (−0.23) and
+  10 (−0.14) on the other (grouped by sign, not by action: 204 is an a2 feature).
 - At the next D1 most of what is left is overwritten (0.65 → 0.35); of the remainder, the carried state supplies
   0.41–0.64 (unrewarded / rewarded), and it moves the next choice by at most 0.6 logits.
 
@@ -114,7 +134,8 @@ the reward and factorial graphs agree):
 | next D1 | the reward meets the remembered state | reset 120 "rewarded S1" (+32), candidate 77 "rewarded a1→S1" (+32), reset 59 and candidate 215 "rewarded S2" (−30 each); after no reward: candidate 208 "unrewarded, not S1", 18 "unrewarded a1→S1" |
 | next GO | the choice is written | update 55 "after rewarded S1" (+6.9), candidate 121 "S1-directed choice" (+5.0); after S2: update 206, candidate 146; update 5 after unrewarded S1 |
 
-- **Opposite pairs cancel.** At D2 and D1 the features for the two cells swap on and off, each with a large flow
+- **Opposite pairs cancel.** At D2 and D1 the features for the two cells (the two versions of the trial being
+  compared, e.g. a1→S1 vs a1→S2) swap on and off, each with a large flow
   and opposite signs (+245 / −230). Their net, and the per-step totals, are what carry the change; single-node
   flows overstate. (A reset feature's effect is measured on the two runs' mean memory, which is no real state.)
 - **Credit-to-state graph** (reward side, `credit_factorial.json`): the interaction's 11.5 logits pass through the D1
@@ -122,6 +143,30 @@ the reward and factorial graphs agree):
   The credit-to-action graph carries 0.6, spread thinly.
 - **The update gate writes the choice.** At GO, update features 55 and 206 set how much of the choice-coded
   candidate (121, 146) is written into h.
+
+**How much flow each gate carries** (`gate_flow_shares.py`; 800 held-out windows, 100 per core-trial pattern). *Why:*
+in the copy task the gates' changes carried only 7–12% of the output change, so freezing them lost little; here we
+want to know how much each gate's features carry, step by step. A feature's flow is how much of the change in the
+next choice passes through it, so summing over a gate's features gives that gate's share. Two numbers per gate:
+the signed sum (oriented so the change is positive; how much of the net change goes through the gate) and the share
+of the absolute flow at that step (how much traffic the gate carries, cancelling pairs included).
+
+| step | contrast | reset | update | candidate | net change |
+|---|---|---|---|---|---|
+| D2 | state | −9.8 (abs share 0.20) | −0.6 (0.01) | +6.6 (0.79) | 5.9 |
+| next D1 | state | −3.0 (0.34) | +2.7 (0.07) | +3.3 (0.59) | 5.9 |
+| next D1 | reward | −1.0 (0.09) | +0.4 (0.02) | +5.6 (0.89) | 6.0 |
+| next GO | state | +0.3 (0.06) | **+2.2 (0.52)** | +1.7 (0.42) | 5.9 |
+| next GO | reward | +0.3 (0.07) | **+2.3 (0.56)** | +1.8 (0.37) | 6.0 |
+
+- **At D2 and D1 the candidate carries most of the traffic** (59–89% of absolute flow), with reset second at D2 and
+  for the state at D1 (20–34%); the update gate carries little there (1–7%).
+- **At GO the update gate carries the most:** about 2.2 of a 5.9–6.0 logit change (signed flow over net change:
+  0.38), against 1.7–1.8 for the candidate (0.29); the rest (about 0.33) arrives through the carried memory. This is the step that writes the choice.
+- **Reading the numbers.** Reset features act on h only through the candidate (they gate what it reads), so their
+  flow is nested inside the candidate's, not added to it; update and candidate features write h side by side, so
+  those two compare like for like. Per-step signed sums need not add up to the net change (cancelling pairs, nested
+  reset flow); the action contrast (net 0.6) splits the same way at GO (update 0.44, candidate 0.47 of the traffic).
 - **The a1 side carries more flow** than the a2 side: the a1 features (219, 77, 208, 18) are the large ones; a2
   trials use smaller, more numerous features.
 
@@ -140,19 +185,50 @@ the reward and factorial graphs agree):
 | P(new good action), ideal observer | 0.10 | 0.80 | 0.80 | 0.91 | 0.90 |
 | agent's choice logit towards the new action (−9.0 when settled) | −5.9 | −1.6 | +2.3 | +4.6 | +5.8 |
 
-The agent switches a median 2–3 trials after the reversal (the first trial after which it chooses the new action
-twice running), about one trial behind the observer, whose belief in the new state is then 0.91 (median). The
-mean logit rises by 3–4 per trial after the reversal.
+The agent switches a median 2–3 trials after the reversal (the switch trial is the first trial on which it chooses
+the new action and chooses it again on the next trial, so one-off tries do not count). The mean logit rises by 3–4
+per trial after the reversal.
 
-**The switch's graph.** 600 switches; the counterfactual replaces the outcomes of the 5 trials before the switch
-trial S by those the old belief expects. That removes 12.9 logits, split exactly by trial:
+**Compared with the ideal observer** (`switch_lag.py`; 4,970 settled reversals in 3,000 episodes). *Why:* a lag after
+the reversal is expected, since no one can know the reversal has happened until outcomes show it; the fair question
+is how much later the agent switches than an agent that uses the same evidence perfectly. The ideal observer does
+not know when the reversal happened: it is the Bayesian belief from the agent's own outcomes, knowing only the
+task's rules (reversal chance 0.025 per trial, rewards 0.9 / 0.1). Same switch definition for both; the agent's
+preferred action (sign of its logit) is used, so sampling noise is left out:
+
+| | median trials to switch | mean |
+|---|---|---|
+| ideal observer | 2 | 2.5 |
+| agent (preferred action) | 3 | 3.2 |
+| agent (actual, sampled choices) | 3 | 3.2 |
+
+Per reversal, agent minus observer: same trial 46%, one trial later 37%, two or more later 13%, earlier 5%; mean 0.7
+trials. So the agent is often exactly as fast as the evidence allows and otherwise mostly one trial late. Split
+by direction, the lag is all in switching away from S2: about 1.5 trials late, later in 94% of those reversals;
+switching away from S1 it is as fast as the observer (−0.15 trials, later in 2%). Why: §7, "How evidence from S1
+and from S2 outcomes is carried". At its
+switch the observer's belief in the new good state is already 0.91 (median).
+
+**The switch's graph.** 600 switches; the counterfactual replaces the rewards of the 5 trials before the switch
+trial S by those the old belief expects (1 in the old good state, 0 in the old bad one). Target: the choice logit at
+S.GO towards the new action. Each trial's reward is an input at the next trial's D1, and the graph gives the flow
+from each of those inputs. Replacing all five removes 12.9 logits; the five inputs carry 13.7 and the transcoder
+errors −0.8:
 
 | outcome of trial | S−1 | S−2 | S−3 | S−4 | S−5 |
 |---|---|---|---|---|---|
 | flow into the switch (logits) | 6.4 | 5.1 | 1.4 | 0.6 | 0.2 |
 
-- **Evidence decays fast:** the last two outcomes give 11.5 of the 12.9. Replacing only the last one removes 10.5
-  on its own (the effects are not additive: the logit saturates).
+- **Not every reward actually changes.** A reward only changes if it differed from what the old belief expected:
+  trial S−1's always does, S−2's in 86% of switches, S−3's 52%, S−4's 28%, S−5's 19% (2.85 of the 5 on average;
+  the older trials often fall before the reversal). Per changed reward, the flow is roughly 6.4, 5.9, 2.6, 2.1 and
+  1.1 logits for S−1 to S−5 (approximate: change rates from the circuit-check run).
+- **Evidence decays fast:** the last two outcomes give 11.5 of the 12.9 (partly because older rewards change less
+  often; per changed reward the decay is gentler, as above). Replacing only the last one (a separate
+  rerun) removes 10.5 on its own, more than its 6.4 share above: its effect depends on the other outcomes. With
+  the four earlier outcomes still real, the last one decides the switch; with them replaced too, the logit is
+  already deep on the old side, where one more outcome moves it less (the logit saturates). The 6.4 is its share of
+  the joint effect, not its effect alone.
 - **Same circuit every trial.** Each outcome enters through the D1 detectors of §3 (208, 77, 18, 66) and the GO
   features (update 55, 206; candidate 121, 146). There is no separate "switch" circuit.
 - **Relay through h.** Evidence is carried from trial to trial in the hidden state: flow passes each step on the
@@ -179,7 +255,8 @@ held). Score: median share of the choice change carried.
 With k = 10 the choice ends on the predicted side in 90–100% of cases. A single feature per step can overshoot
 (reward, k = 1: 1.12–1.19), because its cancelling partner is not patched.
 
-**Steering by label** (`credit_steering.py`). The detectors of each (state, reward) cell are the features at the
+**Steering by label** (`credit_steering.py`). A cell is one combination of the core trial's state reached and
+reward (rewarded S1, unrewarded S1, rewarded S2, unrewarded S2). The detectors of each cell are the features at the
 next D1 at least 3× more active in that cell than in any other (chosen on half the windows, tested on the other
 half). With the input unchanged, the recorded cell's detectors are switched off and another cell's on (at their
 mean there). Shift of the next choice, in units of a real state swap's effect (medians; candidate features at the
@@ -194,8 +271,10 @@ next D1; random control 0.04–0.05):
 
 ![steering](figures/rl/credit_steering.png)
 
-- **The reward swap works by label:** 0.90 of the real swap's own effect, the choice following in 92% of cases
-  (random features: 0.06, 25%).
+- **The reward swap works by label:** 0.90 of the real reward swap's effect, the choice following in 92% of cases
+  (random features: 0.06, 25%). The 0.90 compares the two window by window (median of steered shift over the real
+  reward swap's shift in the same window). The table's 1.08 and 1.03 are both in units of the state swap and are
+  medians over different windows, so their ratio is not the per-window answer.
 - **The state swap does not, at D1 alone** (0.41), and the double swap, which a model-based agent should credit to
   the same action, is steered as if the reward had flipped (0.68). Downstream reads the D1 detectors mainly as reward
   valence; which state is re-read from the memory carried from D2, at GO. Steering the state detectors at D2, D1 and
@@ -212,10 +291,14 @@ next D1; random control 0.04–0.05):
 γ = 0.97 per step, terminal at trial 100); the network gets no trial-number input.
 
 **What the value is for.** The return-to-go at step t is the discounted reward still to come in the episode,
-G_t = r_t + γ r_{t+1} + γ² r_{t+2} + … to the last step. The critic is trained to predict it, (G_t − V_t)². At test
+G_t = r_t + γ r_{t+1} + γ² r_{t+2} + … to the last step (training used these full-episode returns, no
+bootstrapping). The critic's output V_t = V(h_t) is a read-out of the hidden state h_t, trained on (G_t − V_t)²,
+so it learns E[G_t | h_t]: the expected return given what the agent's memory holds. This is the usual value
+function, with the agent's memory as its state (the task's good state is hidden from it). Nothing forces V to use
+time rather than belief; that it mostly uses time is a finding (below). At test
 nothing reads V: actions come from the policy logits alone. Its use was in training, as the baseline of the policy
 gradient, −log π(a_t) (G_t − V_t): an action is reinforced only if the return beat V's expectation, which cuts the
-gradient's variance without biasing it. G_t falls near the end of the episode. A V that did not know the time would
+gradient's variance without biasing it (the training also clips G_t − V_t to ±5, a small departure). G_t falls near the end of the episode. A V that did not know the time would
 be too high there, so the advantage G_t − V_t would be negative for every late action and the policy wrongly
 discouraged; counting trials lets V remove that time-driven part, so the advantage reflects only whether the choice
 was good. The policy and the
@@ -277,14 +360,42 @@ inputs; 400 pairs; ΔV = −2.66, exact to 1e-5):
 - Patching the top-k value features per step from the early run into the late one carries 0.67 (k = 1) to 0.81
   (k = 20) of the value difference.
 
+**Is the value right beyond time?** (`value_check.py`; 3,000 closed-loop episodes.) *Why:* V barely moves when an
+outcome changes (0.15 at most above), but that alone does not say it is wrong; an outcome might change the expected
+return only a little. If V were exactly the expected return given the agent's memory, then for any group of steps
+picked by what the agent has seen, V's average would equal the actual return's average. So we compare the two,
+both beyond their time profile, at the next D1 after a trial, rewarded minus unrewarded:
+
+| trial reached the state the ideal observer believed | V (value head) | G (actual return) |
+|---|---|---|
+| good | +0.10 | +0.21 |
+| bad | +0.08 | **−0.27** |
+
+- **After the believed-good state, V moves the right way but half as much.**
+- **After the believed-bad state, V moves the wrong way.** A reward there is evidence that the good state has
+  reversed, so the agent is about to choose wrongly for a trial or two and its expected return falls (−0.27). V
+  rises anyway (+0.08): it treats a reward as good news whatever it implies.
+- **Around reversals** (figure, middle panel) the actual return dips by 0.76 one trial after the reversal and 0.42
+  two trials after (beyond time); V dips by 0.03 and 0.07.
+- So beyond the clock, V is not the expected return: it carries a small "reward is good" term and the TD-like jump
+  when the state is shown, and misses what an outcome implies about the future. This fits its job ("What the value is for" above): as a
+  baseline it only needs to remove the time trend, and errors in the baseline add variance but no bias.
+
 **Does it touch the choice circuit?**
-- The two readouts are nearly orthogonal (cosine 0.02).
-- The credit contrasts move the value by at most 0.15 (§1), and the time contrast moves the choice by −0.55 (sd 1.3;
+- The two heads read nearly perpendicular directions of the hidden state: the cosine between the choice read-out
+  (output weights for a1 minus a2) and the value read-out is 0.02. This is about where the heads read, not what the
+  features write: a feature's write could still move both, which the next points check.
+- The credit contrasts of §3 (the state reached, the action or the reward of one trial swapped) move the value by
+  at most 0.15, and the time contrast moves the choice by −0.55 (sd 1.3;
   the choice logit is about ±8.6). In the choice's flow candidate 130 is large (−4.1) but cancelled by others.
 - Patching the value features changes the choice by about 1 logit (11–16% of its size).
-- Of the top 15 value-time features, 2 are among the top 15 credit features (candidate 167, reset 10), carrying 13%
-  of the value-time flow.
-- Behaviour does not change over the episode: agreement with the observer 0.97 / 0.97 / 0.95 (trials 10–49 /
+- Feature overlap between the two graphs: the 15 features with the most flow in the value-time graph (late vs
+  early episode, target the value) and the 15 with the most in the credit graphs (state and reward swaps, target the
+  choice) share only 2, candidate 167 and reset 10. Those 2 carry 13% of the value-time list's flow (their |flow|
+  over the summed |flow| of its 15 features). A rough measure: it depends on the top-15 cut, and a shared feature
+  can carry different things in each graph (167 writes the state for the choice and fades with episode time).
+- Behaviour does not change over the episode, although the clock does (V falls from 7.8 to 2.8 and the late-onset
+  features switch on, some with large flow into the choice that others cancel): agreement with the observer 0.97 / 0.97 / 0.95 (trials 10–49 /
   50–79 / 80–99), mean |choice logit| 8.6 / 8.7 / 8.5, the same stay table.
 - So the clock serves the value, which mattered for training (the baseline); at test it neither drives nor is
   driven by the choice in any large way.
@@ -359,7 +470,7 @@ offset by about 70%.)
 - **The same input is read by history-specific detectors.** Compare trials with the same logit (about 8.7) and
   the same new outcome, where the trial before was either a rewarded S1 or an unrewarded S2 (both are evidence for
   S1, so the belief is the same):
-  - a new rewarded S1 is read more by candidate 118 ("rewarded S1, about to choose a1 again") after an unrewarded S2
+  - a new rewarded S1 is read more by candidate 118 ("rewarded a1→S1 trial") after an unrewarded S2
     than after a rewarded S1 (1.76 vs 0.61; candidate 77: 1.72 vs 2.07), and the logit then rises by 1.66 instead of
     not at all (−0.06);
   - a new unrewarded S1 is read more by candidate 114 (1.95 vs 0.59);
@@ -418,26 +529,61 @@ outcome stops making a difference).
   0.40 for the fitted Bayesian). The follow-up below shows this is a selection effect, not special handling of rare
   transitions.
 
-**Test 2: do S1 evidence and S2 evidence travel through the same features?** We traced, in the attribution graph,
-the evidence from an S1 outcome and from an S2 outcome to the choice two trials later, and compared which features
-carry each at every step (cosine of the two flow patterns: 1 = the same features, 0 = different features).
+**How evidence from S1 and from S2 outcomes is carried.** *Why:* the belief is one number (P(S1 is the good
+state)), and an outcome at either state is evidence about it: a reward at S1 or a missed reward at S2 both point to
+S1. "S1 evidence" and "S2 evidence" below mean evidence from an outcome observed at S1 or at S2; both should update
+the same belief, and equally. We followed one outcome through time to see how the network carries each. Events: one
+trial's reward swapped (1,200–3,000 events from closed-loop episodes); effects oriented so the evidence counts as
+positive. "Next choice" is the choice right after the outcome is shown; "the choice after" is the one a trial later.
 
-| step | where the reward is read | that trial's GO | its D2 | next D1 | next GO (the choice) |
-|---|---|---|---|---|---|
-| same features? | 0.00 | −0.16 | 0.66 | 0.88 | 0.69 |
+1. **Reading the outcome.** Different detectors read each state's outcome: S1 outcomes candidates 18, 77, 66; S2
+   outcomes 215, 208, reset 59. *How:* attribution graph; the two entry patterns do not overlap (flow-pattern cosine
+   0.00, at chance).
+2. **The next choice.** Both are pushed onto the choice read-out, unequally. When the agent is already confident
+   (|choice logit| ≥ 6, most trials), an S1 outcome moves the choice by 4–5 logits and an S2 outcome by about 1.2;
+   when it is unsure the two are similar (6–9). *How:* the real GRU rerun with the outcome swapped. Not the logit
+   running out of room: its range is the same on both sides (about ±11.5).
+3. **Right after the choice.** S1 evidence is wiped off the choice read-out (5.4 → 0.6 logits on it, mean); S2
+   evidence is kept (3.3 → 3.6), mostly by the carry. *How:* the change in h at each step split exactly into the
+   carried part (1 − z)·Δh, the candidate's write and the update gate's change.
+4. **Between the choices.** S1 evidence is re-created by features: passed to the next state-writers (at the next trial's D2:
+   candidates 219, 76; resets 117, 80, 98), then to the next outcome's readers (77 / 66, 208). S2 evidence waits in
+   memory on the read-out: about 40% of it reaches the choice through the carry alone, touching no feature. *How:*
+   the graph's flow from the reading detectors split by where it goes first (straight to the choice through the carry,
+   or into the features of a later step); and patching in the real GRU: the features carrying the most flow remove
+   all of S1 evidence but only about 0.3 of S2 evidence.
+5. **The choice after.** S1 evidence is written back onto the read-out by the GO features and the update gate (update
+   55, 206; candidates 121, 146); S2 evidence is read straight from memory. Their later effects end up similar (1.7 vs
+   1.2 logits, medians). *How:* removal: taking the evidence's component on the read-out away between the two
+   choices leaves 0.87 of S1's later effect and 0.31 of S2's; the belief decoder's direction and random directions
+   remove nothing.
+6. **The consequences for behaviour.**
+   - *Unequal weighting:* over two choices, an S1 outcome typically counts about 2–3× an S2 outcome (about 6.3 vs 2.5
+     logits); the ideal observer and the fitted Bayesian weigh them equally (2.3 / 0.7 and 3.1–3.2 / 1.2).
+   - *The switching lag* (§4): switching away from S1 the agent is as fast as the ideal observer (−0.15 trials; later
+     in 2% of reversals); switching away from S2 it is about 1.5 trials late (later in 94%). The news that S2 has gone
+     bad arrives as S2 outcomes, which barely move a confident agent (step 2); carrying S2 evidence (step 3) lets
+     those weak pushes add up instead of vanishing.
+   - *Survival ratios:* small starting effects plus kept evidence inflate S2's survival in Test 1, which probably
+     accounts for part of the agent's departures from the observer there.
+7. **Still one quantity.** Both end on the same readers and choice writers, and each interacts with the next outcome
+   whatever its state: S1 evidence passes through the S2-outcome readers (candidates 8, 208, 165; 0.83–1.29 of its
+   effect) when the next trial visits S2, which two separate values would not do. *How:* graph version of Test 1;
+   where the two use features, their flow patterns overlap far above chance from the next D2 on (cosine 0.67–0.88;
+   shuffled features up to 0.24; p < 0.001), though not completely (below the 0.99 within-group ceiling and every
+   label shuffle).
 
-- The reward is read by different detectors for the two states (as in §3), but from the next step on, S1 and S2
-  evidence are carried by the same features: one shared path, as a single belief needs.
-- They also move h along the belief direction (a linear read-out of the ideal observer's belief) by the same amount
-  (2.5 vs 2.6 in belief units after that trial's GO).
-- Re-checked on the action preference (the part of the memory the choice is read from; see the end of this
-  section): tests 1 and 2 were already measured on the choice, so they are about the action preference. Along the
-  action preference direction (the choice read-out minus its overlap with the belief read-outs), S1 and S2 evidence
-  move it by similar amounts at the two choices (0.81 vs 0.64 right after; 0.41 vs 0.55 a trial later). Between the
-  choices that direction holds little after S1 evidence (0.16 at D2, 0.08 at the next D1) and more after S2 evidence
-  (0.88, 0.58): the preference is carried by the shared features in between and written into the read-out direction
-  at each GO.
-- Most of the change in h is something else: a trace of whether a reward came at all, the same for S1 and S2. It is
+**Still unknown:** why the network wipes S1 evidence and keeps S2 evidence (one idea, that S2 evidence rides the
+memory's "S2 reached" signal, was tested and rejected: clamping that direction removes none of it); why it reads S2
+outcomes weakly when confident; and whether that weak reading causes the lag (test: boost the S2 missed-reward
+readers, such as candidate 208, after long runs). The task is symmetric between S1 and S2, so the asymmetry is
+probably one of two equally good solutions picked in training; testing that needs other trained networks.
+
+Code and results (`rl_features/rl_circuits/`): `evidence_patch.py` (patching), `flow_cosine_null.py` (cosine nulls and
+intervals), `test1_flow.py` (graph Test 1), `state_channel.py` (the rejected idea), `storage_asymmetry.py` and
+`storage_cause.py` (behaviour, restoration and removal, step-by-step read-out), `switch_lag.py` (lag by direction).
+
+**The rest of the change in h** is something else: a trace of whether a reward came at all, the same for S1 and S2. It is
   strongest when the reward is read and fades within a trial or two. It is not a second value; the follow-up below
   tests whether it carries the bands (about 40% of them).
 
@@ -534,8 +680,8 @@ below always means the state reached and whether it was rewarded.) Three tests, 
    1.1% of trials, and changes the probability of choosing a1 by more than 0.1 on 3.3%. Mostly the bands change how
    sure the agent is, not what it does.
 
-**Is the belief update itself sub-par?** *Why we ran this:* the agent switches about a trial later than the ideal
-observer; if not the trace, something in the belief or the choice must be slower. Two terms, used from here on:
+**Is the belief update itself sub-par?** *Why we ran this:* the agent switches later than the ideal observer (0.7
+trials on average; one trial late on half the reversals); if not the trace, something in the belief or the choice must be slower. Two terms, used from here on:
 - **belief information**: the ideal observer's belief as read from the agent's hidden state by a straight-line
   read-out (after GO). It shows what information the memory holds, not that the agent uses it.
 - **action preference**: the part of the memory the choice is read from (found below). The test at the end of this
@@ -769,10 +915,11 @@ the circuit, and the kind of evidence. Four kinds of evidence, defined first:
 |---|---|---|
 | The bands are mostly the previous trial: its outcome explains 71% of the spread around the curves (75% with its transition); its reward matters more (58%) than its state (29%). | none | regression |
 | A few features carry each band: patching the top 3–5 per step reproduces the band offset (0.81–1.12 of it; random features up to 0.31–0.52). | the next-D1 detectors that read the previous outcome (candidates 18, 77, 215, 208), the current trial's state writers at D2 (reset 117, candidates 76, 219), the detectors that read the current outcome at the next D1 (candidates 77, 66), and GO features | attribution graph, feature patching |
-| How the history acts: the previous outcome changes which detectors read the next outcome. At the same logit, a new rewarded S1 is read more by candidate 118 ("rewarded S1, about to choose a1 again") after an unrewarded S2 than after a rewarded S1 (1.76 vs 0.61), and the logit then rises by 1.66 instead of not at all; a new unrewarded S1 is read more by candidate 114 (1.95 vs 0.59); a new rewarded S2 by candidate 8 after a rewarded S2, by candidates 215 and 95 after a setback. | the outcome detectors at D1 | feature activations at matched logit, located by the attribution graph |
+| How the history acts: the previous outcome changes which detectors read the next outcome. At the same logit, a new rewarded S1 is read more by candidate 118 ("rewarded a1→S1 trial") after an unrewarded S2 than after a rewarded S1 (1.76 vs 0.61), and the logit then rises by 1.66 instead of not at all; a new unrewarded S1 is read more by candidate 114 (1.95 vs 0.59); a new rewarded S2 by candidate 8 after a rewarded S2, by candidates 215 and 95 after a setback. | the outcome detectors at D1 | feature activations at matched logit, located by the attribution graph |
 | What carries the history: about 40% of the bands is a "was I just rewarded" trace that the action preference does not reflect; the rest goes with information tied to the action preference. | a few directions of the hidden state (not features) | hidden-state intervention |
 | The bands barely matter for behaviour: they change the chosen action on about 1% of trials; removing the trace in play leaves reward, switching and agreement with the ideal observer unchanged. | | hidden-state intervention, closed-loop play |
-| One belief, not two values (Bayesian-like, not model-based RL): S1 and S2 evidence are read by different detectors but carried by the same features from the next D2 on (flow-pattern cosine 0.66–0.88), and move the action preference alike at the choices; an outcome's effect lasts according to whether the next outcome agrees, not which state is visited. | shared features after the outcome detectors | attribution graph, counterfactual reruns of the network |
+| One belief, not two values (Bayesian-like, not model-based RL): an outcome's effect lasts according to whether the next outcome agrees, not which state is visited; S1 evidence passes through the S2-outcome readers when the next trial visits S2. | next-outcome readers 8, 208, 165; 77 / 66 | counterfactual reruns of the network (Test 1); attribution graph (graph version) |
+| Evidence from the two states is carried differently: S1 evidence is wiped off the choice read-out after each choice and re-created by features (patching them removes all of it); S2 evidence waits in memory on the read-out (40% reaches the choice through the carry alone; removing its read-out component between choices leaves 0.31 of its later effect). A confident agent reads S2 outcomes weakly (1.2 vs 4–5 logits), so an S1 outcome counts 2–3× an S2 outcome and the agent switches late only when leaving S2 (+1.5 trials vs −0.15). | S1: 18, 77, 66 → 219, 76, resets 117, 80, 98 → 77 / 66, 208 → updates 55, 206, candidates 121, 146; S2: 215, 208, reset 59, then the carry | attribution graph (path split), feature patching, hidden-state removal and restoration, step-by-step split of h, reruns |
 | The decodable ideal belief is not what the agent acts on: replacing the belief part of the memory changes later choices by about 1% of what replacing the whole memory does, and the belief read-out itself snaps back; the agent acts on a separate action preference (the part of the memory the choice is read from), which drives choices now and later (38–66%). | belief directions and choice read-out direction of the hidden state (not features); the graph split below names the features | hidden-state intervention; attribution graph (the stick-vs-follow difference: 0.08 through the belief directions, 0.29 through the choice read-out direction, 1.04 through the rest) |
 | Why the agent switches a trial late: after a long run of one choice, the detectors that read a missed reward as "switch" respond less and a "stay anyway" detector more, so the action preference lags the belief information by about a trial. Patching the top 3–5 features per step carries 92–95% of the stick-vs-follow difference (random 10% or less). | "switch" readers: candidate 208 ("after an unrewarded trial"), candidate 11 ("after an unrewarded trial, fades late in the episode"), reset 4; "stay anyway" reader: candidate 220 ("after an unrewarded a2→S2, strongest after runs of a2 choices"); state writers at D2 (reset 115, candidates 167, 115) | attribution graph, feature patching |
 | The credit circuit behind the Bayesian-like behaviour: credit to the state 11.5 logits, to the action 0.6. D2 features write the state reached (the action is mostly cancelled there); next-D1 conjunction detectors combine the reward with the remembered state; GO features, including update-gate features, write the choice. | D2: candidates 219, 147, 210, 167, resets 80, 98, 10; D1: candidates 77, 215, 208, 18, resets 120, 59; GO: updates 55, 206, 5, candidates 121, 146 | attribution graph, feature patching, label-level steering (§2–3, §5) |

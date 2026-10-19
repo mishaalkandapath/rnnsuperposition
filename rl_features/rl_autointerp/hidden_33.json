@@ -1,64 +1,126 @@
 {
-  "label": "D2: reached S1 while the policy favors a2",
-  "predicate": "(phase == D2) & (state == S1) & (choice < -2)",
-  "verdict": "explained",
-  "confidence": "high",
+  "gate": "hidden",
+  "feature": 33,
+  "final_verdict": "partially_explained",
+  "final_label": "D2 at S1 while the agent's policy leans a2: mostly a2->S1 rare transitions, plus weaker a1->S1 steps when the agent favours a2; fades in the last ~10 trials",
+  "with_model_outputs": {
+    "label": "D2: reached S1 while the policy favors a2",
+    "predicate": "(phase == D2) & (state == S1) & (choice < -2)",
+    "verdict": "explained",
+    "confidence": "high",
+    "uses_future": false,
+    "explanation": "Fires only at D2 and only when the state shown is S1 (never at D1, GO, or when S2 is shown). Within S1-at-D2 it is gated by the agent leaning toward a2: the D2 policy logit(a1)-logit(a2) < -2. In practice this covers a2 then rare transition to S1 (89% of activation mass is a2/rare) and a1 then common S1 when S2 is the good state, which gives the strongest activations (top windows: a1 S1c with good=S2 at about 0.9-1.0 of max; a2 S1R at about 0.7). Weak or silent for a1 to S1 common when S1 is good and the agent prefers a1. Plain D2 and S1 gives recall 1.0 but precision 0.37; adding action==2 gives F1 0.80; the choice-logit threshold gives F1 0.90 on dev. All variables are observed at D2 (choice is the model's own output), so no future variables are used. Magnitude grows with how strongly the policy favors a2. Activation-based description only; no causal claim.",
+    "test_scores": {
+      "gate": "hidden",
+      "feature": 33,
+      "predicate": "(phase == D2) & (state == S1) & (choice < -2)",
+      "split": "test",
+      "precision": 0.8981192350308664,
+      "recall": 0.8801472247292419,
+      "f1": 0.8890424130194793,
+      "mass_recall": 0.9769720775613578,
+      "correlation": 0.8461569380229588,
+      "n_active": 70912,
+      "n_predicted": 69493,
+      "coverage_by_activation_quartile": [
+        0.5482287906137184,
+        0.9723601083032491,
+        1.0,
+        1.0
+      ]
+    },
+    "dev_scores": {
+      "gate": "hidden",
+      "feature": 33,
+      "predicate": "(phase == D2) & (state == S1) & (choice < -2)",
+      "split": "dev",
+      "precision": 0.9030284034090061,
+      "recall": 0.888820332011165,
+      "f1": 0.895868037817708,
+      "mass_recall": 0.980363718932541,
+      "correlation": 0.8491048374976423,
+      "n_active": 68070,
+      "n_predicted": 66999,
+      "coverage_by_activation_quartile": [
+        0.5734516394405923,
+        0.9818427547302856,
+        1.0,
+        1.0
+      ]
+    },
+    "skeptic": {
+      "upheld": false,
+      "issues": [
+        "The predicate holds up: test P 0.898, R 0.880, F1 0.889, mass recall 0.977. Checked claims that hold: no firing at D1 or GO (phase != D2 gives P=0, R=0), no firing when S2 is shown (D2 & S2 gives P=0), D2 & S1 alone gives R=1.0 and P=0.37, adding action==2 gives F1 0.80, and a2->S1 rare holds 89% of mass. The missed activations hold only 2.3% of mass and are weak (mostly under 0.2 of max) near the choice threshold. The false positives are scattered a2-rare steps that sit near zero. Neither shows a systematic class.",
+        "FALSE: the claim that a1->S1 common with S2 good gives 'the strongest activations: about 0.9 to 1.0 of max'. On test, D2&S1&a1&good==S2 holds 1.9% of mass with top-quartile coverage of 0.19%. Even with choice<-2 added it holds 1.5% of mass. The handful of 0.9-1.0 a1 S1c windows in the top-example list are rare outliers. Several of them also have good=? (unknown), not S2.",
+        "The strongest activations are a2->S1 rare with a very negative logit: D2&S1&a2&choice<-6 covers 99.6% of the top activation quartile and 74% of mass, with precision 0.96. Taken as a class, a1->S1 activations are weak: a1&choice<-2 covers 34%/33%/5.7%/0.4% of the activation quartiles from lowest to highest.",
+        "MISCHARACTERIZED: most of the a1->S1 common activations happen when S1 is the good state (good==S1 & choice<-2: 12.5k predicted steps, precision 0.77, mass 7%), not when S2 is good (1.9k steps). So the account in which 'a1 common fires mainly when S2 is good' is wrong. What drives it is the agent's D2 lean toward a2, whatever the good state is.",
+        "The threshold choice is fine. Choice<-1.5 gives test F1 0.884 and choice<-2.5 gives 0.874, so -2 is near optimal. The 'magnitude grows as the policy favors a2' claim is supported: choice bin [-8.9,-4.4] holds 88% of mass."
+      ],
+      "revised_verdict": "explained",
+      "revised_label": "D2: S1 shown while the agent leans toward a2 (mostly a2->S1 rare; magnitude scales with the a2 preference)",
+      "better_predicate": null,
+      "better_predicate_test_f1": null
+    },
+    "final_verdict": "explained",
+    "final_label": "D2: S1 shown while the agent leans toward a2 (mostly a2->S1 rare; magnitude scales with the a2 preference)"
+  },
+  "label": "D2 at S1 while the agent's policy leans a2: mostly a2->S1 rare transitions, plus weaker a1->S1 steps when the agent favours a2; fades in the last ~10 trials",
+  "predicate": "(phase == D2) & (in_state == S1) & (in_action == 2)",
+  "verdict": "partially_explained",
+  "confidence": "medium",
   "uses_future": false,
-  "explanation": "Fires only at D2 and only when the state shown is S1 (never at D1, GO, or when S2 is shown). Within S1-at-D2 it is gated by the agent leaning toward a2: the D2 policy logit(a1)-logit(a2) < -2. In practice this covers a2 then rare transition to S1 (89% of activation mass is a2/rare) and a1 then common S1 when S2 is the good state, which gives the strongest activations (top windows: a1 S1c with good=S2 at about 0.9-1.0 of max; a2 S1R at about 0.7). Weak or silent for a1 to S1 common when S1 is good and the agent prefers a1. Plain D2 and S1 gives recall 1.0 but precision 0.37; adding action==2 gives F1 0.80; the choice-logit threshold gives F1 0.90 on dev. All variables are observed at D2 (choice is the model's own output), so no future variables are used. Magnitude grows with how strongly the policy favors a2. Activation-based description only; no causal claim.",
+  "explanation": "Fires only at D2 and only when the reached state is S1. 89% of activation mass is on a2 -> S1 (rare transition) steps; dev precision 0.90, mass recall 0.89. The remaining mass is mostly weak activations on a1 -> S1 (common) steps, although the very strongest single activations in the top windows are a1 -> S1 steps after a run of a2 choices, so the feature tracks reaching S1 while the recent history favors a2. Adding belief < 0.2, prev_action == 2 or ep_trial < 95 terms only raises dev F1 from 0.803 to 0.814, so the simple rule is kept. Activity fades in the last ~10 trials of the episode (not used in the predicate). Magnitude modulation not checked quantitatively.",
   "test_scores": {
     "gate": "hidden",
     "feature": 33,
-    "predicate": "(phase == D2) & (state == S1) & (choice < -2)",
+    "predicate": "(phase == D2) & (in_state == S1) & (in_action == 2)",
     "split": "test",
-    "precision": 0.8981192350308664,
-    "recall": 0.8801472247292419,
-    "f1": 0.8890424130194793,
-    "mass_recall": 0.9769720775613578,
-    "correlation": 0.8461569380229588,
+    "precision": 0.8958934789074939,
+    "recall": 0.7220639666064982,
+    "f1": 0.7996408074024909,
+    "mass_recall": 0.8863500908856647,
+    "correlation": 0.8468777302795445,
     "n_active": 70912,
-    "n_predicted": 69493,
+    "n_predicted": 57153,
     "coverage_by_activation_quartile": [
-      0.5482287906137184,
-      0.9723601083032491,
-      1.0,
-      1.0
+      0.30488492779783394,
+      0.6451940433212996,
+      0.9425203068592057,
+      0.9956565884476535
     ]
   },
   "dev_scores": {
     "gate": "hidden",
     "feature": 33,
-    "predicate": "(phase == D2) & (state == S1) & (choice < -2)",
+    "predicate": "(phase == D2) & (in_state == S1) & (in_action == 2)",
     "split": "dev",
-    "precision": 0.9030284034090061,
-    "recall": 0.888820332011165,
-    "f1": 0.895868037817708,
-    "mass_recall": 0.980363718932541,
-    "correlation": 0.8491048374976423,
+    "precision": 0.904016913319239,
+    "recall": 0.7224034082562069,
+    "f1": 0.803070264973666,
+    "mass_recall": 0.8911188879399851,
+    "correlation": 0.8573852848121049,
     "n_active": 68070,
-    "n_predicted": 66999,
+    "n_predicted": 54395,
     "coverage_by_activation_quartile": [
-      0.5734516394405923,
-      0.9818427547302856,
-      1.0,
-      1.0
+      0.2892231754612763,
+      0.6429075096956164,
+      0.9598636657460187,
+      0.9976494094141153
     ]
   },
-  "gate": "hidden",
-  "feature": 33,
-  "final_verdict": "explained",
   "skeptic": {
     "upheld": false,
     "issues": [
-      "The predicate holds up: test P 0.898, R 0.880, F1 0.889, mass recall 0.977. Checked claims that hold: no firing at D1 or GO (phase != D2 gives P=0, R=0), no firing when S2 is shown (D2 & S2 gives P=0), D2 & S1 alone gives R=1.0 and P=0.37, adding action==2 gives F1 0.80, and a2->S1 rare holds 89% of mass. The missed activations hold only 2.3% of mass and are weak (mostly under 0.2 of max) near the choice threshold. The false positives are scattered a2-rare steps that sit near zero. Neither shows a systematic class.",
-      "FALSE: the claim that a1->S1 common with S2 good gives 'the strongest activations: about 0.9 to 1.0 of max'. On test, D2&S1&a1&good==S2 holds 1.9% of mass with top-quartile coverage of 0.19%. Even with choice<-2 added it holds 1.5% of mass. The handful of 0.9-1.0 a1 S1c windows in the top-example list are rare outliers. Several of them also have good=? (unknown), not S2.",
-      "The strongest activations are a2->S1 rare with a very negative logit: D2&S1&a2&choice<-6 covers 99.6% of the top activation quartile and 74% of mass, with precision 0.96. Taken as a class, a1->S1 activations are weak: a1&choice<-2 covers 34%/33%/5.7%/0.4% of the activation quartiles from lowest to highest.",
-      "MISCHARACTERIZED: most of the a1->S1 common activations happen when S1 is the good state (good==S1 & choice<-2: 12.5k predicted steps, precision 0.77, mass 7%), not when S2 is good (1.9k steps). So the account in which 'a1 common fires mainly when S2 is good' is wrong. What drives it is the agent's D2 lean toward a2, whatever the good state is.",
-      "The threshold choice is fine. Choice<-1.5 gives test F1 0.884 and choice<-2.5 gives 0.874, so -2 is near optimal. The 'magnitude grows as the policy favors a2' claim is supported: choice bin [-8.9,-4.4] holds 88% of mass."
+      "Systematic recall gap: a1->S1 common D2 steps hold 28% of active steps (19.7k on test) and 11.4% of mass; predicate recall only 0.72.",
+      "Those a1->S1 activations are almost entirely where the model's logit favours a2 at D2: a1->S1 & choice<0 keeps 99.5% of the a1->S1 mass (precision 0.35 vs 0.15). Model-output rule (D2 & S1 & choice < -1) gets test F1 0.859, recall 0.96, vs observed 0.800.",
+      "No observed proxy recovers this: adding prev_action==2 (F1 0.799), two prior a2 choices (0.805), belief<0.5 (0.794), belief<0.7 & prev reward (0.785). Belief (>0.8) does not separate them (precision 0.10).",
+      "Label 'rare transition into S1' overclaims: the feature is 'reached S1 while the agent's own policy leans a2'; a2->S1 is the main but not only case. Also fades after trial 90 (a2->S1 precision 0.45 at ep_trial>=90 vs 0.95 before)."
     ],
-    "revised_verdict": "explained",
-    "revised_label": "D2: S1 shown while the agent leans toward a2 (mostly a2->S1 rare; magnitude scales with the a2 preference)",
+    "revised_verdict": "partially_explained",
+    "revised_label": "D2 at S1 while the agent's policy leans a2: mostly a2->S1 rare transitions, plus weaker a1->S1 steps when the agent favours a2; fades in the last ~10 trials",
     "better_predicate": null,
     "better_predicate_test_f1": null
   },
-  "final_label": "D2: S1 shown while the agent leans toward a2 (mostly a2->S1 rare; magnitude scales with the a2 preference)"
+  "observed_only_round": "rl_features/rl_observed/hidden_33.json"
 }

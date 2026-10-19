@@ -18,3 +18,9 @@ After each run: `python -m circuit.copy_task.autointerp_runs merge rl_features/r
 then `python -m circuit.rl_task.autointerp report rl_features/rl_autointerp`.
 
 Pilot (12 features, earlier prompt without the episode-trial table): `rl_features/rl_autointerp_pilot`, run wf_0b7946f3-dd5.
+
+Observed-only round (2026-10-18): the 31 features that matter whose recorded rule used model outputs (value, choice,
+model_act) or the upcoming choice were re-explained with observed variables only (`autointerp score --observed`):
+22 by one Agent-tool subagent each plus 5 skeptic subagents (not a saved workflow), 8 by swapping the window-start
+choice stand-in for `belief`, update 235 in the main session. Records in `rl_features/rl_observed/`; merged here
+(each keeps its earlier rule under `with_model_outputs`). Findings doc §3.

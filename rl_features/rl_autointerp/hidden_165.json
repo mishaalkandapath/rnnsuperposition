@@ -1,64 +1,125 @@
 {
-  "label": "D1 after an unrewarded rare a1->S2 trial (agent about to repeat a1)",
-  "predicate": "(phase == D1) & (prev_reward == 0) & (choice > 2.78) & (prev_common != 1)",
+  "gate": "hidden",
+  "feature": 165,
+  "final_verdict": "explained",
+  "with_model_outputs": {
+    "label": "D1 after an unrewarded rare a1->S2 trial (agent about to repeat a1)",
+    "predicate": "(phase == D1) & (prev_reward == 0) & (choice > 2.78) & (prev_common != 1)",
+    "verdict": "explained",
+    "confidence": "high",
+    "uses_future": false,
+    "explanation": "Fires only at D1 (never GO or D2), only when the reward input is 0. Nearly all the mass (80%) is at D1 after a trial where the agent chose a1, had a rare transition to S2, and got no reward. That is the model-based stay-on-a1 case, and the policy logit is moderately pro-a1 (choice in [2.78, 8.07]). The remaining activations are on the first trial of the window, where the previous trial falls outside the window (prev_common = -1). Those are probably the same situation, but the window data cannot confirm it, so I included them by keeping prev_common != 1 and gating on the model choice logit. The plain history predicate D1 & prev_reward==0 & prev_action==1 & prev_common==0 scores dev F1 0.84 / precision 0.95. The recorded version adds the window-start cases and reaches dev F1 0.91 / mass recall 0.985. It does not fire after common unrewarded trials (prev_common==1: 1.5% of mass), after rewarded trials, or after an a2 choice (S1 rare unrewarded is the mirror case and stays silent). Its weakest activations are the window-start D1 steps. Every term is observed: prev outcome and transition, and the model own policy logit.",
+    "test_scores": {
+      "gate": "hidden",
+      "feature": 165,
+      "predicate": "(phase == D1) & (prev_reward == 0) & (choice > 2.78) & (prev_common != 1)",
+      "split": "test",
+      "precision": 0.8597084358856463,
+      "recall": 0.9375018433859312,
+      "f1": 0.8969214706961256,
+      "mass_recall": 0.9823508304910099,
+      "correlation": 0.8605372648333716,
+      "n_active": 33905,
+      "n_predicted": 36973,
+      "coverage_by_activation_quartile": [
+        0.7618261177303292,
+        0.9896177442189712,
+        0.9988201982067013,
+        0.9997640396413403
+      ]
+    },
+    "dev_scores": {
+      "gate": "hidden",
+      "feature": 165,
+      "predicate": "(phase == D1) & (prev_reward == 0) & (choice > 2.78) & (prev_common != 1)",
+      "split": "dev",
+      "precision": 0.8749656347940837,
+      "recall": 0.9450647345290415,
+      "f1": 0.9086652391149179,
+      "mass_recall": 0.9853800029796407,
+      "correlation": 0.8730402593283404,
+      "n_active": 33676,
+      "n_predicted": 36374,
+      "coverage_by_activation_quartile": [
+        0.7872668963059746,
+        0.9935859365720394,
+        0.9994061052381518,
+        1.0
+      ]
+    },
+    "skeptic": {
+      "upheld": true,
+      "issues": [
+        "Core claims hold. The feature fires 100% at D1 (0 active steps at GO or D2). Essentially all of it has prev_reward==0 (21 of 33676 active steps have prev_reward=1). Dev history-only predicate D1 & r0 & prev_action==1 & prev_common==0: precision 0.945, recall 0.763, F1 0.844, mass 0.799. Test: precision 0.941, F1 0.838. The mirror case, a2 rare to S1 unrewarded, scores 0.000. a1 common unrewarded scores 0.000. Reported test scores reproduce exactly: P 0.86, R 0.938, F1 0.897, mass 0.982.",
+        "False claim: 'the weakest activations are the window-start D1 steps'. Window-start coverage is about flat across activation quartiles (dev 0.163/0.187/0.187/0.190; test 0.171/0.182/0.187/0.190), so those steps are not mainly weak.",
+        "The real weak tail is a small secondary class the predicate excludes: D1 after an a2 -> S2 common unrewarded trial where the agent switches to a1. Firing there is weak (0.02-0.3 of max). D1 & r0 & prev_action==2 & prev_common==1 & choice>2.78 has precision 0.30-0.32 and 1.5-1.8% of mass, but it accounts for 21-24% of the lowest activation quartile, which explains the recorded predicate's 0.76-0.79 coverage of that quartile. The explanation calls the feature 'silent after common unrewarded trials'. It is silent after a1 common unrewarded (0 of 10996 predicted steps), but only weak and occasional after a2 common unrewarded.",
+        "The window-start part of the predicate (prev_common==-1 & r0 & choice>2.78) has low precision: dev 0.66, test 0.63. These cases cannot be checked against the label because the previous trial is outside the window. They drive most of the false positives.",
+        "The choice gate is partly circular. All activations lie in choice [2.78, 8.07] (D1 & r0 & that bin: recall 0.999, precision 0.63), and the hidden candidate feeds the policy logit. It is a legitimate observed-only signal for the agent's own upcoming choice, and the explanation is transparent about it. The upper bound 8.07 changes nothing.",
+        "Also tried: last reached state == S2 (unifying a1-rare and a2-common): test F1 0.817, worse. Adding a value gate: test F1 0.844-0.886, also worse. No better predicate found, so the recorded one stands. No future variables are used."
+      ],
+      "revised_verdict": "explained",
+      "revised_label": null,
+      "better_predicate": null,
+      "better_predicate_test_f1": null
+    },
+    "final_verdict": "explained"
+  },
+  "label": "D1 after an unrewarded rare a1->S2 trial",
+  "predicate": "(phase == D1) & (prev_reward == 0) & (((prev_action == 1) & (prev_state == 2)) | ((rel == -3) & (belief > 0.8)))",
   "verdict": "explained",
   "confidence": "high",
   "uses_future": false,
-  "explanation": "Fires only at D1 (never GO or D2), only when the reward input is 0. Nearly all the mass (80%) is at D1 after a trial where the agent chose a1, had a rare transition to S2, and got no reward. That is the model-based stay-on-a1 case, and the policy logit is moderately pro-a1 (choice in [2.78, 8.07]). The remaining activations are on the first trial of the window, where the previous trial falls outside the window (prev_common = -1). Those are probably the same situation, but the window data cannot confirm it, so I included them by keeping prev_common != 1 and gating on the model choice logit. The plain history predicate D1 & prev_reward==0 & prev_action==1 & prev_common==0 scores dev F1 0.84 / precision 0.95. The recorded version adds the window-start cases and reaches dev F1 0.91 / mass recall 0.985. It does not fire after common unrewarded trials (prev_common==1: 1.5% of mass), after rewarded trials, or after an a2 choice (S1 rare unrewarded is the mirror case and stays silent). Its weakest activations are the window-start D1 steps. Every term is observed: prev outcome and transition, and the model own policy logit.",
+  "explanation": "Fires only at D1, when the reward input shows the previous trial was unrewarded and that trial was a1 that reached S2 via a rare transition (precision 0.95 on dev for this core clause alone, F1 0.84). The remaining activity is at window-start D1 steps, where the previous trial is not in the data; there it fires when the reward is 0 and the ideal-observer belief strongly favours S1 (belief > 0.8), a stand-in for the unseen previous rare a1 trial. Only observed variables are used; magnitude modulation was not checked.",
   "test_scores": {
     "gate": "hidden",
     "feature": 165,
-    "predicate": "(phase == D1) & (prev_reward == 0) & (choice > 2.78) & (prev_common != 1)",
+    "predicate": "(phase == D1) & (prev_reward == 0) & (((prev_action == 1) & (prev_state == 2)) | ((rel == -3) & (belief > 0.8)))",
     "split": "test",
-    "precision": 0.8597084358856463,
-    "recall": 0.9375018433859312,
-    "f1": 0.8969214706961256,
-    "mass_recall": 0.9823508304910099,
-    "correlation": 0.8605372648333716,
+    "precision": 0.8845947556615018,
+    "recall": 0.8755935702698717,
+    "f1": 0.8800711480026681,
+    "mass_recall": 0.9235067477817691,
+    "correlation": 0.8488306336668101,
     "n_active": 33905,
-    "n_predicted": 36973,
+    "n_predicted": 33560,
     "coverage_by_activation_quartile": [
-      0.7618261177303292,
-      0.9896177442189712,
-      0.9988201982067013,
-      0.9997640396413403
+      0.6901026306476348,
+      0.9244926852288815,
+      0.9431335535630014,
+      0.9446672958942898
     ]
   },
   "dev_scores": {
     "gate": "hidden",
     "feature": 165,
-    "predicate": "(phase == D1) & (prev_reward == 0) & (choice > 2.78) & (prev_common != 1)",
+    "predicate": "(phase == D1) & (prev_reward == 0) & (((prev_action == 1) & (prev_state == 2)) | ((rel == -3) & (belief > 0.8)))",
     "split": "dev",
-    "precision": 0.8749656347940837,
-    "recall": 0.9450647345290415,
-    "f1": 0.9086652391149179,
-    "mass_recall": 0.9853800029796407,
-    "correlation": 0.8730402593283404,
+    "precision": 0.8977149075081611,
+    "recall": 0.8819337213445777,
+    "f1": 0.889754343918514,
+    "mass_recall": 0.9249400867940507,
+    "correlation": 0.8588852524065111,
     "n_active": 33676,
-    "n_predicted": 36374,
+    "n_predicted": 33084,
     "coverage_by_activation_quartile": [
-      0.7872668963059746,
-      0.9935859365720394,
-      0.9994061052381518,
-      1.0
+      0.713861503741537,
+      0.9284950706734767,
+      0.9441738923862691,
+      0.9412044185770282
     ]
   },
-  "gate": "hidden",
-  "feature": 165,
-  "final_verdict": "explained",
   "skeptic": {
     "upheld": true,
     "issues": [
-      "Core claims hold. The feature fires 100% at D1 (0 active steps at GO or D2). Essentially all of it has prev_reward==0 (21 of 33676 active steps have prev_reward=1). Dev history-only predicate D1 & r0 & prev_action==1 & prev_common==0: precision 0.945, recall 0.763, F1 0.844, mass 0.799. Test: precision 0.941, F1 0.838. The mirror case, a2 rare to S1 unrewarded, scores 0.000. a1 common unrewarded scores 0.000. Reported test scores reproduce exactly: P 0.86, R 0.938, F1 0.897, mass 0.982.",
-      "False claim: 'the weakest activations are the window-start D1 steps'. Window-start coverage is about flat across activation quartiles (dev 0.163/0.187/0.187/0.190; test 0.171/0.182/0.187/0.190), so those steps are not mainly weak.",
-      "The real weak tail is a small secondary class the predicate excludes: D1 after an a2 -> S2 common unrewarded trial where the agent switches to a1. Firing there is weak (0.02-0.3 of max). D1 & r0 & prev_action==2 & prev_common==1 & choice>2.78 has precision 0.30-0.32 and 1.5-1.8% of mass, but it accounts for 21-24% of the lowest activation quartile, which explains the recorded predicate's 0.76-0.79 coverage of that quartile. The explanation calls the feature 'silent after common unrewarded trials'. It is silent after a1 common unrewarded (0 of 10996 predicted steps), but only weak and occasional after a2 common unrewarded.",
-      "The window-start part of the predicate (prev_common==-1 & r0 & choice>2.78) has low precision: dev 0.66, test 0.63. These cases cannot be checked against the label because the previous trial is outside the window. They drive most of the false positives.",
-      "The choice gate is partly circular. All activations lie in choice [2.78, 8.07] (D1 & r0 & that bin: recall 0.999, precision 0.63), and the hidden candidate feeds the policy logit. It is a legitimate observed-only signal for the agent's own upcoming choice, and the explanation is transparent about it. The upper bound 8.07 changes nothing.",
-      "Also tried: last reached state == S2 (unifying a1-rare and a2-common): test F1 0.817, worse. Adding a value gate: test F1 0.844-0.886, also worse. No better predicate found, so the recorded one stands. No future variables are used."
+      "Claims check out: 100% D1; prev_reward==1 gives only 21 dev activations; a rare a2->S1 trial does not activate it (prev_common==0 activations are almost all prev_action==1); after an unrewarded a1->S1 trial precision is 0.0002.",
+      "The core clause alone has test precision 0.94, F1 0.84. The window-start stand-in (rel==-3 & belief>0.8) is weak (precision 0.64, recall 0.12), but that is expected because the previous trial is not in the data.",
+      "A small residual: about 6% of activations follow an unrewarded a2->S2 trial (precision 0.056) and do not separate by belief. Adding the model's choice only reaches 0.894 vs 0.880."
     ],
     "revised_verdict": "explained",
     "revised_label": null,
     "better_predicate": null,
     "better_predicate_test_f1": null
-  }
+  },
+  "observed_only_round": "rl_features/rl_observed/hidden_165.json",
+  "final_label": "D1 after an unrewarded rare a1->S2 trial"
 }

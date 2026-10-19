@@ -1,70 +1,119 @@
 {
-  "label": "D2 after a2 -> S2 (common) late in the episode (trial >= ~88)",
-  "predicate": "(phase == D2) & (action == 2) & (state == 2) & (value < 5.6)",
-  "verdict": "explained",
-  "confidence": "high",
-  "uses_future": false,
-  "explanation": "Fires only at D2 steps where the agent chose a2 and reached S2 by the common transition (100% of mass; never on a1, S1, or rare a2->S1 or a1->S2), and only near the end of the episode: no activity before trial ~78, 5.5% of mass at trials 80-89, 94.5% at trials 90-99. Magnitude grows with episode trial index; activations rise steadily across consecutive a2->S2 trials in the same window, and the low-activation quartile sits at trials 85-89. That is why the ep_trial>=88 cutoff misses mostly weak activations (dev mass recall 0.98). The feature also lines up with low value-head output (96% of mass in the lowest value bin), which is consistent with the end-of-episode position. It does not fire at D1 or GO, and it ignores reward and the hidden good state beyond the a2/S2 bias. All variables are observed at D2, so no future variables are used. Dev: P 0.94, R 0.91, F1 0.92.",
-  "test_scores": {
-    "gate": "hidden",
-    "feature": 175,
-    "predicate": "(phase == D2) & (action == 2) & (state == 2) & (value < 5.6)",
-    "split": "test",
-    "precision": 0.9844831314878892,
-    "recall": 0.9237520292207793,
-    "f1": 0.9531511725293131,
-    "mass_recall": 0.9876098980290019,
-    "correlation": 0.8449779922156462,
-    "n_active": 19712,
-    "n_predicted": 18496,
-    "coverage_by_activation_quartile": [
-      0.7140827922077922,
-      0.9809253246753247,
-      1.0,
-      1.0
-    ]
-  },
-  "dev_scores": {
-    "gate": "hidden",
-    "feature": 175,
-    "predicate": "(phase == D2) & (action == 2) & (state == 2) & (value < 5.6)",
-    "split": "dev",
-    "precision": 0.9838031370766083,
-    "recall": 0.9261676742817398,
-    "f1": 0.9541157990464905,
-    "mass_recall": 0.9889386303010206,
-    "correlation": 0.8477346373210839,
-    "n_active": 18691,
-    "n_predicted": 17596,
-    "coverage_by_activation_quartile": [
-      0.7162422426706613,
-      0.988444254226407,
-      1.0,
-      1.0
-    ]
-  },
   "gate": "hidden",
   "feature": 175,
   "final_verdict": "explained",
-  "skeptic": {
-    "upheld": true,
-    "issues": [
-      "All the categorical claims hold on the dev profile. 100% of activation mass is at D2, with in_action=2, state=2 and common=1. There is zero activity at D1, GO, on a1, on S1 or on rare transitions. Mass by trial: 0 before trial 70, 4 steps in trials 70-79, 5.5% in 80-89, 94.5% in 90-99. 96.4% of mass sits in the lowest value bin. Reward and prev_reward splits do not separate it: P stays at 0.92-0.97 within each, and recall splits roughly by base rate.",
-      "Reported scores reproduce. Test: P 0.922, R 0.921, F1 0.921, mass recall 0.985. Cutoff sweep on test: >=86 F1 0.896, >=87 0.915, >=88 0.921, >=89 0.913. The ep_trial>=88 edge is a soft threshold. Remaining misses (1.5% of mass on test) and false positives are weak activations (rel. act < ~0.3) around trials 85-89 on a2->S2c steps. They are not a separate phase, choice, transition or reward class.",
-      "Minor overclaim: magnitude is not simply 'growing with trial index'. Several of the top activating windows are a2->S2c steps right after a run of a1 choices (switch trials, stay==0). Those are a small share of mass (predicate with stay==0: P 0.99, R 0.07), but the strongest single activations are not only at the end of long a2 streaks.",
-      "Better boundary: swapping the trial cutoff for the model's own value output, (phase == D2) & (action == 2) & (state == 2) & (value < 5.6), gives test P 0.984, R 0.924, F1 0.953, mass recall 0.988. False positives drop from 1534 to 287. So the 'late in episode' condition is better read as 'low predicted value / few trials remaining', which is a smooth function of ep_trial. The value head may be partly downstream of this feature, so this is a refinement, not a refutation."
-    ],
-    "revised_verdict": "explained",
-    "revised_label": "D2 after a2 -> S2 (common) in the final ~12 trials of the episode, when the value estimate is low",
-    "better_predicate": "(phase == D2) & (action == 2) & (state == 2) & (value < 5.6)",
-    "better_predicate_test_f1": 0.953
+  "final_label": "D2 after a2 -> S2 (common transition) late in the episode (trial >= 88)",
+  "with_model_outputs": {
+    "label": "D2 after a2 -> S2 (common) late in the episode (trial >= ~88)",
+    "predicate": "(phase == D2) & (action == 2) & (state == 2) & (value < 5.6)",
+    "verdict": "explained",
+    "confidence": "high",
+    "uses_future": false,
+    "explanation": "Fires only at D2 steps where the agent chose a2 and reached S2 by the common transition (100% of mass; never on a1, S1, or rare a2->S1 or a1->S2), and only near the end of the episode: no activity before trial ~78, 5.5% of mass at trials 80-89, 94.5% at trials 90-99. Magnitude grows with episode trial index; activations rise steadily across consecutive a2->S2 trials in the same window, and the low-activation quartile sits at trials 85-89. That is why the ep_trial>=88 cutoff misses mostly weak activations (dev mass recall 0.98). The feature also lines up with low value-head output (96% of mass in the lowest value bin), which is consistent with the end-of-episode position. It does not fire at D1 or GO, and it ignores reward and the hidden good state beyond the a2/S2 bias. All variables are observed at D2, so no future variables are used. Dev: P 0.94, R 0.91, F1 0.92.",
+    "test_scores": {
+      "gate": "hidden",
+      "feature": 175,
+      "predicate": "(phase == D2) & (action == 2) & (state == 2) & (value < 5.6)",
+      "split": "test",
+      "precision": 0.9844831314878892,
+      "recall": 0.9237520292207793,
+      "f1": 0.9531511725293131,
+      "mass_recall": 0.9876098980290019,
+      "correlation": 0.8449779922156462,
+      "n_active": 19712,
+      "n_predicted": 18496,
+      "coverage_by_activation_quartile": [
+        0.7140827922077922,
+        0.9809253246753247,
+        1.0,
+        1.0
+      ]
+    },
+    "dev_scores": {
+      "gate": "hidden",
+      "feature": 175,
+      "predicate": "(phase == D2) & (action == 2) & (state == 2) & (value < 5.6)",
+      "split": "dev",
+      "precision": 0.9838031370766083,
+      "recall": 0.9261676742817398,
+      "f1": 0.9541157990464905,
+      "mass_recall": 0.9889386303010206,
+      "correlation": 0.8477346373210839,
+      "n_active": 18691,
+      "n_predicted": 17596,
+      "coverage_by_activation_quartile": [
+        0.7162422426706613,
+        0.988444254226407,
+        1.0,
+        1.0
+      ]
+    },
+    "skeptic": {
+      "upheld": true,
+      "issues": [
+        "All the categorical claims hold on the dev profile. 100% of activation mass is at D2, with in_action=2, state=2 and common=1. There is zero activity at D1, GO, on a1, on S1 or on rare transitions. Mass by trial: 0 before trial 70, 4 steps in trials 70-79, 5.5% in 80-89, 94.5% in 90-99. 96.4% of mass sits in the lowest value bin. Reward and prev_reward splits do not separate it: P stays at 0.92-0.97 within each, and recall splits roughly by base rate.",
+        "Reported scores reproduce. Test: P 0.922, R 0.921, F1 0.921, mass recall 0.985. Cutoff sweep on test: >=86 F1 0.896, >=87 0.915, >=88 0.921, >=89 0.913. The ep_trial>=88 edge is a soft threshold. Remaining misses (1.5% of mass on test) and false positives are weak activations (rel. act < ~0.3) around trials 85-89 on a2->S2c steps. They are not a separate phase, choice, transition or reward class.",
+        "Minor overclaim: magnitude is not simply 'growing with trial index'. Several of the top activating windows are a2->S2c steps right after a run of a1 choices (switch trials, stay==0). Those are a small share of mass (predicate with stay==0: P 0.99, R 0.07), but the strongest single activations are not only at the end of long a2 streaks.",
+        "Better boundary: swapping the trial cutoff for the model's own value output, (phase == D2) & (action == 2) & (state == 2) & (value < 5.6), gives test P 0.984, R 0.924, F1 0.953, mass recall 0.988. False positives drop from 1534 to 287. So the 'late in episode' condition is better read as 'low predicted value / few trials remaining', which is a smooth function of ep_trial. The value head may be partly downstream of this feature, so this is a refinement, not a refutation."
+      ],
+      "revised_verdict": "explained",
+      "revised_label": "D2 after a2 -> S2 (common) in the final ~12 trials of the episode, when the value estimate is low",
+      "better_predicate": "(phase == D2) & (action == 2) & (state == 2) & (value < 5.6)",
+      "better_predicate_test_f1": 0.953
+    },
+    "original_predicate": "(phase == D2) & (action == 2) & (state == 2) & (ep_trial >= 88)",
+    "original_test_scores": {
+      "gate": "hidden",
+      "feature": 175,
+      "predicate": "(phase == D2) & (action == 2) & (state == 2) & (ep_trial >= 88)",
+      "split": "test",
+      "precision": 0.9220805607761466,
+      "recall": 0.9209111201298701,
+      "f1": 0.9214954694281581,
+      "mass_recall": 0.9848828980251774,
+      "correlation": 0.8162930724064055,
+      "n_active": 19712,
+      "n_predicted": 19687,
+      "coverage_by_activation_quartile": [
+        0.7165178571428571,
+        0.96875,
+        0.9983766233766234,
+        1.0
+      ]
+    },
+    "original_dev_scores": {
+      "gate": "hidden",
+      "feature": 175,
+      "predicate": "(phase == D2) & (action == 2) & (state == 2) & (ep_trial >= 88)",
+      "split": "dev",
+      "precision": 0.9360114147733509,
+      "recall": 0.9125247445294526,
+      "f1": 0.9241188741093923,
+      "mass_recall": 0.9835580274690606,
+      "correlation": 0.8282031155918331,
+      "n_active": 18691,
+      "n_predicted": 18222,
+      "coverage_by_activation_quartile": [
+        0.6871388829445753,
+        0.9642627862187032,
+        0.9987160282473786,
+        1.0
+      ]
+    },
+    "predicate_from": "skeptic",
+    "final_verdict": "explained",
+    "final_label": "D2 after a2 -> S2 (common) in the final ~12 trials of the episode, when the value estimate is low"
   },
-  "final_label": "D2 after a2 -> S2 (common) in the final ~12 trials of the episode, when the value estimate is low",
-  "original_predicate": "(phase == D2) & (action == 2) & (state == 2) & (ep_trial >= 88)",
-  "original_test_scores": {
+  "label": "D2 after a2 -> S2 (common transition) late in the episode (trial >= 88)",
+  "predicate": "(phase == D2) & (in_action == 2) & (in_state == 2) & (ep_trial >= 88)",
+  "verdict": "explained",
+  "confidence": "high",
+  "uses_future": false,
+  "explanation": "Fires only at D2 when the agent chose a2 and landed in S2 (common transition), and only in the last ~12 trials of the episode (none before trial 78; rate 3% in trials 80-89, 14% in 90-99). Episode trial replaces the banned value output (value falls with episode time). Missed activations are weak (1.6% of activation mass) near the trial-88 boundary; the onset is soft between trials ~85 and ~90. Adding belief or previous action did not help.",
+  "test_scores": {
     "gate": "hidden",
     "feature": 175,
-    "predicate": "(phase == D2) & (action == 2) & (state == 2) & (ep_trial >= 88)",
+    "predicate": "(phase == D2) & (in_action == 2) & (in_state == 2) & (ep_trial >= 88)",
     "split": "test",
     "precision": 0.9220805607761466,
     "recall": 0.9209111201298701,
@@ -80,10 +129,10 @@
       1.0
     ]
   },
-  "original_dev_scores": {
+  "dev_scores": {
     "gate": "hidden",
     "feature": 175,
-    "predicate": "(phase == D2) & (action == 2) & (state == 2) & (ep_trial >= 88)",
+    "predicate": "(phase == D2) & (in_action == 2) & (in_state == 2) & (ep_trial >= 88)",
     "split": "dev",
     "precision": 0.9360114147733509,
     "recall": 0.9125247445294526,
@@ -99,5 +148,16 @@
       1.0
     ]
   },
-  "predicate_from": "skeptic"
+  "skeptic": {
+    "upheld": true,
+    "issues": [
+      "Claims check out on test: D2-only, common-only (a1->S2 rare at trial>=88 precision 0.0; a2->S1 precision 0.0001), zero activity before trial 78 (precision 0.0 on 307k D2 steps).",
+      "Remaining misses/FPs are weak activations around the soft trial ~85-90 onset (misses hold 1.5% mass); thresholds 86/90 give F1 0.896/0.886 vs 0.921 at 88. Belief and prev_action terms lower F1 (0.81, 0.79). No systematic counterexample class."
+    ],
+    "revised_verdict": "explained",
+    "revised_label": null,
+    "better_predicate": null,
+    "better_predicate_test_f1": null
+  },
+  "observed_only_round": "rl_features/rl_observed/hidden_175.json"
 }
